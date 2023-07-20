@@ -50,7 +50,7 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "tables"
+    "tables",
 ]
 
 [project.scripts]

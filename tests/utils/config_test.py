@@ -6,14 +6,17 @@ import toml
 
 from pymodaq.utils import config as config_mod
 
-TOML_DICT = dict(scan=dict(scan1d=dict(start=0.,
-                                       stop=5,
-                                       step=0.1),
-                           scan2d=dict(rmax=5,
-                                       rstep=0.2),
-                           ),
-                 general=dict(name='myname',
-                              date=datetime.date.today()))
+TOML_DICT = dict(
+    scan=dict(scan1d=
+              dict(start=0.,
+                   stop=5,
+                   step=0.1),
+              scan2d=
+              dict(rmax=5,
+                   rstep=0.2),
+              ),
+    general=dict(name='myname',
+                 date=datetime.date.today()))
 
 
 def create_toml(path: Path):
@@ -141,6 +144,9 @@ def test_load_system_config(tmp_path):
     config_dict = config_mod.load_system_config_and_update_from_user(test_name)
     assert config_dict['other'] == '456'
 
+    # modifying nested dicts
+
+
 
 def test_check_config():
     dict1 = {'name': 'test', 'status': True}
@@ -190,6 +196,34 @@ def test_custom_config():
     assert config_mod.get_config_file(config.config_name, user=False).is_file()
 
     assert config.to_dict() == config_dict
+
+
+def test_nested_update_from_user(tmp_path):
+    """ make sure the user defined entry within a nested config is loaded but that the other entries are also loaded
+     from the system wide config file"""
+
+    test_name = 'config_test'
+    template_path = tmp_path.joinpath('template.toml')
+    create_toml(template_path)  # creates a system wide config using TOML_DICT
+
+    system_file = config_mod.get_set_local_dir().joinpath(test_name + '.toml')
+    user_file = config_mod.get_set_local_dir(True).joinpath(test_name + '.toml')
+    dest_file = config_mod.copy_template_config(test_name, source_path=template_path)
+
+    user_dict = dict(
+        scan=dict(scan1d=
+                  dict(start=23.,
+                       ),
+                  ),
+    )
+
+    with open(user_file, 'w') as f:
+        toml.dump(user_dict, f)  # creates a user config file with one entry of the nested config updated
+
+    config_dict = config_mod.load_system_config_and_update_from_user(test_name)
+    assert 'start' in config_dict['scan']['scan1d']
+    assert 'stop' in config_dict['scan']['scan1d']  # making sure the entry that is not in the user is still present
+
 
 
 
