@@ -8,7 +8,6 @@ import functools
 import re
 import time
 import warnings
-
 from packaging import version as version_mod
 from pathlib import Path
 import pkgutil
@@ -409,7 +408,6 @@ def rint(x):
     """
     return int(np.rint(x))
 
-
 def elt_as_first_element(elt_list, match_word='Mock'):
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
@@ -534,8 +532,6 @@ def find_dict_if_matched_key_val(dict_tmp, key, value):
     return False
 
 
-
-
 def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
 
@@ -596,7 +592,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     plugins_import = []
     discovered_plugins = get_entrypoints(group='pymodaq.plugins')
-    logger.info(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
+    logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     for module in discovered_plugins:
         try:
             if plugin_type == 'daq_move':
@@ -619,20 +615,20 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                     plugins_import.append(mod)
                 except Exception as e:  # pragma: no cover
                     """If an error is generated at the import, then exclude this plugin"""
-                    logger.warning(f'Impossible to import {mod["name"]}')
-                    print(f'Impossible to import Instrument plugin {mod["name"]} from module: {submodule.__package__}')
+                    logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
+                                 f' from module: {submodule.__package__}')
         except Exception as e:  # pragma: no cover
-            logger.warning(str(e))
+            logger.debug(str(e))
 
-    #add utility plugin for PID
+    #  add utility plugin for PID
     if plugin_type == 'daq_move':
         try:
-            submodule = importlib.import_module('pymodaq.pid')
-
+            submodule = importlib.import_module('pymodaq.extensions.pid')
             plugins_import.append({'name': 'PID', 'module': submodule})
 
-        except Exception:  # pragma: no cover
-            pass
+        except Exception as e:
+            logger.debug(f'Impossible to import the Fake PID Instrument plugin\n'
+                         f'{str(e)}')
 
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import
