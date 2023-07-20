@@ -4,12 +4,13 @@ from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict, TypeVar, Any
 
 import toml
 from qtpy.QtCore import QObject
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
+
 
 try:
     USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
@@ -18,6 +19,23 @@ except:
 
 CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
     Path('Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
+
+
+KeyType = TypeVar('KeyType')
+
+
+def deep_update(mapping: Dict[KeyType, Any], *updating_mappings: Dict[KeyType, Any]) -> Dict[KeyType, Any]:
+    """ Make sure a dictionary is updated using another dict in any nested level
+    Taken from Pydantic v1
+    """
+    updated_mapping = mapping.copy()
+    for updating_mapping in updating_mappings:
+        for k, v in updating_mapping.items():
+            if k in updated_mapping and isinstance(updated_mapping[k], dict) and isinstance(v, dict):
+                updated_mapping[k] = deep_update(updated_mapping[k], v)
+            else:
+                updated_mapping[k] = v
+    return updated_mapping
 
 
 def replace_file_extension(filename: str, ext: str):
@@ -245,7 +263,7 @@ def load_system_config_and_update_from_user(config_file_name: str):
         config_dict = toml.load(toml_base_path)
     toml_user_path = get_config_file(config_file_name, user=True)
     if toml_user_path.is_file():
-        config_dict.update(toml.load(toml_user_path))
+        config_dict = deep_update(config_dict, toml.load(toml_user_path))
     return config_dict
 
 
