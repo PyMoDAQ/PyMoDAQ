@@ -6,7 +6,7 @@ Created the 29/07/2022
 """
 
 from __future__ import annotations
-
+from numbers import Number
 import sys
 from typing import List, Tuple, Union
 import numpy as np
@@ -251,7 +251,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         """
         try:
             self._send_to_tcpip = send_to_tcpip
-            if not value == self._current_value:
+            if np.all(value != self._current_value):  # in case value is a ndarray (very specific cases...)
                 if self.ui is not None:
                     self.ui.move_done = False
                 self._move_done_bool = False
@@ -734,8 +734,9 @@ class DAQ_Move_Hardware(QObject):
             --------
             move_Abs
         """
-        position = float(position)  # because it may be a numpy float and could cause issues
-        # see https://github.com/pythonnet/pythonnet/issues/1833
+        if isinstance(position, Number):
+            position = float(position)  # because it may be a numpy float and could cause issues
+            # see https://github.com/pythonnet/pythonnet/issues/1833
         self._target_value = position
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
