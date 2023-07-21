@@ -3,8 +3,14 @@ import sys
 from typing import List, Tuple, Union
 
 import numpy as np
-from scipy.spatial import QhullError
-from scipy.spatial import Delaunay as Triangulation
+
+try:
+    from scipy.spatial import QhullError  # works for newer version of scipy
+    from scipy.spatial import Delaunay as Triangulation
+except ImportError:
+    from scipy.spatial.qhull import QhullError  # works for old version of scipy
+    from scipy.spatial.qhull import Delaunay as Triangulation
+
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QRectF, QPointF
 
