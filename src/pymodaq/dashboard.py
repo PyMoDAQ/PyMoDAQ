@@ -1269,9 +1269,9 @@ class DashBoard(QObject):
     def check_version(self, show=True):
         try:
             current_version = version_mod.parse(get_version())
-            available_version = [version_mod.parse(ver) for ver in get_pypi_pymodaq('pymodaq')['versions']]
+            available_version = version_mod.parse(get_pypi_pymodaq('pymodaq')['version'])
             msgBox = QtWidgets.QMessageBox()
-            if max(available_version) > current_version:
+            if available_version > current_version:
                 msgBox.setText(f"A new version of PyMoDAQ is available, {str(max(available_version))}!")
                 msgBox.setInformativeText("Do you want to install it?")
                 msgBox.setStandardButtons(msgBox.Ok | msgBox.Cancel)
