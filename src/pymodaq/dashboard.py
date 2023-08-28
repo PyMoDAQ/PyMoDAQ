@@ -604,7 +604,7 @@ class DashBoard(QObject):
             self.logger_dock.area.addDock(det_docks_settings[-1], 'bottom')  # dockarea of the logger dock
         else:
             self.dockarea.addDock(det_docks_settings[-1], 'right',
-                                  detector_modules[-1].viewers_docks[-1])
+                                  detector_modules[-1].viewer_docks[-1])
         self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
         det_mod_tmp = DAQ_Viewer(self.dockarea, title=plug_name, daq_type=plug_type,
                                  dock_settings=det_docks_settings[-1],
