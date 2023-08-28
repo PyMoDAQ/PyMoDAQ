@@ -219,12 +219,11 @@ class DashBoard(QObject):
         self.extension_windows[-1].setCentralWidget(area)
         self.extension_windows[-1].resize(1000, 500)
         self.extension_windows[-1].setWindowTitle(ext['name'])
-        pkg = ext['module']
-        module = import_module(f'{pkg.__name__}.{pkg.module_name}', pkg)
-        klass = getattr(module, pkg.klass_name)
-        self.extensions[pkg.klass_name] = klass(dockarea=area, dashboard=self)
+        module = import_module(f"{ext['pkg']}.extensions.{ext['module']}")
+        klass = getattr(module, ext['class_name'])
+        self.extensions[ext['class_name']] = klass(dockarea=area, dashboard=self)
         self.extension_windows[-1].show()
-        return self.extensions[pkg.klass_name]
+        return self.extensions[ext['class_name']]
 
     def create_menu(self, menubar):
         """
