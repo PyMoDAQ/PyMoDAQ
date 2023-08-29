@@ -250,6 +250,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             return self.ui.viewer_docks
 
+    @property
+    def viewers_docks(self) -> List[Dock]:
+        """list of Viewer Docks from the UI, for back compatibility"""
+        deprecation_msg('viewers_docks is a deprecated property use viewer_docks instead')
+        return self.viewer_docks
+
     def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
         """ Apply changes from the selection of a different DAQTypesEnum in the UI
 
@@ -1319,7 +1325,7 @@ class DAQ_Detector(QObject):
         if not self.grab_state:
             self.detector.stop()
 
-    def single(self, Naverage=1, **kwargs):
+    def single(self, Naverage=1, *args, **kwargs):
         """ Convenience function to grab a single set of data
 
         Parameters
