@@ -26,7 +26,14 @@ def get_extensions():
 
     Returns
     -------
-    list: list of dict containting the name and module of the found extension
+    list: list of dict containing the name and module of the found extension
+
+        Each dict is defined with four keys:
+            * pkg: the name of the plugin package
+            * module: the module name where your extension class is defined
+            * class_name: the name of the class defining the extension
+            * name: a nice name for your extension to be displayed in the menu
+
     """
     extension_import = []
     discovered_extension = get_entrypoints(group='pymodaq.extensions')
@@ -38,7 +45,7 @@ def get_extensions():
                 for mod in modules:
                     mod_in = importlib.import_module(f'{pkg.value}.extensions.{mod}')
                     extension_import.append({'pkg': pkg.value, 'module': mod, 'name': mod_in.EXTENSION_NAME,
-                                             'class_name': mod_in.class_name})
+                                             'class_name': mod_in.CLASS_NAME})
 
             except Exception as e:  # pragma: no cover
                 logger.warning(f'Impossible to import the {pkg.value}.extensions.{mod} extension: {str(e)}')

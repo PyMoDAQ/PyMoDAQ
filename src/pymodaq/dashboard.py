@@ -213,7 +213,23 @@ class DashBoard(QObject):
 
         return qtconsole
 
-    def load_extensions_module(self, ext):
+    def load_extensions_module(self, ext: dict):
+        """ Init and load an extension from a plugin package
+
+        ext: dict
+            dictionary containing info on the extension plugin package and class to be loaded, it contains four
+            keys:
+
+            * pkg: the name of the plugin package
+            * module: the module name where your extension class is defined
+            * class_name: the name of the class defining the extension
+            * name: a nice name for your extension to be displayed in the menu
+
+        See Also
+        --------
+        pymodaq.extensions.utils.get_extensions
+        """
+
         self.extension_windows.append(QtWidgets.QMainWindow())
         area = DockArea()
         self.extension_windows[-1].setCentralWidget(area)
