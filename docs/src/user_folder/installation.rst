@@ -190,6 +190,6 @@ you could follow these steps:
 Python Versions
 +++++++++++++++
 
-As of today (early 2022), PyMoDAQ has been efficiently used on python 3.7 up to 3.9 versions. It's source code
-is regularly tested against those versions. Work is in progress to make it working with python 3.10, but some of
+As of today (early 2022), PyMoDAQ has been efficiently used on python 3.8 up to 3.9 versions. It's source code
+is regularly tested against those versions. Work is in progress to make it working with python 3.10/3.11, but some of
 PyMoDAQ's dependencies are not yet available for these versions.

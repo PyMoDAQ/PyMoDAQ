@@ -5,7 +5,7 @@ from pymodaq.utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
 from pymodaq.utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
-from pymodaq.utils.scanner import TableModelTabular
+from pymodaq.utils.scanner.scanners.tabular import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot
 from qtpy import QtWidgets
 
@@ -14,7 +14,7 @@ class ViewerPointList(QObject):
     def __init__(self, area):
         super().__init__()
         self.area = area
-        self.viewer = None
+        self.viewer: Viewer2D = None
 
         self.set_viewer()
         self.set_point_list()
@@ -22,13 +22,13 @@ class ViewerPointList(QObject):
 
     @Slot(float, float)
     def double_click_action(self, posx, posy):
-        xs, ys = self.viewer.scale_axis(posx, posy)
-        data_at = self.viewer.get_data_at('red', (posx, posy))
+        xs, ys = self.viewer.view.unscale_axis(posx, posy)
+        data_at = self.viewer.view.get_data_at('red', (xs, ys))
         if data_at is not None:
-            self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, data_at])
+            self.table_model.add_data(self.table_view.currentIndex().row() + 1, [posx, posy, data_at])
 
-    def setData(self, data):
-        self.viewer.setImage(data_red=data)
+    def show_data(self, data):
+        self.viewer.show_data(data)
 
     def setXaxis(self, xaxis):
         self.viewer.x_axis = xaxis
@@ -58,7 +58,7 @@ class ViewerPointList(QObject):
         self.table_view = get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
 
-        self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_view.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
@@ -82,7 +82,7 @@ class ViewerPointList(QObject):
 
 if __name__ == '__main__':
     from pymodaq.utils.gui_utils import DockArea
-    from pymodaq.utils.data import Axis
+    from pymodaq.utils.data import Axis, DataFromPlugins
     import sys
     import numpy as np
 
@@ -100,8 +100,11 @@ if __name__ == '__main__':
 
     data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
     data_red += np.random.random(data_red.shape)
+    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red],
+                                   axes=[Axis('xaxis', units='xpxl', data=x, index=1),
+                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
 
-    viewer.setData(data_red)
+    viewer.show_data(data_to_plot)
     viewer.setXaxis(Axis(data=x, label='This is x axis', units='au'))
     viewer.setYaxis(Axis(data=y, label='This is y axis', units='au'))
     win.show()

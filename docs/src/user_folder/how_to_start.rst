@@ -22,7 +22,7 @@ Load installed scripts
 **********************
 
 During its installation, a few scripts have been installed within you environment directory, this means you can start
-PyMoDAQ's main functionnalities directly writing in your console either:
+PyMoDAQ's main functionalities directly writing in your console either:
 
 *  ``dashboard``
 *  ``daq_scan``
@@ -39,11 +39,11 @@ Execute a given python file
 If you knwow where, within PyMoDAQ directories, is the python file you want to run you can enter for instance:
 
 *  ``python -m pymodaq.dashboard``
-*  ``python -m pymodaq.daq_scan``
-*  ``python -m pymodaq.daq_logger``
-*  ``python -m pymodaq.daq_viewer.daq_viewer_main``
-*  ``python -m pymodaq.daq_move.daq_move_main``
-*  ``python -m pymodaq.h5browser``
+*  ``python -m pymodaq.extensions.daq_scan``
+*  ``python -m pymodaq.extensions.daq_logger``
+*  ``python -m pymodaq.control_modules.daq_viewer``
+*  ``python -m pymodaq.control_modules.daq_move``
+*  ``python -m pymodaq.extensions.h5browser``
 *  ``python -m pymodaq_plugin_manager.manager``
 
 for PyMoDAQ's main modules. The *-m* option tells python to look within its *site-packages* folder (where you've just

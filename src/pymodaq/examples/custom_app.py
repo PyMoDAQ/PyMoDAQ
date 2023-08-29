@@ -16,7 +16,11 @@ from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 
-from pymodaq.utils.h5modules import H5Browser, H5Saver
+from pymodaq.utils.h5modules.browsing import H5Browser
+from pymodaq.utils.h5modules.saving import H5Saver
+from pymodaq.utils.h5modules.data_saving import DataToExportSaver
+from pymodaq.utils.data import DataToExport
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -51,7 +55,7 @@ class CustomAppExample(CustomApp):
         super().__init__(dockarea)
 
         # init the object parameters
-        self.raw_data = []
+        self.raw_data: DataToExport = None
         self.setup_ui()
 
     def setup_actions(self):
@@ -98,11 +102,12 @@ class CustomAppExample(CustomApp):
         # init one daq_viewer object named detector
 
         self.detector = DAQ_Viewer(self.dockarea, dock_settings=self.dock_detector_settings,
-                               dock_viewer=self.dock_detector, title="A detector", DAQ_type='DAQ0D')
+                               dock_viewer=self.dock_detector, title="A detector")
         # set its type to 'Mock'
-        self.detector.daq_type = 'Mock'
+        self.detector.daq_type = 'DAQ0D'
+        self.detector.detector = 'Mock'
         # init the detector and wait 1000ms for the completion
-        self.detector.init_det()
+        self.detector.init_hardware()
         self.detector.settings.child('main_settings', 'wait_time').setValue(100)
         QtWidgets.QApplication.processEvents()
         QThread.msleep(1000)
@@ -159,30 +164,21 @@ class CustomAppExample(CustomApp):
 
         logger.debug(f'Value change applied')
 
-    @Slot(OrderedDict)
     def data_done(self, data):
         # print(data)
         pass
 
-    @Slot(OrderedDict)
-    def show_data(self, data):
+    def show_data(self, data: DataToExport):
         """
         do stuff with data from the detector if its grab_done_signal has been connected
         Parameters
         ----------
-        data: (OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+        data: DataToExport
         """
-        data0D = [[data['data0D'][key]['data']] for key in data['data0D']]
-        if self.raw_data == []:
-            self.raw_data = data0D
-        else:
-            if len(self.raw_data) != len(data0D):
-                self.raw_data = data0D
-            else:
-                for ind in range(len(data0D)):
-                    self.raw_data[ind].append(data0D[ind][0])
+        self.raw_data = data
+        data0D = data.get_data_from_dim('Data0D')
 
-        self.target_viewer.show_data(data0D)
+        self.target_viewer.show_data(data0D.data[0])
 
     def load_file(self):
         # init the data browser module
@@ -207,6 +203,8 @@ class CustomAppExample(CustomApp):
                 # init the file object with an addhoc name given by the user
                 h5saver = H5Saver(save_type='custom')
                 h5saver.init_file(update_h5=True, addhoc_file_path=path)
+                datasaver = DataToExportSaver(h5saver)
+
 
                 # save all metadata
                 settings_str = ioxml.parameter_to_xml_string(self.settings)
@@ -214,21 +212,13 @@ class CustomAppExample(CustomApp):
                 settings_str += ioxml.parameter_to_xml_string(self.detector.settings) + ioxml.parameter_to_xml_string(
                     h5saver.settings) + b'</All_settings>'
 
-                data_group = h5saver.add_data_group(h5saver.raw_group, group_data_type='data0D',
-                                                    title='data from custom app',
-                                                    settings_as_xml=settings_str)
+                datasaver.add_data(h5saver.root(), self.raw_data, settings_as_xml=settings_str)
 
-                for dat in self.raw_data:
-                    channel = h5saver.add_CH_group(data_group)
-                    data_dict = dict(data=np.array(dat),
-                                     x_axis=dict(data=np.linspace(0, len(dat) - 1, len(dat)), units='pxl'))
-                    h5saver.add_data(channel, data_dict=data_dict, scan_type='')
+                h5saver.close_file()
 
                 st = 'file {:s} has been saved'.format(str(path))
                 self.add_log(st)
                 self.settings.child('main_settings', 'info').setValue(st)
-
-                h5saver.close_file()
 
         except Exception as e:
             logger.exception(str(e))

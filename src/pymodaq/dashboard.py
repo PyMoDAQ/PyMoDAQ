@@ -213,18 +213,33 @@ class DashBoard(QObject):
 
         return qtconsole
 
-    def load_extensions_module(self, ext):
+    def load_extensions_module(self, ext: dict):
+        """ Init and load an extension from a plugin package
+
+        ext: dict
+            dictionary containing info on the extension plugin package and class to be loaded, it contains four
+            keys:
+
+            * pkg: the name of the plugin package
+            * module: the module name where your extension class is defined
+            * class_name: the name of the class defining the extension
+            * name: a nice name for your extension to be displayed in the menu
+
+        See Also
+        --------
+        pymodaq.extensions.utils.get_extensions
+        """
+
         self.extension_windows.append(QtWidgets.QMainWindow())
         area = DockArea()
         self.extension_windows[-1].setCentralWidget(area)
         self.extension_windows[-1].resize(1000, 500)
         self.extension_windows[-1].setWindowTitle(ext['name'])
-        pkg = ext['module']
-        module = import_module(f'{pkg.__name__}.{pkg.module_name}', pkg)
-        klass = getattr(module, pkg.klass_name)
-        self.extensions[pkg.klass_name] = klass(dockarea=area, dashboard=self)
+        module = import_module(f"{ext['pkg']}.extensions.{ext['module']}")
+        klass = getattr(module, ext['class_name'])
+        self.extensions[ext['class_name']] = klass(dockarea=area, dashboard=self)
         self.extension_windows[-1].show()
-        return self.extensions[pkg.klass_name]
+        return self.extensions[ext['class_name']]
 
     def create_menu(self, menubar):
         """
@@ -604,7 +619,7 @@ class DashBoard(QObject):
             self.logger_dock.area.addDock(det_docks_settings[-1], 'bottom')  # dockarea of the logger dock
         else:
             self.dockarea.addDock(det_docks_settings[-1], 'right',
-                                  detector_modules[-1].viewers_docks[-1])
+                                  detector_modules[-1].viewer_docks[-1])
         self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
         det_mod_tmp = DAQ_Viewer(self.dockarea, title=plug_name, daq_type=plug_type,
                                  dock_settings=det_docks_settings[-1],
@@ -1269,9 +1284,9 @@ class DashBoard(QObject):
     def check_version(self, show=True):
         try:
             current_version = version_mod.parse(get_version())
-            available_version = [version_mod.parse(ver) for ver in get_pypi_pymodaq('pymodaq')['versions']]
+            available_version = version_mod.parse(get_pypi_pymodaq('pymodaq')['version'])
             msgBox = QtWidgets.QMessageBox()
-            if max(available_version) > current_version:
+            if available_version > current_version:
                 msgBox.setText(f"A new version of PyMoDAQ is available, {str(max(available_version))}!")
                 msgBox.setInformativeText("Do you want to install it?")
                 msgBox.setStandardButtons(msgBox.Ok | msgBox.Cancel)

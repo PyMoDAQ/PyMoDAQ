@@ -64,10 +64,10 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     * **PID models** located in a `models` folder: scripts and classes defining the behaviour of a given PID loop
       including several actuators or detectors,
       see :ref:`pid_model`
-    * **Extensions** located in a `extension` folder: scripts and classes allowing to build extensions on top of
+    * **Extensions** located in a `extensions` folder: scripts and classes allowing to build extensions on top of
       the :ref:`Dashboard_module`
 
-    Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extension plugins
+    Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins
 
 
 .. glossary::
