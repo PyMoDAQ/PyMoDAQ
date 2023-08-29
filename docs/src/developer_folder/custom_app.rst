@@ -1,7 +1,7 @@
 .. _custom_app:
 
-Custom App/Extension
-====================
+Custom App
+==========
 
 .. toctree::
    :maxdepth: 3
