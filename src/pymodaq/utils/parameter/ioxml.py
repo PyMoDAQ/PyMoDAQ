@@ -163,14 +163,14 @@ def dict_from_param(param):
             readonly = '0'
     opts.update(dict(readonly=readonly))
 
-    if 'limits' in param.opts:
-        values = str(param.opts['limits'])
-        opts.update(dict(values=values))
+    # if 'limits' in param.opts:
+    #     values = str(param.opts['limits'])
+    #     opts.update(dict(values=values))
 
     if 'limits' in param.opts:
         limits = str(param.opts['limits'])
         opts.update(dict(limits=limits))
-        opts.update(dict(values=limits))
+        # opts.update(dict(values=limits))
 
     if 'addList' in param.opts:
         addList = str(param.opts['addList'])
@@ -273,13 +273,13 @@ def elt_to_dict(el):
         addText = str(el.get('addText'))
         param.update(dict(addText=addText))
 
-    if 'limits' in el.attrib.keys():
-        try:
-            values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
-        # iterator type has been used
-            param.update(dict(values=values))
-        except:
-            pass
+    # if 'limits' in el.attrib.keys():
+    #     try:
+    #         values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
+    #     # iterator type has been used
+    #         param.update(dict(values=values))
+    #     except:
+    #         pass
 
     if 'limits' in el.attrib.keys():
         try:
@@ -531,4 +531,4 @@ def XML_string_to_pobject(xml_string):
     --------
     parameter_to_xml_string
     """
-    return Parameter.create(name='settings', type='group', children=XML_file_to_parameter(xml_string))
+    return Parameter.create(name='settings', type='group', children=XML_string_to_parameter(xml_string))

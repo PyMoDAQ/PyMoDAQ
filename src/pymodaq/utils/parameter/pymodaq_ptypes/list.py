@@ -2,6 +2,7 @@ from qtpy import QtWidgets, QtGui, QtCore
 from pyqtgraph.parametertree.parameterTypes.list import ListParameter, ListParameterItem
 from pyqtgraph.parametertree.Parameter import ParameterItem
 
+
 class Combo_pb(QtWidgets.QWidget):
 
     def __init__(self, items=[]):
