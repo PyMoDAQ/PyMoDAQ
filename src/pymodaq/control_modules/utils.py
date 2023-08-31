@@ -15,6 +15,7 @@ from pymodaq.utils.parameter import Parameter
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
+from pymodaq.utils import config as configmod
 
 
 class DAQTypesEnum(BaseEnum):
@@ -114,6 +115,7 @@ class ControlModule(QObject):
         self._tcpclient_thread = None
         self._hardware_thread = None
         self.module_and_data_saver = None
+        self.plugin_config: configmod.Config = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
@@ -135,6 +137,7 @@ class ControlModule(QObject):
                 * raise_timeout:
                 * show_splash: Display the splash screen with attribute as message
                 * close_splash
+                * show_config: display the plugin configuration
         """
 
         if status.command == "Update_Status":
@@ -283,6 +286,12 @@ class ControlModule(QObject):
         """Open the log file in the default text editor"""
         import webbrowser
         webbrowser.open(self.logger.parent.handlers[0].baseFilename)
+
+    def show_config(self, config: Config):
+        """ Display in a tree the current configuration"""
+        if config is not None:
+            config_tree = configmod.TreeFromToml(config)
+            config_tree.show_dialog()
 
     def update_status(self, txt, log=True):
         """Display a message in the ui status bar and eventually log the message

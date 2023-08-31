@@ -1,22 +1,25 @@
+from time import perf_counter
+from typing import Union, List, Dict
+
+from easydict import EasyDict as edict
+import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
-
-from easydict import EasyDict as edict
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.parameter.utils as putils
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import ioxml
-from pyqtgraph.parametertree import Parameter
-from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.utils.config import Config
+
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, find_keys_from_val
+from pymodaq.utils import config as configmod
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
-import numpy as np
-from time import perf_counter
+
 
 logger = set_logger(get_module_name(__file__))
-config = Config()
+config = configmod.Config()
 
 
 def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
@@ -94,6 +97,7 @@ params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
             'value': config('actuator', 'refresh_timeout_ms')},
@@ -138,45 +142,43 @@ def main(plugin_file, init=True, title='test'):
 
 
 class DAQ_Move_base(QObject):
-    """ The base class to be herited by all actuator modules
+    """ The base class to be inherited by all actuator modules
 
     This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the
     DAQ_Move module)
 
     Parameters
     ----------
-    parent : DAQ_Move_stage instance (see daq_viewer_main module)
-    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the managers)
-
-
-    :ivar move_done_signal: Signal signal represented by a float. Is emitted each time the hardware reached the target
-                            position within the epsilon precision (see comon_parameters variable)
-
-    :ivar controller: the object representing the hardware in the plugin. Used to access hardware functionality
-
-    :ivar status: easydict instance to set information (str), controller object, stage object (if required) and initialized
-                  state (bool) to return to parent after initialization
-
-    :ivar settings: Parameter instance representing the hardware settings defined from the params attribute. Modifications
-                    on the GUI settings will be transferred to this attribute. It stores at all times the current state of the hardware/plugin
-
-    :ivar params: class level attribute. List of dict used to create a Parameter object. Its definition on the class level enable
-                  the automatic update of the GUI settings when changing plugins (even in managers mode creation). To be populated
-                  on the plugin level as the base class does't represents a real hardware
-
-    :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define
-                        a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID Parameter)
-
-    :ivar current_value: (float) stores the current position after each call to the get_actuator_value in the child module
-
-    :ivar target_value: (float) stores the target position the controller should reach within epsilon
-
+    parent : DAQ_Move_Hardware
+    params_state : Parameter
+            pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the preset)
+    Attributes
+    ----------
+    move_done_signal: Signal
+        signal represented by a float. Is emitted each time the hardware reached the target position within the epsilon
+        precision (see comon_parameters variable)
+    controller: object
+        the object representing the hardware in the plugin. Used to access hardware functionality
+    settings: Parameter
+        instance representing the hardware settings defined from the params attribute. Modifications on the GUI settings
+         will be transferred to this attribute. It stores at all times the current state of the hardware/plugin settings
+    params: List of dict used to create a Parameter object.
+        Its definition on the class level enable the automatic update of the GUI settings when changing plugins
+        (even in managers mode creation). To be populated on the plugin level as the base class does't represents a
+        real hardware
+    is_multiaxes: bool
+        class level attribute. Defines if the plugin controller controls multiple axes. If True, one has to define
+        a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID
+        parameter)
+    current_value: float
+        stores the current position after each call to the get_actuator_value in the plugin
+    target_value: float
+        stores the target position the controller should reach within epsilon
     """
 
     move_done_signal = Signal(float)
     is_multiaxes = False
     stage_names = []
-    axes_name = []
     params = []
     _controller_units = ''
     _epsilon = 1
@@ -210,7 +212,40 @@ class DAQ_Move_base(QObject):
 
         self.ini_attributes()
 
+    @property
+    def axis_name(self) -> str:
+        """Get/Set the current axis using its string identifier"""
+        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        if isinstance(limits, list):
+            return self.settings.child('multiaxes', 'axis').value()
+        elif isinstance(limits, dict):
+            return find_keys_from_val(limits, val=self.settings.child('multiaxes', 'axis').value())[0]
+
+    @axis_name.setter
+    def axis_name(self, name: str):
+        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        if name in limits:
+            if isinstance(limits, list):
+                self.settings.child('multiaxes', 'axis').setValue(name)
+            elif isinstance(limits, dict):
+                self.settings.child('multiaxes', 'axis').setValue(limits[name])
+
+    @property
+    def axis_names(self) -> Union[List, Dict]:
+        """ Get/Set the names of all axes controlled by this instrument plugin
+
+        Returns
+        -------
+        List of string or dictionary mapping names to integers
+        """
+        return self.settings.child('multiaxes', 'axis').opts['limits']
+
+    @axis_names.setter
+    def axis_names(self, names: Union[List, Dict]):
+        self.settings.child('multiaxes', 'axis').opts['limits'] = names
+
     def ini_attributes(self):
+        """ To be subclassed, in order to init specific attributes needed by the real implementation"""
         self.controller = None
 
     def ini_stage_init(self, old_controller=None, new_controller=None):
@@ -262,6 +297,7 @@ class DAQ_Move_base(QObject):
 
     @property
     def controller_units(self):
+        """ Get/Set the units of this plugin"""
         return self._controller_units
 
     @controller_units.setter
@@ -274,22 +310,17 @@ class DAQ_Move_base(QObject):
 
     @property
     def ispolling(self):
+        """ Get/Set the polling status"""
         return self._ispolling
 
     @ispolling.setter
     def ispolling(self, polling=True):
         self._ispolling = polling
 
-    def check_bound(self, position):
-        """
+    def check_bound(self, position: float) -> float:
+        """ Check if the current position is within the software bounds
 
-        Parameters
-        ----------
-        position
-
-        Returns
-        -------
-
+        Return the new position eventually coerced within the bounds
         """
         if self.settings.child('bounds', 'is_bounds').value():
             if position > self.settings.child('bounds', 'max_bound').value():
@@ -329,19 +360,7 @@ class DAQ_Move_base(QObject):
             raise NotImplementedError
 
     def emit_status(self, status: ThreadCommand):
-        """
-            | Emit the statut signal from the given status parameter.
-            |
-            | The signal is sended to the gui to update the user interface.
-
-            =============== ===================== ========================================================================================================================================
-            **Parameters**   **Type**              **Description**
-             *status*        ordered dictionnary    dictionnary containing keys:
-                                                        * *info* : string displaying various info
-                                                        * *controller*: instance of the controller object in order to control other axes without the need to init the same controller twice
-                                                        * *stage*: instance of the stage (axis or whatever) object
-                                                        * *initialized*: boolean indicating if initialization has been done corretly
-            =============== ===================== ========================================================================================================================================
+        """ Emit the status_sig signal with the given status ThreadCommand back to the main GUI.
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
@@ -349,36 +368,18 @@ class DAQ_Move_base(QObject):
         else:
             print(status)
 
-    def emit_value(self, pos):
+    def emit_value(self, pos: float):
+        """Convenience method to emit the current actuator value back to the UI"""
+
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
-    def commit_settings(self, param):
+    def commit_settings(self, param: Parameter):
         """
           to subclass to transfer parameters to hardware
         """
-        pass
 
     def commit_common_settings(self, param):
         pass
-
-    def get_position_with_scaling(self, pos):
-        """
-            Get the current position from the hardware with scaling conversion.
-
-            =============== ========= =====================
-            **Parameters**  **Type**  **Description**
-             *pos*           float    the current position
-            =============== ========= =====================
-
-            Returns
-            =======
-            float
-                the computed position.
-        """
-        if self.settings.child('scaling', 'use_scaling').value():
-            pos = (pos - self.settings.child('scaling', 'offset').value()) * self.settings.child('scaling',
-                                                                                                 'scaling').value()
-        return pos
 
     def move_done(self, position=None):  # the position argument is just there to match some signature of child classes
         """
@@ -397,12 +398,11 @@ class DAQ_Move_base(QObject):
         self.move_is_done = True
 
     def poll_moving(self):
-        """
-            Poll the current moving. In case of timeout emit the raise timeout Thread command.
+        """ Poll the current moving. In case of timeout emit the raise timeout Thread command.
 
-            See Also
-            --------
-            DAQ_utils.ThreadCommand, move_done
+        See Also
+        --------
+        DAQ_utils.ThreadCommand, move_done
         """
         if 'TCPServer' not in self.__class__.__name__:
             self.start_time = perf_counter()
@@ -437,19 +437,9 @@ class DAQ_Move_base(QObject):
             self.move_done(self.current_value)
 
     def send_param_status(self, param, changes):
-        """
-            | Send changes value updates to the gui to update consequently the User Interface.
-            | The message passing is made via the Thread Command "update_settings".
+        """ Send changes value updates to the gui to update consequently the User Interface
 
-            =============== =================================== ==================================================
-            **Parameters**  **Type**                             **Description**
-            *param*         instance of pyqtgraph parameter      The parameter to be checked
-            *changes*       (parameter,change,infos)tuple list   The (parameter,change,infos) list to be treated
-            =============== =================================== ==================================================
-
-            See Also
-            ========
-            DAQ_utils.ThreadCommand
+        The message passing is made via the ThreadCommand "update_settings".
         """
 
         for param, change, data in changes:
@@ -464,28 +454,24 @@ class DAQ_Move_base(QObject):
             elif change == 'parent':
                 pass
 
-    def set_position_with_scaling(self, pos):
+    def get_position_with_scaling(self, pos: float):
+        """ Get the current position from the hardware with scaling conversion.
         """
-            Set the current position from the parameter and hardware with scaling conversion.
+        if self.settings.child('scaling', 'use_scaling').value():
+            pos = (pos - self.settings.child('scaling', 'offset').value()) * self.settings.child('scaling',
+                                                                                                 'scaling').value()
+        return pos
 
-            =============== ========= ==========================
-            **Parameters**  **Type**  **Description**
-             *pos*           float    the position to be setted
-            =============== ========= ==========================
-
-            Returns
-            =======
-            float
-                the computed position.
+    def set_position_with_scaling(self, pos: float):
+        """ Set the current position from the parameter and hardware with scaling conversion.
         """
         if self.settings.child('scaling', 'use_scaling').value():
             pos = pos / self.settings.child('scaling', 'scaling').value() + self.settings.child('scaling',
                                                                                                 'offset').value()
         return pos
 
-    def set_position_relative_with_scaling(self, pos):
-        """
-            Set the scaled positions in case of relative moves
+    def set_position_relative_with_scaling(self, pos: float):
+        """ Set the scaled positions in case of relative moves
         """
         if self.settings.child('scaling', 'use_scaling').value():
             pos = pos / self.settings.child('scaling', 'scaling').value()
@@ -493,17 +479,8 @@ class DAQ_Move_base(QObject):
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):  # settings_parameter_dict=edict(path=path,param=param)
-        """
-            Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.
-
-            ==========================  =========== ==========================================================================================================
-            **Arguments**               **Type**     **Description**
-            *settings_parameter_dict*   dictionnary Dictionnary with the path of the parameter in hardware structure as key and the parameter name as element
-            ==========================  =========== ==========================================================================================================
-
-            See Also
-            --------
-            send_param_status, commit_settings
+        """ Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of
+        modified values.
         """
         path = settings_parameter_dict['path']
         param = settings_parameter_dict['param']
@@ -564,9 +541,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         self.client_type = "ACTUATOR"
         DAQ_Move_base.__init__(self, parent, params_state)  # initialize base class with commom attribute and methods
-        self.settings.child(('bounds')).hide()
-        self.settings.child(('scaling')).hide()
-        self.settings.child(('epsilon')).setValue(1)
+        self.settings.child('bounds').hide()
+        self.settings.child('scaling').hide()
+        self.settings.child('epsilon').setValue(1)
 
         TCPServer.__init__(self, self.client_type)
 

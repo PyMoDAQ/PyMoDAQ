@@ -342,7 +342,7 @@ class BaseConfig:
 
     def dict_to_add_to_user(self):
         """To subclass"""
-        return None
+        return dict([])
 
     @property
     def config_path(self):

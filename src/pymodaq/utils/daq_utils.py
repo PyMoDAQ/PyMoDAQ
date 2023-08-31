@@ -408,6 +408,7 @@ def rint(x):
     """
     return int(np.rint(x))
 
+
 def elt_as_first_element(elt_list, match_word='Mock'):
     if not hasattr(elt_list, '__iter__'):
         raise TypeError('elt_list must be an iterable')
@@ -446,6 +447,11 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     else:
         plugins = []
     return plugins
+
+
+def find_keys_from_val(dict_tmp: dict, val: object):
+    """Returns the keys from a dict if its value is matching val"""
+    return [k for k, v in dict_tmp.items() if v == val]
 
 
 def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
