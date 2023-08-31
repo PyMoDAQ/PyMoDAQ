@@ -121,7 +121,6 @@ def get_param_dict_from_name(parent_list, name, pop=False):
                 return ch
 
 
-
 if __name__ == '__main__':              # pragma: no cover
     parent = [
         {'title': 'Spectro Settings:', 'name': 'spectro_settings', 'type': 'group', 'expanded': True,
@@ -156,9 +155,15 @@ def set_param_from_param(param_old, param_new):
 
         if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
             # try:
-            if 'list' in param_type:  # check if the value is in the limits of the old params (limits are usually set at initialization)
-                if child_new.value() not in child_old.opts['limits']:
-                    child_old.opts['limits'].append(child_new.value())
+            if 'list' in param_type:  # check if the value is in the limits of the old params
+                # (limits are usually set at initialization) but carefull as such paramater limits can be a list or a
+                # dict object
+                if isinstance(child_old.opts['limits'], list):
+                    if child_new.value() not in child_old.opts['limits']:
+                        child_old.opts['limits'].append(child_new.value())
+                elif isinstance(child_old.opts['limits'], dict):
+                    if child_new.value() not in child_old.opts['limits'].values():
+                        child_old.opts['limits'].update(dict(str(child_new.value()), child_new.value()))
 
                 child_old.setValue(child_new.value())
             elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
