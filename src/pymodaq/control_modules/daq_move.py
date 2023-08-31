@@ -6,6 +6,8 @@ Created the 29/07/2022
 """
 
 from __future__ import annotations
+
+from importlib import import_module
 from numbers import Number
 import sys
 from typing import List, Tuple, Union
@@ -143,6 +145,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             * show_log
             * actuator_changed
             * rel_value
+            * show_config
         """
         if cmd.command == 'init':
             self.init_hardware(cmd.attribute[0])
@@ -162,6 +165,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.move_rel(cmd.attribute)
         elif cmd.command == 'show_log':
             self.show_log()
+        elif cmd.command == 'show_config':
+            self.show_config(config)
         elif cmd.command == 'actuator_changed':
             self.actuator = cmd.attribute
         elif cmd.command == 'rel_value':
@@ -362,7 +367,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self._hardware_thread.hardware = hardware
                 self._hardware_thread.start()
                 self.command_hardware.emit(
-                    ThreadCommand(command="ini_stage", attribute=[self.settings.child(('move_settings')).saveState(),
+                    ThreadCommand(command="ini_stage", attribute=[self.settings.child('move_settings').saveState(),
                                                                   self.controller]))
             except Exception as e:
                 self.logger.exception(str(e))
@@ -393,6 +398,9 @@ class DAQ_Move(ParameterManager, ControlModule):
                                                                                  'port').value())))
         elif param.name() == 'refresh_timeout':
             self._refresh_timer.setInterval(param.value())
+
+        elif param.name() == 'plugin_config':
+            self.show_config(self.plugin_config)
 
         path = self.settings.childPath(param)
         if path is not None:
@@ -543,11 +551,18 @@ class DAQ_Move(ParameterManager, ControlModule):
     def actuator(self, act_type):
         if act_type in ACTUATOR_TYPES:
             self._actuator_type = act_type
+            self.update_plugin_config()
             if self.ui is not None:
                 self.ui.actuator = act_type
                 self.update_settings()
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
+
+    def update_plugin_config(self):
+        parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self.actuator)
+        mod = import_module(parent_module['module'].__package__.split('.')[0])
+        if hasattr(mod, 'config'):
+            self.plugin_config = mod.config
 
     @property
     def units(self):

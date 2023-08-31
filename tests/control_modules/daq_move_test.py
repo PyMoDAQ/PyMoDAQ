@@ -36,6 +36,7 @@ def ini_daq_move_ui(init_qt):
     widget = QtWidgets.QWidget()
     qtbot.addWidget(widget)
     prog = DAQ_Move(widget)
+    widget.show()
     yield prog, qtbot, widget
     widget.close()
 
@@ -54,4 +55,5 @@ class TestMethods:
         assert ControlModule.quit_fun != DAQ_Move.quit_fun
         assert ControlModule.init_hardware != DAQ_Move.init_hardware
         assert ControlModule.init_hardware_ui != DAQ_Move.init_hardware_ui
+
 

@@ -19,10 +19,20 @@ applications.
 
 
 The DAQ_Move UI class
-*******************
+*********************
 
 This object is the User Interface of the DAQ_Viewer, allowing easy access to all of the DAQ_Viewer functionnalities
 in a generic interface.
 
 .. autoclass:: pymodaq.control_modules.daq_move_ui::DAQ_Move_UI
+   :members:
+
+
+The DAQ_Move Plugin Class
+*************************
+
+This object is the base class from which all actuator plugins should inherit. It exposes a few methods, attributes
+and signal that could be useful to understand.
+
+.. autoclass:: pymodaq.control_modules.move_utility_classes::DAQ_Move_base
    :members:

@@ -39,6 +39,8 @@ class DAQ_Move_UI(ControlModuleUI):
             * show_log
             * actuator_changed
             * rel_value
+            * show_config
+            * show_plugin_config
 
     Methods
     -------
@@ -237,6 +239,8 @@ class DAQ_Move_UI(ControlModuleUI):
                         toolbar=self.toolbar)
         self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
+        self.add_action('show_config', 'Show Config', 'tree', "Show Plugin Config", checkable=False,
+                        toolbar=self.toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", checkable=False,
@@ -256,6 +260,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
+        self.connect_action('show_config', lambda : self.command_sig.emit(ThreadCommand('show_config', )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 
