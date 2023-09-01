@@ -180,9 +180,9 @@ class DAQ_Move_base(QObject):
         class level attribute. Defines if the plugin controller controls multiple axes. If True, one has to define
         a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID
         parameter)
-    current_value: float
+    current_value: DataActuator
         stores the current position after each call to the get_actuator_value in the plugin
-    target_value: float
+    target_value: DataActuator
         stores the target position the controller should reach within epsilon
     """
 
@@ -510,6 +510,7 @@ class DAQ_Move_base(QObject):
         path = settings_parameter_dict['path']
         param = settings_parameter_dict['param']
         change = settings_parameter_dict['change']
+        apply_settings = True
         try:
             self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
         except Exception:
@@ -517,11 +518,13 @@ class DAQ_Move_base(QObject):
         if change == 'value':
             self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
         elif change == 'childAdded':
-            child = Parameter.create(name='tmp')
-            child.restoreState(param)
-            self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
-            param = child
-
+            try:
+                child = Parameter.create(name='tmp')
+                child.restoreState(param)
+                param = child
+                self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
+            except ValueError:
+                apply_settings = False
         elif change == 'parent':
             children = putils.get_param_from_name(self.settings, param.name())
 
@@ -530,8 +533,9 @@ class DAQ_Move_base(QObject):
                 self.settings.child(*path[1:-1]).removeChild(children)
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.commit_common_settings(param)
-        self.commit_settings(param)
+        if apply_settings:
+            self.commit_common_settings(param)
+            self.commit_settings(param)
 
 
 class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
@@ -550,6 +554,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     """
     params_client = []  # parameters of a client grabber
     command_server = Signal(list)
+    data_actuator_type = DataActuatorType['DataActuator']
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
@@ -577,14 +582,14 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
 
             if command == 'position_is':
-                pos = sock.get_scalar()
+                pos = DataActuator(data=sock.get_scalar())
 
                 pos = self.get_position_with_scaling(pos)
                 self.current_value = pos
                 self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
-                pos = sock.get_scalar()
+                pos = DataActuator(data=sock.get_scalar())
                 pos = self.get_position_with_scaling(pos)
                 self.current_value = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
@@ -645,7 +650,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         self.listening = False
         self.close_server()
 
-    def move_abs(self, position):
+    def move_abs(self, position: DataActuator):
         """
 
         """
@@ -657,9 +662,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_abs')
-            sock.send_scalar(position)
+            sock.send_scalar(position.value())
 
-    def move_rel(self, position):
+    def move_rel(self, position: DataActuator):
         position = self.check_bound(self.current_value + position) - self.current_value
         self.target_value = position + self.current_value
 
@@ -667,7 +672,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_rel')
-            sock.send_scalar(position)
+            sock.send_scalar(position.value())
 
     def move_home(self):
         """
