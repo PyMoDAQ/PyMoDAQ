@@ -281,6 +281,33 @@ class TestDataBase:
         with pytest.raises(IndexError):
             data[len(data) + 1]
 
+    @pytest.mark.parametrize('datatmp', (DATA0D, DATA1D, DATA2D))
+    def test_comparison_data_actuator(self, datatmp):
+        LENGTH = 3
+        data = init_data(datatmp, LENGTH)
+        data_eq = init_data(datatmp, LENGTH)
+        data_lt = init_data(datatmp - 0.01 * np.ones(datatmp.shape), LENGTH)
+        data_gt = init_data(datatmp + 0.01 * np.ones(datatmp.shape), LENGTH)
+
+        assert data == data_eq
+        assert data >= data_eq
+        assert data <= data_eq
+        assert data > data_lt
+        assert data < data_gt
+
+    def test_comparison_numbers(self):
+        LENGTH = 1
+        data = init_data(DATA0D, LENGTH)
+        data_eq = float(DATA0D[0])
+        data_lt = float(DATA0D[0]) - 0.01
+        data_gt = float(DATA0D[0]) + 0.01
+
+        assert data == data_eq
+        assert data >= data_eq
+        assert data <= data_eq
+        assert data > data_lt
+        assert data < data_gt
+
     def test_maths(self):
         data = init_data(data=DATA2D, Ndata=2)
         data1 = init_data(data=DATA2D, Ndata=2)
@@ -299,6 +326,13 @@ class TestDataBase:
         data_div = data / 0.85
         for ind_data in range(len(data)):
             assert np.all(data_div[ind_data] == pytest.approx(DATA2D/.85))
+
+    def test_abs(self):
+        data_p = init_data(data=DATA2D, Ndata=2)
+        data_m = init_data(data=-DATA2D, Ndata=2)
+
+        assert data_p.abs() == data_p
+        assert data_m.abs() == data_p
 
     def test_average(self):
         WEIGHT = 5
@@ -645,6 +679,25 @@ class TestDataSource:
         data = data_mod.DataFromRoi('myData', data=[DATA2D for ind in range(Ndata)])
         assert isinstance(data, data_mod.DataWithAxes)
         assert data.source == data_mod.DataSource['calculated']
+
+
+class TestDataActuator:
+    def test_init(self):
+        Ndata = 2
+        data = data_mod.DataActuator()
+
+        assert data.name == 'actuator'
+        assert data.dim == DataDim['Data0D']
+        assert data.length == 1
+        assert data.size == 1
+
+        assert data.shape == (1, )
+
+    @pytest.mark.parametrize("data_number", [23, 0.25, -0.7, 1j*12])
+    def test_quick_format(self, data_number):
+        d = data_mod.DataActuator(data=data_number)
+        assert d.name == 'actuator'
+        assert d.data[0] == np.array([data_number])
 
 
 class TestDataToExport:
