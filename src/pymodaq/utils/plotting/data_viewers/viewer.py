@@ -376,6 +376,7 @@ class ViewerDispatcher:
             dock.close()
 
     def show_data(self, data: DataToExport):
+        """ Convenience method. Display each dwa in a dedicated data viewer"""
         viewer_types = [ViewersEnum(dwa.dim.name) for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types)

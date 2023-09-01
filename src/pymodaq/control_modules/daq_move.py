@@ -33,7 +33,7 @@ from pymodaq.utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.data import DataRaw, DataToExport
+from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins
 from pymodaq.utils.h5modules.backends import Node
 
 
@@ -330,7 +330,9 @@ class DAQ_Move(ParameterManager, ControlModule):
         if self._initialized_state:
             self.init_hardware(False)
         self.quit_signal.emit()
-        self.parent.close()
+        if self.ui is not None:
+            self.ui.close()
+        # self.parent.close()
 
     def init_hardware_ui(self, do_init=True):
         """Programmatic actuator's Initialization
@@ -469,6 +471,10 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif status.command == "get_actuator_value" or status.command == 'check_position':
             if self.ui is not None:
                 self.ui.display_value(status.attribute[0])
+                if self.ui.is_action_checked('show_graph'):
+                    self.ui.show_data(DataToExport(name=self.title,
+                                                   data=[DataFromPlugins(name='act',
+                                                                         data=[np.array([status.attribute[0]])])]))
             self._current_value = status.attribute[0]
             self.current_value_signal.emit(self.title, self._current_value)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
