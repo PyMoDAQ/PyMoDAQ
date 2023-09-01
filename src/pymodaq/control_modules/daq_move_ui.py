@@ -18,7 +18,7 @@ from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinB
 from pymodaq.control_modules.utils import ControlModuleUI
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq.utils.data import DataWithAxes, DataToExport
+from pymodaq.utils.data import DataWithAxes, DataToExport, DataActuator
 
 
 class DAQ_Move_UI(ControlModuleUI):
@@ -65,8 +65,8 @@ class DAQ_Move_UI(ControlModuleUI):
 
         self.enable_move_buttons(False)
 
-    def display_value(self, value: float):
-        self.current_value_sb.setValue(value)
+    def display_value(self, value: DataActuator):
+        self.current_value_sb.setValue(value.value())
 
     @property
     def actuator_init(self):
@@ -311,11 +311,12 @@ class DAQ_Move_UI(ControlModuleUI):
                                                      self.actuators_combo.currentText()]))
 
     def emit_move_abs(self, spinbox):
-        self.command_sig.emit(ThreadCommand('move_abs', spinbox.value()))
+        self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value())))
 
     def emit_move_rel(self, sign):
-        self.command_sig.emit(ThreadCommand('move_rel', self.rel_value_sb.value() * (1 if sign == '+'
-                                                                                     else -1)))
+        self.command_sig.emit(ThreadCommand('move_rel',
+                                            DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+'
+                                                                                           else -1))))
 
     def close(self):
         self.graph_ui.close()
