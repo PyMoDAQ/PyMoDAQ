@@ -276,7 +276,8 @@ class ModulesManager(QObject, ParameterManager):
         tzero = time.perf_counter()
 
         for sig in [mod.command_hardware for mod in self.detectors]:
-            sig.emit(utils.ThreadCommand("single", [1, kwargs]))
+            kwargs.update(dict(Naverage=1))
+            sig.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end
@@ -379,7 +380,7 @@ class ModulesManager(QObject, ParameterManager):
 
         self.connect_actuators(False)
 
-    def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True):
+    def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
 
         Parameters
@@ -395,7 +396,7 @@ class ModulesManager(QObject, ParameterManager):
 
         Returns
         -------
-        (OrderedDict) with the selected actuators's name as key and current actuators's value as value
+        DataToExport with the selected actuators's name as key and current actuators's value as value
         """
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
@@ -442,11 +443,12 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def order_positions(self, positions_as_dict):
+    def order_positions(self, positions: DataToExport):
+        """ Reorder the content of the DataToExport given the order of the selected actuators"""
         actuators = self.selected_actuators_name
-        pos = []
+        pos = DataToExport('actuators')
         for act in actuators:
-            pos.append(positions_as_dict[act])
+            pos.append(positions.get_data_from_name(act))
         return pos
 
     @Slot(DataActuator)

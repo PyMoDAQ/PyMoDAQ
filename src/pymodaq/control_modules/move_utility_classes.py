@@ -439,7 +439,7 @@ class DAQ_Move_base(QObject):
 
         """
         if position is None:
-            if self.data_actuator_type['name'] == 'float':
+            if self.data_actuator_type.name == 'float':
                 position = DataActuator(self._title, data=self.get_actuator_value())
             else:
                 position = self.get_actuator_value()
@@ -461,7 +461,7 @@ class DAQ_Move_base(QObject):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                if self.data_actuator_type['name'] == 'float':
+                if self.data_actuator_type.name == 'float':
                     self._current_value = DataActuator(data=self.get_actuator_value())
                 else:
                     self._current_value = self.get_actuator_value()
