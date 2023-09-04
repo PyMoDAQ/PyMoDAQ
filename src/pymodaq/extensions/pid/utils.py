@@ -97,7 +97,6 @@ class PIDModelGeneric:
             name = name.split('//')
             self.data_names.append(name)
 
-
     def update_settings(self, param):
         """
         Get a parameter instance whose value has been modified by a user on the UI

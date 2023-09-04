@@ -21,7 +21,7 @@ from pymodaq.utils.messenger import messagebox
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.daq_utils import get_version
+from pymodaq.utils.daq_utils import get_version, find_dict_in_list_from_key_val
 from pymodaq.utils.managers.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
@@ -212,6 +212,9 @@ class DashBoard(QObject):
         qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
 
         return qtconsole
+
+    def load_extension_from_name(self, name: str) -> dict:
+        self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
 
     def load_extensions_module(self, ext: dict):
         """ Init and load an extension from a plugin package
