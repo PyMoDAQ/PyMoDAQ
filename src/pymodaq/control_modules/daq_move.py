@@ -768,9 +768,9 @@ class DAQ_Move_Hardware(QObject):
         self.hardware.ispolling = polling
 
         if self.hardware.data_actuator_type.name == 'float':
-            self.hardware.move_abs(rel_position.value())
+            self.hardware.move_rel(rel_position.value())
         else:
-            self.hardware.move_abs(rel_position)
+            self.hardware.move_rel(rel_position)
 
         self.hardware.poll_moving()
 
