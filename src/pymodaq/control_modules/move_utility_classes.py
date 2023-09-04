@@ -201,8 +201,8 @@ class DAQ_Move_base(QObject):
         self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
-        self.current_value = DataActuator()
-        self.target_value = DataActuator()
+        self._current_value = DataActuator()
+        self._target_value = DataActuator()
         self._ispolling = True
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
@@ -222,6 +222,7 @@ class DAQ_Move_base(QObject):
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
+
 
     @property
     def axis_name(self) -> str:
@@ -287,6 +288,34 @@ class DAQ_Move_base(QObject):
             controller = new_controller
         self.controller = controller
         return controller
+
+    @property
+    def current_value(self):
+        if self.data_actuator_type.name == 'float':
+            return self._current_value.value()
+        else:
+            return self._current_value
+
+    @current_value.setter
+    def current_value(self, value: Union[float, DataActuator]):
+        if not isinstance(value, DataActuator):
+            self._current_value = DataActuator(data=value)
+        else:
+            self._current_value = value
+
+    @property
+    def target_value(self):
+        if self.data_actuator_type.name == 'float':
+            return self._target_value.value()
+        else:
+            return self._target_value
+
+    @target_value.setter
+    def target_value(self, value: Union[float, DataActuator]):
+        if not isinstance(value, DataActuator):
+            self._target_value = DataActuator(data=value)
+        else:
+            self._target_value = value
 
     @property
     def current_position(self):
@@ -424,35 +453,32 @@ class DAQ_Move_base(QObject):
                 self.poll_timer.start()
             else:
                 if self.data_actuator_type['name'] == 'float':
-                    self.current_value = DataActuator(data=self.get_actuator_value())
+                    self._current_value = DataActuator(data=self.get_actuator_value())
                 else:
-                    self.current_value = self.get_actuator_value()
-                logger.debug(f'Current position: {self.current_value}')
-                self.move_done(self.current_value)
+                    self._current_value = self.get_actuator_value()
+                logger.debug(f'Current position: {self._current_value}')
+                self.move_done(self._current_value)
 
     def check_target_reached(self):
-        if not isinstance(self.current_value, DataActuator):
-            self.current_value = DataActuator(data=self.current_value)
-        if not isinstance(self.target_value, DataActuator):
-            self.target_value = DataActuator(data=self.target_value)
+        # if not isinstance(self._current_value, DataActuator):
+        #     self._current_value = DataActuator(data=self._current_value)
+        # if not isinstance(self._target_value, DataActuator):
+        #     self._target_value = DataActuator(data=self._target_value)
 
         logger.debug(f"epsilon value is {self.settings['epsilon']}")
-        logger.debug(f"current_value value is {self.current_value}")
-        logger.debug(f"target_value value is {self.target_value}")
+        logger.debug(f"current_value value is {self._current_value}")
+        logger.debug(f"target_value value is {self._target_value}")
 
-        if (self.current_value - self.target_value).abs() > self.settings['epsilon']:
+        if (self._current_value - self._target_value).abs() > self.settings['epsilon']:
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped', ))
                 logger.info(f'Move has been stopped')
-            if self.data_actuator_type.name == 'float':
-                self.current_value = DataActuator(data=self.get_actuator_value())
-            else:
-                self.current_value = self.get_actuator_value()
+            self.current_value = self.get_actuator_value()
 
-            self.emit_value(self.current_value)
-            logger.debug(f'Current value: {self.current_value}')
+            self.emit_value(self._current_value)
+            logger.debug(f'Current value: {self._current_value}')
 
             if perf_counter() - self.start_time >= self.settings['timeout']:
                 self.poll_timer.stop()
@@ -460,8 +486,8 @@ class DAQ_Move_base(QObject):
                 logger.info(f'Timeout activated')
         else:
             self.poll_timer.stop()
-            logger.debug(f'Current value: {self.current_value}')
-            self.move_done(self.current_value)
+            logger.debug(f'Current value: {self._current_value}')
+            self.move_done(self._current_value)
 
     def send_param_status(self, param, changes):
         """ Send changes value updates to the gui to update consequently the User Interface
@@ -585,13 +611,13 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
                 pos = DataActuator(data=sock.get_scalar())
 
                 pos = self.get_position_with_scaling(pos)
-                self.current_value = pos
+                self._current_value = pos
                 self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
                 pos = DataActuator(data=sock.get_scalar())
                 pos = self.get_position_with_scaling(pos)
-                self.current_value = pos
+                self._current_value = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
             else:
                 self.send_command(sock, command)
@@ -698,7 +724,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             self.send_command(sock, 'get_actuator_value')
 
-        return self.current_value
+        return self._current_value
 
     def stop_motion(self):
         """
