@@ -684,14 +684,18 @@ class TestDataSource:
 class TestDataActuator:
     def test_init(self):
         Ndata = 2
-        data = data_mod.DataActuator()
+        data = data_mod.DataActuator('myact')
+        assert data.name == 'myact'
+        assert data.data[0] == pytest.approx(0.)
 
+        data = data_mod.DataActuator()
         assert data.name == 'actuator'
         assert data.dim == DataDim['Data0D']
         assert data.length == 1
         assert data.size == 1
 
         assert data.shape == (1, )
+        assert data.data[0] == pytest.approx(0.)
 
     @pytest.mark.parametrize("data_number", [23, 0.25, -0.7, 1j*12])
     def test_quick_format(self, data_number):

@@ -72,8 +72,8 @@ class DAQ_Move(ParameterManager, ControlModule):
     """
     settings_name = 'daq_move_settings'
 
-    move_done_signal = Signal(str, DataActuator)
-    current_value_signal = Signal(str, DataActuator)
+    move_done_signal = Signal(DataActuator)
+    current_value_signal = Signal(DataActuator)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
     _update_settings_signal = Signal(edict)
@@ -120,9 +120,9 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         self._move_done_bool = True
 
-        self._current_value = DataActuator()
-        self._target_value: DataActuator()
-        self._relative_value: DataActuator()
+        self._current_value = DataActuator(title)
+        self._target_value: DataActuator(title)
+        self._relative_value: DataActuator(title)
 
         self._refresh_timer = QTimer()
         self._refresh_timer.timeout.connect(self.get_actuator_value)
@@ -474,7 +474,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                     self.ui.show_data(DataToExport(name=self.title,
                                                    data=[status.attribute[0]]))
             self._current_value = status.attribute[0]
-            self.current_value_signal.emit(self.title, self._current_value)
+            self.current_value_signal.emit(self._current_value)
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
@@ -484,7 +484,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self.ui.move_done = True
             self._current_value = status.attribute[0]
             self._move_done_bool = True
-            self.move_done_signal.emit(self._title, status.attribute[0])
+            self.move_done_signal.emit(status.attribute[0])
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
@@ -671,6 +671,10 @@ class DAQ_Move_Hardware(QObject):
         self.axis_address = None
         self.motion_stoped = False
 
+    @property
+    def title(self):
+        return self._title
+
     def close(self):
         """
             Uninitialize the stage closing the hardware.
@@ -685,7 +689,7 @@ class DAQ_Move_Hardware(QObject):
         """
         pos = self.hardware.get_actuator_value()
         if self.hardware.data_actuator_type.name == 'float':
-            return DataActuator(data=pos)
+            return DataActuator(self._title, data=pos)
         else:
             return pos
 

@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Union, List, Dict
+from typing import Union, List, Dict, TYPE_CHECKING
 from numbers import Number
 
 from easydict import EasyDict as edict
@@ -20,6 +20,9 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.enums import BaseEnum, enum_checker
 
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -194,15 +197,14 @@ class DAQ_Move_base(QObject):
     _epsilon = 1
     data_actuator_type = DataActuatorType['float']
 
-    def __init__(self, parent=None, params_state=None):
+    def __init__(self, parent: 'DAQ_Move_Hardware' = None, params_state: dict = None):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
         self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
-        self._current_value = DataActuator()
-        self._target_value = DataActuator()
+
         self._ispolling = True
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
@@ -214,6 +216,10 @@ class DAQ_Move_base(QObject):
                 self.settings.restoreState(params_state.saveState())
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
+
+        self._title = parent.title
+        self._current_value = DataActuator(self._title)
+        self._target_value = DataActuator(self._title)
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()
@@ -299,7 +305,7 @@ class DAQ_Move_base(QObject):
     @current_value.setter
     def current_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
-            self._current_value = DataActuator(data=value)
+            self._current_value = DataActuator(self._title, data=value)
         else:
             self._current_value = value
 
@@ -313,7 +319,7 @@ class DAQ_Move_base(QObject):
     @target_value.setter
     def target_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
-            self._target_value = DataActuator(data=value)
+            self._target_value = DataActuator(self._title, data=value)
         else:
             self._target_value = value
 
@@ -364,10 +370,10 @@ class DAQ_Move_base(QObject):
         """
         if self.settings.child('bounds', 'is_bounds').value():
             if position > self.settings.child('bounds', 'max_bound').value():
-                position = DataActuator(data=self.settings.child('bounds', 'max_bound').value())
+                position = DataActuator(self._title, data=self.settings.child('bounds', 'max_bound').value())
                 self.emit_status(ThreadCommand('outofbounds', []))
             elif position < self.settings.child('bounds', 'min_bound').value():
-                position = DataActuator(data=self.settings.child('bounds', 'min_bound').value())
+                position = DataActuator(self._title, data=self.settings.child('bounds', 'min_bound').value())
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
@@ -434,9 +440,12 @@ class DAQ_Move_base(QObject):
         """
         if position is None:
             if self.data_actuator_type['name'] == 'float':
-                position = DataActuator(data=self.get_actuator_value())
+                position = DataActuator(self._title, data=self.get_actuator_value())
             else:
                 position = self.get_actuator_value()
+        if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
+            #of the plugin
+            position = DataActuator(self._title, data=position.value())
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
