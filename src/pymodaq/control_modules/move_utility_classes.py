@@ -216,8 +216,10 @@ class DAQ_Move_base(QObject):
                 self.settings.restoreState(params_state.saveState())
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-
-        self._title = parent.title
+        if parent is not None:
+            self._title = parent.title
+        else:
+            self._title = "myactuator"
         self._current_value = DataActuator(self._title)
         self._target_value = DataActuator(self._title)
         self.controller_units = self._controller_units
