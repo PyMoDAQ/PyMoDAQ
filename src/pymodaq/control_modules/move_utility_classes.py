@@ -196,6 +196,7 @@ class DAQ_Move_base(QObject):
     _controller_units = ''
     _epsilon = 1
     data_actuator_type = DataActuatorType['float']
+    data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: 'DAQ_Move_Hardware' = None, params_state: dict = None):
         QObject.__init__(self)  # to make sure this is the parent class
@@ -220,8 +221,8 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
-        self._current_value = DataActuator(self._title)
-        self._target_value = DataActuator(self._title)
+        self._current_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
+        self._target_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()
@@ -230,7 +231,6 @@ class DAQ_Move_base(QObject):
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
-
 
     @property
     def axis_name(self) -> str:
@@ -480,7 +480,7 @@ class DAQ_Move_base(QObject):
         logger.debug(f"current_value value is {self._current_value}")
         logger.debug(f"target_value value is {self._target_value}")
 
-        if (self._current_value - self._target_value).abs() > self.settings['epsilon']:
+        if not (self._current_value - self._target_value).abs() < self.settings['epsilon']:
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:

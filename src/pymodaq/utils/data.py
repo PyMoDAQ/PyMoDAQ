@@ -618,7 +618,7 @@ class DataBase(DataLowLevel):
                 eq = eq and np.all(getattr(self[ind], operator)(other[ind]))
             return eq
         elif isinstance(other, numbers.Number):
-            return self.length == 1 and self.size == 1 and np.all(getattr(self[0], operator)(other))
+            return np.all(getattr(self[0], operator)(other))
         else:
             raise TypeError()
 

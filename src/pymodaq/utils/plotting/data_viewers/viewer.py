@@ -381,6 +381,8 @@ class ViewerDispatcher:
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types)
         for viewer, dwa in zip(self.viewers, data):
+            if len(dwa.axes) != len(dwa.shape):
+                dwa.create_missing_axes()
             viewer.show_data(dwa)
 
 

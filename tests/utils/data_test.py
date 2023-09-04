@@ -308,6 +308,15 @@ class TestDataBase:
         assert data > data_lt
         assert data < data_gt
 
+        ARRAY = np.array([1, 2, 1.5])
+        data = data_mod.DataActuator(data=[ARRAY])
+        assert not data > 1
+        assert data > 0.999
+        assert data >= 1
+        assert data == data_mod.DataActuator(data=[ARRAY])
+        assert data < 2.001
+        assert data <= 2
+
     def test_maths(self):
         data = init_data(data=DATA2D, Ndata=2)
         data1 = init_data(data=DATA2D, Ndata=2)
