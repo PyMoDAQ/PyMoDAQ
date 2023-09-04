@@ -8,7 +8,7 @@ import time
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
-from pymodaq.utils.data import DataToExport, DataFromPlugins
+from pymodaq.utils.data import DataToExport, DataFromPlugins, DataActuator
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
@@ -32,8 +32,8 @@ class ModulesManager(QObject, ParameterManager):
     """
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
-    det_done_signal = Signal(DataToExport)
-    move_done_signal = Signal(OrderedDict)
+    det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
+    move_done_signal = Signal(DataToExport)  # dte here contains DataActuators
     timeout_signal = Signal(bool)
 
     params = [
@@ -72,7 +72,7 @@ class ModulesManager(QObject, ParameterManager):
 
         self.det_done_datas: DataToExport = None
         self.det_done_flag = False
-        self.move_done_positions = OrderedDict()
+        self.move_done_positions: DataToExport = None
         self.move_done_flag = False
 
         self.settings.child('data_dimensions', 'probe_data').sigActivated.connect(self.get_det_data_list)
@@ -276,7 +276,8 @@ class ModulesManager(QObject, ParameterManager):
         tzero = time.perf_counter()
 
         for sig in [mod.command_hardware for mod in self.detectors]:
-            sig.emit(utils.ThreadCommand("single", [1, kwargs]))
+            kwargs.update(dict(Naverage=1))
+            sig.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end
@@ -360,31 +361,32 @@ class ModulesManager(QObject, ParameterManager):
 
     def test_move_actuators(self):
         """Do a move of selected actuator"""
-        positions = dict()
+        dte_act = DataToExport('Actuators', control_module='DAQ_MOVE')
         for act in self.get_names(self.actuators):
             pos, done = QtWidgets.QInputDialog.getDouble(None, f'Enter a target position for actuator {act}',
                                                          'Position:')
             if not done:
                 pos = 0.
-            positions[act] = pos
+            dte_act.append(DataActuator(act, data=pos))
 
         self.connect_actuators()
 
-        positions = self.move_actuators(positions)
+        self.move_actuators(dte_act)
 
         self.settings.child('actuators_positions',
-                            'positions_list').setValue(dict(all_items=[f'{k}: {positions[k]}' for k in positions],
+                            'positions_list').setValue(dict(all_items=[f'{dact.name}: {dact.value()}' for dact
+                                                                       in dte_act],
                                                             selected=[]))
 
         self.connect_actuators(False)
 
-    def move_actuators(self, positions, mode='abs', polling=True):
+    def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
 
         Parameters
         ----------
-        positions: list
-            the list of position to apply. Its length must be equal to the number of selected actutors
+        dte_act: DataToExport
+            the DataToExport of position to apply. Its length must be equal to the number of selected actuators
         mode: str
             either 'abs' for absolute positionning or 'rel' for relative
         polling: bool
@@ -394,9 +396,9 @@ class ModulesManager(QObject, ParameterManager):
 
         Returns
         -------
-        (OrderedDict) with the selected actuators's name as key and current actuators's value as value
+        DataToExport with the selected actuators's name as key and current actuators's value as value
         """
-        self.move_done_positions = OrderedDict()
+        self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
         self.settings.child('move_done').setValue(self.move_done_flag)
 
@@ -408,21 +410,16 @@ class ModulesManager(QObject, ParameterManager):
             logger.error(f'Invalid positioning mode: {mode}')
             return self.move_done_positions
 
-        if not hasattr(positions, '__iter__'):
-            positions = [positions]
-
-        if len(positions) == self.Nactuators:
-            if isinstance(positions, dict):
-                for k in positions:
-                    act = self.get_mod_from_name(k, 'act')
-                    if act is not None:
-                        #getattr(act, command)(positions[k])
-                        act.command_hardware.emit(
-                            utils.ThreadCommand(command=command, attribute=[positions[k], polling]))
-            else:
-                for ind, act in enumerate(self.actuators):
-                    #getattr(act, command)(positions[ind])
-                    act.command_hardware.emit(utils.ThreadCommand(command=command, attribute=[positions[ind], polling]))
+        if len(dte_act) == self.Nactuators:
+            for dact in dte_act:
+                act = self.get_mod_from_name(dact.name, 'act')
+                if act is not None:
+                    act.command_hardware.emit(
+                        utils.ThreadCommand(command=command, attribute=[dact, polling]))
+            # else:
+            #     for ind, act in enumerate(self.actuators):
+            #         #getattr(act, command)(positions[ind])
+            #         act.command_hardware.emit(utils.ThreadCommand(command=command, attribute=[positions[ind], polling]))
 
         else:
             logger.error('Invalid number of positions compared to selected actuators')
@@ -446,20 +443,21 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_flag = True
         self.det_done_flag = True
 
-    def order_positions(self, positions_as_dict):
+    def order_positions(self, positions: DataToExport):
+        """ Reorder the content of the DataToExport given the order of the selected actuators"""
         actuators = self.selected_actuators_name
-        pos = []
+        pos = DataToExport('actuators')
         for act in actuators:
-            pos.append(positions_as_dict[act])
+            pos.append(positions.get_data_from_name(act))
         return pos
 
-    @Slot(str, float)
-    def move_done(self, name, position):
+    @Slot(DataActuator)
+    def move_done(self, data_act: DataActuator):
         try:
-            if name not in list(self.move_done_positions.keys()):
-                self.move_done_positions[name] = position
+            if data_act.name not in self.move_done_positions.get_names():
+                self.move_done_positions.append(data_act)
 
-            if len(self.move_done_positions.items()) == len(self.actuators):
+            if len(self.move_done_positions) == len(self.actuators):
                 self.move_done_flag = True
                 self.settings.child('move_done').setValue(self.move_done_flag)
         except Exception as e:
@@ -505,6 +503,8 @@ if __name__ == '__main__':
     act2_widget = QtWidgets.QWidget()
     act1 = DAQ_Move(act1_widget, title='X_axis')
     act2 = DAQ_Move(act2_widget, title='Y_axis')
+    act1.actuator = 'Mock'
+    act2.actuator = 'MockTau'
 
     QThread.msleep(1000)
     prog.init_hardware_ui()

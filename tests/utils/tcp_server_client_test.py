@@ -9,7 +9,7 @@ from pyqtgraph.parametertree import Parameter
 from pyqtgraph import SRTTransform
 from collections import OrderedDict
 from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2, Expected_3
-
+from pymodaq.utils.data import DataActuator
 
 class MockPythonSocket:  # pragma: no cover
     def __init__(self):
@@ -380,7 +380,7 @@ class TestTCPClient:
         assert test_TCP_Client.socket.get_string() == 'Done'
         assert test_TCP_Client.socket.get_list() == command.attribute[0]['data']
 
-        command.attribute = [10]
+        command.attribute = [DataActuator(data=10)]
         command.command = 'position_is'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'position_is'

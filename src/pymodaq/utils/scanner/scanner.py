@@ -13,6 +13,7 @@ from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils.scanner.utils import ScanInfo
 from pymodaq.utils.plotting.scan_selector import Selector
+from pymodaq.utils.data import DataToExport, DataActuator
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -186,6 +187,13 @@ class Scanner(QObject, ParameterManager):
     @property
     def positions(self):
         return self._scanner.positions
+
+    def positions_at(self, index: int) -> DataToExport:
+        """ Extract the actuators positions at a given index in the scan as a DataToExport of DataActuators"""
+        dte = DataToExport('scanner')
+        for ind, pos in enumerate(self.positions[index]):
+            dte.append(DataActuator(self.actuators[ind].title, data=float(pos)))
+        return dte
 
     @property
     def axes_indexes(self):

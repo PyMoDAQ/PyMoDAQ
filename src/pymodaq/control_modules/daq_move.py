@@ -23,7 +23,7 @@ from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
-from pymodaq.control_modules.move_utility_classes import MoveCommand
+from pymodaq.control_modules.move_utility_classes import MoveCommand, DAQ_Move_base
 from pymodaq.utils.tcp_server_client import TCPClient
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils import daq_utils as utils
@@ -33,7 +33,7 @@ from pymodaq.utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.data import DataRaw, DataToExport
+from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
 
 
@@ -60,7 +60,7 @@ class DAQ_Move(ParameterManager, ControlModule):
     ----------
     init_signal: Signal[bool]
         This signal is emitted when the chosen actuator is correctly initialized
-    move_done_signal: Signal[str, float]
+    move_done_signal: Signal[str, DataActuator]
         This signal is emitted when the chosen actuator finished its action. It gives the actuator's name and current
         value
     bounds_signal: Signal[bool]
@@ -72,8 +72,8 @@ class DAQ_Move(ParameterManager, ControlModule):
     """
     settings_name = 'daq_move_settings'
 
-    move_done_signal = Signal(str, float)
-    current_value_signal = Signal(str, float)
+    move_done_signal = Signal(DataActuator)
+    current_value_signal = Signal(DataActuator)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
     _update_settings_signal = Signal(edict)
@@ -120,9 +120,9 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         self._move_done_bool = True
 
-        self._current_value = 0.
-        self._target_value = 0.
-        self._relative_value = 0.
+        self._current_value = DataActuator(title)
+        self._target_value: DataActuator(title)
+        self._relative_value: DataActuator(title)
 
         self._refresh_timer = QTimer()
         self._refresh_timer.timeout.connect(self.get_actuator_value)
@@ -184,8 +184,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         ActuatorEnlargeableSaver
         """
         if data is None:
-            data = DataToExport(name=self.title, data=[DataRaw(name=self.title, dim='Data0D',
-                                                               data=[np.array([self._current_value])])])
+            data = DataToExport(name=self.title, data=[self._current_value])
         self._add_data_to_saver(data, where=where)
         # todo: test this for logging
 
@@ -242,21 +241,21 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif move_command.move_type == 'home':
             self.move_home(move_command.value)
 
-    def move_abs(self, value, send_to_tcpip=False):
+    def move_abs(self, value: DataActuator, send_to_tcpip=False):
         """Move the connected hardware to the absolute value
 
         Returns nothing but the move_done_signal will be send once the action is done
 
         Parameters
         ----------
-        value: float
+        value: ndarray
             The value the actuator should reach
         send_to_tcpip: bool
             if True, this position is send through the TCP/IP communication canal
         """
         try:
             self._send_to_tcpip = send_to_tcpip
-            if np.all(value != self._current_value):  # in case value is a ndarray (very specific cases...)
+            if value != self._current_value:
                 if self.ui is not None:
                     self.ui.move_done = False
                 self._move_done_bool = False
@@ -330,7 +329,9 @@ class DAQ_Move(ParameterManager, ControlModule):
         if self._initialized_state:
             self.init_hardware(False)
         self.quit_signal.emit()
-        self.parent.close()
+        if self.ui is not None:
+            self.ui.close()
+        # self.parent.close()
 
     def init_hardware_ui(self, do_init=True):
         """Programmatic actuator's Initialization
@@ -469,9 +470,12 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif status.command == "get_actuator_value" or status.command == 'check_position':
             if self.ui is not None:
                 self.ui.display_value(status.attribute[0])
+                if self.ui.is_action_checked('show_graph'):
+                    self.ui.show_data(DataToExport(name=self.title,
+                                                   data=[status.attribute[0]]))
             self._current_value = status.attribute[0]
-            self.current_value_signal.emit(self.title, self._current_value)
-            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+            self.current_value_signal.emit(self._current_value)
+            if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
         elif status.command == "move_done":
@@ -480,7 +484,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self.ui.move_done = True
             self._current_value = status.attribute[0]
             self._move_done_bool = True
-            self.move_done_signal.emit(self._title, status.attribute[0])
+            self.move_done_signal.emit(status.attribute[0])
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
@@ -655,17 +659,21 @@ class DAQ_Move_Hardware(QObject):
     """
     status_sig = Signal(ThreadCommand)
 
-    def __init__(self, actuator_type, position, title='actuator'):
+    def __init__(self, actuator_type, position: DataActuator, title='actuator'):
         super().__init__()
         self.logger = set_logger(f'{logger.name}.{title}.actuator')
         self._title = title
-        self.hardware = None
+        self.hardware: DAQ_Move_base = None
         self.actuator_type = actuator_type
-        self.current_position = position
-        self._target_value = 0
+        self.current_position: DataActuator = position
+        self._target_value: DataActuator = None
         self.hardware_adress = None
         self.axis_address = None
         self.motion_stoped = False
+
+    @property
+    def title(self):
+        return self._title
 
     def close(self):
         """
@@ -680,7 +688,10 @@ class DAQ_Move_Hardware(QObject):
         """Get the current position checking the hardware value.
         """
         pos = self.hardware.get_actuator_value()
-        return pos
+        if self.hardware.data_actuator_type.name == 'float':
+            return DataActuator(self._title, data=pos)
+        else:
+            return pos
 
     def check_position(self):
         """Get the current position checking the hardware position (deprecated)
@@ -735,49 +746,36 @@ class DAQ_Move_Hardware(QObject):
             self.logger.exception(str(e))
             return status
 
-    def move_abs(self, position, polling=True):
+    def move_abs(self, position: DataActuator, polling=True):
         """
-            Make the hardware absolute move from the given position.
 
-            =============== ========= =======================
-            **Parameters**  **Type**   **Description**
-
-            *position*       float     The absolute position
-            =============== ========= =======================
-
-            See Also
-            --------
-            move_Abs
         """
-        if isinstance(position, Number):
-            position = float(position)  # because it may be a numpy float and could cause issues
-            # see https://github.com/pythonnet/pythonnet/issues/1833
+        # if isinstance(position, Number):
+        #     position = float(position)  # because it may be a numpy float and could cause issues
+        #     # see https://github.com/pythonnet/pythonnet/issues/1833
         self._target_value = position
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
-        pos = self.hardware.move_abs(position)
+        if self.hardware.data_actuator_type.name == 'float':
+            self.hardware.move_abs(position.value())
+        else:
+            self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
-    def move_rel(self, rel_position, polling=True):
+    def move_rel(self, rel_position: DataActuator, polling=True):
         """
-            Make the hardware relative move from the given relative position added to the current one.
 
-            ================ ========= ======================
-            **Parameters**   **Type**  **Description**
-
-             *position*       float    The relative position
-            ================ ========= ======================
-
-            See Also
-            --------
-            move_Rel
         """
-        rel_position = float(rel_position)  # because it may be a numpy float and could cause issues
-        # see https://github.com/pythonnet/pythonnet/issues/1833
+
         self.hardware.move_is_done = False
         self._target_value = self.current_position + rel_position
         self.hardware.ispolling = polling
-        pos = self.hardware.move_rel(rel_position)
+
+        if self.hardware.data_actuator_type.name == 'float':
+            self.hardware.move_rel(rel_position.value())
+        else:
+            self.hardware.move_rel(rel_position)
+
         self.hardware.poll_moving()
 
     @Slot(float)
@@ -800,8 +798,8 @@ class DAQ_Move_Hardware(QObject):
         self._target_value = 0
         self.hardware.move_home()
 
-    @Slot(float)
-    def move_done(self, pos):
+    @Slot(DataActuator)
+    def move_done(self, pos: DataActuator):
         """Send the move_done signal back to the main class
         """
         self._current_value = pos
