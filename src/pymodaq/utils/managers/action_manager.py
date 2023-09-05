@@ -48,7 +48,7 @@ class QAction(QAction):
         self.setIcon(create_icon(icon_name))
 
 
-def addaction(name: str, icon_name: str = '', tip='', checkable=False, slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
+def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut=None):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -177,7 +177,8 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name: str, name: str, icon_name: str = '', tip='', checkable=False, toolbar=None, menu=None,
+    def add_action(self, short_name: str = '', name: str = '', icon_name: str = '', tip='', checkable=False,
+                   toolbar=None, menu=None,
                    visible=True, shortcut=None, auto_toolbar=True, auto_menu=True):
         """Create a new action and add it to toolbar and menu
 
