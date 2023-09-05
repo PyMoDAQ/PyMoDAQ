@@ -913,3 +913,17 @@ class TestDataToExport:
         assert data1[0] == dat1.average(dat3, WEIGHT)
         assert data1[1] == dat2.average(dat2, WEIGHT)
 
+    def test_merge(self):
+
+        dat1 = init_data(data=DATA1D, Ndata=1, name='data1D1')
+        dat2 = init_data(data=0.2 * DATA1D, Ndata=2, name='data1D2')
+        dat3 = init_data(data=-0.7 * DATA1D, Ndata=3, name='data1D3')
+
+        dte = data_mod.DataToExport('merging', data=[dat1, dat2, dat3])
+
+        dwa = dte.merge_as_dwa('Data1D')
+
+        assert len(dwa) == 6
+        assert np.all(dwa[0] == pytest.approx(DATA1D))
+        assert np.all(dwa[1] == pytest.approx(0.2*DATA1D))
+        assert np.all(dwa[3] == pytest.approx(-0.7*DATA1D))

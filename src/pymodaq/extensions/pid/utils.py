@@ -2,11 +2,13 @@ import importlib
 import inspect
 import pkgutil
 from pathlib import Path
+from typing import Union, List
 
 from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
+from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator
 
 logger = set_logger(get_module_name(__file__))
 
@@ -17,18 +19,8 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class InputFromDetector:
-    def __init__(self, values=[]):
-        super().__init__()
-
-        self.values = values
-
-    def __repr__(self):
-        return f'Inputs with current values: {self.values}'
-
-
 class OutputToActuator:
-    def __init__(self, mode='rel', values=[]):
+    def __init__(self, mode='rel', values=DataToExport):
         super().__init__()
         if mode not in ['abs', 'rel']:
             raise ValueError(f'Incorrect mode for the OutputToActuator object: {mode}')
@@ -110,21 +102,21 @@ class PIDModelGeneric:
         self.setpoint(self.setpoint_ini)
         self.apply_constants()
 
-    def convert_input(self, measurements):
+    def convert_input(self, measurements: DataToExport) -> DataToExport:
         """
         Convert the measurements in the units to be fed to the PID (same dimensionality as the setpoint)
         Parameters
         ----------
-        measurements: (Ordereddict) Ordereded dict of object from which the model extract a value of the same units as the setpoint
+        measurements: DataToExport
+         DataToExport object from which the model extract a value of the same units as the setpoint
 
         Returns
         -------
-        float: the converted input
-
+        DataToExport: the converted input as 0D DataCalculated stored in a DataToExport
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs, dt, stab=True):
+    def convert_output(self, outputs: List[float], dt, stab=True) -> OutputToActuator:
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
@@ -137,7 +129,10 @@ class PIDModelGeneric:
 
         """
         self.curr_output = outputs
-        return OutputToActuator(mode='rel', values=outputs)
+        return OutputToActuator(mode='rel',
+                                values=DataToExport('pid',
+                                                    data=[DataActuator(self.actuators_name[ind], outputs[ind])
+                                                          for ind in range(len(outputs))]))
 
 
 def main(xmlfile):
@@ -145,7 +140,6 @@ def main(xmlfile):
     from pymodaq.utils.config import get_set_preset_path
     from pathlib import Path
     from qtpy import QtWidgets
-    from extensions.pid.pid_controller import DAQ_PID
 
     import sys
     app = QtWidgets.QApplication(sys.argv)
@@ -164,12 +158,7 @@ def main(xmlfile):
         pid_window = QtWidgets.QMainWindow()
         pid_window.setCentralWidget(pid_area)
 
-        prog = DAQ_PID(pid_area)
-        pid_window.show()
-        pid_window.setWindowTitle('PidController')
-        prog.set_module_manager(dashboard.detector_modules, dashboard.actuators_modules)
-        QtWidgets.QApplication.processEvents()
-
+        prog = dashboard.load_pid_module(pid_window)
 
     else:
         msgBox = QtWidgets.QMessageBox()
