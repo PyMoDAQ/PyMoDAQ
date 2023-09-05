@@ -741,6 +741,34 @@ class TestDataToExport:
         assert len(data) == 3
         assert data.data == [dat1, dat2, dat3]
 
+    def test_getitem(self):
+        dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+        dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+        dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+
+        data = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+        assert isinstance(data[0], data_mod.DataWithAxes)
+
+        assert data[0] == dat0D
+        assert data[1] == dat1D_calculated
+        assert data[2] == dat1D_raw
+
+        index_slice = 1
+        sliced_data = data[index_slice:]
+        assert isinstance(sliced_data, data_mod.DataToExport)
+        assert len(sliced_data) == len(data) - index_slice
+
+        sliced_data = data[0:2]
+        assert len(sliced_data) == 2
+        assert sliced_data[0] == dat0D
+        assert sliced_data[1] == dat1D_calculated
+
+        sliced_data = data[0::2]
+        assert len(sliced_data) == 2
+        assert sliced_data[0] == dat0D
+        assert sliced_data[1] == dat1D_raw
+
     def test_get_data_from_source(self):
         dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
         dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')

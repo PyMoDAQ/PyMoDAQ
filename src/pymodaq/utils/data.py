@@ -1694,9 +1694,11 @@ class DataToExport(DataLowLevel):
         else:
             raise StopIteration
 
-    def __getitem__(self, item) -> DataWithAxes:
+    def __getitem__(self, item) -> Union[DataWithAxes, DataToExport]:
         if isinstance(item, int) and 0 <= item < len(self):
             return self.data[item]
+        elif isinstance(item, slice):
+            return DataToExport(self.name, data=[self[ind] for ind in list(range(len(self))[item])])
         else:
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
