@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import pkgutil
+import warnings
 from pathlib import Path
 from typing import Union, List
 
@@ -30,6 +31,32 @@ class OutputToActuator:
 
     def __repr__(self):
         return f'Output in {self.mode} mode with current values: {self.values}'
+
+
+class DataToActuatorPID(DataToExport):
+    """ Particular case of a DataToExport adding one named parameter to indicate what kind of change should be applied
+    to the actuators, absolute or relative
+
+    Attributes
+    ----------
+    mode: str
+        Adds an attribute called mode holding a string describing the type of change: relative or absolute
+
+    Parameters
+    ---------
+    mode: str
+        either 'rel' or 'abs' for a relative or absolute change of the actuator's values
+    """
+
+    def __init__(self, *args, mode='rel', **kwargs):
+        if mode not in ['rel', 'abs']:
+            warnings.warn('Incorrect mode for the actuators, switching to default relative mode: rel')
+            mode = 'rel'
+        kwargs.update({'mode': mode})
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f'{super().__repr__()}: {self.mode}'
 
 
 class PIDModelGeneric:
@@ -116,7 +143,7 @@ class PIDModelGeneric:
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[float], dt, stab=True) -> OutputToActuator:
+    def convert_output(self, outputs: List[float], dt, stab=True) -> DataToActuatorPID:
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
@@ -125,14 +152,13 @@ class PIDModelGeneric:
         dt: (float) elapsed time in seconds since last call
         Returns
         -------
-        OutputToActuator: the converted output as an OutputToActuator object
+        DataToActuatorPID: the converted output as a DataToActuatorPID object (derived from DataToExport)
 
         """
         self.curr_output = outputs
-        return OutputToActuator(mode='rel',
-                                values=DataToExport('pid',
-                                                    data=[DataActuator(self.actuators_name[ind], outputs[ind])
-                                                          for ind in range(len(outputs))]))
+        return DataToActuatorPID('pid', mode='rel',
+                                 data=[DataActuator(self.actuators_name[ind], data=outputs[ind])
+                                       for ind in range(len(outputs))])
 
 
 def main(xmlfile):

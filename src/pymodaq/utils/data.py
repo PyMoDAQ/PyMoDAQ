@@ -1866,10 +1866,13 @@ class DataToExport(DataLowLevel):
                     data.append(_data)
         return data
 
-    def get_data_from_name(self, name: str) -> List[DataWithAxes]:
+    def get_data_from_name(self, name: str) -> DataWithAxes:
         """Get the data matching the given name"""
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
+
+    def get_data_from_names(self, names: List[str]) -> DataToExport:
+        return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
 
     def get_data_from_name_origin(self, name: str, origin: str = None) -> DataWithAxes:
         """Get the data matching the given name and the given origin"""

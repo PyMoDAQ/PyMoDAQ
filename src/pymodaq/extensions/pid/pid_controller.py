@@ -15,11 +15,11 @@ from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_va
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.gui_utils.widgets import QLED
-from pymodaq.extensions.pid.utils import OutputToActuator, get_models
+from pymodaq.extensions.pid.utils import DataToActuatorPID, get_models
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.widgets.label import LabelWithFont
-from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator
+from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataRaw
 from pymodaq.utils.config import Config
 
 config = Config()
@@ -156,10 +156,10 @@ class DAQ_PID(CustomApp):
         self.initialized_state = True
 
     def process_output(self, data: DataToExport):
-        inputs = data.get_data_from_full_names(
-            ['inputs/Xaxis', 'inputs/Yaxis']).merge_as_dwa('Data0D')
-        self.curr_points = [float(d) for d in inputs.data]
-        self.output_viewer.show_data(data.get_data_from_full_names(['pid/Xpiezo', 'pid/Ypiezo']).merge_as_dwa('Data0D'))
+        inputs: DataRaw = data.get_data_from_name('inputs')
+        outputs: DataRaw = data.get_data_from_name('outputs')
+        self.curr_points = [float(d) for d in inputs]
+        self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
 
     def enable_controls_pid(self, enable=False):
@@ -482,11 +482,11 @@ class PIDRunner(QObject):
                                                                             data=[np.array([setpoints[ind]])])
                                                              for ind in range(Nsetpoints)])
         self.outputs = [0. for _ in range(Nsetpoints)]
-        self.outputs_to_actuators = OutputToActuator(
-            mode='rel',
-            values=DataToExport('pid',
-                                data=[DataActuator(self.model_class.actuators_name[ind], data=self.outputs[ind])
-                                      for ind in range(Nsetpoints)]))
+        self.outputs_to_actuators = DataToActuatorPID('pid',
+                                                      mode='rel',
+                                                      data=[DataActuator(self.model_class.actuators_name[ind],
+                                                                         data=self.outputs[ind])
+                                                            for ind in range(Nsetpoints)])
 
         if 'sample_time' in params:
             self.sample_time = params['sample_time']
@@ -508,9 +508,8 @@ class PIDRunner(QObject):
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
-        dte = DataToExport('toplot')
-        dte.append(self.outputs_to_actuators.values)
-        dte.append(self.inputs_from_dets)
+        dte = DataToExport('toplot', data=[self.outputs_to_actuators.merge_as_dwa('Data0D', name='outputs')])
+        dte.append(self.inputs_from_dets.merge_as_dwa('Data0D', name='inputs'))
         self.pid_output_signal.emit(dte)
 
     @Slot(ThreadCommand)
@@ -586,10 +585,11 @@ class PIDRunner(QObject):
                     self.outputs = [pid.setpoint for pid in self.pids]
 
                 dt = time.perf_counter() - self.current_time
-                self.outputs_to_actuators: OutputToActuator = self.model_class.convert_output(self.outputs, dt, stab=True)
+                self.outputs_to_actuators: DataToActuatorPID = self.model_class.convert_output(self.outputs, dt,
+                                                                                               stab=True)
 
                 if not self.paused:
-                    self.modules_manager.move_actuators(self.outputs_to_actuators.values,
+                    self.modules_manager.move_actuators(self.outputs_to_actuators,
                                                         self.outputs_to_actuators.mode,
                                                         polling=False)
 
