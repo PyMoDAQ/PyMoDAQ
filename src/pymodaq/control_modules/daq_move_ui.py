@@ -249,9 +249,9 @@ class DAQ_Move_UI(ControlModuleUI):
                         toolbar=self.move_toolbar)
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True,
+        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_config', 'Show Config', 'tree', "Show Plugin Config", checkable=False,
+        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
                         toolbar=self.toolbar)
         self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
                         toolbar=self.toolbar)
