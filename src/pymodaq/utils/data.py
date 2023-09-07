@@ -1677,6 +1677,21 @@ class DataToExport(DataLowLevel):
             raise TypeError(f'Could not average a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
+    def merge_as_dwa(self, dim: DataDim, name: str = None) -> DataRaw:
+        """ attempt to merge all dwa into one
+
+        Only possible if all dwa and underlying data have same shape
+        """
+        dim = enum_checker(DataDim, dim)
+        if name is None:
+            name = self.name
+        filtered_data = self.get_data_from_dim(dim)
+        ndarrays = []
+        for dwa in filtered_data:
+            ndarrays.extend(dwa.data)
+        dwa = DataRaw(name, dim=dim, data=ndarrays)
+        return dwa
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.name} <len:{len(self)}>'
 
@@ -1851,10 +1866,13 @@ class DataToExport(DataLowLevel):
                     data.append(_data)
         return data
 
-    def get_data_from_name(self, name: str) -> List[DataWithAxes]:
+    def get_data_from_name(self, name: str) -> DataWithAxes:
         """Get the data matching the given name"""
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
+
+    def get_data_from_names(self, names: List[str]) -> DataToExport:
+        return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
 
     def get_data_from_name_origin(self, name: str, origin: str = None) -> DataWithAxes:
         """Get the data matching the given name and the given origin"""

@@ -57,6 +57,7 @@ timeout = 10000  # default duration in ms to wait for data to be acquirred
 [presets]
 default_preset_for_scan = "preset_default"
 default_preset_for_logger = "preset_default"
+default_preset_for_pid = "beam_steering_mock"
 
 [actuator]
     epsilon_default = 1

@@ -194,8 +194,7 @@ class DashBoard(QObject):
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID Controller')
-        self.pid_module = extmod.DAQ_PID(dockarea=dockarea)
-        self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
+        self.pid_module = extmod.DAQ_PID(dockarea=dockarea, dashboard=self)
         self.extensions['DAQ_PID'] = self.pid_module
         self.pid_window.show()
         return self.pid_module

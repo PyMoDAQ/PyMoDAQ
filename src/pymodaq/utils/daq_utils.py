@@ -107,6 +107,11 @@ def copy_preset():                          # pragma: no cover
         with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
             path.write_text(file.read())
 
+    path = get_set_preset_path().joinpath('beam_steering_mock.xml')
+    if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
+        with open(str(Path(__file__).parent.parent.joinpath('resources/beam_steering_mock.xml')), 'r') as file:
+            path.write_text(file.read())
+
 
 def set_qt_backend():
     backend_present = True
