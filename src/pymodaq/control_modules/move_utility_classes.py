@@ -253,6 +253,7 @@ class DAQ_Move_base(QObject):
                 self.settings.child('multiaxes', 'axis').setValue(name)
             elif isinstance(limits, dict):
                 self.settings.child('multiaxes', 'axis').setValue(limits[name])
+            QtWidgets.QApplication.processEvents()
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -272,6 +273,7 @@ class DAQ_Move_base(QObject):
             names = list(names.keys())
         grouped_axes.update({'all_items': names, 'selected': []})
         self.settings.child('grouping', 'grouped_axes').setValue(grouped_axes)
+        QtWidgets.QApplication.processEvents()
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
