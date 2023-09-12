@@ -20,19 +20,6 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class OutputToActuator:
-    def __init__(self, mode='rel', values=DataToExport):
-        super().__init__()
-        if mode not in ['abs', 'rel']:
-            raise ValueError(f'Incorrect mode for the OutputToActuator object: {mode}')
-
-        self.mode = mode
-        self.values = values
-
-    def __repr__(self):
-        return f'Output in {self.mode} mode with current values: {self.values}'
-
-
 class DataToActuatorPID(DataToExport):
     """ Particular case of a DataToExport adding one named parameter to indicate what kind of change should be applied
     to the actuators, absolute or relative

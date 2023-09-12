@@ -638,18 +638,19 @@ class DataBase(DataLowLevel):
         return self._comparison_common(other, '__gt__')
 
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
-        """ Compute the weighted average between self and other DataBase and attributes it to self
+        """ Compute the weighted average between self and other DataBase
 
         Parameters
         ----------
         other_data: DataBase
         weight: int
             The weight the 'other' holds with respect to self
-
+        Returns
+        -------
+        DataBase: the averaged DataBase object
         """
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
-            new_data = copy.copy(self)
-            return (other * (weight - 1) + new_data) / weight
+            return (other * weight + self) / (weight + 1)
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')

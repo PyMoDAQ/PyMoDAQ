@@ -1391,8 +1391,9 @@ class DAQ_Detector(QObject):
                         QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.detector.live_mode_available:
-                        break  # if live can be done in the plugin breaks the while loop
+                    if self.detector.live_mode_available and (not self.hardware_averaging and self.average_done):
+                        break  # if live can be done in the plugin breaks the while loop except if average is asked but
+                        # not done hardware wise
                 except Exception as e:
                     self.logger.exception(str(e))
             self.status_sig.emit(ThreadCommand('grab_stopped'))

@@ -347,11 +347,11 @@ class TestDataBase:
         WEIGHT = 5
         FRAC = 0.23
         data = init_data(data=DATA2D, Ndata=2)
-        data1 = init_data(data=FRAC * DATA2D, Ndata=2)
+        data1 = init_data(data=-DATA2D, Ndata=2)
 
-        data_averaged = data.average(data1, WEIGHT)
-        for ind_data in range(len(data_averaged)):
-            assert np.all(data_averaged[ind_data] == pytest.approx(DATA2D * ((WEIGHT-1) * FRAC + 1) / WEIGHT))
+        assert data.average(data1, 1) == data * 0
+        assert data.average(data, 1) == data
+        assert data.average(data, 2) == data
 
     def test_append(self):
         Ndata = 2
