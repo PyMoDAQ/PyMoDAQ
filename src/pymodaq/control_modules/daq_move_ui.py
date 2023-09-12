@@ -16,6 +16,9 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
 from pymodaq.control_modules.utils import ControlModuleUI
+from pymodaq.utils.gui_utils import DockArea
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
+from pymodaq.utils.data import DataWithAxes, DataToExport, DataActuator
 
 
 class DAQ_Move_UI(ControlModuleUI):
@@ -62,8 +65,8 @@ class DAQ_Move_UI(ControlModuleUI):
 
         self.enable_move_buttons(False)
 
-    def display_value(self, value: float):
-        self.current_value_sb.setValue(value)
+    def display_value(self, value: DataActuator):
+        self.current_value_sb.setValue(value.value())
 
     @property
     def actuator_init(self):
@@ -143,6 +146,9 @@ class DAQ_Move_UI(ControlModuleUI):
             self.abs_value_sb_2.setSingleStep(properties['step'])
             self.abs_value_sb_bis.setSingleStep(properties['step'])
 
+    def show_data(self, data: DataToExport):
+        self.viewer.show_data(data)
+
     def setup_docks(self):
         self.parent.setLayout(QVBoxLayout())
         self.parent.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
@@ -155,6 +161,12 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui = QWidget()
         self.control_ui = QWidget()
         self.settings_ui = QWidget()
+        self.graph_ui = QWidget()
+        self.graph_ui.setLayout(QtWidgets.QHBoxLayout())
+        self.graph_ui.layout().setContentsMargins(0, 0, 0, 0)
+        dockarea = DockArea()
+        self.graph_ui.layout().addWidget(dockarea)
+        self.viewer = ViewerDispatcher(dockarea)
 
         left_widget = QWidget()
         left_widget.setLayout(QVBoxLayout())
@@ -237,9 +249,11 @@ class DAQ_Move_UI(ControlModuleUI):
                         toolbar=self.move_toolbar)
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True,
+        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_config', 'Show Config', 'tree', "Show Plugin Config", checkable=False,
+        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
+                        toolbar=self.toolbar)
+        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.toolbar)
@@ -253,6 +267,8 @@ class DAQ_Move_UI(ControlModuleUI):
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self.control_ui.setVisible(show))
         self.connect_action('show_settings', lambda show: self.settings_ui.setVisible(show))
+        self.connect_action('show_graph', lambda show: self.graph_ui.setVisible(show))
+
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
         self.connect_action('refresh_value',
                             lambda do_refresh: self.command_sig.emit(ThreadCommand('loop_get_value', do_refresh)))
@@ -295,16 +311,16 @@ class DAQ_Move_UI(ControlModuleUI):
                                                      self.actuators_combo.currentText()]))
 
     def emit_move_abs(self, spinbox):
-        self.command_sig.emit(ThreadCommand('move_abs', spinbox.value()))
+        self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value())))
 
     def emit_move_rel(self, sign):
-        self.command_sig.emit(ThreadCommand('move_rel', self.rel_value_sb.value() * (1 if sign == '+'
-                                                                                     else -1)))
+        self.command_sig.emit(ThreadCommand('move_rel',
+                                            DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+'
+                                                                                           else -1))))
 
-
-
-        
-
+    def close(self):
+        self.graph_ui.close()
+        self.parent.close()
 
 
 def main(init_qt=True):

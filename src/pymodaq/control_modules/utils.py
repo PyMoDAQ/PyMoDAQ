@@ -190,6 +190,7 @@ class ControlModule(QObject):
                 elif status.attribute[2] == 'limits':
                     self.settings.child(f'{control_module_type}_settings',
                                         *status.attribute[0]).setLimits(status.attribute[1])
+
                 elif status.attribute[2] == 'options':
                     self.settings.child(f'{control_module_type}_settings',
                                         *status.attribute[0]).setOpts(**status.attribute[1])

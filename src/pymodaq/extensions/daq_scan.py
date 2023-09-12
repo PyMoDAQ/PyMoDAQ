@@ -41,6 +41,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving, data_saving
+from pymodaq.utils.data import DataToExport, DataActuator
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -1069,19 +1070,10 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.move_actuators(command.attribute)
 
     def set_ini_positions(self):
-        """
-            | Set the positions from the scan_move attribute.
-            |
-            | Move all activated modules to specified positions.
-            | Check the module corresponding to the name assigned in pos.
-
-            See Also
-            --------
-            DAQ_Move_main.daq_move.move_Abs
-        """
+        """ Set the actuators's positions totheir initial value as defined in the scanner  """
         try:
             if self.scanner.scan_sub_type != 'Adaptive':
-                self.modules_manager.move_actuators(list(self.scanner.positions[0]))
+                self.modules_manager.move_actuators(self.scanner.positions_at(0))
 
         except Exception as e:
             logger.exception(str(e))
@@ -1109,7 +1101,7 @@ class DAQScanAcquisition(QObject):
                     if not self.isadaptive:
                         if self.ind_scan >= len(self.scanner.positions):
                             break
-                        positions = self.scanner.positions[self.ind_scan]  # get positions
+                        positions = self.scanner.positions_at(self.ind_scan)  # get positions
                     else:
                         pass
                         #todo update for v4
@@ -1135,7 +1127,7 @@ class DAQScanAcquisition(QObject):
                     #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
 
-                    QThread.msleep(self.scan_settings.child('time_flow', 'wait_time_between').value())
+                    QThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
 
                     #grab datas and wait for grab completion
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)

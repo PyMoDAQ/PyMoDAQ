@@ -15,7 +15,7 @@ from  pymodaq.utils.parameter import utils as putils
 import pymodaq.utils.parameter.pymodaq_ptypes
 from pymodaq.utils.parameter.ioxml import parameter_to_xml_string
 from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
-from pymodaq.utils.data import DataFromPlugins
+from pymodaq.utils.data import DataFromPlugins, DataActuator
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pyqtgraph.parametertree import Parameter
@@ -510,12 +510,12 @@ class TCPClient(TCPClientTemplate, QObject):
         elif command.command == 'position_is':
             if self.socket is not None:
                 self.socket.send_string('position_is')
-                self.socket.send_scalar(command.attribute[0])
+                self.socket.send_scalar(command.attribute[0].value())
 
         elif command.command == 'move_done':
             if self.socket is not None:
                 self.socket.send_string('move_done')
-                self.socket.send_scalar(command.attribute[0])
+                self.socket.send_scalar(command.attribute[0].value())
 
         elif command.command == 'x_axis':
             if self.socket is not None:
@@ -601,11 +601,11 @@ class TCPClient(TCPClientTemplate, QObject):
 
             elif message == 'move_abs':
                 position = self.socket.get_scalar()
-                messg.attribute = [position]
+                messg.attribute = [DataActuator(data=position)]
 
             elif message == 'move_rel':
                 position = self.socket.get_scalar()
-                messg.attribute = [position]
+                messg.attribute = [DataActuator(data=position)]
 
             self.cmd_signal.emit(messg)
 

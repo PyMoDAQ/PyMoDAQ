@@ -500,7 +500,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if snap_state:
             self.update_status(f'{self._title}: Snap')
             self.command_hardware.emit(
-                ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
+                ThreadCommand("single", dict(Naverage=self.settings['main_settings', 'Naverage'])))
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
@@ -509,7 +509,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.thread_status(ThreadCommand("update_channels", ))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
-                    ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
+                    ThreadCommand("grab", dict(Naverage=self.settings['main_settings', 'Naverage'])))
 
     def take_bkg(self):
         """ Do a snap and store data to be used as background into an attribute: `self._bkg`
@@ -1219,12 +1219,12 @@ class DAQ_Detector(QObject):
         elif command.command == "grab":
             self.single_grab = False
             self.grab_state = True
-            self.grab_data(*command.attribute)
+            self.grab_data(**command.attribute)
 
         elif command.command == "single":
             self.single_grab = True
             self.grab_state = True
-            self.single(*command.attribute)
+            self.single(**command.attribute)
 
         elif command.command == "stop_grab":
             self.grab_state = False
@@ -1391,8 +1391,9 @@ class DAQ_Detector(QObject):
                         QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.detector.live_mode_available:
-                        break  # if live can be done in the plugin breaks the while loop
+                    if self.detector.live_mode_available and (not self.hardware_averaging and self.average_done):
+                        break  # if live can be done in the plugin breaks the while loop except if average is asked but
+                        # not done hardware wise
                 except Exception as e:
                     self.logger.exception(str(e))
             self.status_sig.emit(ThreadCommand('grab_stopped'))

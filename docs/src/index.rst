@@ -22,7 +22,8 @@ __ https://youtu.be/TrRy6HL3h3c
 
 
 .. note::
-   Second edition of the PyMoDAQ's Days: Paris 16/17 October. Training session in Paris, France 18/19/20 October 2023
+   * Second edition of the PyMoDAQ's Days: Paris 16/17 October 2023. Register on https://pymodaq-jt2022.sciencesconf.org/
+   * Training session in Paris, France 18/19/20 October 2023
 
 
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.

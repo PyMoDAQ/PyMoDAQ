@@ -475,8 +475,8 @@ class DataBase(DataLowLevel):
     >>> import numpy as np
     >>> from pymodaq.utils.data import DataBase, DataSource, DataDim, DataDistribution
     >>> data = DataBase('mydata', source=DataSource['raw'], dim=DataDim['Data1D'], \
-distribution=DataDistribution['uniform'], data=[np.array([1.,2.,3.]), np.array([4.,5.,6.])],\
-labels=['channel1', 'channel2'], origin='docutils code')
+    distribution=DataDistribution['uniform'], data=[np.array([1.,2.,3.]), np.array([4.,5.,6.])],\
+    labels=['channel1', 'channel2'], origin='docutils code')
     >>> data.dim
     <DataDim.Data1D: 1>
     >>> data.source
@@ -567,6 +567,10 @@ labels=['channel1', 'channel2'], origin='docutils code')
                     raise ValueError('The shapes of arrays stored into the data are not consistent')
                 new_data[ind_array] = self[ind_array] + other[ind_array]
             return new_data
+        elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
+            new_data = copy.deepcopy(self)
+            new_data = new_data + DataActuator(data=other)
+            return new_data
         else:
             raise TypeError(f'Could not add a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')
@@ -576,6 +580,10 @@ labels=['channel1', 'channel2'], origin='docutils code')
             new_data = copy.deepcopy(self)
             for ind_array in range(len(new_data)):
                 new_data[ind_array] = self[ind_array] - other[ind_array]
+            return new_data
+        elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
+            new_data = copy.deepcopy(self)
+            new_data = new_data - DataActuator(data=other)
             return new_data
         else:
             raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
@@ -598,7 +606,7 @@ labels=['channel1', 'channel2'], origin='docutils code')
             raise TypeError(f'Could not divide a {other.__class__.__name__} and a {self.__class__.__name__} '
                             f'of a different length')
 
-    def __eq__(self, other):
+    def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
             if not(self.name == other.name and len(self) == len(other)):
                 return False
@@ -607,31 +615,51 @@ labels=['channel1', 'channel2'], origin='docutils code')
                 if self[ind].shape != other[ind].shape:
                     eq = False
                     break
-                eq = eq and np.allclose(self[ind], other[ind])
-            # labels_not = (self.labels == other.labels)
-            # if labels_not:
-            #     logger.debug(f'labels from self:{self.labels}, other: {other.labels}')
-            # eq = (eq and labels_not)
+                eq = eq and np.all(getattr(self[ind], operator)(other[ind]))
             return eq
+        elif isinstance(other, numbers.Number):
+            return np.all(getattr(self[0], operator)(other))
         else:
             raise TypeError()
 
+    def __eq__(self, other):
+        return self._comparison_common(other, '__eq__')
+
+    def __le__(self, other):
+        return self._comparison_common(other, '__le__')
+
+    def __lt__(self, other):
+        return self._comparison_common(other, '__lt__')
+
+    def __ge__(self, other):
+        return self._comparison_common(other, '__ge__')
+
+    def __gt__(self, other):
+        return self._comparison_common(other, '__gt__')
+
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
-        """ Compute the weighted average between self and other DataBase and attributes it to self
+        """ Compute the weighted average between self and other DataBase
 
         Parameters
         ----------
         other_data: DataBase
         weight: int
             The weight the 'other' holds with respect to self
-
+        Returns
+        -------
+        DataBase: the averaged DataBase object
         """
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
-            new_data = copy.copy(self)
-            return (other * (weight - 1) + new_data) / weight
+            return (other * weight + self) / (weight + 1)
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')
+
+    def abs(self):
+        """ Take the absolute value of itself"""
+        new_data = copy.copy(self)
+        new_data.data = [np.abs(dat) for dat in new_data]
+        return new_data
 
     def append(self, data: DataWithAxes):
         for dat in data:
@@ -1504,8 +1532,33 @@ class DataRaw(DataWithAxes):
         super().__init__(*args, source=DataSource['raw'], **kwargs)
 
 
+class DataActuator(DataRaw):
+    """Specialized DataWithAxes set with source as 'raw'. To be used for raw data generated by actuator plugins"""
+    def __init__(self, *args, **kwargs):
+        if len(args) == 0 and 'name' not in kwargs:
+            args = ['actuator']
+        if 'data' not in kwargs:
+            kwargs['data'] = [np.array([0.])]
+        elif isinstance(kwargs['data'], numbers.Number):  # useful formatting
+            kwargs['data'] = [np.array([kwargs['data']])]
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        if self.dim.name == 'Data0D':
+            return f'{self.__class__.__name__} <{self.data[0][0]}>'
+        else:
+            return f'{self.__class__.__name__} <{self.shape}>>'
+
+    def value(self):
+        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the average"""
+        if self.length == 1 and self.size == 1:
+            return float(self.data[0][0])
+        else:
+            return float(np.mean(self.data))
+
+
 class DataFromPlugins(DataRaw):
-    """Specialized DataWithAxes set with source as 'raw'. To be used for raw data generated by plugins"""
+    """Specialized DataWithAxes set with source as 'raw'. To be used for raw data generated by Detector plugins"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1625,6 +1678,21 @@ class DataToExport(DataLowLevel):
             raise TypeError(f'Could not average a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
+    def merge_as_dwa(self, dim: DataDim, name: str = None) -> DataRaw:
+        """ attempt to merge all dwa into one
+
+        Only possible if all dwa and underlying data have same shape
+        """
+        dim = enum_checker(DataDim, dim)
+        if name is None:
+            name = self.name
+        filtered_data = self.get_data_from_dim(dim)
+        ndarrays = []
+        for dwa in filtered_data:
+            ndarrays.extend(dwa.data)
+        dwa = DataRaw(name, dim=dim, data=ndarrays)
+        return dwa
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.name} <len:{len(self)}>'
 
@@ -1642,9 +1710,11 @@ class DataToExport(DataLowLevel):
         else:
             raise StopIteration
 
-    def __getitem__(self, item) -> DataWithAxes:
+    def __getitem__(self, item) -> Union[DataWithAxes, DataToExport]:
         if isinstance(item, int) and 0 <= item < len(self):
             return self.data[item]
+        elif isinstance(item, slice):
+            return DataToExport(self.name, data=[self[ind] for ind in list(range(len(self))[item])])
         else:
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
@@ -1654,7 +1724,7 @@ class DataToExport(DataLowLevel):
         else:
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
-    def get_names(self, dim: DataDim = None):
+    def get_names(self, dim: DataDim = None) -> List[str]:
         """Get the names of the stored DataWithAxes,  eventually filtered by dim
 
         Parameters
@@ -1797,10 +1867,13 @@ class DataToExport(DataLowLevel):
                     data.append(_data)
         return data
 
-    def get_data_from_name(self, name: str) -> List[DataWithAxes]:
+    def get_data_from_name(self, name: str) -> DataWithAxes:
         """Get the data matching the given name"""
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
+
+    def get_data_from_names(self, names: List[str]) -> DataToExport:
+        return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
 
     def get_data_from_name_origin(self, name: str, origin: str = None) -> DataWithAxes:
         """Get the data matching the given name and the given origin"""

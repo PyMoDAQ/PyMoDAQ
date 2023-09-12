@@ -281,6 +281,42 @@ class TestDataBase:
         with pytest.raises(IndexError):
             data[len(data) + 1]
 
+    @pytest.mark.parametrize('datatmp', (DATA0D, DATA1D, DATA2D))
+    def test_comparison_data_actuator(self, datatmp):
+        LENGTH = 3
+        data = init_data(datatmp, LENGTH)
+        data_eq = init_data(datatmp, LENGTH)
+        data_lt = init_data(datatmp - 0.01 * np.ones(datatmp.shape), LENGTH)
+        data_gt = init_data(datatmp + 0.01 * np.ones(datatmp.shape), LENGTH)
+
+        assert data == data_eq
+        assert data >= data_eq
+        assert data <= data_eq
+        assert data > data_lt
+        assert data < data_gt
+
+    def test_comparison_numbers(self):
+        LENGTH = 1
+        data = init_data(DATA0D, LENGTH)
+        data_eq = float(DATA0D[0])
+        data_lt = float(DATA0D[0]) - 0.01
+        data_gt = float(DATA0D[0]) + 0.01
+
+        assert data == data_eq
+        assert data >= data_eq
+        assert data <= data_eq
+        assert data > data_lt
+        assert data < data_gt
+
+        ARRAY = np.array([1, 2, 1.5])
+        data = data_mod.DataActuator(data=[ARRAY])
+        assert not data > 1
+        assert data > 0.999
+        assert data >= 1
+        assert data == data_mod.DataActuator(data=[ARRAY])
+        assert data < 2.001
+        assert data <= 2
+
     def test_maths(self):
         data = init_data(data=DATA2D, Ndata=2)
         data1 = init_data(data=DATA2D, Ndata=2)
@@ -300,15 +336,22 @@ class TestDataBase:
         for ind_data in range(len(data)):
             assert np.all(data_div[ind_data] == pytest.approx(DATA2D/.85))
 
+    def test_abs(self):
+        data_p = init_data(data=DATA2D, Ndata=2)
+        data_m = init_data(data=-DATA2D, Ndata=2)
+
+        assert data_p.abs() == data_p
+        assert data_m.abs() == data_p
+
     def test_average(self):
         WEIGHT = 5
         FRAC = 0.23
         data = init_data(data=DATA2D, Ndata=2)
-        data1 = init_data(data=FRAC * DATA2D, Ndata=2)
+        data1 = init_data(data=-DATA2D, Ndata=2)
 
-        data_averaged = data.average(data1, WEIGHT)
-        for ind_data in range(len(data_averaged)):
-            assert np.all(data_averaged[ind_data] == pytest.approx(DATA2D * ((WEIGHT-1) * FRAC + 1) / WEIGHT))
+        assert data.average(data1, 1) == data * 0
+        assert data.average(data, 1) == data
+        assert data.average(data, 2) == data
 
     def test_append(self):
         Ndata = 2
@@ -647,6 +690,29 @@ class TestDataSource:
         assert data.source == data_mod.DataSource['calculated']
 
 
+class TestDataActuator:
+    def test_init(self):
+        Ndata = 2
+        data = data_mod.DataActuator('myact')
+        assert data.name == 'myact'
+        assert data.data[0] == pytest.approx(0.)
+
+        data = data_mod.DataActuator()
+        assert data.name == 'actuator'
+        assert data.dim == DataDim['Data0D']
+        assert data.length == 1
+        assert data.size == 1
+
+        assert data.shape == (1, )
+        assert data.data[0] == pytest.approx(0.)
+
+    @pytest.mark.parametrize("data_number", [23, 0.25, -0.7, 1j*12])
+    def test_quick_format(self, data_number):
+        d = data_mod.DataActuator(data=data_number)
+        assert d.name == 'actuator'
+        assert d.data[0] == np.array([data_number])
+
+
 class TestDataToExport:
     def test_init(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
@@ -674,6 +740,34 @@ class TestDataToExport:
         data.append(dat3)
         assert len(data) == 3
         assert data.data == [dat1, dat2, dat3]
+
+    def test_getitem(self):
+        dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+        dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+        dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+
+        data = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+        assert isinstance(data[0], data_mod.DataWithAxes)
+
+        assert data[0] == dat0D
+        assert data[1] == dat1D_calculated
+        assert data[2] == dat1D_raw
+
+        index_slice = 1
+        sliced_data = data[index_slice:]
+        assert isinstance(sliced_data, data_mod.DataToExport)
+        assert len(sliced_data) == len(data) - index_slice
+
+        sliced_data = data[0:2]
+        assert len(sliced_data) == 2
+        assert sliced_data[0] == dat0D
+        assert sliced_data[1] == dat1D_calculated
+
+        sliced_data = data[0::2]
+        assert len(sliced_data) == 2
+        assert sliced_data[0] == dat0D
+        assert sliced_data[1] == dat1D_raw
 
     def test_get_data_from_source(self):
         dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
@@ -819,3 +913,17 @@ class TestDataToExport:
         assert data1[0] == dat1.average(dat3, WEIGHT)
         assert data1[1] == dat2.average(dat2, WEIGHT)
 
+    def test_merge(self):
+
+        dat1 = init_data(data=DATA1D, Ndata=1, name='data1D1')
+        dat2 = init_data(data=0.2 * DATA1D, Ndata=2, name='data1D2')
+        dat3 = init_data(data=-0.7 * DATA1D, Ndata=3, name='data1D3')
+
+        dte = data_mod.DataToExport('merging', data=[dat1, dat2, dat3])
+
+        dwa = dte.merge_as_dwa('Data1D')
+
+        assert len(dwa) == 6
+        assert np.all(dwa[0] == pytest.approx(DATA1D))
+        assert np.all(dwa[1] == pytest.approx(0.2*DATA1D))
+        assert np.all(dwa[3] == pytest.approx(-0.7*DATA1D))

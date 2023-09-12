@@ -1,5 +1,6 @@
 from time import perf_counter
-from typing import Union, List, Dict
+from typing import Union, List, Dict, TYPE_CHECKING
+from numbers import Number
 
 from easydict import EasyDict as edict
 import numpy as np
@@ -16,10 +17,21 @@ from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, find_keys_from_v
 from pymodaq.utils import config as configmod
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.data import DataActuator
+from pymodaq.utils.enums import BaseEnum, enum_checker
 
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
+
+
+class DataActuatorType(BaseEnum):
+    """Enum for new or old style holding the value of the actuator"""
+    float = 0
+    DataActuator = 1
 
 
 def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
@@ -38,6 +50,7 @@ def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
                  'default': False},
                 {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                 {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+
 
 MOVE_COMMANDS = ['abs', 'rel', 'home']
 
@@ -131,9 +144,9 @@ def main(plugin_file, init=True, title='test'):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet())
 
-    Form = QtWidgets.QWidget()
-    prog = DAQ_Move(Form, title=title,)
-    Form.show()
+    widget = QtWidgets.QWidget()
+    prog = DAQ_Move(widget, title=title,)
+    widget.show()
     prog.actuator = Path(plugin_file).stem[9:]
     if init:
         prog.init_hardware_ui()
@@ -170,28 +183,29 @@ class DAQ_Move_base(QObject):
         class level attribute. Defines if the plugin controller controls multiple axes. If True, one has to define
         a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID
         parameter)
-    current_value: float
+    current_value: DataActuator
         stores the current position after each call to the get_actuator_value in the plugin
-    target_value: float
+    target_value: DataActuator
         stores the target position the controller should reach within epsilon
     """
 
-    move_done_signal = Signal(float)
+    move_done_signal = Signal(DataActuator)
     is_multiaxes = False
     stage_names = []
     params = []
     _controller_units = ''
     _epsilon = 1
+    data_actuator_type = DataActuatorType['float']
+    data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
-    def __init__(self, parent=None, params_state=None):
+    def __init__(self, parent: 'DAQ_Move_Hardware' = None, params_state: dict = None):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
         self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
-        self.current_value = 0.
-        self.target_value = 0.
+
         self._ispolling = True
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
@@ -203,6 +217,16 @@ class DAQ_Move_base(QObject):
                 self.settings.restoreState(params_state.saveState())
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
+        # self.settings.child('multiaxes',
+        #                     'axis').sigLimitsChanged.connect(lambda param,
+        #                                                             limits: self.send_param_status(
+        #    param, [(param, 'limits', None)]))
+        if parent is not None:
+            self._title = parent.title
+        else:
+            self._title = "myactuator"
+        self._current_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
+        self._target_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()
@@ -229,6 +253,7 @@ class DAQ_Move_base(QObject):
                 self.settings.child('multiaxes', 'axis').setValue(name)
             elif isinstance(limits, dict):
                 self.settings.child('multiaxes', 'axis').setValue(limits[name])
+            QtWidgets.QApplication.processEvents()
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -242,7 +267,13 @@ class DAQ_Move_base(QObject):
 
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
-        self.settings.child('multiaxes', 'axis').opts['limits'] = names
+        self.settings.child('multiaxes', 'axis').setLimits(names)
+        grouped_axes = self.settings['grouping', 'grouped_axes'].copy()  # copying the dict otherwise the valuechanged will not be triggered
+        if isinstance(names, dict):
+            names = list(names.keys())
+        grouped_axes.update({'all_items': names, 'selected': []})
+        self.settings.child('grouping', 'grouped_axes').setValue(grouped_axes)
+        QtWidgets.QApplication.processEvents()
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
@@ -276,6 +307,34 @@ class DAQ_Move_base(QObject):
             controller = new_controller
         self.controller = controller
         return controller
+
+    @property
+    def current_value(self):
+        if self.data_actuator_type.name == 'float':
+            return self._current_value.value()
+        else:
+            return self._current_value
+
+    @current_value.setter
+    def current_value(self, value: Union[float, DataActuator]):
+        if not isinstance(value, DataActuator):
+            self._current_value = DataActuator(self._title, data=value)
+        else:
+            self._current_value = value
+
+    @property
+    def target_value(self):
+        if self.data_actuator_type.name == 'float':
+            return self._target_value.value()
+        else:
+            return self._target_value
+
+    @target_value.setter
+    def target_value(self, value: Union[float, DataActuator]):
+        if not isinstance(value, DataActuator):
+            self._target_value = DataActuator(self._title, data=value)
+        else:
+            self._target_value = value
 
     @property
     def current_position(self):
@@ -317,17 +376,17 @@ class DAQ_Move_base(QObject):
     def ispolling(self, polling=True):
         self._ispolling = polling
 
-    def check_bound(self, position: float) -> float:
+    def check_bound(self, position: DataActuator) -> DataActuator:
         """ Check if the current position is within the software bounds
 
         Return the new position eventually coerced within the bounds
         """
         if self.settings.child('bounds', 'is_bounds').value():
             if position > self.settings.child('bounds', 'max_bound').value():
-                position = self.settings.child('bounds', 'max_bound').value()
+                position = DataActuator(self._title, data=self.settings.child('bounds', 'max_bound').value())
                 self.emit_status(ThreadCommand('outofbounds', []))
             elif position < self.settings.child('bounds', 'min_bound').value():
-                position = self.settings.child('bounds', 'min_bound').value()
+                position = DataActuator(self._title, data=self.settings.child('bounds', 'min_bound').value())
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
@@ -338,21 +397,21 @@ class DAQ_Move_base(QObject):
         else:
             raise NotImplementedError
 
-    def move_abs(self, value):
+    def move_abs(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Abs'):
-            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs',3)
+            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs', 3)
             self.move_Abs(value)
         else:
             raise NotImplementedError
 
-    def move_rel(self, value):
+    def move_rel(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Rel'):
-            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel',3)
+            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel', 3)
             self.move_Rel(value)
         else:
             raise NotImplementedError
 
-    def move_home(self, value):
+    def move_home(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()
@@ -368,7 +427,7 @@ class DAQ_Move_base(QObject):
         else:
             print(status)
 
-    def emit_value(self, pos: float):
+    def emit_value(self, pos: DataActuator):
         """Convenience method to emit the current actuator value back to the UI"""
 
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
@@ -381,7 +440,7 @@ class DAQ_Move_base(QObject):
     def commit_common_settings(self, param):
         pass
 
-    def move_done(self, position=None):  # the position argument is just there to match some signature of child classes
+    def move_done(self, position: DataActuator = None):  # the position argument is just there to match some signature of child classes
         """
             | Emit a move done signal transmitting the float position to hardware.
             | The position argument is just there to match some signature of child classes.
@@ -393,7 +452,13 @@ class DAQ_Move_base(QObject):
 
         """
         if position is None:
-            position = self.get_actuator_value()
+            if self.data_actuator_type.name == 'float':
+                position = DataActuator(self._title, data=self.get_actuator_value())
+            else:
+                position = self.get_actuator_value()
+        if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
+            #of the plugin
+            position = DataActuator(self._title, data=position.value())
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
@@ -409,32 +474,42 @@ class DAQ_Move_base(QObject):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                self.current_value = self.get_actuator_value()
-                logger.debug(f'Current position: {self.current_value}')
-                self.move_done(self.current_value)
+                if self.data_actuator_type.name == 'float':
+                    self._current_value = DataActuator(data=self.get_actuator_value())
+                else:
+                    self._current_value = self.get_actuator_value()
+                logger.debug(f'Current position: {self._current_value}')
+                self.move_done(self._current_value)
 
     def check_target_reached(self):
-        logger.debug(f"epsilon value is {self.settings.child('epsilon').value()}")
-        logger.debug(f"current_value value is {self.current_value}")
-        logger.debug(f"target_value value is {self.target_value}")
-        if np.abs(self.current_value - self.target_value) > self.settings.child('epsilon').value():
+        # if not isinstance(self._current_value, DataActuator):
+        #     self._current_value = DataActuator(data=self._current_value)
+        # if not isinstance(self._target_value, DataActuator):
+        #     self._target_value = DataActuator(data=self._target_value)
+
+        logger.debug(f"epsilon value is {self.settings['epsilon']}")
+        logger.debug(f"current_value value is {self._current_value}")
+        logger.debug(f"target_value value is {self._target_value}")
+
+        if not (self._current_value - self._target_value).abs() < self.settings['epsilon']:
+
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped', ))
                 logger.info(f'Move has been stopped')
-
             self.current_value = self.get_actuator_value()
-            self.emit_value(self.current_value)
-            logger.debug(f'Current value: {self.current_value}')
 
-            if perf_counter() - self.start_time >= self.settings.child('timeout').value():
+            self.emit_value(self._current_value)
+            logger.debug(f'Current value: {self._current_value}')
+
+            if perf_counter() - self.start_time >= self.settings['timeout']:
                 self.poll_timer.stop()
                 self.emit_status(ThreadCommand('raise_timeout', ))
                 logger.info(f'Timeout activated')
         else:
             self.poll_timer.stop()
-            logger.debug(f'Current value: {self.current_value}')
-            self.move_done(self.current_value)
+            logger.debug(f'Current value: {self._current_value}')
+            self.move_done(self._current_value)
 
     def send_param_status(self, param, changes):
         """ Send changes value updates to the gui to update consequently the User Interface
@@ -453,28 +528,29 @@ class DAQ_Move_base(QObject):
                                                                    change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
+            elif change == 'limits':
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
+                                                                   change]))
 
-    def get_position_with_scaling(self, pos: float):
+    def get_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Get the current position from the hardware with scaling conversion.
         """
-        if self.settings.child('scaling', 'use_scaling').value():
-            pos = (pos - self.settings.child('scaling', 'offset').value()) * self.settings.child('scaling',
-                                                                                                 'scaling').value()
+        if self.settings['scaling', 'use_scaling']:
+            pos = (pos - self.settings['scaling', 'offset']) * self.settings['scaling', 'scaling']
         return pos
 
-    def set_position_with_scaling(self, pos: float):
+    def set_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Set the current position from the parameter and hardware with scaling conversion.
         """
-        if self.settings.child('scaling', 'use_scaling').value():
-            pos = pos / self.settings.child('scaling', 'scaling').value() + self.settings.child('scaling',
-                                                                                                'offset').value()
+        if self.settings['scaling', 'use_scaling']:
+            pos = pos / self.settings['scaling', 'scaling'] + self.settings['scaling', 'offset']
         return pos
 
-    def set_position_relative_with_scaling(self, pos: float):
+    def set_position_relative_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Set the scaled positions in case of relative moves
         """
-        if self.settings.child('scaling', 'use_scaling').value():
-            pos = pos / self.settings.child('scaling', 'scaling').value()
+        if self.settings['scaling', 'use_scaling']:
+            pos = pos / self.settings['scaling', 'scaling']
         return pos
 
     @Slot(edict)
@@ -485,6 +561,7 @@ class DAQ_Move_base(QObject):
         path = settings_parameter_dict['path']
         param = settings_parameter_dict['param']
         change = settings_parameter_dict['change']
+        apply_settings = True
         try:
             self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
         except Exception:
@@ -492,11 +569,13 @@ class DAQ_Move_base(QObject):
         if change == 'value':
             self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
         elif change == 'childAdded':
-            child = Parameter.create(name='tmp')
-            child.restoreState(param)
-            self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
-            param = child
-
+            try:
+                child = Parameter.create(name='tmp')
+                child.restoreState(param)
+                param = child
+                self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
+            except ValueError:
+                apply_settings = False
         elif change == 'parent':
             children = putils.get_param_from_name(self.settings, param.name())
 
@@ -505,8 +584,9 @@ class DAQ_Move_base(QObject):
                 self.settings.child(*path[1:-1]).removeChild(children)
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.commit_common_settings(param)
-        self.commit_settings(param)
+        if apply_settings:
+            self.commit_common_settings(param)
+            self.commit_settings(param)
 
 
 class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
@@ -525,6 +605,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     """
     params_client = []  # parameters of a client grabber
     command_server = Signal(list)
+    data_actuator_type = DataActuatorType['DataActuator']
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
@@ -552,23 +633,23 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
 
             if command == 'position_is':
-                pos = sock.get_scalar()
+                pos = DataActuator(data=sock.get_scalar())
 
                 pos = self.get_position_with_scaling(pos)
-                self.current_value = pos
+                self._current_value = pos
                 self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
-                pos = sock.get_scalar()
+                pos = DataActuator(data=sock.get_scalar())
                 pos = self.get_position_with_scaling(pos)
-                self.current_value = pos
+                self._current_value = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
             else:
                 self.send_command(sock, command)
 
     def commit_settings(self, param):
 
-        if param.name() in putils.iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in putils.iter_children(self.settings.child('settings_client'), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
             path = putils.get_param_path(param)[2:]
@@ -592,7 +673,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
         try:
-            self.settings.child(('infos')).addChildren(self.params_client)
+            self.settings.child('infos').addChildren(self.params_client)
 
             self.init_server()
 
@@ -620,7 +701,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         self.listening = False
         self.close_server()
 
-    def move_abs(self, position):
+    def move_abs(self, position: DataActuator):
         """
 
         """
@@ -632,9 +713,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_abs')
-            sock.send_scalar(position)
+            sock.send_scalar(position.value())
 
-    def move_rel(self, position):
+    def move_rel(self, position: DataActuator):
         position = self.check_bound(self.current_value + position) - self.current_value
         self.target_value = position + self.current_value
 
@@ -642,7 +723,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_rel')
-            sock.send_scalar(position)
+            sock.send_scalar(position.value())
 
     def move_home(self):
         """
@@ -668,7 +749,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             self.send_command(sock, 'get_actuator_value')
 
-        return self.current_value
+        return self._current_value
 
     def stop_motion(self):
         """
