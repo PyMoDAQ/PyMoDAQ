@@ -217,6 +217,10 @@ class DAQ_Move_base(QObject):
                 self.settings.restoreState(params_state.saveState())
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
+        # self.settings.child('multiaxes',
+        #                     'axis').sigLimitsChanged.connect(lambda param,
+        #                                                             limits: self.send_param_status(
+        #    param, [(param, 'limits', None)]))
         if parent is not None:
             self._title = parent.title
         else:
@@ -249,6 +253,7 @@ class DAQ_Move_base(QObject):
                 self.settings.child('multiaxes', 'axis').setValue(name)
             elif isinstance(limits, dict):
                 self.settings.child('multiaxes', 'axis').setValue(limits[name])
+            QtWidgets.QApplication.processEvents()
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -262,7 +267,13 @@ class DAQ_Move_base(QObject):
 
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
-        self.settings.child('multiaxes', 'axis').opts['limits'] = names
+        self.settings.child('multiaxes', 'axis').setLimits(names)
+        grouped_axes = self.settings['grouping', 'grouped_axes'].copy()  # copying the dict otherwise the valuechanged will not be triggered
+        if isinstance(names, dict):
+            names = list(names.keys())
+        grouped_axes.update({'all_items': names, 'selected': []})
+        self.settings.child('grouping', 'grouped_axes').setValue(grouped_axes)
+        QtWidgets.QApplication.processEvents()
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
@@ -517,6 +528,9 @@ class DAQ_Move_base(QObject):
                                                                    change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
+            elif change == 'limits':
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
+                                                                   change]))
 
     def get_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Get the current position from the hardware with scaling conversion.
