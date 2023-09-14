@@ -217,7 +217,10 @@ class Axis:
             data = self._data
 
         if self.is_axis_linear(data):
-            self._scaling = np.mean(np.diff(data))
+            if len(data) == 1:
+                self._scaling = 1
+            else:
+                self._scaling = np.mean(np.diff(data))
             self._offset = data[0]
             self._data = None
 
@@ -285,9 +288,10 @@ class Axis:
         return self.size
 
     def _slicer(self, _slice, *ignored, **ignored_also):
-        ax = copy.deepcopy(self)
+        ax: Axis = copy.deepcopy(self)
         if isinstance(_slice, int):
-            return None
+            ax.data = np.array([ax.get_data()[_slice]])
+            return ax
         elif _slice is Ellipsis:
             return ax
         elif isinstance(_slice, slice):
