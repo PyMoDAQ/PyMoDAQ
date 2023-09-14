@@ -326,7 +326,7 @@ class BaseConfig:
             config_template = toml.load(template_path)
             if check_config(config_template, config):  # check if all fields from template are there
                 # (could have been  modified by some commits)
-                create_toml_from_dict(toml.dumps(config), toml_base_path)
+                create_toml_from_dict(config, toml_base_path)
 
         else:
             copy_template_config(config_file_name, template_path, toml_base_path.parent)
