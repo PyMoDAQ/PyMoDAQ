@@ -74,10 +74,10 @@ class Filter1DFromCrosshair(Filter):
             if axis is not None:
                 self.update_axis(axis)
 
-            self._x, self._y = self.crosshair.get_positions()
-            ind_x = self._axis.find_index(self._x)
-            for label, dat in zip(data.labels, data.data):
-                data_dict[label] = dict(pos=self._axis.get_data()[ind_x], value=dat[ind_x])
+                self._x, self._y = self.crosshair.get_positions()
+                ind_x = self._axis.find_index(self._x)
+                for label, dat in zip(data.labels, data.data):
+                    data_dict[label] = dict(pos=self._axis.get_data()[ind_x], value=dat[ind_x])
         return data_dict
 
 
