@@ -2,11 +2,12 @@ import sys
 from qtpy import QtWidgets
 from pymodaq.utils.h5modules.browsing import H5Browser
 from pymodaq.utils.config import Config
+from pathlib import Path
 
 config = Config()
 
 
-def main():
+def main(h5file_path: Path = None):
     app = QtWidgets.QApplication(sys.argv)
     if config['style']['darkstyle']:
         import qdarkstyle
