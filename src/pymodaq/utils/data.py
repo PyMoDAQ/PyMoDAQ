@@ -366,7 +366,11 @@ class Axis:
 
     def find_index(self, threshold: float) -> int:
         """find the index of the threshold value within the axis"""
-        if self._data is not None:
+        if threshold < self.min():
+            return 0
+        elif threshold > self.max():
+            return len(self) - 1
+        elif self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
             return int((threshold - self.offset) / self.scaling)
@@ -1071,7 +1075,7 @@ class AxesManagerUniform(AxesManagerBase):
 
         Returns
         -------
-        Axis or None: return the list of axis instance if Data has the axis (or it has been created) else None
+        List[Axis] or None: return the list of axis instance if Data has the axis (or it has been created) else None
 
         See Also
         --------
