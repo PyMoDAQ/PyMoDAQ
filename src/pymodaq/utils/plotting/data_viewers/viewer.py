@@ -133,7 +133,7 @@ class ViewerBase(QObject):
     crosshair_clicked = Signal(bool)
     sig_double_clicked = Signal(float, float)
 
-    def __init__(self, parent=None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__()
         self.title = title if title != '' else self.__class__.__name__
 
