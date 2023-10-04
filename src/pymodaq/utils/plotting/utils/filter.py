@@ -69,15 +69,15 @@ class Filter1DFromCrosshair(Filter):
 
     def _filter_data(self, data: data_mod.DataFromPlugins):
         data_dict = dict([])
-        if data is not None and self._axis is not None:
-            axis = data.get_axis_from_index(0, create=False)
+        if data is not None:
+            axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
 
-            self._x, self._y = self.crosshair.get_positions()
-            ind_x, axis_val = mutils.find_index(self._axis.data, (self._x,))[0]
-            for label, dat in zip(data.labels, data.data):
-                data_dict[label] = dict(pos=axis_val, value=dat[ind_x])
+                self._x, self._y = self.crosshair.get_positions()
+                ind_x = self._axis.find_index(self._x)
+                for label, dat in zip(data.labels, data.data):
+                    data_dict[label] = dict(pos=self._axis.get_data()[ind_x], value=dat[ind_x])
         return data_dict
 
 
@@ -210,7 +210,7 @@ class Filter1DFromRois(Filter):
     def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
         data_dict = dict([])
         try:
-            axis = data.get_axis_from_index(0, create=False)
+            axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
             if data is not None:

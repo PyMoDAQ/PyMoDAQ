@@ -452,8 +452,8 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         ]},
     ]
 
-    def __init__(self, parent_widget: QtWidgets.QWidget, title=''):
-        ViewerBase.__init__(self, parent_widget, title=title)
+    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
+        ViewerBase.__init__(self, parent, title=title)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
         ParameterManager.__init__(self)
 

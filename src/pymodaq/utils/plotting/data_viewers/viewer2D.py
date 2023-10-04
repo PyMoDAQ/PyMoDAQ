@@ -638,7 +638,7 @@ class Viewer2D(ViewerBase):
     crosshair_clicked = Signal(bool)
     ROI_select_signal = Signal(QtCore.QRectF)
 
-    def __init__(self, parent=None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__(parent, title)
 
         self._datas = None

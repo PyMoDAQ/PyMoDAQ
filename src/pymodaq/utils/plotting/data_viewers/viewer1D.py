@@ -348,7 +348,7 @@ class Viewer1D(ViewerBase):
     Datas and measurements are then exported with the signal data_to_export_signal
     """
 
-    def __init__(self, parent=None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__(parent=parent, title=title)
 
         self.view = View1D(self.parent)

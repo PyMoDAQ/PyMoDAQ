@@ -121,6 +121,7 @@ class TestDataDim:
         assert (DataDim[dim1] > DataDim[dim2]) == (DataDim[dim1].dim_index > DataDim[dim2].dim_index)
         assert (DataDim[dim1] >= DataDim[dim2]) == (DataDim[dim1].dim_index >= DataDim[dim2].dim_index)
 
+
 class TestAxis:
 
     def test_errors(self):
@@ -191,6 +192,25 @@ class TestAxis:
         ax = init_axis(data=data_tmp)
         assert ax.find_index(5) == 1
 
+    def test_slice(self, init_axis_fixt):
+        ax = init_axis_fixt
+
+        ellipsis_axis = ax.iaxis[...]
+        assert isinstance(ellipsis_axis, data_mod.Axis)
+        assert ellipsis_axis == ax
+
+        ind_start = 2
+        ind_end = 10
+        sliced_axis = ax.iaxis[ind_start:ind_end]
+        assert isinstance(sliced_axis, data_mod.Axis)
+        assert len(sliced_axis) == ind_end - ind_start
+        assert np.allclose(sliced_axis.get_data(), ax.get_data()[ind_start:ind_end])
+
+        ind_int = 3
+        int_axis = ax.iaxis[ind_int]
+        assert isinstance(int_axis, data_mod.Axis)
+        assert len(int_axis) == 1
+        assert int_axis.get_data()[0] == ax.get_data()[ind_int]
 
 
 class TestDataLowLevel:
