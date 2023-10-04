@@ -338,9 +338,7 @@ class DAQScan(QObject, ParameterManager):
                     logger.exception(str(e))
 
             self.h5saver.close_file()
-            self.ui.average_dock.close()
-            self.ui.scan_dock.close()
-            self.dockarea.close()
+            self.mainwindow.close()
 
         except Exception as e:
             logger.exception(str(e))
