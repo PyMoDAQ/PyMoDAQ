@@ -1301,7 +1301,55 @@ class DataWithAxes(DataBase):
         for dat in self.data:
             dat_mean.append(np.mean(dat, axis=axis))
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
+    
+    def sum(self, axis: int = 0) -> DataWithAxes:
+        """Process the sum of the data on the specified axis and returns the new data
 
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_sum = []
+        for dat in self.data:
+            dat_sum.append(np.sum(dat, axis=axis))
+        return self.deepcopy_with_new_data(dat_sum, remove_axes_index=axis)
+    
+    def ft(self, axis: int = 0) -> DataWithAxes:
+        """Process the Fourier Transform of the data on the specified axis and returns the new data
+
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_ft = []
+        for dat in self.data:
+            dat_ft.append(mutils.ft(dat, dim=axis))
+        return self.deepcopy_with_new_data(dat_ft)
+
+    def ift(self, axis: int = 0) -> DataWithAxes:
+        """Process the inverse Fourier Transform of the data on the specified axis and returns the new data
+
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_ift = []
+        for dat in self.data:
+            dat_ift.append(mutils.ift(dat, dim=axis))
+        return self.deepcopy_with_new_data(dat_ift)
+    
     def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
         """
