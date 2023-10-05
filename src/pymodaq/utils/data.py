@@ -1521,10 +1521,11 @@ class DataWithAxes(DataBase):
                 source = enum_checker(DataSource, source)
                 new_data._source = source
 
-            if not isinstance(remove_axes_index, Iterable):
-                remove_axes_index = [remove_axes_index]
 
             if remove_axes_index is not None:
+                if not isinstance(remove_axes_index, Iterable):
+                    remove_axes_index = [remove_axes_index]
+                    
                 lower_indexes = dict(zip(new_data.get_axis_indexes(),
                                          [0 for _ in range(len(new_data.get_axis_indexes()))]))
                 # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
@@ -2053,7 +2054,7 @@ if __name__ == '__main__':
 
     data2 = copy.copy(data)
 
-    data3 = data._deepcopy_with_new_data([np.sum(dat, 1)], remove_axes_index=(1,))
+    data3 = data.deepcopy_with_new_data([np.sum(dat, 1)], remove_axes_index=(1,))
 
     print('done')
 
