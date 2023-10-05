@@ -768,7 +768,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @Slot(DataToExport)
     def show_data(self, dte: DataToExport):
-        """Send data to their dedicated viewers but those will not emit processed data signal
+        """Send data to their dedicated viewers
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
