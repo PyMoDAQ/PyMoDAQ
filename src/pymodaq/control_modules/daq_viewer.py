@@ -60,7 +60,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     Attributes
     ----------
-    grab_done_signal: Signal[OrderedDict]
+    grab_done_signal: Signal[DataToExport]
         Signal emitted when the data from the plugin (and eventually from the data viewers) has been received. To be
         used by connected objects.
     custom_sig: Signal[ThreadCommand]
