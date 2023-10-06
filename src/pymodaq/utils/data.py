@@ -1973,7 +1973,7 @@ class DataToExport(DataLowLevel):
         return self.data.pop(index)
 
     def remove(self, dwa: DataWithAxes):
-        self.pop(self.data.index(dwa))
+        return self.pop(self.data.index(dwa))
 
     @property
     def data(self) -> List[DataWithAxes]:
