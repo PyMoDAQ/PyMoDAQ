@@ -720,6 +720,8 @@ class DAQScan(QObject, ParameterManager):
             scan_node = self.module_and_data_saver.get_last_node()
             scan_node.attrs['scan_done'] = True
             self.save_scan()
+            self.module_and_data_saver.flush()
+
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
@@ -1147,7 +1149,7 @@ class DAQScanAcquisition(QObject):
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
-            self.h5saver.h5_file.flush()
+            self.h5saver.flush()
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
