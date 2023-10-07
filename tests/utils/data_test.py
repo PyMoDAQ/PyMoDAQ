@@ -192,7 +192,7 @@ class TestAxis:
         ax = init_axis(data=data_tmp)
         assert ax.find_index(5) == 1
 
-    def test_slice(self, init_axis_fixt):
+    def test_slice_getter(self, init_axis_fixt):
         ax = init_axis_fixt
 
         ellipsis_axis = ax.iaxis[...]
@@ -211,6 +211,23 @@ class TestAxis:
         assert isinstance(int_axis, data_mod.Axis)
         assert len(int_axis) == 1
         assert int_axis.get_data()[0] == ax.get_data()[ind_int]
+
+    def test_slice_setter(self, init_axis_fixt):
+        ax = init_axis_fixt
+        length = len(ax)
+        ind_start = 2
+        ind_end = 10
+        axis_to_put_in = data_mod.Axis('replace', data=mutils.linspace_step(ind_start-10, ind_end-1-10, 1))
+
+        ax.iaxis[ind_start:ind_end] = axis_to_put_in
+
+        assert np.allclose(ax.data[ind_start:ind_end], axis_to_put_in.get_data())
+        assert len(ax) == length
+
+        ax.iaxis[ind_start:ind_end] = axis_to_put_in.get_data()
+
+        assert np.allclose(ax.data[ind_start:ind_end], axis_to_put_in.get_data())
+        assert len(ax) == length
 
 
 class TestDataLowLevel:
@@ -626,8 +643,6 @@ class TestSlicingUniform:
         assert data_sliced.shape == (Nn1, DATA2D.shape[0], DATA2D.shape[1])
         assert data_sliced.nav_indexes == (0,)
 
-
-
     def test_slice_signal(self, init_data_uniform):
         data_raw = init_data_uniform
         assert data_raw.shape == (Nn0, Nn1, DATA2D.shape[0], DATA2D.shape[1])
@@ -653,6 +668,15 @@ class TestSlicingUniform:
         assert data_2.shape == (Nn0, Nn1, 3, 2)
         assert data_2.get_axis_from_index(2)[0].size == 3
         assert data_2.get_axis_from_index(3)[0].size == 2
+
+    def test_slicing_setter(self):
+        data_raw, shape = init_dataND()
+        assert data_raw.shape == (5, 6, 3)
+        data_raw.nav_indexes = (0, 1)
+
+        data_nav = data_mod.DataRaw('to replace', data=[np.ones((5, 6))])
+
+        data_raw.isig[0] = data_nav
 
 
 class TestSlicingSpread:
@@ -869,6 +893,13 @@ class TestDataToExport:
         assert len(data) == 1
         with pytest.raises(ValueError):
             data.index(dat2)
+
+    def test_remove(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+
+        assert len(data) == 2
+        dat2bis = data.remove(dat2)
+        assert dat2 is dat2bis
 
     def test_get_names(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
