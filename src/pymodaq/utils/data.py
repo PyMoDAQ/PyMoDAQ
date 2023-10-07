@@ -287,6 +287,9 @@ class Axis:
     def __len__(self):
         return self.size
 
+    def _compute_slices(self, slices, *ignored, **ignored_also):
+        return slices
+
     def _slicer(self, _slice, *ignored, **ignored_also):
         ax: Axis = copy.deepcopy(self)
         if isinstance(_slice, int):
@@ -1424,6 +1427,8 @@ class DataWithAxes(DataBase):
 
         Filling in Ellipsis when no slicing should be done
         """
+        if isinstance(slices, numbers.Number) or isinstance(slices, slice):
+            slices = [slices]
         if is_navigation:
             indexes = self._am.nav_indexes
         else:
