@@ -1612,7 +1612,8 @@ class DataActuator(DataRaw):
             return f'{self.__class__.__name__} <{self.shape}>>'
 
     def value(self):
-        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the average"""
+        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the
+        underlying data"""
         if self.length == 1 and self.size == 1:
             return float(self.data[0][0])
         else:
