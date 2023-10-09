@@ -672,6 +672,18 @@ class DataBase(DataLowLevel):
         new_data.data = [np.abs(dat) for dat in new_data]
         return new_data
 
+    def flipud(self):
+        """Reverse the order of elements along axis 0 (up/down)"""
+        new_data = copy.copy(self)
+        new_data.data = [np.flipud(dat) for dat in new_data]
+        return new_data
+
+    def fliplr(self):
+        """Reverse the order of elements along axis 1 (left/right)"""
+        new_data = copy.copy(self)
+        new_data.data = [np.fliplr(dat) for dat in new_data]
+        return new_data
+
     def append(self, data: DataWithAxes):
         for dat in data:
             if dat.shape != self.shape:
