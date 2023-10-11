@@ -7,6 +7,7 @@ Created the 29/07/2022
 
 from __future__ import annotations
 
+import numbers
 from importlib import import_module
 from numbers import Number
 import sys
@@ -241,7 +242,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif move_command.move_type == 'home':
             self.move_home(move_command.value)
 
-    def move_abs(self, value: DataActuator, send_to_tcpip=False):
+    def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_tcpip=False):
         """Move the connected hardware to the absolute value
 
         Returns nothing but the move_done_signal will be send once the action is done
@@ -254,6 +255,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             if True, this position is send through the TCP/IP communication canal
         """
         try:
+            if isinstance(value, Number):
+                value = DataActuator(self.title, data=[np.array([value])])
             self._send_to_tcpip = send_to_tcpip
             if value != self._current_value:
                 if self.ui is not None:
@@ -287,7 +290,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def move_rel(self, rel_value, send_to_tcpip=False):
+    def move_rel(self, rel_value: Union[DataActuator, numbers.Number], send_to_tcpip=False):
         """Move the connected hardware to the relative value
 
         Returns nothing but the move_done_signal will be send once the action is done
@@ -301,6 +304,8 @@ class DAQ_Move(ParameterManager, ControlModule):
         """
 
         try:
+            if isinstance(rel_value, Number):
+                rel_value = DataActuator(self.title, data=[np.array([rel_value])])
             self._send_to_tcpip = send_to_tcpip
             if self.ui is not None:
                 self.ui.move_done = False
