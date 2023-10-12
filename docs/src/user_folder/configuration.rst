@@ -3,11 +3,26 @@
 Configuration
 =============
 
-All configuration files used by PyMoDAQ will be located within a folder named *pymodaq_local* saved by default
-on the user *Home* folder (see Fig. :numref:`pymodaq_local`)
+All configuration files used by PyMoDAQ will be located within two folders each called
+*.pymodaq*. One is system wide and located in one of these locations:
 
+* Windows: *ProgramData* folder
+* Mac: *Library/Application Support* folder
+* Linux: */etc*
 
-   .. _pymodaq_local:
+while the other is restricted to the current user and located in the user's *home* folder.
+
+All configuration files that should be shared between users are in the system wide folder,
+for instance all files related to the dashboard, see Fig. :numref:`pymodaq_config_folder`:
+
+* preset configs: preset file defining the type and numbers of control modules for a given experiment
+* batch configs: file describing the batch of scans to do
+* layout configs: store the user interface docks arrangement
+* overshoot configs: store the files defining overshoots
+* remote configs: store the files defining the remote control actions
+* roi configs: store the overall ROI in all `DAQ_Viewers` on the dashboard
+
+   .. _pymodaq_config_folder:
 
 .. figure:: /image/configuration/pymodaq_local.png
    :alt: local_folder
@@ -26,18 +41,23 @@ manager user interface to create and modify them.
 
 .. _configfile:
 
-Default configuration
-+++++++++++++++++++++
+PyMoDAQ configuration for default values
+++++++++++++++++++++++++++++++++++++++++
 
-The *config.toml* file is the only exception. It is there so that a particular user could enter specific personal
-information such as the name that will be used by default in the metadata, default *preset* file to load
-if executing directly the *DAQ_Scan* extension, default type of *Scan* and so on. The file can be directly modified
-or accessed within the *Dashboard* in the file menu.
+The *config_pymodaq.toml* file is the only exception. It is there so that a particular user could enter
+specific personal information such as the name that will be used by default in the metadata,
+default *preset* file to load if executing directly the *DAQ_Scan* extension, default type of *Scan*
+and so on. The file can be directly modified but should be accessed within the *Dashboard* in the file menu.
 
+The configuration file located in the system wide folder is the default one, see below, but when a user override
+the default values, they will be stored in another *config_pymodaq.toml* in the user *.pymodaq* folder. In this way,
+if the computer is shared among multiple users, each can specify their own metadata, UI feel and shape,
+default presets, ...
 
+Below is a non exhaustive list of configuration entries stored in the *config_pymodaq.toml* file:
 
 .. code-block:: toml
-    :caption: Default Configuration file of PyMoDAQ that will be copied on the local folder where the user can modify it
+   :caption: Default Configuration file of PyMoDAQ that will be copied on the local folder where the user can modify it
 
     [data_saving]
         [data_saving.h5file]
@@ -76,32 +96,41 @@ or accessed within the *Dashboard* in the file menu.
     default_preset_for_scan = "preset_default"
     default_preset_for_logger = "preset_default"
 
-    [scan]
-        default = "Scan1D"
-        Naverage = 1  # minimum is 1
-        steps_limit = 1000  # the limit of the number of steps you can set in a given scan
 
-        [scan.timeflow]
-        wait_time = 0
-        wait_time_between = 0
-        timeout = 10000  # in millisecond
+.. _plugins_configuration_files:
 
-        [scan.scan1D]
-        type = "Linear" # either "Linear", "Adaptive", "Linear back to start", "Random" see pymodaq.utils.scanner.py
-        start = 1.0
-        stop = 2.0
-        step = 0.01
+Plugins configuration for default values
+++++++++++++++++++++++++++++++++++++++++
 
-        [scan.scan2D]
-        type = "Spiral" # either "Spiral", "Linear", "Adaptive", "Back&Forth", "Random" see pymodaq.utils.scanner.py
-        start1 = -5
-        start2 = -5
-        stop1 = 5
-        stop2 = 5
-        step1 = 0.1
-        step2 = 0.1
-        npts = 10
+In the same way, the file *config_pymodaq.toml* stores (system/user wide) default configuration values, plugins
+benefits of the same features. The mechanism is as follow. The plugin package should contain (PyMoDAQ >= 4)
+a resources folder containing at least the *VERSION* file and a *config_template.toml* file, see
+:numref:`config_resources`.
 
-        [scan.tabular]
-        type = "Linear" #either "Linear", "Adaptive" see pymodaq.utils.scanner.py
-        curvilinear = 0.1
+
+   .. _config_resources:
+
+.. figure:: /image/configuration/resources.png
+   :alt: resources
+
+   Files in the resources folder of each plugin (well that should be like this as of october 2023)
+
+This *config_template.toml* file holds any mandatory config values needed from within you plugin package
+scripts. The first time the plugin package is imported, this config will be copied into the system wide/user
+folders, to be used by the plugins scripts. They can be manually amended by each user in their *.pymodaq*
+user folder.
+
+Another file is mandatory, the `utils.py` at the root of the plugin package, see :numref:`config_resources`.
+In there, will be defined the particular `Config` object to be used with each script of the package plugin:
+
+.. code-block::
+
+    class Config(BaseConfig):
+        """Main class to deal with configuration values for this plugin"""
+        config_template_path = Path(__file__).parent.joinpath('resources/config_template.toml')
+        config_name = f"config_{__package__.split('pymodaq_plugins_')[1]}"
+
+
+This object will automatically be linked to the system wide/user *.pymodaq* folder where the template will be
+copied and renamed from the plugin name. For instance, the plugin package, `pymodaq_plugins_optimisation` will
+produce a configuration file called *config_optimisation.toml*

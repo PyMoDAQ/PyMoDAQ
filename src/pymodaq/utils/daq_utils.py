@@ -62,12 +62,6 @@ def get_module_name(*args, **kwargs):
     return logger_module.get_module_name(*args, **kwargs)
 
 
-## data classes deprecated calls
-
-
-
-#################################
-
 def is_64bits():
     return sys.maxsize > 2**32
 
