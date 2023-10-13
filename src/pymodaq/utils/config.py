@@ -290,6 +290,9 @@ class BaseConfig:
     def __init__(self):
         self._config = self.load_config(self.config_name, self.config_template_path)
 
+    def __repr__(self):
+        return f'{self.config_name} configuration file'
+
     def __call__(self, *args):
         try:
             ret = getitem_recursive(self._config, *args)
