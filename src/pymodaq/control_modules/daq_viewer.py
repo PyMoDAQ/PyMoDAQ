@@ -805,6 +805,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self._data_to_save_export = \
                         _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
             else:
+                for dwa in dte:
+                    dwa.origin = self._title
                 self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:
