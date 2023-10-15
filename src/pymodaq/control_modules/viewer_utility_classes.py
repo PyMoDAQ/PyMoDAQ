@@ -263,6 +263,9 @@ class DAQ_Viewer_base(QObject):
         pass
 
     def get_axis(self):
+        """deprecated"""
+        raise DeprecationWarning('get_axis is deprecated add the axes within the DataWithAxes, '
+                                 'DataFromPlugins')
         if self.plugin_type == '1D' or self.plugin_type == '2D':
             self.emit_x_axis()
 
