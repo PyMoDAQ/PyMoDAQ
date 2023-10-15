@@ -1038,7 +1038,7 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def create_overshoot_fun(self, move_module, position):
-        return lambda: move_module.move_Abs(position)
+        return lambda: move_module.move_abs(position)
 
     @property
     def move_modules(self):
