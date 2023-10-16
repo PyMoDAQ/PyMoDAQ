@@ -1383,6 +1383,11 @@ class DataWithAxes(DataBase):
         return self._dim
 
     @property
+    def n_axes(self):
+        """Get the number of axes (even if not specified)"""
+        return len(self.axes)
+
+    @property
     def axes(self):
         """convenience property to fetch attribute from axis_manager"""
         return self._am.axes
@@ -1936,6 +1941,27 @@ class DataToExport(DataLowLevel):
         data = DataToExport(name=self.name)
         for _data in self:
             if len(_data.shape) == Naxes:
+                if deepcopy:
+                    data.append(_data.deepcopy())
+                else:
+                    data.append(_data)
+        return data
+
+    def get_data_with_naxes_lower_than(self, n_axes=2, deepcopy: bool = False) -> DataToExport:
+        """Get the data with n axes lower than the given number
+
+        Parameters
+        ----------
+        Naxes: int
+            Number of axes in the DataWithAxes objects
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the number of axes
+        """
+        data = DataToExport(name=self.name)
+        for _data in self:
+            if _data.n_axes <= n_axes:
                 if deepcopy:
                     data.append(_data.deepcopy())
                 else:
