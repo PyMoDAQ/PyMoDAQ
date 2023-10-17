@@ -37,19 +37,49 @@ the *pymodaq_plugins_mock* package of mock instruments installed on the *site_pa
 
 __ https://github.com/PyMoDAQ/pymodaq_plugin_manager
 
-Contributions:
---------------
+Contributions
+-------------
 
-Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two approaches are possible:
+If you wish to develop a plugin specific to a new hardware or feature not present on the github repo (and I strongly encourage you
+to do so!!), you will have to follow the rules as below.
 
-* Fork one of the official plugin package repositories and add within your own plugin scripts
-* Copy the `plugin template package`__ on you disk and work on the templates within then ask to create an official
-  plugin package
+Two cases are possible: either you want to add a new hardware from a manufacturer for which
+a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
+
+#. You have to fork the existing repo
+#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+
+Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
+the command line where you *cd* within the cloned package.
+This command will install the package but
+any change you apply on the local folder will be applied on the package.
+Then just add a new python file in the correct location.
+
+In the case of a new repository, you will have to
+* fill in the appropriate information in plugin_info.toml and README.rst,
+* rename the Pymodaq_plugins_template folder to the name of your package,
+* add your own instrument files in the right location, you might use the provided examples
+* finally remove the unused example files of the template repository in the subfolders.
+
+Once you're ready with a working plugin, you can then:
+
+#. Publish your repo on pypi (just by doing a release on github will trigger the creation
+   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
+#. do a pull request on the initial repository to merge your new implementations.
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
-Naming convention:
-------------------
+All the packages published on pypi using the template and the naming convention will be available
+in the plugin manager.
+
+Some more detailed instruction would be published and you can in the mean time look at this
+`video`__
+
+__ https://youtu.be/9O6pqz89UT8
+
+
+Naming convention
+-----------------
 
 For an instrument plugin to be properly recognised by PyMoDAQ, the location and name of the underlying script must
 follow some rules and syntax. The `plugin template package`__ could be copied locally as a starting point:
@@ -393,42 +423,6 @@ and call whatever module I need within (meaning there is a __init__.py file in t
     #and then use it as you see fit in your module
 
 
-How to contribute?
-------------------
-
-If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as stated above.
-
-Two cases are possible: either you want to add a new hardware from a manufacturer for which
-a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
-
-#. You have to fork the existing repo
-#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
-
-Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
-the command line where you *cd* within the cloned package. This command will install the package but
-any change you apply on the local folder will be applied on the package. Then just add a new python file in the correct location
-
-In the case of a new repo, you will have to rename a few files (plugin_info.toml, README.rst ...) then add the
-python file of your instrument at the right location.
-
-Once you're ready with a working plugin, you can then:
-
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
-#. do a pull request on the initial repository to merge your new implementations.
-
-__ https://github.com/PyMoDAQ/pymodaq_plugins_template
-
-All the packages published on pypi using the template and the naming convention will be available
-in the plugin manager.
-
-Some more detailed instruction would be published and you can in the mean time look at this
-`video`__
-
-__ https://youtu.be/9O6pqz89UT8
-
-
 Modifying the UI from the instrument plugin class
 -------------------------------------------------
 
@@ -543,7 +537,7 @@ Specifics commands for the :py:class:`DAQ_Viewer<pymodaq.control_modules.daq_vie
 
 The interesting bit is the possibility to display a
 :py:class:`LCD widget<pymodaq.utils.gui_utils.widgets.lcd.LCD>` to display some numerical values (could be
-0D Data also emitted using the ``dte_signal`` but could also be any values). You should firs init the LCD screen
+0D Data also emitted using the ``dte_signal`` but could also be any values). You should first init the LCD screen
 using the command: ``init_lcd`` with an attribute being a dictionary with keys either:
 
 * digits: an integer specifying the number of digits to display
