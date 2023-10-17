@@ -54,6 +54,7 @@ Naming convention:
 For an instrument plugin to be properly recognised by PyMoDAQ, the location and name of the underlying script must
 follow some rules and syntax. The `plugin template package`__ could be copied locally as a starting point:
 
+* The plugin package will be named pymodaq_plugins_xxxx (name: xxxx)
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
 * The main instrument class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well and sorry
   if it is troublesome)
