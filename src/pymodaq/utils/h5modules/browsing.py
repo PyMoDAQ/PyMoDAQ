@@ -26,7 +26,7 @@ from pymodaq.utils.gui_utils.widgets.tree_layout import TreeLayout
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.data import Axis
 from pymodaq.utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
-from pymodaq.utils.gui_utils.file_io import select_file
+from pymodaq.utils.gui_utils.file_io import select_file, select_file_filter
 from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
 from qtpy import QtWidgets
 from pymodaq.utils import daq_utils as utils
@@ -55,7 +55,7 @@ class H5BrowserUtil(H5Backend):
     def __init__(self, backend='tables'):
         super().__init__(backend=backend)
 
-    def export_data(self, node_path='/', filesavename: str = 'datafile.h5'):
+    def export_data(self, node_path='/', filesavename: str = 'datafile.h5', filter=None):
         """Initialize the correct exporter and export the node"""
 
         # Format the node and file type
@@ -64,7 +64,8 @@ class H5BrowserUtil(H5Backend):
         # Separate dot from extension
         extension = filepath.suffix[1:]
         # Obtain the suitable exporter object
-        exporter = ExporterFactory.create_exporter(extension)
+        exporter = ExporterFactory.create_exporter(extension,
+                                                   ExporterFactory.get_format_from_filter(filter))
         # Export the data
         exporter.export_data(node, filepath)
 
@@ -408,10 +409,10 @@ class H5Browser(QObject, ActionManager):
         """
         try:
             file_filter = ExporterFactory.get_file_filters()
-            file = select_file(save=True, filter=file_filter)
+            file, selected_filter = select_file_filter(save=True, filter=file_filter)
             self.current_node_path = self.get_tree_node_path()
             if file != '':
-                self.h5utils.export_data(self.current_node_path, str(file))
+                self.h5utils.export_data(self.current_node_path, str(file), selected_filter)
 
         except Exception as e:
             logger.exception(str(e))
