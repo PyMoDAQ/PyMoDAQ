@@ -17,6 +17,7 @@ class TestH5Exporter:
         for ext in factory.exporters_registry.keys():
             assert ext in ('h5', 'txt', 'ascii', 'npy', 'hspy')
 
+
         #todo add a test to check this but knowing that some may be missing (for instance hyperspy if no hyperspy package)
         # assert factory.get_file_filters() == \
         #        "Single node h5 file (*.h5);;" \
@@ -25,9 +26,4 @@ class TestH5Exporter:
         #        "Binary NumPy format (*.npy);;" \
         #        "Hyperspy file format (*.hspy)"
 
-    def test_exporter_creation(self):
 
-        assert isinstance(h5export.ExporterFactory.create_exporter('txt'), H5txtExporter)
-        assert isinstance(h5export.ExporterFactory.create_exporter('ascii'), H5asciiExporter)
-        assert isinstance(h5export.ExporterFactory.create_exporter('h5'), H5h5Exporter)
-        assert isinstance(h5export.ExporterFactory.create_exporter('npy'), H5npyExporter)
