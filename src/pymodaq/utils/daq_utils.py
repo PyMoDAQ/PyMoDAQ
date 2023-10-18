@@ -30,12 +30,12 @@ if version_mod.parse(platform.python_version()) >= version_mod.parse('3.8'):  # 
 else:
     import importlib_metadata as metadata  # pragma: no cover
 
-if version_mod.parse(platform.python_version()) > version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):  # from version 3.8 this feature is included in the
     from functools import cache
 else:
     from functools import lru_cache as cache
 
-    
+
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
