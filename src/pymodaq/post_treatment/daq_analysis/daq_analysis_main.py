@@ -11,8 +11,8 @@ from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from collections import OrderedDict
 import numpy as np
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_ptypes
+from pymodaq.utils.parameter import ParameterTree, Parameter
+
 from pymodaq.utils.tree_layout.tree_layout_main import TreeLayout
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
