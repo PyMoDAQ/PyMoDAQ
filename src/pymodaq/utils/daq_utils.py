@@ -602,7 +602,7 @@ def get_instrument_plugins():  # pragma: no cover
     logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     viewer_types = ['0D', '1D', '2D', 'ND']
     for module in discovered_plugins:
-        print(f'Looking for valid instrument plugins in package: {module.value}')
+        #print(f'Looking for valid instrument plugins in package: {module.value}')
         plugin_list = []
         try:
             movemodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
