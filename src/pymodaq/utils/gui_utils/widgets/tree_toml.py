@@ -6,7 +6,7 @@ Created the 19/10/2023
 """
 import datetime
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject
 
 from pymodaq.utils.parameter import ParameterTree, Parameter
