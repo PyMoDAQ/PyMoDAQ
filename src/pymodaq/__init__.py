@@ -84,7 +84,11 @@ try:
     Q_ = ureg.Quantity
     logger.info('')
     logger.info('')
-
+    logger.info('************************')
+    logger.info(f"Getting the list of instrument plugins...")
+    logger.info('************************')
+    from pymodaq.utils.daq_utils import get_plugins
+    get_plugins()
 except Exception as e:
     try:
         logger.exception(str(e))
