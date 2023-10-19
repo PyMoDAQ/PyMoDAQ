@@ -28,9 +28,10 @@ if version_mod.parse(platform.python_version()) >= version_mod.parse('3.8'):  # 
     # standard lib
     from importlib import metadata
 else:
-    import importlib_metadata as metadata  # pragma: no cover
+    import importlib_metadata as metadata
 
-if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):  # from version 3.8 this feature is included in the
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
+    # from version 3.9 the cache decorator is available
     from functools import cache
 else:
     from functools import lru_cache as cache
