@@ -654,6 +654,7 @@ def get_instrument_plugins():  # pragma: no cover
             logger.debug(str(e))
     return plugins_import
 
+
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     Get plugins names as a list
