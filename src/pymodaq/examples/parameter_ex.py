@@ -6,7 +6,7 @@ import sys
 
 import pymodaq.utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 from collections import OrderedDict
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.parameter import pymodaq_ptypes

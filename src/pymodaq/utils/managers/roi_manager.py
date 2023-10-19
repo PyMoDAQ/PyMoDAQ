@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter import utils as putils
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.utils.parameter import pymodaq_ptypes
 from pymodaq.utils.managers.action_manager import QAction

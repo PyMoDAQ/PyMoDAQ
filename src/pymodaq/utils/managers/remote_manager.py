@@ -9,7 +9,8 @@ from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.gui_utils import select_file
-from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType
+from pymodaq.utils.parameter import ParameterTree, Parameter
+from pyqtgraph.parametertree import registerParameterType
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 logger = set_logger(get_module_name(__file__))

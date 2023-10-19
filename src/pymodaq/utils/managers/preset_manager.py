@@ -5,7 +5,7 @@ from pymodaq.utils.gui_utils.file_io import select_file
 from qtpy import QtWidgets
 import sys
 import os
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils import daq_utils as utils
 from pathlib import Path

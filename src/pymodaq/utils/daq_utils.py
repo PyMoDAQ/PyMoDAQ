@@ -12,7 +12,8 @@ from packaging import version as version_mod
 from pathlib import Path
 import pkgutil
 import traceback
-from functools import cache
+import platform
+
 
 import numpy as np
 from qtpy import QtCore
@@ -23,13 +24,18 @@ from pymodaq.utils.config import get_set_preset_path, Config
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.qvariant import QVariant
 
-
-python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
-if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
     # standard lib
     from importlib import metadata
 else:
-    import importlib_metadata as metadata  # pragma: no cover
+    import importlib_metadata as metadata
+
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
+    # from version 3.9 the cache decorator is available
+    from functools import cache
+else:
+    from functools import lru_cache as cache
+
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 

@@ -2,7 +2,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject
 
 import pymodaq.utils.parameter.ioxml
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 
 import sys
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D

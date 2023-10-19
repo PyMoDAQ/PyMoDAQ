@@ -3,7 +3,7 @@ import sys
 import os
 
 from pymodaq.utils.parameter import ioxml
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.utils.gui_utils import select_file
