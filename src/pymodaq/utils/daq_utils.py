@@ -607,27 +607,33 @@ def get_instrument_plugins():  # pragma: no cover
     discovered_plugins = get_entrypoints(group='pymodaq.plugins')
     logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     viewer_types = ['0D', '1D', '2D', 'ND']
-    for module in discovered_plugins:
+    for entrypoint in discovered_plugins:
         #print(f'Looking for valid instrument plugins in package: {module.value}')
         plugin_list = []
         try:
-            movemodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
+            try:
+                movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
+                plugin_list.extend([{'name': mod[len('daq_move') + 1:],
+                                     'module': movemodule,
+                                     'parent_module': importlib.import_module(entrypoint.value),
+                                     'type': 'daq_move'}
+                                    for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
+                                    if 'daq_move' in mod])
+            except ModuleNotFoundError:
+                pass
             viewer_modules = {}
-            plugin_list.extend([{'name': mod[len('daq_move') + 1:],
-                                 'module': movemodule,
-                                 'parent_module': module,
-                                 'type': 'daq_move'}
-                                for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
-                                if 'daq_move' in mod])
             for vtype in viewer_types:
-                viewer_modules[vtype] = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{vtype}',
-                                                    module.value)
-                plugin_list.extend([{'name': mod[len(f'daq_{vtype}viewer') + 1:],
+                try:
+                    viewer_modules[vtype] = importlib.import_module(f'{entrypoint.value}.daq_viewer_plugins.plugins_{vtype}',
+                                                    entrypoint.value)
+                    plugin_list.extend([{'name': mod[len(f'daq_{vtype}viewer') + 1:],
                                      'module': viewer_modules[vtype],
-                                     'parent_module': module,
+                                     'parent_module': importlib.import_module(entrypoint.value),
                                      'type': f'daq_{vtype}viewer'}
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(viewer_modules[vtype].path.parent)])]
                                     if f'daq_{vtype}viewer' in mod])
+                except ModuleNotFoundError:
+                    pass
 
             # check if modules are importable
             for mod in plugin_list:
@@ -866,8 +872,8 @@ if __name__ == '__main__':
     #                                      replace_str="pymodaq.utils")
     #get_version()
     get_instrument_plugins()
-    get_plugins('daq_move')
-    get_plugins('daq_0Dviewer')
+    #get_plugins('daq_move')
+    #get_plugins('daq_0Dviewer')
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])
