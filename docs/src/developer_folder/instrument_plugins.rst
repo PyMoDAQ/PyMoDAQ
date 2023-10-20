@@ -59,6 +59,7 @@ In the case of a new repository, you will have to
 * fill in the appropriate information in plugin_info.toml and README.rst,
 * rename the Pymodaq_plugins_template folder to the name of your package,
 * add your own instrument files in the right location, you might use the provided examples
+* add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder,
 * finally remove the unused example files of the template repository in the subfolders.
 
 Once you're ready with a working plugin, you can then:
