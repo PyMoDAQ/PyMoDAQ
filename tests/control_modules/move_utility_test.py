@@ -18,7 +18,7 @@ def init_qt(qtbot):
 
 def test_stage_names(init_qt):
     qtbot = init_qt
-    axis_names = DAQ_Move_MockNamedAxes.stage_names.copy()
+    axis_names = DAQ_Move_MockNamedAxes._axis_names.copy()
     prog = DAQ_Move_MockNamedAxes()
 
     prog.ini_stage()
@@ -26,6 +26,7 @@ def test_stage_names(init_qt):
     name_axis = 'anotheraxis'
     index_axis = 45
     axis_names.update({name_axis: index_axis})
+
     prog.axis_names = axis_names
     assert prog.axis_names == axis_names
 
@@ -33,3 +34,4 @@ def test_stage_names(init_qt):
     prog.axis_name = name_axis
     assert name_axis == prog.axis_name
     assert prog.settings.child('multiaxes', 'axis').value() == index_axis
+    assert prog.axis_value == index_axis

@@ -77,7 +77,7 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names = [], master=True, epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -244,7 +244,7 @@ class DAQ_Move_base(QObject):
             return find_keys_from_val(limits, val=self.settings['multiaxes', 'axis'])[0]
 
     @axis_name.setter
-    def axis_name(self, name: Union[str, object]):
+    def axis_name(self, name: str):
         limits = self.settings.child('multiaxes', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
@@ -266,18 +266,12 @@ class DAQ_Move_base(QObject):
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
         self.settings.child('multiaxes', 'axis').setLimits(names)
-        if isinstance(names, dict):
-            names = list(names.keys())
         QtWidgets.QApplication.processEvents()
 
     @property
     def axis_value(self) -> object:
         """Get the current value selected from the current axis"""
-        limits = self.settings.child('multiaxes', 'axis').opts['limits']
-        if isinstance(limits, dict):
-            return self.axis_names[self.axis_name]
-        elif isinstance(limits, list):
-            return self.axis_name
+        return self.settings['multiaxes', 'axis']
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
