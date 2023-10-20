@@ -392,41 +392,65 @@ and call whatever module I need within (meaning there is a __init__.py file in t
     #and then use it as you see fit in your module
 
 
-How to contribute?
-------------------
+Actuator plugin having multiple axis
+------------------------------------
+See also: :ref:`multiaxes_controller`
 
-If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as stated above.
+When an actuator's controller can drive multiple axis (like a XY translation stage for instance), the plugin instrument
+class should defines two class attributes:
 
-Two cases are possible: either you want to add a new hardware from a manufacturer for which
-a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
+* `is_multiaxis` should be set to True. This will trigger the display of the multiaxis section on the UI
+* `axes_names` should be a list or dict describing the different actuator such a controller can drive
 
-#. You have to fork the existing repo
-#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+.. code-block::
 
-Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
-the command line where you *cd* within the cloned package. This command will install the package but
-any change you apply on the local folder will be applied on the package. Then just add a new python file in the correct location
+    class DAQ_Move_MockNamedAxes(DAQ_Move_base):
+        is_multiaxes = True
+        axes_names = ['Xaxis', 'Yaxis', 'Zaxis']
+        # or:
+        axes_names = {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
 
-In the case of a new repo, you will have to rename a few files (plugin_info.toml, README.rst ...) then add the
-python file of your instrument at the right location.
+would produce such display on the UI (Fig. :numref:`multiaxes_xyz`):
 
-Once you're ready with a working plugin, you can then:
 
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
-#. do a pull request on the initial repository to merge your new implementations.
+   .. _multiaxes_xyz:
 
-__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+.. figure:: /image/DAQ_Move/multiaxes_xyz.png
+   :alt: Settings example
 
-All the packages published on pypi using the template and the naming convention will be available
-in the plugin manager.
+   Typical multiaxis settings represented as a combo box
 
-Some more detailed instruction would be published and you can in the mean time look at this
-`video`__
+Both the list or the dictionary will produce the same output on the UI but their use will depend of the controller and
+underlying methods of its driver to act on a particular axis. In the drivers derived from C code,
+methods will have an argument describing a particular axis as an integer. It is however not possible to pass
+integers directly to the combobox of the UI who holds strings. To deal with that `pyqtgraph`, and therefore `pymodaq`,
+uses a dictionary mapping the names of the axis (to be printed in the UI) to objects (here integers) to be
+used with the drivers's method.
 
-__ https://youtu.be/9O6pqz89UT8
+A set of methods/properties have been introduced to quickly manipulate those and get either the current
+axis name of associated *value*.
 
+Case of a list of strings:
+
+.. code-block::
+
+    >>> self.axis_name
+    'Yaxis'
+    >>> self.axes_names
+    ['Xaxis', 'Yaxis', 'Zaxis']
+    >>> self.axis_value
+    'Yaxis'
+
+Case of a dictionary of strings/integers:
+
+.. code-block::
+
+    >>> self.axis_name
+    'Yaxis'
+    >>> self.axes_names
+    {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
+    >>> self.axis_value
+    1
 
 Modifying the UI from the instrument plugin class
 -------------------------------------------------
@@ -561,3 +585,40 @@ For instance, in the 0D Mock viewer plugin:
 
 Where the lcd is first initialized, then data are sent using the ``lcd`` command taking as attribute a list of 0D
 numpy arrays
+
+
+
+How to contribute?
+------------------
+
+If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
+to do so!!), you will have to follow the rules as stated above.
+
+Two cases are possible: either you want to add a new hardware from a manufacturer for which
+a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
+
+#. You have to fork the existing repo
+#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+
+Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
+the command line where you *cd* within the cloned package. This command will install the package but
+any change you apply on the local folder will be applied on the package. Then just add a new python file in the correct location
+
+In the case of a new repo, you will have to rename a few files (plugin_info.toml, README.rst ...) then add the
+python file of your instrument at the right location.
+
+Once you're ready with a working plugin, you can then:
+
+#. Publish your repo on pypi (just by doing a release on github will trigger the creation
+   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
+#. do a pull request on the initial repository to merge your new implementations.
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+
+All the packages published on pypi using the template and the naming convention will be available
+in the plugin manager.
+
+A very detailed tutorial has been published in this documentation: :ref:`plugin_development`
+and you can in the mean time look at this `video`__
+
+__ https://youtu.be/9O6pqz89UT8
