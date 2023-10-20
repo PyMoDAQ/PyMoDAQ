@@ -502,7 +502,7 @@ class DataBase(DataLowLevel):
 
     def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
                  distribution: DataDistribution = DataDistribution['uniform'], data: List[np.ndarray] = None,
-                 labels: List[str] = [], origin: str = None, **kwargs):
+                 labels: List[str] = [], origin: str = '', **kwargs):
 
         super().__init__(name=name)
         self._iter_index = 0

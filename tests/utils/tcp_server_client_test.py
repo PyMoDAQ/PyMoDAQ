@@ -4,7 +4,7 @@ import socket
 
 from unittest import mock
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket
+from pymodaq.utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket, Serializer
 from pyqtgraph.parametertree import Parameter
 from pyqtgraph import SRTTransform
 from collections import OrderedDict
@@ -64,6 +64,196 @@ class MockPythonSocket:  # pragma: no cover
         pass
 
 
+class TestSerializer:
+
+    def test_message_to_bytes(self):
+        message = 10
+        bytes_message = Serializer.message_to_bytes(message)
+        assert isinstance(bytes_message[0], bytes)
+        assert isinstance(bytes_message[1], bytes)
+
+    def test_int_to_bytes(self):
+        integer = 5
+        bytes_integer = Serializer.int_to_bytes(integer)
+        assert isinstance(bytes_integer, bytes)
+
+        with pytest.raises(TypeError):
+            Serializer.int_to_bytes(1.5)
+        with pytest.raises(TypeError):
+            Serializer.int_to_bytes('5')
+
+    def test_bytes_to_int(self):
+        integer = 5
+        bytes_integer = Serializer.int_to_bytes(integer)
+        result = Serializer.bytes_to_int(bytes_integer)
+        assert isinstance(result, int)
+        assert result == integer
+
+        with pytest.raises(TypeError):
+            Serializer.bytes_to_int(integer)
+
+
+    def send_string(self, string):
+        """
+
+        Parameters
+        ----------
+        socket
+        string
+
+        Returns
+        -------
+
+        """
+        cmd_bytes, cmd_length_bytes = self.message_to_bytes(string)
+        self.check_sended(cmd_length_bytes)
+        self.check_sended(cmd_bytes)
+
+    def get_string(self):
+        string_len = self.get_int()
+        string = self.check_received_length(string_len).decode()
+        return string
+
+    def get_int(self):
+        data = self.bytes_to_int(self.check_received_length(4))
+        return data
+
+    def send_scalar(self, data):
+        """
+        Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+
+        """
+        if not (isinstance(data, int) or isinstance(data, float)):
+            raise TypeError(f'{data} should be an integer or a float, not a {type(data)}')
+        data = np.array([data])
+        data_type = data.dtype.descr[0][1]
+        data_bytes = data.tobytes()
+        self.send_string(data_type)
+        self.check_sended(self.int_to_bytes(len(data_bytes)))
+        self.check_sended(data_bytes)
+
+    def get_scalar(self):
+        """
+
+        Parameters
+        ----------
+        socket
+
+        Returns
+        -------
+
+        """
+        data_type = self.get_string()
+        data_len = self.get_int()
+        data_bytes = self.check_received_length(data_len)
+
+        data = np.frombuffer(data_bytes, dtype=data_type)[0]
+        return data
+
+    def get_array(self):
+        """get 1D or 2D arrays"""
+        data_type = self.get_string()
+        data_len = self.get_int()
+        shape_len = self.get_int()
+        shape = []
+        for ind in range(shape_len):
+            shape.append(self.get_int())
+        data_bytes = self.check_received_length(data_len)
+        data = np.frombuffer(data_bytes, dtype=data_type)
+        data = data.reshape(tuple(shape))
+        data = np.squeeze(data)  # remove singleton dimensions
+        return data
+
+    def send_array(self, data_array):
+        """send ndarrays
+
+        get data type as a string
+        reshape array as 1D array and get the array dimensionality (len of array's shape)
+        convert Data array as bytes
+        send data type
+        send data length
+        send data shape length
+        send all values of the shape as integers converted to bytes
+        send data as bytes
+        """
+        if not isinstance(data_array, np.ndarray):
+            raise TypeError(f'{data_array} should be an numpy array, not a {type(data_array)}')
+        data_type = data_array.dtype.descr[0][1]
+        data_shape = data_array.shape
+
+        data = data_array.reshape(np.prod(data_shape))
+        data_bytes = data.tobytes()
+
+        self.send_string(data_type)
+        self.check_sended(self.int_to_bytes(len(data_bytes)))
+        self.check_sended(self.int_to_bytes(len(data_shape)))
+        for Nxxx in data_shape:
+            self.check_sended(self.int_to_bytes(Nxxx))
+        self.check_sended(data_bytes)
+
+    def send_list(self, data_list):
+        """
+
+        Parameters
+        ----------
+        socket
+        data_list
+
+        Returns
+        -------
+
+        """
+        if not isinstance(data_list, list):
+            raise TypeError(f'{data_list} should be a list, not a {type(data_list)}')
+        self.check_sended(self.int_to_bytes(len(data_list)))
+        for data in data_list:
+
+            if isinstance(data, np.ndarray):
+                self.send_string('array')
+                self.send_array(data)
+
+            elif isinstance(data, str):
+                self.send_string('string')
+                self.send_string(data)
+
+            elif isinstance(data, int) or isinstance(data, float):
+                self.send_string('scalar')
+                self.send_scalar(data)
+
+            else:
+                raise TypeError(f'the element {data} type is cannot be sent by TCP/IP, only numpy arrays'
+                                f', strings, or scalars (int or float)')
+
+    def get_list(self):
+        """
+        Receive data from socket as a list
+        Parameters
+        ----------
+        socket: the communication socket
+        Returns
+        -------
+
+        """
+        data = []
+        list_len = self.get_int()
+
+        for ind in range(list_len):
+            data_type = self.get_string()
+            if data_type == 'scalar':
+                data.append(self.get_scalar())
+            elif data_type == 'string':
+                data.append(self.get_string())
+            elif data_type == 'array':
+                data.append(self.get_array())
+        return data
+
+
 class TestSocket:
     def test_init(self):
         test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,31 +293,11 @@ class TestSocket:
         test_Socket.close()
         assert test_Socket.socket._closed
         
-    def test_message_to_bytes(self):
-        message = 10
-        bytes_message = Socket.message_to_bytes(message)
-        assert isinstance(bytes_message[0], bytes)
-        assert isinstance(bytes_message[1], bytes)
 
-    def test_int_to_bytes(self):
-        integer = 5
-        bytes_integer = Socket.int_to_bytes(integer)
-        assert isinstance(bytes_integer, bytes)
 
-        with pytest.raises(TypeError):
-            Socket.int_to_bytes(1.5)
-        with pytest.raises(TypeError):
-            Socket.int_to_bytes('5')
+
             
-    def test_bytes_to_int(self):
-        integer = 5
-        bytes_integer = Socket.int_to_bytes(integer)
-        result = Socket.bytes_to_int(bytes_integer)
-        assert isinstance(result, int)
-        assert result == integer
-        
-        with pytest.raises(TypeError):
-            Socket.bytes_to_int(integer)
+
 
     def test_check_sended(self):
         test_Socket = Socket(MockPythonSocket())

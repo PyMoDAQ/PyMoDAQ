@@ -556,25 +556,17 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
-        try:
-            self.settings.child(('infos')).addChildren(self.params_GRABBER)
+        self.settings.child('infos').addChildren(self.params_GRABBER)
 
-            self.init_server()
+        self.init_server()
+        self.controller = self.serversocket
+        # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+        self.x_axis = self.get_xaxis()
+        self.y_axis = self.get_yaxis()
 
-            # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-            self.x_axis = self.get_xaxis()
-            self.y_axis = self.get_yaxis()
-            self.status.x_axis = self.x_axis
-            self.status.y_axis = self.y_axis
-            self.status.initialized = True
-            self.status.controller = self.serversocket
-            return self.status
-
-        except Exception as e:
-            self.status.info = getLineInfo() + str(e)
-            self.status.initialized = False
-            return self.status
+        initialized = True
+        info = "Server ready"
+        return info, initialized
 
     def close(self):
         """

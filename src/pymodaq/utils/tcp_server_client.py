@@ -10,15 +10,13 @@ import socket
 import select
 import numpy as np
 
-from pymodaq.utils.parameter import ioxml
-from  pymodaq.utils.parameter import utils as putils
-import pymodaq.utils.parameter.pymodaq_ptypes
+from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.ioxml import parameter_to_xml_string
 from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
 from pymodaq.utils.data import DataFromPlugins, DataActuator
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
-from pyqtgraph.parametertree import Parameter
+from pymodaq.utils.parameter import Parameter
 from collections import OrderedDict
 from typing import List
 
@@ -31,6 +29,7 @@ tcp_parameters = [
     {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
     {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',
      'value': dict(), 'header': ['Type', 'adress']}, ]
+
 
 
 class Socket:
@@ -178,25 +177,6 @@ class Socket:
         data = self.bytes_to_int(self.check_received_length(4))
         return data
 
-    def send_scalar(self, data):
-        """
-        Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-
-        """
-        if not (isinstance(data, int) or isinstance(data, float)):
-            raise TypeError(f'{data} should be an integer or a float, not a {type(data)}')
-        data = np.array([data])
-        data_type = data.dtype.descr[0][1]
-        data_bytes = data.tobytes()
-        self.send_string(data_type)
-        self.check_sended(self.int_to_bytes(len(data_bytes)))
-        self.check_sended(data_bytes)
 
     def get_scalar(self):
         """
@@ -229,6 +209,48 @@ class Socket:
         data = data.reshape(tuple(shape))
         data = np.squeeze(data)  # remove singleton dimensions
         return data
+    def get_list(self):
+        """
+        Receive data from socket as a list
+        Parameters
+        ----------
+        socket: the communication socket
+        Returns
+        -------
+
+        """
+        data = []
+        list_len = self.get_int()
+
+        for ind in range(list_len):
+            data_type = self.get_string()
+            if data_type == 'scalar':
+                data.append(self.get_scalar())
+            elif data_type == 'string':
+                data.append(self.get_string())
+            elif data_type == 'array':
+                data.append(self.get_array())
+        return data
+
+    def send_scalar(self, data):
+        """
+        Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+
+        """
+        if not (isinstance(data, int) or isinstance(data, float)):
+            raise TypeError(f'{data} should be an integer or a float, not a {type(data)}')
+        data = np.array([data])
+        data_type = data.dtype.descr[0][1]
+        data_bytes = data.tobytes()
+        self.send_string(data_type)
+        self.check_sended(self.int_to_bytes(len(data_bytes)))
+        self.check_sended(data_bytes)
 
     def send_array(self, data_array):
         """send ndarrays
@@ -290,28 +312,7 @@ class Socket:
                 raise TypeError(f'the element {data} type is cannot be sent by TCP/IP, only numpy arrays'
                                 f', strings, or scalars (int or float)')
 
-    def get_list(self):
-        """
-        Receive data from socket as a list
-        Parameters
-        ----------
-        socket: the communication socket
-        Returns
-        -------
 
-        """
-        data = []
-        list_len = self.get_int()
-
-        for ind in range(list_len):
-            data_type = self.get_string()
-            if data_type == 'scalar':
-                data.append(self.get_scalar())
-            elif data_type == 'string':
-                data.append(self.get_string())
-            elif data_type == 'array':
-                data.append(self.get_array())
-        return data
 
 
 class TCPClientTemplate:
