@@ -4,7 +4,7 @@ DAQ Viewer
 ==========
 This module is to be used to interface any :term:`detector`. It will display hardware settings
 and display data as exported by the hardware plugins (see :ref:`data_emission`). The default detector
-is a Mock ones (a kind of software based
+is a Mock one (a kind of software based
 detector generating data and useful to test the program development). Other detectors may be loaded as
 plugins, see :ref:`instrument_plugin_doc`.
 
@@ -180,13 +180,14 @@ the DAQ_Viewer. By default, one viewer will be set with its type (0D, 1D, 2D, ND
 dimensionality (DAQ_type: DAQ0D, DAQ1D, DAQ2D...) but in fact the data viewers are set depending on the data exported
 from the detector plugin using the `data_grabed_signal` or `data_grabed_signal_temp` signals.
 
-These two signal emit a
+These two signals emit a
 list of `DataFromPlugins` objects. The **length** of this list will set the **number of dedicated data viewers**. In
 general one, but think about data from a Lockin amplifier generating an amplitude in volt and a phase in degrees.
 They are unrelated physical values better displayed in separated axes or viewers. The `DataFromPlugins`'s attribute
 `dim` (a string either equal to `Data0D`, `Data1D`, `Data2D`, `DataND`) will determine the data viewer type to set.
 
 This code in a plugin
+
 .. code-block:: python
 
     self.data_grabed_signal.emit([
