@@ -16,7 +16,7 @@ from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
 class Serializer:
     """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and DataToExport objects"""
 
-    def __init__(self, obj: Union[int, str, numbers.Number, list, np.ndarray, Axis, DataWithAxes, DataToExport]):
+    def __init__(self, obj: Union[int, str, numbers.Number, list, np.ndarray, Axis, DataWithAxes, DataToExport] = None):
         self._bytes_string = b''
         self._obj = obj
 
@@ -38,7 +38,7 @@ class Serializer:
 
     @staticmethod
     def int_to_bytes(an_integer: int) -> bytes:
-        """Convert an integer into a byte array of length 4 in big endian
+        """Convert an unsigned integer into a byte array of length 4 in big endian
 
         Parameters
         ----------
@@ -80,6 +80,14 @@ class Serializer:
             message = cls.str_to_bytes(message)
         return message, cls.int_to_bytes(len(message))
 
+    def _int_serialization(self, int_obj: int) -> bytes:
+        """Deserialize an unsigned integer used for getting the length of messages internaly, for outside integer
+        serialization or deserialization use scalar_serialization"""
+        int_bytes = self.int_to_bytes(int_obj)
+        bytes_string = int_bytes
+        self._bytes_string += bytes_string
+        return bytes_string
+
     def string_serialization(self, string: str) -> bytes:
         """ Convert a string into a bytes message together with the info to convert it back
 
@@ -109,15 +117,15 @@ class Serializer:
         -------
         bytes: the total bytes message to serialize the scalar
         """
-        if not isinstance(scalar, numbers.Number) :
+        if not isinstance(scalar, numbers.Number):
             raise TypeError(f'{scalar} should be an integer or a float, not a {type(scalar)}')
         scalar_array = np.array([scalar])
         data_type = scalar_array.dtype.descr[0][1]
         data_bytes = scalar_array.tobytes()
 
         bytes_string = b''
-        bytes_string += data_type
-        bytes_string += self.int_to_bytes(len(data_bytes))
+        bytes_string += self.string_serialization(data_type)
+        bytes_string += self._int_serialization(len(data_bytes))
         bytes_string += data_bytes
         self._bytes_string += bytes_string
         return bytes_string
@@ -155,11 +163,11 @@ class Serializer:
         array = array.reshape(array.size)
         array_bytes = array.tobytes()
         bytes_string = b''
-        bytes_string += array_type
-        bytes_string += self.int_to_bytes(len(array_bytes))
-        bytes_string += self.int_to_bytes(len(array_shape))
+        bytes_string += self.string_serialization(array_type)
+        bytes_string += self._int_serialization(len(array_bytes))
+        bytes_string += self._int_serialization(len(array_shape))
         for shape_elt in array_shape:
-            bytes_string += self.int_to_bytes(shape_elt)
+            bytes_string += self._int_serialization(shape_elt)
         bytes_string += array_bytes
         self._bytes_string += bytes_string
         return bytes_string
@@ -237,7 +245,7 @@ class Serializer:
 
         bytes_string = b''
 
-        bytes_string += self.int_to_bytes(len(list_object))
+        bytes_string += self._int_serialization(len(list_object))
         for obj in list_object:
             if isinstance(obj, DataWithAxes):
                 bytes_string += self.string_serialization('dwa')
@@ -402,8 +410,9 @@ class DeSerializer:
         array = np.atleast_1d(array)  # remove singleton dimensions but keeping ndarrays
         return array
 
-    def int_deserialization(self) -> int:
-        """Convert the fourth first bytes into an integer"""
+    def _int_deserialization(self) -> int:
+        """Convert the fourth first bytes into an unsigned integer to be used internally. For integer serialization
+        use scal_serialization"""
         int_obj = self.bytes_to_int(self._bytes_string[0:4])
         self._bytes_string = self._bytes_string[4:]
         return int_obj
@@ -417,7 +426,7 @@ class DeSerializer:
         -------
         str: the decoded string
         """
-        string_len = self.int_deserialization()
+        string_len = self._int_deserialization()
         str_obj = self._bytes_string[0:string_len].decode()
         self._bytes_string = self._bytes_string[string_len:]
         return str_obj
@@ -433,7 +442,7 @@ class DeSerializer:
         numbers.Number: the decoded number
         """
         data_type = self.string_deserialization()
-        data_len = self.int_deserialization()
+        data_len = self._int_deserialization()
         number = np.frombuffer(self._bytes_string[0:data_len], dtype=data_type)[0]
         self._bytes_string = self._bytes_string[data_len:]
         return number
@@ -448,11 +457,11 @@ class DeSerializer:
         ndarray: the decoded numpy array
         """
         ndarray_type = self.string_deserialization()
-        ndarray_len = self.int_deserialization()
-        shape_len = self.int_deserialization()
+        ndarray_len = self._int_deserialization()
+        shape_len = self._int_deserialization()
         shape = []
         for ind in range(shape_len):
-            shape_elt = self.int_deserialization()
+            shape_elt = self._int_deserialization()
             shape.append(shape_elt)
 
         ndarray = np.frombuffer(self._bytes_string[0:ndarray_len], dtype=ndarray_type)
@@ -471,7 +480,7 @@ class DeSerializer:
         list: the decoded list
         """
         list_obj = []
-        list_len = self.int_deserialization()
+        list_len = self._int_deserialization()
 
         for ind in range(list_len):
             list_type = self.string_deserialization()
@@ -504,7 +513,7 @@ class DeSerializer:
         axis_label = self.string_deserialization()
         axis_units = self.string_deserialization()
         axis_array = self.ndarray_deserialization()
-        axis_index = self.int_deserialization()
+        axis_index = self._int_deserialization()
 
         axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index)
         return axis

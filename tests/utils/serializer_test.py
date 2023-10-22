@@ -13,28 +13,56 @@ from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
 from pymodaq.utils.serializer import Serializer, DeSerializer
 
+LABEL = 'A Label'
+UNITS = 'units'
+OFFSET = -20.4
+SCALING = 0.22
+SIZE = 20
+DATA = OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE)
+
+DATA0D = np.array([2.7])
+DATA1D = np.arange(0, 10)
+DATA2D = np.arange(0, 5*6).reshape((5, 6))
+DATAND = np.arange(0, 5 * 6 * 3).reshape((5, 6, 3))
+Nn0 = 10
+Nn1 = 5
+
+
+def init_axis(data=None, index=0):
+    if data is None:
+        data = DATA
+    return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
+
+
+def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
+              labels=None) -> data_mod.DataWithAxes:
+    if data is None:
+        data = DATA2D
+    return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
+                                 axes=axes, labels=labels)
+
 
 class TestStaticClassMethods:
 
     def test_int_to_bytes(self):
-        ser = Serializer()
+
         afloat = 45.7
         a_negative_integer = -56
         for int_obj in [6, 678900786]:
-            bytes_string = ser.int_to_bytes(int_obj)
+            bytes_string = Serializer.int_to_bytes(int_obj)
             assert len(bytes_string) == 4
             assert bytes_string == int_obj.to_bytes(4, 'big')
 
             assert DeSerializer.bytes_to_int(bytes_string) == int_obj
 
         with pytest.raises(TypeError):
-            ser.int_to_bytes(afloat)
+            Serializer.int_to_bytes(afloat)
         with pytest.raises(ValueError):
-            ser.int_to_bytes(a_negative_integer)
+            Serializer.int_to_bytes(a_negative_integer)
 
     def test_str_to_bytes(self):
-        ser = Serializer()
         MESSAGE = 'Hello World'
+        ser = Serializer(MESSAGE)
         bytes_message = ser.str_to_bytes(MESSAGE)
         assert bytes_message == MESSAGE.encode()
         assert DeSerializer.bytes_to_string(bytes_message) == MESSAGE
@@ -44,9 +72,9 @@ class TestStaticClassMethods:
             ser.str_to_bytes(56,8)
 
     def test_str_len_to_bytes(self):
-        ser = Serializer()
-        MESSAGE = 'Hello World'
 
+        MESSAGE = 'Hello World'
+        ser = Serializer(MESSAGE)
         bytes_string, bytes_length = ser.str_len_to_bytes(MESSAGE)
 
         assert bytes_string == MESSAGE.encode()
@@ -55,9 +83,6 @@ class TestStaticClassMethods:
         assert DeSerializer.bytes_to_string(bytes_string) == MESSAGE
 
 
-def test_int_serialization_deserialization():
-    ser = Serializer()
-
 def test_string_serialization_deserialization():
 
     string = 'Hello World'
@@ -65,85 +90,50 @@ def test_string_serialization_deserialization():
 
     bytes_string = ser.string_serialization(string)
     assert len(bytes_string) == len(string) + 4
-
     deser = DeSerializer(bytes_string)
     assert deser.string_deserialization() == string
-
     assert ser.to_bytes() == bytes_string
 
 
-    #     bytes_string = b''
-    #     cmd_bytes, cmd_length_bytes = self.str_len_to_bytes(string)
-    #     bytes_string += cmd_length_bytes
-    #     bytes_string += cmd_bytes
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
-    # def scalar_serialization(self, scalar: numbers.Number) -> bytes:
-    #     """ Convert a scalar into a bytes message together with the info to convert it back
-    #
-    #     Parameters
-    #     ----------
-    #     scalar: str
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the scalar
-    #     """
-    #     if not isinstance(scalar, numbers.Number):
-    #         raise TypeError(f'{scalar} should be an integer or a float, not a {type(scalar)}')
-    #     scalar_array = np.array([scalar])
-    #     data_type = scalar_array.dtype.descr[0][1]
-    #     data_bytes = scalar_array.tobytes()
-    #
-    #     bytes_string = b''
-    #     bytes_string += data_type
-    #     bytes_string += self.int_to_bytes(len(data_bytes))
-    #     bytes_string += data_bytes
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
-    # def ndarray_serialization(self, array: np.ndarray) -> bytes:
-    #     """ Convert a ndarray into a bytes message together with the info to convert it back
-    #
-    #     Parameters
-    #     ----------
-    #     array: np.ndarray
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the scalar
-    #
-    #     Notes
-    #     -----
-    #
-    #     The bytes sequence is constructed as:
-    #
-    #     * get data type as a string
-    #     * reshape array as 1D array and get the array dimensionality (len of array's shape)
-    #     * convert Data array as bytes
-    #     * serialize data type
-    #     * serialize data length
-    #     * serialize data shape length
-    #     * serialize all values of the shape as integers converted to bytes
-    #     * serialize array as bytes
-    #     """
-    #     if not isinstance(array, np.ndarray):
-    #         raise TypeError(f'{array} should be an numpy array, not a {type(array)}')
-    #     array_type = array.dtype.descr[0][1]
-    #     array_shape = array.shape
-    #
-    #     array = array.reshape(array.size)
-    #     array_bytes = array.tobytes()
-    #     bytes_string = b''
-    #     bytes_string += array_type
-    #     bytes_string += self.int_to_bytes(len(array_bytes))
-    #     bytes_string += self.int_to_bytes(len(array_shape))
-    #     for shape_elt in array_shape:
-    #         bytes_string += self.int_to_bytes(shape_elt)
-    #     bytes_string += array_bytes
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
+def test_scalar_serialization_deserialization():
+    scalars = [45.6, 67, -64, -56.8, 2+1j*56]
+
+    for scalar in scalars:
+        ser = Serializer(scalar)
+        assert isinstance(ser.to_bytes(), bytes)
+        assert DeSerializer(ser.to_bytes()).scalar_deserialization() == pytest.approx(scalar)
+        pass
+
+
+def test_ndarray_serialization_deserialization():
+
+    ndarrays = [np.array([12, 56, 78,]),
+                np.array([-12.8, 56, 78, ]),
+                np.array([12]),
+                np.array([[12, 56, 78, ],
+                          [12, 56, 78, ],
+                          [12, 56, 78, ]])]
+
+    for ndarray in ndarrays:
+        ser = Serializer(ndarray)
+        assert isinstance(ser.to_bytes(), bytes)
+        assert np.allclose(DeSerializer(ser.to_bytes()).ndarray_deserialization(), ndarray)
+
+def test_object_type_serialization():
+    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+    dat_act = data_mod.DataActuator(data=45)
+    data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
+    axis = init_axis(data=data_tmp)
+    dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+    ser = Serializer()
+
+    for obj in [dat0D, dat1D_calculated, dat_act, axis, dte]:
+        assert Serializer.object_type_serialization(obj)[4:].decode() == obj.__class__.__name__
+
+
     #
     # def object_type_serialization(self, obj: Union[Axis, DataToExport, DataWithAxes]) -> bytes:
     #     """ Convert an object type into a bytes message as a string together with the info to convert it back
