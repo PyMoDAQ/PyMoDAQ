@@ -63,6 +63,14 @@ class DataLengthError(Exception):
     pass
 
 
+class DwaType(BaseEnum):
+    DataWithAxes = 0
+    DataRaw = 1
+    DataActuator = 2
+    DataFromPlugins = 3
+    DataCalculated = 4
+
+
 class DataDim(BaseEnum):
     """Enum for dimensionality representation of data"""
     Data0D = 0
