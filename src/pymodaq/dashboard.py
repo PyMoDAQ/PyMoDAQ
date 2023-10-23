@@ -791,7 +791,7 @@ class DashBoard(QObject):
                                     if plugin['status'] != "Master":
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
-                                        detector_modules[-1].init_hardware()
+                                        detector_modules[-1].init_hardware_ui()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
@@ -801,7 +801,7 @@ class DashBoard(QObject):
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
                                         detector_modules[-1].controller = master_controller
-                                        detector_modules[-1].init_hardware()
+                                        detector_modules[-1].init_hardware_ui()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
