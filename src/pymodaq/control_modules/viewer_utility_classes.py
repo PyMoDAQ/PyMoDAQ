@@ -11,7 +11,7 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
-from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.data import DataToExport
 from pymodaq.utils.messenger import deprecation_msg
 

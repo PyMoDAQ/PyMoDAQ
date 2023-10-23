@@ -15,7 +15,7 @@ from pymodaq.utils.parameter import ioxml
 
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, find_keys_from_val
 from pymodaq.utils import config as configmod
-from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.enums import BaseEnum, enum_checker

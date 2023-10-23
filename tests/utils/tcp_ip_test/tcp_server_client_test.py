@@ -4,12 +4,13 @@ import socket
 
 from unittest import mock
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket, Serializer
+from pymodaq.utils.tcp_ip.tcp_server_client import MockServer, TCPClient, TCPServer, Socket, Serializer
 from pyqtgraph.parametertree import Parameter
 from pyqtgraph import SRTTransform
 from collections import OrderedDict
 from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2, Expected_3
 from pymodaq.utils.data import DataActuator
+
 
 class MockPythonSocket:  # pragma: no cover
     def __init__(self):

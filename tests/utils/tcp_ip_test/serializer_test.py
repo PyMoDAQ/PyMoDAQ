@@ -11,7 +11,7 @@ import pytest
 
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
-from pymodaq.utils.serializer import Serializer, DeSerializer
+from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
 
 LABEL = 'A Label'
 UNITS = 'units'
@@ -40,6 +40,16 @@ def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSo
         data = DATA2D
     return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
                                  axes=axes, labels=labels)
+
+
+@pytest.fixture()
+def get_data():
+    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+    dat_act = data_mod.DataActuator(data=45)
+    dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw, dat_act])
+    return dte
 
 
 class TestStaticClassMethods:
@@ -119,64 +129,56 @@ def test_ndarray_serialization_deserialization():
         assert isinstance(ser.to_bytes(), bytes)
         assert np.allclose(DeSerializer(ser.to_bytes()).ndarray_deserialization(), ndarray)
 
-def test_object_type_serialization():
-    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
-    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
-    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
-    dat_act = data_mod.DataActuator(data=45)
-    data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
-    axis = init_axis(data=data_tmp)
-    dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
 
+def test_object_type_serialization(get_data):
+    dte = get_data
     ser = Serializer()
+    objects = [dwa for dwa in dte]
+    objects.append(dte)
+    objects.extend(dte.get_data_from_dim('Data1D')[0].axes)
 
-    for obj in [dat0D, dat1D_calculated, dat_act, axis, dte]:
-        assert Serializer.object_type_serialization(obj)[4:].decode() == obj.__class__.__name__
+    for obj in objects:
+        assert ser.object_type_serialization(obj)[4:].decode() == obj.__class__.__name__
 
 
-    #
-    # def object_type_serialization(self, obj: Union[Axis, DataToExport, DataWithAxes]) -> bytes:
-    #     """ Convert an object type into a bytes message as a string together with the info to convert it back
-    #
-    #     Applies to Data object from the pymodaq.utils.data module
-    #     """
-    #     return self.string_serialization(obj.__class__.__name__)
-    #
-    # def axis_serialization(self, axis: Axis) -> bytes:
-    #     """ Convert an Axis object into a bytes message together with the info to convert it back
-    #
-    #     Parameters
-    #     ----------
-    #     axis: Axis
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the Axis
-    #
-    #     Notes
-    #     -----
-    #
-    #     The bytes sequence is constructed as:
-    #
-    #     * serialize the type: 'Axis'
-    #     * serialize the axis label
-    #     * serialize the axis units
-    #     * serialize the axis array
-    #     * serialize the axis index
-    #     """
-    #     if not isinstance(axis, Axis):
-    #         raise TypeError(f'{axis} should be a list, not a {type(axis)}')
-    #
-    #     bytes_string = b''
-    #     bytes_string += self.object_type_serialization(axis)
-    #     bytes_string += self.string_serialization(axis.label)
-    #     bytes_string += self.string_serialization(axis.units)
-    #     bytes_string += self.ndarray_serialization(axis.get_data())
-    #     bytes_string += self.scalar_serialization(axis.index)
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
-    # def list_serialization(self, list_object: List) -> bytes:
+def test_axis_serialization_deserialization():
+
+    axis = init_axis()
+
+    ser = Serializer(axis)
+    assert isinstance(ser.to_bytes(), bytes)
+
+    axis_deser = DeSerializer(ser.to_bytes()).axis_deserialization()
+    assert isinstance(axis_deser, Axis)
+    assert axis_deser.label == axis.label
+    assert axis_deser.units == axis.units
+    assert np.allclose(axis_deser.get_data(), axis.get_data())
+
+    ser = Serializer('bjkdbjk')
+    with pytest.raises(TypeError):
+        ser.axis_serialization()
+    with pytest.raises(TypeError):
+        DeSerializer(ser.string_serialization()).axis_deserialization()
+
+
+@pytest.mark.parametrize('obj_list', (['hjk', 'jkgjg', 'lkhlkhl'],  # homogeneous string
+                                      [21, 34, -56, 56.7, 1+1j*99],  # homogeneous numbers
+                                      [np.array([45, 67, 87654]), np.array([[45, 67, 87654],
+                                                                            [-45, -67, -87654]])],  # homogeneous ndarrays
+                                      [init_axis(), init_axis()],  # homogeneous axis
+                                      [init_data(), init_data(), init_data()],  # homogeneous dwa
+                                      ['hjk', 34, np.array([45, 67, 87654]), init_data(), init_axis()]))  # inhomogeneous
+def test_list_serialization_deserialization(get_data, obj_list):
+    ser = Serializer(obj_list)
+    list_back = DeSerializer(ser.to_bytes()).list_deserialization()
+    assert isinstance(list_back, list)
+    for ind in range(len(obj_list)):
+        if isinstance(obj_list[ind], np.ndarray):
+            assert np.allclose(obj_list[ind], list_back[ind])
+        else:
+            assert obj_list[ind] == list_back[ind]
+
+
     #     """ Convert a list of objects into a bytes message together with the info to convert it back
     #
     #     Parameters

@@ -199,7 +199,8 @@ class Serializer:
         * serialize the axis label
         * serialize the axis units
         * serialize the axis array
-        * serialize the axis index
+        * serialize the axis
+        * serialize the axis spread_order
         """
         if not isinstance(axis, Axis):
             raise TypeError(f'{axis} should be a list, not a {type(axis)}')
@@ -210,6 +211,7 @@ class Serializer:
         bytes_string += self.string_serialization(axis.units)
         bytes_string += self.ndarray_serialization(axis.get_data())
         bytes_string += self.scalar_serialization(axis.index)
+        bytes_string += self.scalar_serialization(axis.spread_order)
         self._bytes_string += bytes_string
         return bytes_string
 
@@ -444,6 +446,10 @@ class DeSerializer:
         data_type = self.string_deserialization()
         data_len = self._int_deserialization()
         number = np.frombuffer(self._bytes_string[0:data_len], dtype=data_type)[0]
+        if 'f' in data_type:
+            number = float(number)  # because one get numpy  float type
+        elif 'i' in data_type:
+            number = int(number)  # because one get numpy int type
         self._bytes_string = self._bytes_string[data_len:]
         return number
 
@@ -483,16 +489,16 @@ class DeSerializer:
         list_len = self._int_deserialization()
 
         for ind in range(list_len):
-            list_type = self.string_deserialization()
-            if list_type == 'scalar':
+            obj_type = self.string_deserialization()
+            if obj_type == 'scalar':
                 list_elt = self.scalar_deserialization()
-            elif list_type == 'string':
+            elif obj_type == 'string':
                 list_elt = self.string_deserialization()
-            elif list_type == 'array':
+            elif obj_type == 'array':
                 list_elt = self.ndarray_deserialization()
-            elif list_type == 'dwa':
+            elif obj_type == 'dwa':
                 list_elt = self.dwa_deserialization()
-            elif list_type == 'axis':
+            elif obj_type == 'axis':
                 list_elt = self.axis_deserialization()
             list_obj.append(list_elt)
         return list_obj
@@ -513,9 +519,10 @@ class DeSerializer:
         axis_label = self.string_deserialization()
         axis_units = self.string_deserialization()
         axis_array = self.ndarray_deserialization()
-        axis_index = self._int_deserialization()
+        axis_index = self.scalar_deserialization()
+        axis_spread_order = self.scalar_deserialization()
 
-        axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index)
+        axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index, spread_order=axis_spread_order)
         return axis
 
     def dwa_deserialization(self) -> DataWithAxes:
