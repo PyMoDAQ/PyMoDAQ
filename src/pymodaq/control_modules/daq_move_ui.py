@@ -302,11 +302,11 @@ class DAQ_Move_UI(ControlModuleUI):
         do_init: bool
             will fire the Init button depending on the argument value and the button check state
         """
-        if (do_init and not self.ini_actuator_pb.isChecked()) or ((not do_init) and self.ini_actuator_pb.isChecked()):
+        if do_init is not self.ini_actuator_pb.isChecked():
             self.ini_actuator_pb.click()
 
-    def send_init(self):
-        self.actuators_combo.setEnabled(not self.ini_actuator_pb.isChecked())
+    def send_init(self, checked):
+        self.actuators_combo.setEnabled(not checked)
         self.command_sig.emit(ThreadCommand('init', [self.ini_actuator_pb.isChecked(),
                                                      self.actuators_combo.currentText()]))
 

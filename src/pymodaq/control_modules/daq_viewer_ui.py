@@ -232,7 +232,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand('save_new', )))
         self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand('open', )))
 
-        self._ini_det_pb.clicked.connect(self._send_init)
+        self._ini_det_pb.clicked.connect(self.send_init)
 
         self._detectors_combo.currentTextChanged.connect(
             lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
@@ -289,7 +289,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         do_init: bool
             will fire the Init button depending on the argument value and the button check state
         """
-        if (do_init and not self._ini_det_pb.isChecked()) or ((not do_init) and self._ini_det_pb.isChecked()):
+        if do_init is not self._ini_det_pb.isChecked():
             self._ini_det_pb.click()
 
     def do_grab(self, do_grab=True):
@@ -317,10 +317,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         if self.is_action_checked('grab'):
             self.get_action('grab').trigger()
 
-    def _send_init(self):
-        self._enable_detchoices(not self._ini_det_pb.isChecked())
-        self._ini_det_pb.isChecked()
-        self.command_sig.emit(ThreadCommand('init', [self._ini_det_pb.isChecked(),
+    def send_init(self, checked: bool):
+        self._enable_detchoices(not checked)
+        self.command_sig.emit(ThreadCommand('init', [checked,
                                                      self._daq_types_combo.currentText(),
                                                      self._detectors_combo.currentText()]))
 
