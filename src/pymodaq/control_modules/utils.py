@@ -102,6 +102,7 @@ class ControlModule(QObject):
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
     custom_sig = Signal(ThreadCommand)
+    ui = None
 
     def __init__(self):
         super().__init__()
@@ -281,7 +282,8 @@ class ControlModule(QObject):
         -----
         This method should be preferred to :meth:`init_hardware`
         """
-        raise NotImplementedError
+        if self.ui is not None:
+            self.ui.do_init(do_init)
 
     def show_log(self):
         """Open the log file in the default text editor"""
@@ -373,5 +375,5 @@ class ControlModuleUI(CustomApp):
         raise NotImplementedError
 
     def send_init(self):
-        """Shoudl be implemented to send to the main app the fact that someone pressed init"""
+        """Should be implemented to send to the main app the fact that someone pressed init."""
         raise NotImplementedError

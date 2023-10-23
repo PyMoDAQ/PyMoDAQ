@@ -404,11 +404,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     #  #####################################
     #  Methods for running the acquisition
 
-    def init_hardware_ui(self, do_init=True):
-        """Send a command to the underlying UI to click the init button"""
-        if self.ui is not None:
-            self.ui.do_init()
-
     def init_hardware(self, do_init=True):
         """ Init the selected detector
 
