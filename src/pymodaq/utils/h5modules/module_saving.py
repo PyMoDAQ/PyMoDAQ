@@ -35,6 +35,10 @@ class ModuleSaver(metaclass=ABCMeta):
     _module_group: GROUP = abstract_attribute()
     main_module = True
 
+    def flush(self):
+        """Flush the underlying file"""
+        self._h5saver.flush()
+
     def get_set_node(self, where: Union[Node, str] = None, name: str = None) -> GROUP:
         """Get or create the node corresponding to this particular Module instance
 

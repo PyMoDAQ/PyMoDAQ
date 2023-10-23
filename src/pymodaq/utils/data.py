@@ -287,6 +287,9 @@ class Axis:
     def __len__(self):
         return self.size
 
+    def _compute_slices(self, slices, *ignored, **ignored_also):
+        return slices
+
     def _slicer(self, _slice, *ignored, **ignored_also):
         ax: Axis = copy.deepcopy(self)
         if isinstance(_slice, int):
@@ -667,6 +670,18 @@ class DataBase(DataLowLevel):
         """ Take the absolute value of itself"""
         new_data = copy.copy(self)
         new_data.data = [np.abs(dat) for dat in new_data]
+        return new_data
+
+    def flipud(self):
+        """Reverse the order of elements along axis 0 (up/down)"""
+        new_data = copy.copy(self)
+        new_data.data = [np.flipud(dat) for dat in new_data]
+        return new_data
+
+    def fliplr(self):
+        """Reverse the order of elements along axis 1 (left/right)"""
+        new_data = copy.copy(self)
+        new_data.data = [np.fliplr(dat) for dat in new_data]
         return new_data
 
     def append(self, data: DataWithAxes):
@@ -1301,7 +1316,55 @@ class DataWithAxes(DataBase):
         for dat in self.data:
             dat_mean.append(np.mean(dat, axis=axis))
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
+    
+    def sum(self, axis: int = 0) -> DataWithAxes:
+        """Process the sum of the data on the specified axis and returns the new data
 
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_sum = []
+        for dat in self.data:
+            dat_sum.append(np.sum(dat, axis=axis))
+        return self.deepcopy_with_new_data(dat_sum, remove_axes_index=axis)
+    
+    def ft(self, axis: int = 0) -> DataWithAxes:
+        """Process the Fourier Transform of the data on the specified axis and returns the new data
+
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_ft = []
+        for dat in self.data:
+            dat_ft.append(mutils.ft(dat, dim=axis))
+        return self.deepcopy_with_new_data(dat_ft)
+
+    def ift(self, axis: int = 0) -> DataWithAxes:
+        """Process the inverse Fourier Transform of the data on the specified axis and returns the new data
+
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_ift = []
+        for dat in self.data:
+            dat_ift.append(mutils.ift(dat, dim=axis))
+        return self.deepcopy_with_new_data(dat_ift)
+    
     def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
         """
@@ -1318,6 +1381,11 @@ class DataWithAxes(DataBase):
                 elif len(self.axes) == 2:
                     self._dim = DataDim['Data2D']
         return self._dim
+
+    @property
+    def n_axes(self):
+        """Get the number of axes (even if not specified)"""
+        return len(self.axes)
 
     @property
     def axes(self):
@@ -1376,6 +1444,8 @@ class DataWithAxes(DataBase):
 
         Filling in Ellipsis when no slicing should be done
         """
+        if isinstance(slices, numbers.Number) or isinstance(slices, slice):
+            slices = [slices]
         if is_navigation:
             indexes = self._am.nav_indexes
         else:
@@ -1473,10 +1543,11 @@ class DataWithAxes(DataBase):
                 source = enum_checker(DataSource, source)
                 new_data._source = source
 
-            if not isinstance(remove_axes_index, Iterable):
-                remove_axes_index = [remove_axes_index]
 
             if remove_axes_index is not None:
+                if not isinstance(remove_axes_index, Iterable):
+                    remove_axes_index = [remove_axes_index]
+                    
                 lower_indexes = dict(zip(new_data.get_axis_indexes(),
                                          [0 for _ in range(len(new_data.get_axis_indexes()))]))
                 # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
@@ -1558,7 +1629,8 @@ class DataActuator(DataRaw):
             return f'{self.__class__.__name__} <{self.shape}>>'
 
     def value(self):
-        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the average"""
+        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the
+        underlying data"""
         if self.length == 1 and self.size == 1:
             return float(self.data[0][0])
         else:
@@ -1875,6 +1947,27 @@ class DataToExport(DataLowLevel):
                     data.append(_data)
         return data
 
+    def get_data_with_naxes_lower_than(self, n_axes=2, deepcopy: bool = False) -> DataToExport:
+        """Get the data with n axes lower than the given number
+
+        Parameters
+        ----------
+        Naxes: int
+            Number of axes in the DataWithAxes objects
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the number of axes
+        """
+        data = DataToExport(name=self.name)
+        for _data in self:
+            if _data.n_axes <= n_axes:
+                if deepcopy:
+                    data.append(_data.deepcopy())
+                else:
+                    data.append(_data)
+        return data
+
     def get_data_from_name(self, name: str) -> DataWithAxes:
         """Get the data matching the given name"""
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
@@ -1924,7 +2017,7 @@ class DataToExport(DataLowLevel):
         return self.data.pop(index)
 
     def remove(self, dwa: DataWithAxes):
-        self.pop(self.data.index(dwa))
+        return self.pop(self.data.index(dwa))
 
     @property
     def data(self) -> List[DataWithAxes]:
@@ -2005,7 +2098,7 @@ if __name__ == '__main__':
 
     data2 = copy.copy(data)
 
-    data3 = data._deepcopy_with_new_data([np.sum(dat, 1)], remove_axes_index=(1,))
+    data3 = data.deepcopy_with_new_data([np.sum(dat, 1)], remove_axes_index=(1,))
 
     print('done')
 

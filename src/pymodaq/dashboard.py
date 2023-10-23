@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
@@ -28,6 +27,7 @@ from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.managers.roi_manager import ROISaver
 from pymodaq.utils.exceptions import DetectorError, ActuatorError
 from pymodaq.utils import config as configmod
+from pymodaq.utils.parameter import ParameterTree, Parameter
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -36,7 +36,9 @@ from pymodaq import extensions as extmod
 
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
+from pymodaq.utils.daq_utils import get_instrument_plugins
 
+get_instrument_plugins()
 
 logger = set_logger(get_module_name(__file__))
 
@@ -1038,7 +1040,7 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def create_overshoot_fun(self, move_module, position):
-        return lambda: move_module.move_Abs(position)
+        return lambda: move_module.move_abs(position)
 
     @property
     def move_modules(self):
@@ -1190,7 +1192,8 @@ class DashBoard(QObject):
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
     def show_config(self):
-        config_tree = configmod.TreeFromToml()
+        from pymodaq.utils.gui_utils.widgets.tree_toml import TreeFromToml
+        config_tree = TreeFromToml()
         config_tree.show_dialog()
 
     def setupUI(self):

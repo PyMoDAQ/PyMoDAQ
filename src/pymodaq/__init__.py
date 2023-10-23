@@ -84,6 +84,9 @@ try:
     Q_ = ureg.Quantity
     logger.info('')
     logger.info('')
+    logger.info('************************')
+    logger.info(f"Getting the list of instrument plugins...")
+    logger.info('************************')
 
 except Exception as e:
     try:

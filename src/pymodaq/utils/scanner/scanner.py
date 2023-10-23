@@ -247,6 +247,7 @@ def main():
 
     widget_main = QtWidgets.QWidget()
     widget_main.setLayout(QtWidgets.QVBoxLayout())
+    #widget_main.layout().setContentsMargins(0, 0, 0, 0)
     widget_scanner = QtWidgets.QWidget()
     widget_main.layout().addWidget(settings_tree)
     widget_main.layout().addWidget(widget_scanner)

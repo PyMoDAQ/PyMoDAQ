@@ -36,13 +36,13 @@ class ExporterFactory:
 
         def inner_wrapper(wrapped_class) -> Callable:
             extension = wrapped_class.FORMAT_EXTENSION
-            # Warn if overriding existing exporter
-            if extension in cls.exporters_registry:
-                logger.warning(f"Exporter for the .{extension} format already exists and will be replaced")
+            format_desc = wrapped_class.FORMAT_DESCRIPTION
 
-            # Register extension
-            cls.exporters_registry[extension] = wrapped_class
-            cls.file_filters[extension] = wrapped_class.FORMAT_DESCRIPTION
+            if extension not in cls.exporters_registry:
+                cls.exporters_registry[extension] = {}
+            if filter not in cls.exporters_registry[extension]:
+                cls.exporters_registry[extension][format_desc] = wrapped_class
+
             # Return wrapped_class
             return wrapped_class
 
@@ -50,30 +50,40 @@ class ExporterFactory:
         return inner_wrapper
 
     @classmethod
-    def create_exporter(cls, extension: str):
+    def create_exporter(cls, extension: str, filter: str):
         """Factory command to create the exporter object.
-            This method gets the appropriate executor class from the registry
-            and instantiates it.
-            Args:
-                extension (str): the extension of the file that will be exported
-            returns:
-                an instance of the executor created
+        This method gets the appropriate executor class from the registry
+        and instantiates it.
+        Parameters
+        ----------
+        extension: str
+            the extension of the file that will be exported
+        filter: str
+            the filter string
+        Returns
+        -------
+        an instance of the executor created
         """
         if extension not in cls.exporters_registry:
             raise ValueError(f".{extension} is not a supported file format.")
+        elif filter not in cls.exporters_registry[extension]:
+            raise ValueError(f".{filter} is not a supported file description.")
 
-        exporter_class = cls.exporters_registry[extension]
-
-        exporter = exporter_class()
-
-        return exporter
+        return cls.exporters_registry[extension][filter]()
 
     @classmethod
     def get_file_filters(cls):
         """Create the file filters string"""
-        tmplist = [f"{v} (*.{k})" for k, v in cls.file_filters.items()]
-        return ";;".join(tmplist)
+        tmp_list = []
+        for extension in cls.exporters_registry:
+            for format_desc in cls.exporters_registry[extension]:
+                tmp_list.append(f"{format_desc} (*.{extension})")
+        return ";;".join(tmp_list)
 
+    @staticmethod
+    def get_format_from_filter(filter: str):
+        """Returns the string format description removing the extension part"""
+        return filter.split(' (*')[0]
 
 class H5Exporter(metaclass=ABCMeta):
     """Base class for an exporter. """

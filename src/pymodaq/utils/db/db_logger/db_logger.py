@@ -13,7 +13,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.utils.messenger import messagebox, deprecation_msg
 from pymodaq.utils.abstract.logger import AbstractLogger
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.parameter import ParameterTree, Parameter
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

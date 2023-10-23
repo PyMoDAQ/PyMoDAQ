@@ -1,6 +1,6 @@
 import random
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params

@@ -3,7 +3,7 @@ from  pymodaq.utils.parameter.utils import get_widget_from_tree
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock
-from pyqtgraph.parametertree import ParameterTree, Parameter
+from pymodaq.utils.parameter import ParameterTree, Parameter
 from pymodaq.utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
 from pymodaq.utils.scanner.scanners.tabular import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot

@@ -11,6 +11,7 @@ from typing import Callable, Union, List, Tuple, TYPE_CHECKING
 
 
 import numpy as np
+from qtpy import QtWidgets
 
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.utils.factory import ObjectFactory
@@ -34,7 +35,9 @@ class ScanParameterManager(ParameterManager):
 
     def __init__(self):
         super().__init__()
-        self.settings_tree.header().setVisible(False)
+        self.settings_tree.header().setVisible(True)
+        self.settings_tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Interactive)
+        self.settings_tree.header().setMinimumSectionSize(150)
         self.settings_tree.setMinimumHeight(150)
 
 

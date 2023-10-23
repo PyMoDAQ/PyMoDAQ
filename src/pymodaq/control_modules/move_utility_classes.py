@@ -77,31 +77,29 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
     ----------
     is_multiaxes: bool
         If True, display the particular settings to define which axis the controller is driving
-    axes_names: list of str
+    axis_names: list of str
         The string identifier of every axis the controller can drive
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
+    if axis_names == [] and axes_names != []:
+        axis_names == axes_names
+
     params = [
                  {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
                      {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
                       'default': False},
                      {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
                       'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
-                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
+                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names},
                  ]},
-                 {'title': 'Grouping', 'name': 'grouping', 'type': 'group', 'visible': is_multiaxes, 'children': [
-                     {'title': 'Axes', 'name': 'grouped_axes', 'type': 'itemselect',
-                      'value': dict(all_items=axes_names, selected=[])},
-                     {'title': 'Do group', 'name': 'do_group', 'type': 'bool'},
-                 ]}
              ] + comon_parameters(epsilon)
     return params
 
@@ -237,7 +235,7 @@ class DAQ_Move_base(QObject):
         self.ini_attributes()
 
     @property
-    def axis_name(self) -> str:
+    def axis_name(self) -> Union[str, object]:
         """Get/Set the current axis using its string identifier"""
         limits = self.settings.child('multiaxes', 'axis').opts['limits']
         if isinstance(limits, list):
@@ -268,12 +266,12 @@ class DAQ_Move_base(QObject):
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
         self.settings.child('multiaxes', 'axis').setLimits(names)
-        grouped_axes = self.settings['grouping', 'grouped_axes'].copy()  # copying the dict otherwise the valuechanged will not be triggered
-        if isinstance(names, dict):
-            names = list(names.keys())
-        grouped_axes.update({'all_items': names, 'selected': []})
-        self.settings.child('grouping', 'grouped_axes').setValue(grouped_axes)
         QtWidgets.QApplication.processEvents()
+
+    @property
+    def axis_value(self) -> object:
+        """Get the current value selected from the current axis"""
+        return self.settings['multiaxes', 'axis']
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
@@ -671,24 +669,16 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
-        try:
-            self.settings.child('infos').addChildren(self.params_client)
+        self.settings.child('infos').addChildren(self.params_client)
 
-            self.init_server()
+        self.init_server()
+        self.controller = self.serversocket
+        self.settings.child('units').hide()
+        self.settings.child('epsilon').hide()
 
-            self.settings.child('units').hide()
-            self.settings.child('epsilon').hide()
-
-            self.status.info = 'TCP Server actuator'
-            self.status.initialized = True
-            self.status.controller = self.serversocket
-            return self.status
-
-        except Exception as e:
-            self.status.info = getLineInfo() + str(e)
-            self.status.initialized = False
-            return self.status
+        info = 'TCP Server actuator'
+        initialized = True
+        return info, initialized
 
     def close(self):
         """

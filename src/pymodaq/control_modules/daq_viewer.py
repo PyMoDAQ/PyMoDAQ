@@ -60,7 +60,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     Attributes
     ----------
-    grab_done_signal: Signal[OrderedDict]
+    grab_done_signal: Signal[DataToExport]
         Signal emitted when the data from the plugin (and eventually from the data viewers) has been received. To be
         used by connected objects.
     custom_sig: Signal[ThreadCommand]
@@ -768,7 +768,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @Slot(DataToExport)
     def show_data(self, dte: DataToExport):
-        """Send data to their dedicated viewers but those will not emit processed data signal
+        """Send data to their dedicated viewers
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
@@ -805,6 +805,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self._data_to_save_export = \
                         _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
             else:
+                for dwa in dte:
+                    dwa.origin = self._title
                 self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:

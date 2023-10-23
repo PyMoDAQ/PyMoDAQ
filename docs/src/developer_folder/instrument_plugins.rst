@@ -51,8 +51,7 @@ a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
 
 Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
 the command line where you *cd* within the cloned package.
-This command will install the package but
-any change you apply on the local folder will be applied on the package.
+This command will install the package but any change you apply on the local folder will be applied on the package.
 Then just add a new python file in the correct location.
 
 In the case of a new repository, you will have to
@@ -73,8 +72,8 @@ __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 All the packages published on pypi using the template and the naming convention will be available
 in the plugin manager.
 
-Some more detailed instruction would be published and you can in the mean time look at this
-`video`__
+A very detailed tutorial has been published in this documentation: :ref:`plugin_development`
+and you can in the mean time look at this `video`__
 
 __ https://youtu.be/9O6pqz89UT8
 
@@ -423,6 +422,66 @@ and call whatever module I need within (meaning there is a __init__.py file in t
     from pymodaq_plugins.hardware.andor import daq_AndorSDK2 #this import the module DAQ_AndorSDK2 containing classes, methods...
     #and then use it as you see fit in your module
 
+
+Actuator plugin having multiple axis
+------------------------------------
+See also: :ref:`multiaxes_controller`
+
+When an actuator's controller can drive multiple axis (like a XY translation stage for instance), the plugin instrument
+class should defines two class attributes:
+
+* `is_multiaxis` should be set to True. This will trigger the display of the multiaxis section on the UI
+* `axes_names` should be a list or dict describing the different actuator such a controller can drive
+
+.. code-block::
+
+    class DAQ_Move_MockNamedAxes(DAQ_Move_base):
+        is_multiaxes = True
+        axes_names = ['Xaxis', 'Yaxis', 'Zaxis']
+        # or:
+        axes_names = {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
+
+would produce such display on the UI (Fig. :numref:`multiaxes_xyz`):
+
+
+   .. _multiaxes_xyz:
+
+.. figure:: /image/DAQ_Move/multiaxes_xyz.png
+   :alt: Settings example
+
+   Typical multiaxis settings represented as a combo box
+
+Both the list or the dictionary will produce the same output on the UI but their use will depend of the controller and
+underlying methods of its driver to act on a particular axis. In the drivers derived from C code,
+methods will have an argument describing a particular axis as an integer. It is however not possible to pass
+integers directly to the combobox of the UI who holds strings. To deal with that `pyqtgraph`, and therefore `pymodaq`,
+uses a dictionary mapping the names of the axis (to be printed in the UI) to objects (here integers) to be
+used with the drivers's method.
+
+A set of methods/properties have been introduced to quickly manipulate those and get either the current
+axis name of associated *value*.
+
+Case of a list of strings:
+
+.. code-block::
+
+    >>> self.axis_name
+    'Yaxis'
+    >>> self.axes_names
+    ['Xaxis', 'Yaxis', 'Zaxis']
+    >>> self.axis_value
+    'Yaxis'
+
+Case of a dictionary of strings/integers:
+
+.. code-block::
+
+    >>> self.axis_name
+    'Yaxis'
+    >>> self.axes_names
+    {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
+    >>> self.axis_value
+    1
 
 Modifying the UI from the instrument plugin class
 -------------------------------------------------

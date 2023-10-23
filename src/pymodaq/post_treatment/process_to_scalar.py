@@ -19,7 +19,7 @@ config_processors = {
 
 
 class DataProcessorBase(metaclass=ABCMeta):
-    """Apply processing functions to signal data. This function should return a scalar.
+    """Apply processing functions to signal data. This function should return a DataWithAxes.
 
     Attributes
     ----------

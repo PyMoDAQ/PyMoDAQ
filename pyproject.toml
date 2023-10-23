@@ -50,7 +50,7 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "tables",
+    "tables<3.9",  # issue with some version of required package blosc2>=2.2.8
 ]
 
 [project.scripts]

@@ -663,9 +663,10 @@ class DAQScan(QObject, ParameterManager):
             viewers_enum = [ViewersEnum('Data2D')]
             data_names = [self.live_plotter.grouped_data0D_fullname]
 
-        viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
-                             for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
-        data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
+        if self.scanner.n_axes <= 1:
+            viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
+                                 for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
+            data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
     def update_status(self, txt, wait_time=0, log_type=None):
@@ -720,6 +721,8 @@ class DAQScan(QObject, ParameterManager):
             scan_node = self.module_and_data_saver.get_last_node()
             scan_node.attrs['scan_done'] = True
             self.save_scan()
+            self.module_and_data_saver.flush()
+
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
@@ -745,12 +748,6 @@ class DAQScan(QObject, ParameterManager):
     def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
             nav_axes = self.scanner.get_nav_axes()
-
-            #
-            #     for nav_axe in nav_axes:
-            #         nav_axe.index += 1
-            #     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
-            #                                   index=0))
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
 
         self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
@@ -1147,7 +1144,7 @@ class DAQScanAcquisition(QObject):
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
-            self.h5saver.h5_file.flush()
+            self.h5saver.flush()
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
@@ -1188,6 +1185,7 @@ class DAQScanAcquisition(QObject):
             full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
             full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
             data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
+            data_temp = data_temp.get_data_with_naxes_lower_than(2-len(indexes))  # maximum Data2D included nav indexes
 
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
