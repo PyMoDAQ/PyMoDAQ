@@ -137,7 +137,7 @@ class Axis:
     """
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
-                 offset=None, spread_order: int = None):
+                 offset=None, spread_order: int = -1):
         super().__init__()
 
         self.iaxis: Axis = SpecialSlicersData(self, False)
