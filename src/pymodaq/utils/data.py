@@ -1707,7 +1707,7 @@ class DataToExport(DataLowLevel):
     def affect_name_to_origin_if_none(self):
         """Affect self.name to all DataWithAxes children's attribute origin if this origin is not defined"""
         for dat in self.data:
-            if dat.origin is None:
+            if dat.origin is None or dat.origin == '':
                 dat.origin = self.name
 
     def __sub__(self, other: object):
@@ -1984,9 +1984,9 @@ class DataToExport(DataLowLevel):
     def get_data_from_names(self, names: List[str]) -> DataToExport:
         return DataToExport(self.name, data=[dwa for dwa in self if dwa.name in names])
 
-    def get_data_from_name_origin(self, name: str, origin: str = None) -> DataWithAxes:
+    def get_data_from_name_origin(self, name: str, origin: str = '') -> DataWithAxes:
         """Get the data matching the given name and the given origin"""
-        if origin is None:
+        if origin == '':
             data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         else:
             selection = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=False)
@@ -1997,10 +1997,10 @@ class DataToExport(DataLowLevel):
     def index(self, data: DataWithAxes):
         return self.data.index(data)
 
-    def index_from_name_origin(self, name: str, origin: str = None) -> List[DataWithAxes]:
+    def index_from_name_origin(self, name: str, origin: str = '') -> List[DataWithAxes]:
         """Get the index of a given DataWithAxes within the list of data"""
         """Get the data matching the given name and the given origin"""
-        if origin is None:
+        if origin == '':
             _, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         else:
             selection = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=False)
