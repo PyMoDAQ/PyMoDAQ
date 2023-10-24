@@ -131,6 +131,7 @@ Please see :doc:`the changelog </changelog>`.
    feedback
    glossary
    api/api_doc
+   Supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
 
 ..   usage/classDiagram
