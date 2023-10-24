@@ -23,7 +23,7 @@ from pymodaq.utils.data import DataFromPlugins, DataToExport, Axis, DataDistribu
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
-from pymodaq.utils.tcp_server_client import TCPClient
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
 from pymodaq.utils.config import Config, get_set_local_dir
 from pymodaq.utils.h5modules.browsing import browse_data
