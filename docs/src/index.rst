@@ -6,6 +6,10 @@
 Welcome to PyMoDAQ's documentation!
 ===================================
 
+PyMoDAQ is an open-source software, officially supported by the CNRS, to perform modular data acquisition with Python.
+It proposes a set of modules used to interface any kind of experiments. It simplifies the interaction with detector and
+actuator hardware to go straight to the data acquisition of interest.
+
 
 .. raw:: html
 
@@ -19,17 +23,21 @@ French version `here`__
 
 __ https://youtu.be/TrRy6HL3h3c
 
+   .. _training:
 
+Training
+********
+
+.. figure:: /image/Flyer_PyMoDAQ.png
+   :alt: Flyer_femto
+
+   Training sessions announcement and PyMoDAQ's days
 
 .. note::
    * Second edition of the PyMoDAQ's Days: Paris 16/17 October 2023. Register on https://pymodaq-jt2022.sciencesconf.org/
    * Training session in Paris, France 18/19/20 October 2023
 
-
-PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
-It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.
-
-It has two purposes:
+PyMoDAQ has two purposes:
 
 * First, to provide a complete interface to perform automated measurements or logging data without having to write
   a user/interface for each new experiment.
@@ -52,20 +60,8 @@ It is divided in two main components as shown on figure :numref:`overview_submod
 The Control modules are interfacing real instruments using user written plugins. The complete list of available plugins
 is maintained on this GitHub `repository`__ and installabled using the :ref:`PluginManager`
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md
 
-
-
-   .. _training:
-
-Training
-********
-
-
-.. figure:: /image/Flyer_PyMoDAQ.png
-   :alt: Flyer_femto
-
-   Training sessions announcement and PyMoDAQ's days
 
 Information
 ***********
@@ -120,7 +116,7 @@ Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
    :numbered:
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: Contents:
 
    features
