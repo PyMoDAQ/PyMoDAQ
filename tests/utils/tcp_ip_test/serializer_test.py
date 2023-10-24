@@ -35,18 +35,19 @@ def init_axis(data=None, index=0):
 
 
 def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
-              labels=None) -> data_mod.DataWithAxes:
+              labels=None, klass=data_mod.DataWithAxes) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
-                                 axes=axes, labels=labels)
+    return klass(name, source=source, data=[data for ind in range(Ndata)],
+                 axes=axes, labels=labels)
 
 
 @pytest.fixture()
 def get_data():
     dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
-    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
-    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated',
+                                 klass=data_mod.DataCalculated)
+    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', klass=data_mod.DataFromPlugins)
     dat_act = data_mod.DataActuator(data=45)
     dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw, dat_act])
     return dte
@@ -179,138 +180,27 @@ def test_list_serialization_deserialization(get_data, obj_list):
             assert obj_list[ind] == list_back[ind]
 
 
-    #     """ Convert a list of objects into a bytes message together with the info to convert it back
-    #
-    #     Parameters
-    #     ----------
-    #     list_object: list
-    #         the list could contains either scalars, strings or ndarrays or Axis objects or DataWithAxis objects
-    #         module
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the list of objects
-    #
-    #     Notes
-    #     -----
-    #
-    #     The bytes sequence is constructed as:
-    #     * the length of the list
-    #     * get data type as a string
-    #     * reshape array as 1D array and get the array dimensionality (len of array's shape)
-    #     * convert Data array as bytes
-    #     * serialize data type
-    #     * serialize data length
-    #     * serialize data shape length
-    #     * serialize all values of the shape as integers converted to bytes
-    #     * serialize array as bytes
-    #     """
-    #     if not isinstance(list_object, list):
-    #         raise TypeError(f'{list_object} should be a list, not a {type(list_object)}')
-    #
-    #     bytes_string = b''
-    #
-    #     bytes_string += self.int_to_bytes(len(list_object))
-    #     for obj in list_object:
-    #         if isinstance(obj, DataWithAxes):
-    #             bytes_string += self.string_serialization('dwa')
-    #             bytes_string += self.dwa_serialization(obj)
-    #
-    #         elif isinstance(obj, Axis):
-    #             bytes_string += self.string_serialization('axis')
-    #             bytes_string += self.axis_serialization(obj)
-    #
-    #         elif isinstance(obj, np.ndarray):
-    #             bytes_string += self.string_serialization('array')
-    #             bytes_string += self.ndarray_serialization(obj)
-    #
-    #         elif isinstance(obj, str):
-    #             bytes_string += self.string_serialization('string')
-    #             bytes_string += self.string_serialization(obj)
-    #
-    #         elif isinstance(obj, numbers.Number):
-    #             bytes_string += self.string_serialization('scalar')
-    #             bytes_string += self.scalar_serialization(obj)
-    #
-    #         else:
-    #             raise TypeError(f'the element {obj} type cannot be serialized into bytes, only numpy arrays'
-    #                             f', strings, or scalars (int or float)')
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
-    # def dwa_serialization(self, dwa: DataWithAxes) -> bytes:
-    #     """ Convert a DataWithAxes into a bytes string
-    #
-    #     Parameters
-    #     ----------
-    #     dwa: DataWithAxes
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the DataWithAxes
-    #
-    #     Notes
-    #     -----
-    #     The bytes sequence is constructed as:
-    #
-    #     * serialize the string type: 'DataWithAxis'
-    #     * serialize the timestamp: float
-    #     * serialize the name
-    #     * serialize the source enum as a string
-    #     * serialize the dim enum as a string
-    #     * serialize the distribution enum as a string
-    #     * serialize the list of numpy arrays
-    #     * serialize the list of labels
-    #     * serialize the origin
-    #     * serialize the nav_index tuple as a list of int
-    #     * serialize the list of axis
-    #     """
-    #     if not isinstance(dwa, DataWithAxes):
-    #         raise TypeError(f'{dwa} should be a DataWithAxes, not a {type(dwa)}')
-    #
-    #     bytes_string = b''
-    #     bytes_string += self.object_type_serialization(dwa)
-    #     bytes_string += self.scalar_serialization(dwa.timestamp)
-    #     bytes_string += self.string_serialization(dwa.name)
-    #     bytes_string += self.string_serialization(dwa.source.name)
-    #     bytes_string += self.string_serialization(dwa.dim.name)
-    #     bytes_string += self.string_serialization(dwa.distribution.name)
-    #     bytes_string += self.list_serialization(dwa.data)
-    #     bytes_string += self.list_serialization(dwa.labels)
-    #     bytes_string += self.string_serialization(dwa.origin)
-    #     bytes_string += self.list_serialization(list(dwa.nav_indexes))
-    #     bytes_string += self.list_serialization(dwa.axes)
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
-    # def dte_serialization(self, dte: DataToExport) -> bytes:
-    #     """ Convert a DataToExport into a bytes string
-    #
-    #     Parameters
-    #     ----------
-    #     dte: DataToExport
-    #
-    #     Returns
-    #     -------
-    #     bytes: the total bytes message to serialize the DataToExport
-    #
-    #     Notes
-    #     -----
-    #     The bytes sequence is constructed as:
-    #
-    #     * serialize the string type: 'DataToExport'
-    #     * serialize the timestamp: float
-    #     * serialize the name
-    #     * serialize the list of DataWithAxes
-    #     """
-    #     if not isinstance(dte, DataToExport):
-    #         raise TypeError(f'{dte} should be a DataToExport, not a {type(dte)}')
-    #
-    #     bytes_string = b''
-    #     bytes_string += self.object_type_serialization(dte)
-    #     bytes_string += self.scalar_serialization(dte.timestamp)
-    #     bytes_string += self.string_serialization(dte.name)
-    #     bytes_string += self.list_serialization(dte.data)
-    #     self._bytes_string += bytes_string
-    #     return bytes_string
-    #
+def test_dwa_serialization_deserialization(get_data):
+    dte = get_data
+
+    for dwa in dte:
+        ser = Serializer(dwa)
+        assert isinstance(ser.to_bytes(), bytes)
+        dwa_back = DeSerializer(ser.to_bytes()).dwa_deserialization()
+
+        assert dwa_back.__class__.__name__ in DwaType.names()
+        assert dwa_back.__class__.__name__ == dwa.__class__.__name__
+        assert dwa == dwa_back
+
+
+def test_dte_serialization(get_data):
+    dte = get_data
+
+    ser = Serializer(dte)
+    assert isinstance(ser.to_bytes(), bytes)
+    dte_back = DeSerializer(ser.to_bytes()).dte_deserialization()
+
+    assert dte_back.name == dte.name
+    assert dte_back.timestamp == dte.timestamp
+    for dwa in dte_back:
+        assert dwa == dte.get_data_from_full_name(dwa.get_full_name())

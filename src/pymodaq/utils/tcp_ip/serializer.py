@@ -233,14 +233,11 @@ class Serializer:
 
         The bytes sequence is constructed as:
         * the length of the list
+
+        Then for each object:
+
         * get data type as a string
-        * reshape array as 1D array and get the array dimensionality (len of array's shape)
-        * convert Data array as bytes
-        * serialize data type
-        * serialize data length
-        * serialize data shape length
-        * serialize all values of the shape as integers converted to bytes
-        * serialize array as bytes
+        * use the serialization method adapted to each object in the list
         """
         if not isinstance(list_object, list):
             raise TypeError(f'{list_object} should be a list, not a {type(list_object)}')
