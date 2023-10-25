@@ -114,7 +114,7 @@ def main(plugin_file=None, init=True):
     prog.daq_type = det_type
     prog.detector = detector
     if init:
-        prog.init_hardware()
+        prog.init_hardware_ui()
 
     sys.exit(app.exec_())
 
