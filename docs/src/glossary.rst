@@ -36,7 +36,7 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
   DataDistribution
     Enum for the distribution type of the data object. Data can be stored on linear grid (think about an oscilloscope
     trace having a fixed time interval, or camera having a regular grid of pixels) or stored on non uniform and non
-    linear "positions", for instance data taken at random time intervals. Data can therefore have two ditributions:
+    linear "positions", for instance data taken at random time intervals. Data can therefore have two distributions:
     **uniform** or **spread**.
 
   Signal
