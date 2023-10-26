@@ -14,7 +14,7 @@ actuator hardware to go straight to the data acquisition of interest.
 .. raw:: html
 
    <div style="text-align: center">
-      <iframe width="560" height="315" src="https://www.youtube.com/embed/PWuZggs_HwM" title="YouTube video player"
+      <iframe width="672" height="378" src="https://www.youtube.com/embed/PWuZggs_HwM" title="YouTube video player"
       frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
        allowfullscreen></iframe>
    </div>
