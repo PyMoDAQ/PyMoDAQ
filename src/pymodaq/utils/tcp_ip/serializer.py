@@ -5,12 +5,33 @@ Created the 20/10/2023
 @author: Sebastien Weber
 """
 import numbers
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, TYPE_CHECKING
 
 
 import numpy as np
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
+
+if TYPE_CHECKING:
+    from pymodaq.utils.tcp_ip.mysocket import Socket
+
+class SocketString:
+    """Mimic the Socket object but actually using a bytes string not a socket connection
+
+    See Also
+    --------
+    :class:`pymodaq.utils.tcp_ip.mysocket:Socket`
+    """
+    def __init__(self, bytes_string: bytes):
+        self._bytes_string = bytes_string
+
+    def check_received_length(self, length: int) -> bytes:
+        data = self._bytes_string[0:length]
+        self._bytes_string = self._bytes_string[length:]
+        return data
+
+    def get_first_nbytes(self, length: int) -> bytes:
+        return self.check_received_length(length)
 
 
 class Serializer:
@@ -360,7 +381,9 @@ class DeSerializer:
 
     """
 
-    def __init__(self, bytes_string: bytes):
+    def __init__(self, bytes_string:  Union[bytes, 'Socket'] = None):
+        if isinstance(bytes_string, bytes):
+            bytes_string = SocketString(bytes_string)
         self._bytes_string = bytes_string
 
     @staticmethod
@@ -412,8 +435,7 @@ class DeSerializer:
     def _int_deserialization(self) -> int:
         """Convert the fourth first bytes into an unsigned integer to be used internally. For integer serialization
         use scal_serialization"""
-        int_obj = self.bytes_to_int(self._bytes_string[0:4])
-        self._bytes_string = self._bytes_string[4:]
+        int_obj = self.bytes_to_int(self._bytes_string.get_first_nbytes(4))
         return int_obj
 
     def string_deserialization(self) -> str:
@@ -426,8 +448,7 @@ class DeSerializer:
         str: the decoded string
         """
         string_len = self._int_deserialization()
-        str_obj = self._bytes_string[0:string_len].decode()
-        self._bytes_string = self._bytes_string[string_len:]
+        str_obj = self._bytes_string.get_first_nbytes(string_len).decode()
         return str_obj
 
     def scalar_deserialization(self) -> numbers.Number:
@@ -442,12 +463,11 @@ class DeSerializer:
         """
         data_type = self.string_deserialization()
         data_len = self._int_deserialization()
-        number = np.frombuffer(self._bytes_string[0:data_len], dtype=data_type)[0]
+        number = np.frombuffer(self._bytes_string.get_first_nbytes(data_len), dtype=data_type)[0]
         if 'f' in data_type:
             number = float(number)  # because one get numpy  float type
         elif 'i' in data_type:
             number = int(number)  # because one get numpy int type
-        self._bytes_string = self._bytes_string[data_len:]
         return number
 
     def ndarray_deserialization(self) -> np.ndarray:
@@ -467,8 +487,7 @@ class DeSerializer:
             shape_elt = self._int_deserialization()
             shape.append(shape_elt)
 
-        ndarray = np.frombuffer(self._bytes_string[0:ndarray_len], dtype=ndarray_type)
-        self._bytes_string = self._bytes_string[ndarray_len:]
+        ndarray = np.frombuffer(self._bytes_string.get_first_nbytes(ndarray_len), dtype=ndarray_type)
         ndarray = ndarray.reshape(tuple(shape))
         ndarray = np.atleast_1d(ndarray)  # remove singleton dimensions
         return ndarray

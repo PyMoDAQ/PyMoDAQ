@@ -19,7 +19,8 @@ from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.enums import BaseEnum, enum_checker
-
+from pymodaq.utils.tcp_ip.mysocket import Socket
+from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -627,18 +628,18 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         TCPServer.__init__(self, self.client_type)
 
     def command_to_from_client(self, command):
-        sock = self.find_socket_within_connected_clients(self.client_type)
+        sock: Socket = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
 
             if command == 'position_is':
-                pos = DataActuator(data=sock.get_scalar())
+                pos = DeSerializer(sock).dwa_deserialization()
 
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
                 self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
-                pos = DataActuator(data=sock.get_scalar())
+                pos = DeSerializer(sock).dwa_deserialization()
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
@@ -648,16 +649,16 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     def commit_settings(self, param):
 
         if param.name() in putils.iter_children(self.settings.child('settings_client'), []):
-            actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
-            actuator_socket.send_string('set_info')
+            actuator_socket: Socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
+            actuator_socket.check_sended_with_serializer('set_info')
             path = putils.get_param_path(param)[2:]
             # get the path of this param as a list starting at parent 'infos'
 
-            actuator_socket.send_list(path)
+            actuator_socket.check_sended_with_serializer(path)
 
             # send value
             data = ioxml.parameter_to_xml_string(param)
-            actuator_socket.send_string(data)
+            actuator_socket.check_sended_with_serializer(data)
 
     def ini_stage(self, controller=None):
         """
@@ -702,8 +703,8 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.send_string('move_abs')
-            sock.send_scalar(position.value())
+            sock.check_sended_with_serializer('move_abs')
+            sock.check_sended_with_serializer(position.value())
 
     def move_rel(self, position: DataActuator):
         position = self.check_bound(self.current_value + position) - self.current_value
@@ -712,8 +713,8 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         position = self.set_position_relative_with_scaling(position)
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.send_string('move_rel')
-            sock.send_scalar(position.value())
+            sock.check_sended_with_serializer('move_rel')
+            sock.check_sended_with_serializer(position.value())
 
     def move_home(self):
         """
@@ -725,7 +726,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.send_string('move_home')
+            sock.check_sended_with_serializer('move_home')
 
     def get_actuator_value(self):
         """

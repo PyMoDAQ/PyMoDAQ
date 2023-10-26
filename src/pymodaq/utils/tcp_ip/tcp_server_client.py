@@ -4,11 +4,14 @@ Created on Fri Aug 30 12:21:56 2019
 
 @author: Weber
 """
+from collections import OrderedDict
+import select
+from typing import List
+import socket
+
+import numpy as np
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
-import socket
-import select
-import numpy as np
 
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.ioxml import parameter_to_xml_string
@@ -17,8 +20,9 @@ from pymodaq.utils.data import DataFromPlugins, DataActuator
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import Parameter
-from collections import OrderedDict
-from typing import List
+from pymodaq.utils.data import DataToExport
+from pymodaq.utils.tcp_ip.mysocket import Socket
+from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
 
 config = Config()
 
@@ -29,290 +33,6 @@ tcp_parameters = [
     {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
     {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',
      'value': dict(), 'header': ['Type', 'adress']}, ]
-
-
-
-class Socket:
-    def __init__(self, socket=None):
-        super().__init__()
-        self._socket = socket
-
-    def __eq__(self, other_obj):
-        if isinstance(other_obj, Socket):
-            other_obj = other_obj.socket
-        return self.socket == other_obj
-
-    @property
-    def socket(self):
-        return self._socket
-
-    def bind(self, *args, **kwargs):
-        return self.socket.bind(*args, **kwargs)
-
-    def listen(self, *args, **kwargs):
-        return self.socket.listen(*args, **kwargs)
-
-    def getsockname(self, *args, **kwargs):
-        return self.socket.getsockname(*args, **kwargs)
-
-    def accept(self):
-        sock, addr = self.socket.accept()
-        return Socket(sock), addr
-
-    def connect(self, *args, **kwargs):
-        return self.socket.connect(*args, **kwargs)
-
-    def send(self, *args, **kwargs):
-        return self.socket.send(*args, **kwargs)
-
-    def sendall(self, *args, **kwargs):
-        return self.socket.sendall(*args, **kwargs)
-
-    def recv(self, *args, **kwargs):
-        return self.socket.recv(*args, **kwargs)
-
-    def close(self):
-        return self.socket.close()
-
-    @classmethod
-    def message_to_bytes(cls, message):
-        """
-        Convert a string to a byte array
-        Parameters
-        ----------
-        message (str): message
-
-        Returns
-        -------
-        Tuple consisting of the message converted as a byte array, and the length of the byte array, itself as a byte array of length 4
-        """
-
-        if not isinstance(message, str) and not isinstance(message, bytes):
-            message = str(message)
-        if not isinstance(message, bytes):
-            message = message.encode()
-        return message, cls.int_to_bytes(len(message))
-
-    @classmethod
-    def int_to_bytes(cls, an_integer):
-        if not isinstance(an_integer, int):
-            raise TypeError(f'{an_integer} should be an integer, not a {type(an_integer)}')
-        return an_integer.to_bytes(4, 'big')
-
-    @classmethod
-    def bytes_to_int(cls, bytes_string):
-        if not isinstance(bytes_string, bytes):
-            raise TypeError(f'{bytes_string} should be an bytes string, not a {type(bytes_string)}')
-        assert len(bytes_string) == 4
-        return int.from_bytes(bytes_string, 'big')
-
-    def check_sended(self, data_bytes):
-        """
-        Make sure all bytes are sent through the socket
-        Parameters
-        ----------
-        socket
-        data_bytes
-
-        Returns
-        -------
-
-        """
-        if not isinstance(data_bytes, bytes):
-            raise TypeError(f'{data_bytes} should be an bytes string, not a {type(data_bytes)}')
-        sended = 0
-        while sended < len(data_bytes):
-            sended += self.socket.send(data_bytes[sended:])
-        # print(data_bytes)
-
-    def check_received_length(self, length):
-        """
-        Make sure all bytes (length) that should be received are received through the socket
-        Parameters
-        ----------
-        sock
-        length
-
-        Returns
-        -------
-
-        """
-        if not isinstance(length, int):
-            raise TypeError(f'{length} should be an integer, not a {type(length)}')
-
-        mess_length = 0
-        data_bytes = b''
-        while mess_length < length:
-            if mess_length < length - 4096:
-                data_bytes_tmp = self.socket.recv(4096)
-            else:
-                data_bytes_tmp = self.socket.recv(length - mess_length)
-            mess_length += len(data_bytes_tmp)
-            data_bytes += data_bytes_tmp
-        # print(data_bytes)
-        return data_bytes
-
-    def send_string(self, string):
-        """
-
-        Parameters
-        ----------
-        socket
-        string
-
-        Returns
-        -------
-
-        """
-        cmd_bytes, cmd_length_bytes = self.message_to_bytes(string)
-        self.check_sended(cmd_length_bytes)
-        self.check_sended(cmd_bytes)
-
-    def get_string(self):
-        string_len = self.get_int()
-        string = self.check_received_length(string_len).decode()
-        return string
-
-    def get_int(self):
-        data = self.bytes_to_int(self.check_received_length(4))
-        return data
-
-
-    def get_scalar(self):
-        """
-
-        Parameters
-        ----------
-        socket
-
-        Returns
-        -------
-
-        """
-        data_type = self.get_string()
-        data_len = self.get_int()
-        data_bytes = self.check_received_length(data_len)
-
-        data = np.frombuffer(data_bytes, dtype=data_type)[0]
-        return data
-
-    def get_array(self):
-        """get 1D or 2D arrays"""
-        data_type = self.get_string()
-        data_len = self.get_int()
-        shape_len = self.get_int()
-        shape = []
-        for ind in range(shape_len):
-            shape.append(self.get_int())
-        data_bytes = self.check_received_length(data_len)
-        data = np.frombuffer(data_bytes, dtype=data_type)
-        data = data.reshape(tuple(shape))
-        data = np.squeeze(data)  # remove singleton dimensions
-        return data
-    def get_list(self):
-        """
-        Receive data from socket as a list
-        Parameters
-        ----------
-        socket: the communication socket
-        Returns
-        -------
-
-        """
-        data = []
-        list_len = self.get_int()
-
-        for ind in range(list_len):
-            data_type = self.get_string()
-            if data_type == 'scalar':
-                data.append(self.get_scalar())
-            elif data_type == 'string':
-                data.append(self.get_string())
-            elif data_type == 'array':
-                data.append(self.get_array())
-        return data
-
-    def send_scalar(self, data):
-        """
-        Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
-        Parameters
-        ----------
-        data
-
-        Returns
-        -------
-
-        """
-        if not (isinstance(data, int) or isinstance(data, float)):
-            raise TypeError(f'{data} should be an integer or a float, not a {type(data)}')
-        data = np.array([data])
-        data_type = data.dtype.descr[0][1]
-        data_bytes = data.tobytes()
-        self.send_string(data_type)
-        self.check_sended(self.int_to_bytes(len(data_bytes)))
-        self.check_sended(data_bytes)
-
-    def send_array(self, data_array):
-        """send ndarrays
-
-        get data type as a string
-        reshape array as 1D array and get the array dimensionality (len of array's shape)
-        convert Data array as bytes
-        send data type
-        send data length
-        send data shape length
-        send all values of the shape as integers converted to bytes
-        send data as bytes
-        """
-        if not isinstance(data_array, np.ndarray):
-            raise TypeError(f'{data_array} should be an numpy array, not a {type(data_array)}')
-        data_type = data_array.dtype.descr[0][1]
-        data_shape = data_array.shape
-
-        data = data_array.reshape(np.prod(data_shape))
-        data_bytes = data.tobytes()
-
-        self.send_string(data_type)
-        self.check_sended(self.int_to_bytes(len(data_bytes)))
-        self.check_sended(self.int_to_bytes(len(data_shape)))
-        for Nxxx in data_shape:
-            self.check_sended(self.int_to_bytes(Nxxx))
-        self.check_sended(data_bytes)
-
-    def send_list(self, data_list):
-        """
-
-        Parameters
-        ----------
-        socket
-        data_list
-
-        Returns
-        -------
-
-        """
-        if not isinstance(data_list, list):
-            raise TypeError(f'{data_list} should be a list, not a {type(data_list)}')
-        self.check_sended(self.int_to_bytes(len(data_list)))
-        for data in data_list:
-
-            if isinstance(data, np.ndarray):
-                self.send_string('array')
-                self.send_array(data)
-
-            elif isinstance(data, str):
-                self.send_string('string')
-                self.send_string(data)
-
-            elif isinstance(data, int) or isinstance(data, float):
-                self.send_string('scalar')
-                self.send_scalar(data)
-
-            else:
-                raise TypeError(f'the element {data} type is cannot be sent by TCP/IP, only numpy arrays'
-                                f', strings, or scalars (int or float)')
-
-
 
 
 class TCPClientTemplate:
@@ -335,7 +55,8 @@ class TCPClientTemplate:
 
         self.ipaddress = ipaddress
         self.port = port
-        self._socket = None
+        self._socket: Socket = None
+        self._deserializer: DeSerializer = None
         self.connected = False
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
@@ -347,12 +68,13 @@ class TCPClientTemplate:
         self.client_type = client_type
 
     @property
-    def socket(self):
+    def socket(self) -> Socket:
         return self._socket
 
     @socket.setter
-    def socket(self, sock):
+    def socket(self, sock: Socket):
         self._socket = sock
+        self._deserializer = DeSerializer(sock)
 
     def close(self):
         if self.socket is not None:
@@ -422,7 +144,7 @@ class TCPClientTemplate:
 
 class TCPClient(TCPClientTemplate, QObject):
     """
-    PyQt5 object initializing a TCP socket client. Can be used by any module but is a builtin functionnality of all
+    PyQt5 object initializing a TCP socket client. Can be used by any module but is a builtin functionality of all
     actuators and detectors of PyMoDAQ
 
     The module should init TCPClient, move it in a thread and communicate with it using a custom signal connected to
@@ -452,24 +174,24 @@ class TCPClient(TCPClientTemplate, QObject):
         QObject.__init__(self)
         TCPClientTemplate.__init__(self, ipaddress, port, params_state, client_type)
 
-    def send_data(self, data_list):
+    def send_data(self, data: DataToExport):
         # first send 'Done' and then send the length of the list
-        if self.socket is not None and isinstance(data_list, list):
-            self.socket.send_string('Done')
-            self.socket.send_list(data_list)
+        if self.socket is not None and isinstance(data, DataToExport):
+            self.socket.check_sended_with_serializer('Done')
+            self.socket.check_sended_with_serializer(data)
 
-    def send_infos_xml(self, infos):
+    def send_infos_xml(self, infos: str):
         if self.socket is not None:
-            self.socket.send_string('Infos')
-            self.socket.send_string(infos)
+            self.socket.check_sended_with_serializer('Infos')
+            self.socket.check_sended_with_serializer(infos)
 
     def send_info_string(self, info_to_display, value_as_string):
         if self.socket is not None:
-            self.socket.send_string('Info')  # the command
-            self.socket.send_string(info_to_display)  # the actual info to display as a string
+            self.socket.check_sended_with_serializer('Info')
+            self.socket.check_sended_with_serializer(info_to_display)  # the actual info to display as a string
             if not isinstance(value_as_string, str):
                 value_as_string = str(value_as_string)
-            self.socket.send_string(value_as_string)
+            self.socket.check_sended_with_serializer(value_as_string)
 
     @Slot(ThreadCommand)
     def queue_command(self, command=ThreadCommand):
@@ -501,49 +223,28 @@ class TCPClient(TCPClientTemplate, QObject):
                 path = command.attribute['path']
                 param = command.attribute['param']
 
-                self.socket.send_string('Info_xml')
-                self.socket.send_list(path)
+                self.socket.check_sended_with_serializer('Info_xml')
+                self.socket.check_sended_with_serializer(path)
 
                 # send value
                 data = parameter_to_xml_string(param)
-                self.socket.send_string(data)
+                self.socket.check_sended_with_serializer(data)
 
         elif command.command == 'position_is':
             if self.socket is not None:
-                self.socket.send_string('position_is')
-                self.socket.send_scalar(command.attribute[0].value())
+                self.socket.check_sended_with_serializer('position_is')
+                self.socket.check_sended_with_serializer(command.attribute[0].value())
 
         elif command.command == 'move_done':
             if self.socket is not None:
-                self.socket.send_string('move_done')
-                self.socket.send_scalar(command.attribute[0].value())
+                self.socket.check_sended_with_serializer('move_done')
+                self.socket.check_sended_with_serializer(command.attribute[0].value())
 
         elif command.command == 'x_axis':
-            if self.socket is not None:
-                self.socket.send_string('x_axis')
-                x_axis = dict(label='', units='')
-                if isinstance(command.attribute[0], np.ndarray):
-                    x_axis['data'] = command.attribute[0]
-                elif isinstance(command.attribute[0], dict):
-                    x_axis.update(command.attribute[0].copy())
-
-                self.socket.send_array(x_axis['data'])
-                self.socket.send_string(x_axis['label'])
-                self.socket.send_string(x_axis['units'])
+            raise DeprecationWarning('Getting axis though TCPIP is deprecated use the data objects directly')
 
         elif command.command == 'y_axis':
-            if self.socket is not None:
-                self.socket.send_string('y_axis')
-                y_axis = dict(label='', units='')
-                if isinstance(command.attribute[0], np.ndarray):
-                    y_axis['data'] = command.attribute[0]
-                elif isinstance(command.attribute[0], dict):
-                    y_axis.update(command.attribute[0].copy())
-
-                self.socket.send_array(y_axis['data'])
-                self.socket.send_string(y_axis['label'])
-                self.socket.send_string(y_axis['units'])
-
+            raise DeprecationWarning('Getting axis though TCPIP is deprecated use the data objects directly')
         else:
             raise IOError('Unknown TCP client command')
 
@@ -553,7 +254,7 @@ class TCPClient(TCPClientTemplate, QObject):
         self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
 
     def ready_to_read(self):
-        message = self.socket.get_string()
+        message = self._deserializer.string_deserialization()
         self.get_data(message)
 
     def ready_to_write(self):
@@ -566,7 +267,7 @@ class TCPClient(TCPClientTemplate, QObject):
     def process_error_in_polling(self, e: Exception):
         try:
             self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
-            self.socket.send_string('Quit')
+            self.socket.check_sended_with_serializer('Quit')
             self.socket.close()
         except Exception:  # pragma: no cover
             pass
@@ -574,14 +275,14 @@ class TCPClient(TCPClientTemplate, QObject):
     def post_init(self, extra_commands=[]):
 
         self.cmd_signal.emit(ThreadCommand('connected'))
-        self.socket.send_string(self.client_type)
+        self.socket.check_sended_with_serializer(self.client_type)
 
         self.send_infos_xml(parameter_to_xml_string(self.settings))
         for command in extra_commands:
             if isinstance(command, ThreadCommand):
                 self.cmd_signal.emit(command)
 
-    def get_data(self, message):
+    def get_data(self, message: str):
         """
 
         Parameters
@@ -596,23 +297,18 @@ class TCPClient(TCPClientTemplate, QObject):
             messg = ThreadCommand(message)
 
             if message == 'set_info':
-                path = self.socket.get_list()
-                param_xml = self.socket.get_string()
+                path = self._deserializer.list_deserialization()
+                param_xml = self._deserializer.string_deserialization()
                 messg.attribute = [path, param_xml]
 
-            elif message == 'move_abs':
-                position = self.socket.get_scalar()
-                messg.attribute = [DataActuator(data=position)]
-
-            elif message == 'move_rel':
-                position = self.socket.get_scalar()
-                messg.attribute = [DataActuator(data=position)]
+            elif message == 'move_abs' or message == 'move_rel':
+                position = self._deserializer.dwa_deserialization()
+                messg.attribute = [position]
 
             self.cmd_signal.emit(messg)
 
-    @Slot(list)
-    def data_ready(self, datas):
-        self.send_data(datas[0]['data'])  # datas from viewer 0 and get 'data' key (within the ordereddict list of datas
+    def data_ready(self, data: DataToExport):
+        self.send_data(data)
 
 
 class TCPServer(QObject):
@@ -622,7 +318,7 @@ class TCPServer(QObject):
 
     def __init__(self, client_type='GRABBER'):
         QObject.__init__(self)
-        self.serversocket = None
+        self.serversocket: Socket = None
         self.connected_clients = []
         self.listening = True
         self.processing = False
@@ -642,15 +338,15 @@ class TCPServer(QObject):
 
     def init_server(self):
         self.emit_status(ThreadCommand("Update_Status", [
-            "Started new server for {:s}:{:d}".format(self.settings.child(('socket_ip')).value(),
-                                                      self.settings.child(('port_id')).value()), 'log']))
+            "Started new server for {:s}:{:d}".format(self.settings['socket_ip'],
+                                                      self.settings['port_id']), 'log']))
         serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.serversocket = Socket(serversocket)
         # bind the socket to a public host, and a well-known port
         try:
             self.serversocket.bind(
-                (self.settings.child(('socket_ip')).value(), self.settings.child(('port_id')).value()))
+                (self.settings['socket_ip'], self.settings['port_id']))
             # self.serversocket.bind((socket.gethostname(), self.settings.child(('port_id')).value()))
         except socket.error as msg:
             self.emit_status(ThreadCommand("Update_Status",
@@ -660,7 +356,7 @@ class TCPServer(QObject):
 
         self.serversocket.listen(1)
         self.connected_clients.append(dict(socket=self.serversocket, type='server'))
-        self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
+        self.settings.child('conn_clients').setValue(self.set_connected_clients_table())
 
         self.timer = self.startTimer(100)  # Timer event fired every 100ms
         # self.listen_client()
@@ -683,9 +379,9 @@ class TCPServer(QObject):
         if not self.processing:
             self.listen_client()
 
-    def find_socket_within_connected_clients(self, client_type):
+    def find_socket_within_connected_clients(self, client_type) -> Socket:
         """
-            Find a socket from a conneceted client with socket type corresponding.
+            Find a socket from a connected client with socket type corresponding.
 
             =============== =========== ================================
             **Parameters**    **Type**    **Description**
@@ -752,7 +448,7 @@ class TCPServer(QObject):
         sock_type = self.find_socket_type_within_connected_clients(sock)
         if sock_type is not None:
             self.connected_clients.remove(dict(socket=sock, type=sock_type))
-            self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
+            self.settings.child('conn_clients').setValue(self.set_connected_clients_table())
             try:
                 sock.close()
             except Exception:
@@ -813,7 +509,7 @@ class TCPServer(QObject):
                         break
 
                     self.connected_clients.append(dict(socket=client_socket, type=DAQ_type))
-                    self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
+                    self.settings.child('conn_clients').setValue(self.set_connected_clients_table())
                     self.emit_status(ThreadCommand("Update_Status",
                                                    [DAQ_type + ' connected with ' + address[0] + ':' + str(address[1]),
                                                     'log']))
@@ -822,7 +518,7 @@ class TCPServer(QObject):
                 else:  # Some incoming message from a client
                     # Data received from client, process it
                     try:
-                        message = sock.get_string()
+                        message = DeSerializer(sock).string_deserialization()
                         if message in ['Done', 'Info', 'Infos', 'Info_xml', 'position_is', 'move_done']:
                             self.process_cmds(message, command_sock=None)
                         elif message == 'Quit':
@@ -839,7 +535,7 @@ class TCPServer(QObject):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-    def send_command(self, sock, command="move_at"):
+    def send_command(self, sock: Socket, command="move_at"):
         """
             Send one of the message contained in self.message_list toward a socket with identity socket_type.
             First send the length of the command with 4bytes.
@@ -861,7 +557,7 @@ class TCPServer(QObject):
             return
 
         if sock is not None:
-            sock.send_string(command)
+            sock.check_sended_with_serializer(command)
 
     def emit_status(self, status):
         print(status)
@@ -922,18 +618,19 @@ class TCPServer(QObject):
         else:
             self.command_to_from_client(command)
 
-    def read_infos(self, sock=None, infos=''):
+    def read_infos(self, sock: Socket = None, infos=''):
         if sock is not None:
-            infos = sock.get_string()
+            infos = DeSerializer(sock).string_deserialization()
         params = ioxml.XML_string_to_parameter(infos)
 
         param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
-        self.settings.child(('settings_client')).restoreState(param_state)
+        self.settings.child('settings_client').restoreState(param_state)
 
-    def read_info_xml(self, sock, path=['settings', 'apathinsettings'], param_xml=''):
+    def read_info_xml(self, sock: Socket, path=['settings', 'apathinsettings'], param_xml=''):
         if sock is not None:
-            path = sock.get_list()
-            param_xml = sock.get_string()
+            deser = DeSerializer(sock)
+            path = deser.list_deserialization()
+            param_xml = deser.string_deserialization()
         try:
             param_dict = ioxml.XML_string_to_parameter(param_xml)[0]
         except Exception as e:
@@ -944,7 +641,7 @@ class TCPServer(QObject):
             raise Exception(f'Invalid path for TCP server settings: {str(e)}')
         param_here.restoreState(param_dict)
 
-    def read_info(self, sock=None, test_info='an_info', test_value=''):
+    def read_info(self, sock: Socket=None, test_info='an_info', test_value=''):
         """
         if the client is not from PyMoDAQ it can use this method to display some info into the server widget
         """
@@ -953,10 +650,11 @@ class TCPServer(QObject):
             info = test_info
             data = test_value
         else:
-            info = sock.get_string()
-            data = sock.get_string()
+            deser = DeSerializer(sock)
+            info = deser.string_deserialization()
+            data = deser.string_deserialization()
 
-        if info not in putils.iter_children(self.settings.child(('infos')), []):
+        if info not in putils.iter_children(self.settings.child('infos'), []):
             self.settings.child('infos').addChild({'name': info, 'type': 'str', 'value': data})
             pass
         else:
@@ -970,7 +668,6 @@ class MockServer(TCPServer):
         super().__init__(client_type)
 
         self.settings = Parameter.create(name='settings', type='group', children=tcp_parameters)
-
 
 
 class MockDataGrabber:
@@ -1034,8 +731,6 @@ class Grabber(QObject):
         """
         data = self.grab_method()
         self.command_tcpip.emit(ThreadCommand('data_ready', data))
-
-
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):

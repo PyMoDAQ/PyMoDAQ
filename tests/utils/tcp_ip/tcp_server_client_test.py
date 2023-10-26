@@ -4,7 +4,8 @@ import socket
 
 from unittest import mock
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.tcp_ip.tcp_server_client import MockServer, TCPClient, TCPServer, Socket
+from pymodaq.utils.tcp_ip.tcp_server_client import MockServer, TCPClient, TCPServer
+from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import Serializer
 from pyqtgraph.parametertree import Parameter
 from pyqtgraph import SRTTransform
