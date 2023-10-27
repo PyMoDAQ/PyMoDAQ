@@ -15,22 +15,55 @@ from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
 if TYPE_CHECKING:
     from pymodaq.utils.tcp_ip.mysocket import Socket
 
+
 class SocketString:
     """Mimic the Socket object but actually using a bytes string not a socket connection
 
+    Implements a minimal interface of two methods
+
+    Parameters
+    ----------
+    bytes_string: bytes
+
     See Also
     --------
-    :class:`pymodaq.utils.tcp_ip.mysocket:Socket`
+    :class:`~pymodaq.utils.tcp_ip.mysocket.Socket`
     """
     def __init__(self, bytes_string: bytes):
         self._bytes_string = bytes_string
 
     def check_received_length(self, length: int) -> bytes:
+        """
+        Make sure all bytes (length) that should be received are received through the socket.
+
+        Here just read the content of the underlying bytes string
+
+        Parameters
+        ----------
+        length: int
+            The number of bytes to be read from the socket
+
+        Returns
+        -------
+        bytes
+        """
         data = self._bytes_string[0:length]
         self._bytes_string = self._bytes_string[length:]
         return data
 
     def get_first_nbytes(self, length: int) -> bytes:
+        """ Read the first N bytes from the socket
+
+        Parameters
+        ----------
+        length: int
+            The number of bytes to be read from the socket
+
+        Returns
+        -------
+        bytes
+            the read bytes string
+        """
         return self.check_received_length(length)
 
 
@@ -42,6 +75,20 @@ class Serializer:
         self._obj = obj
 
     def to_bytes(self):
+        """ Generic method to obtain the bytes string from various objects
+
+        Compatible objects are:
+
+        * :class:`bytes`
+        * :class:`numbers.Number`
+        * :class:`str`
+        * :class:`numpy.ndarray`
+        * :class:`~pymodaq.utils.data.Axis`
+        * :class:`~pymodaq.utils.data.DataWithAxes` and sub-flavours
+        * :class:`~pymodaq.utils.data.DataToExport`
+        * :class:`list` of any objects above
+
+        """
         if isinstance(self._obj, bytes):
             return self.bytes_serialization(self._obj)
         elif isinstance(self._obj, numbers.Number):
@@ -316,7 +363,7 @@ class Serializer:
         -----
         The bytes sequence is constructed as:
 
-        * serialize the string type: 'DataWithAxis'
+        * serialize the string type: 'DataWithAxes'
         * serialize the timestamp: float
         * serialize the name
         * serialize the source enum as a string
@@ -384,9 +431,14 @@ class DeSerializer:
 
     Parameters
     ----------
-    bytes_string: bytes
+    bytes_string: bytes or Socket
         the bytes string to deserialize into an object: int, float, string, arrays, list, Axis, DataWithAxes...
+        Could also be a Socket object reading bytes from the network having a `get_first_nbytes` method
 
+    See Also
+    --------
+    :py:class:`~pymodaq.utils.tcp_ip.serializer.SocketString`
+    :py:class:`~pymodaq.utils.tcp_ip.mysocket.Socket`
     """
 
     def __init__(self, bytes_string:  Union[bytes, 'Socket'] = None):

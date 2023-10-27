@@ -11,6 +11,8 @@ from pymodaq.utils.tcp_ip.serializer import Serializer
 
 
 class Socket:
+    """Custom Socket wrapping the built-in one and added functionalities to
+    make sure message have been sent and received entirely"""
     def __init__(self, socket: socket.socket = None):
         super().__init__()
         self._socket = socket
@@ -75,14 +77,15 @@ class Socket:
     def check_received_length(self, length) -> bytes:
         """
         Make sure all bytes (length) that should be received are received through the socket
+
         Parameters
         ----------
-        sock
-        length
+        length: int
+            The number of bytes to be read from the socket
 
         Returns
         -------
-
+        bytes
         """
         if not isinstance(length, int):
             raise TypeError(f'{length} should be an integer, not a {type(length)}')
@@ -100,5 +103,16 @@ class Socket:
         return data_bytes
 
     def get_first_nbytes(self, length: int) -> bytes:
+        """ Read the first N bytes from the socket
+
+        Parameters
+        ----------
+        length: int
+            The number of bytes to be read from the socket
+
+        Returns
+        -------
+        bytes: the read bytes string
+        """
         return self.check_received_length(length)
 
