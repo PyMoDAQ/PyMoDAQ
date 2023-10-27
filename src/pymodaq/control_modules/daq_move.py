@@ -338,19 +338,6 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.ui.close()
         # self.parent.close()
 
-    def init_hardware_ui(self, do_init=True):
-        """Programmatic actuator's Initialization
-
-        Programmatic way to simulate a click on the init button of the UI to initialize the communication with the
-        hardware
-
-        Parameters
-        ----------
-        do_init: bool
-            if the init or des-init should be performed
-        """
-        self.ui.do_init(do_init)
-
     def init_hardware(self, do_init=True):
         """ Init or desinit the selected instrument plugin class """
         if not do_init:
