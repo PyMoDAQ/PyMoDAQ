@@ -78,6 +78,9 @@ One should then run before/after installing pymodaq:
 
 As a side note, these files are shared between different pymodaq's versions (going from 3 to 4 for example). It is suggested to delete/remake the folder (or empty its content) when setting up a new environment with a different pymodaq version.
 
+One should also make sure that the QT environment can be safely used with linux installations, running the following command should be sufficient to start with:
+``sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils``
+
   .. _shortcut_section:
 
 Creating shortcuts on **Windows**
