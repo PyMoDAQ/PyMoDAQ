@@ -25,7 +25,7 @@ from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.move_utility_classes import MoveCommand, DAQ_Move_base
-from pymodaq.utils.tcp_server_client import TCPClient
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.parameter import utils as putils

@@ -4,17 +4,18 @@ from qtpy.QtCore import QObject, Slot, Signal
 
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
-from pyqtgraph.parametertree import Parameter
+from pymodaq.utils.parameter import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
-from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
-from pymodaq.utils.data import DataToExport
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.data import DataToExport, DataRaw
 from pymodaq.utils.messenger import deprecation_msg
-
+from pymodaq.utils.tcp_ip.mysocket import Socket
+from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -413,41 +414,31 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         self.data = None
         self.grabber_type = grabber_type
         self.ind_data = 0
-        self.data_mock = None
+        self.data_mock: DataToExport = None
 
-    def command_to_from_client(self, command):
+    def command_to_from_client(self, command: str):
+        """Process the command"""
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
 
             if command == 'x_axis':
-                x_axis = dict(data=sock.get_array())
-                x_axis['label'] = sock.get_string()
-                x_axis['units'] = sock.get_string()
-                self.x_axis = x_axis.copy()
-                self.emit_x_axis()
+                raise DeprecationWarning(f'The command {command} is deprecated use the data objects')
             elif command == 'y_axis':
-                y_axis = dict(data=sock.get_array())
-                y_axis['label'] = sock.get_string()
-                y_axis['units'] = sock.get_string()
-                self.y_axis = y_axis.copy()
-                self.emit_y_axis()
+                raise DeprecationWarning(f'The command {command} is deprecated use the data objects')
 
             else:
                 self.send_command(sock, command)
 
         else:  # else simulate mock data
             if command == "Send Data 0D":
-                self.set_1D_Mock_data()
-                self.data_mock = np.array([self.data_mock[0]])
+                self.set_0D_Mock_data()
             elif command == "Send Data 1D":
                 self.set_1D_Mock_data()
-                data = self.data_mock
             elif command == "Send Data 2D":
                 self.set_2D_Mock_data()
-                data = self.data_mock
             self.process_cmds('Done')
 
-    def send_data(self, sock, data):
+    def send_data(self, sock: Socket, data: DataToExport):
         """
             To match digital and labview, send again a command.
 
@@ -462,64 +453,24 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             send_command, check_send_data
         """
         self.send_command(sock, 'Done')
+        sock.check_sended_with_serializer(data)
 
-        sock.send_array(data)
-        # if len(data.shape) == 0:
-        #     Nrow = 1
-        #     Ncol = 0
-        # elif len(data.shape) == 1:
-        #     Nrow = data.shape[0]
-        #     Ncol = 0
-        # elif len(data.shape) == 2:
-        #     Nrow = data.shape[0]
-        #     Ncol = data.shape[1]
-        # data_bytes = data.tobytes()
-        # check_sended(sock, np.array([len(data_bytes)],
-        #                             dtype='>i4').tobytes())  # first send length of data after reshaping as 1D bytes array
-        # check_sended(sock, np.array([Nrow], dtype='>i4').tobytes())  # then send dimension of lines
-        # check_sended(sock, np.array([Ncol], dtype='>i4').tobytes())  # then send dimensions of columns
-        #
-        # check_sended(sock, data_bytes)  # then send data
-
-    def read_data(self, sock):
+    def read_data(self, sock: Socket) -> DataToExport:
+        """Read data from the socket
         """
-            Read the unsigned 32bits int data contained in the given socket in five steps :
-                * get back the message
-                * get the list length
-                * get the data length
-                * get the number of row
-                * get the number of column
-                * get data
+        return DeSerializer(sock).dte_deserialization()
 
-            =============== ===================== =========================
-            **Parameters**    **Type**             **Description**
-            *sock*              ???                the socket to be readed
-            *dtype*           numpy unint 32bits   ???
-            =============== ===================== =========================
-
-            See Also
-            --------
-            check_received_length
+    def data_ready(self, data: DataToExport):
         """
-
-        data_list = sock.get_list()
-
-        return data_list
-
-    def data_ready(self, data):
+            Send the grabed data signal.
         """
-            Send the grabed data signal. to be written in the detailed plugin using this base class
-
-        for instance:
-        self.data_grabed_signal.emit([OrderedDict(name=self.client_type,data=[data], type='Data2D')])  #to be overloaded
-        """
-        pass
+        self.dte_signal.emit(data)
 
     def command_done(self, command_sock):
         try:
             sock = self.find_socket_within_connected_clients(self.client_type)
             if sock is not None:  # if client self.client_type is connected then send it the command
-                data = self.read_data(sock)
+                data: DataToExport = self.read_data(sock)
             else:
                 data = self.data_mock
 
@@ -534,16 +485,16 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     def commit_settings(self, param):
 
         if param.name() in iter_children(self.settings.child(('settings_client')), []):
-            grabber_socket = \
+            grabber_socket: Socket = \
                 [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
-            grabber_socket.send_string('set_info')
+            grabber_socket.check_sended_with_serializer('set_info')
 
             path = get_param_path(param)[2:]  # get the path of this param as a list starting at parent 'infos'
-            grabber_socket.send_list(path)
+            grabber_socket.check_sended_with_serializer(path)
 
             # send value
             data = ioxml.parameter_to_xml_string(param)
-            grabber_socket.send_string(data)
+            grabber_socket.check_sended_with_serializer(data)
 
     def ini_detector(self, controller=None):
         """
@@ -556,25 +507,17 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
-        try:
-            self.settings.child(('infos')).addChildren(self.params_GRABBER)
+        self.settings.child('infos').addChildren(self.params_GRABBER)
 
-            self.init_server()
+        self.init_server()
+        self.controller = self.serversocket
+        # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+        self.x_axis = self.get_xaxis()
+        self.y_axis = self.get_yaxis()
 
-            # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-            self.x_axis = self.get_xaxis()
-            self.y_axis = self.get_yaxis()
-            self.status.x_axis = self.x_axis
-            self.status.y_axis = self.y_axis
-            self.status.initialized = True
-            self.status.controller = self.serversocket
-            return self.status
-
-        except Exception as e:
-            self.status.info = getLineInfo() + str(e)
-            self.status.initialized = False
-            return self.status
+        initialized = True
+        info = "Server ready"
+        return info, initialized
 
     def close(self):
         """
@@ -642,19 +585,26 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         pass
         return ""
 
-    def set_1D_Mock_data(self):
-        self.data_mock
+    def set_0D_Mock_data(self):
         x = np.linspace(0, 99, 100)
         data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
         self.ind_data += 1
-        self.data_mock = np.roll(data_tmp, self.ind_data)
+        self.data_mock = DataToExport('mocktcp',
+                                      data=[DataRaw('mock',
+                                                    data=[np.atleast_1d(np.roll(data_tmp, self.ind_data)[0])])])
+
+    def set_1D_Mock_data(self):
+        x = np.linspace(0, 99, 100)
+        data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
+        self.ind_data += 1
+        self.data_mock = DataToExport('mocktcp', data=[DataRaw('mock', data=[np.roll(data_tmp, self.ind_data)])])
 
     def set_2D_Mock_data(self):
         self.x_axis = np.linspace(0, 50, 50, endpoint=False)
         self.y_axis = np.linspace(0, 30, 30, endpoint=False)
-        self.data_mock = 10 * gauss2D(self.x_axis, 20, 10,
+        data_tmp = 10 * gauss2D(self.x_axis, 20, 10,
                                       self.y_axis, 15, 7, 1) + 2 * np.random.rand(len(self.y_axis), len(self.x_axis))
-
+        self.data_mock = DataToExport('mocktcp', data=[DataRaw('mock', data=[data_tmp])])
 
 if __name__ == '__main__':
     prog = DAQ_Viewer_TCP_server()
