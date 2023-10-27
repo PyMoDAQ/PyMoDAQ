@@ -14,7 +14,7 @@ from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 
 from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter.ioxml import parameter_to_xml_string
+from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
 from pymodaq.utils.data import DataFromPlugins, DataActuator
 from pymodaq.utils import math_utils as mutils
@@ -227,7 +227,7 @@ class TCPClient(TCPClientTemplate, QObject):
                 self.socket.check_sended_with_serializer(path)
 
                 # send value
-                data = parameter_to_xml_string(param)
+                data = ioxml.parameter_to_xml_string(param)
                 self.socket.check_sended_with_serializer(data)
 
         elif command.command == 'position_is':
@@ -277,7 +277,7 @@ class TCPClient(TCPClientTemplate, QObject):
         self.cmd_signal.emit(ThreadCommand('connected'))
         self.socket.check_sended_with_serializer(self.client_type)
 
-        self.send_infos_xml(parameter_to_xml_string(self.settings))
+        self.send_infos_xml(ioxml.parameter_to_xml_string(self.settings))
         for command in extra_commands:
             if isinstance(command, ThreadCommand):
                 self.cmd_signal.emit(command)
@@ -502,7 +502,7 @@ class TCPServer(QObject):
                 if sock == self.serversocket:  # New connection
                     # means a new socket (client) try to reach the server
                     (client_socket, address) = self.serversocket.accept()
-                    DAQ_type = client_socket.get_string()
+                    DAQ_type = DeSerializer(client_socket).string_deserialization()
                     if DAQ_type not in self.socket_types:
                         self.emit_status(ThreadCommand("Update_Status", [DAQ_type + ' is not a valid type', 'log']))
                         client_socket.close()
@@ -713,7 +713,8 @@ class Grabber(QObject):
         self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
         self.tcpclient_thread.start()
-        tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
+        #tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
+        tcpclient.init_connection()
         self.send_to_tcpip = True
 
     def snapshot(self, info='', send_to_tcpip=True):
@@ -751,8 +752,6 @@ class Grabber(QObject):
 
 if __name__ == '__main__':  # pragma: no cover
     import sys
-    from pymodaq.utils.parameter import ioxml
-
     app = QtWidgets.QApplication(sys.argv)
     mockdata_grabber = MockDataGrabber('2D')
     grabber = Grabber(mockdata_grabber.grab)

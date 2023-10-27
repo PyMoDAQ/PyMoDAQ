@@ -1096,7 +1096,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
             self._tcpclient_thread.start()
-            tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
+            #tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
+            tcpclient.init_connection()
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
@@ -1111,8 +1112,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             * 'disconnected': show that connection is not OK
             * 'Update_Status': update a status command
             * 'set_info': receive settings from the server side and update them on this side
-            * 'get_axis': request the plugin to send its axis info
-
 
         See Also
         --------
@@ -1138,6 +1137,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             param.restoreState(param_tmp.saveState())
 
         elif status.command == 'get_axis':
+            raise DeprecationWarning('Do not use this, the axis are in the data objects')
             self.command_hardware.emit(
                 ThreadCommand('get_axis', ))  # tells the plugin to emit its axes so that the server will receive them
 

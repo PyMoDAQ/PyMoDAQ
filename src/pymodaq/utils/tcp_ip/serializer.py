@@ -42,7 +42,9 @@ class Serializer:
         self._obj = obj
 
     def to_bytes(self):
-        if isinstance(self._obj, numbers.Number):
+        if isinstance(self._obj, bytes):
+            return self.bytes_serialization(self._obj)
+        elif isinstance(self._obj, numbers.Number):
             return self.scalar_serialization(self._obj)
         elif isinstance(self._obj, str):
             return self.string_serialization(self._obj)
@@ -102,11 +104,17 @@ class Serializer:
         return message, cls.int_to_bytes(len(message))
 
     def _int_serialization(self, int_obj: int) -> bytes:
-        """Deserialize an unsigned integer used for getting the length of messages internaly, for outside integer
+        """serialize an unsigned integer used for getting the length of messages internaly, for outside integer
         serialization or deserialization use scalar_serialization"""
         int_bytes = self.int_to_bytes(int_obj)
         bytes_string = int_bytes
         self._bytes_string += bytes_string
+        return bytes_string
+
+    def bytes_serialization(self, bytes_string_in: bytes) -> bytes:
+        bytes_string = b''
+        bytes_string += self.int_to_bytes(len(bytes_string_in))
+        bytes_string += bytes_string_in
         return bytes_string
 
     def string_serialization(self, string: str) -> bytes:

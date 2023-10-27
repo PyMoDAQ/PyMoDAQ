@@ -460,14 +460,11 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         """
         return DeSerializer(sock).dte_deserialization()
 
-    def data_ready(self, data):
+    def data_ready(self, data: DataToExport):
         """
-            Send the grabed data signal. to be written in the detailed plugin using this base class
-
-        for instance:
-        self.data_grabed_signal.emit([OrderedDict(name=self.client_type,data=[data], type='Data2D')])  #to be overloaded
+            Send the grabed data signal.
         """
-        pass
+        self.dte_signal.emit(data)
 
     def command_done(self, command_sock):
         try:
