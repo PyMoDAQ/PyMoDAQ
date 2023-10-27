@@ -704,7 +704,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.check_sended_with_serializer('move_abs')
-            sock.check_sended_with_serializer(position.value())
+            sock.check_sended_with_serializer(position)
 
     def move_rel(self, position: DataActuator):
         position = self.check_bound(self.current_value + position) - self.current_value
@@ -714,7 +714,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.check_sended_with_serializer('move_rel')
-            sock.check_sended_with_serializer(position.value())
+            sock.check_sended_with_serializer(position)
 
     def move_home(self):
         """

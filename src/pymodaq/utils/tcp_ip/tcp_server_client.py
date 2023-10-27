@@ -176,7 +176,9 @@ class TCPClient(TCPClientTemplate, QObject):
 
     def send_data(self, data: DataToExport):
         # first send 'Done' and then send the length of the list
-        if self.socket is not None and isinstance(data, DataToExport):
+        if not isinstance(data, DataToExport):
+            raise TypeError(f'should send a DataToExport object')
+        if self.socket is not None:
             self.socket.check_sended_with_serializer('Done')
             self.socket.check_sended_with_serializer(data)
 
@@ -233,12 +235,12 @@ class TCPClient(TCPClientTemplate, QObject):
         elif command.command == 'position_is':
             if self.socket is not None:
                 self.socket.check_sended_with_serializer('position_is')
-                self.socket.check_sended_with_serializer(command.attribute[0].value())
+                self.socket.check_sended_with_serializer(command.attribute[0])
 
         elif command.command == 'move_done':
             if self.socket is not None:
                 self.socket.check_sended_with_serializer('move_done')
-                self.socket.check_sended_with_serializer(command.attribute[0].value())
+                self.socket.check_sended_with_serializer(command.attribute[0])
 
         elif command.command == 'x_axis':
             raise DeprecationWarning('Getting axis though TCPIP is deprecated use the data objects directly')
