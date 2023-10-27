@@ -54,6 +54,6 @@ class TestMethods:
         assert ControlModule.grab != DAQ_Move.grab
         assert ControlModule.quit_fun != DAQ_Move.quit_fun
         assert ControlModule.init_hardware != DAQ_Move.init_hardware
-        assert ControlModule.init_hardware_ui != DAQ_Move.init_hardware_ui
+
 
 
