@@ -98,7 +98,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        QObject.__init__(self)
         ParameterManager.__init__(self)
         ControlModule.__init__(self)
 
