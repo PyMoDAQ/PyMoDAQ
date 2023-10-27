@@ -374,6 +374,6 @@ class ControlModuleUI(CustomApp):
         """
         raise NotImplementedError
 
-    def send_init(self):
-        """Should be implemented to send to the main app the fact that someone pressed init."""
+    def send_init(self, checked: bool):
+        """Should be implemented to send to the main app the fact that someone (un)checked init."""
         raise NotImplementedError
