@@ -70,8 +70,8 @@ __ https://pypi.org/project/QtPy/
   .. _linux_installation_section:
 Linux installation
 +++++++++++
-For Linux installation, it can be necessary to give some reading and writing permission access to some specific folders. In particulqr, PyMoDAQ creates two folders that are used to store configurations files, one assigned to the system in /etc/.pymodaq/ and one assigned to the user ~/.pymodaq/. We need to give reading/writing permission acess to the system folder.
-One should then run after installing pymodaq:
+For Linux installation, it can be necessary to give some reading and writing permission access to some specific folders. In particular, PyMoDAQ creates two folders that are used to store configurations files, one assigned to the system in /etc/.pymodaq/ and one assigned to the user ~/.pymodaq/. We need to give reading/writing permission acess to the system folder.
+One should then run before/after installing pymodaq:
 
 * ``sudo mkdir /etc/.pymodaq/``
 * ``sudo chmod uo+rw /etc/.pymodaq``
