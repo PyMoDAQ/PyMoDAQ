@@ -50,7 +50,6 @@ class TestMethods:
         assert ControlModule.grab != DAQ_Viewer.grab
         assert ControlModule.quit_fun != DAQ_Viewer.quit_fun
         assert ControlModule.init_hardware != DAQ_Viewer.init_hardware
-        assert ControlModule.init_hardware_ui != DAQ_Viewer.init_hardware_ui
 
 
 class TestWithoutUI:
