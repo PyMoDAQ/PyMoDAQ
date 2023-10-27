@@ -67,7 +67,19 @@ This means you have to install one of these backends on your environment using e
 
 __ https://pypi.org/project/QtPy/
 
+  .. _linux_installation_section:
+Linux installation
++++++++++++
+For Linux installation, it can be necessary to give some reading and writing permission access to some specific folders. In particular, PyMoDAQ creates two folders that are used to store configurations files, one assigned to the system in /etc/.pymodaq/ and one assigned to the user ~/.pymodaq/. We need to give reading/writing permission acess to the system folder.
+One should then run before/after installing pymodaq:
 
+* ``sudo mkdir /etc/.pymodaq/``
+* ``sudo chmod uo+rw /etc/.pymodaq``
+
+As a side note, these files are shared between different pymodaq's versions (going from 3 to 4 for example). It is suggested to delete/remake the folder (or empty its content) when setting up a new environment with a different pymodaq version.
+
+One should also make sure that the QT environment can be safely used with linux installations, running the following command should be sufficient to start with:
+``sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils``
 
   .. _shortcut_section:
 
