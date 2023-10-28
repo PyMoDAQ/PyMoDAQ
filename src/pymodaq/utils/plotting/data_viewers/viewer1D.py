@@ -67,6 +67,7 @@ class DataDisplayer(QObject):
         self._plotitem = plotitem
         self._plotitem.addLegend()
         self._plot_items: List[pg.PlotDataItem] = []
+        self._overlay_items: List[pg.PlotDataItem] = []
         self._axis: Axis = None
         self._data: DataRaw = None
 
@@ -161,6 +162,18 @@ class DataDisplayer(QObject):
 
     def legend_items(self):
         return [item[1].text for item in self.legend.items]
+
+    def show_overlay(self, show=True):
+        if not show:
+            while len(self._overlay_items) > 0:
+                self._plotitem.removeItem(self._overlay_items.pop(0))
+        else:
+            for ind in range(len(self._data)):
+                pen = pg.mkPen(color=PLOT_COLORS[ind], style=Qt.CustomDashLine)
+                pen.setDashPattern([10, 10])
+                self._overlay_items.append(pg.PlotDataItem(pen=pen))
+                self._plotitem.addItem(self._overlay_items[-1])
+                self._overlay_items[ind].setData(self._axis.get_data(), self._data[ind])
 
 
 class View1D(ActionManager, QObject):
@@ -287,6 +300,7 @@ class View1D(ActionManager, QObject):
         self.connect_action('xyplot', self.data_displayer.update_xyplot)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
+        self.connect_action('overlay', self.data_displayer.show_overlay)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
@@ -309,6 +323,7 @@ class View1D(ActionManager, QObject):
         self.add_action('xyplot', 'XYPlotting', '2d',
                         'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
                         visible=False)
+        self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data', checkable=True)
         self.add_action('x_label', 'x:')
         self.add_action('y_label', 'y:')
 
