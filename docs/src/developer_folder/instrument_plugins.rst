@@ -437,9 +437,9 @@ class should defines two class attributes:
 
     class DAQ_Move_MockNamedAxes(DAQ_Move_base):
         is_multiaxes = True
-        axes_names = ['Xaxis', 'Yaxis', 'Zaxis']
+        _axis_names = ['Xaxis', 'Yaxis', 'Zaxis']
         # or:
-        axes_names = {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
+        _axis_names = {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
 
 would produce such display on the UI (Fig. :numref:`multiaxes_xyz`):
 
@@ -467,7 +467,7 @@ Case of a list of strings:
 
     >>> self.axis_name
     'Yaxis'
-    >>> self.axes_names
+    >>> self.axis_names
     ['Xaxis', 'Yaxis', 'Zaxis']
     >>> self.axis_value
     'Yaxis'
@@ -478,7 +478,7 @@ Case of a dictionary of strings/integers:
 
     >>> self.axis_name
     'Yaxis'
-    >>> self.axes_names
+    >>> self.axei_names
     {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
     >>> self.axis_value
     1
