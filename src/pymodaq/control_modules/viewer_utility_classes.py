@@ -219,7 +219,7 @@ class DAQ_Viewer_base(QObject):
             hardware library. In case of Master it is the new instance of your plugin controller
         """
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings.child('controller_status').value() == "Slave":
+        if self.settings['controller_status'] == "Slave":
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
