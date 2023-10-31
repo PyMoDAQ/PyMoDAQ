@@ -164,10 +164,84 @@ Now, we tell Git to track this folder with the *init* command
 
 ``C:\Users\dbrestea\MyAmazingProject!!!>git init``
 
-Any folder that is tracked by Git contains a *.git subfolder*
+Any folder that is tracked by Git contains a *.git subfolder* and called a *repository*.
 
 .. figure:: /image/tutorial_git/git_init_git_folder.png
     :width: 400
 
 We now create a new file in this folder
 
+The *status* command
+++++++++++++++++++++
+
+You should never hesitate to run this command, it gives you the current status of the project.
+
+.. figure:: /image/tutorial_git/git_status.png
+    :width: 700
+
+Here Git says that he noticed that we created a new file, but he placed it under the *Untracked files* and colored it in
+red.
+
+The red means that Git does not know what to do with this file, he is waiting for an order from us.
+
+We have to tell him explicitly to track. To do so, we will just follow what he advised us, and use the *add* command.
+
+The *add* command
++++++++++++++++++
+
+To put a file under the supervision of Git (to *track* the file), we use the *add* command. This has to be done only the
+first time you add a file into the folder.
+
+.. figure:: /image/tutorial_git/git_add.png
+    :width: 700
+
+Then we do again the *status* command to see what have changed.
+
+Now the filename turned green, which means that the file is tracked by Git and ready to be *commited*.
+
+The *commit* command
+++++++++++++++++++++
+
+A *commit* is a fundamental notion of Git.
+
+**A commit is a snapshot of the folder status at a point in time.**
+
+It is you, the user, that decide when to do a commit.
+
+**A commit should be done at every little change you do on your program, after you tested that the result is as you
+expected.** For example, you should do a commit each time you add a new functionality that is working properly.
+
+For now, we just have one sentence in the file: "Hello world!", but that's a start. Let us do our initial commit.
+
+.. figure:: /image/tutorial_git/git_commit.png
+    :width: 700
+
+After the *-am* options (which means that you *add* the files that are not already tracked, and you type the *message*
+of your commit just after the command), we put a message to describe what we have done between parenthesis.
+
+If we now look at the status of our project
+
+.. figure:: /image/tutorial_git/git_tree_clean.png
+    :width: 600
+
+Everything is clean, good! We just did our first commit! :)
+
+The *log* command
++++++++++++++++++
+
+The *log* command will give you the complete history of the commits since the beginning of the project.
+
+.. figure:: /image/tutorial_git/git_log_complete.png
+    :width: 700
+
+You can see that for each commit you have:
+
+* An *id* that has been attributed to the commit, which is the big number in orange
+* The name and email address of the author.
+* The date and time of the commit.
+* The message that the author has written.
+
+In the following we will use the *--oneline* option to get the useful information in a more compact way.
+
+.. figure:: /image/tutorial_git/git_log.png
+    :width: 700
