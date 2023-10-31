@@ -1,11 +1,15 @@
 .. _git_tutorial:
 
-october 2023
-
-david.bresteau@cea.fr
-
 Basics of Git and GitHub
 ========================
+
++------------------------------------+---------------------------------------+
+| Author email                       | david.bresteau@cea.fr                 |
++------------------------------------+---------------------------------------+
+| First edition                      | november 2023                         |
++------------------------------------+---------------------------------------+
+| Difficulty                         | Easy                                  |
++------------------------------------+---------------------------------------+
 
 .. figure:: /image/tutorial_git/git_logo.png
     :width: 200
@@ -59,33 +63,33 @@ Run the installer. From all the windows that will appear, let the default option
 Uncheck "Windows Explorer integration".
 
 .. figure:: /image/tutorial_git/git_install_window.png
-    :width: 600
+    :width: 400
 
 For the default editor, do not let Vim if you don't know about it, for example you can choose Notepad++.
 
 .. figure:: /image/tutorial_git/git_editor_selection.png
-    :width: 600
+    :width: 400
 
 Use the following option for the name of the default branch.
 
 .. figure:: /image/tutorial_git/git_install_init_configuration.png
-    :width: 600
+    :width: 400
 
 If you develop from Windows, it is better that you let Git manage the line endings.
 
 .. figure:: /image/tutorial_git/git_install_line_ending.png
-    :width: 600
+    :width: 400
 
 Use the second option here.
 
 .. figure:: /image/tutorial_git/git_install_path.png
-    :width: 600
+    :width: 400
 
 Open the Git Bash terminal (Windows Applications > Git > Git Bash or Search for "Git Bash") that has been installed with
 the Git installer.
 
 .. figure:: /image/tutorial_git/git_bash.png
-    :width: 600
+    :width: 400
 
 We can now check that it is actually installed on our system.
 
@@ -99,8 +103,9 @@ Just after the installation, you should configure Git so that he knows your emai
 *global* in the sense that it does not depend on the project (the repository) you are working on. Use the following
 commands replacing with your own email and a name of your choice:
 
-.. figure:: /image/tutorial_git/git_configuration.png
-    :width: 600
+``git config --global user.email "david.bresteau@cea.fr"``
+
+``git config --global user.name "David Bresteau"``
 
 Good, we are now ready to use Git!
 
@@ -126,3 +131,43 @@ commands replacing with your own email and a name of your choice:
 ``git config --global user.name "David Bresteau"``
 
 Good, we are now ready to use Git!
+
+Local use of Git
+----------------
+
+We will start by using Git just on our local machine.
+
+Before we start...
+++++++++++++++++++
+
+**What kind of files I CAN track with Git?**
+
+Opened file formats that use text language: any "normal" language like C++, Python, Latex, markdown...
+
+**What kind of files I CANNOT track with Git?**
+
+* Closed file format like Word, pdf, Labview...
+* Images, drawings...
+
+The *init* command: start a new project
++++++++++++++++++++++++++++++++++++++++
+
+We start a project by creating a folder
+
+``C:\Users\dbrestea>mkdir MyAmazingProject!!!``
+
+And *cd* into this folder
+
+``C:\Users\dbrestea>cd MyAmazingProject!!!``
+
+Now, we tell Git to track this folder with the *init* command
+
+``C:\Users\dbrestea\MyAmazingProject!!!>git init``
+
+Any folder that is tracked by Git contains a *.git subfolder*
+
+.. figure:: /image/tutorial_git/git_init_git_folder.png
+    :width: 400
+
+We now create a new file in this folder
+
