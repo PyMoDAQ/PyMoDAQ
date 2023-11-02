@@ -171,6 +171,9 @@ Any folder that is tracked by Git contains a *.git subfolder* and called a *repo
 
 We now create a new file in this folder
 
+.. figure:: /image/tutorial_git/git_first_file.png
+    :width: 400
+
 The *status* command
 ++++++++++++++++++++
 
@@ -184,7 +187,7 @@ red.
 
 The red means that Git does not know what to do with this file, he is waiting for an order from us.
 
-We have to tell him explicitly to track. To do so, we will just follow what he advised us, and use the *add* command.
+We have to tell him explicitly to track this file. To do so, we will just follow what he advised us, and use the *add* command.
 
 The *add* command
 +++++++++++++++++
@@ -245,3 +248,77 @@ In the following we will use the *--oneline* option to get the useful informatio
 
 .. figure:: /image/tutorial_git/git_log.png
     :width: 700
+
+The *diff* command
+++++++++++++++++++
+
+The *diff* command is here to tell you what have changed since your last commit.
+
+Let us now put some interesting content in our file. We will found this in the `textart.me`__ website. Choose an
+animal and copy paste it into our file. (Textart is the art of drawing something with some keyboard characters. It
+would be equivalent to just add a sentence in the file!).
+
+__ https://textart.me/#animals and birds
+
+.. figure:: /image/tutorial_git/git_textart.png
+    :width: 700
+
+Let's go for the monkey, he is fun!
+
+.. figure:: /image/tutorial_git/git_monkey.png
+    :width: 700
+
+What happen if we ask for a difference from Git?
+
+.. figure:: /image/tutorial_git/git_diff_monkey.png
+    :width: 700
+
+In *green* appears what we have added, in *red* appears what we have removed.
+
+The *diff* command allows us to check what we have modified. Since we are happy with our last modification, we will
+commit our changes.
+
+.. figure:: /image/tutorial_git/git_commit_the_monkey.png
+    :width: 700
+
+Let us check what the log says now.
+
+.. figure:: /image/tutorial_git/git_log_the_monkey.png
+    :width: 700
+
+We now have two commits in our history.
+
+The *revert* command
+++++++++++++++++++++
+
+The *revert* command is here if you want to come back to a previous state of your folder.
+
+Let's say that we are not happy with the monkey anymore. We would like to come back to the original state of the file
+just before we added the monkey. Since we did the things properly, by commiting at every important point, this is a
+child play.
+
+We use the *revert* command and the commit number that we want to cancel. The commit number is found by using the
+*log --oneline* command. In our case it is 0b6ad27.
+
+.. figure:: /image/tutorial_git/git_revert_monkey.png
+    :width: 500
+
+This command will open Notepad++ (because we configured this editor in the installation section), just close it or
+modify the first text line if you want another commit message.
+
+.. figure:: /image/tutorial_git/git_revert_open_notepad.png
+    :width: 700
+
+Let's now see the history
+
+.. figure:: /image/tutorial_git/git_log_after_revert.png
+    :width: 700
+
+You can see that the revert operation has been written in the history, just as a usual commit.
+
+Let see how it looks like inside our amazing file (it may be needed to close/reopen the file).
+
+.. figure:: /image/tutorial_git/git_file_content_after_revert.png
+    :width: 500
+
+The monkey actually disappeared! :O
