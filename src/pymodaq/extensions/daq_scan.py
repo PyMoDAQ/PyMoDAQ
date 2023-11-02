@@ -205,69 +205,6 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
         self.settings.child('scan_options', 'sort_scan1D').setValue(config['scan']['sort1D'])
 
-    def setup_modules(self, filename):
-        """
-
-        """
-        try:
-            # todo update with v4 layout
-            pass
-            ######################################################################
-            # set scan selector
-            # items = OrderedDict()
-            # if self.navigator is not None:
-            #     items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
-            # for det in self.modules_manager.detectors_all:
-            #     if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
-            #         items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
-            #                                 names=[view.title for view in det.ui.viewers if
-            #                                        view.viewer_type == 'Data2D'], )
-            # items["DAQScan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQScan"])
-            #
-            # if self.navigator is not None:
-            #     items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
-            #     items.update(self.scanner.scan_selector.viewers_items)
-            #
-            # self.scanner.viewers_items = items
-            #
-            # self.scanner.scan_selector.widget.setVisible(False)
-            # self.scanner.scan_selector.settings.child('scan_options', 'scan_type').hide()
-            #
-            # self.scanner.scan_selector.widget.setVisible(False)
-            # self.scanner.scan_selector.show_scan_selector(visible=False)
-            #
-            # self.show_average_dock(False)
-            #
-            # self.ui.scan_dock.setEnabled(True)
-            # self.file_menu.setEnabled(True)
-            # self._extensions_menu.setEnabled(True)
-            # self.create_new_file(True)
-
-        except Exception as e:
-            logger.exception(str(e))
-            # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
-
-    def create_average_dock(self):
-        #todo update with v4 layout
-        self.ui.average_dock = gutils.dock.Dock("Averaging")
-        average_tab = QtWidgets.QTabWidget()
-        average1D_widget = QtWidgets.QWidget()
-        average2D_widget = QtWidgets.QWidget()
-
-        # %% init the 1D viewer
-        self.ui.average1D_graph = Viewer1D(average1D_widget)
-
-        # %% init the 2D viewer
-        self.ui.average2D_graph = Viewer2D(average2D_widget)
-
-        average_tab.addTab(average1D_widget, '1D plot Average')
-        average_tab.addTab(average2D_widget, '2D plot Average')
-
-        self.ui.average_dock.addWidget(average_tab)
-        self.dockarea.addDock(self.ui.average_dock, 'right', self.ui.scan_dock)
-
-        self.ui.average_dock.setVisible(False)
-
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
 
@@ -683,10 +620,6 @@ class DAQScan(QObject, ParameterManager):
         self.ui.display_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
-
-    def save_scan(self):
-        #todo update with v4 layout
-        pass
 
     @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
