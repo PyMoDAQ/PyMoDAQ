@@ -322,3 +322,85 @@ Let see how it looks like inside our amazing file (it may be needed to close/reo
     :width: 500
 
 The monkey actually disappeared! :O
+
+Work with branches
+++++++++++++++++++
+
+Within a given project, we can define several *branches*. Each branch will define different evolutions of the project.
+Git allows you to easily switch between those different branches, and to work in parallel on different *versions* of the
+same project. It is a central concept of a version control system.
+
+Up to now, we worked on the default branch, which is by convention named *main*. This branch should be the most
+reliable, the most *stable*. A good practice is to **never work directly on the main branch**. We actually
+did not follow this rule up to now for simplicity. In order to keep the main branch stable, **each time we want to
+modify our project, we should create a new branch** to isolate our future changes, that may lead to break the
+consistency of the code.
+
+Here is a representation of what is the current status of our project.
+
+.. figure:: /image/tutorial_git/git_branch_initial.svg
+    :width: 500
+
+    We are on the *main* branch and we did 3 commits. The most recent commit of the branch is also called *HEAD*.
+
+We will create a new branch, that we will call *develop*, with the following command
+
+``git checkout -b develop``
+
+Within this branch, we will be very safe to try any modification of the code we like, because it will be completely
+isolated from the *main* one. If we look at the status
+
+``git status``
+
+the first line of the answer should be "On branch develop".
+
+Let say that we now modify our file by adding some new animals (a bird and a mosquito), and commiting at each time. Here
+is a representation of the new status of our project.
+
+.. figure:: /image/tutorial_git/git_branch_merge.svg
+    :width: 500
+
+If we are happy with those two last commits, and we want to include them in the main branch, we will *merge* the
+*develop* branch into the *main* one, using the following procedure.
+
+We first have to go back to the *main* branch. For that, we use
+
+``git checkout main``
+
+Then, we tell Git to *merge* the *develop* branch into the current one, which is *main*
+
+``git merge develop``
+
+And we can now delete the *develop* branch which is now useless.
+
+``git branch -d develop``
+
+We end up with a *main* branch that inherited from the last commits of the former *develop* one (RIP)
+
+.. figure:: /image/tutorial_git/git_branch_final.svg
+    :width: 500
+
+This procedure looks overkill at first sight on such a simple example, but we strongly recommend that you try to stick
+with it at the very beginning of your practice with Git. It will make you more familiar with the concept of branch and
+force you to code with a precise purpose in mind before doing any modification. Finally, the concept of branch will
+become much more powerful when dealing with the remote use of Git.
+
+Local development workflow
+++++++++++++++++++++++++++
+
+To conclude, the local development workflow is as follow:
+
+* Start from a clean repository.
+* Create a new branch *develop* to isolate the development of my new feature from the stable version of the code in
+  *main*. **Never work directly on the main branch!**.
+* Do modifications in the files.
+* Test that the result is as expected.
+* Do a commit.
+* Repeat the 3 previous steps as much as necessary. **Try to decompose as much as possible any modification into very
+  small ones**.
+* Once the new feature is fully operational and tested, merge the *develop* branch into the *main* one.
+
+Doing a commit is like saving your progression in a video game. It is a checkpoint where you will always be able to come
+ back to, whatever you do after.
+
+Once you will be more familiar with Git, you will feel very safe to test any crazy modification of your code!
