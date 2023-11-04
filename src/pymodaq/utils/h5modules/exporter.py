@@ -18,6 +18,34 @@ from pymodaq.utils.logger import set_logger, get_module_name
 logger = set_logger(get_module_name(__file__))
 
 
+class H5Exporter(metaclass=ABCMeta):
+    """Base class for an exporter. """
+
+    # This is to define an abstract class attribute
+    @classmethod
+    @property
+    @abstractmethod
+    def FORMAT_DESCRIPTION(cls):
+        """str: file format description as a short text. eg: text file"""
+        raise NotImplementedError
+
+    @classmethod
+    @property
+    @abstractmethod
+    def FORMAT_EXTENSION(cls):
+        """str: File format extension. eg: txt"""
+        raise NotImplementedError
+
+    def __init__(self):
+        """Abstract Exporter Constructor"""
+        pass
+
+    @abstractmethod
+    def export_data(self, node: Node, filename: str) -> None:
+        """Abstract method to save a .h5 node to a file"""
+        pass
+
+
 class ExporterFactory:
     """The factory class for creating executors"""
 
@@ -50,7 +78,7 @@ class ExporterFactory:
         return inner_wrapper
 
     @classmethod
-    def create_exporter(cls, extension: str, filter: str):
+    def create_exporter(cls, extension: str, filter: str) -> H5Exporter:
         """Factory command to create the exporter object.
         This method gets the appropriate executor class from the registry
         and instantiates it.
@@ -85,33 +113,6 @@ class ExporterFactory:
         """Returns the string format description removing the extension part"""
         return filter.split(' (*')[0]
 
-
-class H5Exporter(metaclass=ABCMeta):
-    """Base class for an exporter. """
-
-    # This is to define an abstract class attribute
-    @classmethod
-    @property
-    @abstractmethod
-    def FORMAT_DESCRIPTION(cls):
-        """str: file format description as a short text. eg: text file"""
-        raise NotImplementedError
-
-    @classmethod
-    @property
-    @abstractmethod
-    def FORMAT_EXTENSION(cls):
-        """str: File format extension. eg: txt"""
-        raise NotImplementedError
-
-    def __init__(self):
-        """Abstract Exporter Constructor"""
-        pass
-
-    @abstractmethod
-    def export_data(self, node: Node, filename: str) -> None:
-        """Abstract method to save a .h5 node to a file"""
-        pass
 
 
 
