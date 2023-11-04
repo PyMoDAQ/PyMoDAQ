@@ -105,6 +105,8 @@ class Scanner(QObject, ParameterManager):
                 limits=scanner_factory.scan_sub_types(param.value()))
         if param.name() in ['scan_type', 'scan_sub_type']:
             self.set_scanner()
+            self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
+            self.settings.child('scan_sub_type').setOpts(tip=self._scanner.__doc__)
 
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
