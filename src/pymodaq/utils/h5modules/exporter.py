@@ -85,6 +85,7 @@ class ExporterFactory:
         """Returns the string format description removing the extension part"""
         return filter.split(' (*')[0]
 
+
 class H5Exporter(metaclass=ABCMeta):
     """Base class for an exporter. """
 

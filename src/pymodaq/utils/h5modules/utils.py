@@ -7,9 +7,39 @@ Created the 19/01/2023
 # Standard imports
 from collections import OrderedDict
 from typing import List, Dict
+from pathlib import Path
+from importlib import import_module
+from ..daq_utils import get_entrypoints
 
 # 3rd party imports
 import numpy as np
+
+
+def register_exporter(parent_module_name: str = 'pymodaq.utils.h5modules'):
+    exporters = []
+    try:
+        exporter_module = import_module(f'{parent_module_name}.exporters')
+
+        exporter_path = Path(exporter_module.__path__[0])
+
+        for file in exporter_path.iterdir():
+            if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
+                try:
+                    exporters.append(import_module(f'.{file.stem}', exporter_module.__name__))
+                except ModuleNotFoundError:
+                    pass
+    except ModuleNotFoundError:
+        pass
+    finally:
+        return exporters
+
+
+def register_exporters() -> list:
+    exporters = register_exporter('pymodaq.utils.h5modules')
+    discovered_exporter_plugins = get_entrypoints('pymodaq.h5exporters')
+    for entry in discovered_exporter_plugins:
+        exporters.extend(register_exporter(entry.value))
+    return exporters
 
 
 def find_scan_node(scan_node):

@@ -43,7 +43,6 @@ try:
     from pymodaq.utils.config import Config
 
 
-
     # issue on windows when using .NET code within multithreads, this below allows it but requires the
     # pywin32 (pythoncom) package
     if importlib.util.find_spec('clr') is not None:
