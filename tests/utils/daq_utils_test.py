@@ -158,7 +158,8 @@ def test_elt_as_first_element_dicts():
 
 
 def test_get_entry_points():
-    discovered_entrypoints = utils.get_entrypoints('pymodaq.plugins')
+    discovered_entrypoints = utils.get_entrypoints('pymodaq.instruments')
+    discovered_entrypoints.extend(utils.get_entrypoints('pymodaq.plugins'))
     assert len(discovered_entrypoints) > 0
 
     names = [entry.name for entry in discovered_entrypoints]

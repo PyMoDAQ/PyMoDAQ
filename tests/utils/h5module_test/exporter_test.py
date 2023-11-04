@@ -69,8 +69,8 @@ class TestH5Exporter:
     def test_exporters_registry(self):
         factory = h5export.ExporterFactory()
 
-        for ext in factory.exporters_registry.keys():
-            assert ext in ('h5', 'txt', 'npy')
+        for ext in ('h5', 'txt', 'npy'):
+            assert ext in list(factory.exporters_registry.keys())
 
 
 def test_register_exporter():
