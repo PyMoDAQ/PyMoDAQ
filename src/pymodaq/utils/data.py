@@ -1535,10 +1535,26 @@ class DataWithAxes(DataBase):
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
                                remove_axes_index: List[int] = None,
-                               source: DataSource = 'calculated') -> DataWithAxes:
+                               source: DataSource = 'calculated',
+                               keep_dim=False) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
+
+        Parameters
+        ----------
+        data: list of numpy ndarray
+            The new data
+        remove_axes_index: tuple of int
+            indexes of the axis to be removed
+        source: DataSource
+        keep_dim: bool
+            if False (the default) will calculate the new dim based on the data shape
+            else keep the same (be aware it could lead to issue)
+
+        Returns
+        -------
+        DataWithAxes
         """
         try:
             old_data = self.data
@@ -1592,7 +1608,8 @@ class DataWithAxes(DataBase):
                 # new_data._am.sig_indexes = tuple(sig_indexes)
 
             new_data._shape = data[0].shape
-            new_data._dim = self.get_dim_from_data(data)
+            if not keep_dim:
+                new_data._dim = self.get_dim_from_data(data)
             return new_data
 
         except Exception as e:

@@ -214,7 +214,7 @@ class H5SaverLowLevel(H5Backend):
         array_type: np.dtype or numpy types
             eg np.float, np.int32 ...
         enlargeable: bool
-            if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
+            if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_string_array)
         metadata: dict
             dictionnary whose keys will be saved as the array attributes
         add_scan_dim: if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5

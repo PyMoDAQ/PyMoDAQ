@@ -585,6 +585,9 @@ class DataToExportSaver:
     def _get_node(self, where: Union[Node, str]) -> Node:
         return self._h5saver.get_node(where)
 
+    def close(self):
+        self._h5saver.close()
+
     @staticmethod
     def channel_formatter(ind: int):
         """All DataWithAxes included in the DataToExport will be saved into a channel group indexed and
@@ -645,7 +648,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._axis_name = axis_name
         self._axis_units = axis_units
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, axis_value: float, settings_as_xml='', metadata={}):
+    def add_data(self, where: Union[Node, str], data: DataToExport, axis_value: Union[float, np.ndarray],
+                 settings_as_xml='', metadata={}):
         """
 
         Parameters
@@ -654,8 +658,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             the path of a given node or the node itself
         data: DataToExport
             The data to be saved into an enlargeable array
-        axis_value: float
-            The next value of the enlarged axis
+        axis_value: float or np.ndarray
+            The next value (or values) of the enlarged axis
         settings_as_xml: str
             The settings parameter as an XML string
         metadata: dict
@@ -670,7 +674,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             axis_array.attrs['size'] = 0
 
         axis_array = self._nav_axis_saver.get_node_from_index(nav_group, 0)
-        axis_array.append(np.array([axis_value]))
+        axis_array.append(np.atleast_1d(np.squeeze(np.array([axis_value]))))
         axis_array.attrs['size'] += 1
 
 
