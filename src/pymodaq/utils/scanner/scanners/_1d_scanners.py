@@ -20,8 +20,33 @@ logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
 
+class Scan1DBase(ScannerBase):
+    params = []
+    n_axes = 1
+    distribution = DataDistribution['uniform']
+
+    def __init__(self, actuators: List = None, **_ignored):
+        super().__init__(actuators=actuators)
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{self.actuators[0].title}',
+                     units=f'{self.actuators[0].units}',
+                     data=np.squeeze(self.positions))]
+
+    def get_scan_shape(self) -> Tuple[int]:
+        return len(self.positions),
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return tuple(self.axes_indexes[scan_index])
+
+    def update_from_scan_selector(self, scan_selector: Selector):
+        pass
+
+
 @ScannerFactory.register('Scan1D', 'Linear')
-class Scan1DLinear(ScannerBase):
+class Scan1DLinear(Scan1DBase):
+    """ Defines a linear scan between start and stop values with steps of length defined in the step setting"""
     params = [
         {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
         {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
@@ -48,18 +73,6 @@ class Scan1DLinear(ScannerBase):
         n_steps = int(np.abs((self.settings['stop'] - self.settings['start']) / self.settings['step']) + 1)
         return n_steps
 
-    def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{self.actuators[0].title}',
-                     units=f'{self.actuators[0].units}',
-                     data=np.squeeze(self.positions))]
-
-    def get_scan_shape(self) -> Tuple[int]:
-        return len(self.positions),
-
-    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
-        """To be reimplemented. Calculations of indexes within the scan"""
-        return tuple(self.axes_indexes[scan_index])
-
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
         if coordinates.shape == (2, 2) or coordinates.shape == (2, 1):
@@ -69,6 +82,8 @@ class Scan1DLinear(ScannerBase):
 
 @ScannerFactory.register('Scan1D', 'Random')
 class Scan1DRandom(Scan1DLinear):
+    """ Defines a  random linear scan by first initializing a linear one between start and stop values with
+    steps of length defined in the step setting, then shuffling the values."""
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
 

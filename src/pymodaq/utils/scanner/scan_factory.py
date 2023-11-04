@@ -141,7 +141,8 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     @abstractmethod
     def evaluate_steps(self):
-        """To be reimplemented. Quick evaluation of the current numbers of scan steps from the settings
+        """To be reimplemented. Quick evaluation of the number of steps to stop the calculation if the evaluation os above the
+        configured limit
         """
         ...
 
