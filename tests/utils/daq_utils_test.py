@@ -60,28 +60,6 @@ class TestString:
         assert utils.uncapitalize(string, 3) == 'abcDef'
 
 
-def test_get_data_dimension():
-    shapes = [(), (1,), (10,), (5, 5), (2, 2, 2)]
-    scan_types = ['scan1D', 'scan2D', 'scanND']
-    remove = [False, True]
-    for shape in shapes:
-        for scan in scan_types:
-            for rem in remove:
-                arr = np.ones(shape)
-                size = arr.size
-                dim = len(arr.shape)
-                if dim == 1 and size == 1:
-                    dim = 0
-                if rem:
-                    if scan.lower() == 'scan1d':
-                        dim -= 1
-                    if scan.lower() == 'scan2d':
-                        dim -= 2
-                else:
-                    if dim > 2:
-                        dim = 'N'
-                assert utils.get_data_dimension(arr, scan, rem) == (shape, f'{dim}D', size)
-
 
 def test_getLineInfo():
     try:

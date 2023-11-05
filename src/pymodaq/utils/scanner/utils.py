@@ -4,23 +4,48 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
+from importlib import import_module
+from pathlib import Path
 
 
-import numpy as np
-from qtpy import QtCore
-from qtpy.QtCore import Slot
-
-from pymodaq.utils.plotting.utils.plot_utils import QVector
-import pymodaq.utils.math_utils as mutils
-from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
+from pymodaq.utils.daq_utils import get_entrypoints
 from pymodaq.utils.scanner.scan_factory import ScannerFactory
 from pymodaq.utils.enums import BaseEnum
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
 
+
+def register_scanner(parent_module_name: str = 'pymodaq.utils.scanner'):
+    scanners = []
+    try:
+        scanner_module = import_module(f'{parent_module_name}.scanners')
+
+        scanner_path = Path(scanner_module.__path__[0])
+
+        for file in scanner_path.iterdir():
+            if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
+                try:
+                    scanners.append(import_module(f'.{file.stem}', scanner_module.__name__))
+                except ModuleNotFoundError:
+                    pass
+    except ModuleNotFoundError:
+        pass
+    finally:
+        return scanners
+
+
+def register_scanners() -> list:
+    scanners = register_scanner('pymodaq.utils.scanner')
+    discovered_scanners_plugins = get_entrypoints('pymodaq.scanners')
+    for entry in discovered_scanners_plugins:
+        scanners.extend(register_scanner(entry.value))
+    return scanners
+
+
+register_scanners()
 scanner_factory = ScannerFactory()
 ScanType = BaseEnum('ScanType', ['NoScan'] + scanner_factory.scan_types())
 
