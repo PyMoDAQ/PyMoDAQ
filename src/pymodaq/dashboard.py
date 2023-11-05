@@ -1082,8 +1082,12 @@ class DashBoard(QObject):
                 actuators_modules, detector_modules = self.set_file_preset(filename)
             except (ActuatorError, DetectorError, PIDError, MasterSlaveError) as error:
                 self.splash_sc.close()
+                self.mainwindow.setVisible(True)
+                for area in self.dockarea.tempAreas:
+                    area.window().setVisible(True)
                 messagebox(text=f'{str(error)}\nQuitting the application...', title='Incompatibility')
                 logger.exception(str(error))
+
                 self.quit_fun()
                 return
 
