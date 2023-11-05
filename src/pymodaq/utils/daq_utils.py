@@ -570,6 +570,8 @@ def get_entrypoints(group='pymodaq.plugins'):
             discovered_entrypoints = metadata.entry_points().select(group=group)
         except AttributeError:
             discovered_entrypoints = metadata.entry_points().get(group, [])
+    if isinstance(discovered_entrypoints, tuple):  # API for python > 3.8
+        discovered_entrypoints = list(discovered_entrypoints)
     return discovered_entrypoints
 
 
