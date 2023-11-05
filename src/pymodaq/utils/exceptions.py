@@ -11,6 +11,14 @@ class ActuatorError(Exception):
     pass
 
 
+class PIDError(Exception):
+    pass
+
+
+class MasterSlaveError(Exception):
+    pass
+
+
 class ViewerError(Exception):
     pass
 
