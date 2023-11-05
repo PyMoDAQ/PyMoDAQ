@@ -765,6 +765,11 @@ class DashBoard(QObject):
                                 self.poll_init(actuators_modules[-1])
                                 QtWidgets.QApplication.processEvents()
                                 master_controller = actuators_modules[-1].controller
+                            elif plugin['status'] == "Master" and len(plug_IDs) > 1:
+                                raise MasterSlaveError(f'The instrument {plug_name} defined as Master has to be '
+                                                       f'initialized (init checked in the preset) in order to init '
+                                                       f'its associated slave instrument'
+                                                       )
                         else:
                             if plugin['status'] != "Slave":
                                 raise MasterSlaveError(f'The instrument {plug_name} should'
@@ -791,6 +796,11 @@ class DashBoard(QObject):
                                 self.poll_init(detector_modules[-1])
                                 QtWidgets.QApplication.processEvents()
                                 master_controller = detector_modules[-1].controller
+                            elif plugin['status'] == "Master" and len(plug_IDs) > 1:
+                                raise MasterSlaveError(f'The instrument {plug_name} defined as Master has to be '
+                                                       f'initialized (init checked in the preset) in order to init '
+                                                       f'its associated slave instrument'
+                                                       )
                         else:
                             if plugin['status'] != "Slave":
                                 raise MasterSlaveError(f'The instrument {plug_name} should'
