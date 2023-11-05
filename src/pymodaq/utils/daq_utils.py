@@ -226,23 +226,6 @@ def uncapitalize(string, Nfirst=1):
     return string[:Nfirst].lower() + string[Nfirst:]
 
 
-def get_data_dimension(arr: np.ndarray, scan_type='scan1D', remove_scan_dimension=False):
-    dimension = len(arr.shape)
-    if dimension == 1:
-        if arr.size == 1:
-            dimension = 0
-
-    if remove_scan_dimension:
-        if scan_type.lower() == 'scan1d':
-            dimension -= 1
-        elif scan_type.lower() == 'scan2d':
-            dimension -= 2
-    else:
-        if dimension > 2:
-            dimension = 'N'
-    return arr.shape, f'{dimension}D', arr.size
-
-
 def getLineInfo():
     """get information about where the Exception has been triggered"""
     tb = sys.exc_info()[2]
