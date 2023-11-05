@@ -132,6 +132,7 @@ Please see :doc:`the changelog </changelog>`.
    glossary
    api/api_doc
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
+   PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>
 
 ..   usage/classDiagram
 
