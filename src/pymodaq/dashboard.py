@@ -25,7 +25,7 @@ from pymodaq.utils.managers.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.managers.roi_manager import ROISaver
-from pymodaq.utils.exceptions import DetectorError, ActuatorError
+from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError, MasterSlaveError
 from pymodaq.utils import config as configmod
 from pymodaq.utils.parameter import ParameterTree, Parameter
 
@@ -705,7 +705,8 @@ class DashBoard(QObject):
                         QtWidgets.QApplication.processEvents()
 
             except Exception as e:
-                logger.exception(str(e))
+                raise PIDError('Could not load the PID extension and create setpoints actuators'
+                               f'{str(e)}')
 
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -750,75 +751,60 @@ class DashBoard(QObject):
                                                color=Qt.white)
 
                     if plugin['type'] == 'move':
-                        try:
-                            plug_type = plug_settings.child('main_settings', 'move_type').value()
-                            self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms,
-                                          actuators_modules)
+                        plug_type = plug_settings.child('main_settings', 'move_type').value()
+                        self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms,
+                                      actuators_modules)
 
-                            try:
-                                if ind_plugin == 0:  # should be a master type plugin
-                                    if plugin['status'] != "Master":
-                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                    if plug_init:
-                                        actuators_modules[-1].init_hardware_ui()
-                                        QtWidgets.QApplication.processEvents()
-                                        self.poll_init(actuators_modules[-1])
-                                        QtWidgets.QApplication.processEvents()
-                                        master_controller = actuators_modules[-1].controller
-                                else:
-                                    if plugin['status'] != "Slave":
-                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                    if plug_init:
-                                        actuators_modules[-1].controller = master_controller
-                                        actuators_modules[-1].init_hardware_ui()
-                                        QtWidgets.QApplication.processEvents()
-                                        self.poll_init(actuators_modules[-1])
-                                        QtWidgets.QApplication.processEvents()
-                            except Exception as e:
-                                logger.exception(str(e))
-                        except ActuatorError as e:
-                            self.splash_sc.close()
-                            messagebox(text=f'{str(e)}\nQuitting the application...', title='Incompatibility')
-                            logger.exception(str(e))
-                            self.quit_fun()
-                            return
+                        if ind_plugin == 0:  # should be a master type plugin
+                            if plugin['status'] != "Master":
+                                raise MasterSlaveError(f'The instrument {plug_name} should'
+                                                       f' be defined as Master')
+                            if plug_init:
+                                actuators_modules[-1].init_hardware_ui()
+                                QtWidgets.QApplication.processEvents()
+                                self.poll_init(actuators_modules[-1])
+                                QtWidgets.QApplication.processEvents()
+                                master_controller = actuators_modules[-1].controller
+                        else:
+                            if plugin['status'] != "Slave":
+                                raise MasterSlaveError(f'The instrument {plug_name} should'
+                                                       f' be defined as slave')
+                            if plug_init:
+                                actuators_modules[-1].controller = master_controller
+                                actuators_modules[-1].init_hardware_ui()
+                                QtWidgets.QApplication.processEvents()
+                                self.poll_init(actuators_modules[-1])
+                                QtWidgets.QApplication.processEvents()
                     else:
-                        try:
-                            ind_det += 1
-                            self.add_det(plug_name, plug_settings, det_docks_settings, det_docks_viewer,
-                                         detector_modules)
-                            QtWidgets.QApplication.processEvents()
+                        ind_det += 1
+                        self.add_det(plug_name, plug_settings, det_docks_settings, det_docks_viewer,
+                                     detector_modules)
+                        QtWidgets.QApplication.processEvents()
 
-                            try:
-                                if ind_plugin == 0:  # should be a master type plugin
-                                    if plugin['status'] != "Master":
-                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                    if plug_init:
-                                        detector_modules[-1].init_hardware_ui()
-                                        QtWidgets.QApplication.processEvents()
-                                        self.poll_init(detector_modules[-1])
-                                        QtWidgets.QApplication.processEvents()
-                                        master_controller = detector_modules[-1].controller
-                                else:
-                                    if plugin['status'] != "Slave":
-                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                    if plug_init:
-                                        detector_modules[-1].controller = master_controller
-                                        detector_modules[-1].init_hardware_ui()
-                                        QtWidgets.QApplication.processEvents()
-                                        self.poll_init(detector_modules[-1])
-                                        QtWidgets.QApplication.processEvents()
-                            except Exception as e:
-                                logger.exception(str(e))
+                        if ind_plugin == 0:  # should be a master type plugin
+                            if plugin['status'] != "Master":
+                                raise MasterSlaveError(f'The instrument {plug_name} should'
+                                                       f' be defined as Master')
+                            if plug_init:
+                                detector_modules[-1].init_hardware_ui()
+                                QtWidgets.QApplication.processEvents()
+                                self.poll_init(detector_modules[-1])
+                                QtWidgets.QApplication.processEvents()
+                                master_controller = detector_modules[-1].controller
+                        else:
+                            if plugin['status'] != "Slave":
+                                raise MasterSlaveError(f'The instrument {plug_name} should'
+                                                       f' be defined as Slave')
+                            if plug_init:
+                                detector_modules[-1].controller = master_controller
+                                detector_modules[-1].init_hardware_ui()
+                                QtWidgets.QApplication.processEvents()
+                                self.poll_init(detector_modules[-1])
+                                QtWidgets.QApplication.processEvents()
 
-                            detector_modules[-1].settings.child('main_settings', 'overshoot').show()
-                            detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
-                        except DetectorError as e:
-                            self.splash_sc.close()
-                            messagebox(text=f'{str(e)}\nQuitting the application...', title='Incompatibility')
-                            logger.exception(str(e))
-                            self.quit_fun()
-                            return
+                        detector_modules[-1].settings.child('main_settings', 'overshoot').show()
+                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
+
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
 
@@ -1091,7 +1077,16 @@ class DashBoard(QObject):
             QtWidgets.QApplication.processEvents()
 
             logger.info(f'Loading Preset file: {filename}')
-            actuators_modules, detector_modules = self.set_file_preset(filename)
+
+            try:
+                actuators_modules, detector_modules = self.set_file_preset(filename)
+            except (ActuatorError, DetectorError, PIDError, MasterSlaveError) as error:
+                self.splash_sc.close()
+                messagebox(text=f'{str(error)}\nQuitting the application...', title='Incompatibility')
+                logger.exception(str(error))
+                self.quit_fun()
+                return
+
             if not (not actuators_modules and not detector_modules):
                 self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
