@@ -239,17 +239,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'viewers_changed':
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-        elif cmd.command == 'save_settings':            
-            filePath = select_file(get_set_config_dir('config',user=True),save=True,ext='xml',filter='*.xml',force_save_extension=True)
-            if filePath:
-                ioxml.parameter_to_xml_file(self.settings,str(filePath.resolve()))
+        elif cmd.command == 'save_settings':      
+            self.save_settings()                
         elif cmd.command == 'load_settings':
-            filePath = select_file(get_set_config_dir('config',user=True),save=False,ext='xml',filter='*.xml',force_save_extension=True)
-            if filePath:
-                params = ioxml.XML_file_to_parameter(str(filePath.resolve()))
-                param_obj = Parameter.create(name='daq_viewer_settings', type='group', children=params)
-                self.settings = param_obj
-                self._set_setting_tree()
+            self.load_settings()                
     @property
     def bkg(self) -> DataToExport:
         """Get the background data object"""

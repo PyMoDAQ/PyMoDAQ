@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import List, Union, Dict
-from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml
-
+from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml                
+from pymodaq.utils.gui_utils.file_io import select_file
+from pymodaq.utils.config import get_set_config_dir
 
 class ParameterManager:
     """Class dealing with Parameter and ParameterTree
@@ -108,3 +109,17 @@ class ParameterManager:
             the parameter that has been deleted
         """
         pass
+    
+    def save_settings(self,):
+        """Method to save the current settings using an xml file extension. The starting directory is the user/config folder
+        """        
+        filePath = select_file(get_set_config_dir('config',user=True),save=True,ext='xml',filter='*.xml',force_save_extension=True)
+        if filePath:
+            ioxml.parameter_to_xml_file(self.settings,str(filePath.resolve()))
+                
+    def load_settings(self,):
+        """Method to load settings into the parameter using an xml file extension. The starting directory is the user/config folder
+        """                
+        filePath = select_file(get_set_config_dir('config',user=True),save=False,ext='xml',filter='*.xml',force_save_extension=True)
+        if filePath:
+            self.settings = ioxml.XML_file_to_parameter(str(filePath.resolve()))
