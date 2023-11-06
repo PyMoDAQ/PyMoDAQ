@@ -47,6 +47,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
             * daq_type_changed
             * save_current
             * save_new
+            * save_settings
+            * load_settings
 
     Methods
     -------
@@ -152,6 +154,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._detector_widget = QWidget()
         self._settings_widget = QWidget()
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        self._settings_manager_widget = QtWidgets.QToolBar()
+        self._settings_widget.layout().addWidget(self._settings_manager_widget)
         bkg_widget = QWidget()
         bkg_widget.setLayout(QtWidgets.QHBoxLayout())
 
@@ -207,6 +211,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
+        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save Settings", checkable=True,toolbar=self._settings_manager_widget)
+        self.add_action('load_settings', 'Load Settings', 'openTree', "Load Settings", checkable=True,toolbar=self._settings_manager_widget)        
 
         self.add_action('quit', 'Quit the module', 'close2')
         self.add_action('log', 'Show Log file', 'information2')
@@ -227,6 +233,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand('snap', )))
+
+        self.connect_action('save_settings', lambda: self.command_sig.emit(ThreadCommand('save_settings', )))
+        self.connect_action('load_settings', lambda: self.command_sig.emit(ThreadCommand('load_settings', )))
 
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand('save_current', )))
         self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand('save_new', )))

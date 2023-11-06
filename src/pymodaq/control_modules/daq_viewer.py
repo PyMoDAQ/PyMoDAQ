@@ -25,7 +25,7 @@ from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
-from pymodaq.utils.config import Config, get_set_local_dir
+from pymodaq.utils.config import Config, get_set_local_dir,get_set_config_dir
 from pymodaq.utils.h5modules.browsing import browse_data
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
@@ -204,6 +204,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * save_settings
+                * load_settings
         """
 
         if cmd.command == 'init':
@@ -237,7 +239,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'viewers_changed':
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-
+        elif cmd.command == 'save_settings':            
+            filePath = select_file(get_set_config_dir('config',user=True),save=True,ext='xml',filter='*.xml',force_save_extension=True)
+            if filePath:
+                ioxml.parameter_to_xml_file(self.settings,str(filePath.resolve()))
+        elif cmd.command == 'load_settings':
+            filePath = select_file(get_set_config_dir('config',user=True),save=False,ext='xml',filter='*.xml',force_save_extension=True)
+            if filePath:
+                params = ioxml.XML_file_to_parameter(str(filePath.resolve()))
+                param_obj = Parameter.create(name='daq_viewer_settings', type='group', children=params)
+                self.settings = param_obj
+                self._set_setting_tree()
     @property
     def bkg(self) -> DataToExport:
         """Get the background data object"""
