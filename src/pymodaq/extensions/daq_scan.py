@@ -164,7 +164,7 @@ class DAQScan(QObject, ParameterManager):
         self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.create_dataset_settings()
-        self.setup_modules(self.dashboard.title)
+
         self.set_config()
 
         self.live_plotter = LoaderPlotter(self.dockarea)
