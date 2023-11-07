@@ -594,9 +594,9 @@ class DAQ_Move(ParameterManager, ControlModule):
             tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
 
             self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+            self._tcpclient_thread.started.connect(tcpclient.init_connection)
 
             self._tcpclient_thread.start()
-            tcpclient.init_connection()
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
