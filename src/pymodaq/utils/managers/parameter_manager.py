@@ -24,8 +24,8 @@ class ParameterTreeWidget(ActionManager):
         self.set_toolbar(toolbar)
         self.tree: ParameterTree = ParameterTree()
 
-        self.widget.header = self.tree.header  # for backcompatibility
-        self.widget.listAllItems = self.tree.listAllItems
+        self.widget.header = self.tree.header  # for back-compatibility, widget behave a bit like a ParameterTree
+        self.widget.listAllItems = self.tree.listAllItems  # for back-compatibility
 
         self.tree.setMinimumWidth(150)
         self.tree.setMinimumHeight(300)
