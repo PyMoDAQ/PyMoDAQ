@@ -77,7 +77,7 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -89,6 +89,9 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
+    if axes_names == []:
+        axes_names == axis_names
+    
     params = [
                  {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
                      {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
