@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Union, Dict
+from qtpy import QtWidgets
 from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml                
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.config import get_set_config_dir
@@ -112,14 +113,29 @@ class ParameterManager:
     
     def save_settings(self,):
         """Method to save the current settings using an xml file extension. The starting directory is the user/config folder
+        Both the representation of the module is saved and the settings. The representation of the module is then used to check for valid loading.
         """        
         filePath = select_file(get_set_config_dir('config',user=True),save=True,ext='xml',filter='*.xml',force_save_extension=True)
+        param_type = Parameter.create(name='module', type='str',value=self.__repr__())
+        param = Parameter.create(name='Settings',type='group',children = [param_type,self.settings])
         if filePath:
-            ioxml.parameter_to_xml_file(self.settings,str(filePath.resolve()))
+            ioxml.parameter_to_xml_file(param,str(filePath.resolve()))
                 
     def load_settings(self,):
         """Method to load settings into the parameter using an xml file extension. The starting directory is the user/config folder
+        The representation of the module is checked to see if load should be accepted or not.
         """                
-        filePath = select_file(get_set_config_dir('config',user=True),save=False,ext='xml',filter='*.xml',force_save_extension=True)
+        filePath = select_file(get_set_config_dir('config',user=True),save=False,ext='xml',filter='*.xml',force_save_extension=False)
         if filePath:
-            self.settings = ioxml.XML_file_to_parameter(str(filePath.resolve()))
+            param = ioxml.XML_file_to_parameter(str(filePath.resolve()))
+            doInitialize = param[0]['value'] == self.__repr__()
+            if not doInitialize:
+                print(f'Settings from \"{param[0]["value"]}\"  cannot be used for the current initialized plugin  \"{self.__repr__()}\"')                
+                # messageBox = QtWidgets.QMessageBox(title='Loading settings',text='Do you want to change the currently initialized plugin?',)
+                # QtWidgets.QMessageBox.addButton(QtWidgets.QMessageBox().standardButton())
+                # Do you want to change the currently initialized plugin?
+                # if True:
+                #     doInitialize = True
+            if doInitialize == True:
+                self.settings = param[1]['children']
+                
