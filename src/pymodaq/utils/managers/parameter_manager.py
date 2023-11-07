@@ -57,7 +57,10 @@ class ParameterManager:
         The particular name to give to the object parent Parameter (self.settings)
     settings: Parameter
         The higher level (parent) Parameter
-    settings_tree: ParameterTree
+    settings_tree: QWidget
+        widget Holding a ParameterTree and a toolbar for interacting with the tree
+    tree: ParameterTree
+        the underlying ParameterTree
     """
     settings_name = 'custom_settings'
     params = []
@@ -71,7 +74,7 @@ class ParameterManager:
         self._settings_tree = ParameterTreeWidget()
 
         self._settings_tree.get_action('save_settings').connect_to(self.save_settings)
-        self._settings_tree.get_action('load_settings').connect_to(self.load_settings)
+        self._settings_tree.get_action('load_settings').connect_to(self.update_settings)
 
         self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
@@ -173,15 +176,30 @@ class ParameterManager:
         if file_path:
             ioxml.parameter_to_xml_file(self.settings, file_path.resolve())
 
-    def load_settings(self, ):
+    def load_settings(self):
         """ Method to load settings into the parameter using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
         """
         file_path = select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
-                               force_save_extension=True)
+                                force_save_extension=True)
         if file_path:
-            self.settings = ioxml.XML_file_to_parameter(file_path.resolve())
+            self.settings = self.create_parameter(file_path.resolve())
+
+    def update_settings(self):
+        """ Method to update settings using a xml file extension.
+
+        The file should define the same settings structure (names and children)
+
+        The starting directory is the user config folder with a subfolder called settings folder
+        """
+        file_path = select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
+                                force_save_extension=True)
+        if file_path:
+            _settings = self.create_parameter(file_path.resolve())
+            #TODO: use a Parameter comparison to check if one can refresh the current settings
+            if True:  # here will be the comparison
+                self.settings.restoreState(_settings.saveState())
 
 
 if __name__ == '__main__':
