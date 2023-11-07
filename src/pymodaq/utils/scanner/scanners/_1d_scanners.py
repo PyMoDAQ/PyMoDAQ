@@ -93,6 +93,8 @@ class Scan1DRandom(Scan1DLinear):
         np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
         self.set_settings_titles()
+        
+        
 @ScannerFactory.register('Scan1D', 'Sparse')
 class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
     ''' Syntax goes as start:step:stop or with single entry
@@ -101,7 +103,6 @@ class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
     Separate entries with comma or new line
       - 0:0.2:1,5 will give [0 0.2 0.4 0.6 0.8 1 5]
       - 0:0.2:1,5:1:7 will give [0 0.2 0.4 0.6 0.8 1 5 6 7]
-
     '''
     params = [
         {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1', }
