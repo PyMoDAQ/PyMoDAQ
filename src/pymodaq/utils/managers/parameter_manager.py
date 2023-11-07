@@ -25,6 +25,7 @@ class ParameterTreeWidget(ActionManager):
         self.tree: ParameterTree = ParameterTree()
 
         self.widget.header = self.tree.header  # for backcompatibility
+        self.widget.listAllItems = self.tree.listAllItems
 
         self.tree.setMinimumWidth(150)
         self.tree.setMinimumHeight(300)
