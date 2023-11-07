@@ -1090,9 +1090,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
+            self._tcpclient_thread.started.connect(tcpclient.init_connection)
+
             self._tcpclient_thread.start()
-            #tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
-            tcpclient.init_connection()
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
