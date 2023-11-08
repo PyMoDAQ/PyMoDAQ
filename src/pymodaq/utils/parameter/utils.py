@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 import numpy as np
+from collections import OrderedDict
 
 if TYPE_CHECKING:
     from pymodaq.utils.parameter import Parameter
@@ -51,7 +52,8 @@ def iter_children(param, childlist=[]):
     """
     for child in param.children():
         childlist.append(child.name())
-        if 'group' in child.type():
+        if child.hasChildren():
+        # if 'group' in child.type():
             childlist.extend(iter_children(child, []))
     return childlist
 
@@ -62,7 +64,7 @@ def iter_children_params(param, childlist=[]):
     """
     for child in param.children():
         childlist.append(child)
-        if 'group' in child.type():
+        if child.hasChildren():
             childlist.extend(iter_children_params(child, []))
     return childlist
 
@@ -82,7 +84,7 @@ def get_param_from_name(parent, name) -> Parameter:
     for child in parent.children():
         if child.name() == name:
             return child
-        if 'group' in child.type():
+        if child.hasChildren():
             ch = get_param_from_name(child, name)
             if ch is not None:
                 return ch
