@@ -1,3 +1,6 @@
+from typing import Union
+from pathlib import Path
+
 import importlib
 import json
 from pathlib import Path
@@ -320,7 +323,7 @@ def parameter_to_xml_string(param):
     return ET.tostring(xml_elt)
 
 
-def parameter_to_xml_file(param, filename):
+def parameter_to_xml_file(param, filename: Union[str, Path]):
     """
         Convert the given parameter to XML element and update the given XML file.
 
@@ -337,9 +340,10 @@ def parameter_to_xml_file(param, filename):
         Examples
         --------
     """
-    fname = Path(filename)
-    parent = fname.parent
-    filename = fname.stem
+    if not isinstance(filename, Path):
+        filename = Path(filename)
+    parent = filename.parent
+    filename = filename.stem
     fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
     xml_elt = walk_parameters_to_xml(param=param)
     tree = ET.ElementTree(xml_elt)
@@ -457,29 +461,22 @@ def set_txt_from_elt(el, param_dict):
         param_dict.update(dict(value=param_value))
 
 
-def XML_file_to_parameter(file_name):
+def XML_file_to_parameter(file_name: Union[str, Path]) -> list:
+    """ Convert a xml file into pyqtgraph parameter object.
+
+    Returns
+    -------
+    params : list of dictionary
+        a list of dictionary defining a Parameter object and its children
+
+    See Also
+    --------
+    walk_parameters_to_xml
+
+    Examples
+    --------
     """
-        Convert a xml file into pyqtgraph parameter object.
-
-        =============== =========== ================================================
-        **Parameters**   **Type**    **Description**
-
-        *file_name*     string      the file name of the XML file to be converted
-        =============== =========== ================================================
-
-        Returns
-        -------
-        params : dictionnary list
-            a parameter list of dictionnary to init a parameter
-
-        See Also
-        --------
-        walk_parameters_to_xml
-
-        Examples
-        --------
-    """
-    tree = ET.parse(file_name)
+    tree = ET.parse(str(file_name))
 
     root = tree.getroot()
     params = walk_xml_to_parameter(params=[], XML_elt=root)

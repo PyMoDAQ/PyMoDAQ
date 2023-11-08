@@ -509,7 +509,7 @@ if __name__ == '__main__':
     act1 = DAQ_Move(act1_widget, title='X_axis')
     act2 = DAQ_Move(act2_widget, title='Y_axis')
     act1.actuator = 'Mock'
-    act2.actuator = 'MockTau'
+    act2.actuator = 'Mock'
 
     QThread.msleep(1000)
     prog.init_hardware_ui()
