@@ -34,37 +34,85 @@ def get_param_path(param):
         param = param.parent()
     return path[::-1]
 
-def getOpts(param:Parameter,):
-    """Return a tree of all opts that are children of this parameter"""
+def getOpts(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all opts for all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict
+    """
     vals = OrderedDict()    
     for ch in param:      
         vals[ch.name()] = (ch.opts, getOpts(ch))
     return vals
 
-def getStruct(param:Parameter,):
-    """Return a tree that are children of this parameter"""
+def getStruct(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict    
+    """
     vals = OrderedDict()
     for ch in param:      
         vals[ch.name()] = (None, getStruct(ch))
     return vals 
 
-def getValues(param:Parameter,):
-    """Return a tree of values that are children of this parameter"""
+def getValues(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all values for all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict    
+    """    
     vals = OrderedDict()
     for ch in param:      
         vals[ch.name()] = (ch.value(), getValues(ch))
     return vals 
 
-def compareParameters(param1:Parameter,param2:Parameter,opts:list=[]):  
-    """Compare the structure and the opts of two parameters with their children"""
-    return getOpts(param1) == getOpts(param2) 
+def compareParameters(param1:Parameter,param2:Parameter,opts:list=[])-> bool:  
+    """Compare the structure and the opts of two parameters with their children, return True if structure and all opts are identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
+    return getOpts(param1)==getOpts(param2) 
     
-def compareStructureParameter(param1:Parameter,param2:Parameter,):
-    """Compare the structure of two parameters with their children"""
+def compareStructureParameter(param1:Parameter,param2:Parameter,)-> bool:  
+    """Compare the structure of two parameters with their children, return True if structure is identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
     return getStruct(param1)==getStruct(param2)
 
-def compareValuesParameter(param1:Parameter,param2:Parameter,):
-    """Compare the structure and the values of two parameters with their children"""
+def compareValuesParameter(param1:Parameter,param2:Parameter,)-> bool:  
+    """Compare the structure and the values of two parameters with their children, return True if structures and values are identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
     return getValues(param1)==getValues(param2)    
 
 def iter_children(param, childlist=[]):
