@@ -34,6 +34,42 @@ def get_param_path(param):
         param = param.parent()
     return path[::-1]
 
+def getOpts(param:Parameter,):
+    """Return a tree of all opts that are children of this parameter"""
+    vals = OrderedDict()
+    for ch in param:      
+        vals[ch.name()] = (ch.opts, getOpts(ch))
+    return vals
+
+def getStruct(param:Parameter,):
+    """Return a tree that are children of this parameter"""
+    vals = OrderedDict()
+    for ch in param:      
+        vals[ch.name()] = (None, getStruct(ch))
+    return vals 
+
+def getValues(param:Parameter,):
+    """Return a tree of values that are children of this parameter"""
+    vals = OrderedDict()
+    for ch in param:      
+        vals[ch.name()] = (ch.value(), getValues(ch))
+    return vals 
+
+def compareParameters(param1:Parameter,param2:Parameter,opts:list=[]):  
+    return getOpts(param1) == getOpts(param2) 
+    
+def compareStructureParameter(param1:Parameter,param2:Parameter,):
+    return getStruct(param1)==getStruct(param2)
+
+def compareValuesParameter(param1:Parameter,param2:Parameter,):
+    return getValues(param1)==getValues(param2)
+    
+    
+def get_values_from_params(param,values=[]):
+    if len(values)>=1:
+        param_list = iter_children_params(param)
+        return [tuple([getattr(p1,value)() for value in values]) for p1 in param_list]
+
 
 def iter_children(param, childlist=[]):
     """Get a list of parameters name under a given Parameter
