@@ -43,8 +43,9 @@ class ParameterTreeWidget(ActionManager):
         --------
         ActionManager.add_action
         """
-        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save Settings")
-        self.add_action('load_settings', 'Load Settings', 'openTree', "Load Settings")
+        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save current settings in an xml file")
+        self.add_action('update_settings', 'Update Settings', 'updateTree', "Update the settings from an xml file, the settings structure loaded must be identical to the current one")                
+        self.add_action('load_settings', 'Load Settings', 'openTree', "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one")
 
 
 class ParameterManager:

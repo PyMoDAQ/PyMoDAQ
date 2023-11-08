@@ -56,7 +56,7 @@ def getValues(param:Parameter,):
     return vals 
 
 def compareParameters(param1:Parameter,param2:Parameter,opts:list=[]):  
-    """Compare the structure and the opts of two parameters and their children"""
+    """Compare the structure and the opts of two parameters with their children"""
     return getOpts(param1) == getOpts(param2) 
     
 def compareStructureParameter(param1:Parameter,param2:Parameter,):
