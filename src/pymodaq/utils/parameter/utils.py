@@ -36,7 +36,7 @@ def get_param_path(param):
 
 def getOpts(param:Parameter,):
     """Return a tree of all opts that are children of this parameter"""
-    vals = OrderedDict()
+    vals = OrderedDict()    
     for ch in param:      
         vals[ch.name()] = (ch.opts, getOpts(ch))
     return vals
@@ -56,20 +56,16 @@ def getValues(param:Parameter,):
     return vals 
 
 def compareParameters(param1:Parameter,param2:Parameter,opts:list=[]):  
+    """Compare the structure and the opts of two parameters and their children"""
     return getOpts(param1) == getOpts(param2) 
     
 def compareStructureParameter(param1:Parameter,param2:Parameter,):
+    """Compare the structure of two parameters with their children"""
     return getStruct(param1)==getStruct(param2)
 
 def compareValuesParameter(param1:Parameter,param2:Parameter,):
-    return getValues(param1)==getValues(param2)
-    
-    
-def get_values_from_params(param,values=[]):
-    if len(values)>=1:
-        param_list = iter_children_params(param)
-        return [tuple([getattr(p1,value)() for value in values]) for p1 in param_list]
-
+    """Compare the structure and the values of two parameters with their children"""
+    return getValues(param1)==getValues(param2)    
 
 def iter_children(param, childlist=[]):
     """Get a list of parameters name under a given Parameter
