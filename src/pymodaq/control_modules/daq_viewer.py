@@ -124,7 +124,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             QtWidgets.QApplication.processEvents()
             self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
-            self.ui.add_setting_tree(self.settings_tree)
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
 

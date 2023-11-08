@@ -126,6 +126,7 @@
     <file>Icon_Library/Open_File.png</file>
     <file>Icon_Library/Open_File_32.png</file>
     <file>Icon_Library/openArrow.png</file>
+    <file>Icon_Library/openTree.png</file>
     <file>Icon_Library/Options.png</file>
     <file>Icon_Library/Oscilloscope.png</file>
     <file>Icon_Library/Oscilloscope_16.png</file>
@@ -175,6 +176,7 @@
     <file>Icon_Library/SaveAll_32.png</file>
     <file>Icon_Library/SaveAs.png</file>
     <file>Icon_Library/SaveAs_32.png</file>
+    <file>Icon_Library/saveTree.png</file>
     <file>Icon_Library/scale_horizontally.png</file>
     <file>Icon_Library/scale_vertically.png</file>
     <file>Icon_Library/Search.png</file>
