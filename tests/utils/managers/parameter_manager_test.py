@@ -43,6 +43,7 @@ def test_parameter_manager(qtbot):
 
     assert hasattr(param_manager.settings_tree, 'header')
     assert hasattr(param_manager.settings_tree, 'setMinimumHeight')
+    assert hasattr(param_manager.settings_tree, 'listAllItems')
 
 
 
