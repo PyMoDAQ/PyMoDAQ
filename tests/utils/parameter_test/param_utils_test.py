@@ -6,9 +6,11 @@ Created the 28/10/2022
 """
 import numpy as np
 import pytest
+from qtpy import QtWidgets
 
-from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.parameter import ioxml
 from unittest import mock
 
 
@@ -114,11 +116,14 @@ class TestScroll:
             assert putils.scroll_linear(scroll_val, min_val, max_val) == \
                    pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
+
 def test_set_param_from_param():
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
             {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
              'readonly': True},
+            {'title': 'axis names:', 'name': 'axis', 'type': 'list',
+             'limits': {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}, 'readonly': True},
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
@@ -131,12 +136,27 @@ def test_set_param_from_param():
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
 
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
     settings.child('main_settings', 'DAQ_type').opts['limits'].append('new type')
     settings.child('main_settings', 'DAQ_type').setValue('new type')
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'DAQ_type').value() == 'new type'
 
-    settings.child('main_settings', 'detector_type').setValue('')
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
+    settings.child('main_settings', 'detector_type').setValue('new string')
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
+
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
+    settings.child('main_settings', 'axis').opts['limits'].update({'DAQ4D': 4})
+    settings.child('main_settings', 'axis').setValue(4)
+    putils.set_param_from_param(param_old=settings_old, param_new=settings)
+    assert settings_old.child('main_settings', 'axis').value() == 4
+
 

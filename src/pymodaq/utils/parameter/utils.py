@@ -1,7 +1,8 @@
 from __future__ import annotations
-
 from typing import TYPE_CHECKING
 import numpy as np
+
+from pymodaq.utils.daq_utils import find_keys_from_val
 
 if TYPE_CHECKING:
     from pymodaq.utils.parameter import Parameter
@@ -163,7 +164,8 @@ def set_param_from_param(param_old, param_new):
                         child_old.opts['limits'].append(child_new.value())
                 elif isinstance(child_old.opts['limits'], dict):
                     if child_new.value() not in child_old.opts['limits'].values():
-                        child_old.opts['limits'].update(dict(str(child_new.value()), child_new.value()))
+                        child_new_key = find_keys_from_val(child_old.opts['limits'], child_new.value())
+                        child_old.opts['limits'].update({child_new_key: child_new.value()})
 
                 child_old.setValue(child_new.value())
             elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:

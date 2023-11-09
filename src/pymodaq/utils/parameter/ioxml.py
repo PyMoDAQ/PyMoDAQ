@@ -513,7 +513,7 @@ def XML_string_to_parameter(xml_string):
     return params
 
 
-def XML_string_to_pobject(xml_string):
+def XML_string_to_pobject(xml_string) -> Parameter:
     """
     return a Parameter object from its *translated* version as a XML string
     Parameters
