@@ -505,6 +505,16 @@ class H5Browser(QObject, ActionManager):
 
     def show_h5_data(self, item, with_bkg=False, plot_all=False):
         """
+
+        Parameters
+        ----------
+        item
+        with_bkg
+        plot_all
+
+        Returns
+        -------
+
         """
         try:
             if item is None:

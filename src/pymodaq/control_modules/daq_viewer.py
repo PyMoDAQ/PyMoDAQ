@@ -313,6 +313,15 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.ui.detector = det
         self._set_setting_tree()
 
+    @property
+    def Naverage(self):
+        return self.settings['main_settings', 'Naverage']
+
+    @Naverage.setter
+    def Naverage(self, ngrab: int):
+        if ngrab >= 1:
+            self.settings.child('main_settings', 'Naverage').setValue(ngrab)
+
     def update_plugin_config(self):
         parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self.daq_type.name], 'name', self.detector)
         mod = import_module(parent_module['module'].__package__.split('.')[0])

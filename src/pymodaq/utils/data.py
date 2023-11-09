@@ -217,7 +217,10 @@ class Axis:
             data = self._data
 
         if self.is_axis_linear(data):
-            self._scaling = np.mean(np.diff(data))
+            if len(data) == 1:
+                self._scaling = 1
+            else:
+                self._scaling = np.mean(np.diff(data))
             self._offset = data[0]
             self._data = None
 
@@ -285,9 +288,10 @@ class Axis:
         return self.size
 
     def _slicer(self, _slice, *ignored, **ignored_also):
-        ax = copy.deepcopy(self)
+        ax: Axis = copy.deepcopy(self)
         if isinstance(_slice, int):
-            return None
+            ax.data = np.array([ax.get_data()[_slice]])
+            return ax
         elif _slice is Ellipsis:
             return ax
         elif isinstance(_slice, slice):
@@ -362,7 +366,11 @@ class Axis:
 
     def find_index(self, threshold: float) -> int:
         """find the index of the threshold value within the axis"""
-        if self._data is not None:
+        if threshold < self.min():
+            return 0
+        elif threshold > self.max():
+            return len(self) - 1
+        elif self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
             return int((threshold - self.offset) / self.scaling)
@@ -1067,7 +1075,7 @@ class AxesManagerUniform(AxesManagerBase):
 
         Returns
         -------
-        Axis or None: return the list of axis instance if Data has the axis (or it has been created) else None
+        List[Axis] or None: return the list of axis instance if Data has the axis (or it has been created) else None
 
         See Also
         --------

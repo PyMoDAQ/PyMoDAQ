@@ -133,7 +133,7 @@ class ViewerBase(QObject):
     crosshair_clicked = Signal(bool)
     sig_double_clicked = Signal(float, float)
 
-    def __init__(self, parent=None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__()
         self.title = title if title != '' else self.__class__.__name__
 
@@ -265,11 +265,13 @@ class ViewerBase(QObject):
 class ViewerDispatcher:
     """MixIn class to add easy control for adding multuiple data viewers in docks depending on data to be plotted"""
 
-    def __init__(self, dockarea: DockArea, title: str = '', next_to_dock: Dock = None):
+    def __init__(self, dockarea: DockArea = None, title: str = '', next_to_dock: Dock = None):
         super().__init__()
         self._title = title
         self._next_to_dock = next_to_dock
-
+        if dockarea is None:
+            dockarea = DockArea()
+            dockarea.show()
         self.dockarea = dockarea
 
         self._viewer_docks = []

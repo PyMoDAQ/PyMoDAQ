@@ -24,7 +24,7 @@ class Viewer2DBasic(ViewerBase):
 
     """
 
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent: QtWidgets.QWidget = None, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.scaling_options = edict(scaled_xaxis=edict(label="", units=None, offset=0, scaling=1),

@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, TYPE_CHECKING
 
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
@@ -11,6 +11,11 @@ from pymodaq.utils.config import Config
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataActuator
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.managers.parameter_manager import ParameterManager
+
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -275,9 +280,9 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
-        for sig in [mod.command_hardware for mod in self.detectors]:
-            kwargs.update(dict(Naverage=1))
-            sig.emit(utils.ThreadCommand("single", kwargs))
+        for mod in self.detectors:
+            kwargs.update(dict(Naverage=mod.Naverage))
+            mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end

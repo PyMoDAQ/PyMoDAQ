@@ -12,6 +12,12 @@ Data in PyMoDAQ are objects with many characteristics:
 *  axes
 *  actual data as numpy arrays
 
+.. figure:: /image/data/data.png
+   :alt: What is data?
+
+   What is PyMoDAQ's data?.
+
+
 Because of this variety, PyMoDAQ introduce a set of objects including metadata (for instance the time of acquisition)
 and various methods and properties to manipulate those (getting name, slicing, concatenating...). The most basic object
 is ``DataLowLevel`` whose all data objects will inherit. It is very basic and will only store a name as a string and a
@@ -22,11 +28,21 @@ Then one have ``DataBase`` objects that stores homogeneous data (data of same ty
 Numpy is fundamental in python and it was obvious to choose that. However, instruments can acquire data having the same
 type and shape but from different channels. It then makes sense to have a list of numpy arrays.
 
+Figure :numref:`zoology` presents the different types of data objects introduced by
+PyMoDAQ, which are also described below with examples on how to use them.
+
+  .. _zoology:
+
+.. figure:: /image/data/zoology.png
+   :alt: Zoology
+
+   Zoology of PyMoDAQ's data objects.
+
 
 DataBase
 --------
 
-`DataBase`, see :ref:`data_objects`, is the most basic object to store data. It takes as argument a name,
+`DataBase`, see :ref:`data_api`, is the most basic object to store data. It takes as argument a name,
 a :term:`DataSource`, a :term:`DataDim`, a :term:`DataDistribution`, the actual data as a list of numpy arrays (even for scalars), labels (a name for each element
 in the list), eventually an origin (a string from which module it originates) and optional named arguments.
 
@@ -75,7 +91,7 @@ iterating over the numpy arrays with the standard `for` loop.
 For a full description see :ref:`data_objects`.
 
 One course for data that are not scalar, a very important information is the axis associated with the data (one axis
-for waveforms, two for 2D data or more fro hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxis`
+for waveforms, two for 2D data or more fro hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxes`
 objects.
 
 .. _data_axis:

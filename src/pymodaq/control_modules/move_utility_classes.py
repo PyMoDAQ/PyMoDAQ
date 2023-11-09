@@ -244,9 +244,9 @@ class DAQ_Move_base(QObject):
         """Get/Set the current axis using its string identifier"""
         limits = self.settings.child('multiaxes', 'axis').opts['limits']
         if isinstance(limits, list):
-            return self.settings.child('multiaxes', 'axis').value()
+            return self.settings['multiaxes', 'axis']
         elif isinstance(limits, dict):
-            return find_keys_from_val(limits, val=self.settings.child('multiaxes', 'axis').value())[0]
+            return find_keys_from_val(limits, val=self.settings['multiaxes', 'axis'])[0]
 
     @axis_name.setter
     def axis_name(self, name: str):
