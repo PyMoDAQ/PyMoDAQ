@@ -90,7 +90,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], maste
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
     if axes_names == []:
-        axes_names == axis_names
+        axes_names = axis_names
     
     params = [
                  {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
