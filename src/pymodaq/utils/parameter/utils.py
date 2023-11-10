@@ -161,11 +161,16 @@ def set_param_from_param(param_old, param_new):
                 # dict object
                 if isinstance(child_old.opts['limits'], list):
                     if child_new.value() not in child_old.opts['limits']:
-                        child_old.opts['limits'].append(child_new.value())
+                        new_limits = child_old.opts['limits'].copy()
+                        new_limits.append(child_new.value())
+                        child_old.setLimits(new_limits)
+                        
                 elif isinstance(child_old.opts['limits'], dict):
                     if child_new.value() not in child_old.opts['limits'].values():
                         child_new_key = find_keys_from_val(child_new.opts['limits'], child_new.value())[0]
-                        child_old.opts['limits'].update({child_new_key: child_new.value()})
+                        new_limits = child_old.opts['limits'].copy()
+                        new_limits.update({child_new_key: child_new.value()})
+                        child_old.setLimits(new_limits)
 
                 child_old.setValue(child_new.value())
             elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
