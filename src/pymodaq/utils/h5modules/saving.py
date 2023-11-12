@@ -238,8 +238,8 @@ class H5SaverLowLevel(H5Backend):
         data_dimension = enum_checker(DataDim, data_dimension)
 
         if enlargeable:
-            if data_shape == (1,):
-                data_shape = None
+            # if data_shape == (1,):
+            #     data_shape = None
             array = self.create_earray(where, utils.capitalize(name), dtype=np.dtype(array_type),
                                        data_shape=data_shape, title=title)
         else:

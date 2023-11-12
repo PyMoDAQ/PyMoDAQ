@@ -63,6 +63,10 @@ class DataLengthError(Exception):
     pass
 
 
+class DataDimError(Exception):
+    pass
+
+
 class DwaType(BaseEnum):
     DataWithAxes = 0
     DataRaw = 1
@@ -1388,6 +1392,8 @@ class DataWithAxes(DataBase):
                     self._dim = DataDim['Data1D']
                 elif len(self.axes) == 2:
                     self._dim = DataDim['Data2D']
+        if len(self.nav_indexes) > 0:
+            self._dim = DataDim['DataND']
         return self._dim
 
     @property
@@ -1550,7 +1556,7 @@ class DataWithAxes(DataBase):
         source: DataSource
         keep_dim: bool
             if False (the default) will calculate the new dim based on the data shape
-            else keep the same (be aware it could lead to issue)
+            else keep the same (be aware it could lead to issues)
 
         Returns
         -------

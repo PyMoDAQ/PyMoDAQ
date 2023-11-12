@@ -369,17 +369,32 @@ class EARRAY(CARRAY):
     def __init__(self, array, backend):
         super().__init__(array, backend)
 
-    def append(self, data):
-        if isinstance(data, np.ndarray):
-            if data.shape != (1,):
-                shape = [1]
-                shape.extend(data.shape)
-                data = data.reshape(shape)
+    def append(self, data: np.ndarray):
+        """ appends a ndarray after the current data in the enlargeable array
+
+        Considering the shape length of the enlargeable array is n+1
+
+        The data to append could be:
+
+        * a single element (without the enlargeable shape index that is always the first
+        index, that is of shape length n). In that case the first index of the enlargeable array is increased by one.
+        * an ensemble of elements (a ndarray) of shape length of (n+1).
+
+        """
+        if not isinstance(data, np.ndarray):
+            raise TypeError('The appended object should be a ndarray')
+        if len(self.attrs['shape']) > 1 and data.shape == self.attrs['shape'][1:]:
+            shape = [1]
+            shape.extend(data.shape)
+            data = data.reshape(shape)
+            extended_first_index = 1
+        else:
+            extended_first_index = data.shape[0]
 
         self.append_backend(data)
 
         sh = list(self.attrs['shape'])
-        sh[0] += 1
+        sh[0] += extended_first_index
         self.attrs['shape'] = tuple(sh)
 
     def append_backend(self, data):
