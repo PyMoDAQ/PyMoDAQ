@@ -114,7 +114,7 @@ class BaseDataDisplayer(QObject):
     def update_nav_data_from_roi(self, roi: Union[SimpleRectROI, LinearROI]):
         if isinstance(roi, LinearROI):
             x, y = roi.getRegion()
-            self._nav_limits = (int(x), int(y), None, None)
+            self._nav_limits = (x, y, None, None)
         elif isinstance(roi, SimpleRectROI):
             x, y = roi.pos().x(), roi.pos().y()
             width, height = roi.size().x(), roi.size().y()
