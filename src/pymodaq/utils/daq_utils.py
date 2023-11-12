@@ -612,8 +612,14 @@ def get_instrument_plugins():  # pragma: no cover
 
     """
     plugins_import = []
-    discovered_plugins = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
-    discovered_plugins.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+    discovered_plugins = []
+    discovered_plugins_all = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
+    discovered_plugins_all.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+
+    for entry in discovered_plugins_all:
+        if entry.name not in [ent.name for ent in discovered_plugins]:
+            discovered_plugins.append(entry)
+
     logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     viewer_types = ['0D', '1D', '2D', 'ND']
     for entrypoint in discovered_plugins:
