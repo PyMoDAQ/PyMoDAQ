@@ -13,7 +13,7 @@ from pymodaq.utils.abstract import ABCMeta, abstract_attribute
 from pymodaq.utils.enums import enum_checker
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution, DataDimError
 from .saving import DataType, H5Saver
-from .backends import GROUP, CARRAY, Node, EARRAY
+from .backends import GROUP, CARRAY, Node, EARRAY, NodeError
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.scanner.utils import ScanType
 
@@ -694,7 +694,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             axis_array.attrs['size'] = 0
 
         axis_array = self._nav_axis_saver.get_node_from_index(nav_group, 0)
-        axis_array.append(np.atleast_1d(np.squeeze(np.array([axis_value]))))
+        axis_array.append(np.atleast_1d(np.squeeze(np.array([axis_value]))), expand=False)
         axis_array.attrs['size'] += 1
 
 
@@ -797,6 +797,10 @@ class DataLoader:
         self._h5saver = h5saver
         self._axis_loader = AxisSaverLoader(h5saver)
         self._data_loader = DataSaverLoader(h5saver)
+
+    def get_node(self, where: Union[Node, str], name: str = None) -> Node:
+        """ Convenience method to get node"""
+        return self.h5saver.get_node(where, name)
 
     def get_nav_group(self, where: Union[Node, str]) -> Union[Node, None]:
         """

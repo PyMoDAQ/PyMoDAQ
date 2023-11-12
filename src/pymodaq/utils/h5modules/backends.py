@@ -52,6 +52,10 @@ if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
 
 
+class NodeError(Exception):
+    pass
+
+
 class SaveType(BaseEnum):
     scan = 0
     detector = 1
@@ -369,7 +373,7 @@ class EARRAY(CARRAY):
     def __init__(self, array, backend):
         super().__init__(array, backend)
 
-    def append(self, data: np.ndarray):
+    def append(self, data: np.ndarray, expand=True):
         """ appends a ndarray after the current data in the enlargeable array
 
         Considering the shape length of the enlargeable array is n+1
@@ -390,7 +394,8 @@ class EARRAY(CARRAY):
             extended_first_index = 1
         else:
             extended_first_index = data.shape[0]
-
+        if expand and (len(data.shape) == 1 and not data.shape == (1, )):
+            data = np.expand_dims(data, 1)
         self.append_backend(data)
 
         sh = list(self.attrs['shape'])
@@ -702,22 +707,24 @@ class H5Backend:
     def get_node(self, where, name=None) -> Node:
         if isinstance(where, Node):
             where = where.node
-
-        if self.backend == 'tables':
-            node = self._h5file.get_node(where, name)
-        else:
-            if name is not None:
-                if isinstance(where, str):
-                    where += f'/{name}'
-                    node = self._h5file.get(where)
-                else:
-                    where = where.get(name)
-                    node = where
+        try:
+            if self.backend == 'tables':
+                node = self._h5file.get_node(where, name)
             else:
-                if isinstance(where, str):
-                    node = self._h5file.get(where)
+                if name is not None:
+                    if isinstance(where, str):
+                        where += f'/{name}'
+                        node = self._h5file.get(where)
+                    else:
+                        where = where.get(name)
+                        node = where
                 else:
-                    node = where
+                    if isinstance(where, str):
+                        node = self._h5file.get(where)
+                    else:
+                        node = where
+        except Exception as e:
+            raise NodeError(str(e))
 
         if 'CLASS' not in self.get_attr(node):
             self.set_attr(node, 'CLASS', 'GROUP')
