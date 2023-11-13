@@ -7,12 +7,11 @@ Created the 28/10/2022
 import numpy as np
 import pytest
 from qtpy import QtWidgets
-
+from collections import OrderedDict
 from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter import ioxml
 from unittest import mock
-
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
@@ -25,7 +24,41 @@ params = [
          'readonly': True},
     ]}
 ]
-
+params1 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+        ]},
+]
+# No min for afloat ==) False, True, True
+params2 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+    ]},
+]
+# No children in afloat ==) False, False, False
+params3 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                []},
+    ]},
+]
+# Different value in afloat ==) False, False, True
+params4 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 10., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+    ]},
+]    
+P1 = Parameter(name='settings1', type='group', children=params1)
+P2 = Parameter(name='settings2', type='group', children=params2)
+P3 = Parameter(name='settings3', type='group', children=params3)
+P4 = Parameter(name='settings4', type='group', children=params4)
 
 def test_get_param_path():
     settings = Parameter.create(name='settings', type='group', children=params)
@@ -68,6 +101,46 @@ def test_get_param_dict_from_name():
     result = putils.get_param_dict_from_name(parent_list, 20, pop=True)
 
     assert result['value'] == 40
+    
+def test_getOpts():
+    opts = putils.getOpts(P1)
+    assert [len(opts['numbers'][0])==13,
+            len(opts['numbers'][1]['afloat'][0])==15,
+            len(opts['numbers'][1]['afloat'][1]['aint'][0])==13]            
+    
+def test_getStruct():
+    struc = putils.getStruct(P1)
+    assert [struc['numbers'][0]==None,
+            struc['numbers'][1]['afloat'][0]==None,
+            struc['numbers'][1]['afloat'][1]['aint'][0]==None]                   
+
+def test_getValues():
+    val = putils.getValues(P1)
+    assert [val['numbers'][0]==None,
+            val['numbers'][1]['afloat'][0]==20.0,
+            val['numbers'][1]['afloat'][1]['aint'][0]==20]             
+
+
+def test_compareParameters():      
+    assert [putils.compareParameters(param1=P1,param2=P1) == True,
+            putils.compareParameters(param1=P1,param2=P2) == False,
+            putils.compareParameters(param1=P1,param2=P3) == False,
+            putils.compareParameters(param1=P1,param2=P4) == False]        
+def test_compareStructureParameter():  
+    assert [putils.compareStructureParameter(param1=P1,param2=P1) == True,
+            putils.compareStructureParameter(param1=P1,param2=P2) == True,
+            putils.compareStructureParameter(param1=P1,param2=P3) == False,
+            putils.compareStructureParameter(param1=P1,param2=P4) == True]    
+
+def test_compareValuesParameter():  
+    assert [putils.compareValuesParameter(param1=P1,param2=P1) == True,
+            putils.compareValuesParameter(param1=P1,param2=P2) == True,
+            putils.compareValuesParameter(param1=P1,param2=P3) == False,
+            putils.compareValuesParameter(param1=P1,param2=P4) == False]
+
+        
+
+    
 
 
 class TestScroll:
