@@ -3,7 +3,7 @@ from typing import List, Union, Dict
 
 from qtpy import QtWidgets, QtCore
 from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml
+from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml, utils
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.config import get_set_config_dir
 
@@ -199,8 +199,9 @@ class ParameterManager:
                                 force_save_extension=True)
         if file_path:
             _settings = self.create_parameter(file_path.resolve())
-            #TODO: use a Parameter comparison to check if one can refresh the current settings
-            if True:  # here will be the comparison
+            # Checking if both parameters have the same structure
+            sameStruct = utils.compareStructureParameter(self.settings,_settings)
+            if sameStruct:  # Update if true
                 self.settings.restoreState(_settings.saveState())
 
 
