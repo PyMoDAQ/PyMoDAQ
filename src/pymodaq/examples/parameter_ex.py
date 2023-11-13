@@ -53,6 +53,10 @@ class ParameterEx:
             {'title': 'Standard list:', 'name': 'alist', 'type': 'list', 'limits': ['a value', 'another one']},
             {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list', 'limits': ['a value', 'another one'],
              'show_pb': True, 'tip': 'when using the "show_pb" option, displays a plus button to add elt to the list'},
+            {'title': 'List defined from a dict:', 'name': 'dict_list', 'type': 'list',
+             'limits': {'xaxis': 0, 'yaxis': [0, 1, 2]}, 'tip': 'Such a parameter display text that are keys of a dict while'
+                                                        'values could be any object'
+             },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
             {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': '', 'filetype': True,
