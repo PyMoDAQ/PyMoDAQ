@@ -10,15 +10,12 @@ from pymodaq.utils.config import get_set_config_dir
 
 class ParameterTreeWidget(ActionManager):
 
-    def __init__(self):
+    def __init__(self,action_list=[]):
         super().__init__()
 
         self.widget = QtWidgets.QWidget()
         self.widget.setLayout(QtWidgets.QVBoxLayout())
 
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self.widget.layout().addWidget(self.splitter)
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)
 
         toolbar = QtWidgets.QToolBar()
         self.set_toolbar(toolbar)
@@ -29,23 +26,30 @@ class ParameterTreeWidget(ActionManager):
 
         self.tree.setMinimumWidth(150)
         self.tree.setMinimumHeight(300)
+        if len(action_list) != 0:
+            self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+            self.widget.layout().addWidget(self.splitter)
+            self.widget.layout().setContentsMargins(0, 0, 0, 0)            
+            self.splitter.addWidget(toolbar)
+            self.splitter.addWidget(self.tree)
+            self.splitter.setSizes([0, 300])
+            self.setup_actions(action_list)
+        else:
+            self.widget.layout().addWidget(self.tree)
 
-        self.splitter.addWidget(toolbar)
-        self.splitter.addWidget(self.tree)
-
-        self.splitter.setSizes([0, 300])
-        self.setup_actions()
-
-    def setup_actions(self):
+    def setup_actions(self,action_list:list = []):
         """
-
         See Also
         --------
         ActionManager.add_action
         """
-        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save current settings in an xml file")
-        self.add_action('update_settings', 'Update Settings', 'updateTree', "Update the settings from an xml file, the settings structure loaded must be identical to the current one")                
-        self.add_action('load_settings', 'Load Settings', 'openTree', "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one")
+        for action in action_list:
+            if action =='save':
+                self.add_action('save_settings', 'Save Settings', 'saveTree', "Save current settings in an xml file")
+            elif action == 'update':
+                self.add_action('update_settings', 'Update Settings', 'updateTree', "Update the settings from an xml file, the settings structure loaded must be identical to the current one")                
+            elif action == 'load':
+                self.add_action('load_settings', 'Load Settings', 'openTree', "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one")
 
 
 class ParameterManager:
@@ -67,16 +71,14 @@ class ParameterManager:
     settings_name = 'custom_settings'
     params = []
 
-    def __init__(self, settings_name: str = None):
+    def __init__(self, settings_name: str = None, action_list: list = []):
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
         # object containing the settings defined in the preamble
         # create a settings tree to be shown eventually in a dock
-        self._settings_tree = ParameterTreeWidget()
-
-        self._settings_tree.get_action('save_settings').connect_to(self.save_settings)
-        self._settings_tree.get_action('load_settings').connect_to(self.update_settings)
+        self._settings_tree = ParameterTreeWidget(action_list)
+        [self._settings_tree.get_action(f'{action}_settings').connect_to(getattr(self,f'{action}_settings')) for action in action_list]
 
         self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
@@ -168,7 +170,7 @@ class ParameterManager:
         """
         pass
 
-    def save_settings(self, ):
+    def save_settings(self):
         """ Method to save the current settings using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
@@ -177,6 +179,7 @@ class ParameterManager:
                                force_save_extension=True)
         if file_path:
             ioxml.parameter_to_xml_file(self.settings, file_path.resolve())
+            print(f'The settings have been successfully saved at {file_path}')
 
     def load_settings(self):
         """ Method to load settings into the parameter using a xml file extension.
@@ -187,6 +190,7 @@ class ParameterManager:
                                 force_save_extension=True)
         if file_path:
             self.settings = self.create_parameter(file_path.resolve())
+            print('The settings have been successfully loaded')
 
     def update_settings(self):
         """ Method to update settings using a xml file extension.
@@ -203,6 +207,10 @@ class ParameterManager:
             sameStruct = utils.compareStructureParameter(self.settings,_settings)
             if sameStruct:  # Update if true
                 self.settings.restoreState(_settings.saveState())
+                print('The settings have been successfully updated')
+            else:
+                print('The loaded settings do not match the current settings structure and cannot be updated.')
+
 
 
 if __name__ == '__main__':
