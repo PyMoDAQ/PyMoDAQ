@@ -790,6 +790,20 @@ class DataBase(DataLowLevel):
     def check_shape_from_data(self, data: List[np.ndarray]):
         self._shape = data[0].shape
 
+    @staticmethod
+    def _get_dim_from_data(data: List[np.ndarray]) -> DataDim:
+        shape = data[0].shape
+        size = data[0].size
+        if len(shape) == 1 and size == 1:
+            dim = DataDim['Data0D']
+        elif len(shape) == 1 and size > 1:
+            dim = DataDim['Data1D']
+        elif len(shape) == 2:
+            dim = DataDim['Data2D']
+        else:
+            dim = DataDim['DataND']
+        return dim
+
     def get_dim_from_data(self, data: List[np.ndarray]):
         """Get the dimensionality DataDim from data"""
         self.check_shape_from_data(data)
@@ -1615,7 +1629,7 @@ class DataWithAxes(DataBase):
 
             new_data._shape = data[0].shape
             if not keep_dim:
-                new_data._dim = self.get_dim_from_data(data)
+                new_data._dim = self._get_dim_from_data(data)
             return new_data
 
         except Exception as e:
