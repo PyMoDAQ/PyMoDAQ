@@ -98,7 +98,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self,action_list=['save','update'])
         ControlModule.__init__(self)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
