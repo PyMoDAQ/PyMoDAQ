@@ -5,14 +5,17 @@ from pyqtgraph.parametertree import Parameter
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self,checkbox=False):
 
         super(ItemSelect_pb, self).__init__()
-        self.initUI()
+        self.initUI(checkbox)
 
-    def initUI(self):
+    def initUI(self,checkbox=False):
         self.hor_layout = QtWidgets.QHBoxLayout()
-        self.itemselect = ItemSelect()
+        if checkbox:
+            self.itemselect = ItemCheck()
+        else:
+            self.itemselect = ItemSelect()
         self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
@@ -23,6 +26,59 @@ class ItemSelect_pb(QtWidgets.QWidget):
         self.hor_layout.setSpacing(0)
 
         self.setLayout(self.hor_layout)
+
+class ItemCheck(QtWidgets.QListWidget):
+    def __init__(self):
+        QtWidgets.QListWidget.__init__(self)
+
+    def get_value(self):
+        """
+            Get the dictionnary of values contained in the QtWidget attribute.
+
+            Returns
+            -------
+            dictionnary
+                The dictionnary of all_items compared to the selectedItems.
+        """
+        selitems = [item.text() for item in self.all_items() if item.checkState()!=0]
+        allitems = [item.text() for item in self.all_items()]
+        return dict(all_items=allitems, selected=selitems)
+
+    def all_items(self):
+        """
+            Get the all_items list from the self QtWidget attribute.
+
+            Returns
+            -------
+            list
+                The item list.
+        """
+        return [self.item(ind) for ind in range(self.count())]
+
+    def set_value(self, values):
+        """
+            Set values to the all_items attributes filtering values by the 'selected' key.
+
+            =============== ============== =======================================
+            **Parameters**    **Type**       **Description**
+            *values*          dictionnary    the values dictionnary to be setted.
+            =============== ============== =======================================
+        """
+        allitems = [item.text() for item in self.all_items()]
+        if allitems != values['all_items']:
+            self.clear()
+            for value in values['all_items']:
+                # if value not in allitems:
+                item = QtWidgets.QListWidgetItem(value)
+                item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                item.setCheckState(QtCore.Qt.Unchecked)
+                self.addItem(item)
+            QtWidgets.QApplication.processEvents()
+
+        self.clearSelection()
+        for item in self.all_items():
+            if item.text() in values['selected']:
+                item.setSelected(True)
 
 
 class ItemSelect(QtWidgets.QListWidget):
@@ -36,7 +92,7 @@ class ItemSelect(QtWidgets.QListWidget):
             Returns
             -------
             dictionnary
-                The dictionnary of all_items compared to the slelectedItems.
+                The dictionnary of all_items compared to the selectedItems.
         """
         selitems = [item.text() for item in self.selectedItems()]
         allitems = [item.text() for item in self.all_items()]
@@ -84,7 +140,13 @@ class ItemSelectParameterItem(WidgetParameterItem):
         self.asSubItem = True
         self.hideWidget = False
         opts = self.param.opts
-        w = ItemSelect_pb()
+        if 'checkbox' in opts and opts['checkbox']:        
+            w = ItemSelect_pb(checkbox = opts['checkbox'])
+            w.sigChanged = w.itemselect.itemChanged
+        else:
+            w = ItemSelect_pb()
+            w.sigChanged = w.itemselect.itemSelectionChanged
+
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         if 'minheight' in opts:
             w.itemselect.setMinimumHeight(opts['min_height'])
@@ -102,7 +164,6 @@ class ItemSelectParameterItem(WidgetParameterItem):
             w.setToolTip(opts['tip'])
         w.value = w.itemselect.get_value
         w.setValue = w.itemselect.set_value
-        w.sigChanged = w.itemselect.itemSelectionChanged
         w.add_pb.clicked.connect(self.buttonClicked)
         return w
 
