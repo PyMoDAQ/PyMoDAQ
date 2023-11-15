@@ -68,7 +68,7 @@ class ParameterEx:
             {'title': 'Selectable items', 'name': 'itemsbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
              'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True},
-            {'title': 'Selectable items', 'name': 'itemsbisbis', 'type': 'itemselect',
+            {'title': 'Checkable items', 'name': 'itemsbisbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
              'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True,'checkbox':True},                        
         ]},

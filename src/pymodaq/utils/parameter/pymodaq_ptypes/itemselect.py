@@ -68,7 +68,6 @@ class ItemCheck(QtWidgets.QListWidget):
         if allitems != values['all_items']:
             self.clear()
             for value in values['all_items']:
-                # if value not in allitems:
                 item = QtWidgets.QListWidgetItem(value)
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(QtCore.Qt.Unchecked)
