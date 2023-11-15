@@ -26,14 +26,15 @@ class ParameterTreeWidget(ActionManager):
 
         self.tree.setMinimumWidth(150)
         self.tree.setMinimumHeight(300)
-        if len(action_list) != 0:
+        
+        self.setup_actions(action_list) # Making the button
+        if len(action_list) != 0: # If no action allowed, no need for splitter
             self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
             self.widget.layout().addWidget(self.splitter)
             self.widget.layout().setContentsMargins(0, 0, 0, 0)            
             self.splitter.addWidget(toolbar)
             self.splitter.addWidget(self.tree)
             self.splitter.setSizes([0, 300])
-            self.setup_actions(action_list)
         else:
             self.widget.layout().addWidget(self.tree)
 
@@ -43,13 +44,12 @@ class ParameterTreeWidget(ActionManager):
         --------
         ActionManager.add_action
         """
-        for action in action_list:
-            if action =='save':
-                self.add_action('save_settings', 'Save Settings', 'saveTree', "Save current settings in an xml file")
-            elif action == 'update':
-                self.add_action('update_settings', 'Update Settings', 'updateTree', "Update the settings from an xml file, the settings structure loaded must be identical to the current one")                
-            elif action == 'load':
-                self.add_action('load_settings', 'Load Settings', 'openTree', "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one")
+        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save current settings in an xml file",
+                        visible='save' in action_list)
+        self.add_action('update_settings', 'Update Settings', 'updateTree', "Update the settings from an xml file, the settings structure loaded must be identical to the current one",
+                        visible='update' in action_list)                
+        self.add_action('load_settings', 'Load Settings', 'openTree', "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one",
+                         visible='load' in action_list)
 
 
 class ParameterManager:
@@ -78,8 +78,11 @@ class ParameterManager:
         # object containing the settings defined in the preamble
         # create a settings tree to be shown eventually in a dock
         self._settings_tree = ParameterTreeWidget(action_list)
-        [self._settings_tree.get_action(f'{action}_settings').connect_to(getattr(self,f'{action}_settings')) for action in action_list]
-
+        
+        self._settings_tree.get_action(f'save_settings').connect_to(self.save_settings)
+        self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings)
+        self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings)
+                                                                        
         self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
 
