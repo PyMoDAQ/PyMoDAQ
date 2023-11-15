@@ -88,7 +88,7 @@ def compareParameters(param1:Parameter,param2:Parameter,opts:list=[])-> bool:
         -------
         Bool    
     """    
-    return getOpts(param1)==getOpts(param2) 
+    return getOpts(param1) == getOpts(param2) 
     
 def compareStructureParameter(param1:Parameter,param2:Parameter,)-> bool:  
     """Compare the structure of two parameters with their children, return True if structure is identical
@@ -101,7 +101,7 @@ def compareStructureParameter(param1:Parameter,param2:Parameter,)-> bool:
         -------
         Bool    
     """    
-    return getStruct(param1)==getStruct(param2)
+    return getStruct(param1) == getStruct(param2)
 
 def compareValuesParameter(param1:Parameter,param2:Parameter,)-> bool:  
     """Compare the structure and the values of two parameters with their children, return True if structures and values are identical
@@ -114,7 +114,7 @@ def compareValuesParameter(param1:Parameter,param2:Parameter,)-> bool:
         -------
         Bool    
     """    
-    return getValues(param1)==getValues(param2)    
+    return getValues(param1) == getValues(param2)    
 
 def iter_children(param, childlist=[]):
     """Get a list of parameters name under a given Parameter
