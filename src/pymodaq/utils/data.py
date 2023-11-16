@@ -63,6 +63,10 @@ class DataLengthError(Exception):
     pass
 
 
+class DataDimError(Exception):
+    pass
+
+
 class DwaType(BaseEnum):
     DataWithAxes = 0
     DataRaw = 1
@@ -786,6 +790,20 @@ class DataBase(DataLowLevel):
     def check_shape_from_data(self, data: List[np.ndarray]):
         self._shape = data[0].shape
 
+    @staticmethod
+    def _get_dim_from_data(data: List[np.ndarray]) -> DataDim:
+        shape = data[0].shape
+        size = data[0].size
+        if len(shape) == 1 and size == 1:
+            dim = DataDim['Data0D']
+        elif len(shape) == 1 and size > 1:
+            dim = DataDim['Data1D']
+        elif len(shape) == 2:
+            dim = DataDim['Data2D']
+        else:
+            dim = DataDim['DataND']
+        return dim
+
     def get_dim_from_data(self, data: List[np.ndarray]):
         """Get the dimensionality DataDim from data"""
         self.check_shape_from_data(data)
@@ -1388,6 +1406,8 @@ class DataWithAxes(DataBase):
                     self._dim = DataDim['Data1D']
                 elif len(self.axes) == 2:
                     self._dim = DataDim['Data2D']
+        if len(self.nav_indexes) > 0:
+            self._dim = DataDim['DataND']
         return self._dim
 
     @property
@@ -1535,10 +1555,26 @@ class DataWithAxes(DataBase):
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
                                remove_axes_index: List[int] = None,
-                               source: DataSource = 'calculated') -> DataWithAxes:
+                               source: DataSource = 'calculated',
+                               keep_dim=False) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
+
+        Parameters
+        ----------
+        data: list of numpy ndarray
+            The new data
+        remove_axes_index: tuple of int
+            indexes of the axis to be removed
+        source: DataSource
+        keep_dim: bool
+            if False (the default) will calculate the new dim based on the data shape
+            else keep the same (be aware it could lead to issues)
+
+        Returns
+        -------
+        DataWithAxes
         """
         try:
             old_data = self.data
@@ -1592,7 +1628,8 @@ class DataWithAxes(DataBase):
                 # new_data._am.sig_indexes = tuple(sig_indexes)
 
             new_data._shape = data[0].shape
-            new_data._dim = self.get_dim_from_data(data)
+            if not keep_dim:
+                new_data._dim = self._get_dim_from_data(data)
             return new_data
 
         except Exception as e:

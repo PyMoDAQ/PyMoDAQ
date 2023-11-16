@@ -504,11 +504,12 @@ class TestDataWithAxesUniform:
     @pytest.mark.parametrize("IND_MEAN", [0, 1, 2])
     def test_mean(self, IND_MEAN):
         data, shape = init_dataND()
+        data_ini = data.deepcopy()
         new_data = data.mean(IND_MEAN)
         for ind, dat in enumerate(data):
             assert np.all(new_data[ind] == pytest.approx(np.mean(dat, IND_MEAN)))
         assert len(new_data.get_axis_indexes()) == 2
-
+        assert data.shape == data_ini.shape
 
 class TestNavIndexes:
 
