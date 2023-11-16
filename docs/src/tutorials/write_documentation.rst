@@ -125,7 +125,7 @@ Some additional packages are necessary to install, in particular *sphinx*, *docu
 
 Still in the */docs* folder (where you should have a *make.bat* file) execute
 
-``make html``
+``make html`` (``.\make html`` on windows powershell)
 
 This will run *Sphinx* that will build the website and put it into the newly created *docs/_build* folder. Open the */docs/_build/html/index.html* file with your favorite navigator. You just build the website locally!
 
@@ -180,7 +180,7 @@ In the *tutorials.rst* file, there is another *toctree* tag which defines the se
 
 Save this file and compile again with Sphinx in the */docs* directory
 
-``make html``
+``make html`` (``.\make html`` on windows powershell)
 
 and refresh the page in the navigator. Our new tutorial is already included in the website, and the table of contents has been updated!
 
