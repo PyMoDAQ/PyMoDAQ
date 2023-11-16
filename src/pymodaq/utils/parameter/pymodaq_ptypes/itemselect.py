@@ -173,6 +173,9 @@ class ItemSelectParameterItem(WidgetParameterItem):
 
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
                                                   "String value:", QtWidgets.QLineEdit.Normal)
+        if text in self.param.value()['all_items']:
+            print('Entry already exists, please use a different name.')
+            return
         if ok and not (text == ""):
             all = self.param.value()['all_items']
             all.append(text)
