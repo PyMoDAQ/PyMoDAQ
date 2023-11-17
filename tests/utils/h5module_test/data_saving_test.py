@@ -315,7 +315,7 @@ class TestDataEnlargeableSaver:
         data_saver = DataEnlargeableSaver(h5saver)
         Ndata = 2
 
-        nav_length = np.random.randint(5,10)
+        nav_length = np.random.randint(5, 10)
         expanded_shape = list(data_array.shape)[:]
         expanded_array = [nav_length] + expanded_shape
         data_array_expanded = np.ones(expanded_array)
@@ -323,7 +323,7 @@ class TestDataEnlargeableSaver:
         data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
                             labels=['mylabel1', 'mylabel2'],
                             source='raw', distribution='uniform',)
-        dwa_chunk = DataWithAxes(name='mydata', data=[data_array_expanded for _ in range(Ndata)],
+        dwa_chunk = DataWithAxes(name='mydata', data=[np.squeeze(np.atleast_1d(data_array_expanded)) for _ in range(Ndata)],
                                  labels=['mylabel1', 'mylabel2'],
                                  source='raw', distribution='uniform',
                                  nav_indexes=(0,))
@@ -338,7 +338,7 @@ class TestDataEnlargeableSaver:
 
         dwa_back = data_saver.load_data('/RawData/EnlData00', )
 
-        assert dwa_back.shape == tuple(expanded_array)
+        assert dwa_back.shape == dwa_chunk.shape
         assert dwa_back.dim.name == 'DataND'
         assert dwa_back.nav_indexes == (0,)
 

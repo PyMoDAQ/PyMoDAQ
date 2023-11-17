@@ -222,7 +222,8 @@ class AxisSaverLoader(DataManagement):
         if not self._is_node_of_data_type(axis_node):
             raise AxisError(f'Could not create an Axis object from this node: {axis_node}')
         return Axis(label=axis_node.attrs['label'], units=axis_node.attrs['units'],
-                    data=axis_node.read(), index=axis_node.attrs['index'], spread_order=axis_node.attrs['spread_order'])
+                    data=np.atleast_1d(np.squeeze(axis_node.read())), index=axis_node.attrs['index'],
+                    spread_order=axis_node.attrs['spread_order'])
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """Return a list of Axis objects from the Axis Nodes hanging from (or among) a given Node
@@ -334,9 +335,9 @@ class DataSaverLoader(DataManagement):
             getter = self._get_nodes
 
         if with_bkg:
-            return [array.read()-bkg.read() for array, bkg in zip(getter(where), bkg_nodes)]
+            return [np.atleast_1d(np.squeeze(array.read()-bkg.read())) for array, bkg in zip(getter(where), bkg_nodes)]
         else:
-            return [array.read() for array in getter(where)]
+            return [np.atleast_1d(np.squeeze(array.read())) for array in getter(where)]
 
     def load_data(self, where, with_bkg=False, load_all=False) -> DataWithAxes:
         """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
@@ -371,7 +372,7 @@ class DataSaverLoader(DataManagement):
             data_nodes = [data_node]
 
         if 'axis' in self.data_type.name:
-            ndarrays = [data_node.read() for data_node in data_nodes]
+            ndarrays = [np.atleast_1d(np.squeeze(data_node.read())) for data_node in data_nodes]
             axes = [Axis(label=data_node.attrs['label'], units=data_node.attrs['units'],
                          data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
         else:
