@@ -4,6 +4,7 @@ from typing import List
 
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.config import Config
+from pymodaq.utils.data import DataToExport
 from qtpy import QtCore
 from contextlib import contextmanager
 
@@ -14,6 +15,7 @@ from pymodaq.utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.utils.messenger import messagebox, deprecation_msg
 from pymodaq.utils.abstract.logger import AbstractLogger
 from pymodaq.utils.parameter import ParameterTree, Parameter
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -179,26 +181,20 @@ class DbLogger:
         with self.session_scope() as session:
             session.add(LogInfo(log))
 
-    def add_data(self, data):
+    def add_data(self, data: DataToExport):
         with self.session_scope() as session:
-            time_stamp = data['acq_time_s']
-            module_name = data['name']
+            time_stamp = data.timestamp
+            module_name = data.name
 
             if session.query(ControlModule).filter_by(name=module_name).count() == 0:
-                self.add_control_modules(session, dict(name=module_name), data['control_module'])
+                self.add_control_modules(session, dict(name=module_name), data.control_module)
 
             module_id = session.query(ControlModule).filter_by(name=module_name).one().id  # detector/actuator names should/are unique
 
-            if 'data0D' in data:
-                for channel in data['data0D']:
-                    d = data['data0D'][channel]['data']
-                    if hasattr(d, '__len__'):
-                        d = float(d[0])
-                    if data['control_module'] == 'DAQ_Move':
-                        channel = f"{data['data0D'][channel]['name']}"
-                    else:
-                        channel = f"{data['data0D'][channel]['name']}:{channel}"
-                    session.add(Data0D(timestamp=time_stamp, control_module_id=module_id, channel=channel, value=d))
+            for dwa in data.get_data_from_dim('Data0D'):
+                for ind, data0D in enumerate(data):
+                    session.add(Data0D(timestamp=dwa.timestamp, control_module_id=module_id, channel=dwa.labels[ind],
+                                       value=float(data0D[0])))
 
             if 'data1D' in data:
                 for channel in data['data1D']:
@@ -215,7 +211,7 @@ class DbLogger:
             # not yet dataND as db should not know where to save these datas
 
 
-class DbLoggerGUI(DbLogger, QtCore.QObject):
+class DbLoggerGUI(DbLogger, ParameterManager):
     params = [
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
             'limits': ['PostgreSQL', ]},
@@ -231,56 +227,27 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
     def __init__(self, database_name):
         DbLogger.__init__(self, database_name, ip_address=config('network', 'logging', 'sql', 'ip'),
                           port=config('network', 'logging', 'sql', 'port'), save2D=False)
-        QtCore.QObject.__init__(self)
+        ParameterManager.__init__(self)
 
-        self.settings = Parameter.create(title='DB settings', name='db_settings', type='group',
-                                         children=self.params)
         self.settings.child('do_save').hide()
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setMinimumHeight(310)
-        self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-    def parameter_tree_changed(self, param, changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
+    def value_changed(self, param):
+        if param.name() == 'server_ip':
+            self.ip_address = param.value()
 
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
+        elif param.name() == 'server_port':
+            self.port = param.value()
+
+        elif param.name() == 'connect_db':
+            if param.value():
+                status = self.connect_db()
+                self.settings.child('connected_db').setValue(status)
             else:
-                childName = param.name()
-            if change == 'childAdded':
-                pass
+                self.close()
+                self.settings.child('connected_db').setValue(False)
 
-            elif change == 'value':
-                if param.name() == 'server_ip':
-                    self.ip_address = param.value()
-
-                elif param.name() == 'server_port':
-                    self.port = param.value()
-
-                elif param.name() == 'connect_db':
-                    if param.value():
-                        status = self.connect_db()
-                        self.settings.child('connected_db').setValue(status)
-                    else:
-                        self.close()
-                        self.settings.child('connected_db').setValue(False)
-
-                elif param.name() == 'save_2D':
-                    self.save2D = param.value()
-
-            elif change == 'parent':
-                pass
+        elif param.name() == 'save_2D':
+            self.save2D = param.value()
 
 
 class DataBaseLogger(AbstractLogger):
