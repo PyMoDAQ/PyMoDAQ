@@ -1304,8 +1304,8 @@ class DataWithAxes(DataBase):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
 
     def sort_data(self, nav_axis: int = 0):
-        """Sort spread data along a given navigation axis, default is 0"""
-        if self.distribution == 'spread':
+        """Sort data along a given navigation axis, default is 0"""
+        if nav_axis in self.nav_indexes:
             axis = self.get_nav_axes()[nav_axis]
             sorted_index = np.argsort(axis.get_data())
             data = self.deepcopy()
