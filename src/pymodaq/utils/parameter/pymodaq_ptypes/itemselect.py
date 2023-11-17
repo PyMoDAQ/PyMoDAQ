@@ -5,17 +5,20 @@ from pyqtgraph.parametertree import Parameter
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
-    def __init__(self,checkbox=False):
+    def __init__(self,checkbox=False,dragdrop=False):
 
         super(ItemSelect_pb, self).__init__()
-        self.initUI(checkbox)
+        self.initUI(checkbox,dragdrop)
 
-    def initUI(self,checkbox=False):
+    def initUI(self,checkbox,dragdrop):
         self.hor_layout = QtWidgets.QHBoxLayout()
         if checkbox:
             self.itemselect = ItemCheck()
         else:
             self.itemselect = ItemSelect()
+        if dragdrop:
+            self.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+
         self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
@@ -139,11 +142,15 @@ class ItemSelectParameterItem(WidgetParameterItem):
         self.asSubItem = True
         self.hideWidget = False
         opts = self.param.opts
+        if 'dragdrop' in opts and opts['dragdrop']:        
+            dragdrop=True
+        else:
+            dragdrop=False
         if 'checkbox' in opts and opts['checkbox']:        
-            w = ItemSelect_pb(checkbox = opts['checkbox'])
+            w = ItemSelect_pb(checkbox = opts['checkbox'],dragdrop=dragdrop)
             w.sigChanged = w.itemselect.itemChanged
         else:
-            w = ItemSelect_pb()
+            w = ItemSelect_pb(checkbox=False, dragdrop=dragdrop)
             w.sigChanged = w.itemselect.itemSelectionChanged
 
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
