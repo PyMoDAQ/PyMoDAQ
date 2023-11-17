@@ -91,7 +91,7 @@ iterating over the numpy arrays with the standard `for` loop.
 For a full description see :ref:`data_objects`.
 
 Of course for data that are not scalar, a very important information is the axis associated with the data (one axis
-for waveforms, two for 2D data or more fro hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxes`
+for waveforms, two for 2D data or more for hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxes`
 objects.
 
 .. _data_axis:
