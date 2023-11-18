@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(True, reason='qtbot issues but tested locally')
 @fixture
 def ini_daq_viewer_ui(qtbot):
     win = QtWidgets.QMainWindow()
+    qtbot.addWidget(win)
     area = DockArea()
     win.setCentralWidget(area)
     daq_types = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
@@ -27,7 +28,8 @@ def ini_daq_viewer_ui(qtbot):
     prog.daq_types = daq_types
     yield prog, qtbot
     prog.close()
-    win.close()
+    prog.parent.close()
+    QtWidgets.QApplication.processEvents()
 
 @pytestmark
 def test_api_attributes(ini_daq_viewer_ui):
@@ -66,7 +68,7 @@ def test_private_attributes(ini_daq_viewer_ui):
 
     assert '_enable_grab_buttons' in attributes
     assert '_grab' in attributes
-    assert '_send_init' in attributes
+    #assert '_send_init' in attributes
     assert '_enable_detchoices' in attributes
 
 

@@ -79,3 +79,6 @@ class TestDAQMove:
 
         assert data.value() == pytest.approx(POSITION, abs=daq_move.settings['move_settings', 'epsilon'])
         assert data.name == daq_move.title
+
+        daq_move.quit_fun()
+        QtWidgets.QApplication.processEvents() #make sure to properly terminate all the threads!
