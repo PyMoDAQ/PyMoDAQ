@@ -422,8 +422,12 @@ class DataLowLevel:
 
     @property
     def name(self):
-        """str: the identifier of the data"""
+        """Get/Set the identifier of the data"""
         return self._name
+
+    @name.setter
+    def name(self, other_name: str):
+        self._name = other_name
 
     @property
     def timestamp(self):

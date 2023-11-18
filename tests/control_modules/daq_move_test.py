@@ -13,6 +13,7 @@ from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import Config
 
+from pymodaq.utils.data import DataActuator
 
 config = Config()
 config_viewer = daqmv.config
@@ -56,4 +57,28 @@ class TestMethods:
         assert ControlModule.init_hardware != DAQ_Move.init_hardware
 
 
+class TestDAQMove:
+    def test_data_emit(self, ini_daq_move_ui):
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
 
+        with qtbot.waitSignal(daq_move.init_signal, timeout=10000) as blocker:
+            daq_move.init_hardware_ui(True)
+        assert blocker.args[0] is True
+
+        POSITION = 34.5
+        TIMEOUT = 2 * daq_move.settings['move_settings', 'tau']
+        with qtbot.waitSignal(daq_move.move_done_signal, timeout=TIMEOUT) as blocker:
+            with qtbot.waitSignal(daq_move.current_value_signal, timeout=1000) as val_blocker:
+                daq_move.move_abs(POSITION)
+        assert isinstance(val_blocker.args[0], DataActuator)
+        assert val_blocker.args[0].name == daq_move.title
+
+        data = blocker.args[0]
+        assert isinstance(data, DataActuator)
+
+        assert data.value() == pytest.approx(POSITION, abs=daq_move.settings['move_settings', 'epsilon'])
+        assert data.name == daq_move.title
+
+        daq_move.quit_fun()
+        QtWidgets.QApplication.processEvents() #make sure to properly terminate all the threads!
