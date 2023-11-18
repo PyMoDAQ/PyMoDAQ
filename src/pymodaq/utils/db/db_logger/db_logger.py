@@ -192,21 +192,21 @@ class DbLogger:
             module_id = session.query(ControlModule).filter_by(name=module_name).one().id  # detector/actuator names should/are unique
 
             for dwa in data.get_data_from_dim('Data0D'):
-                for ind, data0D in enumerate(data):
+                for ind, data_array in enumerate(dwa):
                     session.add(Data0D(timestamp=dwa.timestamp, control_module_id=module_id, channel=dwa.labels[ind],
-                                       value=float(data0D[0])))
+                                       value=float(data_array[0])))
 
-            if 'data1D' in data:
-                for channel in data['data1D']:
-                    session.add(Data1D(timestamp=time_stamp, control_module_id=module_id,
-                                       channel=f"{data['data1D'][channel]['name']}:{channel}",
-                                       value=data['data1D'][channel]['data'].tolist()))
-
-            if 'data2D' in data and self.save2D:
-                for channel in data['data2D']:
-                    session.add(Data2D(timestamp=time_stamp, control_module_id=module_id,
-                                       channel=f"{data['data2D'][channel]['name']}:{channel}",
-                                       value=data['data2D'][channel]['data'].tolist()))
+            for dwa in data.get_data_from_dim('Data1D'):
+                for ind, data_array in enumerate(dwa):
+                    session.add(Data1D(timestamp=dwa.timestamp, control_module_id=module_id,
+                                       channel=dwa.labels[ind],
+                                       value=data_array.tolist()))
+            if self.save2D:
+                for dwa in data.get_data_from_dim('Data2D'):
+                    for ind, data_array in enumerate(dwa):
+                        session.add(Data2D(timestamp=dwa.timestamp, control_module_id=module_id,
+                                           channel=dwa.labels[ind],
+                                           value=data_array.tolist()))
 
             # not yet dataND as db should not know where to save these datas
 
