@@ -107,7 +107,7 @@ class ControlModule(QObject):
     def __init__(self):
         super().__init__()
         self._title = ""
-
+        self.config = config
         # the hardware controller instance set after initialization and to be used by other modules if they share the
         # same controller
         self.controller = None
@@ -290,13 +290,15 @@ class ControlModule(QObject):
         import webbrowser
         webbrowser.open(self.logger.parent.handlers[0].baseFilename)
 
-    def show_config(self, config: Config):
+    def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""
         if config is not None:
             print('showing config')
             from pymodaq.utils.gui_utils.widgets.tree_toml import TreeFromToml
             config_tree = TreeFromToml(config)
             config_tree.show_dialog()
+
+            return Config()
 
     def update_status(self, txt, log=True):
         """Display a message in the ui status bar and eventually log the message
@@ -360,6 +362,7 @@ class ControlModuleUI(CustomApp):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.config = config
 
     def display_status(self, txt, wait_time=config('general', 'message_status_persistence')):
         if self.statusbar is not None:
