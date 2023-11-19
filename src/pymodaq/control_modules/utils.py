@@ -293,6 +293,7 @@ class ControlModule(QObject):
     def show_config(self, config: Config):
         """ Display in a tree the current configuration"""
         if config is not None:
+            print('showing config')
             from pymodaq.utils.gui_utils.widgets.tree_toml import TreeFromToml
             config_tree = TreeFromToml(config)
             config_tree.show_dialog()
