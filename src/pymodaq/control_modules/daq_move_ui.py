@@ -276,7 +276,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
-        self.connect_action('show_config', lambda : self.command_sig.emit(ThreadCommand('show_config', )))
+        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 
