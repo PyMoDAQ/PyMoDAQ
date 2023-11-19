@@ -29,7 +29,7 @@ def register_scanner(parent_module_name: str = 'pymodaq.utils.scanner'):
             if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
                 try:
                     scanners.append(import_module(f'.{file.stem}', scanner_module.__name__))
-                except ModuleNotFoundError:
+                except (ModuleNotFoundError, Exception) as e:
                     pass
     except ModuleNotFoundError:
         pass
