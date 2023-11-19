@@ -64,7 +64,8 @@ class Scanner(QObject, ParameterManager):
 
         self.setup_ui()
         self.actuators = actuators
-        self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+        if self._scanner is not None:
+            self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def setup_ui(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
