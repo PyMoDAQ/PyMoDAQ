@@ -79,3 +79,27 @@ default_preset_for_pid = "beam_steering_mock"
     wait_time = 0
     wait_time_between = 0
     timeout = 10000  # in millisecond
+
+    [scan.scan1D]
+    type = "Linear" # either "Linear", "Adaptive", "Linear back to start", "Random" see pymodaq.utils.scanner.py
+    start = 1.0
+    stop = 2.0
+    step = 0.01
+    [scan.scan2D]
+    type = "Spiral" # either "Spiral", "Linear", "Adaptive", "Back&Forth", "Random" see pymodaq.utils.scanner.py
+        [scan.scan2D.spiral]
+        center1 = -5
+        center2 = 5
+        rmax1 = 10
+        rmax2 = 5
+        npts = 10
+        [scan.scan2D.linear]
+        start1 = -5
+        start2 = -5
+        stop1 = 5
+        stop2 = 5
+        step1 = 0.5
+        step2 = 0.5
+    [scan.tabular]
+    type = "Linear" #either "Linear", "Adaptive" see pymodaq.utils.scanner.py
+    curvilinear = 0.1
