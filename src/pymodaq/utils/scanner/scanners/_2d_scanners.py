@@ -104,7 +104,7 @@ class Scan2DLinear(Scan2DBase):
 
 
 @ScannerFactory.register()
-class Scan2DLinearBF(Scan2DBase):
+class Scan2DLinearBF(Scan2DLinear):
     scan_subtype = 'LinearBackForce'
 
     def __init__(self, actuators: List = None, **_ignored):
