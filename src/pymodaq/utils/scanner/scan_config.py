@@ -12,7 +12,7 @@ from pymodaq.utils.config import BaseConfig, getitem_recursive
 class ScanConfig(BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = Path(__file__).parent.parent.parent.joinpath('resources/config_scan_template.toml')
-    config_name = f"config_{'scanner'}"
+    config_name = f"scanner_settings"
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
