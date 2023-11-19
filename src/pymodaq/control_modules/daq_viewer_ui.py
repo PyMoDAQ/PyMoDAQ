@@ -279,7 +279,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand('grab', attribute=self.is_action_checked('grab')))
         self._enable_ini_buttons(not self.is_action_checked('grab'))
-        self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+        if not config('viewer', 'allow_settings_edition'):
+            self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
