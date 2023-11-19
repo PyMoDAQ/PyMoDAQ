@@ -14,12 +14,14 @@ import numpy as np
 from qtpy import QtWidgets
 
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq.utils.parameter.utils import get_param_path
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.abstract import abstract_attribute
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
+from pymodaq.utils.scanner.scan_config import ScanConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -46,6 +48,10 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     Attributes
     ----------
+    scan_type: str
+        String defining the main identifier
+    scan_subtype: str
+        String defining the second identifier
     params: List[dict]
         list specifying the scanner set of parameters to properly configure all the scan steps
     positions: np.ndarray
@@ -60,12 +66,16 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     n_axes: int
         Number of actuators/scan axes. Equal to the first dimension of positions
     """
+    scan_type: str = abstract_attribute()
+    scan_subtype: str = abstract_attribute()
+
     params: List[dict] = abstract_attribute()
     axes_unique: List[np.ndarray] = abstract_attribute()
     axes_indexes: np.ndarray = abstract_attribute()
     n_steps: int = abstract_attribute()
     n_axes: int = abstract_attribute()
     distribution: DataDistribution = abstract_attribute()
+    save_settings = True
 
     def __init__(self, actuators: List[DAQ_Move] = None):
         super().__init__()
@@ -75,22 +85,48 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
         self.actuators = actuators
 
+        self.config = ScanConfig()
+
         self.set_settings_titles()
+        self.set_settings_values()
 
         if self.check_steps():
             self.set_scan()
+
 
     def set_settings_titles(self):
         """Update the settings accordingly with the selected actuators"""
         ...
 
+    def set_settings_values(self):
+
+        for child in self.settings.children():
+            path = self.actuators_name
+            path_scan = [self.scan_type, self.scan_subtype]
+            path_param = get_param_path(child)[1:]
+            path.extend(path_scan)
+            path.extend(path_param)
+            try:
+                child.setValue(self.config(*path))  # first try to load the config including the actuators name
+            except configmod.ConfigError as e:
+                try:
+                    path = path_scan
+                    path.extend(path_param)
+                    child.setValue(self.config(*path))   # then without the actuators name
+                except Exception as e:
+                    pass
+
     @property
-    def actuators(self):
+    def actuators(self) -> List[DAQ_Move]:
         return self._actuators
 
     @actuators.setter
-    def actuators(self, actuators_name: List[DAQ_Move]):
-        self._actuators = actuators_name
+    def actuators(self, actuators: List[DAQ_Move]):
+        self._actuators = actuators
+
+    @property
+    def actuators_name(self) -> List[str]:
+        return [act.title for act in self.actuators]
 
     def check_steps(self):
         steps_limit = config('scan', 'steps_limit')
@@ -158,6 +194,18 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     def value_changed(self, param):
         self.evaluate_steps()
+        if self.save_settings:
+            path = self.actuators_name
+            path_scan = [self.scan_type, self.scan_subtype]
+            path_param = get_param_path(param)[1:]
+            path.extend(path_scan)
+            path.extend(path_param)
+            try:
+                self.config[tuple(path)] = param.value()
+                self.config.save()
+            except Exception as e:
+                pass
+
 
     @abstractmethod
     def update_from_scan_selector(self, scan_selector: Selector):
@@ -174,10 +222,17 @@ class ScannerFactory(ObjectFactory):
     """Factory class registering and storing Scanners"""
 
     @classmethod
-    def register(cls, key: str, sub_key: str = '') -> Callable:
-        def inner_wrapper(wrapped_class: Union[Callable]) -> Callable:
+    def register(cls) -> Callable:
+        """ To be used as a decorator
+
+        Register in the class registry a new scanner class using its 2 identifiers: scan_type and scan_sub_type
+        """
+        def inner_wrapper(wrapped_class: ScannerBase) -> Callable:
             if cls.__name__ not in cls._builders:
                 cls._builders[cls.__name__] = {}
+            key = wrapped_class.scan_type
+            sub_key = wrapped_class.scan_subtype
+
             if key not in cls._builders[cls.__name__]:
                 cls._builders[cls.__name__][key] = {}
             if sub_key not in cls._builders[cls.__name__][key]:

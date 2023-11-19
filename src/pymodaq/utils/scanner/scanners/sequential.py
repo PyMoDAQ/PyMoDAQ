@@ -72,8 +72,11 @@ class TableModelSequential(gutils.TableModel):
         return True
 
 
-@ScannerFactory.register('Sequential', 'Linear')
+@ScannerFactory.register()
 class SequentialScanner(ScannerBase):
+    scan_type = 'Sequential'
+    scan_subtype = 'Linear'
+    save_settings = False  # not easy to save table content in a toml...
     params = [
         {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate},
               ]

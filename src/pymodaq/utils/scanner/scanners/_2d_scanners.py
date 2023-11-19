@@ -19,20 +19,19 @@ logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
 
-@ScannerFactory.register('Scan2D', 'Linear')
-class Scan2DLinear(ScannerBase):
-    params = [{'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start1')},
-              {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start2')},
-              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step1')},
-              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step2')},
-              {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop1')},
-              {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop2')},
+class Scan2DBase(ScannerBase):
+    scan_type = 'Scan2D'
+
+
+@ScannerFactory.register()
+class Scan2DLinear(Scan2DBase):
+    scan_subtype = 'Linear'
+    params = [{'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float', 'value': 0.},
+              {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float', 'value': 0.},
+              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float', 'value': 1.},
+              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float', 'value': 1.},
+              {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float', 'value': 10.},
+              {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float', 'value': 10.},
               ]
     n_axes = 2
     distribution = DataDistribution['uniform']
@@ -104,8 +103,10 @@ class Scan2DLinear(ScannerBase):
             self.settings.child('stop_axis2').setValue(coordinates[1, 1])
 
 
-@ScannerFactory.register('Scan2D', 'LinearBack&Force')
-class Scan2DLinearBF(Scan2DLinear):
+@ScannerFactory.register()
+class Scan2DLinearBF(Scan2DBase):
+    scan_subtype = 'LinearBackForce'
+
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
 
@@ -132,8 +133,10 @@ class Scan2DLinearBF(Scan2DLinear):
         self.get_info_from_positions(np.array(positions))
 
 
-@ScannerFactory.register('Scan2D', 'Random')
+@ScannerFactory.register()
 class Scan2DRandom(Scan2DLinear):
+    scan_subtype = 'Random'
+
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
 
@@ -143,18 +146,15 @@ class Scan2DRandom(Scan2DLinear):
         self.get_info_from_positions(self.positions)
 
 
-@ScannerFactory.register('Scan2D', 'Spiral')
+@ScannerFactory.register()
 class Scan2DSpiral(Scan2DLinear):
-    params = [{'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'center1')},
-              {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'center2')},
-              {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'rmax1')},
-              {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'rmax2')},
-              {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
-               'value': config('scan', 'scan2D', 'spiral', 'npts')},
+    scan_subtype = 'Spiral'
+
+    params = [{'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float', 'value': 0.},
+              {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float', 'value': 0.},
+              {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float', 'value': 10.},
+              {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float', 'value': 10.},
+              {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1, 'value': 10},
               {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float', 'value': 0., 'readonly': True},
               {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float', 'value': 0., 'readonly': True},
               ]
@@ -250,21 +250,19 @@ class Scan2DSpiral(Scan2DLinear):
 try:
     import adaptive
 
-    @ScannerFactory.register('Scan2D', 'Adaptive')
+    @ScannerFactory.register()
     class Scan2DAdaptive(Scan2DLinear):
+        scan_subtype = 'Adaptive'
+
         params = [
             {'title': 'Loss type', 'name': 'scan_loss', 'type': 'list',
              'limits': ['default', 'curvature', 'uniform'],
              'tip': 'Type of loss used by the algo. to determine next points'},
 
-            {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'start1')},
-            {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'start2')},
-            {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'stop1')},
-            {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'stop2')},
+            {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float', 'value': -5.},
+            {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float', 'value': -5.},
+            {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float', 'value': 5.},
+            {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float', 'value': 5.},
             ]
         distribution = DataDistribution['spread']
 
