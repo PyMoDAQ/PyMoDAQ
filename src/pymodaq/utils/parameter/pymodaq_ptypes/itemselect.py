@@ -5,34 +5,34 @@ from pyqtgraph.parametertree import Parameter
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
-    def __init__(self,checkbox=False,dragdrop=False):
+    def __init__(self,checkbox=False,):
 
         super(ItemSelect_pb, self).__init__()
-        self.initUI(checkbox,dragdrop)
+        self.initUI(checkbox,)
 
-    def initUI(self,checkbox,dragdrop):
-        self.hor_layout = QtWidgets.QHBoxLayout()
-        if checkbox:
-            self.itemselect = ItemCheck()
-        else:
-            self.itemselect = ItemSelect()
-        if dragdrop:
-            self.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
-
+    def initUI(self,checkbox,):        
+        #### Widgets ###        
+        # ListWidget
+        self.itemselect = ItemSelect(checkbox)
+        # Pushbutton
         self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.add_pb.setIcon(icon3)
+        self.add_pb.setIcon(icon3)        
+        #### Layout ###
+        self.hor_layout = QtWidgets.QHBoxLayout()        
         self.hor_layout.addWidget(self.itemselect)
         self.hor_layout.addWidget(self.add_pb)
         self.hor_layout.setSpacing(0)
-
         self.setLayout(self.hor_layout)
 
-class ItemCheck(QtWidgets.QListWidget):
-    def __init__(self):
+
+
+class ItemSelect(QtWidgets.QListWidget):
+    def __init__(self,hasCheckbox=False):
         QtWidgets.QListWidget.__init__(self)
+        self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
 
     def get_value(self):
         """
@@ -41,9 +41,13 @@ class ItemCheck(QtWidgets.QListWidget):
             Returns
             -------
             dictionnary
-                The dictionnary of all_items compared to the selectedItems.
+                The dictionnary of all_items compared to the selectedItems.                                
         """
-        selitems = [item.text() for item in self.all_items() if item.checkState()!=0]
+        if self.hasCheckbox:            
+            selitems = [item.text() for item in self.all_items() if item.checkState()!=0]            
+        else:
+            selitems = [item.text() for item in self.selectedItems()]
+            
         allitems = [item.text() for item in self.all_items()]
         return dict(all_items=allitems, selected=selitems)
 
@@ -72,8 +76,9 @@ class ItemCheck(QtWidgets.QListWidget):
             self.clear()
             for value in values['all_items']:
                 item = QtWidgets.QListWidgetItem(value)
-                item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                item.setCheckState(QtCore.Qt.Unchecked)
+                if self.hasCheckbox:
+                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    item.setCheckState(QtCore.Qt.Unchecked)
                 self.addItem(item)
             QtWidgets.QApplication.processEvents()
 
@@ -82,57 +87,8 @@ class ItemCheck(QtWidgets.QListWidget):
             if item.text() in values['selected']:
                 item.setSelected(True)
 
-
-class ItemSelect(QtWidgets.QListWidget):
-    def __init__(self):
-        QtWidgets.QListWidget.__init__(self)
-
-    def get_value(self):
-        """
-            Get the dictionnary of values contained in the QtWidget attribute.
-
-            Returns
-            -------
-            dictionnary
-                The dictionnary of all_items compared to the selectedItems.
-        """
-        selitems = [item.text() for item in self.selectedItems()]
-        allitems = [item.text() for item in self.all_items()]
-        return dict(all_items=allitems, selected=selitems)
-
-    def all_items(self):
-        """
-            Get the all_items list from the self QtWidget attribute.
-
-            Returns
-            -------
-            list
-                The item list.
-        """
-        return [self.item(ind) for ind in range(self.count())]
-
-    def set_value(self, values):
-        """
-            Set values to the all_items attributes filtering values by the 'selected' key.
-
-            =============== ============== =======================================
-            **Parameters**    **Type**       **Description**
-            *values*          dictionnary    the values dictionnary to be setted.
-            =============== ============== =======================================
-        """
-        allitems = [item.text() for item in self.all_items()]
-        if allitems != values['all_items']:
-            self.clear()
-            self.addItems(values['all_items'])
-            QtWidgets.QApplication.processEvents()
-
-        self.clearSelection()
-        for item in self.all_items():
-            if item.text() in values['selected']:
-                item.setSelected(True)
-
-
 class ItemSelectParameterItem(WidgetParameterItem):
+    
     def makeWidget(self):
         """
             | Make and initialize an instance of ItemSelect_pb with itemselect value.
@@ -142,16 +98,16 @@ class ItemSelectParameterItem(WidgetParameterItem):
         self.asSubItem = True
         self.hideWidget = False
         opts = self.param.opts
-        if 'dragdrop' in opts and opts['dragdrop']:        
-            dragdrop=True
-        else:
-            dragdrop=False
-        if 'checkbox' in opts and opts['checkbox']:        
-            w = ItemSelect_pb(checkbox = opts['checkbox'],dragdrop=dragdrop)
+        
+        if 'checkbox' in opts and opts['checkbox']:      
+            w = ItemSelect_pb(checkbox = opts['checkbox'])
             w.sigChanged = w.itemselect.itemChanged
         else:
-            w = ItemSelect_pb(checkbox=False, dragdrop=dragdrop)
+            w = ItemSelect_pb()
             w.sigChanged = w.itemselect.itemSelectionChanged
+            
+        if 'dragdrop' in opts and opts['dragdrop']:        
+            w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
 
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         if 'minheight' in opts:
