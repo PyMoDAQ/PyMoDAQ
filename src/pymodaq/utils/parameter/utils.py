@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import numpy as np
+from collections import OrderedDict
 
 from pymodaq.utils.daq_utils import find_keys_from_val
 
@@ -34,6 +35,86 @@ def get_param_path(param):
         param = param.parent()
     return path[::-1]
 
+def getOpts(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all opts for all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict
+    """
+    vals = OrderedDict()    
+    for ch in param:      
+        vals[ch.name()] = (ch.opts, getOpts(ch))
+    return vals
+
+def getStruct(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict    
+    """
+    vals = OrderedDict()
+    for ch in param:      
+        vals[ch.name()] = (None, getStruct(ch))
+    return vals 
+
+def getValues(param:Parameter,) -> OrderedDict:
+    """Return an OrderedDict with tree structures of all values for all children of this parameter
+        Parameters
+        ----------
+        param: Parameter
+        Returns
+        -------
+        OrderedDict    
+    """    
+    vals = OrderedDict()
+    for ch in param:      
+        vals[ch.name()] = (ch.value(), getValues(ch))
+    return vals 
+
+def compareParameters(param1:Parameter,param2:Parameter,opts:list=[])-> bool:  
+    """Compare the structure and the opts of two parameters with their children, return True if structure and all opts are identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
+    return getOpts(param1) == getOpts(param2) 
+    
+def compareStructureParameter(param1:Parameter,param2:Parameter,)-> bool:  
+    """Compare the structure of two parameters with their children, return True if structure is identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
+    return getStruct(param1) == getStruct(param2)
+
+def compareValuesParameter(param1:Parameter,param2:Parameter,)-> bool:  
+    """Compare the structure and the values of two parameters with their children, return True if structures and values are identical
+        Parameters
+        ----------
+        param1: Parameter
+        param2: Parameter   
+        
+        Returns
+        -------
+        Bool    
+    """    
+    return getValues(param1) == getValues(param2)    
 
 def iter_children(param, childlist=[]):
     """Get a list of parameters name under a given Parameter
@@ -52,7 +133,8 @@ def iter_children(param, childlist=[]):
     """
     for child in param.children():
         childlist.append(child.name())
-        if 'group' in child.type():
+        if child.hasChildren():
+        # if 'group' in child.type():
             childlist.extend(iter_children(child, []))
     return childlist
 
@@ -63,7 +145,7 @@ def iter_children_params(param, childlist=[]):
     """
     for child in param.children():
         childlist.append(child)
-        if 'group' in child.type():
+        if child.hasChildren():
             childlist.extend(iter_children_params(child, []))
     return childlist
 
@@ -83,7 +165,7 @@ def get_param_from_name(parent, name) -> Parameter:
     for child in parent.children():
         if child.name() == name:
             return child
-        if 'group' in child.type():
+        if child.hasChildren():
             ch = get_param_from_name(child, name)
             if ch is not None:
                 return ch

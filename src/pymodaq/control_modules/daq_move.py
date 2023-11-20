@@ -98,7 +98,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, action_list= ('save', 'update'))
         ControlModule.__init__(self)
 
         self.parent = parent

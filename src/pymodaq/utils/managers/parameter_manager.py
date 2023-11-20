@@ -3,22 +3,21 @@ from typing import List, Union, Dict
 
 from qtpy import QtWidgets, QtCore
 from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml
+from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml, utils
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.config import get_set_config_dir
 
+from pymodaq.utils.logger import set_logger, get_module_name
+logger = set_logger(get_module_name(__file__))
 
 class ParameterTreeWidget(ActionManager):
 
-    def __init__(self):
+    def __init__(self, action_list: tuple = ('save', 'update', 'load')):
         super().__init__()
 
         self.widget = QtWidgets.QWidget()
         self.widget.setLayout(QtWidgets.QVBoxLayout())
 
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self.widget.layout().addWidget(self.splitter)
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)
 
         toolbar = QtWidgets.QToolBar()
         self.set_toolbar(toolbar)
@@ -29,22 +28,41 @@ class ParameterTreeWidget(ActionManager):
 
         self.tree.setMinimumWidth(150)
         self.tree.setMinimumHeight(300)
-
+        
+        # Making the buttons
+        self.setup_actions(action_list) 
+        # Making the splitter
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        # Adding the toolbar + the parameter tree
         self.splitter.addWidget(toolbar)
         self.splitter.addWidget(self.tree)
-
+        # Hiding toolbar
         self.splitter.setSizes([0, 300])
-        self.setup_actions()
+        # Adding splitter to layout
+        self.widget.layout().addWidget(self.splitter)
+        self.widget.layout().setContentsMargins(0, 0, 0, 0)            
 
-    def setup_actions(self):
+        
+
+
+    def setup_actions(self, action_list: tuple = ('save', 'update', 'load')):
         """
-
         See Also
         --------
         ActionManager.add_action
         """
-        self.add_action('save_settings', 'Save Settings', 'saveTree', "Save Settings")
-        self.add_action('load_settings', 'Load Settings', 'openTree', "Load Settings")
+        # Saving action
+        self.add_action('save_settings', 'Save Settings', 'saveTree',
+                        "Save current settings in an xml file", 
+                        visible = 'save' in action_list)
+        # Update action
+        self.add_action('update_settings', 'Update Settings', 'updateTree',
+                        "Update the settings from an xml file, the settings structure loaded must be identical to the current one",
+                        visible = 'update' in action_list)                
+        # Load action
+        self.add_action('load_settings', 'Load Settings', 'openTree',
+                        "Load current settings from an xml file, the current settings structure is erased and is replaced by the new one",
+                         visible = 'load' in action_list)
 
 
 class ParameterManager:
@@ -66,17 +84,18 @@ class ParameterManager:
     settings_name = 'custom_settings'
     params = []
 
-    def __init__(self, settings_name: str = None):
+    def __init__(self, settings_name: str = None, action_list: tuple = ('save', 'update', 'load')):
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
         # object containing the settings defined in the preamble
         # create a settings tree to be shown eventually in a dock
-        self._settings_tree = ParameterTreeWidget()
-
-        self._settings_tree.get_action('save_settings').connect_to(self.save_settings)
-        self._settings_tree.get_action('load_settings').connect_to(self.update_settings)
-
+        self._settings_tree = ParameterTreeWidget(action_list)
+        
+        self._settings_tree.get_action(f'save_settings').connect_to(self.save_settings)
+        self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings)
+        self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings)
+                                                                        
         self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
 
@@ -167,7 +186,7 @@ class ParameterManager:
         """
         pass
 
-    def save_settings(self, ):
+    def save_settings(self):
         """ Method to save the current settings using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
@@ -176,6 +195,7 @@ class ParameterManager:
                                force_save_extension=True)
         if file_path:
             ioxml.parameter_to_xml_file(self.settings, file_path.resolve())
+            logger.info(f'The settings have been successfully saved at {file_path}')
 
     def load_settings(self):
         """ Method to load settings into the parameter using a xml file extension.
@@ -186,6 +206,7 @@ class ParameterManager:
                                 force_save_extension=True)
         if file_path:
             self.settings = self.create_parameter(file_path.resolve())
+            logger.info(f'The settings from {file_path} have been successfully loaded')            
 
     def update_settings(self):
         """ Method to update settings using a xml file extension.
@@ -198,9 +219,14 @@ class ParameterManager:
                                 force_save_extension=True)
         if file_path:
             _settings = self.create_parameter(file_path.resolve())
-            #TODO: use a Parameter comparison to check if one can refresh the current settings
-            if True:  # here will be the comparison
-                self.settings.restoreState(_settings.saveState())
+            # Checking if both parameters have the same structure
+            sameStruct = utils.compareStructureParameter(self.settings,_settings)
+            if sameStruct:  # Update if true
+                self.settings = _settings
+                logger.info(f'The settings from {file_path} have been successfully applied')                            
+            else:
+                logger.info(f'The loaded settings from {file_path} do not match the current settings structure and cannot be updated.')
+
 
 
 if __name__ == '__main__':
