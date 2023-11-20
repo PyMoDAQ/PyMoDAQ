@@ -12,6 +12,7 @@ from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter import ioxml
 from unittest import mock
+from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
@@ -160,7 +161,7 @@ class TestScroll:
                    pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
 
-def test_set_param_from_param():
+def test_set_param_from_param(qtbot):
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
             {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
@@ -197,9 +198,22 @@ def test_set_param_from_param():
     settings = Parameter.create(name='settings', type='group', children=params)
     settings_old = Parameter.create(name='settings', type='group', children=params)
 
-    settings.child('main_settings', 'axis').opts['limits'].update({'DAQ4D': 4})
+    tree = ParameterTree()
+    tree.setParameters(settings_old, showTop=False)
+
+    dict_item, _ = find_objects_in_list_from_attr_name_val(tree.listAllItems(), 'param',
+                                                           settings_old.child('main_settings', 'axis'))
+    dict_widget: QtWidgets.QComboBox = dict_item.widget.combo
+
+    settings.child('main_settings', 'axis').setLimits({'DAQ4D': 4})
     settings.child('main_settings', 'axis').setValue(4)
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
-    assert settings_old.child('main_settings', 'axis').value() == 4
 
+    assert settings_old.child('main_settings', 'axis').value() == 4
+    assert dict_widget.currentText() == 'DAQ4D'
+
+    settings_old.child('main_settings', 'axis').setValue(2)
+
+    assert settings_old.child('main_settings', 'axis').value() == 2
+    assert dict_widget.currentText() == 'DAQ2D'
 
