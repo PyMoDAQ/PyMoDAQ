@@ -10,7 +10,7 @@ class ItemSelect_pb(QtWidgets.QWidget):
         super(ItemSelect_pb, self).__init__()
         self.initUI(checkbox,)
 
-    def initUI(self,checkbox,):        
+    def initUI(self, checkbox=False,):        
         #### Widgets ###        
         # ListWidget
         self.itemselect = ItemSelect(checkbox)
@@ -30,7 +30,7 @@ class ItemSelect_pb(QtWidgets.QWidget):
 
 
 class ItemSelect(QtWidgets.QListWidget):
-    def __init__(self,hasCheckbox=False):
+    def __init__(self, hasCheckbox=False):
         QtWidgets.QListWidget.__init__(self)
         self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
 
@@ -100,7 +100,7 @@ class ItemSelectParameterItem(WidgetParameterItem):
         opts = self.param.opts
         
         if 'checkbox' in opts and opts['checkbox']:      
-            w = ItemSelect_pb(checkbox = opts['checkbox'])
+            w = ItemSelect_pb(checkbox=opts['checkbox'])
             w.sigChanged = w.itemselect.itemChanged
         else:
             w = ItemSelect_pb()
