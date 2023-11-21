@@ -56,7 +56,7 @@ class TableModel(QtCore.QAbstractTableModel):
         if isinstance(other, TableModel):
             return self._data == other._data
         else:
-            super().__eq__(other)
+            return False
 
     def is_checked(self, row: int):
         return self._checked[row]
