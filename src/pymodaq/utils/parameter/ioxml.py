@@ -101,9 +101,9 @@ def add_text_to_elt(elt, param):
             val = param.value()
         text = str(val)
     elif param_type == 'date_time':
-        text = str(param.value().toSecsSinceEpoch())
+        text = str(param.value().toMSecsSinceEpoch())
     elif param_type == 'date':
-        text = str(QDateTime(param.value()).toSecsSinceEpoch())
+        text = str(QDateTime(param.value()).toMSecsSinceEpoch())
     elif param_type == 'table_view':
         try:
             data = dict(classname=param.value().__class__.__name__,
@@ -439,9 +439,9 @@ def set_txt_from_elt(el, param_dict):
         elif 'bool' in param_type or 'led' in param_type: # covers 'bool' 'bool_push',  'led' and 'led_push'types
             param_value = bool(int(val_text))
         elif param_type == 'date_time':
-            param_value = QDateTime.fromSecsSinceEpoch(int(val_text))
+            param_value = QDateTime.fromMSecsSinceEpoch(int(val_text))
         elif param_type == 'date':
-            param_value = QDateTime.fromSecsSinceEpoch(int(val_text)).date()
+            param_value = QDateTime.fromMSecsSinceEpoch(int(val_text)).date()
         elif param_type == 'table':
             param_value = eval(val_text)
         elif param_type == 'color':
@@ -456,6 +456,9 @@ def set_txt_from_elt(el, param_dict):
             mod = importlib.import_module(data_dict['module'])
             _cls = getattr(mod, data_dict['classname'])
             param_value = _cls(data_dict['data'], header=data_dict['header'])
+        elif param_type == 'action':
+            if val_text == 'None':
+                param_value = None
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
