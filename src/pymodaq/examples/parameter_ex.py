@@ -8,12 +8,10 @@ import pymodaq.utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
 from pymodaq.utils.parameter import ParameterTree, Parameter
 from collections import OrderedDict
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.parameter import pymodaq_ptypes
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 
-class ParameterEx:
+class ParameterEx(ParameterManager):
     params = [
         {'title': 'Groups:', 'name': 'groups', 'type': 'group', 'children': [
             {'title': 'A visible group:', 'name': 'agroup', 'type': 'group', 'children': []},
@@ -93,36 +91,19 @@ class ParameterEx:
         # TableModelTabular and the TableModelSequential custom models in the pymodaq.utils.scanner module
     ]
 
-    def __init__(self, tree):
-        self.parameter_tree = tree
+    def __init__(self):
+        super().__init__()
 
-        self.settings = Parameter.create(name='settings', type='group', children=self.params)
-        self.parameter_tree.setParameters(self.settings, showTop=False)
-
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-    def parameter_tree_changed(self, param, changes):
+    def value_changed(self, param):
         """
         """
-
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                pass  # Triggered when parameter is added to the tree
-
-            elif change == 'value':
-                print(f'The parameter {param.name()} changed its value to {data}')
-
-            elif change == 'parent':
-                pass  # triggered when a param is removed from the tree
+        print(f'The parameter {param.name()} changed its value to {param.value()}')
 
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-
-    parametertree = ParameterTree()
-    ptree = ParameterEx(parametertree)
-    parametertree.show()
+    ptree = ParameterEx()
+    ptree.settings_tree.show()
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
 
