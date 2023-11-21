@@ -72,10 +72,7 @@ def getValues(param:Parameter,) -> OrderedDict:
         -------
         OrderedDict    
     """    
-    vals = OrderedDict()
-    for ch in param:      
-        vals[ch.name()] = (ch.value(), getValues(ch))
-    return vals 
+    return param.getValues()
 
 def compareParameters(param1:Parameter,param2:Parameter,opts:list=[])-> bool:  
     """Compare the structure and the opts of two parameters with their children, return True if structure and all opts are identical
