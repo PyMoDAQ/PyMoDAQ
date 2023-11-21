@@ -4,7 +4,7 @@ from collections import OrderedDict
 from typing import List, Iterable
 
 from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal, Qt
+from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
 import pyqtgraph as pg
 import numpy as np
 
@@ -188,6 +188,7 @@ class View1D(ActionManager, QObject):
         self.crosshair: Crosshair = None
 
         self.roi_target = pg.InfiniteLine(pen='w')
+        self.ROIselect = pg.LinearRegionItem(pen='w')
 
         self.setup_actions()
 
@@ -207,7 +208,9 @@ class View1D(ActionManager, QObject):
         self.prepare_ui()
 
         self.plotitem.addItem(self.roi_target)
+        self.plotitem.addItem(self.ROIselect)
         self.roi_target.setVisible(False)
+        self.ROIselect.setVisible(False)
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -301,10 +304,13 @@ class View1D(ActionManager, QObject):
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
         self.connect_action('overlay', self.data_displayer.show_overlay)
+        self.connect_action('ROIselect', self.show_ROI_select)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
 
+    def show_ROI_select(self):
+        self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
@@ -324,6 +330,8 @@ class View1D(ActionManager, QObject):
                         'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
                         visible=False)
         self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data', checkable=True)
+        self.add_action('ROIselect', 'ROI Select', 'Select_24',
+                        tip='Show/Hide ROI selection area', checkable=True)
         self.add_action('x_label', 'x:')
         self.add_action('y_label', 'y:')
 
@@ -362,6 +370,7 @@ class Viewer1D(ViewerBase):
 
     Datas and measurements are then exported with the signal data_to_export_signal
     """
+    ROI_select_signal = Signal(QRectF)
 
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__(parent=parent, title=title)
@@ -437,10 +446,16 @@ class Viewer1D(ViewerBase):
         self.ROI_changed.emit()
 
     def prepare_connect_ui(self):
+        self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
         self._data_to_show_signal.connect(self.view.display_data)
         self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
         self.view.get_double_clicked().connect(self.double_clicked)
+
+    def selected_region_changed(self):
+        if self.view.is_action_checked('ROIselect'):
+            pos = self.view.ROIselect.getRegion()
+            self.ROI_select_signal.emit(QRectF(pos[0], pos[1], 0, 0))
 
     @Slot(float, float)
     def double_clicked(self, posx, posy):

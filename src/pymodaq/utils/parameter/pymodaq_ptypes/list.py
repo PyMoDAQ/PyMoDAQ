@@ -86,13 +86,24 @@ class ListParameterItem(ListParameterItem):
             --------
             limitsChanged,
         """
-        if type(self.param.opts['limits']) == list:
+        if isinstance(self.param.opts['limits'], list):
             text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
                                                       "String value:", QtWidgets.QLineEdit.Normal)
             if ok and not (text == ""):
                 self.param.opts['limits'].append(text)
                 self.limitsChanged(self.param, self.param.opts['limits'])
                 self.param.setValue(text)
+        elif isinstance(self.param.opts['limits'], dict):
+            text, ok = QtWidgets.QInputDialog.getText(None, "Enter a text to add to the parameter",
+                                                      "String value:", QtWidgets.QLineEdit.Normal)
+            if ok and not (text == ""):
+
+                value, ok = QtWidgets.QInputDialog.getInt(None, "Enter an integer value to add to the parameter",
+                                                          "integer value:", QtWidgets.QLineEdit.Normal)
+                if ok:
+                    self.param.opts['limits'].update({text: value})
+                    self.limitsChanged(self.param, self.param.opts['limits'])
+                    self.param.setValue(text)
 
     def optsChanged(self, param, opts):
         """

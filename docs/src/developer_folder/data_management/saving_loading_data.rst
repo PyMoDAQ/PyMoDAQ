@@ -68,7 +68,7 @@ I save the Axis object in the /RawData node (always created using H5Saver)
 I can check the content of the file:
 
 >>> for node in h5saver.walk_nodes('/'):
->>>     print(node))
+>>>     print(node)
 / (GROUP) 'PyMoDAQ file'
 /RawData (GROUP) 'Data from PyMoDAQ modules'
 /RawData/Logger (VLARRAY) ''

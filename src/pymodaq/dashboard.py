@@ -103,7 +103,7 @@ class DashBoard(QObject):
         self.joysticks = dict([])
         self.ispygame_init = False
 
-        self.modules_manager = None
+        self.modules_manager: ModulesManager = None
 
         self.overshoot = False
         self.preset_file = None

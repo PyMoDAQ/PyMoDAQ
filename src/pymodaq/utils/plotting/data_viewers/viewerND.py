@@ -59,6 +59,8 @@ class BaseDataDisplayer(QObject):
         self._filter_type: str = None
         self._processor = None
 
+        self._show_nav_integration = False
+
     @property
     def data_shape(self):
         return self._data.shape if self._data is not None else None
@@ -84,6 +86,10 @@ class BaseDataDisplayer(QObject):
         self.update_viewer_data(*self._signal_at)
         self.update_nav_data(*self._nav_limits)
 
+    def show_nav_integration(self, show=True):
+        self._show_nav_integration = show
+        self.update_viewer_data(*self._signal_at)
+
     @abstractmethod
     def init_rois(self, data: DataRaw):
         """Init crosshairs and ROIs in viewers if needed"""
@@ -101,6 +107,10 @@ class BaseDataDisplayer(QObject):
         """
         ...
 
+    def updated_nav_integration(self):
+        """ Means the ROI select of the 2D viewer has been moved """
+        ...
+
     @abstractmethod
     def update_nav_data(self, x, y, width=None, height=None):
         """Display navigator data potentially postprocessed from filters in the signal viewers"""
@@ -114,7 +124,7 @@ class BaseDataDisplayer(QObject):
     def update_nav_data_from_roi(self, roi: Union[SimpleRectROI, LinearROI]):
         if isinstance(roi, LinearROI):
             x, y = roi.getRegion()
-            self._nav_limits = (int(x), int(y), None, None)
+            self._nav_limits = (x, y, None, None)
         elif isinstance(roi, SimpleRectROI):
             x, y = roi.pos().x(), roi.pos().y()
             width, height = roi.size().x(), roi.size().y()
@@ -176,6 +186,10 @@ class UniformDataDisplayer(BaseDataDisplayer):
             self._viewer2D.roi.setSize((len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
                                       len(data.get_axis_from_index(data.axes_manager.sig_indexes[0]))))
 
+    def updated_nav_integration(self):
+        """ Means the ROI select of the 2D viewer has been moved """
+        self.update_viewer_data(*self._signal_at)
+
     def update_viewer_data(self, posx=0, posy=0):
         """ Update the signal display depending on the position of the crosshair in the navigation panels
 
@@ -199,7 +213,15 @@ class UniformDataDisplayer(BaseDataDisplayer):
                         return
                     ind_x = nav_axis.find_index(posx)
                     logger.debug(f'Getting the data at nav index {ind_x}')
-                    data = self._data.inav[ind_x]
+                    data: DataCalculated = self._data.inav[ind_x]
+                    if self._show_nav_integration:
+                        if self._navigator1D.view.is_action_checked('ROIselect'):
+                            x0, x1 = self._navigator1D.view.ROIselect.getRegion()
+                            ind_x0 = max(0, int(nav_axis.find_index(x0)))
+                            ind_x1 = min(int(nav_axis.max()), int(nav_axis.find_index(x1)))
+                            data.append(self._data.inav[ind_x0:ind_x1].mean(axis=(nav_axis.index)))
+                        else:
+                            data.append(self._data.mean(axis=nav_axis.index))
 
                 elif len(self._data.nav_indexes) == 2:
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
@@ -212,6 +234,15 @@ class UniformDataDisplayer(BaseDataDisplayer):
                     ind_y = nav_y.find_index(posy)
                     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
                     data = self._data.inav[ind_y, ind_x]
+                    if self._show_nav_integration:
+                        if self._navigator2D.view.is_action_checked('ROIselect'):
+                            ind_x0 = max(0, int(self._navigator2D.view.ROIselect.x()))
+                            ind_y0 = max(0, int(self._navigator2D.view.ROIselect.y()))
+                            ind_x1 = min(int(nav_x.max()), ind_x0 + int(self._navigator2D.view.ROIselect.size().x()))
+                            ind_y1 = min(int(nav_y.max()), ind_y0 + int(self._navigator2D.view.ROIselect.size().y()))
+                            data.append(self._data.inav[ind_y0:ind_y1, ind_x0:ind_x1].mean(axis=(nav_x.index, nav_y.index)))
+                        else:
+                            data.append(self._data.mean(axis=(nav_x.index, nav_y.index)))
                 else:
                     data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
 
@@ -488,7 +519,9 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                                                        self.axes_viewer)
 
         self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+        self.navigator1D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
         self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+        self.navigator2D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
         self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
         self.data_displayer.data_dim_signal.connect(self.update_data_dim)
 
@@ -496,6 +529,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer2D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
 
         self.get_action('filters').currentTextChanged.connect(self.data_displayer.update_filter)
+        self.connect_action('integrate_nav', self.data_displayer.show_nav_integration)
         self.data_displayer.processor_changed.connect(self.update_filters)
 
     def _show_data(self, data: DataRaw, **kwargs):
@@ -649,6 +683,8 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
     def setup_actions(self):
         self.add_action('setaxes', icon_name='cartesian', checkable=True, tip='Change navigation/signal axes')
         self.add_widget('filters', QtWidgets.QComboBox, tip='Filter type to apply to signal data')
+        self.add_action('integrate_nav',icon_name='integrator', checkable=True,
+                        tip='Integrate the navigation data')
 
     def reshape_data(self):
         _nav_indexes = [int(index) for index in

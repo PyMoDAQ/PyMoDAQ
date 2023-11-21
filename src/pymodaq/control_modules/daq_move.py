@@ -75,8 +75,6 @@ class DAQ_Move(ParameterManager, ControlModule):
 
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
-    # to be used in external program to make sure the move has been done,
-    # export the current position. str refer to the unique title given to the module
     _update_settings_signal = Signal(edict)
     bounds_signal = Signal(bool)
 
@@ -167,7 +165,8 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'show_log':
             self.show_log()
         elif cmd.command == 'show_config':
-            self.show_config(config)
+            self.config = self.show_config(self.config)
+            self.ui.config = self.config
         elif cmd.command == 'actuator_changed':
             self.actuator = cmd.attribute
         elif cmd.command == 'rel_value':
@@ -460,23 +459,27 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.init_signal.emit(self._initialized_state)
 
         elif status.command == "get_actuator_value" or status.command == 'check_position':
+            data_act: DataActuator = status.attribute[0]
+            data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
             if self.ui is not None:
-                self.ui.display_value(status.attribute[0])
+                self.ui.display_value(data_act)
                 if self.ui.is_action_checked('show_graph'):
                     self.ui.show_data(DataToExport(name=self.title,
-                                                   data=[status.attribute[0]]))
-            self._current_value = status.attribute[0]
+                                                   data=[data_act]))
+            self._current_value = data_act
             self.current_value_signal.emit(self._current_value)
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
         elif status.command == "move_done":
+            data_act: DataActuator = status.attribute[0]
+            data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
             if self.ui is not None:
-                self.ui.display_value(status.attribute[0])
+                self.ui.display_value(data_act)
                 self.ui.move_done = True
-            self._current_value = status.attribute[0]
+            self._current_value = data_act
             self._move_done_bool = True
-            self.move_done_signal.emit(status.attribute[0])
+            self.move_done_signal.emit(data_act)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 

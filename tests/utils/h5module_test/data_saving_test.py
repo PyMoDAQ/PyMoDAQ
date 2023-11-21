@@ -286,30 +286,68 @@ class TestDataEnlargeableSaver:
         assert data_saver.data_type.value == 'EnlData'
         assert data_saver.data_type.name == 'data_enlargeable'
 
-    def test_add_data(self, get_h5saver):
+    @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
+    def test_add_data(self, get_h5saver, data_array):
         h5saver = get_h5saver
         data_saver = DataEnlargeableSaver(h5saver)
         Ndata = 2
 
-        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                            source='raw',
-                            dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
-                                       index=0),
-                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1),])
+        data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
+                            source='raw', distribution='uniform',)
+        data.create_missing_axes()
 
         data_saver.add_data(h5saver.raw_group, data)
-        assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
+
         data_node = h5saver.get_node('/RawData/EnlData00')
 
         ESHAPE = [1]
-        ESHAPE += list(DATA2D.shape)
+        ESHAPE += list(data_array.shape)
         assert data_node.attrs['shape'] == tuple(ESHAPE)
         data_saver.add_data(h5saver.raw_group, data)
         ESHAPE = [2]
-        ESHAPE += list(DATA2D.shape)
+        ESHAPE += list(data_array.shape)
         assert data_node.attrs['shape'] == tuple(ESHAPE)
+
+    @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
+    def test_add_dataND(self, get_h5saver, data_array):
+        h5saver = get_h5saver
+        data_saver = DataEnlargeableSaver(h5saver)
+        Ndata = 2
+
+        nav_length = np.random.randint(5, 10)
+        expanded_shape = list(data_array.shape)[:]
+        expanded_array = [nav_length] + expanded_shape
+        data_array_expanded = np.ones(expanded_array)
+
+        data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
+                            source='raw', distribution='uniform',)
+        dwa_chunk = DataWithAxes(name='mydata', data=[np.squeeze(np.atleast_1d(data_array_expanded)) for _ in range(Ndata)],
+                                 labels=['mylabel1', 'mylabel2'],
+                                 source='raw', distribution='uniform',
+                                 nav_indexes=(0,))
+
+        dwa_chunk.create_missing_axes()
+        assert dwa_chunk.dim.name == 'DataND'
+
+        data_saver.add_data(h5saver.raw_group, dwa_chunk)
+        data_node = h5saver.get_node('/RawData/EnlData00')
+
+        assert data_node.attrs['shape'] == tuple(expanded_array)
+
+        dwa_back = data_saver.load_data('/RawData/EnlData00', )
+
+        assert dwa_back.shape == dwa_chunk.shape
+        assert dwa_back.dim.name == 'DataND'
+        assert dwa_back.nav_indexes == (0,)
+
+        Nappended_single = 3
+        for _ in range(Nappended_single):
+            data_saver.add_data(h5saver.raw_group, data)
+
+        expanded_array[0] += Nappended_single
+        assert data_node.attrs['shape'] == tuple(expanded_array)
 
 
 class TestDataExtendedSaver:
