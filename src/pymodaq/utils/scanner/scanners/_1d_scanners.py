@@ -115,19 +115,22 @@ class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
         self.settings.child('parsed_string').setOpts(tip=self.__doc__)
 
     def set_scan(self):
-        range_strings = re.findall("[^,\s]+", self.settings['parsed_string'])
-        series = np.asarray([])
-        for range_string in range_strings:
-            number_strings = re.findall("[^:]+", range_string)  # Extract the numbers by splitting on :.
-            this_range = np.asarray([])
-            if len(number_strings) == 3:  # 3 Numbers specify a range
-                start, step, stop = [float(number) for number in number_strings]
-                this_range = mutils.linspace_step(start, stop, step)
-            elif len(number_strings) == 1:  # 1 number just specifies a single number
-                this_range = np.asarray([float(number_strings[0])])
-            series = np.concatenate((series, this_range))
-        self.positions = series
-        self.get_info_from_positions(self.positions)
+        try:
+            range_strings = re.findall("[^,\s]+", self.settings['parsed_string'])
+            series = np.asarray([])
+            for range_string in range_strings:
+                number_strings = re.findall("[^:]+", range_string)  # Extract the numbers by splitting on :.
+                this_range = np.asarray([])
+                if len(number_strings) == 3:  # 3 Numbers specify a range
+                    start, step, stop = [float(number) for number in number_strings]
+                    this_range = mutils.linspace_step(start, stop, step)
+                elif len(number_strings) == 1:  # 1 number just specifies a single number
+                    this_range = np.asarray([float(number_strings[0])])
+                series = np.concatenate((series, this_range))
+            self.positions = np.atleast_1d(np.squeeze(series))
+            self.get_info_from_positions(self.positions)
+        except Exception as e:
+            pass  # many things could happen when parsing strings
 
     def set_settings_titles(self):
         if len(self.actuators) == 1:
