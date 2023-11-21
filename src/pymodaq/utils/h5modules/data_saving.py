@@ -381,7 +381,7 @@ class DataSaverLoader(DataManagement):
 
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension', 'distribution', 'label',
-                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size']:
+                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size', 'EXTDIM']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
@@ -494,6 +494,7 @@ class DataEnlargeableSaver(DataSaverLoader):
                 data_init = data
             elif len(data.nav_indexes) == 1:
                 data_init = data.inav[0]
+                data_init.source = data.source  # because slicing returns a calculated one
             else:
                 raise DataDimError('It is not possible to append DataND with more than 1 navigation axis')
             self._create_data_arrays(where, data_init, save_axes=True)
