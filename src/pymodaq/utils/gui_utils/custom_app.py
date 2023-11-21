@@ -5,6 +5,7 @@ from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pyqtgraph.dockarea import DockArea
 from qtpy import QtCore, QtWidgets
 from typing import Union
+from pymodaq.utils.managers.modules_manager import ModulesManager
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -116,7 +117,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         raise NotImplementedError
 
     @property
-    def modules_manager(self):
+    def modules_manager(self) -> ModulesManager:
         """useful tool to interact with DAQ_Moves and DAQ_Viewers
 
         Will be available if a DashBoard has been set

@@ -95,6 +95,10 @@ class Scanner(QObject, ParameterManager):
         except ValueError:
             pass
 
+    @property
+    def scanner(self) -> ScannerBase:
+        return self._scanner
+
     def get_scanner_sub_settings(self):
         """Get the current ScannerBase implementation's settings"""
         return self._scanner.settings

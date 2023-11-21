@@ -134,11 +134,11 @@ class DAQ_Move_UI(ControlModuleUI):
             self.abs_value_sb_2.setDecimals(properties['decimals'])
             self.abs_value_sb_bis.setDecimals(properties['decimals'])
         if 'minimum' in properties:
-            self.abs_value_sb.setMinimum()
+            self.abs_value_sb.setMinimum(properties['minimum'])
             self.abs_value_sb_2.setMinimum(properties['minimum'])
             self.abs_value_sb_bis.setMinimum(properties['minimum'])
         if 'maximum' in properties:
-            self.abs_value_sb.setMaximum()
+            self.abs_value_sb.setMaximum(properties['maximum'])
             self.abs_value_sb_2.setMaximum(properties['maximum'])
             self.abs_value_sb_bis.setMaximum(properties['maximum'])
         if 'step' in properties:
@@ -276,7 +276,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
-        self.connect_action('show_config', lambda : self.command_sig.emit(ThreadCommand('show_config', )))
+        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 

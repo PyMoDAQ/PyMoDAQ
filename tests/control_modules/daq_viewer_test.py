@@ -31,7 +31,9 @@ def init_qt(qtbot):
 def ini_daq_viewer_without_ui(init_qt):
     qtbot = init_qt
     prog = daqvm.DAQ_Viewer()
-    return prog, qtbot
+    yield prog, qtbot
+    prog.quit_fun()
+    QtWidgets.QApplication.processEvents()
 
 
 @fixture
@@ -41,7 +43,8 @@ def ini_daq_viewer_ui(init_qt):
     qtbot.addWidget(dockarea)
     prog = daqvm.DAQ_Viewer(dockarea)
     yield prog, qtbot, dockarea
-    dockarea.close()
+    prog.quit_fun()
+    QtWidgets.QApplication.processEvents()
 
 
 class TestMethods:
@@ -59,14 +62,13 @@ class TestWithoutUI:
         assert prog.viewers is None
         assert prog.viewer_docks is None
 
-        prog.quit_fun()
-
     def test_daq_type_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
         assert prog.daq_types == DAQTypesEnum.names()
         assert prog.daq_type == config('viewer', 'daq_type')
         assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[prog.daq_type.name]]
         assert prog.detector == prog.detectors[0]
+
 
     @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
     def test_daq_type_changed(self, ini_daq_viewer_without_ui, daq_type):
@@ -83,11 +85,8 @@ class TestWithoutUI:
         assert putils.iter_children(prog.settings.child('detector_settings'), []) == \
             putils.iter_children(det_params, [])
 
-
 @pytest.mark.skip
 class TestWithUI:
-    def test_init_ui(self, ini_daq_viewer_ui):
-        prog, qtbot, dockarea = ini_daq_viewer_ui
 
     @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
     def test_daq_type_changed(self, ini_daq_viewer_ui, daq_type):
@@ -96,7 +95,6 @@ class TestWithUI:
         assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
         assert len(prog.viewers) == 1
         assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
-        prog.quit_fun()
 
     def test_process_commands(self, ini_daq_viewer_ui):
         prog, qtbot, dockarea = ini_daq_viewer_ui
@@ -108,4 +106,3 @@ class TestWithUI:
             prog.ui.get_action('stop').trigger()
         assert blocker.args[0].command == 'stop'
 
-        prog.quit_fun()

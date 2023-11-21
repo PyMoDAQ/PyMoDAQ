@@ -57,7 +57,7 @@ When instantiated, some checks are performed:
 
 
 *  checking the homogeneity of the data
-*  he consistency of the dimensionality and the shape of the numpy arrays
+*  the consistency of the dimensionality and the shape of the numpy arrays
 *  if no dimensionality is given, it is inferred from the data's shape
 
 
@@ -90,8 +90,8 @@ iterating over the numpy arrays with the standard `for` loop.
 
 For a full description see :ref:`data_objects`.
 
-One course for data that are not scalar, a very important information is the axis associated with the data (one axis
-for waveforms, two for 2D data or more fro hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxes`
+Of course for data that are not scalar, a very important information is the axis associated with the data (one axis
+for waveforms, two for 2D data or more for hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxes`
 objects.
 
 .. _data_axis:

@@ -170,6 +170,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._set_setting_tree()  # to activate parameters of default Mock detector
 
         self.grab_done_signal.connect(self._save_export_data)
+        self.update_plugin_config()
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
@@ -203,6 +204,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * show_config
         """
 
         if cmd.command == 'init':
@@ -236,6 +238,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'viewers_changed':
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+        elif cmd.command == 'show_config':
+            self.config = self.show_config(self.config)
+            self.ui.config = self.config
 
     @property
     def bkg(self) -> DataToExport:
@@ -426,7 +431,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                 hardware = DAQ_Detector(self._title, self.settings, self.detector)
                 self._hardware_thread = QThread()
-                if config('viewer', 'viewer_in_thread'):
+                if self.config('viewer', 'viewer_in_thread'):
                     hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
@@ -436,7 +441,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self._update_settings_signal[edict].connect(hardware.update_settings)
 
                 self._hardware_thread.hardware = hardware
-                if config('viewer', 'viewer_in_thread'):
+                if self.config('viewer', 'viewer_in_thread'):
                     self._hardware_thread.start()
                 self.command_hardware.emit(ThreadCommand("ini_detector", attribute=[
                     self.settings.child('detector_settings').saveState(), self.controller]))
@@ -925,10 +930,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         elif param.name() == 'ip_address' or param.name == 'port':
             self._command_tcpip.emit(
-                ThreadCommand('update_connection', dict(ipaddress=self.settings['main_settings', 'tcpip',
-                                                                                      'ip_address'],
-                                                        port=self.settings['main_settings', 'tcpip',
-                                                                                 'port'])))
+                ThreadCommand('update_connection',
+                              dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
+                                   port=self.settings['main_settings', 'tcpip', 'port'])))
 
         elif param.name() == 'plugin_config':
             self.show_config(self.plugin_config)
