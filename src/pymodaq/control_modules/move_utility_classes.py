@@ -90,6 +90,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], maste
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
+
     if axis_names == [] and len(axes_names) != 0:
         axis_names = axes_names
 

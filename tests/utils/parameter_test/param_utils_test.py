@@ -6,73 +6,79 @@ Created the 28/10/2022
 """
 import numpy as np
 import pytest
-
-from pymodaq.utils.parameter import Parameter
+from qtpy import QtWidgets
+from collections import OrderedDict
+from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.parameter import ioxml
 from unittest import mock
+from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 
+params = [
+    {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
+        {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
+         'readonly': True},
+        {'title': 'axis names:', 'name': 'axis', 'type': 'list',
+         'limits': {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}, 'readonly': True},
+        {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
+         'readonly': True},
+    ]}
+]
+params1 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+        ]},
+]
+# No min for afloat ==) False, True, True
+params2 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+    ]},
+]
+# No children in afloat ==) False, False, False
+params3 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                []},
+    ]},
+]
+# Different value in afloat ==) False, False, True
+params4 = [
+    {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+        {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 10., 'min': 1.,
+            'tip': 'displays this text as a tooltip','children':
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+    ]},
+]    
+P1 = Parameter(name='settings1', type='group', children=params1)
+P2 = Parameter(name='settings2', type='group', children=params2)
+P3 = Parameter(name='settings3', type='group', children=params3)
+P4 = Parameter(name='settings4', type='group', children=params4)
 
 def test_get_param_path():
-    item1 = mock.Mock()
-    item1.name.return_value = 'first'
-    item1.parent.return_value = None
-    item2 = mock.Mock()
-    item2.name.return_value = 'second'
-    item2.parent.return_value = item1
-    item3 = mock.Mock()
-    item3.name.return_value = 'third'
-    item3.parent.return_value = item2
-    item4 = mock.Mock()
-    item4.name.return_value = 'fourth'
-    item4.parent.return_value = item3
+    settings = Parameter.create(name='settings', type='group', children=params)
 
-    path = putils.get_param_path(item4)
-
-    assert path == ['first', 'second', 'third', 'fourth']
-
-
-def test_iter_children():
-    child = mock.Mock()
-    child.name.side_effect = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
-    child.type.side_effect = [[], [], [], ['group'], [], [], []]
-    child.children.side_effect = [[child, child, child]]
-    param = mock.Mock()
-    param.children.return_value = [child, child, child, child]
-
-    childlist = putils.iter_children(param)
-
-    assert childlist == ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
-
-
-def test_iter_children_params():
-    child = mock.Mock()
-    child.type.side_effect = [[], [], [], ['group'], [], [], []]
-    child.children.side_effect = [[child, child, child]]
-    param = mock.Mock()
-    param.children.return_value = [child, child, child, child]
-
-    childlist = putils.iter_children_params(param)
-
-    assert len(childlist) == 7
+    assert putils.get_param_path(settings) == ['settings']
+    path = putils.get_param_path(settings.child('main_settings', 'DAQ_type'))
+    assert path == ['settings', 'main_settings', 'DAQ_type']
 
 
 def test_get_param_from_name():
-    child = mock.Mock()
-    child.name.side_effect = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
-    child.type.side_effect = [[], [], [], ['group'], [], [], []]
-    child.children.side_effect = [[child, child, child]]
-    param = mock.Mock()
-    param.children.return_value = [child, child, child, child]
-
-    child = putils.get_param_from_name(param, 'sixth')
-
-    assert child.name() == 'seventh'
+    settings = Parameter.create(name='settings', type='group', children=params)
+    assert putils.get_param_from_name(settings, 'DAQ_type') is settings.child('main_settings', 'DAQ_type')
+    assert putils.get_param_from_name(settings, 'noname') is None
 
 
 def test_is_name_in_dict():
     dict = {'name': 'test', 'parameter': 'gaussian', 'value': 5}
     assert putils.is_name_in_dict(dict, 'test')
-    assert not putils.is_name_in_dict(dict, 'error')
+    assert not putils.is_name_in_dict(dict, 'gaussian')
 
 
 def test_get_param_dict_from_name():
@@ -96,6 +102,46 @@ def test_get_param_dict_from_name():
     result = putils.get_param_dict_from_name(parent_list, 20, pop=True)
 
     assert result['value'] == 40
+    
+def test_getOpts():
+    opts = putils.getOpts(P1)
+    assert [len(opts['numbers'][0])==13,
+            len(opts['numbers'][1]['afloat'][0])==15,
+            len(opts['numbers'][1]['afloat'][1]['aint'][0])==13]            
+    
+def test_getStruct():
+    struc = putils.getStruct(P1)
+    assert [struc['numbers'][0]==None,
+            struc['numbers'][1]['afloat'][0]==None,
+            struc['numbers'][1]['afloat'][1]['aint'][0]==None]                   
+
+def test_getValues():
+    val = putils.getValues(P1)
+    assert [val['numbers'][0]==None,
+            val['numbers'][1]['afloat'][0]==20.0,
+            val['numbers'][1]['afloat'][1]['aint'][0]==20]             
+
+
+def test_compareParameters():      
+    assert [putils.compareParameters(param1=P1,param2=P1) == True,
+            putils.compareParameters(param1=P1,param2=P2) == False,
+            putils.compareParameters(param1=P1,param2=P3) == False,
+            putils.compareParameters(param1=P1,param2=P4) == False]        
+def test_compareStructureParameter():  
+    assert [putils.compareStructureParameter(param1=P1,param2=P1) == True,
+            putils.compareStructureParameter(param1=P1,param2=P2) == True,
+            putils.compareStructureParameter(param1=P1,param2=P3) == False,
+            putils.compareStructureParameter(param1=P1,param2=P4) == True]    
+
+def test_compareValuesParameter():  
+    assert [putils.compareValuesParameter(param1=P1,param2=P1) == True,
+            putils.compareValuesParameter(param1=P1,param2=P2) == True,
+            putils.compareValuesParameter(param1=P1,param2=P3) == False,
+            putils.compareValuesParameter(param1=P1,param2=P4) == False]
+
+        
+
+    
 
 
 class TestScroll:
@@ -114,11 +160,14 @@ class TestScroll:
             assert putils.scroll_linear(scroll_val, min_val, max_val) == \
                    pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
-def test_set_param_from_param():
+
+def test_set_param_from_param(qtbot):
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
             {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
              'readonly': True},
+            {'title': 'axis names:', 'name': 'axis', 'type': 'list',
+             'limits': {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}, 'readonly': True},
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
@@ -131,12 +180,40 @@ def test_set_param_from_param():
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
 
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
     settings.child('main_settings', 'DAQ_type').opts['limits'].append('new type')
     settings.child('main_settings', 'DAQ_type').setValue('new type')
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'DAQ_type').value() == 'new type'
 
-    settings.child('main_settings', 'detector_type').setValue('')
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
+    settings.child('main_settings', 'detector_type').setValue('new string')
     putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
+
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_old = Parameter.create(name='settings', type='group', children=params)
+
+    tree = ParameterTree()
+    tree.setParameters(settings_old, showTop=False)
+
+    dict_item, _ = find_objects_in_list_from_attr_name_val(tree.listAllItems(), 'param',
+                                                           settings_old.child('main_settings', 'axis'))
+    dict_widget: QtWidgets.QComboBox = dict_item.widget.combo
+
+    settings.child('main_settings', 'axis').setLimits({'DAQ4D': 4})
+    settings.child('main_settings', 'axis').setValue(4)
+    putils.set_param_from_param(param_old=settings_old, param_new=settings)
+
+    assert settings_old.child('main_settings', 'axis').value() == 4
+    assert dict_widget.currentText() == 'DAQ4D'
+
+    settings_old.child('main_settings', 'axis').setValue(2)
+
+    assert settings_old.child('main_settings', 'axis').value() == 2
+    assert dict_widget.currentText() == 'DAQ2D'
 
