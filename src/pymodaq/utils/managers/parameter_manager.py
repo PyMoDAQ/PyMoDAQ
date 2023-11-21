@@ -186,37 +186,64 @@ class ParameterManager:
         """
         pass
 
-    def save_settings(self):
+    def save_settings(self, file_path: Path = None):
         """ Method to save the current settings using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
+
+        Parameters
+        ----------
+        file_path: Path
+            Path like object pointing to a xml file encoding a Parameter object
+            If None, opens a file explorer window to save manually a file
         """
-        file_path = select_file(get_set_config_dir('settings', user=True), save=True, ext='xml', filter='*.xml',
-                               force_save_extension=True)
+        if file_path is None or file_path is False:
+            file_path = select_file(get_set_config_dir('settings', user=True), save=True, ext='xml', filter='*.xml',
+                                    force_save_extension=True)
+        else:
+            file_path = Path(file_path)
+            if '.xml' != file_path.suffix:
+                return
         if file_path:
             ioxml.parameter_to_xml_file(self.settings, file_path.resolve())
             logger.info(f'The settings have been successfully saved at {file_path}')
 
-    def load_settings(self):
+    def _get_settings_from_file(self):
+        return select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
+                           force_save_extension=True)
+
+    def load_settings(self, file_path: Path = None):
         """ Method to load settings into the parameter using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
+
+        Parameters
+        ----------
+        file_path: Path
+            Path like object pointing to a xml file encoding a Parameter object
+            If None, opens a file explorer window to pick manually a file
         """
-        file_path = select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
-                                force_save_extension=True)
+        if file_path is None or file_path is False:
+            file_path = self._get_settings_from_file()
         if file_path:
-            self.settings = self.create_parameter(file_path.resolve())
+            self.settings = file_path.resolve()
             logger.info(f'The settings from {file_path} have been successfully loaded')            
 
-    def update_settings(self):
+    def update_settings(self, file_path: Path = None):
         """ Method to update settings using a xml file extension.
 
         The file should define the same settings structure (names and children)
 
         The starting directory is the user config folder with a subfolder called settings folder
+
+        Parameters
+        ----------
+        file_path: Path
+            Path like object pointing to a xml file encoding a Parameter object
+            If None, opens a file explorer window to pick manually a file
         """
-        file_path = select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
-                                force_save_extension=True)
+        if file_path is None or file_path is False:
+            file_path = self._get_settings_from_file()
         if file_path:
             _settings = self.create_parameter(file_path.resolve())
             # Checking if both parameters have the same structure
