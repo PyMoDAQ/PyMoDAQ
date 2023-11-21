@@ -731,6 +731,12 @@ class DataBase(DataLowLevel):
         """DataSource: the enum representing the source of the data"""
         return self._source
 
+    @source.setter
+    def source(self, source_type: Union[str, DataSource]):
+        """DataSource: the enum representing the source of the data"""
+        source_type = enum_checker(DataSource, source_type)
+        self._source = source_type
+
     @property
     def distribution(self):
         """DataDistribution: the enum representing the distribution of the stored data"""
@@ -1707,7 +1713,11 @@ class DataFromPlugins(DataRaw):
         If True the underlying data will be saved
     """
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, plot=True, save=True, **kwargs)
+        if 'plot' not in kwargs:
+            kwargs['plot'] = True
+        if 'save' not in kwargs:
+            kwargs['save'] = True
+        super().__init__(*args, **kwargs)
 
 
 class DataCalculated(DataWithAxes):
