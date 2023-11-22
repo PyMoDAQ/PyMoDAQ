@@ -8,8 +8,9 @@ from xml.etree import ElementTree as ET
 from collections import OrderedDict
 from qtpy import QtGui
 from qtpy.QtCore import QDateTime
-from pyqtgraph.parametertree import Parameter
+from pymodaq.utils.parameter import Parameter
 
+from pyqtgraph.parametertree.Parameter import PARAM_TYPES, PARAM_NAMES
 
 def walk_parameters_to_xml(parent_elt=None, param=None):
     """
@@ -398,14 +399,17 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
             if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
                 set_txt_from_elt(el, param_dict)
             else:
+                if param_type not in PARAM_TYPES:
+                    param_dict['type'] = 'group'  # in case the custom group has been defined somewhere but not
+                    # registered again in this session
                 if len(el) == 0:
                     children = []
                 else:
                     subparams = []
                     children = walk_xml_to_parameter(subparams, el)
-                param_dict.update(dict(children=children))
+                param_dict['children'] = children
 
-                param_dict.update(dict(name=el.tag))
+                param_dict['name'] = el.tag
 
             params.append(param_dict)
     except Exception as e:  # to be able to debug when there's an issue
