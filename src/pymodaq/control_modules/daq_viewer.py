@@ -819,11 +819,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 refresh = True  # if single
             if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
                 self._received_data = 0  # so that data send back from viewers can be properly counted
-                data_to_plot = copy.deepcopy(self._data_to_save_export)
+                data_to_plot = self._data_to_save_export.get_data_from_attribute('plot', True, deepcopy=True)
+                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('plot', deepcopy=True))
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
-                self.set_data_to_viewers(data_to_plot.data)
+                self.set_data_to_viewers(data_to_plot)
             else:
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
