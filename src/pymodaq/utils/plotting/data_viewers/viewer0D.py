@@ -149,11 +149,13 @@ class View0D(ActionManager, QObject):
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
 
     def _setup_widgets(self):
+        self.splitter = QtWidgets.QSplitter(Qt.Vertical)
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.parent_widget.layout().addWidget(self.toolbar)
+        self.parent_widget.layout().addWidget(self.splitter)
+        self.splitter.addWidget(self.toolbar)
 
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
-        self.parent_widget.layout().addWidget(splitter_hor)
+        self.splitter.addWidget(splitter_hor)
 
         splitter_hor.addWidget(self.plot_widget)
         splitter_hor.addWidget(self.values_list)
