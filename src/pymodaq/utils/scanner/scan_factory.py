@@ -14,7 +14,7 @@ import numpy as np
 from qtpy import QtWidgets
 
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
-from pymodaq.utils.parameter.utils import get_param_path
+from pymodaq.utils.parameter.utils import get_param_path, iter_children_params
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import Axis, DataDistribution
@@ -41,8 +41,6 @@ class ScanParameterManager(ParameterManager):
         self.settings_tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Interactive)
         self.settings_tree.header().setMinimumSectionSize(150)
         self.settings_tree.setMinimumHeight(150)
-
-        self.settings.sigTreeStateChanged.connect(self.save_scan_parameters)
 
 
 class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
@@ -194,22 +192,20 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         """
         ...
 
-    def save_scan_parameters(self, param, changes):
-        for param, change, data in changes:
-            if change == 'value':
-                self.evaluate_steps()
-                if self.save_settings:
-                    path = self.actuators_name
-                    path_scan = [self.scan_type, self.scan_subtype]
-                    path_param = get_param_path(param)[1:]
-                    path.extend(path_scan)
-                    path.extend(path_param)
-                    try:
-                        self.config[tuple(path)] = param.value()
-                        self.config.save()
-                    except Exception as e:
-                        pass
-
+    def save_scan_parameters(self):
+        if self.save_settings:
+            path_actuators = self.actuators_name
+            path_scan = [self.scan_type, self.scan_subtype]
+            path_actuators.extend(path_scan)
+            for param in iter_children_params(self.settings, []):
+                path = path_actuators[:]
+                path_param = get_param_path(param)[1:]
+                path.extend(path_param)
+                try:
+                    self.config[tuple(path)] = param.value()
+                except Exception as e:
+                    pass
+            self.config.save()
 
     @abstractmethod
     def update_from_scan_selector(self, scan_selector: Selector):

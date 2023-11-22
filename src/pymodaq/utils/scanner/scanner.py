@@ -159,6 +159,10 @@ class Scanner(QObject, ParameterManager):
 
     def connect_things(self):
         self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
+        self.scanner_updated_signal.connect(self.save_scanner_settings)
+
+    def save_scanner_settings(self):
+        self._scanner.save_scan_parameters()
 
     def get_scan_info(self) -> ScanInfo:
         """Get a summary of the configured scan as a ScanInfo object"""
