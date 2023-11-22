@@ -71,21 +71,27 @@ class ItemSelect(QtWidgets.QListWidget):
             *values*          dictionnary    the values dictionnary to be setted.
             =============== ============== =======================================
         """
-        allitems = [item.text() for item in self.all_items()]
-        if allitems != values['all_items']:
-            self.clear()
-            for value in values['all_items']:
-                item = QtWidgets.QListWidgetItem(value)
-                if self.hasCheckbox:
+        allitems = []
+        # Check existing items
+        for item in self.all_items():     
+            if item.text() not in values['all_items']: # Remove items from list if text not in values
+                self.removeItemWidget(item)
+            else:
+                allitems.append(item.text()) # Add items to list
+        # Loop through all values
+        for value in values['all_items']: # Loop through all values
+            if value not in allitems: # Test if object already exists
+                item = QtWidgets.QListWidgetItem(value) # Create object
+                if self.hasCheckbox: # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    item.setCheckState(QtCore.Qt.Unchecked)
-                self.addItem(item)
+                    item.setCheckState(QtCore.Qt.Unchecked)                  
+                self.addItem(item) # Add object to widget
             QtWidgets.QApplication.processEvents()
-
-        self.clearSelection()
-        for item in self.all_items():
-            if item.text() in values['selected']:
-                item.setSelected(True)
+        if not self.hasCheckbox:
+            self.clearSelection() # Restart selection
+            for item in self.all_items():
+                if item.text() in values['selected']:
+                    item.setSelected(True)
 
 class ItemSelectParameterItem(WidgetParameterItem):
     
