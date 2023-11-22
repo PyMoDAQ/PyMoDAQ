@@ -21,6 +21,7 @@ from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
 from pymodaq.utils.plotting.widgets import PlotWidget
+from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 
 
 logger = set_logger(get_module_name(__file__))
@@ -209,7 +210,8 @@ class View1D(ActionManager, QObject):
 
         self.data_displayer: DataDisplayer = None
         self.plot_widget: PlotWidget = None
-        self.lineout_widgets: PlotWidget = None
+        self.lineout_widgets: QtWidgets.QWidget = None
+        self.lineout_viewers: Viewer0D = None
         self.graphical_widgets: dict = None
         self.crosshair: Crosshair = None
 
@@ -309,7 +311,8 @@ class View1D(ActionManager, QObject):
 
         splitter_ver.addWidget(self.toolbar)
 
-        self.lineout_widgets = PlotWidget()
+        self.lineout_widgets = QtWidgets.QWidget()
+        self.lineout_viewers = Viewer0D(self.lineout_widgets)
         self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
         splitter_ver.addWidget(self.plot_widget)
@@ -343,8 +346,8 @@ class View1D(ActionManager, QObject):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
         for lineout_name in LineoutPlotter.lineout_widgets:
             lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
-            lineout.setMouseEnabled(state, state)
-            lineout.showAxis('left', state)
+            # lineout.setMouseEnabled(state, state)
+            # lineout.showAxis('left', state)
             lineout.setVisible(state)
             lineout.update()
 
