@@ -14,19 +14,30 @@ class ItemSelect_pb(QtWidgets.QWidget):
         #### Widgets ###        
         # ListWidget
         self.itemselect = ItemSelect(checkbox)
-        # Pushbutton
+        # Pushbutton Add
         self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_pb.setIcon(icon3)        
+        # Pushbutton Remove
+        self.remove_pb = QtWidgets.QPushButton()
+        self.remove_pb.setText("")
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/remove.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.remove_pb.setIcon(icon3)               
         #### Layout ###
+        self.ver_layout = QtWidgets.QVBoxLayout()    
+        self.ver_layout.addWidget(self.add_pb)        
+        self.ver_layout.addWidget(self.remove_pb)            
+        self.ver_layout.setSpacing(0)
+                
         self.hor_layout = QtWidgets.QHBoxLayout()        
         self.hor_layout.addWidget(self.itemselect)
-        self.hor_layout.addWidget(self.add_pb)
+        self.hor_layout.addLayout(self.ver_layout)
+        
         self.hor_layout.setSpacing(0)
         self.setLayout(self.hor_layout)
-
 
 
 class ItemSelect(QtWidgets.QListWidget):
@@ -75,7 +86,8 @@ class ItemSelect(QtWidgets.QListWidget):
         # Check existing items
         for item in self.all_items():     
             if item.text() not in values['all_items']: # Remove items from list if text not in values
-                self.removeItemWidget(item)
+                item = self.takeItem(self.row(item))
+                del item # Qt recommand to delete the item when removed
             else:
                 allitems.append(item.text()) # Add items to list
         # Loop through all values
@@ -98,7 +110,7 @@ class ItemSelectParameterItem(WidgetParameterItem):
     def makeWidget(self):
         """
             | Make and initialize an instance of ItemSelect_pb with itemselect value.
-            | Connect the created object with the buttonClicked function.
+            | Connect the created object with the plus and minus buttonClicked function.
 
         """
         self.asSubItem = True
@@ -128,14 +140,21 @@ class ItemSelectParameterItem(WidgetParameterItem):
             w.add_pb.setVisible(opts['show_pb'])
         else:
             w.add_pb.setVisible(False)
+            
+        if 'show_mb' in opts:
+            w.remove_pb.setVisible(opts['show_mb'])
+        else:
+            w.remove_pb.setVisible(False)
+
         if 'tip' in opts:
             w.setToolTip(opts['tip'])
         w.value = w.itemselect.get_value
         w.setValue = w.itemselect.set_value
-        w.add_pb.clicked.connect(self.buttonClicked)
+        w.add_pb.clicked.connect(self.pb_buttonClicked)
+        w.remove_pb.clicked.connect(self.mb_buttonClicked)        
         return w
 
-    def buttonClicked(self):
+    def pb_buttonClicked(self):
         """
            Append to the param attribute the dictionnary obtained from the QtWidget add parameter procedure.
         """
@@ -153,6 +172,23 @@ class ItemSelectParameterItem(WidgetParameterItem):
             val = dict(all_items=all, selected=sel)
             self.param.setValue(val)
             self.param.sigValueChanged.emit(self.param, val)
+            
+    def mb_buttonClicked(self):
+        """
+           Remove the selected Qwidget items by removing the entries in the parameter attribute.
+        """                       
+        items_to_be_removed = self.widget.itemselect.selectedItems()
+        if len(items_to_be_removed) > 0:
+            all = self.param.value()['all_items']
+            sel = self.param.value()['selected'] 
+            for i in items_to_be_removed:
+                if i.text() in all:
+                    all.remove(i.text())
+                if i.text() in sel:
+                    sel.remove(i.text())
+            val = dict(all_items=all, selected=sel)
+            self.param.setValue(val)
+            self.param.sigValueChanged.emit(self.param, val)            
 
     def optsChanged(self, param, opts):
         """
@@ -167,6 +203,9 @@ class ItemSelectParameterItem(WidgetParameterItem):
 
         if 'show_pb' in opts:
             self.widget.add_pb.setVisible(opts['show_pb'])
+        if 'show_mb' in opts:
+            self.widget.remove_pb.setVisible(opts['show_mb'])
+            
 
 
 class ItemSelectParameter(Parameter):
