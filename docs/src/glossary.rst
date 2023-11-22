@@ -50,6 +50,12 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
   Navigation
     See above.
 
+  dwa
+    Short name for ``DataWithAxes`` object
+
+  dte
+    Short name for ``DataToExport`` object
+
   Plugin
     A plugin is a python package whose name is of the type: *pymodaq_plugins_apluginname* containing functionalities
     to be added to PyMoDAQ
