@@ -107,7 +107,7 @@ class ItemSelect(QtWidgets.QListWidget):
                 self.addItem(item) # Add object to widget  
         # Selection process
         for item in self.all_items():
-            self.selectItem(item, doSelect=item.text() in values['selected'])
+            self.select_item(item, doSelect=item.text() in values['selected'])
         QtWidgets.QApplication.processEvents()
 
 
