@@ -13,7 +13,7 @@ from pathlib import Path
 import pkgutil
 import traceback
 import platform
-
+from typing import Union, List
 
 import numpy as np
 from qtpy import QtCore
@@ -449,7 +449,6 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     Parameters
     ----------
     obj: object
-        list of objects
     attr_name: str
         attribute name to look for in the object
     attr_value: object
@@ -466,7 +465,8 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     return False
 
 
-def find_objects_in_list_from_attr_name_val(objects, attr_name, attr_value, return_first=True):
+def find_objects_in_list_from_attr_name_val(objects: List[object], attr_name: str,
+                                            attr_value: object, return_first=True):
     """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
     value pair
 
@@ -589,8 +589,12 @@ def get_instrument_plugins():  # pragma: no cover
 
     """
     plugins_import = []
-    discovered_plugins = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
-    discovered_plugins.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+    discovered_plugins = []
+    discovered_plugins_all = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
+    discovered_plugins_all.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+    for entry in discovered_plugins_all:
+        if entry.name not in [ent.name for ent in discovered_plugins]:
+            discovered_plugins.append(entry)
     logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     viewer_types = ['0D', '1D', '2D', 'ND']
     for entrypoint in discovered_plugins:

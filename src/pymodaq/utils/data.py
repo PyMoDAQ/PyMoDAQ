@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numbers
 import numpy as np
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Any
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 import logging
@@ -60,6 +60,10 @@ class DataShapeError(Exception):
 
 
 class DataLengthError(Exception):
+    pass
+
+
+class DataDimError(Exception):
     pass
 
 
@@ -418,8 +422,12 @@ class DataLowLevel:
 
     @property
     def name(self):
-        """str: the identifier of the data"""
+        """Get/Set the identifier of the data"""
         return self._name
+
+    @name.setter
+    def name(self, other_name: str):
+        self._name = other_name
 
     @property
     def timestamp(self):
@@ -532,8 +540,12 @@ class DataBase(DataLowLevel):
 
         self._check_labels(labels)
         self.extra_attributes = []
+        self.add_extra_attribute(**kwargs)
+
+    def add_extra_attribute(self, **kwargs):
         for key in kwargs:
-            self.extra_attributes.append(key)
+            if key not in self.extra_attributes:
+                self.extra_attributes.append(key)
             setattr(self, key, kwargs[key])
 
     def get_full_name(self) -> str:
@@ -723,6 +735,12 @@ class DataBase(DataLowLevel):
         """DataSource: the enum representing the source of the data"""
         return self._source
 
+    @source.setter
+    def source(self, source_type: Union[str, DataSource]):
+        """DataSource: the enum representing the source of the data"""
+        source_type = enum_checker(DataSource, source_type)
+        self._source = source_type
+
     @property
     def distribution(self):
         """DataDistribution: the enum representing the distribution of the stored data"""
@@ -785,6 +803,20 @@ class DataBase(DataLowLevel):
 
     def check_shape_from_data(self, data: List[np.ndarray]):
         self._shape = data[0].shape
+
+    @staticmethod
+    def _get_dim_from_data(data: List[np.ndarray]) -> DataDim:
+        shape = data[0].shape
+        size = data[0].size
+        if len(shape) == 1 and size == 1:
+            dim = DataDim['Data0D']
+        elif len(shape) == 1 and size > 1:
+            dim = DataDim['Data1D']
+        elif len(shape) == 2:
+            dim = DataDim['Data2D']
+        else:
+            dim = DataDim['DataND']
+        return dim
 
     def get_dim_from_data(self, data: List[np.ndarray]):
         """Get the dimensionality DataDim from data"""
@@ -1286,8 +1318,8 @@ class DataWithAxes(DataBase):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
 
     def sort_data(self, nav_axis: int = 0):
-        """Sort spread data along a given navigation axis, default is 0"""
-        if self.distribution == 'spread':
+        """Sort data along a given navigation axis, default is 0"""
+        if nav_axis in self.nav_indexes:
             axis = self.get_nav_axes()[nav_axis]
             sorted_index = np.argsort(axis.get_data())
             data = self.deepcopy()
@@ -1388,6 +1420,8 @@ class DataWithAxes(DataBase):
                     self._dim = DataDim['Data1D']
                 elif len(self.axes) == 2:
                     self._dim = DataDim['Data2D']
+        if len(self.nav_indexes) > 0:
+            self._dim = DataDim['DataND']
         return self._dim
 
     @property
@@ -1535,10 +1569,26 @@ class DataWithAxes(DataBase):
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
                                remove_axes_index: List[int] = None,
-                               source: DataSource = 'calculated') -> DataWithAxes:
+                               source: DataSource = 'calculated',
+                               keep_dim=False) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
+
+        Parameters
+        ----------
+        data: list of numpy ndarray
+            The new data
+        remove_axes_index: tuple of int
+            indexes of the axis to be removed
+        source: DataSource
+        keep_dim: bool
+            if False (the default) will calculate the new dim based on the data shape
+            else keep the same (be aware it could lead to issues)
+
+        Returns
+        -------
+        DataWithAxes
         """
         try:
             old_data = self.data
@@ -1592,7 +1642,8 @@ class DataWithAxes(DataBase):
                 # new_data._am.sig_indexes = tuple(sig_indexes)
 
             new_data._shape = data[0].shape
-            new_data._dim = self.get_dim_from_data(data)
+            if not keep_dim:
+                new_data._dim = self._get_dim_from_data(data)
             return new_data
 
         except Exception as e:
@@ -1646,8 +1697,30 @@ class DataActuator(DataRaw):
 
 
 class DataFromPlugins(DataRaw):
-    """Specialized DataWithAxes set with source as 'raw'. To be used for raw data generated by Detector plugins"""
+    """Specialized DataWithAxes set with source as 'raw'. To be used for raw data generated by Detector plugins
+
+    It introduces by default to extra attributes, plot and save. Their presence can be checked in the
+    extra_attributes list.
+
+    Parameters
+    ----------
+    plot: bool
+        If True the underlying data will be plotted in the DAQViewer
+    save: bool
+        If True the underlying data will be saved
+
+    Attributes
+    ----------
+    plot: bool
+        If True the underlying data will be plotted in the DAQViewer
+    save: bool
+        If True the underlying data will be saved
+    """
     def __init__(self, *args, **kwargs):
+        if 'plot' not in kwargs:
+            kwargs['plot'] = True
+        if 'save' not in kwargs:
+            kwargs['save'] = True
         super().__init__(*args, **kwargs)
 
 
@@ -1876,8 +1949,35 @@ class DataToExport(DataLowLevel):
         DataToExport: filtered with data matching the dimensionality
         """
         source = enum_checker(DataSource, source)
-        selection = find_objects_in_list_from_attr_name_val(self.data, 'source', source, return_first=False)
+        return self.get_data_from_attribute('source', source, deepcopy=deepcopy)
 
+    def get_data_from_missing_attribute(self, attribute: str, deepcopy=False) -> DataToExport:
+        """ Get the data matching a given attribute value
+
+        Parameters
+        ----------
+        attribute: str
+            a string of a possible attribute
+        deepcopy: bool
+            if True the returned DataToExport will contain deepcopies of the DataWithAxes
+        Returns
+        -------
+        DataToExport: filtered with data missing the given attribute
+        """
+        if deepcopy:
+            return DataToExport(self.name, data=[dwa.deepcopy() for dwa in self if not hasattr(dwa, attribute)])
+        else:
+            return DataToExport(self.name, data=[dwa for dwa in self if not hasattr(dwa, attribute)])
+
+    def get_data_from_attribute(self, attribute: str, attribute_value: Any, deepcopy=False) -> DataToExport:
+        """Get the data matching a given attribute value
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the attribute presence and value
+        """
+        selection = find_objects_in_list_from_attr_name_val(self.data, attribute, attribute_value,
+                                                            return_first=False)
         selection.sort(key=lambda elt: elt[0].name)
         if deepcopy:
             data = [sel[0].deepcopy() for sel in selection]
@@ -1893,13 +1993,7 @@ class DataToExport(DataLowLevel):
         DataToExport: filtered with data matching the dimensionality
         """
         dim = enum_checker(DataDim, dim)
-        selection = find_objects_in_list_from_attr_name_val(self.data, 'dim', dim, return_first=False)
-        selection.sort(key=lambda elt: elt[0].name)
-        if deepcopy:
-            data = [sel[0].deepcopy() for sel in selection]
-        else:
-            data = [sel[0] for sel in selection]
-        return DataToExport(name=self.name, data=data)
+        return self.get_data_from_attribute('dim', dim, deepcopy=deepcopy)
 
     def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim

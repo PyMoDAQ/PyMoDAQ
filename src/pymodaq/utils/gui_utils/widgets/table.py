@@ -52,6 +52,12 @@ class TableModel(QtCore.QAbstractTableModel):
         else:
             self.editable = editable
 
+    def __eq__(self, other):
+        if isinstance(other, TableModel):
+            return self._data == other._data
+        else:
+            return False
+
     def is_checked(self, row: int):
         return self._checked[row]
 

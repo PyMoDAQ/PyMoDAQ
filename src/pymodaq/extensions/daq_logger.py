@@ -9,7 +9,7 @@ Contains all objects related to the DAQScan module, to do automated scans, savin
 import sys
 from collections import OrderedDict
 import datetime
-
+from typing import TYPE_CHECKING, Union
 
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.custom_app import CustomApp
@@ -21,11 +21,22 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.gui_utils.widgets import QLED
+from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.h5modules.h5logging import H5Logger
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.data import DataToExport, DataActuator, DataWithAxes
+
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
+
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+
 try:
     import sqlalchemy
     from pymodaq.utils.db.db_logger.db_logger import DataBaseLogger
@@ -51,22 +62,23 @@ class DAQ_Logger(CustomApp):
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
     ]
 
-    def __init__(self, dockarea=None, dashboard=None):
+    def __init__(self, dockarea: DockArea = None, dashboard: 'DashBoard' = None):
         """
 
         Parameters
         ----------
-        dockarea: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
-        dashboard: (DashBoard) instance of the pymodaq dashboard
+        dockarea: DockArea
+            instance of the modified pyqtgraph Dockarea
+        dashboard: DashBoard
+            instance of the pymodaq dashboard
         """
 
         super().__init__(dockarea, dashboard)
 
-
         self.wait_time = 1000
 
         self.logger_thread = None
-        self.logger = None  # should be a reference either to self.h5saver or self.dblogger depending the choice of the user
+        self.logger: Union[H5Logger, DataBaseLogger] = None
         self.setup_ui()
 
     def setup_actions(self):
@@ -378,7 +390,7 @@ class DAQ_Logging(QObject):
     scan_data_tmp = Signal(OrderedDict)
     status_sig = Signal(list)
 
-    def __init__(self, settings=None, logger=None, modules_manager=[]):
+    def __init__(self, settings=None, logger=None, modules_manager: ModulesManager = None):
 
         """
             DAQ_Logging deal with the acquisition part of daq_scan.
@@ -394,7 +406,7 @@ class DAQ_Logging(QObject):
         self.settings = settings
         self.ini_time = 0
         self.ind_log = 0
-        self.modules_manager = modules_manager
+        self.modules_manager: ModulesManager = modules_manager
         self.modules_manager.detectors_changed.connect(self.update_connect_detectors)
         self.modules_manager.actuators_changed.connect(self.update_connect_actuators)
         self.data_logger = logger
@@ -433,9 +445,8 @@ class DAQ_Logging(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def format_actuators_data(self, act_name, act_value):
-        data = data_mod.DataToExport(name=act_name, data=[data_mod.DataRaw(name=act_name, dim='Data0D',
-                                                                           data=[np.array([act_value])])])
+    def format_actuators_data(self, data_act: DataActuator):
+        data = data_mod.DataToExport(name=data_act.name, data=[data_act])
         self.do_save_continuous(data)
 
     def connect_actuators(self, connect=True):

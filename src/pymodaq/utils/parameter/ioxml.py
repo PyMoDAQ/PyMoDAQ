@@ -1,3 +1,6 @@
+from typing import Union
+from pathlib import Path
+
 import importlib
 import json
 from pathlib import Path
@@ -5,8 +8,9 @@ from xml.etree import ElementTree as ET
 from collections import OrderedDict
 from qtpy import QtGui
 from qtpy.QtCore import QDateTime
-from pyqtgraph.parametertree import Parameter
+from pymodaq.utils.parameter import Parameter
 
+from pyqtgraph.parametertree.Parameter import PARAM_TYPES, PARAM_NAMES
 
 def walk_parameters_to_xml(parent_elt=None, param=None):
     """
@@ -98,9 +102,9 @@ def add_text_to_elt(elt, param):
             val = param.value()
         text = str(val)
     elif param_type == 'date_time':
-        text = str(param.value().toSecsSinceEpoch())
+        text = str(param.value().toMSecsSinceEpoch())
     elif param_type == 'date':
-        text = str(QDateTime(param.value()).toSecsSinceEpoch())
+        text = str(QDateTime(param.value()).toMSecsSinceEpoch())
     elif param_type == 'table_view':
         try:
             data = dict(classname=param.value().__class__.__name__,
@@ -320,7 +324,7 @@ def parameter_to_xml_string(param):
     return ET.tostring(xml_elt)
 
 
-def parameter_to_xml_file(param, filename):
+def parameter_to_xml_file(param, filename: Union[str, Path]):
     """
         Convert the given parameter to XML element and update the given XML file.
 
@@ -337,9 +341,10 @@ def parameter_to_xml_file(param, filename):
         Examples
         --------
     """
-    fname = Path(filename)
-    parent = fname.parent
-    filename = fname.stem
+    if not isinstance(filename, Path):
+        filename = Path(filename)
+    parent = filename.parent
+    filename = filename.stem
     fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
     xml_elt = walk_parameters_to_xml(param=param)
     tree = ET.ElementTree(xml_elt)
@@ -394,14 +399,17 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
             if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
                 set_txt_from_elt(el, param_dict)
             else:
+                if param_type not in PARAM_TYPES:
+                    param_dict['type'] = 'group'  # in case the custom group has been defined somewhere but not
+                    # registered again in this session
                 if len(el) == 0:
                     children = []
                 else:
                     subparams = []
                     children = walk_xml_to_parameter(subparams, el)
-                param_dict.update(dict(children=children))
+                param_dict['children'] = children
 
-                param_dict.update(dict(name=el.tag))
+                param_dict['name'] = el.tag
 
             params.append(param_dict)
     except Exception as e:  # to be able to debug when there's an issue
@@ -435,9 +443,9 @@ def set_txt_from_elt(el, param_dict):
         elif 'bool' in param_type or 'led' in param_type: # covers 'bool' 'bool_push',  'led' and 'led_push'types
             param_value = bool(int(val_text))
         elif param_type == 'date_time':
-            param_value = QDateTime.fromSecsSinceEpoch(int(val_text))
+            param_value = QDateTime.fromMSecsSinceEpoch(int(val_text))
         elif param_type == 'date':
-            param_value = QDateTime.fromSecsSinceEpoch(int(val_text)).date()
+            param_value = QDateTime.fromMSecsSinceEpoch(int(val_text)).date()
         elif param_type == 'table':
             param_value = eval(val_text)
         elif param_type == 'color':
@@ -452,34 +460,30 @@ def set_txt_from_elt(el, param_dict):
             mod = importlib.import_module(data_dict['module'])
             _cls = getattr(mod, data_dict['classname'])
             param_value = _cls(data_dict['data'], header=data_dict['header'])
+        elif param_type == 'action':
+            if val_text == 'None':
+                param_value = None
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
 
 
-def XML_file_to_parameter(file_name):
+def XML_file_to_parameter(file_name: Union[str, Path]) -> list:
+    """ Convert a xml file into pyqtgraph parameter object.
+
+    Returns
+    -------
+    params : list of dictionary
+        a list of dictionary defining a Parameter object and its children
+
+    See Also
+    --------
+    walk_parameters_to_xml
+
+    Examples
+    --------
     """
-        Convert a xml file into pyqtgraph parameter object.
-
-        =============== =========== ================================================
-        **Parameters**   **Type**    **Description**
-
-        *file_name*     string      the file name of the XML file to be converted
-        =============== =========== ================================================
-
-        Returns
-        -------
-        params : dictionnary list
-            a parameter list of dictionnary to init a parameter
-
-        See Also
-        --------
-        walk_parameters_to_xml
-
-        Examples
-        --------
-    """
-    tree = ET.parse(file_name)
+    tree = ET.parse(str(file_name))
 
     root = tree.getroot()
     params = walk_xml_to_parameter(params=[], XML_elt=root)
@@ -516,7 +520,7 @@ def XML_string_to_parameter(xml_string):
     return params
 
 
-def XML_string_to_pobject(xml_string):
+def XML_string_to_pobject(xml_string) -> Parameter:
     """
     return a Parameter object from its *translated* version as a XML string
     Parameters

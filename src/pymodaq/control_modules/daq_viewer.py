@@ -98,7 +98,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, action_list = ('save','update'))
         ControlModule.__init__(self)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
@@ -124,7 +124,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             QtWidgets.QApplication.processEvents()
             self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
-            self.ui.add_setting_tree(self.settings_tree)
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
 
@@ -138,8 +137,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._h5saver_continuous: H5Saver = None
         self._ind_continuous_grab = 0
         self.setup_continuous_saving()
-
-        self._external_h5_data = None
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
@@ -171,6 +168,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._set_setting_tree()  # to activate parameters of default Mock detector
 
         self.grab_done_signal.connect(self._save_export_data)
+        self.update_plugin_config()
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
@@ -204,6 +202,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 * do_bkg
                 * take_bkg
                 * viewers_changed
+                * show_config
         """
 
         if cmd.command == 'init':
@@ -237,6 +236,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'viewers_changed':
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+        elif cmd.command == 'show_config':
+            self.config = self.show_config(self.config)
+            self.ui.config = self.config
 
     @property
     def bkg(self) -> DataToExport:
@@ -427,7 +429,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                 hardware = DAQ_Detector(self._title, self.settings, self.detector)
                 self._hardware_thread = QThread()
-                if config('viewer', 'viewer_in_thread'):
+                if self.config('viewer', 'viewer_in_thread'):
                     hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
@@ -437,7 +439,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self._update_settings_signal[edict].connect(hardware.update_settings)
 
                 self._hardware_thread.hardware = hardware
-                if config('viewer', 'viewer_in_thread'):
+                if self.config('viewer', 'viewer_in_thread'):
                     self._hardware_thread.start()
                 self.command_hardware.emit(ThreadCommand("ini_detector", attribute=[
                     self.settings.child('detector_settings').saveState(), self.controller]))
@@ -595,23 +597,23 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
+    def append_data(self, dte: DataToExport = None, where: Union[Node, str] = None):
         """Appends current DataToExport to a DetectorEnlargeableSaver
 
         Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
 
         Parameters
         ----------
-        data: DataToExport
+        dte: DataToExport
             not really used
         where: Node or str
         See Also
         --------
         :class:`DetectorEnlargeableSaver`
         """
-        if data is None:
-            data = self._data_to_save_export
-        self._add_data_to_saver(data, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
+        if dte is None:
+            dte = self._data_to_save_export
+        self._add_data_to_saver(dte, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
                                 where=where)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
@@ -635,14 +637,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
                                 indexes=indexes, distribution=distribution)
 
-    def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
+    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
 
         Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
         Parameters
         ----------
-        data: DataToExport
+        dte: DataToExport
             The data to be saved
         init_step: bool
             If True, means this is the first step of saving (if multisaving), then save background if any and a png image
@@ -655,27 +657,27 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         detector_node = self.module_and_data_saver.get_set_node(where)
-        data = data if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else\
-            self._data_to_save_export.get_data_from_source('raw')
+        dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
+            dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
 
-        self.module_and_data_saver.add_data(detector_node, data, **kwargs)
+        dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
+                           [dwa for dwa in dte if ('save' not in dwa.extra_attributes) or
+                            ('save' in dwa.extra_attributes and dwa.save)])
+
+        self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
 
         if init_step:
             if self._do_bkg and self._bkg is not None:
                 self.module_and_data_saver.add_bkg(detector_node, self._bkg)
 
-            if self._external_h5_data is not None:
-                # todo test this functionnality
-                self.module_and_data_saver.add_external_h5(self._external_h5_data)
-
-    def _save_data(self, path=None, data: DataToExport = None):
+    def _save_data(self, path=None, dte: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
 
         Parameters
         ----------
         path: Path
             where to save the data as returned from browse_file for instance
-        data: DataToExport
+        dte: DataToExport
 
         See Also
         --------
@@ -688,7 +690,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.module_and_data_saver = module_saving.DetectorSaver(self)
         self.module_and_data_saver.h5saver = h5saver
 
-        self._add_data_to_saver(data, init_step=True)
+        self._add_data_to_saver(dte, init_step=True)
 
         if self.ui is not None:
             (root, filename) = os.path.split(str(path))
@@ -817,11 +819,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 refresh = True  # if single
             if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
                 self._received_data = 0  # so that data send back from viewers can be properly counted
-                data_to_plot = copy.deepcopy(self._data_to_save_export)
+                data_to_plot = self._data_to_save_export.get_data_from_attribute('plot', True, deepcopy=True)
+                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('plot', deepcopy=True))
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
-                self.set_data_to_viewers(data_to_plot.data)
+                self.set_data_to_viewers(data_to_plot)
             else:
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
@@ -829,7 +832,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def _init_show_data(self, data: DataToExport):
+    def _init_show_data(self, dte: DataToExport):
         """Processing before showing data
 
         * process the data to check if they overshoot
@@ -837,24 +840,27 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Parameters
         ----------
-        data: DataToExport
+        dte: DataToExport
 
         See Also
         --------
         _process_overshoot
         """
-        self._process_overshoot(data)
-        self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
+        self._process_overshoot(dte)
+
+        self._viewer_types = [ViewersEnum(dwa.dim.name) for dwa in dte if
+                              ('plot' not in dwa.extra_attributes) or
+                              ('plot' in dwa.extra_attributes and dwa.plot)]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
                 self.ui.update_viewers(self._viewer_types)
 
-    def set_data_to_viewers(self, data, temp=False):
+    def set_data_to_viewers(self, dte: DataToExport, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
 
         Parameters
         ----------
-        data: list of DataFromPlugins
+        dte: DataToExport
         temp: bool
             if True notify the data viewers to display data as temporary (meaning not exporting processed data from roi)
 
@@ -862,14 +868,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         --------
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
-        for ind, data in enumerate(data):
-            self.viewers[ind].title = data.name
-            self.viewer_docks[ind].setTitle(self._title + ' ' + data.name)
+        for ind, dwa in enumerate(dte):
+            if ('plot' not in dwa.extra_attributes) or \
+                    ('plot' in dwa.extra_attributes and dwa.plot):
+                self.viewers[ind].title = dwa.name
+                self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
 
-            if temp:
-                self.viewers[ind].show_data_temp(data)
-            else:
-                self.viewers[ind].show_data(data)
+                if temp:
+                    self.viewers[ind].show_data_temp(dwa)
+                else:
+                    self.viewers[ind].show_data(dwa)
 
     def value_changed(self, param: Parameter):
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
@@ -926,10 +934,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         elif param.name() == 'ip_address' or param.name == 'port':
             self._command_tcpip.emit(
-                ThreadCommand('update_connection', dict(ipaddress=self.settings['main_settings', 'tcpip',
-                                                                                      'ip_address'],
-                                                        port=self.settings['main_settings', 'tcpip',
-                                                                                 'port'])))
+                ThreadCommand('update_connection',
+                              dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
+                                   port=self.settings['main_settings', 'tcpip', 'port'])))
 
         elif param.name() == 'plugin_config':
             self.show_config(self.plugin_config)

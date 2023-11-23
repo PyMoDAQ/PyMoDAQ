@@ -92,12 +92,13 @@ class PlainTextParameterItem(WidgetParameterItem):
         # # TODO: fix so that superclass method can be called
         # # (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.w)
+        if self.treeWidget() is not None:
+            self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+            self.treeWidget().setItemWidget(self.subItem, 0, self.w)
 
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
+            # for now, these are copied from ParameterItem.treeWidgetChanged
+            self.setHidden(not self.param.opts.get('visible', True))
+            self.setExpanded(self.param.opts.get('expanded', True))
 
     def makeWidget(self):
         """

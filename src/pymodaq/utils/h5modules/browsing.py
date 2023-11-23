@@ -20,7 +20,7 @@ from pymodaq.utils.config import Config
 from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
-import pymodaq.utils.parameter.ioxml
+from pymodaq.utils.parameter import ioxml
 
 from pymodaq.utils.gui_utils.widgets.tree_layout import TreeLayout
 from pymodaq.utils.daq_utils import capitalize
@@ -98,10 +98,7 @@ class H5BrowserUtil(H5Backend):
         """
         node = self.get_node(node_path)
         attrs_names = node.attrs.attrs_name
-        attr_dict = OrderedDict([])
-        for attr in attrs_names:
-            # if attr!='settings':
-            attr_dict[attr] = node.attrs[attr]
+        attr_dict = OrderedDict(node.attrs.to_dict())
 
         settings = None
         scan_settings = None
@@ -474,11 +471,11 @@ class H5Browser(QObject, ActionManager):
                 for child in self.settings.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(settings)
+                params = ioxml.XML_string_to_parameter(settings)
                 self.settings.settings.addChildren(params)
 
             if scan_settings is not None:
-                params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(scan_settings)
+                params = ioxml.XML_string_to_parameter(scan_settings)
                 self.settings.settings.addChildren(params)
 
             if pixmaps == []:

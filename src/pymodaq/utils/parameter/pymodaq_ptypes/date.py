@@ -120,4 +120,7 @@ class TimeParameter(SimpleParameter):
     itemClass = TimeParameterItem
 
     def _interpretValue(self, v):
-        return QtCore.QTime(v)
+        if isinstance(v, QtCore.QTime):
+            return v
+        elif isinstance(v, str):
+            return QtCore.QTime(*eval(v.split('QTime')[1]))

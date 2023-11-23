@@ -208,7 +208,7 @@ where ``dte`` stands for DataToExport, see :ref:`datatoexport`.
 
   * ``data_grabed_signal_temp`` (old style, will be deprecated)
   * ``data_grabed_signal`` (old style, will be deprecated)
-  It will be deprecated, as the object to use and emit are now DataToExport objects
+  It will be deprecated in versions > 4.1, as the object to use and emit are now DataToExport objects
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
 used to send temporary data to update the plotting but without triggering anything else (so that the DAQ_Scan still awaits
@@ -238,6 +238,15 @@ Such an emitted signal would trigger the initialization of 4 data viewers in the
 determined by the *dim* key value while its name will be set to the *name* parameter value, for more details on
 data objects, see :ref:`data_objects`
 
+.. note::
+  *New in version 4.1.0*
+
+  The behaviour of the `DAQ_Viewer` can be even more tailored using two extra boolean attributes in the DataWithAxes objects.
+
+  * ``save``: will tell the DAQ_Viewer whether it should save the corresponding dwa (short for ``DataWithAwes``)
+  * ``plot``: will tell the DAQ_Viewer whether it should plot the corresponding dwa
+
+  ``DataFromPlugins`` objects have these two extra attributes by default with values set to True
 
 .. _data_ready:
 
