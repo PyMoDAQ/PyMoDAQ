@@ -73,15 +73,14 @@ class ItemSelect(QtWidgets.QListWidget):
         """
         return [self.item(ind) for ind in range(self.count())]
     
-    def selectItem(self, item:QtWidgets.QListWidgetItem, doSelect:bool = False):
+    def select_item(self, item:QtWidgets.QListWidgetItem, doSelect:bool = False):
+        """
+            Function to select item. The selection depends if the item uses checkbox or not.
+        """        
         if self.hasCheckbox:
-            if doSelect:
-                item.setCheckState(QtCore.Qt.Checked)                                          
-            else:
-                item.setCheckState(QtCore.Qt.Unchecked)   
+            item.setCheckState(int(2*doSelect)) # 2=QtCore.Qt.Checked, 0=QtCore.Qt.Unchecked                                                   
         else:
             item.setSelected(doSelect)
-
 
     def set_value(self, values):
         """
@@ -99,7 +98,7 @@ class ItemSelect(QtWidgets.QListWidget):
                 item = self.takeItem(self.row(item))
             else:
                 allitems.append(item.text()) # Add items to list
-        # Create existing items if needed
+        # Create items if needed
         for value in values['all_items']: # Loop through all values
             if value not in allitems: # Test if object already exists
                 item = QtWidgets.QListWidgetItem(value) # Create object
