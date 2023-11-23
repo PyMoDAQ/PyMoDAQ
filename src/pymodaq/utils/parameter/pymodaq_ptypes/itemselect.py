@@ -87,7 +87,6 @@ class ItemSelect(QtWidgets.QListWidget):
         for item in self.all_items():     
             if item.text() not in values['all_items']: # Remove items from list if text not in values
                 item = self.takeItem(self.row(item))
-                del item # Qt recommand to delete the item when removed
             else:
                 allitems.append(item.text()) # Add items to list
         # Loop through all values
@@ -96,7 +95,10 @@ class ItemSelect(QtWidgets.QListWidget):
                 item = QtWidgets.QListWidgetItem(value) # Create object
                 if self.hasCheckbox: # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    item.setCheckState(QtCore.Qt.Unchecked)                  
+                    if value in values['selected']:
+                        item.setCheckState(QtCore.Qt.Checked)                                          
+                    else:
+                        item.setCheckState(QtCore.Qt.Unchecked)                                          
                 self.addItem(item) # Add object to widget
             QtWidgets.QApplication.processEvents()
         if not self.hasCheckbox:
@@ -128,23 +130,17 @@ class ItemSelectParameterItem(WidgetParameterItem):
             w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
 
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        if 'minheight' in opts:
-            w.itemselect.setMinimumHeight(opts['min_height'])
-
-        if 'height' in opts:
-            w.itemselect.setMaximumHeight(opts['height'])
-        else:
-            w.itemselect.setMaximumHeight(70)
+        # if 'minheight' in opts:
+        #     w.itemselect.setMinimumHeight(opts['min_height'])
+        # if 'height' in opts:
+        #     w.itemselect.setMaximumHeight(opts['height'])
+        # else:
+        #     w.itemselect.setMaximumHeight(70)
         # w.setReadOnly(self.param.opts.get('readonly', False))
-        if 'show_pb' in opts:
-            w.add_pb.setVisible(opts['show_pb'])
-        else:
-            w.add_pb.setVisible(False)
-            
-        if 'show_mb' in opts:
-            w.remove_pb.setVisible(opts['show_mb'])
-        else:
-            w.remove_pb.setVisible(False)
+        w.itemselect.setMinimumHeight(opts.get('min_height', 0))
+        w.itemselect.setMaximumHeight(opts.get('height', 70))
+        w.add_pb.setVisible(opts.get('show_pb', False))
+        w.remove_pb.setVisible(opts.get('show_mb', False))
 
         if 'tip' in opts:
             w.setToolTip(opts['tip'])
@@ -181,11 +177,11 @@ class ItemSelectParameterItem(WidgetParameterItem):
         if len(items_to_be_removed) > 0:
             all = self.param.value()['all_items']
             sel = self.param.value()['selected'] 
-            for i in items_to_be_removed:
-                if i.text() in all:
-                    all.remove(i.text())
-                if i.text() in sel:
-                    sel.remove(i.text())
+            for item in items_to_be_removed:
+                if item.text() in all:
+                    all.remove(item.text())
+                    if item.text() in sel:
+                        sel.remove(item.text())
             val = dict(all_items=all, selected=sel)
             self.param.setValue(val)
             self.param.sigValueChanged.emit(self.param, val)            
@@ -200,13 +196,9 @@ class ItemSelectParameterItem(WidgetParameterItem):
         """
         # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
-
-        if 'show_pb' in opts:
-            self.widget.add_pb.setVisible(opts['show_pb'])
-        if 'show_mb' in opts:
-            self.widget.remove_pb.setVisible(opts['show_mb'])
-            
-
+        
+        self.widget.add_pb.setVisible(opts.get('show_pb', False))
+        self.widget.remove_pb.setVisible(opts.get('show_mb', False))
 
 class ItemSelectParameter(Parameter):
     """
