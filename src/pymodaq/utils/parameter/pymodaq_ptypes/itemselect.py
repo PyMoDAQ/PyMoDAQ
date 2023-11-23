@@ -72,6 +72,16 @@ class ItemSelect(QtWidgets.QListWidget):
                 The item list.
         """
         return [self.item(ind) for ind in range(self.count())]
+    
+    def selectItem(self, item:QtWidgets.QListWidgetItem, doSelect:bool = False):
+        if self.hasCheckbox:
+            if doSelect:
+                item.setCheckState(QtCore.Qt.Checked)                                          
+            else:
+                item.setCheckState(QtCore.Qt.Unchecked)   
+        else:
+            item.setSelected(doSelect)
+
 
     def set_value(self, values):
         """
@@ -83,29 +93,24 @@ class ItemSelect(QtWidgets.QListWidget):
             =============== ============== =======================================
         """
         allitems = []
-        # Check existing items
+        # Check existing items and remove unused ones
         for item in self.all_items():     
             if item.text() not in values['all_items']: # Remove items from list if text not in values
                 item = self.takeItem(self.row(item))
             else:
                 allitems.append(item.text()) # Add items to list
-        # Loop through all values
+        # Create existing items if needed
         for value in values['all_items']: # Loop through all values
             if value not in allitems: # Test if object already exists
                 item = QtWidgets.QListWidgetItem(value) # Create object
                 if self.hasCheckbox: # Add checkbox if required
-                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    if value in values['selected']:
-                        item.setCheckState(QtCore.Qt.Checked)                                          
-                    else:
-                        item.setCheckState(QtCore.Qt.Unchecked)                                          
-                self.addItem(item) # Add object to widget
-            QtWidgets.QApplication.processEvents()
-        if not self.hasCheckbox:
-            self.clearSelection() # Restart selection
-            for item in self.all_items():
-                if item.text() in values['selected']:
-                    item.setSelected(True)
+                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)                                       
+                self.addItem(item) # Add object to widget  
+        # Selection process
+        for item in self.all_items():
+            self.selectItem(item, doSelect=item.text() in values['selected'])
+        QtWidgets.QApplication.processEvents()
+
 
 class ItemSelectParameterItem(WidgetParameterItem):
     
