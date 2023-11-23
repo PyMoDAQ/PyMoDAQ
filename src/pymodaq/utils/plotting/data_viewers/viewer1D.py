@@ -231,7 +231,9 @@ class View1D(ActionManager, QObject):
 
         self.setup_widgets()
 
-        self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
+        # self.lineout_plotter = LineoutPlotter(self.graphical_widgets,
+        #                                       self.roi_manager, self.crosshair)
+
         self.connect_things()
         self.prepare_ui()
 
@@ -239,6 +241,7 @@ class View1D(ActionManager, QObject):
         self.plotitem.addItem(self.ROIselect)
         self.roi_target.setVisible(False)
         self.ROIselect.setVisible(False)
+
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -249,7 +252,11 @@ class View1D(ActionManager, QObject):
         return self.plot_widget.view.sig_double_clicked
 
     def display_roi_lineouts(self, roi_dict):
-        self.lineout_plotter.plot_roi_lineouts(roi_dict)
+        integrated_dwa = DataCalculated('roi',
+                                        data=[roi_dict[roi_key].int_data for roi_key in roi_dict],
+                                        labels=[roi_key for roi_key in roi_dict])
+        self.lineout_viewers.show_data(integrated_dwa)
+        #self.lineout_plotter.plot_roi_lineouts(roi_dict)
 
     @property
     def axis(self):
@@ -278,7 +285,7 @@ class View1D(ActionManager, QObject):
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
-        self.show_lineout_widgets()
+        #self.show_lineout_widgets()
 
     def do_math(self):
         try:
@@ -312,7 +319,9 @@ class View1D(ActionManager, QObject):
         splitter_ver.addWidget(self.toolbar)
 
         self.lineout_widgets = QtWidgets.QWidget()
-        self.lineout_viewers = Viewer0D(self.lineout_widgets)
+        self.lineout_viewers = Viewer0D(self.lineout_widgets, show_toolbar=False,
+                                        no_margins=True)
+        self.lineout_widgets.setContentsMargins(0, 0, 0, 0)
         self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
         splitter_ver.addWidget(self.plot_widget)
@@ -326,30 +335,31 @@ class View1D(ActionManager, QObject):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
         self.connect_action('do_math', self.do_math)
-        self.connect_action('do_math', self.lineout_plotter.roi_clicked)
+        #self.connect_action('do_math', self.lineout_plotter.roi_clicked)
 
         self.connect_action('scatter', self.data_displayer.plot_with_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xy)
         self.connect_action('sort', self.data_displayer.update_sort)
         self.connect_action('crosshair', self.show_hide_crosshair)
-        self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
+        #self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
         self.connect_action('overlay', self.data_displayer.show_overlay)
         self.connect_action('ROIselect', self.show_ROI_select)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
+        self.roi_manager.color_signal.connect(self.lineout_viewers.update_colors)
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
 
-    def show_lineout_widgets(self):
-        state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
-        for lineout_name in LineoutPlotter.lineout_widgets:
-            lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
-            # lineout.setMouseEnabled(state, state)
-            # lineout.showAxis('left', state)
-            lineout.setVisible(state)
-            lineout.update()
+    # def show_lineout_widgets(self):
+    #     state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
+    #     for lineout_name in LineoutPlotter.lineout_widgets:
+    #         lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
+    #         # lineout.setMouseEnabled(state, state)
+    #         # lineout.showAxis('left', state)
+    #         lineout.setVisible(state)
+    #         lineout.update()
 
     def setup_actions(self):
         self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
@@ -465,7 +475,7 @@ class Viewer1D(ViewerBase):
                                                label=lineout_data.hor_axis.label,
                                                index=0)]))
 
-                    self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
+                    self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
                                                               data=[lineout_data.math_data]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
@@ -480,7 +490,8 @@ class Viewer1D(ViewerBase):
     def prepare_connect_ui(self):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
         self._data_to_show_signal.connect(self.view.display_data)
-        self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
+        self.roi_manager.roi_changed.connect(self.roi_changed)
+        #self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
         self.view.get_double_clicked().connect(self.double_clicked)
 
@@ -496,7 +507,6 @@ class Viewer1D(ViewerBase):
             self.crosshair_changed()
         self.sig_double_clicked.emit(posx, posy)
 
-    @Slot(dict)
     def roi_changed(self):
         self.filter_from_rois.filter_data(self._raw_data)
 

@@ -403,6 +403,7 @@ class Data0DWithHistory:
     def __init__(self, Nsamples=200):
         super().__init__()
         self._datas = dict([])
+        self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
         self._data_length = 0
@@ -425,19 +426,21 @@ class Data0DWithHistory:
 
     @dispatch(data_mod.DataWithAxes)
     def add_datas(self, data: data_mod.DataRaw):
+        self.last_data = data
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
         self.add_datas(datas)
 
     @dispatch(list)
-    def add_datas(self, datas: list):
+    def add_datas(self, data: list):
         """
         Add datas to the history
         Parameters
         ----------
-        datas: (list) list of floats or np.array(float)
+        data: (list) list of floats or np.array(float)
         """
-        datas = {f'data_{ind:02d}': datas[ind] for ind in range(len(datas))}
-        self.add_datas(datas)
+        self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
+        datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
+        self.add_datas(data)
 
     @dispatch(dict)
     def add_datas(self, datas: dict):

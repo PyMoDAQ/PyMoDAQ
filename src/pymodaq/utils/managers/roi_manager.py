@@ -88,6 +88,10 @@ class ROI(pgROI):
         self._menu = QtWidgets.QMenu()
         self._menu.addAction('Set ROI positions', self.set_positions)
 
+    @property
+    def color(self):
+        return self.pen.color()
+
     def set_positions(self):
         mapper = ROIPositionMapper(self.pos(), self.size())
         settings = mapper.show_dialog()
@@ -146,6 +150,10 @@ class LinearROI(pgLinearROI):
 
     def setPen(self, color):
         self.setBrush(color)
+
+    @property
+    def color(self):
+        return self.brush.color()
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
@@ -338,9 +346,9 @@ class ROIManager(QObject):
     new_ROI_signal = Signal(int, str)
     remove_ROI_signal = Signal(str)
     roi_value_changed = Signal(str, tuple)
-
+    color_signal = Signal(list)
     roi_update_children = Signal(list)
-
+    roi_changed = Signal()
     color_list = np.array(plot_colors)
 
     def __init__(self, viewer_widget=None, ROI_type='1D'):
@@ -348,7 +356,7 @@ class ROIManager(QObject):
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
         self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
-        self._ROIs = OrderedDict([])
+        self._ROIs: OrderedDict[str, ROI] = OrderedDict([])
         self.setupUI()
 
     @staticmethod
@@ -373,6 +381,9 @@ class ROIManager(QObject):
             return self.ROIs[roi_key]
         else:
             raise KeyError(f'{roi_key} is not a valid ROI identifier for {self.ROIs}')
+
+    def emit_colors(self):
+        self.color_signal.emit([self._ROIs[roi_key].color for roi_key in self._ROIs])
 
     def add_roi_programmatically(self, roitype=ROI2D_TYPES[0]):
         self.settings.child('ROIs').addNew(roitype)
@@ -451,6 +462,7 @@ class ROIManager(QObject):
 
                 newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
                 newroi.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
+                newroi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
                 newroi.index_signal[int].connect(self.update_roi_tree)
                 try:
                     self.settings.sigTreeStateChanged.disconnect()
@@ -463,18 +475,23 @@ class ROIManager(QObject):
 
                 self.new_ROI_signal.emit(newindex, roi_type)
                 self.update_roi_tree(newindex)
+                self.emit_colors()
+                self.roi_changed.emit()
 
             elif change == 'value':
                 if param.name() in putils.iter_children(self.settings.child('ROIs'), []):
                     parent_name = putils.get_param_path(param)[putils.get_param_path(param).index('ROIs')+1]
                     self.update_roi(parent_name, param)
                     self.roi_value_changed.emit(parent_name, (param, param.value()))
+                if param.name() == 'Color':
+                    self.emit_colors()
 
             elif change == 'parent':
                 if 'ROI' in param.name():
                     roi = self._ROIs.pop(param.name())
                     self.viewer_widget.plotItem.removeItem(roi)
                     self.remove_ROI_signal.emit(param.name())
+                    self.emit_colors()
 
         self.ROI_changed_finished.emit()
 
@@ -489,6 +506,7 @@ class ROIManager(QObject):
         self._ROIs[roi_key].index_signal[int].disconnect()
         if param.name() == 'Color':
             self._ROIs[roi_key].setPen(param.value())
+            self.emit_colors()
         elif param.name() == 'left' or param.name() == 'x':
             pos = self._ROIs[roi_key].pos()
             poss = [param.value(), pos[1]]

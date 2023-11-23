@@ -33,6 +33,7 @@ class DataDisplayer(QObject):
     def __init__(self, plotitem: pyqtgraph.PlotItem):
         super().__init__()
         self._plotitem = plotitem
+        self.colors = PLOT_COLORS.copy()
         self._plotitem.addLegend()
         self._plot_items: List[pyqtgraph.PlotDataItem] = []
         self._min_lines: List[pyqtgraph.InfiniteLine] = []
@@ -46,6 +47,10 @@ class DataDisplayer(QObject):
 
         axis = self._plotitem.getAxis('bottom')
         axis.setLabel(text='Samples', units='S')
+
+    def update_colors(self, colors: List[QtGui.QPen]):
+        self.colors[0:len(colors)] = colors
+        self.update_data(self._data.last_data, force_update=True)
 
     @property
     def legend(self):
@@ -63,26 +68,27 @@ class DataDisplayer(QObject):
     def update_axis(self, history_length: int):
         self._data.length = history_length
 
-    def update_data(self, data: data_mod.DataRaw):
-        if len(data) != len(self._plot_items):
-            self.update_display_items(data)
+    def update_data(self, data: data_mod.DataRaw, force_update=False):
+        if data is not None:
+            if len(data) != len(self._plot_items) or force_update:
+                self.update_display_items(data)
 
-        self._data.add_datas(data)
-        for ind, data_str in enumerate(self._data.datas):
-            self._plot_items[ind].setData(self._data.xaxis, self._data.datas[data_str])
-        if len(self._mins) != len(self._data.datas):
-            self._mins = []
-            self._maxs = []
-
-        for ind, label in enumerate(self._data.datas):
+            self._data.add_datas(data)
+            for ind, data_str in enumerate(self._data.datas):
+                self._plot_items[ind].setData(self._data.xaxis, self._data.datas[data_str])
             if len(self._mins) != len(self._data.datas):
-                self._mins.append(float(np.min(self._data.datas[label])))
-                self._maxs.append(float(np.max(self._data.datas[label])))
-            else:
-                self._mins[ind] = min(self._mins[ind], float(np.min(self._data.datas[label])))
-                self._maxs[ind] = max(self._maxs[ind], float(np.max(self._data.datas[label])))
-            self._min_lines[ind].setValue(self._mins[ind])
-            self._max_lines[ind].setValue(self._maxs[ind])
+                self._mins = []
+                self._maxs = []
+
+            for ind, label in enumerate(self._data.datas):
+                if len(self._mins) != len(self._data.datas):
+                    self._mins.append(float(np.min(self._data.datas[label])))
+                    self._maxs.append(float(np.max(self._data.datas[label])))
+                else:
+                    self._mins[ind] = min(self._mins[ind], float(np.min(self._data.datas[label])))
+                    self._maxs[ind] = max(self._maxs[ind], float(np.max(self._data.datas[label])))
+                self._min_lines[ind].setValue(self._mins[ind])
+                self._max_lines[ind].setValue(self._maxs[ind])
 
     def update_display_items(self, data: data_mod.DataRaw):
         while len(self._plot_items) > 0:
@@ -92,11 +98,11 @@ class DataDisplayer(QObject):
             self._plotitem.removeItem(self._min_lines.pop(0))
 
         for ind in range(len(data)):
-            self._plot_items.append(pyqtgraph.PlotDataItem(pen=PLOT_COLORS[ind]))
+            self._plot_items.append(pyqtgraph.PlotDataItem(pen=self.colors[ind]))
             self._plotitem.addItem(self._plot_items[-1])
             self.legend.addItem(self._plot_items[-1], data.labels[ind])
-            max_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=PLOT_COLORS[ind], style=Qt.DashLine))
-            min_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=PLOT_COLORS[ind], style=Qt.DashLine))
+            max_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=self.colors[ind], style=Qt.DashLine))
+            min_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=self.colors[ind], style=Qt.DashLine))
             self._max_lines.append(max_line)
             self._min_lines.append(min_line)
             max_line.setVisible(self._show_lines)
@@ -116,10 +122,12 @@ class DataDisplayer(QObject):
 
 
 class View0D(ActionManager, QObject):
-    def __init__(self, parent_widget: QtWidgets.QWidget = None):
+    def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
+                 no_margins=False):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
 
+        self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
         self.plot_widget: PlotWidget = PlotWidget()
         self.values_list = QtWidgets.QListWidget()
@@ -136,6 +144,8 @@ class View0D(ActionManager, QObject):
         self._setup_widgets()
         self._connect_things()
         self._prepare_ui()
+        if not show_toolbar:
+            self.splitter.setSizes([0,1])
 
         self.get_action('Nhistory').setValue(200) #default history length
 
@@ -151,8 +161,12 @@ class View0D(ActionManager, QObject):
     def _setup_widgets(self):
         self.splitter = QtWidgets.QSplitter(Qt.Vertical)
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
+        if self.no_margins:
+            self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
+
         self.parent_widget.layout().addWidget(self.splitter)
         self.splitter.addWidget(self.toolbar)
+        self.splitter.setStretchFactor(0, 0)
 
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
         self.splitter.addWidget(splitter_hor)
@@ -200,10 +214,13 @@ class Viewer0D(ViewerBase):
     Datas and measurements are then exported with the signal data_to_export_signal
     """
 
-    def __init__(self, parent=None, title=''):
+    def __init__(self, parent=None, title='', show_toolbar=True, no_margins=False):
         super().__init__(parent, title)
-        self.view = View0D(self.parent)
+        self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
         self._labels = []
+
+    def update_colors(self, colors: List[QtGui.QPen]):
+        self.view.data_displayer.update_colors(colors)
 
     @property
     def labels(self):
@@ -232,7 +249,7 @@ def main_view():
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
-    prog = Viewer0D(widget)
+    prog = Viewer0D(widget, show_toolbar=False)
     from pymodaq.utils.daq_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
