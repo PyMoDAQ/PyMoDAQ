@@ -440,7 +440,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.add_action('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
         self.add_action('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
         self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
-
+        self.set_action_checked('aspect_ratio',True)
         self.add_action('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
         self.add_action('ROIselect', 'ROI Select', 'Select_24',
                         tip='Show/Hide ROI selection area', checkable=True)
