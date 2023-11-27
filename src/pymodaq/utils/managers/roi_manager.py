@@ -441,8 +441,6 @@ class ROIManager(QObject):
                     else:
                         newroi = EllipseROI(index=newindex, pos=pos,
                                             size=[width, height])
-                        
-                    newroi.setTransformOriginPoint(QPointF(pos[0],pos[1]))
                     newroi.setPen(par['Color'])
 
                 newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
