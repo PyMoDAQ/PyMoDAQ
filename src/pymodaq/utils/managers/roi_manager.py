@@ -63,7 +63,7 @@ class ROIPositionMapper(QtWidgets.QWidget):
         self.settings_tree.setParameters(self.settings, showTop=False)
         dialog.setLayout(vlayout)
 
-        buttonBox = QtWidgets.QDialogButtonBox(parent=self);
+        buttonBox = QtWidgets.QDialogButtonBox(parent=self)
         buttonBox.addButton('Apply', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
         buttonBox.addButton('Cancel', buttonBox.RejectRole)
@@ -421,6 +421,7 @@ class ROIManager(QObject):
                     roi_type = ''
 
                     pos = self.viewer_widget.plotItem.vb.viewRange()[0]
+                    pos = pos[0] + np.diff(pos)*np.array([2,4])/6
                     newroi = LinearROI(index=newindex, pos=pos)
                     newroi.setZValue(-10)
                     newroi.setBrush(par.child('Color').value())
@@ -440,6 +441,8 @@ class ROIManager(QObject):
                     else:
                         newroi = EllipseROI(index=newindex, pos=pos,
                                             size=[width, height])
+                        
+                    newroi.setTransformOriginPoint(QPointF(pos[0],pos[1]))
                     newroi.setPen(par['Color'])
 
                 newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
@@ -497,7 +500,7 @@ class ROIManager(QObject):
             self._ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'angle':
-            self._ROIs[roi_key].setAngle(param.value())
+            self._ROIs[roi_key].setAngle(param.value(),center=[0.5,0.5])
         elif param.name() == 'width':
             size = self._ROIs[roi_key].size()
             self._ROIs[roi_key].setSize((param.value(), size[1]))
