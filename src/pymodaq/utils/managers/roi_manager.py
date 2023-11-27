@@ -340,8 +340,6 @@ class ROIScalableGroup(GroupParameter):
 
 
 class ROIManager(QObject):
-    ROI_changed = Signal()
-    ROI_changed_finished = Signal()
 
     new_ROI_signal = Signal(int, str)
     remove_ROI_signal = Signal(str)
@@ -460,8 +458,6 @@ class ROIManager(QObject):
                                             size=[width, height])
                     newroi.setPen(par['Color'])
 
-                newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
-                newroi.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
                 newroi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
                 newroi.index_signal[int].connect(self.update_roi_tree)
                 try:
@@ -493,12 +489,11 @@ class ROIManager(QObject):
                     self.remove_ROI_signal.emit(param.name())
                     self.emit_colors()
 
-        self.ROI_changed_finished.emit()
-
     def update_use_channel(self, channels: List[str]):
+        channels.append('All')
         for ind in range(len(self)):
             val = self.settings['ROIs', self.roi_format(ind), 'use_channel']
-            self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setOpts(limits=channels)
+            self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setLimits(channels)
             if val not in channels:
                 self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
 
