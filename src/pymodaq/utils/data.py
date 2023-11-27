@@ -12,6 +12,7 @@ import numpy as np
 from typing import List, Tuple, Union, Any
 from typing import Iterable as IterableType
 from collections.abc import Iterable
+from collections import OrderedDict
 import logging
 
 import warnings
@@ -670,6 +671,9 @@ class DataBase(DataLowLevel):
     def __gt__(self, other):
         return self._comparison_common(other, '__gt__')
 
+    def deepcopy(self):
+        return copy.deepcopy(self)
+
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
         """ Compute the weighted average between self and other DataBase
 
@@ -712,6 +716,13 @@ class DataBase(DataLowLevel):
                 raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
         self.data = self.data + data.data
         self.labels.extend(data.labels)
+
+    def pop(self, index: int) -> DataBase:
+        """ Returns a copy of self but with data taken at the specified index"""
+        dwa = self.deepcopy()
+        dwa.data = [dwa.data[index]]
+        dwa.labels = [dwa.labels[index]]
+        return dwa
 
     @property
     def shape(self):
@@ -795,7 +806,7 @@ class DataBase(DataLowLevel):
         if isinstance(data, list):
             if len(data) == 0:
                 is_valid = False
-            if not isinstance(data[0], np.ndarray):
+            elif not isinstance(data[0], np.ndarray):
                 is_valid = False
             elif len(data[0].shape) == 0:
                 is_valid = False
@@ -864,6 +875,12 @@ class DataBase(DataLowLevel):
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
         self._data = data
+
+    def to_dict(self):
+        data_dict = OrderedDict([])
+        for ind in range(len(self)):
+            data_dict[self.labels[ind]] = self[ind]
+        return data_dict
 
 
 class AxesManagerBase:
@@ -1810,8 +1827,7 @@ class DataWithAxes(DataBase):
         finally:
             self._data = old_data
 
-    def deepcopy(self):
-        return copy.deepcopy(self)
+
 
     @property
     def _am(self) -> AxesManagerBase:
@@ -2008,9 +2024,11 @@ class DataToExport(DataLowLevel):
             name = self.name
         filtered_data = self.get_data_from_dim(dim)
         ndarrays = []
+        labels = []
         for dwa in filtered_data:
             ndarrays.extend(dwa.data)
-        dwa = DataRaw(name, dim=dim, data=ndarrays)
+            labels.extend(dwa.labels)
+        dwa = DataRaw(name, dim=dim, data=ndarrays, labels=labels)
         return dwa
 
     def __repr__(self):
