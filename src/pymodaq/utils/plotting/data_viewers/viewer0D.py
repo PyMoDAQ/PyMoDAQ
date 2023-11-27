@@ -53,8 +53,12 @@ class DataDisplayer(QObject):
         self.update_data(self._data.last_data, force_update=True)
 
     @property
-    def legend(self):
+    def legend(self) -> pyqtgraph.LegendItem:
         return self._plotitem.legend
+
+    @property
+    def legend_names(self) -> List[str]:
+        return [item[1].text for item in self.legend.items]
 
     @property
     def axis(self):
@@ -70,7 +74,7 @@ class DataDisplayer(QObject):
 
     def update_data(self, data: data_mod.DataRaw, force_update=False):
         if data is not None:
-            if len(data) != len(self._plot_items) or force_update:
+            if len(data) != len(self._plot_items) or force_update or data.labels != self.legend_names:
                 self.update_display_items(data)
 
             self._data.add_datas(data)
