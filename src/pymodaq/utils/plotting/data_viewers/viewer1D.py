@@ -251,10 +251,8 @@ class View1D(ActionManager, QObject):
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
 
-    def display_roi_lineouts(self, roi_dict):
-        integrated_dwa = DataCalculated('roi',
-                                        data=[roi_dict[roi_key].int_data for roi_key in roi_dict],
-                                        labels=[roi_key for roi_key in roi_dict])
+    def display_roi_lineouts(self, roi_dte: DataToExport):
+        integrated_dwa = roi_dte.merge_as_dwa('Data0D')
         self.lineout_viewers.show_data(integrated_dwa)
         #self.lineout_plotter.plot_roi_lineouts(roi_dict)
 
@@ -302,9 +300,12 @@ class View1D(ActionManager, QObject):
     @Slot(int, str)
     def update_roi_channels(self, index, roi_type=''):
         """Update the use_channel setting each time a ROI is added"""
-        item_param = self.roi_manager.settings.child('ROIs', self.roi_manager.roi_format(index))
-        item_param.child('use_channel').setOpts(limits=self.data_displayer.labels)
-        item_param.child('use_channel').setValue(self.data_displayer.labels[0])
+        self.roi_manager.update_use_channel(self.data_displayer.labels.copy())
+        # item_param = self.roi_manager.settings.child('ROIs', self.roi_manager.roi_format(index))
+        # channels = self.data_displayer.labels[:]
+        # channels.append('all')
+        # item_param.child('use_channel').setLimits(channels)
+        # item_param.child('use_channel').setValue(self.data_displayer.labels[0])
 
     def setup_widgets(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -322,6 +323,7 @@ class View1D(ActionManager, QObject):
         self.lineout_viewers = Viewer0D(self.lineout_widgets, show_toolbar=False,
                                         no_margins=True)
         self.lineout_widgets.setContentsMargins(0, 0, 0, 0)
+        self.lineout_widgets.hide()
         self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
         splitter_ver.addWidget(self.plot_widget)
@@ -347,7 +349,7 @@ class View1D(ActionManager, QObject):
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
-        self.roi_manager.color_signal.connect(self.lineout_viewers.update_colors)
+        #self.roi_manager.color_signal.connect(self.lineout_viewers.update_colors)
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
@@ -383,16 +385,14 @@ class View1D(ActionManager, QObject):
         else:
             self.plotitem.vb.setAspectLocked(lock=False)
 
-    def update_crosshair_data(self, crosshair_dict: dict):
-        try:
+    def update_crosshair_data(self, crosshair_dte: DataToExport):
+        if len(crosshair_dte) > 0:
+            dwa = crosshair_dte[0]
             string = "y="
-            for key in crosshair_dict:
-                string += "{:.3e} / ".format(crosshair_dict[key]['value'])
+            for data_array in dwa:
+                string += f"{float(data_array[0]):.3e} / "
             self.get_action('y_label').setText(string)
-            self.get_action('x_label').setText(f"x={crosshair_dict[key]['pos']:.3e} ")
-
-        except Exception as e:
-            pass
+            self.get_action('x_label').setText(f"x={float(dwa.axes[0].get_data()[0]):.3e} ")
 
     @Slot(bool)
     def show_hide_crosshair(self, show=True):
@@ -456,31 +456,32 @@ class Viewer1D(ViewerBase):
     def add_plot_item(self, item):
         self.view.add_plot_item(item)
 
-    @Slot(dict)
-    def process_crosshair_lineouts(self, crosshair_dict):
-        self.view.update_crosshair_data(crosshair_dict)
+
+    def process_crosshair_lineouts(self, crosshair_dte: DataToExport):
+        self.view.update_crosshair_data(crosshair_dte)
         self.crosshair_dragged.emit(*self.view.crosshair.get_positions())
 
-    @Slot(dict)
-    def process_roi_lineouts(self, roi_dict):
-        self.view.display_roi_lineouts(roi_dict)
+    def process_roi_lineouts(self, roi_dte: DataToExport):
+        self.view.display_roi_lineouts(roi_dte)
         self.measure_data_dict = dict([])
-        for roi_key, lineout_data in roi_dict.items():
-            if not self._display_temporary:
-                if lineout_data.hor_data.size != 0:
-                    self.data_to_export.append(
-                        DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                    axes=[Axis(data=lineout_data.hor_axis.get_data(),
-                                               units=lineout_data.hor_axis.units,
-                                               label=lineout_data.hor_axis.label,
-                                               index=0)]))
+        # for roi_key, lineout_data in roi_dte.items():
+        #     if not self._display_temporary:
+                # if lineout_data.hor_data.size != 0:
+                #     self.data_to_export.append(
+                #         DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
+                #                     axes=[Axis(data=lineout_data.hor_axis.get_data(),
+                #                                units=lineout_data.hor_axis.units,
+                #                                label=lineout_data.hor_axis.label,
+                #                                index=0)]))
+                #
+                #     self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
+                #                                               data=[lineout_data.math_data]))
+        if not self._display_temporary:
+            self.data_to_export.append(roi_dte.data)
 
-                    self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
-                                                              data=[lineout_data.math_data]))
+        self.measure_data_dict = roi_dte.merge_as_dwa('Data0D').to_dict()
 
-            self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
-
-            QtWidgets.QApplication.processEvents()
+        QtWidgets.QApplication.processEvents()
 
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         if not self._display_temporary:

@@ -14,6 +14,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.data import DataFromRoi, DataToExport, Axis
 
 
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
@@ -47,7 +48,7 @@ class Filter:
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
 
-    def _filter_data(self, data: data_mod.DataFromPlugins):
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
         raise NotImplementedError
 
 
@@ -67,18 +68,22 @@ class Filter1DFromCrosshair(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins):
-        data_dict = dict([])
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('Crosshair')
         if data is not None:
             axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
 
                 self._x, self._y = self.crosshair.get_positions()
-                ind_x = self._axis.find_index(self._x)
-                for label, dat in zip(data.labels, data.data):
-                    data_dict[label] = dict(pos=self._axis.get_data()[ind_x], value=dat[ind_x])
-        return data_dict
+                dwa = data.isig[data.axes[0].find_indexes([self._x])[0]]
+                dwa.axes = [Axis('x', data=np.array([self._x]))]
+                dte.append(dwa)
+                # for label, dat in zip(data.labels, data.data):
+                # dte.append(DataFromRoi('crosshair', data=[np.array([dat[ind_x]]) for dat in data.data],
+                #                        axes=[Axis(data=np.array([self._axis.get_data()[ind_x]]))],
+                #                        labels=data.labels))
+        return dte
 
 
 class Filter2DFromCrosshair(Filter):
@@ -107,7 +112,7 @@ class Filter2DFromCrosshair(Filter):
         if activate:
             self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
 
-    def _filter_data(self, datas: data_mod.DataFromPlugins):
+    def _filter_data(self, datas: data_mod.DataFromPlugins) -> DataToExport:
         data_dict = dict([])
         if datas is not None:
             self._x, self._y = self.crosshair.get_positions()
@@ -207,39 +212,51 @@ class Filter1DFromRois(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
-        data_dict = dict([])
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('roi1D')
         try:
             axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
             if data is not None:
                 for roi_key, roi in self._ROIs.items():
-                    try:
-                        data_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
-                    except ValueError:
-                        data_index = 0
-                    data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                                data, data_index)
+                    if self._roi_settings['ROIs', roi_key, 'use_channel'] == 'All':
+                        data_index = list(range(len(data.labels)))
+                    else:
+                        try:
+                            data_index = [data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])]
+                        except ValueError:
+                            data_index = [0]
+                    dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key), data)
+                    if self._roi_settings['ROIs', roi_key, 'use_channel'] == 'All':
+                        dte.append(dte_tmp.data)
+                    else:
+                        for index in data_index:
+                            for dwa in dte_tmp:
+                                dte.append(dwa.pop(index))
+
         except Exception as e:
             pass
-        return data_dict
+        finally:
+            return dte
 
-    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
+    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
         if data is not None:
+            dte = DataToExport('ROI1D')
             _slice = self.get_slice_from_roi(roi, data)
-            sub_data = data.isig[_slice]
+            sub_data: DataFromRoi = data.isig[_slice]
+            sub_data.name = 'HorData'
+            sub_data.origin = roi_param.name()
+            sub_data.labels = [f'{roi_param.name()}/{label}' for label in sub_data.labels]
+            dte.append(sub_data)
             if sub_data.size != 0:
                 processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
             else:
                 processed_data = None
-            if processed_data is None:
-                return LineoutData()
-            else:
-                if len(sub_data.axes) == 0:
-                    pass
-                return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
-                                   int_data=processed_data.data[data_index])
+            if processed_data is not None:
+                processed_data.name = 'IntData'
+                dte.append(processed_data)
+            return dte
 
     def get_slice_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> slice:
         ind_x_min, ind_x_max = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())
@@ -269,7 +286,7 @@ class Filter2DFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
         data_dict = dict([])
         try:
             if data is not None:
