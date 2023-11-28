@@ -516,16 +516,19 @@ class TestIsocurve:
 class TestAspectRatio:
     def test_aspect_ratio_action(self, init_viewer2D):
         prog, qtbot = init_viewer2D
-        data= init_data()
+        data = init_data()
         prog.show_data(data)
 
-        prog.view.get_action('aspect_ratio').trigger()
         assert prog.view.is_action_checked('aspect_ratio')
         assert prog.view.image_widget.plotitem.vb.state['aspectLocked']
 
         prog.view.get_action('aspect_ratio').trigger()
         assert not prog.view.is_action_checked('aspect_ratio')
         assert not prog.view.image_widget.plotitem.vb.state['aspectLocked']
+
+        prog.view.get_action('aspect_ratio').trigger()
+        assert prog.view.is_action_checked('aspect_ratio')
+        assert prog.view.image_widget.plotitem.vb.state['aspectLocked']
 
 
 class TestCrosshair:
