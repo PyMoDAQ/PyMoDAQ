@@ -63,8 +63,9 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pg.PlotItem):
+    def __init__(self, plotitem: pg.PlotItem, flip_axes=False):
         super().__init__()
+        self._flip_axes = flip_axes
         self._plotitem = plotitem
         self._plotitem.addLegend()
         self._plot_items: List[pg.PlotDataItem] = []
@@ -131,7 +132,10 @@ class DataDisplayer(QObject):
                 if not do_xy:
                     if self._axis is None:
                         self.update_axis(Axis('index', data=Axis.create_simple_linear_data(dat.size)))
-                    self._plot_items[ind_data].setData(self._axis.get_data(), dat)
+                    if self._flip_axes:
+                        self._plot_items[ind_data].setData(dat, self._axis.get_data())
+                    else:
+                        self._plot_items[ind_data].setData(self._axis.get_data(), dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 
@@ -204,15 +208,18 @@ class DataDisplayer(QObject):
 
 
 class View1D(ActionManager, QObject):
-    def __init__(self, parent_widget: QtWidgets.QWidget = None):
+    def __init__(self, parent_widget: QtWidgets.QWidget = None, show_toolbar=True,
+                 no_margins=False, flip_axes=False):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
+
+        self.no_margins = no_margins
+        self.flip_axes = flip_axes
 
         self.data_displayer: DataDisplayer = None
         self.plot_widget: PlotWidget = None
         self.lineout_widgets: QtWidgets.QWidget = None
         self.lineout_viewers: Viewer0D = None
-        self.graphical_widgets: dict = None
         self.crosshair: Crosshair = None
 
         self.roi_target = pg.InfiniteLine(pen='w')
@@ -227,12 +234,9 @@ class View1D(ActionManager, QObject):
 
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIManager('1D')
-        self.data_displayer = DataDisplayer(self.plotitem)
+        self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
 
         self.setup_widgets()
-
-        # self.lineout_plotter = LineoutPlotter(self.graphical_widgets,
-        #                                       self.roi_manager, self.crosshair)
 
         self.connect_things()
         self.prepare_ui()
@@ -242,6 +246,8 @@ class View1D(ActionManager, QObject):
         self.roi_target.setVisible(False)
         self.ROIselect.setVisible(False)
 
+        if not show_toolbar:
+            self.splitter_ver.setSizes([0,1])
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -309,25 +315,26 @@ class View1D(ActionManager, QObject):
 
     def setup_widgets(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
+        if self.no_margins:
+            self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
         self.parent_widget.layout().addWidget(splitter_hor)
 
-        splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
-        splitter_hor.addWidget(splitter_ver)
+        self.splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
+        splitter_hor.addWidget(self.splitter_ver)
         splitter_hor.addWidget(self.roi_manager.roiwidget)
         self.roi_manager.roiwidget.hide()
 
-        splitter_ver.addWidget(self.toolbar)
+        self.splitter_ver.addWidget(self.toolbar)
 
         self.lineout_widgets = QtWidgets.QWidget()
         self.lineout_viewers = Viewer0D(self.lineout_widgets, show_toolbar=False,
                                         no_margins=True)
         self.lineout_widgets.setContentsMargins(0, 0, 0, 0)
         self.lineout_widgets.hide()
-        self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
-        splitter_ver.addWidget(self.plot_widget)
-        splitter_ver.addWidget(self.lineout_widgets)
+        self.splitter_ver.addWidget(self.plot_widget)
+        self.splitter_ver.addWidget(self.lineout_widgets)
         self.roi_manager.viewer_widget = self.plot_widget
 
         self.crosshair = Crosshair(self.plotitem, orientation='vertical')
@@ -410,14 +417,15 @@ class View1D(ActionManager, QObject):
 class Viewer1D(ViewerBase):
     """this plots 1D data on a plotwidget. Math and measurement can be done on it.
 
-    Datas and measurements are then exported with the signal data_to_export_signal
+    Data and measurements are then exported with the signal data_to_export_signal
     """
     ROI_select_signal = Signal(QRectF)
 
-    def __init__(self, parent: QtWidgets.QWidget = None, title=''):
+    def __init__(self, parent: QtWidgets.QWidget = None, title='', show_toolbar=True, no_margins=False,
+                 flip_axes=False):
         super().__init__(parent=parent, title=title)
 
-        self.view = View1D(self.parent)
+        self.view = View1D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins, flip_axes=flip_axes)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
