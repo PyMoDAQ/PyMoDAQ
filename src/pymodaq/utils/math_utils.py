@@ -221,6 +221,19 @@ def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
     return data
 
 
+def rotate(origin, point, angle):
+    """
+    Rotate a point counterclockwise by a given angle around a given origin.
+
+    The angle should be given in radians.
+    """
+    ox, oy = origin
+    px, py = point
+
+    qx = ox + np.cos(angle) * (px - ox) - np.sin(angle) * (py - oy)
+    qy = oy + np.sin(angle) * (px - ox) + np.cos(angle) * (py - oy)
+    return qx, qy
+
 def ftAxis(Npts, omega_max):
     """
     Given two numbers Npts,omega_max, return two vectors spanning the temporal
