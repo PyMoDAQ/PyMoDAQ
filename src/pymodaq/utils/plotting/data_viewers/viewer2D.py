@@ -578,6 +578,9 @@ class View2D(ActionManager, QtCore.QObject):
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
+        rect = self.data_displayer.get_image('red').boundingRect()
+        self.ROIselect.setPos(rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2)
+        self.ROIselect.setSize(rect.size() * 2 / 3)
 
     def set_axis_label(self, position, label='', units=''):
         """
