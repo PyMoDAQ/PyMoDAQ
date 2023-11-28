@@ -14,7 +14,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.data import DataFromRoi, DataToExport, Axis
+from pymodaq.utils.data import DataFromRoi, DataToExport, Axis, DataWithAxes
 
 
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
@@ -112,50 +112,47 @@ class Filter2DFromCrosshair(Filter):
         if activate:
             self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
 
-    def _filter_data(self, datas: data_mod.DataFromPlugins) -> DataToExport:
-        data_dict = dict([])
-        if datas is not None:
+    def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
+
+        if dwa is not None:
             self._x, self._y = self.crosshair.get_positions()
-            data_type = datas.distribution
-            for data_index in range(len(self._image_keys)):
-                if data_index < len(datas.data):
-                    data = datas.data[data_index]
-                    image_type = self._image_keys[data_index]
-                    if data_type == 'uniform':
-                        data_dict[image_type] = self.get_data_from_uniform(image_type, data)
-                    elif data_type == 'spread':
-                        data_dict[image_type] = self.get_data_from_spread(image_type, data)
-        return data_dict
+            data_type = dwa.distribution
+            if data_type == 'uniform':
+                dte = self.get_data_from_uniform(dwa)
+            elif data_type == 'spread':
+                dte = self.get_data_from_spread(dwa)
+        return dte
 
-    def get_data_from_uniform(self, data_key, data):
-        hor_axis, ver_axis = \
-            np.linspace(0, self._graph_items[data_key].width() - 1, self._graph_items[data_key].width()),\
-            np.linspace(0, self._graph_items[data_key].height() - 1, self._graph_items[data_key].height())
-
-        indx, indy = self.mapfromview(self._x, self._y, data_key)
+    def get_data_from_uniform(self, dwa: DataWithAxes) -> DataToExport:
+        indx, indy = self.mapfromview(self._x, self._y, 'red')
 
         data_H_index = slice(None, None, 1)
         data_V_index = slice(None, None, 1)
         H_indexes = (utils.rint(indy), data_H_index)
         V_indexes = (data_V_index, utils.rint(indx))
-
-        out_of_bounds = False
-        if 0 <= H_indexes[0] < len(ver_axis):
-            hor_data = data[H_indexes]
-        else:
-            out_of_bounds = True
-            hor_data = np.zeros(hor_axis.shape)
-        if 0 <= V_indexes[1] < len(hor_axis):
-            ver_data = data[V_indexes]
-        else:
-            out_of_bounds = True
-            ver_data = np.zeros(ver_axis.shape)
-        if out_of_bounds:
-            ind_data = 0.
-        else:
-            ind_data = data[utils.rint(indy), utils.rint(indx)]
-        return LineoutData(hor_axis=hor_axis, ver_axis=ver_axis, hor_data=hor_data, ver_data=ver_data,
-                           int_data=ind_data)
+        dte = DataToExport('Crosshair')
+        try:
+            dwa_hor = dwa.isig[H_indexes]
+            dwa_hor.labels = [f'Crosshair/{label}' for label in dwa_hor.labels]
+            dwa_hor.name = 'hor'
+            dte.append(dwa_hor)
+        except IndexError:
+            pass
+        try:
+            dwa_ver = dwa.isig[V_indexes]
+            dwa_ver.labels = [f'Crosshair/{label}' for label in dwa_ver.labels]
+            dwa_ver.name = 'ver'
+            dte.append(dwa_ver)
+        except IndexError:
+            pass
+        try:
+            dwa_int = dwa.isig[utils.rint(indy), utils.rint(indx)]
+            dwa_int.labels = [f'Crosshair/{label}' for label in dwa_int.labels]
+            dwa_int.name = 'int'
+            dte.append(dwa_int)
+        except IndexError:
+            pass
+        return dte
 
     def get_data_from_spread(self, data_key, data):
         data_H_index = slice(None, None, 1)
