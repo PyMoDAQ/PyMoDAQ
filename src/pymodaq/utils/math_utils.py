@@ -221,12 +221,22 @@ def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
     return data
 
 
-def rotate(origin, point, angle):
+def rotate2D(origin:tuple = (0,0), point:tuple = (0,0), angle:float = 0):
     """
     Rotate a point counterclockwise by a given angle around a given origin.
 
     The angle should be given in radians.
-    """
+    Parameters
+    ----------
+    origin: (tuple) x,y coordinate from which to rotate
+    point: (tuple) x,y coordinate of point to rotate
+    angle: (float) a float to rotate main axes, in radian
+
+    Returns
+    -------
+    out : (tuple) x,y coordinate of rotated point
+
+    """    
     ox, oy = origin
     px, py = point
 
