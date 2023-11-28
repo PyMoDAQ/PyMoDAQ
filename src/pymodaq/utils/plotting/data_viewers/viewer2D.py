@@ -19,6 +19,8 @@ from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.widgets import ImageWidget
 
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -271,7 +273,7 @@ class LineoutPlotter(LineoutPlotter):
     crosshair:
         The Crosshair object
     """
-    lineout_widgets = ['hor', 'ver', 'int']
+    lineout_types = ['hor', 'ver', 'int']
 
     def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
         super().__init__(graph_widgets, roi_manager, crosshair)
@@ -292,7 +294,7 @@ class LineoutPlotter(LineoutPlotter):
     def setup_crosshair(self):
         for image_key in IMAGE_TYPES:
             self._crosshair_curves[image_key] = \
-                {curv_key: curve_item_factory(image_key) for curv_key in self.lineout_widgets}
+                {curv_key: curve_item_factory(image_key) for curv_key in self.lineout_types}
             self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
 
     def show_crosshair_curves(self, curve_key, show=True):
@@ -302,10 +304,19 @@ class LineoutPlotter(LineoutPlotter):
 
 class View2D(ActionManager, QtCore.QObject):
 
+    lineout_types = ['hor', 'ver', 'int']
+
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
+
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+
+        self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in self.lineout_types}
+        self.lineout_viewers = dict(hor=Viewer1D(self._lineout_widgets['hor'], show_toolbar=False, no_margins=True),
+                                    ver=Viewer1D(self._lineout_widgets['ver'], show_toolbar=False, no_margins=True,
+                                                 flip_axes=True),
+                                    int=Viewer0D(self._lineout_widgets['int'], show_toolbar=False, no_margins=True))
 
         self.setup_actions()
 
@@ -327,7 +338,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.isocurver: IsoCurver = None
 
         self.crosshair = Crosshair(self.image_widget)
-        self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
 
         self.connect_things()
         self.prepare_ui()
@@ -411,8 +421,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter.addWidget(self.splitter_VLeft)
         self.splitter.addWidget(self.splitter_VRight)
 
-        self._lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LineoutPlotter.lineout_widgets}
-        self.graphical_widgets = dict(lineouts=self._lineout_widgets, image=self.image_widget)
         self.splitter_VLeft.addWidget(self.image_widget)
         self.splitter_VLeft.addWidget(self._lineout_widgets['hor'])
         self.splitter_VRight.addWidget(self._lineout_widgets['ver'])
@@ -461,13 +469,10 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
         self.connect_action('histo', self.show_hide_histogram)
-        self.connect_action('roi', self.lineout_plotter.roi_clicked)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('ROIselect', self.show_ROI_select)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
-        self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
-
 
     def prepare_ui(self):
         self.ROIselect.setVisible(False)
@@ -483,17 +488,20 @@ class View2D(ActionManager, QtCore.QObject):
     def display_roi_lineouts(self, roi_dict):
         self.lineout_plotter.plot_roi_lineouts(roi_dict)
 
-    def display_crosshair_lineouts(self, crosshair_dict):
-        self.lineout_plotter.plot_crosshair_lineouts(crosshair_dict)
+    def display_crosshair_lineouts(self, crosshair_dte: DataToExport):
+        for lineout_type in self.lineout_types:
+            dwa = crosshair_dte.get_data_from_name(lineout_type)
+            if dwa is not None:
+                self.lineout_viewers[lineout_type].show_data(dwa)
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('roi') or self.is_action_checked('crosshair')
-        for lineout_name in LineoutPlotter.lineout_widgets:
-            lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
-            lineout.setMouseEnabled(state, state)
-            lineout.showAxis('left', state)
-            lineout.setVisible(state)
-            lineout.update()
+        # for lineout_name in LineoutPlotter.lineout_widgets:
+        #     lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
+        #     lineout.setMouseEnabled(state, state)
+        #     lineout.showAxis('left', state)
+        #     lineout.setVisible(state)
+        #     lineout.update()
         self.prepare_image_widget_for_lineouts()
 
     def get_visible_images(self):
@@ -813,20 +821,21 @@ class Viewer2D(ViewerBase):
 
         self.view.roi_manager.roiwidget.setVisible(show_roi_widget)
 
-    def update_crosshair_data(self, crosshair_dict):
+    def update_crosshair_data(self, crosshair_dte: DataToExport):
         try:
             posx, posy = self.view.get_crosshair_position()
             (posx_scaled, posy_scaled) = self.view.scale_axis(posx, posy)
 
             dat = f'({posx_scaled:.1e}{posy_scaled:.1e})\n'
-            for image_key in IMAGE_TYPES:
-                if self.view.is_action_checked(image_key):
-                    dat += f' {image_key[0]}:{crosshair_dict[image_key].int_data:.1e}\n'
+            dwa_int = crosshair_dte.get_data_from_name('int')
+            if dwa_int is not None:
+                for ind_data in range(len(dwa_int)):
+                    dat += f' {dwa_int.labels[ind_data]}:{float(dwa_int[ind_data][0]):.1e}\n'
 
-            self.view.set_action_text('position', dat)
+                self.view.set_action_text('position', dat)
 
         except Exception as e:
-            print(e)
+            logger.warning(str(e))
 
     def prepare_connect_ui(self):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
@@ -838,7 +847,7 @@ class Viewer2D(ViewerBase):
         self.view.connect_action('isocurve', slot=self.update_data)
         self.view.histogrammer.gradient_changed.connect(lambda: setattr(self, '_is_gradient_manually_set', True))
 
-        self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
+        # todo : self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
 
         self.view.get_double_clicked().connect(self.double_clicked)
@@ -879,16 +888,16 @@ class Viewer2D(ViewerBase):
             self.view.set_axis_scaling('right', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
 
-    def scale_lineout_dicts(self, lineout_dicts):
-        for lineout_data in lineout_dicts.values():
-            lineout_data.hor_axis, lineout_data.ver_axis = \
-                self.view.scale_axis(lineout_data.hor_axis, lineout_data.ver_axis)
-        return lineout_dicts
+    # def scale_lineout_dicts(self, lineout_dicts):
+    #     for lineout_data in lineout_dicts.values():
+    #         lineout_data.hor_axis, lineout_data.ver_axis = \
+    #             self.view.scale_axis(lineout_data.hor_axis, lineout_data.ver_axis)
+    #     return lineout_dicts
 
-    @Slot(dict)
-    def process_crosshair_lineouts(self, crosshair_dict):
-        self.view.display_crosshair_lineouts(self.scale_lineout_dicts(crosshair_dict))
-        self.update_crosshair_data(crosshair_dict)
+    @Slot(DataToExport)
+    def process_crosshair_lineouts(self, dte):
+        self.view.display_crosshair_lineouts(dte)
+        self.update_crosshair_data(dte)
         self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
     @Slot(dict)
