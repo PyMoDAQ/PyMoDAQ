@@ -1165,6 +1165,7 @@ class DAQ_Detector(QObject):
         self.waiting_for_data = False
         self.controller = None
         self.logger = set_logger(f'{logger.name}.{title}.detector')
+        self._title = title
         self.detector_name = detector_name
         self.detector: DAQ_Viewer_base = None
         self.controller_adress: int = None
@@ -1178,6 +1179,10 @@ class DAQ_Detector(QObject):
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
         self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
+
+    @property
+    def title(self):
+        return self._title
 
     def update_settings(self, settings_parameter_dict):
         """ Apply a Parameter serialized as a dict to the instrument plugin class or to self
@@ -1417,8 +1422,9 @@ class DAQ_Detector(QObject):
     def close(self):
         """ Call the close method of the instrument plugin class
         """
-        status = self.detector.close()
-        return status
+        if self.detector is not None:
+            status = self.detector.close()
+            return status
 
 
 def prepare_docks(area, title):

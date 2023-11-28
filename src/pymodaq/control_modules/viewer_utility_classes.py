@@ -146,7 +146,7 @@ class DAQ_Viewer_base(QObject):
     params = []
 
     def __init__(self, parent=None, params_state=None):
-        super().__init__()
+        QObject.__init__(self)  # to make sure this is the parent class
 
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when
         # the current class instance parameter list is a child of some other class
@@ -174,6 +174,11 @@ class DAQ_Viewer_base(QObject):
         self.y_axis = None
 
         self.controller = None
+
+        if parent is not None:
+            self._title = parent.title
+        else:
+            self._title = "mydetector"
 
         self.ini_attributes()
 
@@ -288,7 +293,7 @@ class DAQ_Viewer_base(QObject):
             self.parent.status_sig.emit(status)
             QtWidgets.QApplication.processEvents()
         else:
-            print(*status)
+            print(status)
 
     def update_scanner(self, scan_parameters):
         #todo check this because ScanParameters has been removed
