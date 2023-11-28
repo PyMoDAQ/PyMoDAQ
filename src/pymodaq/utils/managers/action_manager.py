@@ -48,7 +48,8 @@ class QAction(QAction):
         self.setIcon(create_icon(icon_name))
 
 
-def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
+def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, checked=False,
+              slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut=None):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -62,6 +63,8 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, slot
         a tooltip to be displayed when hovering above the action
     checkable: bool
         set the checkable state of the action
+    checked: bool
+        set the current state of the action
     slot: callable
         Method or function that will be called when the action is triggered
     toolbar: QToolBar
@@ -79,6 +82,8 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, slot
     if slot is not None:
         action.connect_to(slot)
     action.setCheckable(checkable)
+    if checkable:
+        action.setChecked(checked)
     action.setToolTip(tip)
     if toolbar is not None:
         toolbar.addAction(action)
@@ -178,7 +183,7 @@ class ActionManager:
                                   f'{self.setup_actions.__doc__}')
 
     def add_action(self, short_name: str = '', name: str = '', icon_name: str = '', tip='', checkable=False,
-                   toolbar=None, menu=None,
+                   checked=False, toolbar=None, menu=None,
                    visible=True, shortcut=None, auto_toolbar=True, auto_menu=True):
         """Create a new action and add it to toolbar and menu
 
@@ -194,6 +199,8 @@ class ActionManager:
             a tooltip to be displayed when hovering above the action
         checkable: bool
             set the checkable state of the action
+        checked: bool
+            set the current state of the action            
         toolbar: QToolBar
             a toolbar where action should be added. Actions can also be added later see *affect_to*
         menu: QMenu
@@ -212,7 +219,7 @@ class ActionManager:
         if auto_menu:
             if menu is None:
                 menu = self._menu
-        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu,
+        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, checked=checked, toolbar=toolbar, menu=menu,
                                               visible=visible, shortcut=shortcut)
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget], *args, tip='',
