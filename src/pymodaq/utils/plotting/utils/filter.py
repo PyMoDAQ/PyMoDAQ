@@ -132,6 +132,8 @@ class Filter2DFromCrosshair(Filter):
         V_indexes = (data_V_index, utils.rint(indx))
         dte = DataToExport('Crosshair')
         try:
+            if not (0 <= utils.rint(indy) < dwa.shape[0]):
+                raise IndexError
             dwa_hor = dwa.isig[H_indexes]
             dwa_hor.labels = [f'Crosshair/{label}' for label in dwa_hor.labels]
             dwa_hor.name = 'hor'
@@ -139,6 +141,8 @@ class Filter2DFromCrosshair(Filter):
         except IndexError:
             pass
         try:
+            if not (0 <= utils.rint(indx) < dwa.shape[1]):
+                raise IndexError
             dwa_ver = dwa.isig[V_indexes]
             dwa_ver.labels = [f'Crosshair/{label}' for label in dwa_ver.labels]
             dwa_ver.name = 'ver'
@@ -146,6 +150,10 @@ class Filter2DFromCrosshair(Filter):
         except IndexError:
             pass
         try:
+            if not (0 <= utils.rint(indy) < dwa.shape[0]) \
+                or \
+                    not (0 <= utils.rint(indx) < dwa.shape[1]):
+                raise IndexError
             dwa_int = dwa.isig[utils.rint(indy), utils.rint(indx)]
             dwa_int.labels = [f'Crosshair/{label}' for label in dwa_int.labels]
             dwa_int.name = 'int'
@@ -154,25 +162,45 @@ class Filter2DFromCrosshair(Filter):
             pass
         return dte
 
-    def get_data_from_spread(self, data_key, data):
+    def get_data_from_spread(self, dwa: DataWithAxes) -> DataToExport:
+
         data_H_index = slice(None, None, 1)
         data_V_index = slice(None, None, 1)
-        posx, posy = self.mapfromview(self._x, self._y, data_key)
+        posx, posy = self.mapfromview(self._x, self._y, 'red')
 
-        points, data = self._graph_items[data_key].get_points_at(axis='y', val=posy)
-        x_sorted_indexes = np.argsort(points[:, 0])
-        hor_axis = points[x_sorted_indexes, 0][data_H_index]
+        hor_data = []
+        ver_data = []
+        int_data = []
+        hor_axis = None
+        ver_axis = None
 
-        hor_data = data[x_sorted_indexes][data_H_index]
+        for ind, data_key in enumerate(self._graph_items):
+            if ind < len(dwa):
+                points, data = self._graph_items[data_key].get_points_at(axis='y', val=posy)
+                x_sorted_indexes = np.argsort(points[:, 0])
+                hor_axis = points[x_sorted_indexes, 0][data_H_index]
 
-        points, data = self._graph_items[data_key].get_points_at(axis='x', val=posx)
-        y_sorted_indexes = np.argsort(points[:, 1])
-        ver_axis = points[y_sorted_indexes, 1][data_V_index]
+                hor_data.append(data[x_sorted_indexes][data_H_index])
 
-        ver_data = data[y_sorted_indexes][data_V_index]
+                points, data = self._graph_items[data_key].get_points_at(axis='x', val=posx)
+                y_sorted_indexes = np.argsort(points[:, 1])
+                ver_axis = points[y_sorted_indexes, 1][data_V_index]
 
-        return LineoutData(hor_axis=hor_axis, ver_axis=ver_axis, hor_data=hor_data, ver_data=ver_data,
-                           int_data=self._graph_items[data_key].get_val_at((posx, posy)))
+                ver_data.append(data[y_sorted_indexes][data_V_index])
+
+                int_data.append(np.array([self._graph_items[data_key].get_val_at((posx, posy))]))
+
+        dte = DataToExport('Crosshair')
+        if len(hor_data) > 0 and len(hor_axis) > 0:
+            dte.append(DataFromRoi('hor', data=hor_data,
+                                   axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]),)
+        if len(ver_data) > 0 and len(ver_axis) > 0:
+            dte.append(DataFromRoi('ver', data=ver_data,
+                                   axes=[Axis(dwa.axes[0].label, dwa.axes[0].units, data=ver_axis)]))
+        if len(int_data) > 0:
+            dte.append(DataFromRoi('int', data=int_data))
+
+        return dte
 
     def mapfromview(self, x, y, item_key='red'):
         """

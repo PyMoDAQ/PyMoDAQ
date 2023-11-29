@@ -1032,5 +1032,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    main('uniform')
-    #main('spread')
+    #main('uniform')
+    main('spread')

@@ -1648,6 +1648,22 @@ class DataWithAxes(DataBase):
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)
 
+    def get_axis_from_label(self, label: str) -> Axis:
+        """Get the axis referred by a given label
+
+        Parameters
+        ----------
+        label: str
+            The label of the axis
+
+        Returns
+        -------
+        Axis or None: return the axis instance if it has the right label else None
+        """
+        for axis in self.axes:
+            if axis.label == label:
+                return axis
+
     def create_missing_axes(self):
         """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
         axes = self.axes[:]
