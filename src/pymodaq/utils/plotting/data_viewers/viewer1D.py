@@ -307,11 +307,6 @@ class View1D(ActionManager, QObject):
     def update_roi_channels(self, index, roi_type=''):
         """Update the use_channel setting each time a ROI is added"""
         self.roi_manager.update_use_channel(self.data_displayer.labels.copy())
-        # item_param = self.roi_manager.settings.child('ROIs', self.roi_manager.roi_format(index))
-        # channels = self.data_displayer.labels[:]
-        # channels.append('all')
-        # item_param.child('use_channel').setLimits(channels)
-        # item_param.child('use_channel').setValue(self.data_displayer.labels[0])
 
     def setup_widgets(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())

@@ -3,7 +3,7 @@ import copy
 import datetime
 import numpy as np
 import sys
-from typing import Union, Iterable
+from typing import Union, Iterable, List
 
 import pymodaq.utils.messenger
 from qtpy import QtCore, QtGui, QtWidgets
@@ -43,12 +43,12 @@ IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = utils.plot_colors
 
 
-def image_item_factory(item_type='uniform', axisOrder='row-major'):
+def image_item_factory(item_type='uniform', axisOrder='row-major', pen='r'):
     if item_type == 'uniform':
-        image = UniformImageItem()
+        image = UniformImageItem(pen=pen)
         image.setOpts(axisOrder=axisOrder)
     elif item_type == 'spread':
-        image = SpreadImageItem()
+        image = SpreadImageItem(pen=pen)
     image.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
     return image
 
@@ -87,11 +87,17 @@ class ImageDisplayer(QObject):
     def __init__(self, plotitem, data_distribution: DataDistribution):
         super().__init__()
         self._plotitem = plotitem
+        self._plotitem.addLegend()
         self.display_type = data_distribution
         self._image_items = dict([])
         self._autolevels = False
+        self._data: DataWithAxes = None
 
         self.update_display_items()
+
+    @property
+    def legend(self):
+        return self._plotitem.legend
 
     def get_images(self):
         return self._image_items
@@ -103,6 +109,13 @@ class ImageDisplayer(QObject):
             return self._image_items[name]
 
     @property
+    def labels(self):
+        if self._data is None:
+            return []
+        else:
+            return self._data.labels
+
+    @property
     def autolevels(self):
         return self._autolevels
 
@@ -110,26 +123,33 @@ class ImageDisplayer(QObject):
     def set_autolevels(self, isautolevel):
         self._autolevels = isautolevel
 
-    def update_data(self, data):
-        if data.distribution != self.display_type:
-            self.display_type = data.distribution
-            self.update_display_items()
-        for ind_data, data_array in enumerate(data.data):
+    def update_data(self, dwa: DataWithAxes):
+        if dwa.labels != self.labels:
+            self.update_display_items(dwa.labels)
+        if dwa.distribution != self.display_type:
+            self.display_type = dwa.distribution
+        self._data = dwa
+        for ind_data, data_array in enumerate(dwa.data):
             if data_array.size > 0:
                 if self.display_type == 'uniform':
                     self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
                 else:
-                    nav_axes = data.get_nav_axes()
+                    nav_axes = dwa.get_nav_axes()
                     data_array = np.stack((nav_axes[0].data, nav_axes[1].data, data_array), axis=0).T
                     self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
 
-    def update_display_items(self):
+    def update_display_items(self, labels: List[str] = None):
         while len(self._image_items) > 0:
             self._plotitem.removeItem(self._image_items.pop(next(iter(self._image_items))))
+        if labels is None:
+            labels = []
+        while len(labels) != len(IMAGE_TYPES):
+            labels.append(IMAGE_TYPES[len(labels)])
 
-        for img_key in IMAGE_TYPES:
-            self._image_items[img_key] = image_item_factory(self.display_type)
+        for ind, img_key in enumerate(IMAGE_TYPES):
+            self._image_items[img_key] = image_item_factory(self.display_type, pen=img_key[0])
             self._plotitem.addItem(self._image_items[img_key])
+            self.legend.addItem(self._image_items[img_key], labels[ind])
         self.updated_item.emit(self._image_items)
 
     def update_image_visibility(self, are_items_visible):
@@ -464,15 +484,21 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
-
+        self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.connect_action('isocurve', self.get_action('histo').trigger)
 
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
         self.connect_action('histo', self.show_hide_histogram)
         self.connect_action('roi', self.show_lineout_widgets)
+        self.connect_action('roi', self.roi_clicked)
         self.connect_action('ROIselect', self.show_ROI_select)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
+
+    @Slot(int, str)
+    def update_roi_channels(self, index, roi_type=''):
+        """Update the use_channel setting each time a ROI is added"""
+        self.roi_manager.update_use_channel(self.data_displayer.labels.copy())
 
     def prepare_ui(self):
         self.ROIselect.setVisible(False)
@@ -503,6 +529,13 @@ class View2D(ActionManager, QtCore.QObject):
         #     lineout.setVisible(state)
         #     lineout.update()
         self.prepare_image_widget_for_lineouts()
+
+    @Slot(bool)
+    def roi_clicked(self, isroichecked=True):
+        self.roi_manager.roiwidget.setVisible(isroichecked)
+
+        for k, roi in self.roi_manager.ROIs.items():
+            roi.setVisible(isroichecked)
 
     def get_visible_images(self):
         are_items_visible = []

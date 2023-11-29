@@ -306,7 +306,7 @@ class ROIScalableGroup(GroupParameter):
         if self.roi_type == '2D':
             children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
                              {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
-                              'limits': ['red', 'green', 'blue', 'spread']}, ])
+                              'limits': ['red', 'green', 'blue']}, ])
             children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list',
                              'limits': data_processors.functions_filtered('Data2D')})
         else:
