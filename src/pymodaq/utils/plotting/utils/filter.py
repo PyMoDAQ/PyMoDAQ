@@ -319,8 +319,11 @@ class Filter2DFromRois(Filter):
                     image_key = self._roi_settings['ROIs', roi_key, 'use_channel']
                     image_index = self._image_keys.index(image_key)
 
-                    sub_data = data.deepcopy()
-                    sub_data.data = [data[image_index]]
+                    if image_key != 'All':
+                        sub_data = data.deepcopy()
+                        sub_data.data = [data[image_index]]
+                    else:
+                        sub_data = data
                     data_dict[roi_key] = self.get_xydata_from_roi(roi, sub_data,
                                                                   self._roi_settings['ROIs', roi_key, 'math_function'])
         except Exception as e:
