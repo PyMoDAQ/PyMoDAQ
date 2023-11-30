@@ -117,6 +117,7 @@ class SliderParameterItem(WidgetParameterItem):
             'value': 0, 'min': None, 'max': None,
             'step': 1.0, 'dec': False,
             'siPrefix': False, 'suffix': '', 'decimals': 12,
+            'int': False
         }
         if 'subtype' not in opts:
             opts['subtype'] = 'linear'
@@ -129,6 +130,9 @@ class SliderParameterItem(WidgetParameterItem):
         else:
             defs['bounds'] = opts['limits']
 
-        w = SliderSpinBox(subtype=opts['subtype'], bounds=defs['bounds'], value=defs['value'])
+        if 'int' in opts:
+            defs['int'] = opts['int']
+
+        w = SliderSpinBox(subtype=opts['subtype'], bounds=defs['bounds'], value=defs['value'], int=defs['int'])
         self.setSizeHint(1, QtCore.QSize(50, 50))
         return w
