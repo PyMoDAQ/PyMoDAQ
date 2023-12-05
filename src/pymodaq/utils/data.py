@@ -1058,7 +1058,7 @@ class AxesManagerBase:
 
     def get_signal_axes(self):
         if self.sig_indexes is None:
-            self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
+            self._sig_indexes = tuple([int(axis.index) for axis in self.axes if axis.index not in self.nav_indexes])
         return list(mutils.flatten([copy.copy(self.get_axis_from_index(index, create=True))
                                     for index in self.sig_indexes]))
 
@@ -1136,6 +1136,7 @@ class AxesManagerUniform(AxesManagerBase):
         --------
         :py:meth:`Axis.create_linear_data`
         """
+        index = int(index)
         has_axis, axis = self._has_get_axis_from_index(index)
         if not has_axis:
             if create:
