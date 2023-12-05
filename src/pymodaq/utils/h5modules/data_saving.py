@@ -259,6 +259,10 @@ class DataSaverLoader(DataManagement):
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
 
+    def isopen(self) -> bool:
+        """ Get the opened status of the underlying hdf5 file"""
+        return self._h5saver.isopen()
+
     def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
         """Adds Array nodes to a given location adding eventually axes as others nodes and metadata
 
@@ -609,6 +613,10 @@ class DataToExportSaver:
 
     def close(self):
         self._h5saver.close()
+
+    def isopen(self) -> bool:
+        """ Get the opened status of the underlying hdf5 file"""
+        return self._h5saver.isopen()
 
     @staticmethod
     def channel_formatter(ind: int):
