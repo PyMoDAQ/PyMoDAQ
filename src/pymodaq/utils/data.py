@@ -1565,6 +1565,7 @@ class DataWithAxes(DataBase):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
                             source='calculated', origin=self.origin,
+                            labels=self.labels[:],
                             distribution=self.distribution if len(nav_indexes) != 0 else DataDistribution['uniform'])
         return data
 
