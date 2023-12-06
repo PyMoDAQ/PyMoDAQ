@@ -380,11 +380,12 @@ class View2D(ActionManager, QtCore.QObject):
         self.clear_plot_item()
         self.data_displayer = ImageDisplayer(self.plotitem, data_distribution)
         self.isocurver = IsoCurver(self.data_displayer.get_image('red'), self.histogrammer.get_histogram('red'))
+        self.connect_action('isocurve', self.isocurver.show_hide_iso)
         self.data_displayer.updated_item.connect(self.histogrammer.affect_histo_to_imageitems)
         self.connect_action('autolevels', self.data_displayer.set_autolevels)
         for key in IMAGE_TYPES:
             self.connect_action(key, self.notify_visibility_data_displayer)
-        self.connect_action('isocurve', self.isocurver.show_hide_iso)
+
         self.histogrammer.affect_histo_to_imageitems(self.data_displayer.get_images())
 
     def show_roi_target(self, show=True):
@@ -632,6 +633,13 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect.setPos(rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2)
         self.ROIselect.setSize(rect.size() * 2 / 3)
 
+    def set_image_labels(self, labels: List[str]):
+        action_names =['red', 'green', 'blue']
+        for action_name, label in zip(action_names[:len(labels)], labels):
+            self.get_action(action_name).setToolTip(f'{self.get_action(action_name).toolTip()}'
+                                                    f' - '
+                                                    f'{label}')
+
     def set_axis_label(self, position, label='', units=''):
         """
         Convenience method to set label and unit of any view axes
@@ -772,6 +780,7 @@ class Viewer2D(ViewerBase):
         if len(data) > 3:
             logger.warning('Cannot plot on 2D plot more than 3 channels')
             data.data = data.data[:3]
+        self.view.set_image_labels(data.labels)
         if data.distribution != self.view.data_displayer.display_type:
             self.view.set_image_displayer(data.distribution)
             self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())
