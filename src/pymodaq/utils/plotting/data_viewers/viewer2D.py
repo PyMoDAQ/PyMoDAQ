@@ -464,6 +464,10 @@ class View2D(ActionManager, QtCore.QObject):
         self.add_action('red', 'Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
         self.add_action('green', 'Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
         self.add_action('blue', 'Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
+        self.get_action('red').setChecked(True)
+        self.get_action('green').setChecked(True)
+        self.get_action('blue').setChecked(True)
+
         self.add_action('autolevels', 'AutoLevels', 'autoscale',
                         tip='Scale Histogram to Min/Max intensity', checkable=True)
         self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'autoscale',
@@ -486,9 +490,6 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Show the legend', checkable=True)
 
     def connect_things(self):
-
-
-
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
@@ -551,7 +552,7 @@ class View2D(ActionManager, QtCore.QObject):
     def get_visible_images(self):
         are_items_visible = []
         for key in IMAGE_TYPES:
-            are_items_visible.append(self.is_action_checked(key))
+            are_items_visible.append(self.is_action_visible(key) and self.is_action_checked(key))
         return are_items_visible
 
     def notify_visibility_data_displayer(self):
@@ -856,13 +857,7 @@ class Viewer2D(ViewerBase):
 
     def set_visible_items(self):
         for key in IMAGE_TYPES:
-            if self.view.is_action_checked(key) and not self.isdata[key]:  # turn it off if it was on but there is no data
-                self.view.set_action_checked(key, False)
-                self.view.set_action_visible(key, False)
-
-            elif self.isdata[key]:
-                self.view.set_action_checked(key, True)
-                self.view.set_action_visible(key, True)
+            self.view.set_action_visible(key, self.isdata[key])
 
             self.view.notify_visibility_data_displayer()
 
