@@ -88,12 +88,16 @@ class ImageDisplayer(QObject):
         super().__init__()
         self._plotitem = plotitem
         self._plotitem.addLegend()
+        self.show_legend(False)
         self.display_type = data_distribution
         self._image_items = dict([])
         self._autolevels = False
         self._data: DataWithAxes = None
 
         self.update_display_items()
+
+    def show_legend(self, show=True):
+        self.legend.setVisible(show)
 
     @property
     def legend(self):
@@ -477,6 +481,8 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Flip the image left/right', checkable=True)
         self.add_action('rotate', 'Rotate', 'rotation2',
                         tip='Rotate the image', checkable=True)
+        self.add_action('legend', 'Legend', 'RGB',
+                        tip='Show the legend', checkable=True)
 
     def connect_things(self):
 
@@ -494,6 +500,10 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('ROIselect', self.show_ROI_select)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
+        self.connect_action('legend', self.show_legend)
+
+    def show_legend(self, show=True):
+        self.data_displayer.show_legend(show)
 
     @Slot(int, str)
     def update_roi_channels(self, index, roi_type=''):
