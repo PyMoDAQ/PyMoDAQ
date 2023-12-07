@@ -1088,7 +1088,7 @@ class DAQScanAcquisition(QObject):
             logger.exception(str(e))
             # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
-    def det_done(self, det_done_datas: data_mod.DataToExport, positions=[]):
+    def det_done(self, det_done_datas: data_mod.DataToExport, positions):
         """
 
         """
