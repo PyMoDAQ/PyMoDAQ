@@ -792,8 +792,9 @@ class Viewer2D(ViewerBase):
         self.isdata['green'] = len(data) > 1
         self.isdata['blue'] = len(data) > 2
 
-        self.set_visible_items()
         self.update_data()
+
+        self.set_visible_items()
         if not self.view.is_action_checked('roi'):
             self.data_to_export_signal.emit(self.data_to_export)
 
@@ -859,7 +860,7 @@ class Viewer2D(ViewerBase):
         for key in IMAGE_TYPES:
             self.view.set_action_visible(key, self.isdata[key])
 
-            self.view.notify_visibility_data_displayer()
+        self.view.notify_visibility_data_displayer()
 
     def show_roi(self, show=True, show_roi_widget=True):
         """convenience function to control roi"""
@@ -1017,10 +1018,16 @@ def main_spread():
 
 def main(data_distribution='uniform'):
     """either 'uniform' or 'spread'"""
-    from pymodaq.utils.math_utils import gauss2D
 
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
+
+    widget_button = QtWidgets.QWidget()
+    widget_button.setLayout(QtWidgets.QHBoxLayout())
+    button = QtWidgets.QPushButton('New Data')
+    ndata = QtWidgets.QSpinBox()
+    widget_button.layout().addWidget(button)
+    widget_button.layout().addWidget(ndata)
 
     def print_data(data: DataToExport):
         print(data)
@@ -1028,18 +1035,7 @@ def main(data_distribution='uniform'):
         print(data.get_data_from_dim('Data1D'))
 
     if data_distribution == 'uniform':
-        Nx = 100
-        Ny = 2 * Nx
-        data_random = np.random.normal(size=(Ny, Nx))
-        x = 0.5 * np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
-        y = 0.2 * np.linspace(-Ny / 2, Ny / 2 - 1, Ny)
-        data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.1 * data_random
-        data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
-        data_green[70:80, 7:12] = np.nan
-
-        data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
-                                       axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                             Axis('yaxis', units='ypxl', data=y, index=0), ])
+        data_to_plot = generate_uniform_data()
 
     elif data_distribution == 'spread':
         data_spread = np.load('../../../resources/triangulation_data.npy')
@@ -1060,8 +1056,34 @@ def main(data_distribution='uniform'):
     prog.view.show_roi_target(True)
     prog.view.move_scale_roi_target((50, 40), (10, 20))
 
+    button.clicked.connect(lambda: plot_data(prog, ndata.value()))
+    widget_button.show()
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
+
+
+def generate_uniform_data() -> DataFromPlugins:
+    from pymodaq.utils.math_utils import gauss2D
+    Nx = 100
+    Ny = 2 * Nx
+    data_random = np.random.normal(size=(Ny, Nx))
+    x = 0.5 * np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
+    y = 0.2 * np.linspace(-Ny / 2, Ny / 2 - 1, Ny)
+    data_red = 3 * np.sin(x / 5) ** 2 * gauss2D(x, 5, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.2 * data_random
+    data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
+    data_green[70:80, 7:12] = np.nan
+
+    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
+                                   axes=[Axis('xaxis', units='xpxl', data=x, index=1),
+                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
+    return data_to_plot
+
+
+def plot_data(viewer2D: Viewer2D, ndata: int=2):
+
+    dwa = generate_uniform_data()
+    dwa.data = dwa.data[0:ndata]
+    viewer2D.show_data(dwa)
 
 
 def print_roi_select(rect):
@@ -1070,6 +1092,7 @@ def print_roi_select(rect):
 
 def main_view():
     app = QtWidgets.QApplication(sys.argv)
+
     form = QtWidgets.QWidget()
     prog = View2D(form)
     form.show()
