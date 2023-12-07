@@ -19,7 +19,6 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
-from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
 from pymodaq.utils.plotting.widgets import PlotWidget
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 
@@ -27,32 +26,6 @@ from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 logger = set_logger(get_module_name(__file__))
 
 PLOT_COLORS = utils.plot_colors
-
-
-class LineoutPlotter(LineoutPlotter):
-    """class to manage and display data filtered out into lineouts (1D, 0D)
-
-    Should be inherited and subclass some methods as appropriate
-
-    Parameters
-    ----------
-    graph_widgets: OrderedDict
-        Includes plotwidgets to display data
-    roi_manager:
-        The ROIManager to create ROIs and manage their properties
-    crosshair:
-        The Crosshair object
-    """
-    lineout_widgets = ['int']
-
-    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
-        super().__init__(graph_widgets, roi_manager, crosshair)
-
-    def plot_other_lineouts(self, roi_dicts):
-        pass
-
-    def plot_other_crosshair_lineouts(self, crosshair_dict):
-        pass
 
 
 class DataDisplayer(QObject):
