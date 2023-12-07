@@ -83,8 +83,9 @@ class ROIPositionMapper(QtWidgets.QWidget):
 
 
 class ROI(pgROI):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, name='roi', **kwargs):
         super().__init__(*args, **kwargs)
+        self.name = name
         self._menu = QtWidgets.QMenu()
         self._menu.addAction('Set ROI positions', self.set_positions)
 
@@ -137,8 +138,9 @@ class ROIBrushable(ROI):
 class LinearROI(pgLinearROI):
     index_signal = Signal(int)
 
-    def __init__(self, index=0, pos=[0, 10], **kwargs):
+    def __init__(self, index=0, pos=[0, 10], name = 'roi', **kwargs):
         super().__init__(values=pos, **kwargs)
+        self.name = name
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
@@ -262,8 +264,8 @@ class SimpleRectROI(ROI):
 class RectROI(ROI):
     index_signal = Signal(int)
 
-    def __init__(self, index=0, pos=[0, 0], size=[10, 10]):
-        super().__init__(pos=pos, size=size)  # , scaleSnap=True, translateSnap=True)
+    def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
+        super().__init__(pos=pos, size=size, **kwargs)  # , scaleSnap=True, translateSnap=True)
         self.addScaleHandle([1, 1], [0, 0])
         self.addRotateHandle([0, 0], [0.5, 0.5])
         self.index = index
@@ -429,7 +431,7 @@ class ROIManager(QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':  # new roi to create
-                par = data[0]
+                par: Parameter = data[0]
                 newindex = int(par.name()[-2:])
 
                 if par.child('type').value() == '1D':
@@ -438,6 +440,7 @@ class ROIManager(QObject):
                     pos = self.viewer_widget.plotItem.vb.viewRange()[0]
                     pos = pos[0] + np.diff(pos)*np.array([2,4])/6
                     newroi = LinearROI(index=newindex, pos=pos)
+
                     newroi.setZValue(-10)
                     newroi.setBrush(par.child('Color').value())
                     newroi.setOpacity(0.2)
@@ -452,10 +455,10 @@ class ROIManager(QObject):
 
                     if roi_type == 'RectROI':
                         newroi = RectROI(index=newindex, pos=pos,
-                                         size=[width, height])
+                                         size=[width, height], name=par.name())
                     else:
                         newroi = EllipseROI(index=newindex, pos=pos,
-                                            size=[width, height])
+                                            size=[width, height], name=par.name())
                     newroi.setPen(par['Color'])
 
                 newroi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
