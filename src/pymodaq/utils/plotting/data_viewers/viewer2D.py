@@ -762,7 +762,6 @@ class Viewer2D(ViewerBase):
         self.view.set_action_checked('roi', activate)
         self.view.get_action('roi').triggered.emit(activate)
 
-    @Slot(dict)
     def roi_changed(self):
         self.filter_from_rois.filter_data(self._datas)
 
@@ -894,6 +893,8 @@ class Viewer2D(ViewerBase):
     def prepare_connect_ui(self):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
 
+        self.roi_manager.roi_changed.connect(self.roi_changed)
+
         self.view.connect_action('flip_ud', slot=self.update_data)
         self.view.connect_action('flip_lr', slot=self.update_data)
         self.view.connect_action('rotate', slot=self.update_data)
@@ -954,8 +955,8 @@ class Viewer2D(ViewerBase):
         self.update_crosshair_data(dte)
         self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
-    @Slot(dict)
-    def process_roi_lineouts(self, roi_dict):
+    def process_roi_lineouts(self, roi_dte):
+
         roi_dict = self.scale_lineout_dicts(roi_dict)
         self.view.display_roi_lineouts(roi_dict)
 
