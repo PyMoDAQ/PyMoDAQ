@@ -432,6 +432,9 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
 
+        self.splitter_VLeft.setSizes([1, 0])
+        self.splitter_VRight.setSizes([1, 0])
+
     def setup_graphs(self, graphs_layout):
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         graphs_layout.addWidget(self.splitter)
@@ -540,7 +543,10 @@ class View2D(ActionManager, QtCore.QObject):
         #     lineout.showAxis('left', state)
         #     lineout.setVisible(state)
         #     lineout.update()
-        self.prepare_image_widget_for_lineouts()
+        if state:
+            self.prepare_image_widget_for_lineouts()
+        else:
+            self.prepare_image_widget_for_lineouts(1)
 
     @Slot(bool)
     def roi_clicked(self, isroichecked=True):
@@ -1079,11 +1085,11 @@ def generate_uniform_data() -> DataFromPlugins:
     return data_to_plot
 
 
-def plot_data(viewer2D: Viewer2D, ndata: int=2):
-
-    dwa = generate_uniform_data()
-    dwa.data = dwa.data[0:ndata]
-    viewer2D.show_data(dwa)
+def plot_data(viewer2D: Viewer2D, ndata: int = 2):
+    if ndata > 0:
+        dwa = generate_uniform_data()
+        dwa.data = dwa.data[0:ndata]
+        viewer2D.show_data(dwa)
 
 
 def print_roi_select(rect):
