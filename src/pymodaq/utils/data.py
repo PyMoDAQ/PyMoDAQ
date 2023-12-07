@@ -714,7 +714,7 @@ class DataBase(DataLowLevel):
         for dat in data:
             if dat.shape != self.shape:
                 raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
-        self.data = self.data + data.data
+        self.data += data.data
         self.labels.extend(data.labels)
 
     def pop(self, index: int) -> DataBase:
@@ -1522,7 +1522,10 @@ class DataWithAxes(DataBase):
         """
         dat_mean = []
         for dat in self.data:
-            dat_mean.append(np.mean(dat, axis=axis))
+            mean = np.mean(dat, axis=axis)
+            if isinstance(mean, numbers.Number):
+                mean = np.array([mean])
+            dat_mean.append(mean)
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
     
     def sum(self, axis: int = 0) -> DataWithAxes:
@@ -2036,16 +2039,17 @@ class DataToExport(DataLowLevel):
         Only possible if all dwa and underlying data have same shape
         """
         dim = enum_checker(DataDim, dim)
-        if name is None:
-            name = self.name
+
         filtered_data = self.get_data_from_dim(dim)
-        ndarrays = []
-        labels = []
-        for dwa in filtered_data:
-            ndarrays.extend(dwa.data)
-            labels.extend(dwa.labels)
-        dwa = DataRaw(name, dim=dim, data=ndarrays, labels=labels)
-        return dwa
+        if len(filtered_data) != 0:
+            dwa = filtered_data[0].deepcopy()
+            for dwa_tmp in filtered_data[1:]:
+                if dwa_tmp.shape == dwa.shape and dwa_tmp.distribution == dwa.distribution:
+                    dwa.append(dwa_tmp)
+            if name is None:
+                name = self.name
+            dwa.name = name
+            return dwa
 
     def __repr__(self):
         repr = f'{self.__class__.__name__}: {self.name} <len:{len(self)}>\n'

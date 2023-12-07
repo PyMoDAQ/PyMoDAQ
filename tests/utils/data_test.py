@@ -1115,8 +1115,10 @@ class TestDataToExport:
         dte = data_mod.DataToExport('merging', data=[dat1, dat2, dat3])
 
         dwa = dte.merge_as_dwa('Data1D')
-
+        assert dwa.name == dte.name
         assert len(dwa) == 6
         assert np.all(dwa[0] == pytest.approx(DATA1D))
         assert np.all(dwa[1] == pytest.approx(0.2*DATA1D))
         assert np.all(dwa[3] == pytest.approx(-0.7*DATA1D))
+
+        assert dwa.labels == dat1.labels + dat2.labels + dat3.labels
