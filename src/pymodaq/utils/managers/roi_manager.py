@@ -343,7 +343,7 @@ class ROIScalableGroup(GroupParameter):
 
 class ROIManager(QObject):
 
-    new_ROI_signal = Signal(int, str)
+    new_ROI_signal = Signal(int, str, str)
     remove_ROI_signal = Signal(str)
     roi_value_changed = Signal(str, tuple)
     color_signal = Signal(list)
@@ -472,7 +472,7 @@ class ROIManager(QObject):
 
                 self._set_roi_from_index(newindex, newroi)
 
-                self.new_ROI_signal.emit(newindex, roi_type)
+                self.new_ROI_signal.emit(newindex, roi_type, par.name())
                 self.update_roi_tree(newindex)
                 self.emit_colors()
                 self.roi_changed.emit()
