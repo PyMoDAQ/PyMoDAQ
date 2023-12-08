@@ -312,9 +312,9 @@ class Filter2DFromRois(Filter):
         self._ROIs = roi_manager.ROIs
 
     def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
-
+        dte = DataToExport('ROI')
         if dwa is not None:
-            dte = DataToExport('ROI')
+
             labels = []
             for roi_key, roi in self._ROIs.items():
                 label = self._roi_settings['ROIs', roi_key, 'use_channel']
@@ -323,9 +323,12 @@ class Filter2DFromRois(Filter):
                     sub_data.data = [dwa[dwa.labels.index(label)]]
                 else:
                     sub_data = dwa
-                dte.append(self.get_xydata_from_roi(roi, sub_data,
+                dte_temp = self.get_xydata_from_roi(roi, sub_data,
                                                     self._roi_settings['ROIs',
-                                                    roi_key, 'math_function']))
+                                                    roi_key, 'math_function'])
+
+                dte.append(dte_temp)
+
         return dte
 
     def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
@@ -339,7 +342,7 @@ class Filter2DFromRois(Filter):
         return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
 
     def get_xydata_from_roi(self, roi: RectROI, dwa: DataWithAxes, math_function: str) -> DataToExport:
-        dte = DataToExport('ROI')
+        dte = DataToExport(roi.name)
         if dwa is not None:
             if dwa.distribution.name == 'spread':
                 xvals, yvals, data = self.get_xydata_spread(dwa, roi)
