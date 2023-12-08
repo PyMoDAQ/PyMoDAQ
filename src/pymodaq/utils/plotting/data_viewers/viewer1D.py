@@ -1,7 +1,7 @@
 import sys
 import datetime
 from collections import OrderedDict
-from typing import List, Iterable, Union
+from typing import List, Iterable, Union, Dict
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
@@ -94,20 +94,18 @@ class DataDisplayer(QObject):
 
         self.update_xyplot(do_xy, data)
 
-    def add_other_data(self, dte: DataToExport):
-        pass
-
     def update_xyplot(self, do_xy=True, dwa: DataWithAxes=None):
         if dwa is None:
             dwa = self._data
-        axis = dwa.get_axis_from_index(0)[0].get_data()
+        _axis = dwa.get_axis_from_index(0)[0]
+        _axis_array = _axis.get_data()
         for ind_data, dat in enumerate(dwa.data):
             if dwa.size > 0:
                 if not do_xy:
                     if self._flip_axes:
-                        self._plot_items[ind_data].setData(dat, axis)
+                        self._plot_items[ind_data].setData(dat, _axis_array)
                     else:
-                        self._plot_items[ind_data].setData(axis, dat)
+                        self._plot_items[ind_data].setData(_axis_array, dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 
@@ -122,7 +120,7 @@ class DataDisplayer(QObject):
 
         else:
             axis = self._plotitem.getAxis('bottom')
-            axis.setLabel(text=self._axis.label, units=self._axis.units)
+            axis.setLabel(text=_axis.label, units=_axis.units)
             axis = self._plotitem.getAxis('left')
             axis.setLabel(text='', units='')
             self.legend.setVisible(True)
@@ -208,7 +206,7 @@ class View1D(ActionManager, QObject):
         self.plot_widget = PlotWidget()
         self.roi_manager = ROIManager('1D')
         self.data_displayer = DataDisplayer(self.plotitem, flip_axes=self.flip_axes)
-
+        self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.setup_widgets()
 
         self.connect_things()
@@ -220,7 +218,13 @@ class View1D(ActionManager, QObject):
         self.ROIselect.setVisible(False)
 
         if not show_toolbar:
-            self.splitter_ver.setSizes([0,1])
+            self.splitter_ver.setSizes([0, 1])
+
+    def add_data_displayer(self, displayer_name: str):
+        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes)
+
+    def remove_data_displayer(self, displayer_name: str):
+        self.other_data_displayers.pop(displayer_name, None)
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -233,7 +237,6 @@ class View1D(ActionManager, QObject):
     def display_roi_lineouts(self, roi_dte: DataToExport):
         integrated_dwa = roi_dte.merge_as_dwa('Data0D')
         self.lineout_viewers.show_data(integrated_dwa)
-        #self.lineout_plotter.plot_roi_lineouts(roi_dict)
 
     @property
     def axis(self):
@@ -256,17 +259,22 @@ class View1D(ActionManager, QObject):
         """Convenience function from the Crosshair"""
         self.crosshair.set_crosshair_position(*positions)
 
-    def display_data(self, data: Union[DataWithAxes, DataToExport]):
-        if isinstance(data, DataWithAxes):
-            self.set_action_visible('xyplot', len(data) == 2)
-            self.data_displayer.update_data(data, self.is_action_checked('xyplot'),
-                                            self.is_action_checked('sort'))
-        elif isinstance(data, DataToExport):
-            self.set_action_visible('xyplot', len(data[0]) == 2)
-            self.data_displayer.update_data(data.pop(0), self.is_action_checked('xyplot'),
-                                            self.is_action_checked('sort'))
-            if len(data) > 0:
-                self.data_displayer.add_other_data(data)
+    def display_data(self, data: Union[DataWithAxes, DataToExport], displayer: str = None):
+        if displayer is None:
+            if isinstance(data, DataWithAxes):
+                self.set_action_visible('xyplot', len(data) == 2)
+                self.data_displayer.update_data(data, self.is_action_checked('xyplot'),
+                                                self.is_action_checked('sort'))
+            elif isinstance(data, DataToExport):
+                self.set_action_visible('xyplot', len(data[0]) == 2)
+                self.data_displayer.update_data(data.pop(0), self.is_action_checked('xyplot'),
+                                                self.is_action_checked('sort'))
+                if len(data) > 0:
+                    self.data_displayer.add_other_data(data)
+        elif displayer in self.other_data_displayers:
+            self.other_data_displayers[displayer].update_data(data,
+                                                              self.is_action_checked('xyplot'),
+                                                              self.is_action_checked('sort'))
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)

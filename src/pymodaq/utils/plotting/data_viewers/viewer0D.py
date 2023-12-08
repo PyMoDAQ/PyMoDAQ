@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict
 from numbers import Real
 
 from qtpy import QtWidgets, QtGui
@@ -133,6 +133,7 @@ class View0D(ActionManager, QObject):
 
         self.no_margins = no_margins
         self.data_displayer: DataDisplayer = None
+        self.other_data_displayers: Dict[str, DataDisplayer] = {}
         self.plot_widget: PlotWidget = PlotWidget()
         self.values_list = QtWidgets.QListWidget()
 
@@ -199,7 +200,7 @@ class View0D(ActionManager, QObject):
     def plotitem(self):
         return self.plot_widget.plotItem
 
-    def display_data(self, data: data_mod.DataRaw):
+    def display_data(self, data: data_mod.DataRaw, **kwargs):
         self.data_displayer.update_data(data)
         if self.is_action_checked('show_data_as_list'):
             self.values_list.clear()

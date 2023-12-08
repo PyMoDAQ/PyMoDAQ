@@ -3,7 +3,7 @@ import copy
 import datetime
 import numpy as np
 import sys
-from typing import Union, Iterable, List
+from typing import Union, Iterable, List, Dict
 
 import pymodaq.utils.messenger
 from qtpy import QtCore, QtGui, QtWidgets
@@ -337,10 +337,13 @@ class View2D(ActionManager, QtCore.QObject):
         self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
 
         self._lineout_widgets = {widg_key: QtWidgets.QWidget() for widg_key in self.lineout_types}
-        self.lineout_viewers = dict(hor=Viewer1D(self._lineout_widgets['hor'], show_toolbar=False, no_margins=True),
+        self.lineout_viewers: Dict[str, Viewer1D] = dict(hor=Viewer1D(self._lineout_widgets['hor'], show_toolbar=False, no_margins=True),
                                     ver=Viewer1D(self._lineout_widgets['ver'], show_toolbar=False, no_margins=True,
                                                  flip_axes=True),
                                     int=Viewer0D(self._lineout_widgets['int'], show_toolbar=False, no_margins=True))
+
+        self.lineout_viewers['hor'].view.add_data_displayer('crosshair')
+        self.lineout_viewers['ver'].view.add_data_displayer('crosshair')
 
         self.setup_actions()
 
@@ -496,6 +499,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
+        self.roi_manager.new_ROI_signal.connect(self.add_roi_displayer)
+        self.roi_manager.remove_ROI_signal.connect(self.remove_roi_displayer)
         self.connect_action('isocurve', self.get_action('histo').trigger)
 
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
@@ -510,7 +515,17 @@ class View2D(ActionManager, QtCore.QObject):
     def show_legend(self, show=True):
         self.data_displayer.show_legend(show)
 
-    @Slot(int, str)
+    @Slot(int, str, str)
+    def add_roi_displayer(self, index, roi_type='', roi_name=''):
+        self.lineout_viewers['hor'].view.add_data_displayer(roi_name)
+        self.lineout_viewers['ver'].view.add_data_displayer(roi_name)
+
+    @Slot(str)
+    def remove_roi_displayer(self, roi_name=''):
+        self.lineout_viewers['hor'].view.remove_data_displayer(roi_name)
+        self.lineout_viewers['ver'].view.remove_data_displayer(roi_name)
+
+    @Slot(int, str, str)
     def update_roi_channels(self, index, roi_type=''):
         """Update the use_channel setting each time a ROI is added"""
         self.roi_manager.update_use_channel(self.data_displayer.labels.copy())
@@ -526,23 +541,21 @@ class View2D(ActionManager, QtCore.QObject):
         if self.is_action_checked('isocurve'):
             self.isocurver.set_isocurve_data(datas.data[0])
 
-    def display_roi_lineouts(self, roi_dict):
-        self.lineout_plotter.plot_roi_lineouts(roi_dict)
+    def display_roi_lineouts(self, roi_dte: DataToExport):
+        for lineout_type in self.lineout_types:
+            for displayer_name in self.lineout_viewers[lineout_type].view.other_data_displayers:
+                dwa = roi_dte.get_data_from_name_origin(lineout_type, displayer_name)
+                if dwa is not None:
+                    self.lineout_viewers[lineout_type].view.display_data(dwa, displayer=displayer_name)
 
     def display_crosshair_lineouts(self, crosshair_dte: DataToExport):
         for lineout_type in self.lineout_types:
             dwa = crosshair_dte.get_data_from_name(lineout_type)
             if dwa is not None:
-                self.lineout_viewers[lineout_type].show_data(dwa)
+                self.lineout_viewers[lineout_type].view.display_data(dwa, displayer='crosshair')
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('roi') or self.is_action_checked('crosshair')
-        # for lineout_name in LineoutPlotter.lineout_widgets:
-        #     lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
-        #     lineout.setMouseEnabled(state, state)
-        #     lineout.showAxis('left', state)
-        #     lineout.setVisible(state)
-        #     lineout.update()
         if state:
             self.prepare_image_widget_for_lineouts()
         else:
@@ -943,12 +956,6 @@ class Viewer2D(ViewerBase):
             self.view.set_axis_scaling('right', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
 
-    # def scale_lineout_dicts(self, lineout_dicts):
-    #     for lineout_data in lineout_dicts.values():
-    #         lineout_data.hor_axis, lineout_data.ver_axis = \
-    #             self.view.scale_axis(lineout_data.hor_axis, lineout_data.ver_axis)
-    #     return lineout_dicts
-
     @Slot(DataToExport)
     def process_crosshair_lineouts(self, dte):
         self.view.display_crosshair_lineouts(dte)
@@ -956,10 +963,9 @@ class Viewer2D(ViewerBase):
         self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
     def process_roi_lineouts(self, roi_dte: DataToExport):
-        #TODO
-        roi_dte = self.scale_lineout_dicts(roi_dte)
-        self.view.display_roi_lineouts(roi_dict)
+        self.view.display_roi_lineouts(roi_dte)
 
+        #todo
         self.measure_data_dict = dict([])
         for roi_key, lineout_data in roi_dict.items():
             if not self._display_temporary:
