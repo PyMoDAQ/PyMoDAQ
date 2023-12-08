@@ -1316,7 +1316,7 @@ class DataWithAxes(DataBase):
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
+        return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
 
     def sort_data(self, nav_axis: int = 0):
         """Sort data along a given navigation axis, default is 0"""
@@ -1857,7 +1857,10 @@ class DataToExport(DataLowLevel):
         return dwa
 
     def __repr__(self):
-        return f'{self.__class__.__name__}: {self.name} <len:{len(self)}>'
+        repr = f'{self.__class__.__name__}: {self.name} <len:{len(self)}>\n'
+        for dwa in self:
+            repr += f'    * {str(dwa)}\n'
+        return repr
 
     def __len__(self):
         return len(self.data)
@@ -2147,29 +2150,28 @@ class DataToExport(DataLowLevel):
         return DataToExport('Copy', data=[data.deepcopy() for data in self])
 
     @dispatch(list)
-    def append(self, data: List[DataWithAxes]):
-        for dat in data:
-            self.append(dat)
+    def append(self, data_list: List[DataWithAxes]):
+        for dwa in data_list:
+            self.append(dwa)
 
     @dispatch(DataWithAxes)
-    def append(self, data: DataWithAxes):
+    def append(self, dwa: DataWithAxes):
         """Append/replace DataWithAxes object to the data attribute
 
         Make sure only one DataWithAxes object with a given name is in the list except if they don't have the same
         origin identifier
         """
-        data = copy.deepcopy(data)
-        self._check_data_type(data)
-        obj = self.get_data_from_name_origin(data.name, data.origin)
+        dwa = dwa.deepcopy()
+        self._check_data_type(dwa)
+        obj = self.get_data_from_name_origin(dwa.name, dwa.origin)
         if obj is not None:
             self._data.pop(self.data.index(obj))
-        self._data.append(data)
+        self._data.append(dwa)
 
     @dispatch(object)
-    def append(self, data: DataToExport):
-        if isinstance(data, DataToExport):
-            for dat in data:
-                self.append(dat)
+    def append(self, dte: DataToExport):
+        if isinstance(dte, DataToExport):
+            self.append(dte.data)
 
 
 class DataScan(DataToExport):
