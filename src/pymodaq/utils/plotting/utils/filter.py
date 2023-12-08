@@ -314,10 +314,7 @@ class Filter2DFromRois(Filter):
     def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
 
         if dwa is not None:
-            dte_hor = DataToExport('hor')
-            dte_ver = DataToExport('ver')
-            dte_int = DataToExport('int')
-            dte_math = DataToExport('math')
+            dte = DataToExport('ROI')
             labels = []
             for roi_key, roi in self._ROIs.items():
                 label = self._roi_settings['ROIs', roi_key, 'use_channel']
@@ -326,17 +323,9 @@ class Filter2DFromRois(Filter):
                     sub_data.data = [dwa[dwa.labels.index(label)]]
                 else:
                     sub_data = dwa
-                dte = self.get_xydata_from_roi(roi, sub_data,
-                                               self._roi_settings['ROIs',
-                                               roi_key, 'math_function'])
-                dte_hor.append(dte.get_data_from_name('hor'))
-                dte_ver.append(dte.get_data_from_name('ver'))
-                dte_int.append(dte.get_data_from_name('int'))
-                dte_math.append(dte.get_data_from_name('math'))
-        dte = DataToExport('ROI', data=[dte_hor.merge_as_dwa('Data1D'),
-                                        dte_ver.merge_as_dwa('Data1D'),
-                                        dte_int.merge_as_dwa('Data0D'),
-                                        dte_math.merge_as_dwa('Data0D'),])
+                dte.append(self.get_xydata_from_roi(roi, sub_data,
+                                                    self._roi_settings['ROIs',
+                                                    roi_key, 'math_function']))
         return dte
 
     def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
@@ -367,15 +356,19 @@ class Filter2DFromRois(Filter):
                 sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
                 sub_data_hor = sub_data.mean(0)
                 sub_data_hor.name = 'hor'
+                sub_data_hor.origin = roi.name
                 sub_data_hor.labels = [f'{roi.name}/{label}' for label in sub_data_hor.labels]
                 sub_data_ver = sub_data.mean(1)
                 sub_data_ver.name = 'ver'
+                sub_data_ver.origin = roi.name
                 sub_data_ver.labels = [f'{roi.name}/{label}' for label in sub_data_ver.labels]
                 int_data = sub_data_hor.mean(0)
                 int_data.name = 'int'
+                int_data.origin = roi.name
                 int_data.labels = [f'{roi.name}/{label}' for label in int_data.labels]
                 math_data = data_processors.get(math_function).process(sub_data)
                 math_data.name = 'math'
+                math_data.origin = roi.name
                 math_data.labels = [f'{roi.name}/{label}' for label in math_data.labels]
                 dte.append([sub_data_hor, sub_data_ver, math_data, int_data])
             return dte

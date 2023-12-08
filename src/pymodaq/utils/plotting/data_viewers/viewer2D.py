@@ -955,9 +955,9 @@ class Viewer2D(ViewerBase):
         self.update_crosshair_data(dte)
         self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
-    def process_roi_lineouts(self, roi_dte):
-
-        roi_dict = self.scale_lineout_dicts(roi_dict)
+    def process_roi_lineouts(self, roi_dte: DataToExport):
+        #TODO
+        roi_dte = self.scale_lineout_dicts(roi_dte)
         self.view.display_roi_lineouts(roi_dict)
 
         self.measure_data_dict = dict([])
