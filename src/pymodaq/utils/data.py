@@ -2121,6 +2121,27 @@ class DataToExport(DataLowLevel):
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
+    def get_origins(self, dim: DataDim = None):
+        """Get the origins of the underlying data into the returned value,  eventually filtered by dim
+
+        Parameters
+        ----------
+        dim: DataDim or str
+
+        Returns
+        -------
+        list of str: the origins of the (filtered) DataWithAxes data
+
+        Examples
+        --------
+        d0 = DataWithAxes(name='datafromdet0', origin='det0')
+        """
+        if dim is None:
+            return list({dwa.origin for dwa in self.data})
+        else:
+            return list({dwa.origin for dwa in self.get_data_from_dim(dim).data})
+
+
     def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
         """Get the DataWithAxes with matching full name"""
         if deepcopy:
