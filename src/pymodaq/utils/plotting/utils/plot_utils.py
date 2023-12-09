@@ -19,6 +19,14 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
 
 
+def make_dashed_pens(color: tuple, nstyle=3):
+    pens = [dict(color=color)]
+    if nstyle > 1:
+        for ind in range(nstyle - 1):
+            pens.append(dict(color=color, dash=np.array([5, 5]) * (ind + 1)))
+    return pens
+
+
 class Point:
     def __init__(self, *elt: IterableType[float]):
         """Initialize a geometric point in an arbitrary number of dimensions
@@ -425,7 +433,7 @@ class Data0DWithHistory:
         return self.length
 
     @dispatch(data_mod.DataWithAxes)
-    def add_datas(self, data: data_mod.DataRaw):
+    def add_datas(self, data: data_mod.DataWithAxes):
         self.last_data = data
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
         self.add_datas(datas)
