@@ -43,8 +43,12 @@ class DataDisplayer(QObject):
         self._plot_items: List[pg.PlotDataItem] = []
         self._overlay_items: List[pg.PlotDataItem] = []
         self._axis: Axis = None
-        self._data: DataRaw = None
+        self._data: DataWithAxes = None
         self._plot_colors = plot_colors
+
+    @property
+    def Ndata(self):
+        return len(self._data) if self._data is not None else 0
 
     def update_colors(self, colors: list):
         self._plot_colors[0:len(colors)] = colors
@@ -241,7 +245,8 @@ class View1D(ActionManager, QObject):
     @Slot(int, str, str)
     def add_roi_displayer(self, index, roi_type='', roi_name=''):
         color = self.roi_manager.ROIs[roi_name].color
-        self.lineout_viewers.view.add_data_displayer(roi_name, make_dashed_pens(color))
+        self.lineout_viewers.view.add_data_displayer(
+            roi_name, make_dashed_pens(color, self.data_displayer.Ndata))
 
     @Slot(str)
     def remove_roi_displayer(self, roi_name=''):
@@ -571,7 +576,7 @@ def main():
 
     # x = np.sin(np.linspace(0,6*np.pi,201))
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
-    data = DataRaw('mydata', data=[y1, ydata_expodec],
+    data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1],
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
