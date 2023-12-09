@@ -67,8 +67,11 @@ class DataDisplayer(QObject):
         return self._plot_items[index]
 
     def update_data(self, data: DataRaw, do_xy=False, sort_data=False):
+        force_update = False
+        if data.labels != self.labels:
+            force_update = True
         self._data = data
-        if len(data) != len(self._plot_items):
+        if len(data) != len(self._plot_items) or force_update:
             self.update_display_items(data)
         self.update_plot(do_xy, data, sort_data)
 
@@ -155,7 +158,10 @@ class DataDisplayer(QObject):
 
     @property
     def labels(self):
-        return self._data.labels
+        if self._data is None:
+            return []
+        else:
+            return self._data.labels
 
     def legend_items(self):
         return [item[1].text for item in self.legend.items]
