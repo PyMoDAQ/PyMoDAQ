@@ -72,6 +72,10 @@ class DataDisplayer(QObject):
     def update_axis(self, history_length: int):
         self._data.length = history_length
 
+    @property
+    def Ndata(self):
+        return len(self._data.last_data) if self._data.last_data is not None else 0
+
     def update_data(self, data: data_mod.DataWithAxes, force_update=False):
         if data is not None:
             if len(data) != len(self._plot_items) or force_update or data.labels != self.legend_names:
