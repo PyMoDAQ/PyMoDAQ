@@ -999,6 +999,28 @@ class TestDataToExport:
         assert data.get_data_from_name_origin('data2D') == dat4
         assert dat1 not in data.data
 
+    def test_get_full_names(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORGIN1
+        dat2.origin = ORIGIN2
+
+        assert data.get_full_names() == [dat1.get_full_name(), dat2.get_full_name()]
+
+    def test_get_origins(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORIGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORIGIN1
+        dat2.origin = ORIGIN2
+
+        assert data.get_origins() == [ORIGIN1, ORIGIN2]
+
+        dat2.origin = ORIGIN1
+
+        assert data.get_origins()  == [ORIGIN1]
+
     def test_get_data_from_name_origin(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
         # with origin
