@@ -318,16 +318,18 @@ class Filter2DFromRois(Filter):
             labels = []
             for roi_key, roi in self._ROIs.items():
                 label = self._roi_settings['ROIs', roi_key, 'use_channel']
-                if label != 'All':
-                    sub_data = dwa.deepcopy()
-                    sub_data.data = [dwa[dwa.labels.index(label)]]
-                else:
-                    sub_data = dwa
-                dte_temp = self.get_xydata_from_roi(roi, sub_data,
-                                                    self._roi_settings['ROIs',
-                                                    roi_key, 'math_function'])
+                if label is not None:
+                    if label != 'All':
+                        sub_data = dwa.deepcopy()
+                        sub_data.data = [dwa[dwa.labels.index(label)]]
+                        sub_data.labels = [label]
+                    else:
+                        sub_data = dwa
+                    dte_temp = self.get_xydata_from_roi(roi, sub_data,
+                                                        self._roi_settings['ROIs',
+                                                        roi_key, 'math_function'])
 
-                dte.append(dte_temp)
+                    dte.append(dte_temp)
 
         return dte
 
