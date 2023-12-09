@@ -19,7 +19,7 @@ from collections import OrderedDict
 import datetime
 
 logger = set_logger(get_module_name(__file__))
-PLOT_COLORS = utils.plot_colors
+PLOT_COLORS = [dict(color=color) for color in utils.plot_colors]
 
 
 class DataDisplayer(QObject):
@@ -30,10 +30,10 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pyqtgraph.PlotItem):
+    def __init__(self, plotitem: pyqtgraph.PlotItem, plot_colors=PLOT_COLORS):
         super().__init__()
         self._plotitem = plotitem
-        self.colors = PLOT_COLORS.copy()
+        self.colors = plot_colors
         self._plotitem.addLegend()
         self._plot_items: List[pyqtgraph.PlotDataItem] = []
         self._min_lines: List[pyqtgraph.InfiniteLine] = []
@@ -72,7 +72,7 @@ class DataDisplayer(QObject):
     def update_axis(self, history_length: int):
         self._data.length = history_length
 
-    def update_data(self, data: data_mod.DataRaw, force_update=False):
+    def update_data(self, data: data_mod.DataWithAxes, force_update=False):
         if data is not None:
             if len(data) != len(self._plot_items) or force_update or data.labels != self.legend_names:
                 self.update_display_items(data)
@@ -94,28 +94,32 @@ class DataDisplayer(QObject):
                 self._min_lines[ind].setValue(self._mins[ind])
                 self._max_lines[ind].setValue(self._maxs[ind])
 
-    def update_display_items(self, data: data_mod.DataRaw):
+    def update_display_items(self, data: data_mod.DataWithAxes = None):
         while len(self._plot_items) > 0:
             plot_item = self._plotitem.removeItem(self._plot_items.pop(0))
             self.legend.removeItem(plot_item)
             self._plotitem.removeItem(self._max_lines.pop(0))
             self._plotitem.removeItem(self._min_lines.pop(0))
+        if data is not None:
+            for ind in range(len(data)):
+                self._plot_items.append(pyqtgraph.PlotDataItem(pen=self.colors[ind]))
+                self._plotitem.addItem(self._plot_items[-1])
+                self.legend.addItem(self._plot_items[-1], data.labels[ind])
+                max_line = pyqtgraph.InfiniteLine(angle=0,
+                                                  pen=pyqtgraph.mkPen(color=self.colors[ind]['color'],
+                                                                      style=Qt.DashLine))
+                min_line = pyqtgraph.InfiniteLine(angle=0,
+                                                  pen=pyqtgraph.mkPen(color=self.colors[ind]['color'],
+                                                                      style=Qt.DashLine))
+                self._max_lines.append(max_line)
+                self._min_lines.append(min_line)
+                max_line.setVisible(self._show_lines)
+                min_line.setVisible(self._show_lines)
+                self._plotitem.addItem(self._max_lines[-1])
+                self._plotitem.addItem(self._min_lines[-1])
 
-        for ind in range(len(data)):
-            self._plot_items.append(pyqtgraph.PlotDataItem(pen=self.colors[ind]))
-            self._plotitem.addItem(self._plot_items[-1])
-            self.legend.addItem(self._plot_items[-1], data.labels[ind])
-            max_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=self.colors[ind], style=Qt.DashLine))
-            min_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=self.colors[ind], style=Qt.DashLine))
-            self._max_lines.append(max_line)
-            self._min_lines.append(min_line)
-            max_line.setVisible(self._show_lines)
-            min_line.setVisible(self._show_lines)
-            self._plotitem.addItem(self._max_lines[-1])
-            self._plotitem.addItem(self._min_lines[-1])
-
-        self.updated_item.emit(self._plot_items)
-        self.labels_changed.emit(data.labels)
+            self.updated_item.emit(self._plot_items)
+            self.labels_changed.emit(data.labels)
 
     def show_min_max(self, show=True):
         self._show_lines = show
@@ -200,8 +204,11 @@ class View0D(ActionManager, QObject):
     def plotitem(self):
         return self.plot_widget.plotItem
 
-    def display_data(self, data: data_mod.DataRaw, **kwargs):
-        self.data_displayer.update_data(data)
+    def display_data(self, data: data_mod.DataWithAxes, displayer: str = None, **kwargs):
+        if displayer is None:
+            self.data_displayer.update_data(data)
+        elif displayer in self.other_data_displayers:
+            self.other_data_displayers[displayer].update_data(data)
         if self.is_action_checked('show_data_as_list'):
             self.values_list.clear()
             self.values_list.addItems(['{:.03e}'.format(dat[0]) for dat in data])
@@ -211,6 +218,15 @@ class View0D(ActionManager, QObject):
         if state is None:
             state = self.is_action_checked('show_data_as_list')
         self.values_list.setVisible(state)
+
+    def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
+        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, plot_colors)
+        self.connect_action('clear', self.other_data_displayers[displayer_name].clear_data)
+
+    def remove_data_displayer(self, displayer_name: str):
+        displayer = self.other_data_displayers.pop(displayer_name, None)
+        if displayer is not None:
+            displayer.update_display_items()
 
 
 class Viewer0D(ViewerBase):
@@ -224,8 +240,11 @@ class Viewer0D(ViewerBase):
         self.view = View0D(self.parent, show_toolbar=show_toolbar, no_margins=no_margins)
         self._labels = []
 
-    def update_colors(self, colors: List[QtGui.QPen]):
-        self.view.data_displayer.update_colors(colors)
+    def update_colors(self, colors: list, displayer=None):
+        if displayer is None:
+            self.view.data_displayer.update_colors(colors)
+        elif displayer in self.view.other_data_displayers:
+            self.view.other_data_displayers[displayer].update_colors(colors)
 
     @property
     def labels(self):
