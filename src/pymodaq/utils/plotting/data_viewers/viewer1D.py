@@ -16,7 +16,7 @@ from pymodaq.utils import daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
-
+from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq.utils.plotting.widgets import PlotWidget
@@ -35,7 +35,7 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pg.PlotItem, flip_axes=False):
+    def __init__(self, plotitem: pg.PlotItem, flip_axes=False, plot_colors=PLOT_COLORS):
         super().__init__()
         self._flip_axes = flip_axes
         self._plotitem = plotitem
@@ -44,6 +44,11 @@ class DataDisplayer(QObject):
         self._overlay_items: List[pg.PlotDataItem] = []
         self._axis: Axis = None
         self._data: DataRaw = None
+        self._plot_colors = plot_colors
+
+    def update_colors(self, colors: list):
+        self._plot_colors[0:len(colors)] = colors
+        self.update_data(self._data, force_update=True)
 
         self._doxy = False
         self._do_sort = False
@@ -66,10 +71,10 @@ class DataDisplayer(QObject):
     def get_plot_item(self, index: int):
         return self._plot_items[index]
 
-    def update_data(self, data: DataRaw, do_xy=False, sort_data=False):
-        force_update = False
-        if data.labels != self.labels:
-            force_update = True
+    def update_data(self, data: DataRaw, do_xy=False, sort_data=False, force_update=False):
+        if data is not None:
+            if data.labels != self.labels:
+                force_update = True
         self._data = data
         if len(data) != len(self._plot_items) or force_update:
             self.update_display_items(data)
@@ -88,10 +93,8 @@ class DataDisplayer(QObject):
             data = self._data
         if sort_data:
             data = data.sort_data()
-
-        if len(data.axes) == 0:
-            data.create_missing_axes()
-
+            if len(data.axes) == 0:
+                data.create_missing_axes()
         self._doxy = do_xy
         self._do_sort = sort_data
 
@@ -134,10 +137,10 @@ class DataDisplayer(QObject):
             if with_scatter:
                 pen = None
                 symbol = 'o'
-                brush = PLOT_COLORS[ind]
+                brush = self._plot_colors[ind]
 
             else:
-                pen = PLOT_COLORS[ind]
+                pen = self._plot_colors[ind]
                 symbol = None
                 brush = None
 
@@ -146,15 +149,16 @@ class DataDisplayer(QObject):
             plot_item.setSymbol(symbol)
             plot_item.setSymbolSize(symbol_size)
 
-    def update_display_items(self, data: DataWithAxes):
+    def update_display_items(self, data: DataWithAxes = None):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
-        for ind in range(len(data)):
-            self._plot_items.append(pg.PlotDataItem(pen=PLOT_COLORS[ind]))
-            self._plotitem.addItem(self._plot_items[-1])
-            self.legend.addItem(self._plot_items[-1], data.labels[ind])
-        self.updated_item.emit(self._plot_items)
-        self.labels_changed.emit(data.labels)
+        if data is not None:
+            for ind in range(len(data)):
+                self._plot_items.append(pg.PlotDataItem(pen=self._plot_colors[ind]))
+                self._plotitem.addItem(self._plot_items[-1])
+                self.legend.addItem(self._plot_items[-1], data.labels[ind])
+            self.updated_item.emit(self._plot_items)
+            self.labels_changed.emit(data.labels)
 
     @property
     def labels(self):
@@ -172,7 +176,7 @@ class DataDisplayer(QObject):
                 self._plotitem.removeItem(self._overlay_items.pop(0))
         else:
             for ind in range(len(self._data)):
-                pen = pg.mkPen(color=PLOT_COLORS[ind], style=Qt.CustomDashLine)
+                pen = pg.mkPen(color=self._plot_colors[ind], style=Qt.CustomDashLine)
                 pen.setDashPattern([10, 10])
                 self._overlay_items.append(pg.PlotDataItem(pen=pen))
                 self._plotitem.addItem(self._overlay_items[-1])
@@ -226,11 +230,22 @@ class View1D(ActionManager, QObject):
         if not show_toolbar:
             self.splitter_ver.setSizes([0, 1])
 
-    def add_data_displayer(self, displayer_name: str):
-        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes)
+    def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
+        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes, plot_colors)
 
     def remove_data_displayer(self, displayer_name: str):
-        self.other_data_displayers.pop(displayer_name, None)
+        displayer = self.other_data_displayers.pop(displayer_name, None)
+        if displayer is not None:
+            displayer.update_display_items()
+
+    @Slot(int, str, str)
+    def add_roi_displayer(self, index, roi_type='', roi_name=''):
+        color = self.roi_manager.ROIs[roi_name].color
+        self.lineout_viewers.view.add_data_displayer(roi_name, make_dashed_pens(color))
+
+    @Slot(str)
+    def remove_roi_displayer(self, roi_name=''):
+        self.lineout_viewers.view.remove_data_displayer(roi_name)
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
         if not self.roi_target.isVisible():
@@ -241,8 +256,9 @@ class View1D(ActionManager, QObject):
         return self.plot_widget.view.sig_double_clicked
 
     def display_roi_lineouts(self, roi_dte: DataToExport):
-        integrated_dwa = roi_dte.merge_as_dwa('Data0D')
-        self.lineout_viewers.show_data(integrated_dwa)
+        for roi_name in roi_dte.get_origins('Data0D'):
+            self.lineout_viewers.view.display_data(
+                roi_dte.get_data_from_name_origin('IntData', roi_name), displayer=roi_name)
 
     @property
     def axis(self):
@@ -284,7 +300,6 @@ class View1D(ActionManager, QObject):
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
-        #self.show_lineout_widgets()
 
     def do_math(self):
         try:
@@ -334,31 +349,27 @@ class View1D(ActionManager, QObject):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
         self.connect_action('do_math', self.do_math)
-        #self.connect_action('do_math', self.lineout_plotter.roi_clicked)
-
         self.connect_action('scatter', self.data_displayer.plot_with_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xy)
         self.connect_action('sort', self.data_displayer.update_sort)
         self.connect_action('crosshair', self.show_hide_crosshair)
-        #self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
         self.connect_action('overlay', self.data_displayer.show_overlay)
         self.connect_action('ROIselect', self.show_ROI_select)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
+        self.roi_manager.new_ROI_signal.connect(self.add_roi_displayer)
+        self.roi_manager.new_ROI_signal.connect(self.lineout_viewers.get_action('clear').click)
+        self.roi_manager.remove_ROI_signal.connect(self.remove_roi_displayer)
+
+        self.roi_manager.color_signal.connect(self.update_colors)
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
-        #self.roi_manager.color_signal.connect(self.lineout_viewers.update_colors)
+
+    def update_colors(self, colors: list):
+        for ind, roi_name in enumerate(self.roi_manager.ROIs):
+            self.lineout_viewers.update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
-
-    # def show_lineout_widgets(self):
-    #     state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
-    #     for lineout_name in LineoutPlotter.lineout_widgets:
-    #         lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
-    #         # lineout.setMouseEnabled(state, state)
-    #         # lineout.showAxis('left', state)
-    #         lineout.setVisible(state)
-    #         lineout.update()
 
     def setup_actions(self):
         self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
@@ -429,6 +440,12 @@ class Viewer1D(ViewerBase):
 
         self._labels = []
 
+    def update_colors(self, colors: List, displayer=None):
+        if displayer is None:
+            self.view.data_displayer.update_colors(colors)
+        elif displayer in self.view.other_data_displayers:
+            self.view.other_data_displayers[displayer].update_colors(colors)
+
     @property
     def roi_manager(self):
         """Convenience method """
@@ -454,7 +471,6 @@ class Viewer1D(ViewerBase):
     def add_plot_item(self, item):
         self.view.add_plot_item(item)
 
-
     def process_crosshair_lineouts(self, crosshair_dte: DataToExport):
         self.view.update_crosshair_data(crosshair_dte)
         self.crosshair_dragged.emit(*self.view.crosshair.get_positions())
@@ -462,18 +478,6 @@ class Viewer1D(ViewerBase):
     def process_roi_lineouts(self, roi_dte: DataToExport):
         self.view.display_roi_lineouts(roi_dte)
         self.measure_data_dict = dict([])
-        # for roi_key, lineout_data in roi_dte.items():
-        #     if not self._display_temporary:
-                # if lineout_data.hor_data.size != 0:
-                #     self.data_to_export.append(
-                #         DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                #                     axes=[Axis(data=lineout_data.hor_axis.get_data(),
-                #                                units=lineout_data.hor_axis.units,
-                #                                label=lineout_data.hor_axis.label,
-                #                                index=0)]))
-                #
-                #     self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
-                #                                               data=[lineout_data.math_data]))
         if not self._display_temporary:
             self.data_to_export.append(roi_dte.data)
 
@@ -490,7 +494,8 @@ class Viewer1D(ViewerBase):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
         self._data_to_show_signal.connect(self.view.display_data)
         self.roi_manager.roi_changed.connect(self.roi_changed)
-        #self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
+        self.roi_manager.roi_value_changed.connect(self.roi_changed)
+
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
         self.view.get_double_clicked().connect(self.double_clicked)
 
@@ -524,10 +529,6 @@ class Viewer1D(ViewerBase):
     def labels(self, labels):
         if labels != self._labels:
             self._labels = labels
-
-    def show_data_dte(self, dte: DataToExport):
-        dte = dte.get_data_from_dim('Data1D')
-        self.view.display_data(dte)
 
     def _show_data(self, data: DataWithAxes):
         self.labels = data.labels

@@ -7,7 +7,7 @@ from typing import Union, Iterable, List, Dict
 
 import pymodaq.utils.messenger
 from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal
+from qtpy.QtCore import QObject, Slot, Signal, Qt
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
@@ -26,7 +26,7 @@ from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Sc
 from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
-from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
+from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens
 
 
 logger = set_logger(get_module_name(__file__))
@@ -38,9 +38,12 @@ Gradients.update(OrderedDict([
     ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'}),]))
 
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
-IMAGE_TYPES = ['red', 'green', 'blue']
 
+
+
+IMAGE_TYPES = ['red', 'green', 'blue']
 COLOR_LIST = utils.plot_colors
+crosshair_pens = make_dashed_pens(color=(255, 255, 0))
 
 
 def image_item_factory(item_type='uniform', axisOrder='row-major', pen='r'):
@@ -147,13 +150,14 @@ class ImageDisplayer(QObject):
             self._plotitem.removeItem(self._image_items.pop(next(iter(self._image_items))))
         if labels is None:
             labels = []
-        while len(labels) != len(IMAGE_TYPES):
-            labels.append(IMAGE_TYPES[len(labels)])
+            while len(labels) != len(IMAGE_TYPES):
+                labels.append(IMAGE_TYPES[len(labels)])
 
         for ind, img_key in enumerate(IMAGE_TYPES):
             self._image_items[img_key] = image_item_factory(self.display_type, pen=img_key[0])
             self._plotitem.addItem(self._image_items[img_key])
-            self.legend.addItem(self._image_items[img_key], labels[ind])
+            if ind < len(labels):
+                self.legend.addItem(self._image_items[img_key], labels[ind])
         self.updated_item.emit(self._image_items)
 
     def update_image_visibility(self, are_items_visible):
@@ -283,49 +287,6 @@ class IsoCurver(QObject):
             self._isoLine.hide()
 
 
-class LineoutPlotter(LineoutPlotter):
-    """class to manage and display data filtered out into lineouts (1D, 0D)
-
-    Should be inherited and subclass some methods as appropriate
-
-    Parameters
-    ----------
-    graph_widgets: OrderedDict
-        Includes plotwidgets to display data
-    roi_manager:
-        The ROIManager to create ROIs and manage their properties
-    crosshair:
-        The Crosshair object
-    """
-    lineout_types = ['hor', 'ver', 'int']
-
-    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
-        super().__init__(graph_widgets, roi_manager, crosshair)
-
-    def plot_other_lineouts(self, roi_dicts):
-        for roi_key, lineout_data in roi_dicts.items():
-            if roi_key in self._roi_curves:
-                if lineout_data.hor_data.size > 0:
-                    self._roi_curves[roi_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
-                    self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
-
-    def plot_other_crosshair_lineouts(self, crosshair_dict):
-        for data_key, lineout_data in crosshair_dict.items():
-            if data_key in self._crosshair_curves:
-                self._crosshair_curves[data_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
-                self._crosshair_curves[data_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
-
-    def setup_crosshair(self):
-        for image_key in IMAGE_TYPES:
-            self._crosshair_curves[image_key] = \
-                {curv_key: curve_item_factory(image_key) for curv_key in self.lineout_types}
-            self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
-
-    def show_crosshair_curves(self, curve_key, show=True):
-        for curve in self._crosshair_curves[curve_key].values():
-            curve.setVisible(show)
-
-
 class View2D(ActionManager, QtCore.QObject):
 
     lineout_types = ['hor', 'ver', 'int']
@@ -342,9 +303,6 @@ class View2D(ActionManager, QtCore.QObject):
                                                  flip_axes=True),
                                     int=Viewer0D(self._lineout_widgets['int'], show_toolbar=False, no_margins=True))
 
-        self.lineout_viewers['hor'].view.add_data_displayer('crosshair')
-        self.lineout_viewers['ver'].view.add_data_displayer('crosshair')
-
         self.setup_actions()
 
         self.parent_widget = parent_widget
@@ -355,7 +313,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.image_widget = ImageWidget()
         self.roi_manager = ROIManager(self.image_widget, '2D')
 
-        self.roi_target = pgROI(pos=(0, 0), size=(20,20), movable=False, rotatable=False, resizable=False)
+        self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False, resizable=False)
         self.roi_target.setVisible(False)
 
         self.setup_widgets()
@@ -495,12 +453,20 @@ class View2D(ActionManager, QtCore.QObject):
         self.add_action('legend', 'Legend', 'RGB',
                         tip='Show the legend', checkable=True)
 
+    def update_colors(self, colors: list):
+        for ind, roi_name in enumerate(self.roi_manager.ROIs):
+            self.lineout_viewers['hor'].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
+            self.lineout_viewers['ver'].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
+            self.lineout_viewers['int'].update_colors(make_dashed_pens(colors[ind]), displayer=roi_name)
+
     def connect_things(self):
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
         self.roi_manager.new_ROI_signal.connect(self.add_roi_displayer)
+        self.roi_manager.new_ROI_signal.connect(self.lineout_viewers['int'].get_action('clear').click)
         self.roi_manager.remove_ROI_signal.connect(self.remove_roi_displayer)
+        self.roi_manager.color_signal.connect(self.update_colors)
         self.connect_action('isocurve', self.get_action('histo').trigger)
 
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
@@ -517,13 +483,16 @@ class View2D(ActionManager, QtCore.QObject):
 
     @Slot(int, str, str)
     def add_roi_displayer(self, index, roi_type='', roi_name=''):
-        self.lineout_viewers['hor'].view.add_data_displayer(roi_name)
-        self.lineout_viewers['ver'].view.add_data_displayer(roi_name)
+        color = self.roi_manager.ROIs[roi_name].color
+        self.lineout_viewers['hor'].view.add_data_displayer(roi_name, make_dashed_pens(color))
+        self.lineout_viewers['ver'].view.add_data_displayer(roi_name, make_dashed_pens(color))
+        self.lineout_viewers['int'].view.add_data_displayer(roi_name, make_dashed_pens(color))
 
     @Slot(str)
     def remove_roi_displayer(self, roi_name=''):
         self.lineout_viewers['hor'].view.remove_data_displayer(roi_name)
         self.lineout_viewers['ver'].view.remove_data_displayer(roi_name)
+        self.lineout_viewers['int'].view.remove_data_displayer(roi_name)
 
     @Slot(int, str, str)
     def update_roi_channels(self, index, roi_type=''):
@@ -542,11 +511,13 @@ class View2D(ActionManager, QtCore.QObject):
             self.isocurver.set_isocurve_data(datas.data[0])
 
     def display_roi_lineouts(self, roi_dte: DataToExport):
-        for lineout_type in self.lineout_types:
-            for displayer_name in self.lineout_viewers[lineout_type].view.other_data_displayers:
-                dwa = roi_dte.get_data_from_name_origin(lineout_type, displayer_name)
-                if dwa is not None:
-                    self.lineout_viewers[lineout_type].view.display_data(dwa, displayer=displayer_name)
+        if len(roi_dte) > 0:
+            for lineout_type in self.lineout_types:
+                for displayer_name in self.lineout_viewers[lineout_type].view.other_data_displayers:
+                    dwa = roi_dte.get_data_from_name_origin(lineout_type, displayer_name)
+                    if dwa is not None:
+                        self.lineout_viewers[lineout_type].view.display_data(dwa.deepcopy(),
+                                                                             displayer=displayer_name)
 
     def display_crosshair_lineouts(self, crosshair_dte: DataToExport):
         for lineout_type in self.lineout_types:
@@ -643,8 +614,15 @@ class View2D(ActionManager, QtCore.QObject):
         self.set_action_visible('position', show)
         self.crosshair.setVisible(show)
         if show:
+            self.lineout_viewers['hor'].view.add_data_displayer('crosshair', plot_colors=crosshair_pens)
+            self.lineout_viewers['ver'].view.add_data_displayer('crosshair', plot_colors=crosshair_pens)
+            self.lineout_viewers['int'].view.add_data_displayer('crosshair', plot_colors=crosshair_pens)
             range = self.get_view_range()
             self.set_crosshair_position(np.mean(np.array(range[0])), np.mean(np.array(range[0])))
+        else:
+            self.lineout_viewers['hor'].view.remove_data_displayer('crosshair')
+            self.lineout_viewers['ver'].view.remove_data_displayer('crosshair')
+            self.lineout_viewers['int'].view.remove_data_displayer('crosshair')
         logger.debug(f'Crosshair visible?: {self.crosshair.isVisible()}')
 
     def show_ROI_select(self):
@@ -775,7 +753,7 @@ class Viewer2D(ViewerBase):
         self.view.set_action_checked('roi', activate)
         self.view.get_action('roi').triggered.emit(activate)
 
-    def roi_changed(self):
+    def roi_changed(self, *args, **kwargs):
         self.filter_from_rois.filter_data(self._datas)
 
     def crosshair_changed(self):
@@ -907,6 +885,7 @@ class Viewer2D(ViewerBase):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
 
         self.roi_manager.roi_changed.connect(self.roi_changed)
+        self.roi_manager.roi_value_changed.connect(self.roi_changed)
 
         self.view.connect_action('flip_ud', slot=self.update_data)
         self.view.connect_action('flip_lr', slot=self.update_data)
@@ -963,41 +942,23 @@ class Viewer2D(ViewerBase):
         self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
     def process_roi_lineouts(self, roi_dte: DataToExport):
-        self.view.display_roi_lineouts(roi_dte)
+            if len(roi_dte) > 0:
+                self.view.display_roi_lineouts(roi_dte)
+                self.data_to_export.append(roi_dte)
 
-        #todo
-        self.measure_data_dict = dict([])
-        for roi_key, lineout_data in roi_dict.items():
-            if not self._display_temporary:
-                self.data_to_export.append(
-                    DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                origin=self.title,
-                                axes=[Axis(data=lineout_data.hor_axis,
-                                            units=self.x_axis.axis_units,
-                                            label=self.x_axis.axis_label)]))
+                self.measure_data_dict = dict([])
 
-                self.data_to_export.append(
-                    DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
-                                origin=self.title,
-                                axes=[Axis(data=lineout_data.ver_axis,
-                                            units=self.y_axis.axis_units,
-                                            label=self.y_axis.axis_label)]))
+                for roi_name in roi_dte.get_origins():
+                    dwa = roi_dte.get_data_from_name_origin('int', roi_name)
+                    for ind, data_array in enumerate(dwa.data):
+                            self.measure_data_dict[f'{dwa.labels[ind]}:'] = float(data_array[0])
 
-                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data],
-                                                       origin=self.title))
+                    QtWidgets.QApplication.processEvents()
 
-            if not isinstance(lineout_data.math_data, list):
-                self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
-            else:
-                for ind, dat in enumerate(lineout_data.math_data):
-                    self.measure_data_dict[f'{roi_key}/{ind:02d}:'] = dat
-
-            QtWidgets.QApplication.processEvents()
-
-        self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
-        if not self._display_temporary:
-            self.data_to_export_signal.emit(self.data_to_export)
-        self.ROI_changed.emit()
+                self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
+                if not self._display_temporary:
+                    self.data_to_export_signal.emit(self.data_to_export)
+                self.ROI_changed.emit()
 
 
 def main_spread():
@@ -1086,7 +1047,9 @@ def generate_uniform_data() -> DataFromPlugins:
     data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
     data_green[70:80, 7:12] = np.nan
 
-    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
+    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform',
+                                   data=[data_red, data_green, data_red-data_green],
+                                   labels = ['myreddata', 'mygreendata'],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
                                          Axis('yaxis', units='ypxl', data=y, index=0), ])
     return data_to_plot
