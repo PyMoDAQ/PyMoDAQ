@@ -367,15 +367,11 @@ class Filter2DFromRois(Filter):
                 sub_data_ver.name = 'ver'
                 sub_data_ver.origin = roi.name
                 sub_data_ver.labels = [f'{roi.name}/{label}' for label in sub_data_ver.labels]
-                int_data = sub_data_hor.mean(0)
-                int_data.name = 'int'
-                int_data.origin = roi.name
-                int_data.labels = [f'{roi.name}/{label}' for label in int_data.labels]
                 math_data = data_processors.get(math_function).process(sub_data)
-                math_data.name = 'math'
+                math_data.name = 'int'
                 math_data.origin = roi.name
                 math_data.labels = [f'{roi.name}/{label}' for label in math_data.labels]
-                dte.append([sub_data_hor, sub_data_ver, math_data, int_data])
+                dte.append([sub_data_hor, sub_data_ver, math_data])
             return dte
 
     def get_xydata(self, data: np.ndarray, roi: RectROI):
