@@ -122,7 +122,7 @@ class TestData0DWithHistory:
     def test_add_datas_list(self, init_qt):
         Nsamplesinhisto = 2
         data_histo = plot_utils.Data0DWithHistory(Nsamplesinhisto)
-        dat = [[1, 2], [np.array([1]), 2], [1, 2], [1, 2], [1, 2], [1, 2]]
+        dat = [[1, 2], [1, 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
             assert data_histo._data_length == ind+1
@@ -151,21 +151,6 @@ class TestData0DWithHistory:
 
         assert data_histo.datas == dict([])
         assert data_histo._data_length == 0
-
-
-class TestLineoutData:
-    def test_with_error(self):
-        with pytest.raises(ValueError):
-            pymodaq.utils.plotting.utils.filter.LineoutData(hor_axis=np.random.random(10), hor_data=np.random.random(12))
-
-        with pytest.raises(ValueError):
-            pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(12))
-
-    def test_intdataisnotnone(self):
-        pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10), int_data=np.array([10]))
-
-    def test_intdataisnone(self):
-        pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
 
 
 class TestViewer2D:
@@ -198,6 +183,9 @@ class TestViewer2D:
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
         assert prog.view.is_action_checked('blue')
+        assert prog.view.is_action_visible('red')
+        assert prog.view.is_action_visible('green')
+        assert prog.view.is_action_visible('blue')
 
     def test_show_data_uniform(self, init_viewer2D):
         prog, qtbot = init_viewer2D
@@ -207,7 +195,10 @@ class TestViewer2D:
 
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
-        assert not prog.view.is_action_checked('blue')
+        assert prog.view.is_action_checked('blue')
+        assert prog.view.is_action_visible('red')
+        assert prog.view.is_action_visible('green')
+        assert not prog.view.is_action_visible('blue')
         assert prog.isdata['red']
         assert prog.isdata['green']
         assert not prog.isdata['blue']
@@ -219,7 +210,10 @@ class TestViewer2D:
         prog.show_data(data)
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
-        assert not prog.view.is_action_checked('blue')
+        assert prog.view.is_action_checked('blue')
+        assert prog.view.is_action_visible('red')
+        assert prog.view.is_action_visible('green')
+        assert not prog.view.is_action_visible('blue')
 
     def test_update_data_roi(self, init_prog_show_data):
         prog, qtbot, _ = init_prog_show_data
@@ -376,12 +370,10 @@ class TestROI:
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
         assert roi_type == 'RectROI'
         assert index_roi == 0
-        assert len(prog.view.lineout_plotter.get_roi_curves_triplet()) == 1
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='EllipseROI')
         assert roi_type == 'EllipseROI'
         assert index_roi == 1
-        assert len(prog.view.lineout_plotter.get_roi_curves_triplet()) == 2
 
     def test_remove_roi(self, init_viewer2D):
         prog, qtbot = init_viewer2D
@@ -392,8 +384,6 @@ class TestROI:
 
         prog.view.roi_manager.remove_roi_programmatically(index_roi)
         QtWidgets.QApplication.processEvents()
-
-        assert len(prog.view.lineout_plotter._roi_curves) == 0
 
     def test_update_color_roi(self, init_viewer2D):
         prog, qtbot = init_viewer2D
@@ -544,10 +534,6 @@ class TestCrosshair:
         assert prog.view.is_action_checked('crosshair')
         assert prog.view.is_action_visible('position')
         assert prog.view.crosshair.isVisible()
-        for image_key in v2d.IMAGE_TYPES:
-            for curve_key, curve in prog.view.lineout_plotter.get_crosshair_curves_triplet()[image_key].items():
-                assert curve.isVisible()
-                assert curve == prog.view.lineout_plotter.get_crosshair_curve_triplet(image_key)[curve_key]
 
         prog.view.get_action('crosshair').trigger()
         QtWidgets.QApplication.processEvents()
@@ -559,9 +545,6 @@ class TestCrosshair:
         assert not prog.view.is_action_checked('crosshair')
         assert not prog.view.is_action_visible('position')
         assert not prog.view.crosshair.isVisible()
-        for image_key in v2d.IMAGE_TYPES:
-            for curve in prog.view.lineout_plotter.get_crosshair_curves_triplet()[image_key].values():
-                assert not curve.isVisible()
 
     def test_setpos_crosshair(self, init_viewer2D):
         prog, qtbot = init_viewer2D
@@ -579,64 +562,6 @@ class TestCrosshair:
 
         assert blocker.args[0] == approx(XCROSS)
         assert blocker.args[1] == approx(YCROSS)
-
-    @pytest.mark.parametrize('position', [(24, 75), (300, 10), (50, 300)])
-    def test_get_crosshair_lineout_uniform(self, init_viewer2D, position):
-        prog, qtbot = init_viewer2D
-        data = init_data(2)
-        datas = dict(red=data[0], green=data[1])
-        prog.show_data(data)
-        QtWidgets.QApplication.processEvents()
-
-        XCROSS, YCROSS = position
-
-        prog.view.get_action('crosshair').trigger()
-        QtWidgets.QApplication.processEvents()
-
-        with qtbot.waitSignal(prog.view.lineout_plotter.crosshair_lineout_plotted, timeout=1000) as blocker:
-            prog.view.crosshair.set_crosshair_position(XCROSS, YCROSS)
-
-        crosshair_dict = blocker.args[0]
-        for data_key, lineout_data in crosshair_dict.items():
-            if YCROSS < 0 or YCROSS > datas[data_key].shape[0]:
-                assert np.any(lineout_data.hor_data == approx(np.zeros((datas[data_key].shape[1],))))
-            else:
-                assert np.any(lineout_data.hor_data == approx(datas[data_key][YCROSS, :]))
-            if XCROSS < 0 or XCROSS > datas[data_key].shape[1]:
-                assert np.any(lineout_data.ver_data == approx(np.zeros((datas[data_key].shape[0],))))
-            else:
-                assert np.any(lineout_data.ver_data == approx(datas[data_key][:, XCROSS]))
-
-    @pytest.mark.parametrize('position', [(-2., -3), (2., 1.), (50, 300)])
-    def test_get_crosshair_lineout_spread(self, init_viewer2D, position):
-        prog, qtbot = init_viewer2D
-        data = init_data(uniform=False)
-        prog.show_data(data)
-        QtWidgets.QApplication.processEvents()
-
-        red_image_item = prog.view.data_displayer.get_image('red')
-        XCROSS, YCROSS = position
-
-        prog.view.get_action('crosshair').trigger()
-        QtWidgets.QApplication.processEvents()
-
-        with qtbot.waitSignal(prog.view.lineout_plotter.crosshair_lineout_plotted, timeout=1000) as blocker:
-            prog.view.crosshair.set_crosshair_position(XCROSS, YCROSS)
-
-        crosshair_dict = blocker.args[0]
-        data_H_index = slice(None, None, 1)
-        data_V_index = slice(None, None, 1)
-        for data_key, lineout_data in crosshair_dict.items():
-            points, hor_data = red_image_item.get_points_at('y', position[1])
-            x_sorted_indexes = np.argsort(points[:, 0])
-            hor_data = hor_data[x_sorted_indexes][data_H_index]
-
-            points, ver_data = red_image_item.get_points_at('x', position[0])
-            x_sorted_indexes = np.argsort(points[:, 1])
-            ver_data = ver_data[x_sorted_indexes][data_V_index]
-
-            assert np.any(lineout_data.hor_data == approx(hor_data))
-            assert np.any(lineout_data.ver_data == approx(ver_data))
 
     def test_crosshair_doubleclicked(self, init_viewer2D):
         prog, qtbot = init_viewer2D

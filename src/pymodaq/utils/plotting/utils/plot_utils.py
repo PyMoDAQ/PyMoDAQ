@@ -448,7 +448,7 @@ class Data0DWithHistory:
         """
         self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
         datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
-        self.add_datas(data)
+        self.add_datas(datas)
 
     @dispatch(dict)
     def add_datas(self, datas: dict):
