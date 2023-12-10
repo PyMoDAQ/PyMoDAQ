@@ -483,15 +483,19 @@ class Viewer1D(ViewerBase):
     def process_roi_lineouts(self, roi_dte: DataToExport):
         self.view.display_roi_lineouts(roi_dte)
         self.measure_data_dict = dict([])
-        if not self._display_temporary:
-            self.data_to_export.append(roi_dte.data)
 
         self.measure_data_dict = roi_dte.merge_as_dwa('Data0D').to_dict()
-
         QtWidgets.QApplication.processEvents()
-
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
+
         if not self._display_temporary:
+            roi_dte_bis = roi_dte.deepcopy()
+            for dwa in roi_dte_bis:
+                if dwa.name == 'HorData':
+                    dwa.name = f'Hlineout_{dwa.origin}'
+                elif dwa.name == 'IntData':
+                    dwa.name = f'Integrated_{dwa.origin}'
+            self.data_to_export.append(roi_dte_bis.data)
             self.data_to_export_signal.emit(self.data_to_export)
         self.ROI_changed.emit()
 
