@@ -113,7 +113,7 @@ class Filter2DFromCrosshair(Filter):
             self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
 
     def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
-
+        dte = DataToExport('Crosshair')
         if dwa is not None:
             self._x, self._y = self.crosshair.get_positions()
             data_type = dwa.distribution
@@ -346,8 +346,11 @@ class Filter2DFromRois(Filter):
     def get_xydata_from_roi(self, roi: RectROI, dwa: DataWithAxes, math_function: str) -> DataToExport:
         dte = DataToExport(roi.name)
         if dwa is not None:
+            labels = [f'{roi.name}/{label}' for label in dwa.labels]
             if dwa.distribution.name == 'spread':
                 xvals, yvals, data = self.get_xydata_spread(dwa, roi)
+                if len(data) == 0:
+                    return dte
                 ind_xaxis = np.argsort(xvals)
                 ind_yaxis = np.argsort(yvals)
                 xvals = xvals[ind_xaxis]
@@ -355,40 +358,51 @@ class Filter2DFromRois(Filter):
                 data_H = data[ind_xaxis]
                 data_V = data[ind_yaxis]
                 int_data = np.array([np.mean(data)])
-                math_data = int_data
+
+                _x_axis = dwa.get_axis_from_index_spread(0, 0)
+                x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
+                _y_axis = dwa.get_axis_from_index_spread(0, 1)
+                y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
+                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis],)
+                sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
+                math_data = DataFromRoi('int', data=int_data)
             else:
                 slices = self.get_slices_from_roi(roi, dwa.shape)
                 sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
                 sub_data_hor = sub_data.mean(0)
-                sub_data_hor.name = 'hor'
-                sub_data_hor.origin = roi.name
-                sub_data_hor.labels = [f'{roi.name}/{label}' for label in sub_data_hor.labels]
                 sub_data_ver = sub_data.mean(1)
-                sub_data_ver.name = 'ver'
-                sub_data_ver.origin = roi.name
-                sub_data_ver.labels = [f'{roi.name}/{label}' for label in sub_data_ver.labels]
                 math_data = data_processors.get(math_function).process(sub_data)
-                math_data.name = 'int'
-                math_data.origin = roi.name
-                math_data.labels = [f'{roi.name}/{label}' for label in math_data.labels]
-                dte.append([sub_data_hor, sub_data_ver, math_data])
+
+            sub_data_hor.name = 'hor'
+            sub_data_hor.origin = roi.name
+            sub_data_hor.labels = labels
+            sub_data_ver.name = 'ver'
+            sub_data_ver.origin = roi.name
+            sub_data_ver.labels = labels
+            math_data.name = 'int'
+            math_data.origin = roi.name
+            math_data.labels = labels
+
+            dte.append([sub_data_hor, sub_data_ver, math_data])
             return dte
 
-    def get_xydata(self, data: np.ndarray, roi: RectROI):
-        data, coords = self.data_from_roi(data, roi)
-
-        if data is not None:
-            xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])),
-                                data.shape[1])
-            yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])),
-                                data.shape[0])
-        else:
-            xvals = yvals = data = np.array([])
-        return xvals, yvals, data
-
-    def data_from_roi(self, data, roi):
-        data, coords = roi.getArrayRegion(data, self._graph_item, self.axes, returnMappedCoords=True)
-        return data, coords
+    #TODO possibly not used anymore to be deleted
+    #
+    # def get_xydata(self, data: np.ndarray, roi: RectROI):
+    #     data, coords = self.data_from_roi(data, roi)
+    #
+    #     if data is not None:
+    #         xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])),
+    #                             data.shape[1])
+    #         yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])),
+    #                             data.shape[0])
+    #     else:
+    #         xvals = yvals = data = np.array([])
+    #     return xvals, yvals, data
+    #
+    # def data_from_roi(self, data, roi):
+    #     data, coords = roi.getArrayRegion(data, self._graph_item, self.axes, returnMappedCoords=True)
+    #     return data, coords
 
     def get_xydata_spread(self, data, roi):
         xvals = []
@@ -405,28 +419,6 @@ class Filter2DFromRois(Filter):
         xvals = np.array(xvals)
         yvals = np.array(yvals)
         return xvals, yvals, data_out
-
-
-class LineoutData:
-    def __init__(self, hor_axis=np.array([]), ver_axis=np.array([]), hor_data=np.array([]), ver_data=np.array([]),
-                 int_data: np.ndarray = None, math_data: List[np.ndarray] = None):
-        super().__init__()
-        if len(hor_axis) != len(hor_data):
-            raise ValueError(f'Horizontal lineout data and axis must have the same size')
-        if len(ver_axis) != len(ver_data):
-            raise ValueError(f'Horizontal lineout data and axis must have the same size')
-
-        self.hor_axis = hor_axis
-        self.ver_axis = ver_axis
-        self.hor_data = hor_data
-        self.ver_data = ver_data
-        if int_data is None:
-            self.int_data = np.array([np.sum(self.ver_data)])
-        else:
-            self.int_data = int_data
-        if math_data is None:
-            math_data = self.int_data
-        self.math_data = math_data
 
 
 class FourierFilterer(QObject):
