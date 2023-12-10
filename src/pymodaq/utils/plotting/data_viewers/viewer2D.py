@@ -944,12 +944,20 @@ class Viewer2D(ViewerBase):
     def process_roi_lineouts(self, roi_dte: DataToExport):
             if len(roi_dte) > 0:
                 self.view.display_roi_lineouts(roi_dte)
-                self.data_to_export.append(roi_dte)
+                roi_dte_bis = roi_dte.deepcopy()
+                for dwa in roi_dte_bis:
+                    if dwa.name == 'hor':
+                        dwa.name = f'Hlineout_{dwa.origin}'
+                    elif dwa.name == 'ver':
+                        dwa.name = f'Vlineout_{dwa.origin}'
+                    elif dwa.name == 'int':
+                        dwa.name = f'Integrated_{dwa.origin}'
+                self.data_to_export.append(roi_dte_bis)
 
                 self.measure_data_dict = dict([])
 
-                for roi_name in roi_dte.get_origins():
-                    dwa = roi_dte.get_data_from_name_origin('int', roi_name)
+                for roi_name in roi_dte_bis.get_origins():
+                    dwa = roi_dte_bis.get_data_from_name_origin(f'Integrated_{roi_name}', roi_name)
                     for ind, data_array in enumerate(dwa.data):
                             self.measure_data_dict[f'{dwa.labels[ind]}:'] = float(data_array[0])
 
