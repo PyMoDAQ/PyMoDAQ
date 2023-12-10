@@ -1091,6 +1091,10 @@ class AxesManagerBase:
     def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
         ...
 
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        """Only valid for Spread data"""
+        ...
+
     def get_nav_axes(self) -> List[Axis]:
         """Get the navigation axes corresponding to the data
 
@@ -1399,6 +1403,11 @@ class AxesManagerSpread(AxesManagerBase):
         else:
             return None, None
 
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        for axis in self.axes:
+            if axis.index == index and axis.spread_order == spread_order:
+                return axis
+
     def _get_dimension_str(self):
         try:
             string = "("
@@ -1650,6 +1659,9 @@ class DataWithAxes(DataBase):
 
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)
+
+    def get_axis_from_index_spread(self, index: int, spread: int):
+        return self._am.get_axis_from_index_spread(index, spread)
 
     def get_axis_from_label(self, label: str) -> Axis:
         """Get the axis referred by a given label
