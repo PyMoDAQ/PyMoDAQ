@@ -736,7 +736,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._received_data += 1
             if len(data) != 0:
                 for dat in data:
-                    dat.origin = self.title
+                    dat.origin = f'{self.title} / {dat.origin}' if dat.origin is not None else f'{self.title}'
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):
