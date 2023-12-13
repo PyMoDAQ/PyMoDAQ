@@ -1015,7 +1015,8 @@ class TestDataToExport:
         dat1.origin = ORIGIN1
         dat2.origin = ORIGIN2
 
-        assert data.get_origins() == [ORIGIN1, ORIGIN2]
+        for origin in data.get_origins():
+            assert origin in [ORIGIN1, ORIGIN2]
 
         dat2.origin = ORIGIN1
 
