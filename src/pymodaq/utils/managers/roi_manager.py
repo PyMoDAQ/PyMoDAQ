@@ -1,6 +1,7 @@
+from abc import abstractmethod
 import os
 import sys
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -83,15 +84,25 @@ class ROIPositionMapper(QtWidgets.QWidget):
 
 
 class ROI(pgROI):
-    def __init__(self, *args, name='roi', **kwargs):
+    index_signal = Signal(int)
+
+    def __init__(self, *args, index=0, name='roi', **kwargs):
         super().__init__(*args, **kwargs)
         self.name = name
+        self.index = index
         self._menu = QtWidgets.QMenu()
         self._menu.addAction('Set ROI positions', self.set_positions)
+        self.sigRegionChangeFinished.connect(self.emit_index_signal)
+
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
 
     @property
     def color(self):
         return self.pen.color()
+
+    def center(self):
+        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
 
     def set_positions(self):
         mapper = ROIPositionMapper(self.pos(), self.size())
@@ -104,6 +115,12 @@ class ROI(pgROI):
     def contextMenuEvent(self, event):
         if self._menu is not None:
             self._menu.exec(event.screenPos())
+
+    def width(self) -> float:
+        return self.size().x()
+
+    def height(self) -> float:
+        return self.size().y()
 
 
 class ROIBrushable(ROI):
@@ -144,10 +161,14 @@ class LinearROI(pgLinearROI):
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
-    def pos(self):
+    def pos(self) -> Tuple[float, float]:
         return self.getRegion()
 
-    def setPos(self, pos):
+    def center(self) -> float:
+        pos = self.pos()
+        return (pos[0] + pos[1]) / 2
+
+    def setPos(self, pos: Tuple[int, int]):
         self.setRegion(pos)
 
     def setPen(self, color):
@@ -174,23 +195,13 @@ class EllipseROI(ROI):
     ============== =============================================================
 
     """
-    index_signal = Signal(int)
+
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        super().__init__(pos=pos, size=size, **kwargs)
+        super().__init__(pos=pos, size=size, index=index, **kwargs)
         self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):       
-        # Project width/height in rotated frame         
-        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
-        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
 
     def getArrayRegion(self, arr, img=None, axes=(0, 1), **kwds):
         """
@@ -221,9 +232,6 @@ class EllipseROI(ROI):
         else:
             return arr * mask
 
-    def height(self):
-        return self.size().y()
-
     def paint(self, p, opt, widget):
         r = self.boundingRect()
         p.setRenderHint(QtGui.QPainter.Antialiasing)
@@ -238,9 +246,6 @@ class EllipseROI(ROI):
         self.path = QtGui.QPainterPath()
         self.path.addEllipse(self.boundingRect())
         return self.path
-
-    def width(self):
-        return self.size().x()
 
 
 class SimpleRectROI(ROI):
@@ -262,22 +267,10 @@ class SimpleRectROI(ROI):
 
 
 class RectROI(ROI):
-    index_signal = Signal(int)
-
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
-        super().__init__(pos=pos, size=size, **kwargs)  # , scaleSnap=True, translateSnap=True)
+        super().__init__(pos=pos, size=size, index=index, **kwargs)  # , scaleSnap=True, translateSnap=True)
         self.addScaleHandle([1, 1], [0, 0])
         self.addRotateHandle([0, 0], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):       
-        # Project width/height in rotated frame         
-        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
-        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
 
 
 ROI_NAME_PREFIX = 'ROI_'
