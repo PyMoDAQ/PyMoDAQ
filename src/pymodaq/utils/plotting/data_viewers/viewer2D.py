@@ -694,7 +694,6 @@ class View2D(ActionManager, QtCore.QObject):
 class Viewer2D(ViewerBase):
     """Object managing plotting and manipulation of 2D data using a View2D"""
 
-    crosshair_clicked = Signal(bool)
     ROI_select_signal = Signal(QtCore.QRectF)
 
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
