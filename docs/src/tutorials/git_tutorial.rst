@@ -394,7 +394,7 @@ To conclude, the local development workflow is as follow:
 
 * Start from a clean repository.
 * Create a new branch *develop* to isolate the development of my new feature from the stable version of the code in
-  *main*. **Never work directly on the main branch!**.
+  *main*. **Never work directly on the main branch!**
 * Do modifications in the files.
 * Test that the result is as expected.
 * Do a commit.
@@ -402,7 +402,6 @@ To conclude, the local development workflow is as follow:
   small ones**.
 * Once the new feature is fully operational and tested, merge the *develop* branch into the *main* one.
 
-Doing a commit is like saving your progression in a video game. It is a checkpoint where you will always be able to come
- back to, whatever you do after.
+Doing a commit is like saving your progression in a video game. It is a checkpoint where you will always be able to come back to, whatever you do after.
 
 Once you will be more familiar with Git, you will feel very safe to test any crazy modification of your code!
