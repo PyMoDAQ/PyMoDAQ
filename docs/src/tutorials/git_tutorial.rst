@@ -1,8 +1,5 @@
 .. _git_tutorial:
 
-Basics of Git and GitHub
-========================
-
 +------------------------------------+---------------------------------------+
 | Author email                       | david.bresteau@cea.fr                 |
 +------------------------------------+---------------------------------------+
@@ -13,6 +10,11 @@ Basics of Git and GitHub
 
 .. figure:: /image/tutorial_git/git_logo.png
     :width: 200
+
+Basics of Git and GitHub
+========================
+
+We introduce Git and GitHub in Pymodaq documentation because we believe that every experimental physicist should know about those wonderful tools that have been made by developers. They will help you code and share your code efficiently, not only within the framework of Pymodaq or even Python. Moreover, since Pymodaq is an open source project, its development is based on those tools. They have to be mastered if you want to contribute to the project or develop your own extension. Even as a simple user, you will learn where to ask for help when you are in difficulty, because Pymodaq’s community is organized around those tools.
 
 Why Git?
 --------
