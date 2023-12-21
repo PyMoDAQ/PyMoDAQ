@@ -40,7 +40,8 @@ from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -370,11 +371,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 viewer.data_to_export_signal.disconnect()
             except:
                 pass
-        for viewer in viewers:
+        for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
-            if hasattr(viewer, 'ROI_select_signal'):
-                viewer.ROI_select_signal.connect(
-                    lambda roi_pos_size: self.command_hardware.emit(ThreadCommand('ROISelect', roi_pos_size)))
+            #deprecated:
+            viewer.ROI_select_signal.connect(
+                lambda roi_info: self.command_hardware.emit(ThreadCommand('ROISelect', roi_info)))
+            #use that now
+            viewer.roi_select_signal.connect(
+                lambda roi_info: self.command_hardware.emit(ThreadCommand('roi_select', dict(roi_info=roi_info,
+                                                                                             ind_viewer=ind_viewer))))
+
         self._viewers = viewers
 
     def quit_fun(self):
@@ -1270,7 +1276,12 @@ class DAQ_Detector(QObject):
         else:  # custom commands for particular plugins
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
-                cmd(command.attribute)
+                if isinstance(command.attribute, list):
+                    cmd(*command.attribute)
+                elif isinstance(command.attribute, dict):
+                    cmd(**command.attribute)
+                else:
+                    cmd(command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
         """ Initialize an instrument plugin class and tries to apply preset settings

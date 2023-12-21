@@ -59,6 +59,12 @@ class Point:
         if len(self) != len(other):
             raise ValueError('Those points should be expressed in the same coordinate system and dimensions')
 
+    def __eq__(self, other):
+        if isinstance(other, Point):
+            return np.allclose(self.coordinates, other.coordinates)
+        else:
+            return False
+
     def __add__(self, other: Union['Point', 'Vector']):
         self._compare_length(other)
         return Point(*(self._coordinates + other._coordinates))
@@ -516,18 +522,23 @@ class RoiInfo:
     origin: Union[Point, Iterable[float]]
     width: float
     height: float = None
+    angle: float = None
     centered: bool = False
     color: Tuple[int, int, int] = (255, 0, 0)
+    roi_class: type = None
+    index: int = 0
 
     @classmethod
     def info_from_linear_roi(cls, roi: LinearROI):
         pos = roi.pos()
-        return cls(Point((pos[0],)), width=(pos[1] - pos[0]), color=roi.color)
+        return cls(Point((pos[0],)), width=(pos[1] - pos[0]), color=roi.color,
+                   roi_class=type(roi), index=roi.index)
 
     @classmethod
     def info_from_rect_roi(cls, roi: RectROI):
-        return cls(Point(roi.pos()), width=roi.width(), height=roi.height(), color=roi.color)
+        return cls(Point(roi.pos()), width=roi.width(), height=roi.height(),
+                   color=roi.color, roi_class=type(roi), index=roi.index)
 
     def center_origin(self):
         if not self.centered:
-            self.origin += Point((self.width, self.height))
+            self.origin += Point((self.width / 2, self.height / 2))

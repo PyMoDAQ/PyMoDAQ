@@ -6,40 +6,15 @@ from qtpy import QtWidgets
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import DataToExport, DataWithAxes, Axis, DataSource
 
-from pymodaq.utils.enums import BaseEnum, enum_checker
-from pymodaq.utils.factory import ObjectFactory, BuilderBase
+from pymodaq.utils.enums import enum_checker
+from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.plotting import data_viewers
+from pymodaq.utils.plotting.data_viewers.base import ViewerBase, ViewersEnum
 from pymodaq.utils.gui_utils import DockArea, Dock
-from pymodaq.utils.managers.parameter_manager import ParameterManager
-
 
 config_viewers = {}
 
 logger = set_logger(get_module_name(__file__))
-
-
-class ViewersEnum(BaseEnum):
-    """enum relating a given viewer with data type"""
-    Viewer0D = 'Data0D'
-    Viewer1D = 'Data1D'
-    Viewer2D = 'Data2D'
-    ViewerND = 'DataND'
-    ViewerSequential = 'DataSequential'
-
-    def get_dim(self):
-        return self.value.split('Data')[1].split('D')[0]
-
-    def increase_dim(self, ndim: int):
-        dim = self.get_dim()
-        if dim != 'N':
-            dim_as_int = int(dim) + ndim
-            if dim_as_int > 2:
-                dim = 'N'
-            else:
-                dim = str(dim_as_int)
-        else:
-            dim = 'N'
-        return ViewersEnum[f'Viewer{dim}D']
 
 
 def get_viewer_enum_from_axes(Naxes: int):
@@ -260,7 +235,7 @@ if __name__ == '__main__':
         return dat1, dat2, data
 
     import sys
-    import random
+
     app = QtWidgets.QApplication(sys.argv)
 
     dockarea = DockArea()

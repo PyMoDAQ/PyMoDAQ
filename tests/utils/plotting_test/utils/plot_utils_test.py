@@ -7,6 +7,7 @@ Created the 03/11/2022
 import pytest
 import numpy as np
 
+from pyqtgraph.functions import mkColor
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.utils.plot_utils import Point, Vector, get_sub_segmented_positions, RoiInfo, RectROI, \
     LinearROI
@@ -84,7 +85,7 @@ def test_get_sub_segmented_positions():
 
 class TestInfoFromROI:
     def test_ini(self):
-        origin = 23
+        origin = Point(23)
         width = 40
         height = 25
         with pytest.raises(TypeError):
@@ -94,3 +95,31 @@ class TestInfoFromROI:
 
         assert isinstance(roi_info.origin, Point)
         assert roi_info.origin == origin
+
+    def test_create_from_linear_roi(self):
+        pos_linear = [-30, 65]
+        linear_color = (34, 78, 23)
+        linear_roi = LinearROI(pos=pos_linear)
+        linear_roi.setPen(linear_color)
+        linear_roi_info = RoiInfo.info_from_linear_roi(linear_roi)
+
+        assert linear_roi_info.origin == Point(pos_linear[0])
+        assert linear_roi_info.width == pytest.approx(pos_linear[1]-pos_linear[0])
+        assert linear_roi_info.color == mkColor(linear_color)
+        assert linear_roi_info.height == None
+        assert linear_roi_info.roi_class == LinearROI
+
+    def test_create_from_rect_roi(self, qtbot):
+        pos = [-30, 65]
+        size = [78, 5]
+        color = (34, 78, 23)
+        roi = RectROI(pos=pos, size=size)
+        roi.setPen(color)
+        roi_info = RoiInfo.info_from_rect_roi(roi)
+
+        assert roi_info.origin == Point(pos)
+        assert roi_info.width == pytest.approx(size[0])
+        assert roi_info.color == mkColor(color)
+        assert roi_info.height == pytest.approx(size[1])
+        assert roi_info.roi_class == RectROI
+

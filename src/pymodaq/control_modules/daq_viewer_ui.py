@@ -19,7 +19,8 @@ from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq.utils.gui_utils import Dock
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerFactory, ViewersEnum, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.enums import enum_checker
 
 

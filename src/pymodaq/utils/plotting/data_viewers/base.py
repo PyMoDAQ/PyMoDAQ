@@ -1,13 +1,14 @@
 
 from typing import Union, TYPE_CHECKING, Iterable
 
+from pymodaq.utils.enums import BaseEnum
 from pyqtgraph.graphicsItems import InfiniteLine, ROI
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, QRectF
 
 from pymodaq.utils.data import DataToExport, DataWithAxes
 from pymodaq.utils.exceptions import ViewerError
-from .viewer import ViewersEnum
+from pymodaq.utils.plotting.utils.plot_utils import RoiInfo
 
 if TYPE_CHECKING:
     from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
@@ -16,7 +17,28 @@ if TYPE_CHECKING:
     from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
 
 
+class ViewersEnum(BaseEnum):
+    """enum relating a given viewer with data type"""
+    Viewer0D = 'Data0D'
+    Viewer1D = 'Data1D'
+    Viewer2D = 'Data2D'
+    ViewerND = 'DataND'
+    ViewerSequential = 'DataSequential'
 
+    def get_dim(self):
+        return self.value.split('Data')[1].split('D')[0]
+
+    def increase_dim(self, ndim: int):
+        dim = self.get_dim()
+        if dim != 'N':
+            dim_as_int = int(dim) + ndim
+            if dim_as_int > 2:
+                dim = 'N'
+            else:
+                dim = str(dim_as_int)
+        else:
+            dim = 'N'
+        return ViewersEnum[f'Viewer{dim}D']
 
 
 class ViewerBase(QObject):
@@ -47,7 +69,8 @@ class ViewerBase(QObject):
     status_signal = Signal(str)
     crosshair_clicked = Signal(bool)
     sig_double_clicked = Signal(float, float)
-    ROI_select_signal = Signal(QRectF)
+    ROI_select_signal = Signal(QRectF)  # deprecated: use roi_select_signal
+    roi_select_signal = Signal(RoiInfo)
 
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__()
@@ -176,3 +199,5 @@ class ViewerBase(QObject):
         """Show/Hide a specific read only ROI"""
         if self.roi_target is not None:
             self.roi_target.setVisible(show)
+
+

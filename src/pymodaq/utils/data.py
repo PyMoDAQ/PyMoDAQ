@@ -394,6 +394,8 @@ class Axis:
             return int((threshold - self.offset) / self.scaling)
 
     def find_indexes(self, thresholds: IterableType[float]) -> IterableType[int]:
+        if isinstance(thresholds, numbers.Number):
+            thresholds = [thresholds]
         return [self.find_index(threshold) for threshold in thresholds]
 
 
@@ -1517,6 +1519,15 @@ class DataWithAxes(DataBase):
             self.data[:] = [data.T for data in self.data]
             for axis in self.axes:
                 axis.index = 0 if axis.index == 1 else 1
+
+    def crop_at_along(self, coordinates_tuple: Tuple):
+        slices = []
+        for coordinates in coordinates_tuple:
+            axis = self.get_axis_from_index(0)[0]
+            indexes = axis.find_indexes(coordinates)
+            slices.append(slice(indexes))
+
+        return self._slicer(slices, False)
 
     def mean(self, axis: int = 0) -> DataWithAxes:
         """Process the mean of the data on the specified axis and returns the new data

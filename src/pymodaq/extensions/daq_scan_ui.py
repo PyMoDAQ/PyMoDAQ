@@ -16,7 +16,8 @@ from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.gui_utils import DockArea, Dock
 from pymodaq.utils.gui_utils.widgets.spinbox import QSpinBox_ro
 from pymodaq.utils.parameter.pymodaq_ptypes.led import QLED
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.daq_utils import ThreadCommand
 
 if TYPE_CHECKING:

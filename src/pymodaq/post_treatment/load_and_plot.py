@@ -13,7 +13,8 @@ from qtpy import QtWidgets, QtCore
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker
 from pymodaq.utils.h5modules.data_saving import DataLoader
 from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.gui_utils import Dock, DockArea
 
 
