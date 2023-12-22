@@ -77,7 +77,7 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -89,6 +89,9 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
+    if axes_names == []:
+        axes_names = axis_names
+    
     params = [
                  {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
                      {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
@@ -97,11 +100,6 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon
                       'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
                      {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
                  ]},
-                 {'title': 'Grouping', 'name': 'grouping', 'type': 'group', 'visible': is_multiaxes, 'children': [
-                     {'title': 'Axes', 'name': 'grouped_axes', 'type': 'itemselect',
-                      'value': dict(all_items=axes_names, selected=[])},
-                     {'title': 'Do group', 'name': 'do_group', 'type': 'bool'},
-                 ]}
              ] + comon_parameters(epsilon)
     return params
 
@@ -268,12 +266,6 @@ class DAQ_Move_base(QObject):
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
         self.settings.child('multiaxes', 'axis').setLimits(names)
-        grouped_axes = self.settings['grouping', 'grouped_axes'].copy()  # copying the dict otherwise the valuechanged will not be triggered
-        if isinstance(names, dict):
-            names = list(names.keys())
-        grouped_axes.update({'all_items': names, 'selected': []})
-        self.settings.child('grouping', 'grouped_axes').setValue(grouped_axes)
-        QtWidgets.QApplication.processEvents()
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""

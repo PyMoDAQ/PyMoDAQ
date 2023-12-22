@@ -5,6 +5,7 @@ import importlib
 import inspect
 import json
 import functools
+import platform
 import re
 import time
 import warnings
@@ -29,6 +30,12 @@ if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from versio
     from importlib import metadata
 else:
     import importlib_metadata as metadata  # pragma: no cover
+
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
+    # from version 3.9 the cache decorator is available
+    from functools import cache
+else:
+    from functools import lru_cache as cache
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
@@ -586,7 +593,81 @@ def get_entrypoints(group='pymodaq.plugins'):
             discovered_entrypoints = metadata.entry_points().select(group=group)
         except AttributeError:
             discovered_entrypoints = metadata.entry_points().get(group, [])
+    if isinstance(discovered_entrypoints, tuple):  # API for python <= 3.8
+        discovered_entrypoints = list(discovered_entrypoints)
     return discovered_entrypoints
+
+
+@cache
+def get_instrument_plugins():  # pragma: no cover
+    """
+    Get plugins names as a list
+    Parameters
+    ----------
+    plugin_type: (str) plugin type either 'daq_0Dviewer', 'daq_1Dviewer', 'daq_2Dviewer', 'daq_NDviewer' or 'daq_move'
+    module: (module) parent module of the plugins
+
+    Returns
+    -------
+
+    """
+    plugins_import = []
+    discovered_plugins = []
+    discovered_plugins_all = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
+    discovered_plugins_all.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+
+    for entry in discovered_plugins_all:
+        if entry.name not in [ent.name for ent in discovered_plugins]:
+            discovered_plugins.append(entry)
+
+    logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
+    viewer_types = ['0D', '1D', '2D', 'ND']
+    for entrypoint in discovered_plugins:
+        #print(f'Looking for valid instrument plugins in package: {module.value}')
+        plugin_list = []
+        try:
+            try:
+                movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
+                plugin_list.extend([{'name': mod[len('daq_move') + 1:],
+                                     'module': movemodule,
+                                     'parent_module': importlib.import_module(entrypoint.value),
+                                     'type': 'daq_move'}
+                                    for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
+                                    if 'daq_move' in mod])
+            except ModuleNotFoundError:
+                pass
+            viewer_modules = {}
+            for vtype in viewer_types:
+                try:
+                    viewer_modules[vtype] = importlib.import_module(f'{entrypoint.value}.daq_viewer_plugins.plugins_{vtype}',
+                                                    entrypoint.value)
+                    plugin_list.extend([{'name': mod[len(f'daq_{vtype}viewer') + 1:],
+                                     'module': viewer_modules[vtype],
+                                     'parent_module': importlib.import_module(entrypoint.value),
+                                     'type': f'daq_{vtype}viewer'}
+                                    for mod in [mod[1] for mod in pkgutil.iter_modules([str(viewer_modules[vtype].path.parent)])]
+                                    if f'daq_{vtype}viewer' in mod])
+                except ModuleNotFoundError:
+                    pass
+
+            # check if modules are importable
+            for mod in plugin_list:
+                try:
+                    plugin_type = mod['type']
+                    if plugin_type == 'daq_move':
+                        submodule = mod['module']
+                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+                    else:
+                        submodule = mod['module']
+                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+                    plugins_import.append(mod)
+                except Exception as e:  # pragma: no cover
+                    """If an error is generated at the import, then exclude this plugin"""
+                    logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
+                                 f' from module: {mod["parent_module"].__package__}')
+        except Exception as e:  # pragma: no cover
+            logger.debug(str(e))
+    return plugins_import
 
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
@@ -601,48 +682,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     -------
 
     """
-    plugins_import = []
-    discovered_plugins = get_entrypoints(group='pymodaq.plugins')
-    logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
-    for module in discovered_plugins:
-        try:
-            if plugin_type == 'daq_move':
-                submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
-            else:
-                submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
-                                                    module.value)
-            plugin_list = [{'name': mod[len(plugin_type) + 1:],
-                            'module': submodule} for mod in [mod[1] for
-                                                             mod in pkgutil.iter_modules([str(submodule.path.parent)])]
-                           if plugin_type in mod]
-            # check if modules are importable
-
-            for mod in plugin_list:
-                try:
-                    if plugin_type == 'daq_move':
-                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
-                    else:
-                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
-                    plugins_import.append(mod)
-                except Exception as e:  # pragma: no cover
-                    """If an error is generated at the import, then exclude this plugin"""
-                    logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
-                                 f' from module: {submodule.__package__}')
-        except Exception as e:  # pragma: no cover
-            logger.debug(str(e))
-
-    #  add utility plugin for PID
-    if plugin_type == 'daq_move':
-        try:
-            submodule = importlib.import_module('pymodaq.extensions.pid')
-            plugins_import.append({'name': 'PID', 'module': submodule})
-
-        except Exception as e:
-            logger.debug(f'Impossible to import the Fake PID Instrument plugin\n'
-                         f'{str(e)}')
-
-    plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
-    return plugins_import
+    return [plug for plug in get_instrument_plugins() if plug['type'] == plugin_type]
 
 
 def check_vals_in_iterable(iterable1, iterable2):
@@ -839,15 +879,15 @@ if __name__ == '__main__':
     # mit = license.find('MIT')
     #
 
-    paths = recursive_find_expr_in_files(r'C:\Users\weber\Labo\Programmes Python\PyMoDAQ_Git',
-                                         exp="cfunc",
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox',],
-                                         replace=False,
-                                         replace_str="pymodaq.utils")
-    get_version()
-    pass
+    # paths = recursive_find_expr_in_files(r'C:\Users\weber\Labo\Programmes Python\PyMoDAQ_Git',
+    #                                      exp="cfunc",
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+    #                                               '.tox',],
+    #                                      replace=False,
+    #                                      replace_str="pymodaq.utils")
+    # get_version()
+    get_instrument_plugins()
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])
     # import version

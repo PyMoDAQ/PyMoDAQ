@@ -719,7 +719,7 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_done()
             scan_node = self.module_and_data_saver.get_last_node()
             scan_node.attrs['scan_done'] = True
-            self.save_scan()
+
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
