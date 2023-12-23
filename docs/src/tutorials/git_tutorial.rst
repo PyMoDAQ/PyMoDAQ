@@ -14,7 +14,12 @@
 Basics of Git and GitHub
 ========================
 
-We introduce Git and GitHub in Pymodaq documentation because we believe that every experimental physicist should know about those wonderful tools that have been made by developers. They will help you code and share your code efficiently, not only within the framework of Pymodaq or even Python. Moreover, since Pymodaq is an open source project, its development is based on those tools. They have to be mastered if you want to contribute to the project or develop your own extension. Even as a simple user, you will learn where to ask for help when you are in difficulty, because Pymodaq’s community is organized around those tools.
+We introduce Git and GitHub in Pymodaq documentation because we believe that every experimental physicist should know
+about those wonderful tools that have been made by developers. They will help you code and share your code efficiently,
+not only within the framework of Pymodaq or even Python. Moreover, since Pymodaq is an open source project, its
+development is based on those tools. They have to be mastered if you want to contribute to the project or develop your
+own extension. Even as a simple user, you will learn where to ask for help when you are in difficulty, because Pymodaq’s
+community is organized around those tools.
 
 Why Git?
 --------
@@ -56,11 +61,12 @@ Installation
 .. figure:: /image/tutorial_git/git_scm.svg
     :width: 600
 
-    Download the installer from `the official website`__.
+    Download the installer from the official website.
+
+Download the installer from `the official website`__. Run the installer. From all the windows that will appear, let
+the default option, except for the following ones.
 
 __ https://git-scm.com/
-
-Run the installer. From all the windows that will appear, let the default option, except for the following ones.
 
 Uncheck "Windows Explorer integration".
 
@@ -189,7 +195,8 @@ red.
 
 The red means that Git does not know what to do with this file, he is waiting for an order from us.
 
-We have to tell him explicitly to track this file. To do so, we will just follow what he advised us, and use the *add* command.
+We have to tell him explicitly to track this file. To do so, we will just follow what he advised us, and use the *add*
+command.
 
 The *add* command
 +++++++++++++++++
@@ -402,6 +409,72 @@ To conclude, the local development workflow is as follow:
   small ones**.
 * Once the new feature is fully operational and tested, merge the *develop* branch into the *main* one.
 
-Doing a commit is like saving your progression in a video game. It is a checkpoint where you will always be able to come back to, whatever you do after.
+Doing a commit is like saving your progression in a video game. It is a checkpoint where you will always be able to come
+back to, whatever you do after.
 
 Once you will be more familiar with Git, you will feel very safe to test any crazy modification of your code!
+
+.. figure:: /image/tutorial_git/github_logo.png
+    :width: 200
+
+Remote use of Git: GitHub
+-------------------------
+
+`GitHub`__ is a free cloud service that **allows anyone to have Git repositories on distant servers**. Such services
+allow their users to easily share their source code. They are an essential actor for the open-source development. You
+can find on GitHub such projects as the `Linux kernel`__ , the software that runs `Wikipedia`__... and last but not
+least: `PyMoDAQ`__!
+
+__ https://github.com/
+
+__ https://github.com/torvalds/linux
+
+__ https://github.com/wikimedia/mediawiki
+
+__ https://github.com/pymodaq/pymodaq
+
+Other solutions exist such as `GitLab`__, but may be a bit more complicated since you will need someone to maintain
+the servers that host your Git repositories.
+
+__ https://about.gitlab.com/fr-fr/
+
+Create an account
++++++++++++++++++
+
+Click on *Sign up* and follow the guide. Creating an account is free.
+
+.. figure:: /image/tutorial_git/github_sign_up.png
+    :width: 600
+
+Create a remote repository
+++++++++++++++++++++++++++
+
+Once your profile is created, go to the top right of the screen and click on the icon representing your profile.
+
+.. figure:: /image/tutorial_git/github_account_2.png
+    :width: 600
+
+Let’s create a remote repository.
+
+.. figure:: /image/tutorial_git/github_create_remote_repository_2.png
+    :width: 600
+
+.. figure:: /image/tutorial_git/create_remote_repository.png
+    :width: 600
+
+The next page will give us some help to *push* our *local repository* to the newly created *remote repository*.
+
+.. figure:: /image/tutorial_git/github_push_local_repository_2.png
+    :width: 600
+
+Let’s stop here for a bit of vocabulary:
+
+* Our **local repository** is the local folder that we created and configured to be followed by Git. Here it is our *MyAmazingProject!!!* folder, that is stored on our local machine.
+* We call **remote repository** the one that we just created. Its name is *monkey_repository* and its Git address is *https://github.com/Fakegithubaccountt/monkey_repository.git*.
+* When we talk about **pushing**, we mean that we upload the state of our local repository to the remote repository.
+* When we talk about **cloning**, we mean that we downloaded the state of the remote repository to a local repository.
+
+All this is summed up in the following schematic.
+
+.. figure:: /image/tutorial_git/git_local_remote_repositories.png
+    :width: 600
