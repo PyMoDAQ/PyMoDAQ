@@ -570,3 +570,116 @@ And paste the key in the form
 
 .. figure:: /image/tutorial_git/github_add_ssh_private_key_form.png
     :width: 600
+
+Push our local repository to GitHub (Part II)
++++++++++++++++++++++++++++++++++++++++++++++
+
+Let’s try to push again!
+
+.. figure:: /image/tutorial_git/git_push_success.png
+    :width: 600
+
+.. note::
+    Here I cheated a bit. GitHub was not autorizing that I add a SSH key with a fake account, so I switch to my real account (github.com/quantumm) and I created there the monkey_repository, but if you did not provide a fake email address it should work fine! :)
+
+Our file is online!
+
+.. figure:: /image/tutorial_git/repository-online.png
+    :width: 600
+
+But it is not like we just store a file on a server, we also have access to all the history of the commits.
+
+.. figure:: /image/tutorial_git/quantum_monkey_repository.png
+    :width: 600
+
+Here they are.
+
+.. figure:: /image/tutorial_git/quantum_monkey_repository_commits.png
+    :width: 600
+
+Let’s click on the second commit *The monkey has been added in our file*.
+
+.. figure:: /image/tutorial_git/quantum_monkey_commit.png
+    :width: 600
+
+Here he is!
+
+We see that the GitHub website provides an equivalent to what we see in the terminal.
+
+Finally, the development workflow is as follow:
+
+* Do modifications in the file on your local repository.
+
+* Test that the result is as expected.
+
+* Do a commit.
+
+* You can repeat the previous steps several times.
+
+* At the end of the day, push all your commits to your remote repository.
+
+**Now, your remote repository should always be your reference, and not your local version anymore!**
+
+The lastest version of your code must be stored on the server, not locally. Once your push is done, you can safely
+delete your local folder. You will be able to get your code back at the latest version at any time from any computer,
+thanks to the *clone* command.
+
+The *clone* command
++++++++++++++++++++
+
+Let start by deleting our folder locally. This command is equivalent to right-click on the folder and Delete.
+
+.. figure:: /image/tutorial_git/rm-rf-directory.png
+    :width: 300
+
+Since our work is now stored in the GitHub server, it is not a problem even if our computer goes up in smoke. We can
+get it back with the following command.
+
+First, copy the adress of the repository
+
+.. figure:: /image/tutorial_git/git-clone.png
+    :width: 600
+
+Then, clone the repository
+
+.. figure:: /image/tutorial_git/git-clone-command.png
+    :width: 600
+
+We created a *pmd_pretraining_git* folder and cd into it just to start from a fresh folder. The command created a
+subfolder monkey_repository with our file into it.
+
+.. figure:: /image/tutorial_git/git-clone-result.png
+    :width: 400
+
+We found our work back!
+
+Notice that when you clone a repository, you do not need anymore the *init* command.
+You do not need either to configure the address of the remote repository, Git already
+knows where you took it from.
+
+.. figure:: /image/tutorial_git/result_of_cloning.png
+    :width: 600
+
+You can do this for any public repository on GitHub, which allows you to download
+basically all the open-source codes in the world!
+
+We have presented in this tutorial the use of Git with the command line for educational
+purposes. Know that there is several graphical user interfaces that exists such as `GitHub Desktop`__ if you are working
+with Windows.
+
+__ https://docs.github.com/en/desktop/installing-and-authenticating-to-github-desktop/installing-github-desktop
+
+But we will rather recommand to use the direct integration within your favorite Python IDE. We will present the
+practical use of Git with Pycharm in the next section.
+
+Git in practice: integration within PyCharm
+-------------------------------------------
+
+
+
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+We now know how to connect our local repository to our remote repository. But up to
+now we just worked on our own. In the next section will learn how to contribute to an
+existing project like PyMoDAQ!
