@@ -421,8 +421,8 @@ Remote use of Git: GitHub
 -------------------------
 
 `GitHub`__ is a free cloud service that **allows anyone to have Git repositories on distant servers**. Such services
-allow their users to easily share their source code. They are an essential actor for the open-source development. You
-can find on GitHub such projects as the `Linux kernel`__ , the software that runs `Wikipedia`__... and last but not
+allow their users to easily share their source code. They are an essential actors for the open-source development. You
+can find on GitHub such projects as the `Linux kernel`__, the software that runs `Wikipedia`__... and last but not
 least: `PyMoDAQ`__!
 
 __ https://github.com/
@@ -477,4 +477,96 @@ Let’s stop here for a bit of vocabulary:
 All this is summed up in the following schematic.
 
 .. figure:: /image/tutorial_git/git_local_remote_repositories.png
+    :width: 600
+
+Push our local repository to GitHub
++++++++++++++++++++++++++++++++++++
+
+We started this tutorial from a local folder. What we will do now is to push this repository to GitHub servers.
+
+Note that it is not obvious that you will always work this way. Most of the time, you will start by cloning a remote
+repository to your local machine.
+
+We will follow what is recommanded at the end of the last web page (red frame). `This documentation`__ may also be
+helpful to deal with GitHub remote repositories.
+
+__ https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories?platform=windows
+
+With the following command, we tell Git that our local repository (the folder where we are executing the command) is now
+connected to the remote repository that we just created on GitHub. The latter is called *origin*.
+
+.. figure:: /image/tutorial_git/git_add_remote.png
+    :width: 600
+
+With the next command we just check that everything is as expected. We call for information about the remote repository.
+
+.. figure:: /image/tutorial_git/git_remote_v.png
+    :width: 600
+
+This is all good. The first line, ending with *fetch*, means that when we will ask to update our local repository (with
+a *pull* command, we will see that latter), it will call the origin repository. The second line, ending with *push*,
+means that when we will ask to update the remote repository with the work we have done locally, it will go to origin.
+
+Let us try to push our repository.
+
+.. figure:: /image/tutorial_git/git_push_fatal_authentication.png
+    :width: 600
+
+Here there is an error because we need to authenticate to GitHub, he will not let anyone push what he wants on this
+repository! We have to proove him that we own the repository. The authentication is a bit more complicated than using a
+password, but we will explain it step by step in the next section.
+
+Authentication to GitHub with an SSH key
+++++++++++++++++++++++++++++++++++++++++
+
+This operation will have to be done each time you want to do operations on your remote repository with a different
+machine. But if you keep the same computer, you do it once and then no more password will never be asked.
+
+We will make a secure connection with an SSH key. To do so, we just have to follow those documentations:
+
+`Generating a new SSH key (GitHub)`__
+
+__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+
+`Adding a new SSH key to a GitHub account`__
+
+__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
+
+Let start by generating a new SSH key. Put the email address that is linked with the GitHub account that you just
+created.
+
+.. figure:: /image/tutorial_git/ssh_keygen.png
+    :width: 600
+
+We now start the ssh agent
+
+.. figure:: /image/tutorial_git/ssh_key_agent.png
+    :width: 600
+
+and add the SSH private key to the ssh-agent.
+
+.. figure:: /image/tutorial_git/ssh-add.png
+    :width: 600
+
+This command will create a new SSH key that will be stored in the .ssh folder at your home.
+
+.. figure:: /image/tutorial_git/ssh_keygen_in_ssh.png
+    :width: 300
+
+The following command is equivalent to copying the content of the key to your clipboard.
+
+.. figure:: /image/tutorial_git/ssh-copy-key.png
+    :width: 600
+
+We now have to paste it in our GitHub profile. Go to the settings.
+
+.. figure:: /image/tutorial_git/github_account_settings.png
+    :width: 300
+
+.. figure:: /image/tutorial_git/github_add_ssh_private_key.png
+    :width: 600
+
+And paste the key in the form
+
+.. figure:: /image/tutorial_git/github_add_ssh_private_key_form.png
     :width: 600
