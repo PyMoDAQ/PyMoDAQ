@@ -663,18 +663,60 @@ knows where you took it from.
 You can do this for any public repository on GitHub, which allows you to download
 basically all the open-source codes in the world!
 
-We have presented in this tutorial the use of Git with the command line for educational
-purposes. Know that there is several graphical user interfaces that exists such as `GitHub Desktop`__ if you are working
+Git in practice: integration within PyCharm
+-------------------------------------------
+
+We started this tutorial by presenting the use of Git with the command line for educational purposes. There is several
+graphical user interfaces that can ease the use of Git in the daily life, such as `GitHub Desktop`__ if you are working
 with Windows.
 
 __ https://docs.github.com/en/desktop/installing-and-authenticating-to-github-desktop/installing-github-desktop
 
-But we will rather recommand to use the direct integration within your favorite Python IDE. We will present the
-practical use of Git with Pycharm in the next section.
+However, we will rather recommand to use the direct integration within your favorite Python IDE, because it does not
+require to download another software, and because it is cross platform. We will present the practical use of Git with
+`PyCharm`__.
 
-Git in practice: integration within PyCharm
--------------------------------------------
+__ https://www.jetbrains.com/pycharm/
 
+Register your GitHub account
+++++++++++++++++++++++++++++
+
+As a first step, we should autorize PyCharm to connect to our GitHub account. We recommand to use a token. This way you
+will not have to enter a password each time PyCharm needs to connect to GitHub. The procedure is described in the
+following documentations:
+
+`PyCharm & GitHub (jetbrains.com)`__
+
+__ https://www.jetbrains.com/help/pycharm/github.html#9c1dc6ec
+
+`PyCharm Integration with GitHub (medium.com)`__
+
+__ https://medium.com/@akshay.sinha/pycharm-integration-with-github-876510c6ca1f
+
+Clone a project
++++++++++++++++
+
+We first clone the *monkey_repository* from our GitHub account. Go to Git > Clone..., select the remote repository and
+a local folder where the files will be saved (it does not matter where you decide to save locally the repository).
+
+.. figure:: /image/tutorial_git/pycharm_clone.png
+    :width: 600
+
+Configure our Python environment
+++++++++++++++++++++++++++++++++
+
+Once the remote repository has been cloned, we have to configure our environment. Go to File > Settings... and select
+our Conda environment (here *pmd4*).
+
+.. figure:: /image/tutorial_git/pycharm_configure_environment.png
+    :width: 600
+
+Create a new branch
++++++++++++++++++++
+
+* git clone
+* configure environment
+* create branch
 
 
 
