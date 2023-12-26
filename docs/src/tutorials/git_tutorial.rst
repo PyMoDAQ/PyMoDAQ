@@ -469,8 +469,10 @@ The next page will give us some help to *push* our *local repository* to the new
 
 Let’s stop here for a bit of vocabulary:
 
-* Our **local repository** is the local folder that we created and configured to be followed by Git. Here it is our *MyAmazingProject!!!* folder, that is stored on our local machine.
-* We call **remote repository** the one that we just created. Its name is *monkey_repository* and its Git address is *https://github.com/Fakegithubaccountt/monkey_repository.git*.
+* Our **local repository** is the local folder that we created and configured to be followed by Git. Here it is our
+  *MyAmazingProject!!!* folder, that is stored on our local machine.
+* We call **remote repository** the one that we just created. Its name is *monkey_repository* and its Git address is
+  *https://github.com/Fakegithubaccountt/monkey_repository.git*.
 * When we talk about **pushing**, we mean that we upload the state of our local repository to the remote repository.
 * When we talk about **cloning**, we mean that we downloaded the state of the remote repository to a local repository.
 
@@ -580,7 +582,9 @@ Let’s try to push again!
     :width: 600
 
 .. note::
-    Here I cheated a bit. GitHub was not autorizing that I add a SSH key with a fake account, so I switch to my real account (github.com/quantumm) and I created there the monkey_repository, but if you did not provide a fake email address it should work fine! :)
+    Here I cheated a bit. GitHub was not autorizing that I add a SSH key with a fake account, so I switched to my real
+    account (github.com/quantumm) and I created there the monkey_repository, but if you did not provide a fake email
+    address it should work fine! :)
 
 Our file is online!
 
@@ -666,7 +670,7 @@ basically all the open-source codes in the world!
 Git in practice: integration within PyCharm
 -------------------------------------------
 
-We started this tutorial by presenting the use of Git with the command line for educational purposes. There is several
+We started this tutorial by presenting the use of Git with the command line for educational purposes. There are several
 graphical user interfaces that can ease the use of Git in the daily life, such as `GitHub Desktop`__ if you are working
 with Windows.
 
@@ -681,7 +685,7 @@ __ https://www.jetbrains.com/pycharm/
 Register your GitHub account
 ++++++++++++++++++++++++++++
 
-As a first step, we should autorize PyCharm to connect to our GitHub account. We recommand to use a token. This way you
+As a first step, we should autorize PyCharm to connect to our GitHub account. We recommand to use a token. This way we
 will not have to enter a password each time PyCharm needs to connect to GitHub. The procedure is described in the
 following documentations:
 
@@ -697,7 +701,7 @@ Clone a project
 +++++++++++++++
 
 We first clone the *monkey_repository* from our GitHub account. Go to Git > Clone..., select the remote repository and
-a local folder where the files will be saved (it does not matter where you decide to save locally the repository).
+a local folder where the files will be saved (it does not matter where we decide to save locally the repository).
 
 .. figure:: /image/tutorial_git/pycharm_clone.png
     :width: 600
@@ -714,14 +718,210 @@ our Conda environment (here *pmd4*).
 Create a new branch
 +++++++++++++++++++
 
-* git clone
-* configure environment
-* create branch
+Here are the main important places on the PyCharm interface to manage Git.
 
+.. figure:: /image/tutorial_git/pycharm_git_interface.png
+    :width: 600
 
+We will follow our best practices and create a new local branch before modifying the files in the repository. To do so
+we click on the Git branch button and create a new branch that we call *develop*.
 
-$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+Diff & commit
++++++++++++++
 
-We now know how to connect our local repository to our remote repository. But up to
-now we just worked on our own. In the next section will learn how to contribute to an
-existing project like PyMoDAQ!
+Let’s now add a bird in the file. Go to Git > Commit... It will open a window that allows us to easily see the files
+that have been modified. If we right click on *my_new_file.md* and select *Show diff*, we will see the difference
+between the two versions of the file, just as with the command line, but with a more evolved interface.
+
+.. figure:: /image/tutorial_git/pycharm_git_commit.png
+    :width: 600
+
+If we are happy with that, we can close this window and commit our changes.
+
+Log
++++
+
+If we open the Git bottom panel we can have information about the local and remote branches, and the history of the
+commits.
+
+.. figure:: /image/tutorial_git/pycharm_git_log.png
+    :width: 800
+
+Add a file
+++++++++++
+
+Adding a file is also very easy since you just have to paste it in the right folder within the *Project* panel of
+PyCharm. It will automatically ask us if we want Git to track the new file.
+
+Push
+++++
+
+To send our changes to the remote repository we just have to go to Git > Push... in the main menu.
+
+The PyMoDAQ repositories
+------------------------
+
+From the previous sections we know how to connect our local repository to our remote repository. But up to now we just
+worked on our own. In the next section will learn how to contribute to an existing project like PyMoDAQ!
+
+Let’s now go to the `PyMoDAQ GitHub account`__.
+
+__ https://github.com/PyMoDAQ
+
+.. figure:: /image/tutorial_git/pmd_github_account.png
+    :width: 600
+
+There are a lot of repositories, most of them correspond to *Python packages*. Briefly, there is:
+
+* The `PyMoDAQ repository`__: this is the core of the code, you cannot run PyMoDAQ without it.
+
+* The plugins’ repositories: those repositories follow the naming convention *pymodaq_plugins_<name>*. Most of the time,
+  *<name>* corresponds to the name of an instrument supplier, like *Thorlabs*. Those are optional pieces of code. They
+  will be useful depending on the instruments the final user wants to control.
+
+__ https://github.com/PyMoDAQ/PyMoDAQ
+
+Troubleshoot PyMoDAQ: raise an issue on GitHub
+++++++++++++++++++++++++++++++++++++++++++++++
+
+The main feature of GitHub is the repository hosting, but it also propose some very usefull functionalities around the
+repositories. One of the most important is the possibility for any user to raise an *issue*.
+
+.. figure:: /image/tutorial_git/pmd_repository_issue_V3.png
+    :width: 600
+
+.. figure:: /image/tutorial_git/pmd_repository_open_issue.png
+    :width: 600
+
+Anytime you face a problem or a bug in the program you can raise an issue. Describe as precisely your problem. A
+discussion will be opened with the developers who will try to help you. This is the most efficient way to troubleshoot
+PyMoDAQ because the history of the issues is conserved, which could be helpful to solve future problems. This
+contributes to the documentation of the code. **You don’t need to know the code to raise an issue, and it is really
+helpful to improve the stability of the program, so don’t hesitate to do so ;)**
+
+With such functionalities, the GitHub repository is the meeting point of the community around PyMoDAQ.
+
+PyMoDAQ branches
+++++++++++++++++
+
+.. figure:: /image/tutorial_git/pmd_branches.png
+    :width: 600
+
+There are several branches of the PyMoDAQ repository. The most important ones are:
+
+* **main** This is the most stable branch. It is the present state of the code. When you install PyMoDAQ with pip, it
+  is this version of the code that is downloaded.
+
+* **pymodaq-dev** This is the development branch. It is *ahead* of the main branch, in the sense that it contains more
+  recent commits than the main branch. It is thus the future state of the code. This is where the last developments
+  of the code of PyMoDAQ are pushed. When the developers are happy with the state of this branch, typically when they
+  finished to develop a new functionality and they tested it, they will merge the develop branch into the main branch,
+  which will lead to a new *release* of PyMoDAQ.
+
+How to propose a modification of the code of PyMoDAQ?
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Compared to our previous situation where we had to deal with our local repository and our remote repository, we now have
+to deal with an external repository on which we have no right. This external repository, which in our example is the
+PyMoDAQ one, is called the **upstream repository**. The workflow is represented below and we will detail each step in
+the following.
+
+.. figure:: /image/tutorial_git/git_full_repositories.png
+    :width: 600
+
+**(1) Fork the upstream repository**
+
+While you are connected to your GitHub account, go to the PyMoDAQ repository and select the *pymodaq-dev branch*. Then
+click on the *Fork* button.
+
+.. figure:: /image/tutorial_git/fork_pmd.png
+    :width: 600
+
+This will create a copy of the PyMoDAQ repository on our personal account, it then become our remote repository and **we
+have every right on it**.
+
+.. figure:: /image/tutorial_git/fork_pmd_on_quantumm.png
+    :width: 600
+
+**Every modification of the code of PyMoDAQ should first go on the pymodaq-dev branch, and not on the main branch**.
+The proper way to propose our contribution is that we create a branch from the pymodaq-dev branch, so that it will ease
+the integration of our modifications and isolate or work from other contributions.
+
+We create a branch *monkey-branch* from the *pymodaq-dev* branch.
+
+.. figure:: /image/tutorial_git/create-branch.png
+    :width: 600
+
+**(2) Clone our new remote repository locally**
+
+We will now clone our repository locally. We can clone a particular branch of the repository with the following command
+
+.. figure:: /image/tutorial_git/clone_monkey_branch.png
+    :width: 600
+
+Rather than the comand line, you can also clone directly from PyCharm, like we did in the previous section.
+
+**(3) Do modifications and push**
+
+We now have the PyMoDAQ code on our local machine. We will put the monkey into the README.rst file at the root of the
+PyMoDAQ package. This file is the one that is displayed at the home page of a repository.
+
+.. figure:: /image/tutorial_git/monkey_in_readme.png
+    :width: 600
+
+Let’s commit and push.
+
+.. figure:: /image/tutorial_git/push_the_monkey.png
+    :width: 600
+
+Here is the result on our remote repository.
+
+.. figure:: /image/tutorial_git/see_monkey_in_repository.png
+    :width: 600
+
+The monkey looks more like a crocodile now... it is not very satisfactory. But anyway we will propose this modification
+of the code!
+
+**(4) Pull request (PR) to the upstream repository**
+
+We can be very proud of our modification, but of course, this will not be implemented directly, we will need the
+agreement of the owner of the PyMoDAQ repository.
+
+**Opening a pull request is proposing a modification of the code to the owner of the upstream repository**. This is
+again very easy through the GitHub interface.
+
+.. figure:: /image/tutorial_git/pull_request_the_monkey.png
+    :width: 600
+
+Be careful to properly select the branch of your repository and the branch of the upstream repository, and then send.
+That’s it! You now have to wait for the answer of the owner of the repository. Let’s hope he will appreciate our work!
+You can see the status of your PR on the PyMoDAQ repository home page.
+
+.. figure:: /image/tutorial_git/pmd_pr_tab.png
+    :width: 600
+
+Conclusion
+----------
+
+You now master the basics of the worldwide standard for code development!
+
+Following those guidelines, you will code more efficiently. Git is appropriate for any (descent) language (not Word or
+Labview!).
+
+It is an indispensable tool if you want to share your code with colleagues and not reinvent the wheel.
+
+Git is one of the reasons why you will make better acquisition programs with PyMoDAQ than with Labview ;)
+
+Here are a few external ressources:
+
+`The YouTube channel of Grafikart (in French)`__
+
+__ https://www.youtube.com/watch?v=rP3T0Ee6pLU&list=PLjwdMgw5TTLXuY5i7RW0QqGdW0NZntqiP&index=2
+
+`The course of OpenClassroom (in English)`__
+
+__ https://openclassrooms.com/en/courses/7476131-manage-your-code-project-with-git-and-github
+
+`The Pro Git book (in English)`__. Exhaustive and painful. You will probably not need it!
+
+__ https://git-scm.com/book/en/v2
