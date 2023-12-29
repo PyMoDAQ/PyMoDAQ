@@ -433,18 +433,14 @@ __ https://github.com/wikimedia/mediawiki
 
 __ https://github.com/pymodaq/pymodaq
 
-Other solutions exist such as `GitLab`__, but may be a bit more complicated since you will need someone to maintain
-the servers that host your Git repositories.
+Other solutions exist such as `GitLab`__.
 
 __ https://about.gitlab.com/fr-fr/
 
 Create an account
 +++++++++++++++++
 
-Click on *Sign up* and follow the guide. Creating an account is free.
-
-.. figure:: /image/tutorial_git/github_sign_up.png
-    :width: 600
+Please refer to the tutorial :ref:`Create an account & raise an issue on GitHub <create_github_account>`.
 
 Create a remote repository
 ++++++++++++++++++++++++++
@@ -780,26 +776,6 @@ There are a lot of repositories, most of them correspond to *Python packages*. B
   will be useful depending on the instruments the final user wants to control.
 
 __ https://github.com/PyMoDAQ/PyMoDAQ
-
-Troubleshoot PyMoDAQ: raise an issue on GitHub
-++++++++++++++++++++++++++++++++++++++++++++++
-
-The main feature of GitHub is the repository hosting, but it also propose some very usefull functionalities around the
-repositories. One of the most important is the possibility for any user to raise an *issue*.
-
-.. figure:: /image/tutorial_git/pmd_repository_issue_V3.png
-    :width: 600
-
-.. figure:: /image/tutorial_git/pmd_repository_open_issue.png
-    :width: 600
-
-Anytime you face a problem or a bug in the program you can raise an issue. Describe as precisely your problem. A
-discussion will be opened with the developers who will try to help you. This is the most efficient way to troubleshoot
-PyMoDAQ because the history of the issues is conserved, which could be helpful to solve future problems. This
-contributes to the documentation of the code. **You don’t need to know the code to raise an issue, and it is really
-helpful to improve the stability of the program, so don’t hesitate to do so ;)**
-
-With such functionalities, the GitHub repository is the meeting point of the community around PyMoDAQ.
 
 PyMoDAQ branches
 ++++++++++++++++
