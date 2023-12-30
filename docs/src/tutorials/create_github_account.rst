@@ -45,7 +45,7 @@ __ https://github.com/
 Troubleshoot PyMoDAQ: raise an issue
 ------------------------------------
 
-Now that we have our own account on GitHub and are logged in. Let’s go the `PyMoDAQ GitHub account`__.
+Now that we have our own account on GitHub and are logged in. Let’s go to the `PyMoDAQ GitHub account`__.
 
 __ https://github.com/PyMoDAQ/PyMoDAQ
 
