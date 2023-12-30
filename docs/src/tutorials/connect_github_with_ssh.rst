@@ -11,8 +11,8 @@
 .. figure:: /image/tutorial_create_github_account/github_logo.png
     :width: 200
 
-Connect to GitHub with an SSH key
-=================================
+Authenticate to GitHub with an SSH key
+======================================
 
 In general, when we need to authenticate to a website, we will provide a password. Since quite recently, it is not
 possible to make our local Git connect to GitHub with a password. It is now mandatory to connect with the SSH protocol

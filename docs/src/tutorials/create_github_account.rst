@@ -62,6 +62,6 @@ Anytime we face a problem or a bug in the program we can raise an issue. Describ
 A discussion will be opened with the maintainers who will try to help us. This is the most efficient way to troubleshoot
 PyMoDAQ because the history of the issues is conserved, which could be helpful to solve future problems. This
 contributes to the documentation of the code. **We don’t need to know the code to raise an issue, and it is really
-helpful to improve the stability of the program, so we should not hesitate to do so ;)**
+helpful to improve the stability of the program, so we should not hesitate to do so!**
 
 Thanks to such functionalities, the PyMoDAQ GitHub account is the meeting point of the community around PyMoDAQ.
