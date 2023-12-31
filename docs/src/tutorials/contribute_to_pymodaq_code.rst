@@ -135,13 +135,12 @@ repository.
 We now have the PyMoDAQ code on our local machine. We will put the monkey into the README.rst file at the root of the
 PyMoDAQ package. This file is the one that is displayed at the home page of a GitHub repository.
 
+We can now go to *Git > Commit...*, right click on the file and *Show Diff*.
+
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pycharm_add_monkey_in_readme.png
     :width: 600
 
-.. note::
-    We needed to separate each line with a new line otherwise the RST language would put everything in a row.
-
-We can now go to *Git > Commit...*, right click on the file and *Show Diff*. If we are happy with our modifications,
+If we are happy with our modifications,
 let’s add a commit message and click *Commit and Push*.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pycharm_push.png
@@ -160,20 +159,24 @@ We will now propose this modification, so that the monkey would appear at the fr
 We can be very proud of our modification, but of course, this will not be implemented directly, we will need the
 agreement of the owner of the PyMoDAQ repository.
 
-**Opening a pull request is proposing a modification of the code to the owner of the upstream repository**. This can
-be done through the GitHub website, at the location of our repository. Either click to *Compare & pull request* our to
+**Opening a pull request is proposing a modification of the code to the owner of the upstream repository**.
+
+This can
+be done through the GitHub website, at the location of our repository. Either click to *Compare & pull request* or to
 the *Pull requests* tab and *New pull request*.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pull_request_the_monkey.png
     :width: 600
 
-Be careful to properly select the branch of our repository and the branch of the upstream repository, and then send.
+Be careful to properly select the branch of our repository and the branch of the upstream repository, and then *Send*.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/github_pull_request.png
     :width: 600
 
-That’s it! We now have to wait for the answer of the owner of the repository. Let’s hope he will appreciate our work!
-We can see the status of your PR on the PyMoDAQ repository home page, by clicking on the *Pull requests* tab.
+That’s it! We now have to wait for the answer of the owner of the upstream repository. Let’s hope he will appreciate
+our work!
+We can see the status of our PR on the PyMoDAQ repository home page, by clicking on the *Pull requests* tab.
+There a discussion will be opened with the owner of the repository.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_pr_tab.png
     :width: 600
