@@ -180,3 +180,10 @@ There a discussion will be opened with the owner of the repository.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_pr_tab.png
     :width: 600
+
+Note that opening a PR does not prevent us from working on our remote repository anymore, while waiting for the answer
+of the owner of the upstream repository.
+If we continue to commit some changes to the branch that we used for our PR (the *monkey_branch* here), the PR will
+be automatically updated, and the new commits will be considered as part of the PR.
+If we want to pursue the work but not put the following commits in the PR, we can start a new branch from the
+*monkey_branch*.
