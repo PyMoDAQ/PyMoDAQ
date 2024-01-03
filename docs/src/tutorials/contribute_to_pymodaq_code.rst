@@ -87,7 +87,7 @@ detail each step in the following.
 (1) Fork the upstream repository
 ++++++++++++++++++++++++++++++++
 
-While we are connected to your GitHub account, let’s go to the PyMoDAQ repository and select the *pymodaq-dev branch*.
+While we are connected to our GitHub account, let’s go to the PyMoDAQ repository and select the *pymodaq-dev* branch.
 Then we click on the *Fork* button.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/fork_pmd.png

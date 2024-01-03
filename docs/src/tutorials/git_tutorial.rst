@@ -3,7 +3,7 @@
 +------------------------------------+---------------------------------------+
 | Author email                       | david.bresteau@cea.fr                 |
 +------------------------------------+---------------------------------------+
-| First edition                      | november 2023                         |
+| Last update                        | january 2024                          |
 +------------------------------------+---------------------------------------+
 | Difficulty                         | Easy                                  |
 +------------------------------------+---------------------------------------+
@@ -15,10 +15,10 @@ Basics of Git and GitHub
 ========================
 
 We introduce Git and GitHub in Pymodaq documentation because we believe that every experimental physicist should know
-about those wonderful tools that have been made by developers. They will help you code and share your code efficiently,
+about those wonderful tools that have been made by developers. They will help us code and share our code efficiently,
 not only within the framework of Pymodaq or even Python. Moreover, since Pymodaq is an open source project, its
-development is based on those tools. They have to be mastered if you want to contribute to the project or develop your
-own extension. Even as a simple user, you will learn where to ask for help when you are in difficulty, because Pymodaq’s
+development is based on those tools. They have to be mastered if we want to contribute to the project or develop our
+own extension. Even as a simple user, we will learn where to ask for help when we are in difficulty, because Pymodaq’s
 community is organized around those tools.
 
 Why Git?
@@ -102,7 +102,7 @@ the Git installer.
 We can now check that it is actually installed on our system.
 
 .. figure:: /image/tutorial_git/git_version.png
-    :width: 400
+    :width: 300
 
 Configuration
 +++++++++++++
@@ -111,9 +111,9 @@ Just after the installation, you should configure Git so that he knows your emai
 *global* in the sense that it does not depend on the project (the repository) you are working on. Use the following
 commands replacing with your own email and a name of your choice:
 
-``git config --global user.email "david.bresteau@cea.fr"``
+``$ git config --global user.email "david.bresteau@cea.fr"``
 
-``git config --global user.name "David Bresteau"``
+``$ git config --global user.name "David Bresteau"``
 
 Good, we are now ready to use Git!
 
@@ -125,7 +125,7 @@ Installation
 
 In a terminal
 
-``sudo apt install git``
+``$ sudo apt install git``
 
 Configuration
 +++++++++++++
@@ -134,9 +134,9 @@ Just after the installation, you should configure Git so that he knows your emai
 *global* in the sense that it does not depend on the project (the repository) you are working on. Use the following
 commands replacing with your own email and a name of your choice:
 
-``git config --global user.email "david.bresteau@cea.fr"``
+``$ git config --global user.email "david.bresteau@cea.fr"``
 
-``git config --global user.name "David Bresteau"``
+``$ git config --global user.name "David Bresteau"``
 
 Good, we are now ready to use Git!
 
@@ -160,35 +160,47 @@ Opened file formats that use text language: any "normal" language like C++, Pyth
 The *init* command: start a new project
 +++++++++++++++++++++++++++++++++++++++
 
-We start a project by creating a folder
+We start a project by creating a folder in our *home* directory, with the *mkdir* bash command (for "make directory")
 
-``C:\Users\dbrestea>mkdir MyAmazingProject!!!``
+.. note::
+    The *home* directory corresponds to the directory that is reserved to the connected user. On Windows, it corresponds
+    to the path *C:\\Users\\<username>*. Here the user is called *dbrestea*, you should replace it by your own username.
+    When we open Git Bash, or any terminal in general, we are placed at our home directory in the file system, it can
+    be represented by the *~* symbol (in orange in the above screenshots).
 
-And *cd* into this folder
+``$ mkdir MyLocalRepository``
 
-``C:\Users\dbrestea>cd MyAmazingProject!!!``
+It should look like this now:
 
-Now, we tell Git to track this folder with the *init* command
+.. figure:: /image/tutorial_git/bash_mkdir.png
+    :width: 600
 
-``C:\Users\dbrestea\MyAmazingProject!!!>git init``
+And *cd* (for "change directory") into this folder
+
+``$ cd MyLocalRepository``
+
+Now, we tell Git to track this folder with the *init* Git command
+
+``$ git init``
 
 Any folder that is tracked by Git contains a *.git subfolder* and called a *repository*.
 
-.. figure:: /image/tutorial_git/git_init_git_folder.png
-    :width: 400
+We now create a new *my_first_amazing_file.txt* file in this folder and write *Hello world!* inside
 
-We now create a new file in this folder
-
-.. figure:: /image/tutorial_git/git_first_file.png
-    :width: 400
+.. figure:: /image/tutorial_git/my_first_amazing_file.png
+    :width: 600
 
 The *status* command
 ++++++++++++++++++++
 
 You should never hesitate to run this command, it gives you the current status of the project.
 
+``$ git status``
+
+It should look like this:
+
 .. figure:: /image/tutorial_git/git_status.png
-    :width: 700
+    :width: 600
 
 Here Git says that he noticed that we created a new file, but he placed it under the *Untracked files* and colored it in
 red.
@@ -202,12 +214,16 @@ The *add* command
 +++++++++++++++++
 
 To put a file under the supervision of Git (to *track* the file), we use the *add* command. This has to be done only the
-first time you add a file into the folder.
+first time we add a file into the folder.
 
-.. figure:: /image/tutorial_git/git_add.png
-    :width: 700
+``$ git add my_first_amazing_file.txt``
 
 Then we do again the *status* command to see what have changed.
+
+It should look like this:
+
+.. figure:: /image/tutorial_git/git_add.png
+    :width: 600
 
 Now the filename turned green, which means that the file is tracked by Git and ready to be *commited*.
 
@@ -218,54 +234,70 @@ A *commit* is a fundamental notion of Git.
 
 **A commit is a snapshot of the folder status at a point in time.**
 
-It is you, the user, that decide when to do a commit.
+It is our responsability to decide when to do a commit.
 
-**A commit should be done at every little change you do on your program, after you tested that the result is as you
-expected.** For example, you should do a commit each time you add a new functionality that is working properly.
+**A commit should be done at every little change we do on our program, after we tested that the result is as we
+expected.** For example, we should do a commit each time we add a new functionality to our program that is working
+properly.
 
-For now, we just have one sentence in the file: "Hello world!", but that's a start. Let us do our initial commit.
+For now, we just have one sentence in the file: "Hello world!", but that's a start. Let us do our initial commit with
+the following command
+
+``$ git commit -am "Initial commit of my amazing project. Add my first amazing file and say Hello world!"``
+
+It should look like this:
 
 .. figure:: /image/tutorial_git/git_commit.png
     :width: 700
 
-After the *-am* options (which means that you *add* the files that are not already tracked, and you type the *message*
-of your commit just after the command), we put a message to describe what we have done between parenthesis.
+After the *-am* options (which means that we *add* the files (here we add the file *in the commit* and
+not in the tracking system of Git), and we type the
+*message*
+of our commit just after the command), we put a message to describe what we have done between parenthesis.
 
 If we now look at the status of our project
 
-.. figure:: /image/tutorial_git/git_tree_clean.png
-    :width: 600
+.. figure:: /image/tutorial_git/git_status_2.png
+    :width: 700
 
-Everything is clean, good! We just did our first commit! :)
+Everything is clean. We just did our first commit! :)
 
 The *log* command
 +++++++++++++++++
 
-The *log* command will give you the complete history of the commits since the beginning of the project.
+The *log* command will give us the complete history of the commits since the beginning of the project.
 
-.. figure:: /image/tutorial_git/git_log_complete.png
+``$ git log``
+
+It should look like this:
+
+.. figure:: /image/tutorial_git/git_log.png
     :width: 700
 
-You can see that for each commit you have:
+We can see that for each commit we have:
 
-* An *id* that has been attributed to the commit, which is the big number in orange
+* An *id* that has been attributed to the commit, which is the big number in orange.
 * The name and email address of the author.
 * The date and time of the commit.
 * The message that the author has written.
 
 In the following we will use the *--oneline* option to get the useful information in a more compact way.
 
-.. figure:: /image/tutorial_git/git_log.png
+``$ git log --oneline``
+
+It should look like this:
+
+.. figure:: /image/tutorial_git/git_log_oneline.png
     :width: 700
 
 The *diff* command
 ++++++++++++++++++
 
-The *diff* command is here to tell you what have changed since your last commit.
+The *diff* command is here to tell us what have changed since our last commit.
 
-Let us now put some interesting content in our file. We will found this in the `textart.me`__ website. Choose an
+Let us now put some interesting content in our file. We will found this in the `textart.me`__ website. Let’s choose an
 animal and copy paste it into our file. (Textart is the art of drawing something with some keyboard characters. It
-would be equivalent to just add a sentence in the file!).
+would be equivalent to just add a sentence in the file).
 
 __ https://textart.me/#animals and birds
 
@@ -274,25 +306,30 @@ __ https://textart.me/#animals and birds
 
 Let's go for the monkey, he is fun!
 
-.. figure:: /image/tutorial_git/git_monkey.png
-    :width: 700
+.. figure:: /image/tutorial_git/git_add_monkey_in_file.png
+    :width: 300
 
-What happen if we ask for a difference from Git?
+Let’s not forget to save the file.
 
-.. figure:: /image/tutorial_git/git_diff_monkey.png
-    :width: 700
+What happen if we ask for a difference from Git, with the *diff* command?
+
+``$ git diff``
+
+It should look like this:
+
+.. figure:: /image/tutorial_git/git_diff.png
+    :width: 600
 
 In *green* appears what we have added, in *red* appears what we have removed.
 
 The *diff* command allows us to check what we have modified. Since we are happy with our last modification, we will
 commit our changes.
 
-.. figure:: /image/tutorial_git/git_commit_the_monkey.png
-    :width: 700
+``$ git commit -am "The funny monkey has been added."``
 
 Let us check what the log says now.
 
-.. figure:: /image/tutorial_git/git_log_the_monkey.png
+.. figure:: /image/tutorial_git/git_log_after_monkey.png
     :width: 700
 
 We now have two commits in our history.
@@ -300,22 +337,23 @@ We now have two commits in our history.
 The *revert* command
 ++++++++++++++++++++
 
-The *revert* command is here if you want to come back to a previous state of your folder.
+The *revert* command is here if we want to come back to a previous state of
+our folder.
 
 Let's say that we are not happy with the monkey anymore. We would like to come back to the original state of the file
 just before we added the monkey. Since we did the things properly, by commiting at every important point, this is a
 child play.
 
 We use the *revert* command and the commit number that we want to cancel. The commit number is found by using the
-*log --oneline* command. In our case it is 0b6ad27.
+*log --oneline* command. In our case it is 6045fb4.
 
-.. figure:: /image/tutorial_git/git_revert_monkey.png
+.. figure:: /image/tutorial_git/git_revert.png
     :width: 500
 
 This command will open Notepad++ (because we configured this editor in the installation section), just close it or
 modify the first text line if you want another commit message.
 
-.. figure:: /image/tutorial_git/git_revert_open_notepad.png
+.. figure:: /image/tutorial_git/git_revert_notepad.png
     :width: 700
 
 Let's now see the history
@@ -323,12 +361,12 @@ Let's now see the history
 .. figure:: /image/tutorial_git/git_log_after_revert.png
     :width: 700
 
-You can see that the revert operation has been written in the history, just as a usual commit.
+We can see that the revert operation has been written in the history, just as a usual commit.
 
 Let see how it looks like inside our amazing file (it may be needed to close/reopen the file).
 
-.. figure:: /image/tutorial_git/git_file_content_after_revert.png
-    :width: 500
+.. figure:: /image/tutorial_git/git_monkey_dissapear.png
+    :width: 400
 
 The monkey actually disappeared! :O
 
@@ -719,128 +757,6 @@ Push
 
 To send our changes to the remote repository we just have to go to Git > Push... in the main menu.
 
-The PyMoDAQ repositories
-------------------------
-
-From the previous sections we know how to connect our local repository to our remote repository. But up to now we just
-worked on our own. In the next section will learn how to contribute to an existing project like PyMoDAQ!
-
-Let’s now go to the `PyMoDAQ GitHub account`__.
-
-__ https://github.com/PyMoDAQ
-
-.. figure:: /image/tutorial_git/pmd_github_account.png
-    :width: 600
-
-There are a lot of repositories, most of them correspond to *Python packages*. Briefly, there is:
-
-* The `PyMoDAQ repository`__: this is the core of the code, you cannot run PyMoDAQ without it.
-
-* The plugins’ repositories: those repositories follow the naming convention *pymodaq_plugins_<name>*. Most of the time,
-  *<name>* corresponds to the name of an instrument supplier, like *Thorlabs*. Those are optional pieces of code. They
-  will be useful depending on the instruments the final user wants to control.
-
-__ https://github.com/PyMoDAQ/PyMoDAQ
-
-PyMoDAQ branches
-++++++++++++++++
-
-.. figure:: /image/tutorial_git/pmd_branches.png
-    :width: 600
-
-There are several branches of the PyMoDAQ repository. The most important ones are:
-
-* **main** This is the most stable branch. It is the present state of the code. When you install PyMoDAQ with pip, it
-  is this version of the code that is downloaded.
-
-* **pymodaq-dev** This is the development branch. It is *ahead* of the main branch, in the sense that it contains more
-  recent commits than the main branch. It is thus the future state of the code. This is where the last developments
-  of the code of PyMoDAQ are pushed. When the developers are happy with the state of this branch, typically when they
-  finished to develop a new functionality and they tested it, they will merge the develop branch into the main branch,
-  which will lead to a new *release* of PyMoDAQ.
-
-How to propose a modification of the code of PyMoDAQ?
-+++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-Compared to our previous situation where we had to deal with our local repository and our remote repository, we now have
-to deal with an external repository on which we have no right. This external repository, which in our example is the
-PyMoDAQ one, is called the **upstream repository**. The workflow is represented below and we will detail each step in
-the following.
-
-.. figure:: /image/tutorial_git/git_full_repositories.png
-    :width: 600
-
-**(1) Fork the upstream repository**
-
-While you are connected to your GitHub account, go to the PyMoDAQ repository and select the *pymodaq-dev branch*. Then
-click on the *Fork* button.
-
-.. figure:: /image/tutorial_git/fork_pmd.png
-    :width: 600
-
-This will create a copy of the PyMoDAQ repository on our personal account, it then become our remote repository and **we
-have every right on it**.
-
-.. figure:: /image/tutorial_git/fork_pmd_on_quantumm.png
-    :width: 600
-
-**Every modification of the code of PyMoDAQ should first go on the pymodaq-dev branch, and not on the main branch**.
-The proper way to propose our contribution is that we create a branch from the pymodaq-dev branch, so that it will ease
-the integration of our modifications and isolate or work from other contributions.
-
-We create a branch *monkey-branch* from the *pymodaq-dev* branch.
-
-.. figure:: /image/tutorial_git/create-branch.png
-    :width: 600
-
-**(2) Clone our new remote repository locally**
-
-We will now clone our repository locally. We can clone a particular branch of the repository with the following command
-
-.. figure:: /image/tutorial_git/clone_monkey_branch.png
-    :width: 600
-
-Rather than the comand line, you can also clone directly from PyCharm, like we did in the previous section.
-
-**(3) Do modifications and push**
-
-We now have the PyMoDAQ code on our local machine. We will put the monkey into the README.rst file at the root of the
-PyMoDAQ package. This file is the one that is displayed at the home page of a repository.
-
-.. figure:: /image/tutorial_git/monkey_in_readme.png
-    :width: 600
-
-Let’s commit and push.
-
-.. figure:: /image/tutorial_git/push_the_monkey.png
-    :width: 600
-
-Here is the result on our remote repository.
-
-.. figure:: /image/tutorial_git/see_monkey_in_repository.png
-    :width: 600
-
-The monkey looks more like a crocodile now... it is not very satisfactory. But anyway we will propose this modification
-of the code!
-
-**(4) Pull request (PR) to the upstream repository**
-
-We can be very proud of our modification, but of course, this will not be implemented directly, we will need the
-agreement of the owner of the PyMoDAQ repository.
-
-**Opening a pull request is proposing a modification of the code to the owner of the upstream repository**. This is
-again very easy through the GitHub interface.
-
-.. figure:: /image/tutorial_git/pull_request_the_monkey.png
-    :width: 600
-
-Be careful to properly select the branch of your repository and the branch of the upstream repository, and then send.
-That’s it! You now have to wait for the answer of the owner of the repository. Let’s hope he will appreciate our work!
-You can see the status of your PR on the PyMoDAQ repository home page.
-
-.. figure:: /image/tutorial_git/pmd_pr_tab.png
-    :width: 600
-
 Conclusion
 ----------
 
@@ -853,7 +769,12 @@ It is an indispensable tool if you want to share your code with colleagues and n
 
 Git is one of the reasons why you will make better acquisition programs with PyMoDAQ than with Labview ;)
 
-Here are a few external ressources:
+If you want to go further and learn how to contribute to any external open-source code, we invite you to pursue with the
+tutorial
+
+:ref:`How to contribute to PyMoDAQ’s code? <contribute_to_pymodaq_code>`
+
+Finally, here are a few external ressources:
 
 `The YouTube channel of Grafikart (in French)`__
 
