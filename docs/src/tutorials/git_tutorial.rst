@@ -662,6 +662,11 @@ Then, at our home location, we execute the command
 
 We found our work back!
 
+.. note::
+    Notice that by default, the *clone* command will create a folder with the same name as the remote repository,
+    but this is not mandatory. If you want another name for your local repository you can use
+    ``$ git clone <repository url> <your folder name>``.
+
 Notice that when we clone a repository, we do not need anymore the *init* command.
 We do not need either to configure the address of the remote repository, Git already
 knows where to took it from.
@@ -672,22 +677,25 @@ basically all the open-source codes in the world!
 Git in practice: integration within PyCharm
 -------------------------------------------
 
-We started this tutorial by presenting the use of Git with the command line for educational purposes. There are several
-graphical user interfaces that can ease the use of Git in the daily life, such as `GitHub Desktop`__ if you are working
-with Windows.
+We now master the basics of using Git with the command line (CLI), and it is like this that we get the best control
+of Git.
+But we should know that there are several
+graphical user interfaces (GUI) that can ease the use of Git in the daily life, such as `GitHub Desktop`__
+if we are working with Windows.
 
 __ https://docs.github.com/en/desktop/installing-and-authenticating-to-github-desktop/installing-github-desktop
 
 However, we will rather recommand to use the direct integration within your favorite Python IDE, because it does not
 require to download another software, and because it is cross platform. We will present the practical use of Git with
-`PyCharm`__.
+`PyCharm`__. The *Community Edition* is free of charge and has all the functionalities that we need.
 
 __ https://www.jetbrains.com/pycharm/
 
-Register your GitHub account
-++++++++++++++++++++++++++++
+Link our GitHub account to PyCharm
+++++++++++++++++++++++++++++++++++
 
-As a first step, we should autorize PyCharm to connect to our GitHub account. We recommand to use a token. This way we
+As a first step, we should autorize PyCharm to connect to our GitHub account. We recommand to use a token.
+This way we
 will not have to enter a password each time PyCharm needs to connect to GitHub. The procedure is described in the
 following documentations:
 
@@ -698,6 +706,9 @@ __ https://www.jetbrains.com/help/pycharm/github.html#9c1dc6ec
 `PyCharm Integration with GitHub (medium.com)`__
 
 __ https://medium.com/@akshay.sinha/pycharm-integration-with-github-876510c6ca1f
+
+.. note::
+    It seems like SSH connection is only for the *Professional* version of PyCharm, which is charged.
 
 Clone a project
 +++++++++++++++
@@ -712,10 +723,14 @@ Configure our Python environment
 ++++++++++++++++++++++++++++++++
 
 Once the remote repository has been cloned, we have to configure our environment. Go to File > Settings... and select
-our Conda environment (here *pmd4*).
+an existing Conda environment (here it is called *pmd4*).
 
 .. figure:: /image/tutorial_git/pycharm_configure_environment.png
     :width: 600
+
+.. note::
+    Documentation about setting up a new Python environment can be found here:
+    :ref:`PyMoDAQ installation <section_installation>`.
 
 Create a new branch
 +++++++++++++++++++
@@ -726,51 +741,47 @@ Here are the main important places on the PyCharm interface to manage Git.
     :width: 600
 
 We will follow our best practices and create a new local branch before modifying the files in the repository. To do so
-we click on the Git branch button and create a new branch that we call *develop*.
+we click on the *Git branch button* (see screenshot above) and create a new branch that we call
+*develop*.
 
-Diff & commit
-+++++++++++++
+Diff, commit and push
++++++++++++++++++++++
 
-Let’s now add a bird in the file. Go to Git > Commit... It will open a window that allows us to easily see the files
+Let’s now add a bird in the file.
+
+Then go to Git > Commit... It will open a window that allows us to easily see the files
 that have been modified. If we right click on *my_new_file.md* and select *Show diff*, we will see the difference
 between the two versions of the file, just as with the command line, but with a more evolved interface.
 
 .. figure:: /image/tutorial_git/pycharm_git_commit.png
     :width: 600
 
-If we are happy with that, we can close this window and commit our changes.
+If we are happy with that, we can close this window and *Commit & Push* our changes with the corresponding button.
+
+Add a file
+++++++++++
+
+Adding a file is also very easy since you just have to *Paste* it in the right folder within the *Project* panel of
+PyCharm: right click on the corresponding folder and select *Paste* or *New file* if you start from an empty one.
+
+It will automatically ask us if we want Git to track the new file.
 
 Log
 +++
 
-If we open the Git bottom panel we can have information about the local and remote branches, and the history of the
+If we open the *Git bottom panel* we can have information about the local and remote branches, and the history of the
 commits.
 
 .. figure:: /image/tutorial_git/pycharm_git_log.png
     :width: 800
 
-Add a file
-++++++++++
-
-Adding a file is also very easy since you just have to paste it in the right folder within the *Project* panel of
-PyCharm. It will automatically ask us if we want Git to track the new file.
-
-Push
-++++
-
-To send our changes to the remote repository we just have to go to Git > Push... in the main menu.
-
 Conclusion
 ----------
 
-You now master the basics of the worldwide standard for code development!
-
-Following those guidelines, you will code more efficiently. Git is appropriate for any (descent) language (not Word or
-Labview!).
-
-It is an indispensable tool if you want to share your code with colleagues and not reinvent the wheel.
-
-Git is one of the reasons why you will make better acquisition programs with PyMoDAQ than with Labview ;)
+We now master the basics of the worldwide standard for code development! Following those guidelines, we will code more
+efficiently. Git is appropriate for any (descent) language (not Word or Labview!).
+It is an indispensable tool if we want to share our code with colleagues and not reinvent the wheel.
+Git is one of the reasons why we will make better acquisition programs with PyMoDAQ than with Labview ;)
 
 If you want to go further and learn how to contribute to any external open-source code, we invite you to pursue with the
 tutorial
@@ -790,3 +801,6 @@ __ https://openclassrooms.com/en/courses/7476131-manage-your-code-project-with-g
 `The Pro Git book (in English)`__. Exhaustive and painful. You will probably not need it!
 
 __ https://git-scm.com/book/en/v2
+
+If you have any remarks regarding this tutorial, please do not hesitate to :ref:`raise an issue <create_github_account>`
+or write an email to the author.
