@@ -160,7 +160,7 @@ Opened file formats that use text language: any "normal" language like C++, Pyth
 The *init* command: start a new project
 +++++++++++++++++++++++++++++++++++++++
 
-We start a project by creating a folder in our *home* directory, with the *mkdir* bash command (for "make directory")
+We start a project by creating a folder in our *home* directory, with the *mkdir* Bash command (for "make directory")
 
 .. note::
     The *home* directory corresponds to the directory that is reserved to the connected user. On Windows, it corresponds
@@ -170,14 +170,14 @@ We start a project by creating a folder in our *home* directory, with the *mkdir
 
 ``$ mkdir MyLocalRepository``
 
+And *cd* (for "change directory") into this folder
+
+``$ cd MyLocalRepository``
+
 It should look like this now:
 
 .. figure:: /image/tutorial_git/bash_mkdir.png
     :width: 600
-
-And *cd* (for "change directory") into this folder
-
-``$ cd MyLocalRepository``
 
 Now, we tell Git to track this folder with the *init* Git command
 
@@ -392,14 +392,21 @@ Here is a representation of what is the current status of our project.
 
 We will create a new branch, that we will call *develop*, with the following command
 
-``git checkout -b develop``
+``$ git branch develop``
+
+Then, we will *switch* to this branch, which means that from now on we will work on the *develop* branch.
+
+``$ git switch develop``
+
+It should look like this:
+
+.. figure:: /image/tutorial_git/git_branch.png
+    :width: 500
+
+Notice that the name of the branch we are working on in displayed by Git Bash under brackets in light blue.
 
 Within this branch, we will be very safe to try any modification of the code we like, because it will be completely
-isolated from the *main* one. If we look at the status
-
-``git status``
-
-the first line of the answer should be "On branch develop".
+isolated from the *main* one.
 
 Let say that we now modify our file by adding some new animals (a bird and a mosquito), and commiting at each time. Here
 is a representation of the new status of our project.
@@ -412,17 +419,17 @@ If we are happy with those two last commits, and we want to include them in the 
 
 We first have to go back to the *main* branch. For that, we use
 
-``git checkout main``
+``$ git switch main``
 
 Then, we tell Git to *merge* the *develop* branch into the current one, which is *main*
 
-``git merge develop``
+``$ git merge develop``
 
-And we can now delete the *develop* branch which is now useless.
+And we can now delete (with the -d option) the *develop* branch which is now useless.
 
-``git branch -d develop``
+``$ git branch -d develop``
 
-We end up with a *main* branch that inherited from the last commits of the former *develop* one (RIP)
+We end up with a *main* branch that inherited from the last commits of the former *develop* one (RIP).
 
 .. figure:: /image/tutorial_git/git_branch_final.svg
     :width: 500
