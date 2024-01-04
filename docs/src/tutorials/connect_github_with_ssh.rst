@@ -67,7 +67,7 @@ Let’s open a *Git Bash* terminal.
 Copy-paste the following command that will generate our key pair. We should replace the email address by the one that is
 linked to our GitHub account.
 
-``ssh-keygen -t ed25519 -C "your_email@example.com"``
+``$ ssh-keygen -t ed25519 -C "your_email@example.com"``
 
 Press *Enter* to every question that is prompted.
 
@@ -85,7 +85,7 @@ Add our private key to the ssh-agent
 
 Now that we have our key pair, we must tell SSH to manage this key, using the following command
 
-``ssh-add ~/.ssh/id_ed25519``
+``$ ssh-add ~/.ssh/id_ed25519``
 
 Add our public key to our GitHub account
 ++++++++++++++++++++++++++++++++++++++++
@@ -93,7 +93,7 @@ Add our public key to our GitHub account
 We will now copy the content of our public key with the following command, which is equivalent to opening the file and
 copying its content to the clipboard
 
-``clip < ~/.ssh/id_ed25519.pub``
+``$ clip < ~/.ssh/id_ed25519.pub``
 
 .. note::
     Notice that we use the public key here by taking the file with the *.pub* extension.
