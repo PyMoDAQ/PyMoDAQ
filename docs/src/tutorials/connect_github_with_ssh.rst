@@ -52,16 +52,6 @@ that is proposed by GitHub. Basically there are 3 steps:
   SSH to take this new private key into account and manage it.
 * Finally, we will have to add our *public key* to our GitHub account.
 
-In this section we are following the documentations
-
-`Generating a new SSH key and adding it to the ssh-agent (GitHub)`__
-
-`Adding a new SSH key to your GitHub account (GitHub)`__
-
-__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent?platform=windows
-
-__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
-
 Let’s go!
 
 Generate our SSH key pair
@@ -122,6 +112,16 @@ And paste the key in the form
     :width: 600
 
 Finally, press the *Add SSH key* button. We are done ;)
+
+This section has been inspired by those documentations:
+
+`Generating a new SSH key and adding it to the ssh-agent (GitHub)`__
+
+`Adding a new SSH key to your GitHub account (GitHub)`__
+
+__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent?platform=windows
+
+__ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
 
 Concluding remarks
 ------------------
