@@ -492,32 +492,36 @@ First, we will need to create a personal account on GitHub. Please refer to the 
 Create a remote repository
 ++++++++++++++++++++++++++
 
-Once your profile is created, go to the top right of the screen and click on the icon representing your profile.
+Once our profile is created, we go to the top right of the screen and click on the icon representing our profile.
 
-.. figure:: /image/tutorial_git/github_account_2.png
+.. figure:: /image/tutorial_git/github_new_repository.png
     :width: 600
 
 Let’s create a remote repository.
 
-.. figure:: /image/tutorial_git/github_create_remote_repository_2.png
+.. figure:: /image/tutorial_git/github_new_repository_2.png
     :width: 600
 
-.. figure:: /image/tutorial_git/create_remote_repository.png
+.. figure:: /image/tutorial_git/github_new_repository_3.png
     :width: 600
 
-The next page will give us some help to *push* our *local repository* to the newly created *remote repository*.
+Let’s call it *monkey_repository* and click on *Create repository*.
 
-.. figure:: /image/tutorial_git/github_push_local_repository_2.png
-    :width: 600
+.. note::
+    Note that we can create a *public* or a *private* repository. If we want the other users of GitHub
+    to have access to the
+    code that we will put in this repository, we will make it public. Otherwise we will make it private.
 
 Let’s stop here for a bit of vocabulary:
 
 * Our **local repository** is the local folder that we created and configured to be followed by Git. Here it is our
-  *MyAmazingProject!!!* folder, that is stored on our local machine.
+  *MyLocalRepository* folder, that is stored on our local machine.
 * We call **remote repository** the one that we just created. Its name is *monkey_repository* and its Git address is
   *https://github.com/Fakegithubaccountt/monkey_repository.git*.
-* When we talk about **pushing**, we mean that we upload the state of our local repository to the remote repository.
-* When we talk about **cloning**, we mean that we downloaded the state of the remote repository to a local repository.
+* When we will talk about **pushing**, we will mean that we upload the state of our local repository to the remote
+  repository.
+* When we will talk about **cloning**, we will mean that we downloaded the state of the remote repository to a local
+  repository.
 
 All this is summed up in the following schematic.
 
@@ -538,15 +542,13 @@ everything is explained step by step in the following tutorial:
 Push our local repository to GitHub
 +++++++++++++++++++++++++++++++++++
 
-We started this tutorial from a local folder. What we will do now is to push this repository to GitHub servers.
+We started this tutorial from a local folder, and then created a remote repository on our GitHub account.
+For now the latter is empty.
+What we will do now is to push the content of our local repository to our remote repository.
 
 .. note::
-    Note that it is not obvious that you will always work this way. Most of the time, you will start by cloning a remote
-    repository to your local machine.
-
-The following documentation can be helpful to understand what we are going to do in this section:
-
-`Managing remote repositories (github.com)`__
+    Note that it is not obvious that we will always work this way. Most of the time, we will start by cloning a remote
+    repository to our local machine.
 
 __ https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories?platform=windows
 
@@ -555,122 +557,116 @@ now on will be
 connected to the remote repository that we just created on GitHub. The latter is called *origin* by default.
 Be careful to be at the root of our local repository to execute the following command:
 
-``git remote add origin the_git_address_of_our_remote_repository``
+``$ git remote add origin <the Git address of our remote repository>``
 
 .. note::
     The Git address of a repository follows the naming convention
     *https://github.com/GitHub_username/repository_name.git*
 
-It should look like this:
-
-.. figure:: /image/tutorial_git/git_add_remote.png
-    :width: 600
-
 With the next command, we will check that everything is as expected. We call for information about the remote
 repository.
 
-``git remote -v``
+``$ git remote -v``
 
 It should look like this:
 
-.. figure:: /image/tutorial_git/git_remote_v.png
+.. figure:: /image/tutorial_git/git_remote.png
     :width: 600
 
 This is all good. The first line, ending with *fetch*, means that when we will ask to update our local repository (with
 a *pull* command, we will see that latter), it will call the *origin* repository. The second line, ending with *push*,
-means that when we will ask to update the remote repository with the work we have done locally, it will go to origin.
+means that when we will ask to update the remote repository with the work we have done locally, it will go to *origin*.
 
 Let us try to push our repository!
 
-``git push -u origin main``
+``$ git push -u origin main``
 
 .. note::
     Notice that when we push, we push a specific branch, which is *main* here.
 
 It should look like this:
 
-.. figure:: /image/tutorial_git/git_push_success.png
+.. figure:: /image/tutorial_git/git_push.png
     :width: 600
 
 Our file is online!
 
-.. figure:: /image/tutorial_git/repository-online.png
+.. figure:: /image/tutorial_git/github_file_online.png
     :width: 600
 
 But it is not like we just store a file on a server, we also have access to all the history of the commits.
 
-.. figure:: /image/tutorial_git/quantum_monkey_repository.png
+.. figure:: /image/tutorial_git/github_get_commits.png
     :width: 600
 
 Here they are.
 
-.. figure:: /image/tutorial_git/quantum_monkey_repository_commits.png
+.. figure:: /image/tutorial_git/github_commit_history.png
     :width: 600
 
-Let’s click on the second commit *The monkey has been added in our file*.
+Let’s click on the second commit *The funny monkey has been added*.
 
-.. figure:: /image/tutorial_git/quantum_monkey_commit.png
+.. figure:: /image/tutorial_git/github_see_monkey_commit.png
     :width: 600
 
 Here he is!
 
-We see that the GitHub website provides an equivalent to what we see in the terminal.
+We see that the GitHub website provides an equivalent to what we see in the terminal. The advantage is that now we can
+access it from any computer connected to internet!
 
 Finally, the development workflow is as follow:
 
-* Do modifications in the file on your local repository.
+* Do modifications in the file on our local repository.
 
 * Test that the result is as expected.
 
 * Do a commit.
 
-* You can repeat the previous steps several times.
+* We can repeat the previous steps several times.
 
-* At the end of the day, push all your commits to your remote repository.
+* At the end of the day, we push all our commits to our remote repository.
 
-**Now, your remote repository should always be your reference, and not your local version anymore!**
+**Now, our remote repository should always be our reference, and not our local version anymore!**
 
-The lastest version of your code must be stored on the server, not locally. Once your push is done, you can safely
-delete your local folder. You will be able to get your code back at the latest version at any time from any computer,
+The lastest version of our code must be stored on the server, not locally. Once our push is done, we can safely
+delete our local folder. We will be able to get our code back at the latest version at any time from any computer,
 thanks to the *clone* command.
+
+If you have further questions about the management of remote repositories, you can refer to this documentation:
+
+`Managing remote repositories (github.com)`__
 
 The *clone* command
 +++++++++++++++++++
 
-Let start by deleting our folder locally. This command is equivalent to right-click on the folder and Delete.
+Ok so let’s do it, let’s delete our local folder *MyLocalRepository*. We will convince ourself that we can easily find
+it back.
 
-.. figure:: /image/tutorial_git/rm-rf-directory.png
-    :width: 300
+Since our work is now stored on a GitHub server, it is not a problem even if our computer goes up in smoke. We can
+get it back with the *clone* command.
 
-Since our work is now stored in the GitHub server, it is not a problem even if our computer goes up in smoke. We can
-get it back with the following command.
-
-First, copy the adress of the repository
+First, copy the Git adress of the repository
 
 .. figure:: /image/tutorial_git/git-clone.png
     :width: 600
 
-Then, clone the repository
+Then, at our home location, we execute the command
 
-.. figure:: /image/tutorial_git/git-clone-command.png
+``$ git clone <the Git address of our remote repository>``
+
+.. figure:: /image/tutorial_git/git_clone.png
     :width: 600
 
-We created a *pmd_pretraining_git* folder and cd into it just to start from a fresh folder. The command created a
-subfolder monkey_repository with our file into it.
-
-.. figure:: /image/tutorial_git/git-clone-result.png
+.. figure:: /image/tutorial_git/git_clone_from_remote.png
     :width: 400
 
 We found our work back!
 
-Notice that when you clone a repository, you do not need anymore the *init* command.
-You do not need either to configure the address of the remote repository, Git already
-knows where you took it from.
+Notice that when we clone a repository, we do not need anymore the *init* command.
+We do not need either to configure the address of the remote repository, Git already
+knows where to took it from.
 
-.. figure:: /image/tutorial_git/result_of_cloning.png
-    :width: 600
-
-You can do this for any public repository on GitHub, which allows you to download
+We can follow this procedure for any public repository on GitHub, which allows us to download
 basically all the open-source codes in the world!
 
 Git in practice: integration within PyCharm
