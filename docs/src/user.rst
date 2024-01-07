@@ -2,7 +2,7 @@ User's Guide
 ============
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: Contents:
 
    user_folder/installation
