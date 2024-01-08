@@ -44,6 +44,7 @@ class ItemSelect(QtWidgets.QListWidget):
     def __init__(self, hasCheckbox=False):
         QtWidgets.QListWidget.__init__(self)
         self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
+        self.selItems = [] # Dummy variable to keep track of click order
 
     def get_value(self):
         """
@@ -54,12 +55,23 @@ class ItemSelect(QtWidgets.QListWidget):
             dictionnary
                 The dictionnary of all_items compared to the selectedItems.                                
         """
-        if self.hasCheckbox:            
-            selitems = [item.text() for item in self.all_items() if item.checkState()!=0]            
+        allitems = [item.text() for item in self.all_items()]
+        if self.hasCheckbox:   
+            # Clean up list with non existing entries      
+            [self.selItems.remove(item) for item in self.selItems if item not in allitems]        
+            for item in self.all_items():
+                if item.checkState()!=0: # Item is selected
+                    if item.text() not in self.selItems: # if item not in list then add it
+                        self.selItems.append(item.text())
+                else: # Item is not selected
+                    if item.text() in self.selItems: # if item in list then remove it
+                        self.selItems.remove(item.text())
+            selitems = self.selItems.copy() #need to copy to correctly emit signal when changed
+            
+            # selitems = [item.text() for item in self.all_items() if item.checkState()!=0]
         else:
             selitems = [item.text() for item in self.selectedItems()]
             
-        allitems = [item.text() for item in self.all_items()]
         return dict(all_items=allitems, selected=selitems)
 
     def all_items(self):
