@@ -224,8 +224,8 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
-        self._current_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
-        self._target_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
+        self._current_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
+        self._target_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()
