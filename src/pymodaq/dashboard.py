@@ -1304,7 +1304,7 @@ class DashBoard(QObject):
             available_version = version_mod.parse(get_pypi_pymodaq('pymodaq')['version'])
             msgBox = QtWidgets.QMessageBox()
             if available_version > current_version:
-                msgBox.setText(f"A new version of PyMoDAQ is available, {str(max(available_version))}!")
+                msgBox.setText(f"A new version of PyMoDAQ is available, {str(available_version)}!")
                 msgBox.setInformativeText("Do you want to install it?")
                 msgBox.setStandardButtons(msgBox.Ok | msgBox.Cancel)
                 msgBox.setDefaultButton(msgBox.Ok)
@@ -1312,7 +1312,7 @@ class DashBoard(QObject):
                 ret = msgBox.exec()
 
                 if ret == msgBox.Ok:
-                    command = [sys.executable, '-m', 'pip', 'install', f'pymodaq=={str(max(available_version))}']
+                    command = [sys.executable, '-m', 'pip', 'install', f'pymodaq=={str(available_version)}']
                     subprocess.Popen(command)
 
                     self.restart_fun()
