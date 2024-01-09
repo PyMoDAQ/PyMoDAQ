@@ -77,7 +77,7 @@ class DataDisplayer(QObject):
 
     def update_axis(self, axis: Axis):
         self._axis = axis.copy()
-        if self._axis.data is None:  # create real data vector once here for subsequent use
+        if self._axis.get_data() is None:  # create real data vector once here for subsequent use
             self._axis.create_linear_data(axis.size)
 
     def get_axis(self) -> Axis:

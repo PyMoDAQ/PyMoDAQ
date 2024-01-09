@@ -196,15 +196,12 @@ class AxisSaverLoader(DataManagement):
         enlargeable: bool
             Specify if the underlying array will be enlargebale
         """
-        if axis.data is None:
-            axis.create_linear_data(axis.size)
-
         array = self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=axis.label,
-                                        array_to_save=axis.data, data_dimension=DataDim['Data1D'],
+                                        array_to_save=axis.get_data(), data_dimension=DataDim['Data1D'],
                                         enlargeable=enlargeable,
                                         metadata=dict(size=axis.size, label=axis.label, units=axis.units,
                                                       index=axis.index, offset=axis.offset, scaling=axis.scaling,
-                                                      distribution='uniform' if axis.is_axis_linear() else 'spread',
+                                                      distribution='uniform',  # if axis.is_axis_linear() else 'spread',
                                                       spread_order=axis.spread_order))
         return array
 
