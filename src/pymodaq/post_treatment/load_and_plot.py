@@ -60,7 +60,8 @@ class LoaderPlotter:
         return self._data
 
     def load_data(self, filter_dims: List[Union[DataDim, str]] = None, filter_full_names: List[str] = None,
-                  remove_navigation: bool = True, group_0D=False, average_axis: int=None, average_index: int = 0):
+                  remove_navigation: bool = True, group_0D=False, average_axis: int=None, average_index: int = 0,
+                  sort_1D=False):
         """Load Data from the h5 node of the dataloader and apply some filtering/manipulation before plotting
 
         Parameters
@@ -78,6 +79,8 @@ class LoaderPlotter:
             which axis in the data shapes should be interpereted as the average (in general it is 0 or None)
         average_index: int
             which step in the averaging process are we in.
+        sort_1D: bool
+            If True sort the data with respect to the navigation axis
 
         Returns
         -------
@@ -99,6 +102,11 @@ class LoaderPlotter:
 
         if group_0D:  # 0D initial data
             self.group_0D_data()
+
+        if sort_1D:
+            for data in self._data:
+                if len(data.nav_indexes) == 1:
+                    data.sort_data(data.nav_indexes[0], inplace=True)
 
         if remove_navigation:
             self.remove_navigation_axes()
