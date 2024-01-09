@@ -103,23 +103,32 @@ class ItemSelect(QtWidgets.QListWidget):
             *values*          dictionnary    the values dictionnary to be setted.
             =============== ============== =======================================
         """
-        allitems = []
+        # Remove values in selected if they do not exist in all
+        [values['selected'].remove(value) for value in values['selected'] if value not in values['all_items']]
+        
+        allitems_text = []
         # Check existing items and remove unused ones
         for item in self.all_items():     
             if item.text() not in values['all_items']: # Remove items from list if text not in values
                 item = self.takeItem(self.row(item))
             else:
-                allitems.append(item.text()) # Add items to list
+                allitems_text.append(item.text()) # Add items to list
         # Create items if needed
         for value in values['all_items']: # Loop through all values
-            if value not in allitems: # Test if object already exists
+            if value not in allitems_text: # Test if object already exists
                 item = QtWidgets.QListWidgetItem(value) # Create object
                 if self.hasCheckbox: # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)                                       
-                self.addItem(item) # Add object to widget  
-        # Selection process
-        for item in self.all_items():
-            self.select_item(item, doSelect=item.text() in values['selected'])
+                self.addItem(item) # Add object to widget 
+                 
+        allitems = self.all_items() # All selectable items                
+        # Selection process        
+        for value in values['selected']: # Loop through selected to retain selection order       
+            for item in allitems: # Loop through all items        
+                if item.text()==value:
+                    self.select_item(item, doSelect=True)
+                    allitems.remove(item) # Remove item from list if found
+
         QtWidgets.QApplication.processEvents()
 
 
