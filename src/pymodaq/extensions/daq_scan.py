@@ -697,7 +697,8 @@ class DAQScan(QObject, ParameterManager):
         try:
             self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
                                              average_axis=average_axis, average_index=self.ind_average,
-                                             target_at=self.scanner.positions[self.ind_scan])
+                                             target_at=self.scanner.positions[self.ind_scan],
+                                             sort_1D = self.settings['scan_options', 'sort_scan1D'])
         except Exception as e:
             logger.exception(str(e))
     #################
