@@ -1318,12 +1318,16 @@ class DataWithAxes(DataBase):
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
 
-    def sort_data(self, nav_axis: int = 0):
+    def sort_data(self, nav_axis: int = 0, inplace=False):
         """Sort data along a given navigation axis, default is 0"""
+        #TODO adds a test for this method
         if nav_axis in self.nav_indexes:
             axis = self.get_nav_axes()[nav_axis]
             sorted_index = np.argsort(axis.get_data())
-            data = self.deepcopy()
+            if inplace:
+                data = self
+            else:
+                data = self.deepcopy()
             for ind in range(len(data)):
                 data.data[ind] = data.data[ind][sorted_index]
             for ind in range(len(data.axes)):
