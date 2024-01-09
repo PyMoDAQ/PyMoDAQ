@@ -127,7 +127,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
                 positions = np.expand_dims(positions, 1)
             axes_unique = []
             for ax in positions.T:
-                ax = np.sort(np.unique(ax, return_index=True)[1]) # Getting unique values in ax without any sorting
+                ax = ax[np.sort(np.unique(ax, return_index=True)[1])] # Getting unique values in ax without any sorting
                 axes_unique.append(ax)                
             axes_indexes = np.zeros_like(positions, dtype=int)
             for ind in range(positions.shape[0]):
