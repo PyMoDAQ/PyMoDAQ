@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple
+from typing import List, Tuple, Any
 import re
 import numpy as np
 from pymodaq.utils.data import Axis, DataDistribution
@@ -38,7 +38,7 @@ class Scan1DBase(ScannerBase):
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
-        return tuple(self.axes_indexes[scan_index])
+        return (scan_index,)
 
     def update_from_scan_selector(self, scan_selector: Selector):
         pass
@@ -93,7 +93,7 @@ class Scan1DRandom(Scan1DLinear):
         np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
         self.set_settings_titles()
-        
+
         
 @ScannerFactory.register('Scan1D', 'Sparse')
 class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
