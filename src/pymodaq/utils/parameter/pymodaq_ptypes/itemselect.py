@@ -128,7 +128,7 @@ class ItemSelect(QtWidgets.QListWidget):
                 item = QtWidgets.QListWidgetItem(value) # Create object
                 if self.hasCheckbox: # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)      
-                    self.select_item(item, doSelect=False) # Make sure item is not selected (checkbox not appearing somehow)                                                       
+                    self.select_item(item, doSelect=False) # Make sure item is not selected (checkbox not appearing somehow without)                                                       
                 self.addItem(item) # Add object to widget 
                  
         allitems = self.all_items() # All selectable items                
@@ -137,8 +137,6 @@ class ItemSelect(QtWidgets.QListWidget):
             for item in allitems: # Loop through all items        
                 if item.text()==value:
                     self.select_item(item, doSelect=True)
-                    if self.hasCheckbox:
-                        self.selItems.append(item.text()) # Add it to dummy variable
                     allitems.remove(item) # Remove item from list if found
                 else:
                     self.select_item(item, doSelect=False) 
