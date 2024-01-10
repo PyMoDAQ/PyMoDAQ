@@ -244,7 +244,7 @@ def main():
     actuators = [MoveMock(ind) for ind in range(3)]
 
     params = [{'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect',
-               'value': dict(all_items=[act.title for act in actuators], selected=[])},
+               'value': dict(all_items=[act.title for act in actuators], selected=[]),'checkbox':True},
               {'title': 'Set Scan', 'name': 'set_scan', 'type': 'action'},
               ]
     settings = Parameter.create(name='settings', type='group', children=params)
