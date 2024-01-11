@@ -484,7 +484,6 @@ class Viewer1D(ViewerBase):
         if labels != self._labels:
             self._labels = labels
 
-    @Slot(list)
     def _show_data(self, data: DataWithAxes):
         self.labels = data.labels
 
