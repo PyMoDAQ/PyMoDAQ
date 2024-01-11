@@ -238,7 +238,7 @@ class Axis:
 
     def is_axis_linear(self, data=None):
         if data is None:
-            data = self._data
+            data = self.get_data()
         if data is not None:
             return np.allclose(np.diff(data), np.mean(np.diff(data)))
         else:
