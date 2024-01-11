@@ -384,6 +384,7 @@ class SpreadDataDisplayer(BaseDataDisplayer):
             if nav_data is not None:
                 nav_axes = nav_data.get_nav_axes_with_data()
                 if len(nav_axes) < 2:
+                    #nav_data.nav_indexes = ()
                     self._navigator1D.show_data(nav_data)
                 elif len(nav_axes) == 2:
                     try:
@@ -660,9 +661,9 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
             self.navigator2D.setVisible(len(nav_axes) == 2)
             self.axes_viewer.setVisible(len(data.nav_indexes) > 2)
         else:
-            self.navigator1D.setVisible(len(nav_axes) == 1 or len(nav_axes) > 2)
             self.navigator2D.setVisible(len(nav_axes) == 2 and self.data_displayer.triangulation)
-            self.navigator1D.setVisible(len(nav_axes) == 2 and not self.data_displayer.triangulation)
+            self.navigator1D.setVisible(len(nav_axes) == 1 or len(nav_axes) > 2 or
+                                        len(nav_axes) == 2 and not self.data_displayer.triangulation)
 
     def update_filters(self, processor: DataProcessorFactory):
         self.get_action('filters').clear()

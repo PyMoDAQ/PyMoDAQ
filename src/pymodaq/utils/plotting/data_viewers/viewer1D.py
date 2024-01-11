@@ -96,9 +96,6 @@ class DataDisplayer(QObject):
         self._data = data
         if len(data) != len(self._plot_items):
             self.update_display_items(data)
-
-
-
         self.update_plot(do_xy, data, sort_data)
 
     def update_xy(self, do_xy=False):
