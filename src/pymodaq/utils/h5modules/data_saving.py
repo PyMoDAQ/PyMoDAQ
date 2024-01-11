@@ -201,7 +201,7 @@ class AxisSaverLoader(DataManagement):
                                         enlargeable=enlargeable,
                                         metadata=dict(size=axis.size, label=axis.label, units=axis.units,
                                                       index=axis.index, offset=axis.offset, scaling=axis.scaling,
-                                                      distribution='uniform',  # if axis.is_axis_linear() else 'spread',
+                                                      distribution='uniform' if axis.is_axis_linear() else 'spread',
                                                       spread_order=axis.spread_order))
         return array
 
