@@ -620,6 +620,7 @@ def get_instrument_plugins():  # pragma: no cover
                 except ModuleNotFoundError:
                     pass
 
+
             # check if modules are importable
             for mod in plugin_list:
                 try:
@@ -637,6 +638,20 @@ def get_instrument_plugins():  # pragma: no cover
                                  f' from module: {mod["parent_module"].__package__}')
         except Exception as e:  # pragma: no cover
             logger.debug(str(e))
+
+    # add utility plugin for PID
+    try:
+        pidmodule = importlib.import_module('pymodaq.extensions.pid')
+        mod = [{'name': 'PID',
+               'module': pidmodule,
+               'parent_module': pidmodule,
+               'type': 'daq_move'}]
+        importlib.import_module(f'{pidmodule.__package__}.daq_move_PID')
+        plugins_import.extend(mod)
+
+    except Exception as e:
+        logger.debug(f'Impossible to import PID utility plugin: {str(e)}')
+
     return plugins_import
 
 
