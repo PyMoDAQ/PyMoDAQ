@@ -17,15 +17,14 @@ class DAQ_Move_PID(DAQ_Move_base):
 
 
     def update_position(self, dict_val):
-        self.current_position = dict_val[self.parent.title]
+        self.current_value = dict_val[self.parent.title]
 
-    def check_position(self):
+    def get_actuator_value(self):
         self.controller['emit_curr_points'].emit()
-        pos = self.current_position
+        pos = self.current_value
         #
         # pos = self.get_position_with_scaling(pos)
-        # self.current_position = pos
-        self.emit_status(ThreadCommand('check_position', [pos]))
+        # self.current_value = pos
         return pos
 
     def close(self):
@@ -54,7 +53,7 @@ class DAQ_Move_PID(DAQ_Move_base):
             self.status.info = info
             self.status.controller = self.controller
             self.status.initialized = True
-            return self.status
+            return self.status.info, self.status.initialized
 
         except Exception as e:
             self.status.info = str(e)
@@ -75,8 +74,8 @@ class DAQ_Move_PID(DAQ_Move_base):
     def move_Rel(self, position):
         """
         """
-        position = self.check_bound(self.current_position + position) - self.current_position
-        self.target_position = position + self.current_position
+        position = self.check_bound(self.current_value + position) - self.current_value
+        self.target_position = position + self.current_value
 
         self.controller['setpoint'].emit({self.parent.title: self.target_position})
         self.poll_moving()
