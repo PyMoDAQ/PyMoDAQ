@@ -71,6 +71,9 @@ class DataDisplayer(QObject):
         self._axis: Axis = None
         self._data: DataRaw = None
 
+        self._doxy = False
+        self._do_sort = False
+
     @property
     def legend(self):
         return self._plotitem.legend
@@ -89,14 +92,35 @@ class DataDisplayer(QObject):
     def get_plot_item(self, index: int):
         return self._plot_items[index]
 
-    def update_data(self, data: DataRaw, do_xy=False):
+    def update_data(self, data: DataRaw, do_xy=False, sort_data=False):
         self._data = data
         if len(data) != len(self._plot_items):
             self.update_display_items(data)
 
+
+
+        self.update_plot(do_xy, data, sort_data)
+
+    def update_xy(self, do_xy=False):
+        self._doxy = do_xy
+        self.update_plot(do_xy, sort_data=self._do_sort)
+
+    def update_sort(self, do_sort=False):
+        self._do_sort = do_sort
+        self.update_plot(self._doxy, sort_data=self._do_sort)
+
+    def update_plot(self, do_xy=True, data=None, sort_data=False):
+        if data is None:
+            data = self._data
+        if sort_data:
+            data = data.sort_data()
+
         axis = data.get_axis_from_index(0, create=False)[0]
         if axis is not None:
             self.update_axis(axis)
+
+        self._doxy = do_xy
+        self._do_sort = sort_data
 
         self.update_xyplot(do_xy, data)
 
@@ -244,9 +268,9 @@ class View1D(ActionManager, QObject):
         """Convenience function from the Crosshair"""
         self.crosshair.set_crosshair_position(*positions)
 
-    def display_data(self, data: DataRaw):
+    def display_data(self, data: DataWithAxes):
         self.set_action_visible('xyplot', len(data) == 2)
-        self.data_displayer.update_data(data, self.is_action_checked('xyplot'))
+        self.data_displayer.update_data(data, self.is_action_checked('xyplot'), self.is_action_checked('sort'))
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
@@ -300,7 +324,8 @@ class View1D(ActionManager, QObject):
         self.connect_action('do_math', self.lineout_plotter.roi_clicked)
 
         self.connect_action('scatter', self.data_displayer.plot_with_scatter)
-        self.connect_action('xyplot', self.data_displayer.update_xyplot)
+        self.connect_action('xyplot', self.data_displayer.update_xy)
+        self.connect_action('sort', self.data_displayer.update_sort)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
         self.connect_action('overlay', self.data_displayer.show_overlay)
@@ -330,6 +355,8 @@ class View1D(ActionManager, QObject):
                         'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
                         visible=False)
         self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data', checkable=True)
+        self.add_action('sort', 'Sort Data', 'sort_ascend', 'Display data in a sorted fashion with respect to axis',
+                        checkable=True)
         self.add_action('ROIselect', 'ROI Select', 'Select_24',
                         tip='Show/Hide ROI selection area', checkable=True)
         self.add_action('x_label', 'x:')
@@ -488,8 +515,8 @@ class Viewer1D(ViewerBase):
         self.labels = data.labels
 
         self.get_axis_from_view(data)
+        self.view.display_data(data)
 
-        self.view.display_data(data.sort_data())
         if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
         else:
@@ -568,6 +595,25 @@ def main_unsorted():
 
     sys.exit(app.exec_())
 
+def main_random():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    prog = Viewer1D(widget)
+
+    from pymodaq.utils.math_utils import gauss1D
+    x = np.random.randint(201, size=201)
+    y1 = gauss1D(x, 75, 25)
+    y2 = gauss1D(x, 120, 50, 2)
+
+    QtWidgets.QApplication.processEvents()
+    data = DataRaw('mydata', data=[y1, y2],
+                   axes=[Axis('myaxis', 'units', data=x)])
+
+    widget.show()
+    prog.show_data(data)
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())
+
 
 def main_view1D():
     app = QtWidgets.QApplication(sys.argv)
@@ -597,7 +643,7 @@ def main_nans():
     sys.exit(app.exec_())
 
 if __name__ == '__main__':  # pragma: no cover
-    main()
-    #main_unsorted()
+    # main()
+    main_random()
     #main_view1D()
     #main_nans()
