@@ -19,32 +19,53 @@ logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
 
-@ScannerFactory.register('Scan2D', 'Linear')
-class Scan2DLinear(ScannerBase):
-    params = [{'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start1')},
-              {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start2')},
-              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step1')},
-              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step2')},
-              {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop1')},
-              {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop2')},
-              ]
+class Scan2DBase(ScannerBase):    
+    params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
+                'children':[]
+                }, 
+                {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
+                'children':[]
+                }, 
+                ]
+    axes = ('axis1','axis2')    
     n_axes = 2
-    distribution = DataDistribution['uniform']
-
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
         self.axes_unique = []
 
+        
+@ScannerFactory.register('Scan2D', 'Linear')
+class Scan2DLinear(Scan2DBase):    
+    
+    params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
+               'children':[
+              {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start1')},
+              {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop1')},              
+              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'step1')},
+              ]}, 
+              {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
+               'children':[
+              {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start2')},
+              {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop2')},              
+              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'step2')},              
+               ]},
+              ]    
+    n_axes = 2
+    distribution = DataDistribution['uniform']
+
+    def __init__(self, actuators: List = None, **_ignored):        
+        super().__init__(actuators=actuators)
+
     def get_pos(self):
-        starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])
-        stops = np.array([self.settings['stop_axis1'], self.settings['stop_axis2']])
-        steps = np.array([self.settings['step_axis1'], self.settings['step_axis2']])
+        starts = np.array([self.settings[ax,f'start_{ax}'] for ax in self.axes])
+        stops = np.array([self.settings[ax,f'stop_{ax}'] for ax in self.axes])
+        steps = np.array([self.settings[ax,f'step_{ax}'] for ax in self.axes])        
         return starts, stops, steps
 
     def evaluate_steps(self) -> int:
@@ -75,12 +96,13 @@ class Scan2DLinear(ScannerBase):
 
     def set_settings_titles(self):
         if len(self.actuators) == 2:
-            self.settings.child('start_axis1').setOpts(title=f'{self.actuators[0].title} start:')
-            self.settings.child('stop_axis1').setOpts(title=f'{self.actuators[0].title} stop:')
-            self.settings.child('step_axis1').setOpts(title=f'{self.actuators[0].title} step:')
-            self.settings.child('start_axis2').setOpts(title=f'{self.actuators[1].title} start:')
-            self.settings.child('stop_axis2').setOpts(title=f'{self.actuators[1].title} stop:')
-            self.settings.child('step_axis2').setOpts(title=f'{self.actuators[1].title} step:')
+            for i,ax in enumerate(self.axes):            
+                title = self.actuators[i].title
+                self.settings.child(ax).setOpts(title=title)                
+                self.settings.child(ax,f'start_{ax}').setOpts(title=f'{title} start:')
+                self.settings.child(ax,f'stop_{ax}').setOpts(title=f'{title} stop:')
+                self.settings.child(ax,f'step_{ax}').setOpts(title=f'{title} step:')
+
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}',
@@ -98,10 +120,10 @@ class Scan2DLinear(ScannerBase):
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
         if coordinates.shape == (2, 2):
-            self.settings.child('start_axis1').setValue(coordinates[0, 0])
-            self.settings.child('start_axis2').setValue(coordinates[0, 1])
-            self.settings.child('stop_axis1').setValue(coordinates[1, 0])
-            self.settings.child('stop_axis2').setValue(coordinates[1, 1])
+            for i,ax in enumerate(self.axes):            
+                self.settings.child(ax,f'start_{ax}').setValue(coordinates[0, i])
+                self.settings.child(ax,f'stop_{ax}').setValue(coordinates[1, i])
+
 
 
 @ScannerFactory.register('Scan2D', 'LinearBack&Force')
@@ -256,15 +278,24 @@ try:
             {'title': 'Loss type', 'name': 'scan_loss', 'type': 'list',
              'limits': ['default', 'curvature', 'uniform'],
              'tip': 'Type of loss used by the algo. to determine next points'},
-
-            {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'start1')},
-            {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'start2')},
-            {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'stop1')},
-            {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
-             'value': config('scan', 'scan2D', 'linear', 'stop2')},
+            {'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
+               'children':[
+              {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start1')},
+              {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop1')},              
+              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'step1')},
+              ]}, 
+              {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
+               'children':[
+              {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start2')},
+              {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop2')},              
+              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'step2')},              
+               ]},
             ]
         distribution = DataDistribution['spread']
 
