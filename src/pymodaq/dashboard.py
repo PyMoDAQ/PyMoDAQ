@@ -673,41 +673,6 @@ class DashBoard(QObject):
             det_docks_viewer = []
             move_forms = []
 
-            # # set PID if checked in managers
-            try:
-                if self.preset_manager.preset_params.child('use_pid').value():
-                    self.load_pid_module()
-
-                    self.pid_module.settings.child('models', 'model_class').setValue(
-                        self.preset_manager.preset_params.child('pid_models').value())
-                    QtWidgets.QApplication.processEvents()
-                    self.pid_module.set_model()
-
-                    QtWidgets.QApplication.processEvents()
-
-                    for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
-                                                             []):
-                        preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
-                        path = ['models', 'model_params']
-                        path.extend(preset_path)
-                        self.pid_module.settings.child(*path).setValue(child.value())
-
-                    model_class = extmod.get_models(
-                        self.preset_manager.preset_params.child('pid_models').value())['class']
-                    for setp in model_class.setpoints_names:
-                        self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)
-                        actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
-                                                           setpoint=self.pid_module.setpoints_signal,
-                                                           emit_curr_points=self.pid_module.emit_curr_points_sig)
-                        actuators_modules[-1].init_hardware_ui()
-                        QtWidgets.QApplication.processEvents()
-                        self.poll_init(actuators_modules[-1])
-                        QtWidgets.QApplication.processEvents()
-
-            except Exception as e:
-                raise PIDError('Could not load the PID extension and create setpoints actuators'
-                               f'{str(e)}')
-
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
@@ -1108,10 +1073,51 @@ class DashBoard(QObject):
                 self.detector_modules = detector_modules
 
                 self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
+
+                # Now that we have the module manager, load PID if it is checked in managers
+                try:
+                    if self.preset_manager.preset_params.child('use_pid').value():
+                        self.load_pid_module()
+
+                        self.pid_module.settings.child('models', 'model_class').setValue(
+                            self.preset_manager.preset_params.child('pid_models').value())
+                        QtWidgets.QApplication.processEvents()
+                        self.pid_module.set_model()
+
+                        QtWidgets.QApplication.processEvents()
+
+                        for child in putils.iter_children_params(
+                                self.preset_manager.preset_params.child('model_settings'),
+                                []):
+                            preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
+                            path = ['models', 'model_params']
+                            path.extend(preset_path)
+                            self.pid_module.settings.child(*path).setValue(child.value())
+
+                        model_class = extmod.get_models(
+                            self.preset_manager.preset_params.child('pid_models').value())['class']
+                        for setp in model_class.setpoints_names:
+                            self.add_move(setp, None, 'PID', [], [], actuators_modules)
+                            actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
+                                                                    setpoint=self.pid_module.setpoints_signal,
+                                                                    emit_curr_points=self.pid_module.emit_curr_points_sig)
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+
+                    # Update actuators modules and module manager
+                    self.actuators_modules = actuators_modules
+                    self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
+
+                except Exception as e:
+                    raise PIDError('Could not load the PID extension and create setpoints actuators'
+                                   f'{str(e)}')
+
                 #
                 if self.pid_module is not None:
-                    self.pid_module.ini_model_action.click()
-                #
+                    self.pid_module.get_action('ini_model').trigger()
+                # #
 
                 #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],

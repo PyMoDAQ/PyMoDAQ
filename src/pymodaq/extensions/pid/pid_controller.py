@@ -106,9 +106,6 @@ class DAQ_PID(CustomApp):
 
         self.emit_curr_points_sig.connect(self.emit_curr_points)
 
-    def set_module_manager(self, detector_modules, actuator_modules):
-        self.modules_manager = ModulesManager(detector_modules, actuator_modules)
-
     def ini_PID(self):
 
         if self.is_action_checked('ini_pid'):
