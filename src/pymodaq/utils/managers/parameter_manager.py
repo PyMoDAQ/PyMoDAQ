@@ -165,7 +165,7 @@ class ParameterManager:
         ...
 
     def child_added(self, param, data):
-        """Non-mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
+        """Non-mandatory method to be subclassed for actions to perform when a param has been added in self.settings
 
         Parameters
         ----------
@@ -252,7 +252,7 @@ class ParameterManager:
                 self.settings = _settings
                 logger.info(f'The settings from {file_path} have been successfully applied')                            
             else:
-                logger.info(f'The loaded settings from {file_path} do not match the current settings structure and cannot be updated.')
+                logger.info(f'The loaded settings from {file_path} do not match the current settings structure and cannot be applied.')
 
 
 
