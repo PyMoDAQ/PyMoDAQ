@@ -34,7 +34,7 @@ class Scan2DBase(ScannerBase):
         self.axes_unique = []
 
         
-@ScannerFactory.register('Scan2D', 'Linear')
+@ScannerFactory.register()
 class Scan2DLinear(Scan2DBase):    
     
     params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
@@ -58,6 +58,8 @@ class Scan2DLinear(Scan2DBase):
               ]    
     n_axes = 2
     distribution = DataDistribution['uniform']
+    scan_type = 'Scan2D'
+    scan_subtype = 'Linear'
 
     def __init__(self, actuators: List = None, **_ignored):        
         super().__init__(actuators=actuators)
@@ -171,26 +173,26 @@ class Scan2DRandom(Scan2DLinear):
 
 @ScannerFactory.register()
 class Scan2DSpiral(Scan2DLinear):
-   
-    params = [ {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
+    scan_subtype = 'Spiral'
+    params = [{'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
                'value': config('scan', 'scan2D', 'spiral', 'npts')},
               {'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
-               'children':[
-              {'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start1')},
-              {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop1')},              
-              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
-               'value': 0., 'readonly': True},
-              ]}, 
+               'children': [
+                   {'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
+                    'value': config('scan', 'scan2D', 'linear', 'start1')},
+                   {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
+                    'value': config('scan', 'scan2D', 'linear', 'stop1')},
+                   {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
+                    'value': 0., 'readonly': True},
+               ]},
               {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
-               'children':[
-              {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start2')},
-              {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop2')},              
-              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
-               'value': 0., 'readonly': True},              
+               'children': [
+                   {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
+                    'value': config('scan', 'scan2D', 'linear', 'start2')},
+                   {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
+                    'value': config('scan', 'scan2D', 'linear', 'stop2')},
+                   {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
+                    'value': 0., 'readonly': True},
                ]},
               ]  
    
