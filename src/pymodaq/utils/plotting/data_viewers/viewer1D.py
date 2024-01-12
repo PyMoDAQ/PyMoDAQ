@@ -412,7 +412,7 @@ class Viewer1D(ViewerBase):
         self.view.crosshair.set_crosshair_position(xpos=xpos, ypos=ypos)
 
     def add_plot_item(self, item):
-        self.view.add_item(item)
+        self.view.add_plot_item(item)
 
     @Slot(dict)
     def process_crosshair_lineouts(self, crosshair_dict):
