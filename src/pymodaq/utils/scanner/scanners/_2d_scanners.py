@@ -167,36 +167,70 @@ class Scan2DRandom(Scan2DLinear):
 
 @ScannerFactory.register('Scan2D', 'Spiral')
 class Scan2DSpiral(Scan2DLinear):
-    params = [{'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'center1')},
-              {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'center2')},
-              {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'rmax1')},
-              {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'spiral', 'rmax2')},
-              {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
+    
+    
+    params = [ {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
                'value': config('scan', 'scan2D', 'spiral', 'npts')},
-              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float', 'value': 0., 'readonly': True},
-              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float', 'value': 0., 'readonly': True},
-              ]
+              {'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
+               'children':[
+              {'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start1')},
+              {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop1')},              
+              {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
+               'value': 0., 'readonly': True},
+              ]}, 
+              {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
+               'children':[
+              {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'start2')},
+              {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
+               'value': config('scan', 'scan2D', 'linear', 'stop2')},              
+              {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
+               'value': 0., 'readonly': True},              
+               ]},
+              ]  
+    
+        
+    # params = [{'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
+    #            'value': config('scan', 'scan2D', 'spiral', 'center1')},
+    #           {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
+    #            'value': config('scan', 'scan2D', 'spiral', 'center2')},
+    #           {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
+    #            'value': config('scan', 'scan2D', 'spiral', 'rmax1')},
+    #           {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
+    #            'value': config('scan', 'scan2D', 'spiral', 'rmax2')},
+    #           {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
+    #            'value': config('scan', 'scan2D', 'spiral', 'npts')},
+    #           {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float', 'value': 0., 'readonly': True},
+    #           {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float', 'value': 0., 'readonly': True},
+    #           ]
 
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_settings_titles(self):
         if len(self.actuators) == 2:
-            self.settings.child('center_axis1').setOpts(title=f'Center {self.actuators[0].title}:')
-            self.settings.child('rmax_axis1').setOpts(title=f'Rmax {self.actuators[0].title}:')
-            self.settings.child('step_axis1').setOpts(title=f'Step {self.actuators[0].title}:')
-            self.settings.child('center_axis2').setOpts(title=f'Center {self.actuators[1].title}:')
-            self.settings.child('rmax_axis2').setOpts(title=f'Rmax {self.actuators[1].title}:')
-            self.settings.child('step_axis2').setOpts(title=f'Step {self.actuators[1].title}:')
+            for i,ax in enumerate(self.axes):            
+                title = self.actuators[i].title
+                self.settings.child(ax).setOpts(title=title)                
+                self.settings.child(ax,f'center_{ax}').setOpts(title=f'{title} center:')
+                self.settings.child(ax,f'rmax_{ax}').setOpts(title=f'{title} rmax:')
+                self.settings.child(ax,f'step_{ax}').setOpts(title=f'{title} step:')
+
+            
+            # self.settings.child('center_axis1').setOpts(title=f'Center {self.actuators[0].title}:')
+            # self.settings.child('rmax_axis1').setOpts(title=f'Rmax {self.actuators[0].title}:')
+            # self.settings.child('step_axis1').setOpts(title=f'Step {self.actuators[0].title}:')
+            # self.settings.child('center_axis2').setOpts(title=f'Center {self.actuators[1].title}:')
+            # self.settings.child('rmax_axis2').setOpts(title=f'Rmax {self.actuators[1].title}:')
+            # self.settings.child('step_axis2').setOpts(title=f'Step {self.actuators[1].title}:')
 
     def value_changed(self, param):
         starts, rmaxs, rsteps = self.get_pos()
-        self.settings.child('step_axis1').setValue(rsteps[0])
-        self.settings.child('step_axis2').setValue(rsteps[1])
+        for i,ax in enumerate(self.axes):            
+                self.settings.child(ax,f'step_{ax}').setValue(rsteps[i])
+        # self.settings.child('step_axis2').setValue(rsteps[1])
 
     def get_pos(self):
         """Get centers, radius and n steps from settings
@@ -210,8 +244,10 @@ class Scan2DSpiral(Scan2DLinear):
         r_steps: np.ndarray
             steps size in both directions
         """
-        centers = np.array([self.settings['center_axis1'], self.settings['center_axis2']])
-        rmaxs = np.array([self.settings['rmax_axis1'], self.settings['rmax_axis2']])
+        centers = np.array([self.settings[ax,f'center_{ax}'] for ax in self.axes])
+        rmaxs = np.array([self.settings[ax,f'rmax_{ax}'] for ax in self.axes])
+        # centers = np.array([self.settings['center_axis1'], self.settings['center_axis2']])
+        # rmaxs = np.array([self.settings['rmax_axis1'], self.settings['rmax_axis2']])
         r_steps = 2 * rmaxs / self.settings['npts_by_axis']
         return centers, rmaxs, r_steps
 
@@ -263,10 +299,15 @@ class Scan2DSpiral(Scan2DLinear):
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
         if coordinates.shape == (2, 2):
-            self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
-            self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
-            self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
-            self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
+            for i,ax in enumerate(self.axes):            
+                self.settings.child(ax,f'center_{ax}').setValue((coordinates[0, i] + coordinates[1, i]) / 2)
+                self.settings.child(ax,f'rmax_{ax}').setValue((coordinates[0, i] - coordinates[1, i]) / 2)
+            #     self.settings.child(ax,f'center_{ax}').setValue((coordinates[0, i] - coordinates[1, i]) / 2)
+            #     self.settings.child(ax,f'rmax_{ax}').setValue(coordinates[1, i])            
+            # self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
+            # self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
+            # self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
+            # self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
 
 
 try:
