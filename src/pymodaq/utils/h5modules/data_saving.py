@@ -259,6 +259,10 @@ class DataSaverLoader(DataManagement):
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
 
+    def isopen(self) -> bool:
+        """ Get the opened status of the underlying hdf5 file"""
+        return self._h5saver.isopen()
+
     def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
         """Adds Array nodes to a given location adding eventually axes as others nodes and metadata
 
@@ -381,7 +385,7 @@ class DataSaverLoader(DataManagement):
 
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension', 'distribution', 'label',
-                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size']:
+                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size', 'EXTDIM', 'path']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
@@ -494,6 +498,7 @@ class DataEnlargeableSaver(DataSaverLoader):
                 data_init = data
             elif len(data.nav_indexes) == 1:
                 data_init = data.inav[0]
+                data_init.source = data.source  # because slicing returns a calculated one
             else:
                 raise DataDimError('It is not possible to append DataND with more than 1 navigation axis')
             self._create_data_arrays(where, data_init, save_axes=True)
@@ -608,6 +613,10 @@ class DataToExportSaver:
 
     def close(self):
         self._h5saver.close()
+
+    def isopen(self) -> bool:
+        """ Get the opened status of the underlying hdf5 file"""
+        return self._h5saver.isopen()
 
     @staticmethod
     def channel_formatter(ind: int):

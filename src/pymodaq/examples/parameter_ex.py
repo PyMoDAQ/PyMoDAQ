@@ -8,12 +8,10 @@ import pymodaq.utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
 from pymodaq.utils.parameter import ParameterTree, Parameter
 from collections import OrderedDict
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.parameter import pymodaq_ptypes
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 
-class ParameterEx:
+class ParameterEx(ParameterManager):
     params = [
         {'title': 'Groups:', 'name': 'groups', 'type': 'group', 'children': [
             {'title': 'A visible group:', 'name': 'agroup', 'type': 'group', 'children': []},
@@ -27,6 +25,9 @@ class ParameterEx:
             {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 0,
              'max': 123, 'subtype': 'linear'},
+            {'title': 'Linear int Slide', 'name': 'linearslideint', 'type': 'slide', 'value': 50, 'default': 50,
+             'min': 0,
+             'max': 123, 'subtype': 'linear', 'int': True},
             {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 1e-5,
              'max': 1e5, 'subtype': 'log'},
@@ -53,6 +54,10 @@ class ParameterEx:
             {'title': 'Standard list:', 'name': 'alist', 'type': 'list', 'limits': ['a value', 'another one']},
             {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list', 'limits': ['a value', 'another one'],
              'show_pb': True, 'tip': 'when using the "show_pb" option, displays a plus button to add elt to the list'},
+            {'title': 'List defined from a dict:', 'name': 'dict_list', 'type': 'list',
+             'limits': {'xaxis': 0, 'yaxis': [0, 1, 2]}, 'tip': 'Such a parameter display text that are keys of a dict while'
+                                                        'values could be any object'
+             },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
             {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': '', 'filetype': True,
@@ -67,8 +72,18 @@ class ParameterEx:
              'tip': 'Press Ctrl+click  to select items in any order'},
             {'title': 'Selectable items', 'name': 'itemsbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
-             'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True},
-        ]},
+             'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True,},
+            {'title': 'Removable items', 'name': 'itemsbisbis', 'type': 'itemselect',
+             'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
+             'tip': 'If show_mb is True, user can remove selected items from the list', 'show_mb': True,},            
+            {'title': 'Checkable items', 'name': 'itemscheckable', 'type': 'itemselect',
+             'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
+             'tip': 'If checkbox is True, user can select item by checking/unchecking items. Remove items is still used with standard selections',
+             'show_pb': True, 'checkbox': True, 'show_mb': True,},                        
+            {'title': 'Dragable items', 'name': 'itemsdragablecheckable', 'type': 'itemselect',
+             'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
+             'tip': 'If dragdrop is True, user can drag or drop items inside the list', 'checkbox': True, 'dragdrop': True}, 
+        ]},  
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
@@ -89,36 +104,19 @@ class ParameterEx:
         # TableModelTabular and the TableModelSequential custom models in the pymodaq.utils.scanner module
     ]
 
-    def __init__(self, tree):
-        self.parameter_tree = tree
+    def __init__(self):
+        super().__init__()
 
-        self.settings = Parameter.create(name='settings', type='group', children=self.params)
-        self.parameter_tree.setParameters(self.settings, showTop=False)
-
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-    def parameter_tree_changed(self, param, changes):
+    def value_changed(self, param):
         """
         """
-
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                pass  # Triggered when parameter is added to the tree
-
-            elif change == 'value':
-                print(f'The parameter {param.name()} changed its value to {data}')
-
-            elif change == 'parent':
-                pass  # triggered when a param is removed from the tree
+        print(f'The parameter {param.name()} changed its value to {param.value()}')
 
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-
-    parametertree = ParameterTree()
-    ptree = ParameterEx(parametertree)
-    parametertree.show()
+    ptree = ParameterEx()
+    ptree.settings_tree.show()
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
 

@@ -192,3 +192,24 @@ class TestMath:
             mutils.ift2(x, dim=(1.1, 1.2))
         with pytest.raises(TypeError):
             mutils.ift2(x, dim=1.1)
+            
+    def test_rotate2D(self):
+        accuracy = 10 # Rouding precision
+        x,y = (0,0) # Point to rotate
+        ox,oy = (1,1) # Origin 
+        angle = np.pi/2 # Angle
+        x_r,y_r = mutils.rotate2D((ox,oy),(x,y),angle)    
+        assert (np.round((x_r,y_r),accuracy) == np.array([2,0])).all()        
+        angle = np.pi
+        x_r,y_r = mutils.rotate2D((ox,oy),(x,y),angle)    
+        assert (np.round((x_r,y_r),accuracy) == np.array([2,2])).all()
+        ox,oy = (1,0)
+        x_r,y_r = mutils.rotate2D((ox,oy),(x,y),angle)                 
+        assert (np.round((x_r,y_r),accuracy) == np.array([2,0])).all()
+        ox,oy = (0,1)
+        x_r,y_r = mutils.rotate2D((ox,oy),(x,y),angle)                         
+        assert (np.round((x_r,y_r),accuracy) == np.array([0,2])).all()
+        x,y = (1,1)
+        x_r,y_r = mutils.rotate2D((ox,oy),(x,y),angle)                                 
+        assert (np.round((x_r,y_r),accuracy) == np.array([-1,1])).all()
+

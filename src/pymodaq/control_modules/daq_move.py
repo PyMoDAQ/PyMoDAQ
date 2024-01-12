@@ -96,7 +96,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, action_list= ('save', 'update'))
         ControlModule.__init__(self)
 
         self.parent = parent
@@ -165,7 +165,8 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'show_log':
             self.show_log()
         elif cmd.command == 'show_config':
-            self.show_config(config)
+            self.config = self.show_config(self.config)
+            self.ui.config = self.config
         elif cmd.command == 'actuator_changed':
             self.actuator = cmd.attribute
         elif cmd.command == 'rel_value':

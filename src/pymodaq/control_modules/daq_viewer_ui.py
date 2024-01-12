@@ -209,6 +209,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
 
         self.add_action('quit', 'Quit the module', 'close2')
+        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
+                        toolbar=self.toolbar)
         self.add_action('log', 'Show Log file', 'information2')
 
         self._data_ready_led = QLED(readonly=True)
@@ -218,6 +220,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', lambda show: self._settings_widget.setVisible(show))
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
+        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
 
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
@@ -279,7 +282,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand('grab', attribute=self.is_action_checked('grab')))
         self._enable_ini_buttons(not self.is_action_checked('grab'))
-        self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+        if not self.config('viewer', 'allow_settings_edition'):
+            self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

@@ -439,8 +439,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.add_action('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
         self.add_action('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
         self.add_action('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
-        self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
-
+        self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True, checked=True)
         self.add_action('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
         self.add_action('ROIselect', 'ROI Select', 'Select_24',
                         tip='Show/Hide ROI selection area', checkable=True)
@@ -578,6 +577,9 @@ class View2D(ActionManager, QtCore.QObject):
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
+        rect = self.data_displayer.get_image('red').boundingRect()
+        self.ROIselect.setPos(rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2)
+        self.ROIselect.setSize(rect.size() * 2 / 3)
 
     def set_axis_label(self, position, label='', units=''):
         """

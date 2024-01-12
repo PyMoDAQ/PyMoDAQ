@@ -139,10 +139,12 @@ class Scan1DSparse(Scan1DBase):
                 elif len(number_strings) == 1:  # 1 number just specifies a single number
                     this_range = np.asarray([float(number_strings[0])])
                 series = np.concatenate((series, this_range))
-            self.positions = series
+
+            self.positions = np.atleast_1d(np.squeeze(series))
             self.get_info_from_positions(self.positions)
         except Exception as e:
             pass  # many things could happen when parsing strings
+
     def set_settings_titles(self):
         if len(self.actuators) == 1:
             self.settings.child('start').setOpts(title=f'{self.actuators[0].title} start:')

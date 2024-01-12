@@ -21,6 +21,8 @@ from pymodaq.utils.daq_utils import plot_colors
 from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.config import get_set_roi_path
 from pymodaq.utils.gui_utils import select_file
+from pymodaq.utils.math_utils import rotate2D
+
 import numpy as np
 from pathlib import Path
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
@@ -63,7 +65,7 @@ class ROIPositionMapper(QtWidgets.QWidget):
         self.settings_tree.setParameters(self.settings, showTop=False)
         dialog.setLayout(vlayout)
 
-        buttonBox = QtWidgets.QDialogButtonBox(parent=self);
+        buttonBox = QtWidgets.QDialogButtonBox(parent=self)
         buttonBox.addButton('Apply', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
         buttonBox.addButton('Cancel', buttonBox.RejectRole)
@@ -172,8 +174,10 @@ class EllipseROI(ROI):
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
-    def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+    def center(self):       
+        # Project width/height in rotated frame         
+        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
+        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
@@ -257,8 +261,10 @@ class RectROI(ROI):
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
-    def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+    def center(self):       
+        # Project width/height in rotated frame         
+        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
+        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
@@ -421,6 +427,7 @@ class ROIManager(QObject):
                     roi_type = ''
 
                     pos = self.viewer_widget.plotItem.vb.viewRange()[0]
+                    pos = pos[0] + np.diff(pos)*np.array([2,4])/6
                     newroi = LinearROI(index=newindex, pos=pos)
                     newroi.setZValue(-10)
                     newroi.setBrush(par.child('Color').value())
@@ -497,7 +504,7 @@ class ROIManager(QObject):
             self._ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'angle':
-            self._ROIs[roi_key].setAngle(param.value())
+            self._ROIs[roi_key].setAngle(param.value(),center=[0.5,0.5])
         elif param.name() == 'width':
             size = self._ROIs[roi_key].size()
             self._ROIs[roi_key].setSize((param.value(), size[1]))

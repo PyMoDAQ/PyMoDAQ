@@ -13,7 +13,7 @@ from pathlib import Path
 import pkgutil
 import traceback
 import platform
-
+from typing import Union, List
 
 import numpy as np
 from qtpy import QtCore
@@ -106,11 +106,6 @@ def copy_preset():                          # pragma: no cover
     path = get_set_preset_path().joinpath('preset_default.xml')
     if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
         with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
-            path.write_text(file.read())
-
-    path = get_set_preset_path().joinpath('beam_steering_mock.xml')
-    if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
-        with open(str(Path(__file__).parent.parent.joinpath('resources/beam_steering_mock.xml')), 'r') as file:
             path.write_text(file.read())
 
 
@@ -449,7 +444,6 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     Parameters
     ----------
     obj: object
-        list of objects
     attr_name: str
         attribute name to look for in the object
     attr_value: object
@@ -466,7 +460,8 @@ def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
     return False
 
 
-def find_objects_in_list_from_attr_name_val(objects, attr_name, attr_value, return_first=True):
+def find_objects_in_list_from_attr_name_val(objects: List[object], attr_name: str,
+                                            attr_value: object, return_first=True):
     """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
     value pair
 

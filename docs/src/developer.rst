@@ -2,7 +2,7 @@ Developer's Guide
 =================
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 3
    :caption: Contents:
 
    /developer_folder/data_management

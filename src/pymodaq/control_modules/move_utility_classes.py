@@ -90,6 +90,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], maste
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
+
     if axis_names == [] and len(axes_names) != 0:
         axis_names = axes_names
 
@@ -201,7 +202,6 @@ class DAQ_Move_base(QObject):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
-        self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
 
@@ -224,8 +224,8 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
-        self._current_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
-        self._target_value = DataActuator(self._title, data=np.zeros(self.data_shape, dtype=float))
+        self._current_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
+        self._target_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()

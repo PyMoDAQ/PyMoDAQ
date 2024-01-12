@@ -601,6 +601,17 @@ class TestDataWithAxesSpread:
             assert len(new_data.axes) == 2
 
 
+class TestDataFromPlugins:
+    def test_attributes(self):
+        dwa = data_mod.DataFromPlugins(name='blabla', data=[DATA1D])
+
+        assert hasattr(dwa, 'plot')
+        assert dwa.plot == True
+
+        assert hasattr(dwa, 'save')
+        assert dwa.save == True
+
+
 class TestSlicingUniform:
     def test_slice_navigation(self, init_data_uniform):
         data_raw = init_data_uniform
@@ -827,6 +838,29 @@ class TestDataToExport:
         assert len(data.get_data_from_source('raw')) == 2
         assert data.get_data_from_source('raw').get_data_from_dim('Data0D').data == [dat0D]
         assert data.get_data_from_source('raw').get_data_from_dim('Data1D').data == [dat1D_raw]
+
+    def test_get_data_from_attribute(self):
+        dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+        dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+        dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+
+        data = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+        assert data.get_data_from_attribute('name', 'my1DDataraw')[0] == dat1D_raw
+        assert len(data.get_data_from_attribute('dim', 'Data1D')) == 2
+        assert data.get_data_from_attribute('dim', 'Data0D')[0] == dat0D
+
+    def test_get_data_from_missing_attribute(self):
+        dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+        dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+        dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+
+        EXTRA_ATTRIBUE = 'aweirdattribute'
+        data = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+        assert len(data.get_data_from_missing_attribute(EXTRA_ATTRIBUE)) == 3
+        dat1D_calculated.add_extra_attribute(**{EXTRA_ATTRIBUE: 'blabla'})
+        assert len(data.get_data_from_missing_attribute(EXTRA_ATTRIBUE)) == 2
 
     def test_get_data_by_dim(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
