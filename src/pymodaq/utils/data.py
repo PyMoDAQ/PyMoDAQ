@@ -141,7 +141,7 @@ class Axis:
     """
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
-                 offset=None, spread_order: int = -1):
+                 offset=None, spread_order: int = 0):
         super().__init__()
 
         self.iaxis: Axis = SpecialSlicersData(self, False)
@@ -159,8 +159,8 @@ class Axis:
         self.data = data
         self.index = index
         self.spread_order = spread_order
-
-        self.get_scale_offset_from_data(data)
+        if (scaling is None or offset is None) and data is not None:
+            self.get_scale_offset_from_data(data)
 
     def copy(self):
         return copy.copy(self)
@@ -1611,7 +1611,7 @@ class DataWithAxes(DataBase):
         """Get the data's navigation axes making sure there is data in the data field"""
         axes = self.get_nav_axes()
         for axis in axes:
-            if axis.data is None:
+            if axis.get_data() is None:
                 axis.create_linear_data(self.shape[axis.index])
         return axes
 
@@ -1625,7 +1625,7 @@ class DataWithAxes(DataBase):
     def create_missing_axes(self):
         """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
         axes = self.axes[:]
-        for index in self.sig_indexes:
+        for index in self.nav_indexes + self.sig_indexes:
             if len(self.get_axis_from_index(index)) != 0 and self.get_axis_from_index(index)[0] is None:
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
@@ -1690,7 +1690,7 @@ class DataWithAxes(DataBase):
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            if len(ax) != 0:
+            if len(ax) != 0 and ax[0] is not None:
                 for ind in range(len(ax)):
                     ax[ind] = ax[ind].iaxis[_slice]
 
