@@ -1,0 +1,42 @@
+
+[Scan1D.Linear]
+start = 1.0
+stop = 2.0
+step = 0.01
+
+[Scan1D.Random]
+start = 1.0
+stop = 2.0
+step = 0.01
+
+[Scan1D.Sparse]
+parsed_string = '0:0.1:1'
+
+[Scan2D.Spiral]
+center_axis1 = -5
+center_axis2 = 5
+rmax_axis1 = 10
+rmax_axis2 = 5
+npts_by_axis = 10
+
+[Scan2D.Linear]
+start_axis1 = -5
+start_axis2 = -5
+stop_axis1 = 5
+stop_axis2 = 5
+step_axis1 = 0.5
+step_axis2 = 0.5
+
+[Scan2D.LinearBackForce]
+start_axis1 = -5
+start_axis2 = -5
+stop_axis1 = 5
+stop_axis2 = 5
+step_axis1 = 0.5
+step_axis2 = 0.5
+
+[Scan2D.Adaptive]
+start_axis1 = -5
+start_axis2 = -5
+stop_axis1 = 5
+stop_axis2 = 5

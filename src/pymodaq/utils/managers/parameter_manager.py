@@ -92,9 +92,9 @@ class ParameterManager:
         # create a settings tree to be shown eventually in a dock
         self._settings_tree = ParameterTreeWidget(action_list)
         
-        self._settings_tree.get_action(f'save_settings').connect_to(self.save_settings)
-        self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings)
-        self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings)
+        self._settings_tree.get_action(f'save_settings').connect_to(self.save_settings_slot)
+        self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings_slot)
+        self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings_slot)
                                                                         
         self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
@@ -186,7 +186,7 @@ class ParameterManager:
         """
         pass
 
-    def save_settings(self, file_path: Path = None):
+    def save_settings_slot(self, file_path: Path = None):
         """ Method to save the current settings using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
@@ -212,7 +212,7 @@ class ParameterManager:
         return select_file(get_set_config_dir('settings', user=True), save=False, ext='xml', filter='*.xml',
                            force_save_extension=True)
 
-    def load_settings(self, file_path: Path = None):
+    def load_settings_slot(self, file_path: Path = None):
         """ Method to load settings into the parameter using a xml file extension.
 
         The starting directory is the user config folder with a subfolder called settings folder
@@ -229,7 +229,7 @@ class ParameterManager:
             self.settings = file_path.resolve()
             logger.info(f'The settings from {file_path} have been successfully loaded')            
 
-    def update_settings(self, file_path: Path = None):
+    def update_settings_slot(self, file_path: Path = None):
         """ Method to update settings using a xml file extension.
 
         The file should define the same settings structure (names and children)

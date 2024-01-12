@@ -21,6 +21,8 @@ config = configmod.Config()
 
 
 class Scan1DBase(ScannerBase):
+    scan_type = 'Scan1D'
+
     params = []
     n_axes = 1
     distribution = DataDistribution['uniform']
@@ -44,13 +46,15 @@ class Scan1DBase(ScannerBase):
         pass
 
 
-@ScannerFactory.register('Scan1D', 'Linear')
+@ScannerFactory.register()
 class Scan1DLinear(Scan1DBase):
     """ Defines a linear scan between start and stop values with steps of length defined in the step setting"""
+
+    scan_subtype = 'Linear'
     params = [
-        {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
-        {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
-        {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': config('scan', 'scan1D', 'step')}
+        {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': 0.},
+        {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': 1.},
+        {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': 0.1}
         ]
     n_axes = 1
     distribution = DataDistribution['uniform']
@@ -80,10 +84,13 @@ class Scan1DLinear(Scan1DBase):
             self.settings.child('stop').setValue(coordinates[1, 0])
 
 
-@ScannerFactory.register('Scan1D', 'Random')
+@ScannerFactory.register()
 class Scan1DRandom(Scan1DLinear):
     """ Defines a  random linear scan by first initializing a linear one between start and stop values with
     steps of length defined in the step setting, then shuffling the values."""
+
+    scan_subtype = 'Random'
+
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
 
@@ -95,15 +102,20 @@ class Scan1DRandom(Scan1DLinear):
         self.set_settings_titles()
         
         
-@ScannerFactory.register('Scan1D', 'Sparse')
-class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
-    ''' Syntax goes as start:step:stop or with single entry
-    - 0:0.2:1 will give [0 0.2 0.4 0.6 0.8 1]
-    - 0 will give [0]
-    Separate entries with comma or new line
-      - 0:0.2:1,5 will give [0 0.2 0.4 0.6 0.8 1 5]
-      - 0:0.2:1,5:1:7 will give [0 0.2 0.4 0.6 0.8 1 5 6 7]
-    '''
+@ScannerFactory.register()
+class Scan1DSparse(Scan1DBase):
+    """ Syntax goes as start:step:stop or with single entry
+
+    * 0:0.2:1 will give [0 0.2 0.4 0.6 0.8 1]
+    * 0 will give [0]
+
+    Separate entries with comma or new line:
+
+    * 0:0.2:1,5 will give [0 0.2 0.4 0.6 0.8 1 5]
+    * 0:0.2:1,5:1:7 will give [0 0.2 0.4 0.6 0.8 1 5 6 7]
+    """
+
+    scan_subtype = 'Sparse'
     params = [
         {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1', }
         ]
@@ -127,6 +139,7 @@ class Scan1DSparse(Scan1DBase): #Matlab syntax class for easy scan creation
                 elif len(number_strings) == 1:  # 1 number just specifies a single number
                     this_range = np.asarray([float(number_strings[0])])
                 series = np.concatenate((series, this_range))
+
             self.positions = np.atleast_1d(np.squeeze(series))
             self.get_info_from_positions(self.positions)
         except Exception as e:
@@ -150,13 +163,15 @@ try:
     import adaptive
 
 
-    @ScannerFactory.register('Scan1D', 'Adaptive')
-    class Scan1DAdaptive(Scan1DLinear):
+    @ScannerFactory.register()
+    class Scan1DAdaptive(Scan1DBase):
+
+        scan_subtype = 'Adaptive'
         params = [
             {'title': 'Loss type', 'name': 'scan_loss', 'type': 'list',
              'limits': ['default', 'curvature', 'uniform'], 'tip': 'Type of loss used by the algo. to determine next points'},
-            {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
-            {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
+            {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': 0.},
+            {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': 1.},
             ]
         distribution = DataDistribution['spread']
 

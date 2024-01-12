@@ -92,8 +92,11 @@ class TableModelTabularReadOnly(TableModelTabular):
         return False
 
 
-@ScannerFactory.register('Tabular', 'Linear')
+@ScannerFactory.register()
 class TabularScanner(ScannerBase):
+    scan_type = 'Tabular'
+    scan_subtype = 'Linear'
+    save_settings = False  # not easy to save table content in a toml...
     params = [
         {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
          'menu': True},
@@ -205,9 +208,10 @@ class TabularScanner(ScannerBase):
         self.update_model(init_data=coordinates)
 
 
-@ScannerFactory.register('Tabular', 'Subsegmented')
+@ScannerFactory.register()
 class TabularScannerSubsegmented(TabularScanner):
-
+    scan_subtype = 'Subsegmented'
+    save_settings = False
     params = [{'title': 'Step:', 'name': 'tabular_step', 'type': 'float', 'value': 0.1},
               {'title': 'Points', 'name': 'tabular_points', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
                'menu': True},

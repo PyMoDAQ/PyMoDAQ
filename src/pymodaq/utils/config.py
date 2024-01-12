@@ -44,7 +44,7 @@ def replace_file_extension(filename: str, ext: str):
     return file_name
 
 
-def getitem_recursive(dic, *args, ndepth=0):
+def getitem_recursive(dic, *args, ndepth=0, create_if_missing=False):
     """Will scan recursively a dictionary in order to get the item defined by the iterable args
 
     Parameters
@@ -56,13 +56,27 @@ def getitem_recursive(dic, *args, ndepth=0):
     ndepth: int
         by default (0) get the last element defined by args. 1 would mean it get the parent dict, 2 the parent of the
         parent...
+    create_if_missing: bool
+        if the entry is not present, create it assigning the 'none' default value (as a lower case string)
     Returns
     -------
     object or dict
     """
     args = list(args)
     while len(args) > ndepth:
-        dic = dic[args.pop(0)]
+        try:
+            arg = args.pop(0)
+            dic = dic[arg]
+        except KeyError as e:
+            if create_if_missing:
+                if len(args) > 0:
+                    dic[arg] = {}
+                    dic = dic[arg]
+                else:
+                    dic[arg] = 'none'
+                    dic = 'none'
+            else:
+                raise e
     return dic
 
 
@@ -310,7 +324,7 @@ class BaseConfig:
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
-            dic = getitem_recursive(self._config, *key, ndepth=1)
+            dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
             dic[key[-1]] = value
         else:
             self._config[key] = value

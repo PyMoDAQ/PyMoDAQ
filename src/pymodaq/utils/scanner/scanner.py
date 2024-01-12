@@ -64,7 +64,8 @@ class Scanner(QObject, ParameterManager):
 
         self.setup_ui()
         self.actuators = actuators
-        self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+        if self._scanner is not None:
+            self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def setup_ui(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -162,6 +163,10 @@ class Scanner(QObject, ParameterManager):
 
     def connect_things(self):
         self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
+        self.scanner_updated_signal.connect(self.save_scanner_settings)
+
+    def save_scanner_settings(self):
+        self._scanner.save_scan_parameters()
 
     def get_scan_info(self) -> ScanInfo:
         """Get a summary of the configured scan as a ScanInfo object"""

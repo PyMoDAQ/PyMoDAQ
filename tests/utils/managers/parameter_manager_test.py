@@ -54,7 +54,7 @@ def test_save(qtbot, tmp_path):
     qtbot.addWidget(ptree.settings_tree)
 
     file_path = tmp_path.joinpath('settings.xml')
-    ptree.save_settings(file_path)
+    ptree.save_settings_slot(file_path)
 
 
 def test_load(qtbot, tmp_path):
@@ -63,7 +63,7 @@ def test_load(qtbot, tmp_path):
     qtbot.addWidget(ptree.settings_tree)
 
     file_path = tmp_path.joinpath('settings.xml')
-    ptree.save_settings(file_path)
+    ptree.save_settings_slot(file_path)
 
     parameter_copy = Parameter.create(name='settings', type='group', children=ParameterEx.params)
     assert compareValuesParameter(ptree.settings, parameter_copy)
@@ -86,7 +86,7 @@ def test_load(qtbot, tmp_path):
     assert not compareValuesParameter(ptree.settings, parameter_copy)
     assert compareStructureParameter(ptree.settings, parameter_copy)
 
-    ptree.load_settings(file_path)
+    ptree.load_settings_slot(file_path)
     parameters = iter_children_params(ptree.settings, childlist=[])
 
     for parameter, pcopy in zip(parameters, parameters_copy):
@@ -102,7 +102,7 @@ def test_load(qtbot, tmp_path):
     qtbot.addWidget(ptree.settings_tree)
 
     file_path = tmp_path.joinpath('settings.xml')
-    ptree.save_settings(file_path)
+    ptree.save_settings_slot(file_path)
 
     parameter_copy = Parameter.create(name='settings', type='group', children=ParameterEx.params)
     assert compareValuesParameter(ptree.settings, parameter_copy)
@@ -125,7 +125,7 @@ def test_load(qtbot, tmp_path):
     assert not compareValuesParameter(ptree.settings, parameter_copy)
     assert compareStructureParameter(ptree.settings, parameter_copy)
 
-    ptree.update_settings(file_path)
+    ptree.update_settings_slot(file_path)
     parameters = iter_children_params(ptree.settings, childlist=[])
 
     for parameter, pcopy in zip(parameters, parameters_copy):
