@@ -604,7 +604,8 @@ def main_random():
 
     QtWidgets.QApplication.processEvents()
     data = DataRaw('mydata', data=[y1, y2],
-                   axes=[Axis('myaxis', 'units', data=x)])
+                   axes=[Axis('myaxis', 'units', data=x, index=0, spread_order=0)],
+                   nav_indexes=(0, ))
 
     widget.show()
     prog.show_data(data)
@@ -638,6 +639,7 @@ def main_nans():
     prog.show_data(data)
 
     sys.exit(app.exec_())
+
 
 if __name__ == '__main__':  # pragma: no cover
     # main()
