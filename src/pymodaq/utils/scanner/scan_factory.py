@@ -98,23 +98,27 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         """Update the settings accordingly with the selected actuators"""
         ...
 
-    def set_settings_values(self):
-
-        for child in self.settings.children():
-            path = self.actuators_name
-            path_scan = [self.scan_type, self.scan_subtype]
-            path_param = get_param_path(child)[1:]
-            path.extend(path_scan)
-            path.extend(path_param)
-            try:
-                child.setValue(self.config(*path))  # first try to load the config including the actuators name
-            except configmod.ConfigError as e:
+    def set_settings_values(self, param: Parameter = None):
+        if param is None:
+            param = self.settings
+        for child in param.children():
+            if len(child.children()) == 0:  #means it is not a group parameter
+                path = self.actuators_name
+                path_scan = [self.scan_type, self.scan_subtype]
+                path_param = get_param_path(child)[1:]
+                path.extend(path_scan)
+                path.extend(path_param)
                 try:
-                    path = path_scan
-                    path.extend(path_param)
-                    child.setValue(self.config(*path))   # then without the actuators name
-                except Exception as e:
-                    pass
+                    child.setValue(self.config(*path))  # first try to load the config including the actuators name
+                except configmod.ConfigError as e:
+                    try:
+                        path = path_scan
+                        path.extend(path_param)
+                        child.setValue(self.config(*path))   # then without the actuators name
+                    except Exception as e:
+                        pass
+            else:
+                self.set_settings_values(child)
 
     @property
     def actuators(self) -> List[DAQ_Move]:
