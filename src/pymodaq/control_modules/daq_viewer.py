@@ -791,7 +791,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
-            self._init_show_data(dte)
 
             if self.settings['main_settings', 'live_averaging']:
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
@@ -824,6 +823,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
+
+                self._init_show_data(data_to_plot)
                 self.set_data_to_viewers(data_to_plot)
             else:
                 self._grab_done = True
