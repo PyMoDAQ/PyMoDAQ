@@ -458,7 +458,7 @@ class Viewer1D(ViewerBase):
             self.ROI_select_signal.emit(QRectF(pos[0], pos[1], 0, 0))
 
     @Slot(float, float)
-    def double_clicked(self, posx, posy):
+    def double_clicked(self, posx, posy=0):
         if self.view.is_action_checked('crosshair'):
             self.view.crosshair.set_crosshair_position(posx)
             self.crosshair_changed()
