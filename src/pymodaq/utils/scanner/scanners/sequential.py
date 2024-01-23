@@ -78,7 +78,8 @@ class SequentialScanner(ScannerBase):
     scan_subtype = 'Linear'
     save_settings = False  # not easy to save table content in a toml...
     params = [
-        {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate},
+        {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view',
+         'delegate': gutils.SpinBoxDelegate},
               ]
     distribution = DataDistribution['uniform']
     n_axes = 1
@@ -119,9 +120,12 @@ class SequentialScanner(ScannerBase):
         self.update_table_view()
 
     def get_pos(self):
-        starts = np.array([self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))])
-        stops = np.array([self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))])
-        steps = np.array([self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))])
+        starts = np.array([self.table_model.get_data(ind, 1)
+                           for ind in range(self.table_model.rowCount(None))])
+        stops = np.array([self.table_model.get_data(ind, 2)
+                          for ind in range(self.table_model.rowCount(None))])
+        steps = np.array([self.table_model.get_data(ind, 3)
+                          for ind in range(self.table_model.rowCount(None))])
         return starts, stops, steps
 
     def evaluate_steps(self) -> int:

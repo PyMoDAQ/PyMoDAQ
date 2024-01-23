@@ -17,6 +17,8 @@ class ScanConfig(BaseConfig):
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
             dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
+            if value is None:  # means the setting is a group
+                value = {}
             dic[key[-1]] = value
         else:
             self._config[key] = value
