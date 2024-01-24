@@ -194,7 +194,12 @@ class DataDisplayer(QObject):
                 pen.setDashPattern([10, 10])
                 self._overlay_items.append(pg.PlotDataItem(pen=pen))
                 self._plotitem.addItem(self._overlay_items[-1])
-                self._overlay_items[ind].setData(self._axis.get_data(), self._data[ind])
+                if self._do_sort:
+                    self._overlay_items[ind].setData(self._axis.get_data(),
+                                                     self._data.sort_data()[ind])
+                else:
+                    self._overlay_items[ind].setData(self._axis.get_data(), self._data[ind])
+
 
 
 class View1D(ActionManager, QObject):
