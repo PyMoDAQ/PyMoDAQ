@@ -5,6 +5,7 @@ import importlib
 import inspect
 import json
 import functools
+import platform
 import re
 import time
 import warnings
@@ -36,6 +37,12 @@ if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
 else:
     from functools import lru_cache as cache
 
+
+if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
+    # from version 3.9 the cache decorator is available
+    from functools import cache
+else:
+    from functools import lru_cache as cache
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
@@ -620,7 +627,6 @@ def get_instrument_plugins():  # pragma: no cover
                 except ModuleNotFoundError:
                     pass
 
-
             # check if modules are importable
             for mod in plugin_list:
                 try:
@@ -638,7 +644,7 @@ def get_instrument_plugins():  # pragma: no cover
                                  f' from module: {mod["parent_module"].__package__}')
         except Exception as e:  # pragma: no cover
             logger.debug(str(e))
-
+            
     # add utility plugin for PID
     try:
         pidmodule = importlib.import_module('pymodaq.extensions.pid')
@@ -653,7 +659,6 @@ def get_instrument_plugins():  # pragma: no cover
         logger.debug(f'Impossible to import PID utility plugin: {str(e)}')
 
     return plugins_import
-
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
@@ -871,11 +876,13 @@ if __name__ == '__main__':
     #                                               '.tox',],
     #                                      replace=False,
     #                                      replace_str="pymodaq.utils")
+
     #get_version()
     get_instrument_plugins()
     #get_plugins('daq_move')
     #get_plugins('daq_0Dviewer')
     pass
+
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])
     # import version
