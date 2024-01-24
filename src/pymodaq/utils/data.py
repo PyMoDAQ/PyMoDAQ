@@ -141,7 +141,7 @@ class Axis:
     """
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
-                 offset=None, spread_order: int = -1):
+                 offset=None, spread_order: int = 0):
         super().__init__()
 
         self.iaxis: Axis = SpecialSlicersData(self, False)
@@ -159,8 +159,8 @@ class Axis:
         self.data = data
         self.index = index
         self.spread_order = spread_order
-
-        self.get_scale_offset_from_data(data)
+        if (scaling is None or offset is None) and data is not None:
+            self.get_scale_offset_from_data(data)
 
     def copy(self):
         return copy.copy(self)
@@ -238,7 +238,7 @@ class Axis:
 
     def is_axis_linear(self, data=None):
         if data is None:
-            data = self._data
+            data = self.get_data()
         if data is not None:
             return np.allclose(np.diff(data), np.mean(np.diff(data)))
         else:
@@ -887,6 +887,33 @@ class AxesManagerBase:
     def _check_axis(self, axes):
         ...
 
+    @abstractmethod
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+        """ Get the index to sort the specified axis
+
+        Parameters
+        ----------
+        axis_index: int
+            The index along which one should sort the data
+        spread_index: int
+            for spread data only, specifies which spread axis to use
+
+        Returns
+        -------
+        np.ndarray: the sorted index from the specified axis
+        tuple of slice:
+            used to slice the underlying data
+        """
+        ...
+
+    @abstractmethod
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        """in spread mode, different nav axes have the same index (but not
+        the same spread_order integer value)
+
+        """
+        ...
+
     def compute_sig_indexes(self):
         _shape = list(self._data_shape)
         indexes = list(np.arange(len(self._data_shape)))
@@ -1148,6 +1175,45 @@ class AxesManagerUniform(AxesManagerBase):
                 warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, returning None'))
         return [axis]
 
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        """in spread mode, different nav axes have the same index (but not
+        the same spread_order integer value)
+
+        """
+        return None
+
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+        """ Get the index to sort the specified axis
+
+        Parameters
+        ----------
+        axis_index: int
+            The index along which one should sort the data
+        spread_index: int
+            for spread data only, specifies which spread axis to use
+
+        Returns
+        -------
+        np.ndarray: the sorted index from the specified axis
+        tuple of slice:
+            used to slice the underlying data
+        """
+
+        axes = self.get_axis_from_index(axis_index)
+        if axes[0] is not None:
+            sorted_index = np.argsort(axes[0].get_data())
+            axes[0].data = axes[0].get_data()[sorted_index]
+            slices = []
+            for ind in range(len(self.shape)):
+                if ind == axis_index:
+                    slices.append(sorted_index)
+                else:
+                    slices.append(Ellipsis)
+            slices = tuple(slices)
+            return sorted_index, slices
+        else:
+            return None, None
+
     def _get_dimension_str(self):
         string = "("
         for nav_index in self.nav_indexes:
@@ -1235,14 +1301,84 @@ class AxesManagerSpread(AxesManagerBase):
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value) so may return multiple axis
 
-        No possible "linear" creation in this mode
+        No possible "linear" creation in this mode except if the index is a signal index
 
         """
-        axes = []
+        if index in self.nav_indexes:
+            axes = []
+            for axis in self.axes:
+                if axis.index == index:
+                    axes.append(axis)
+            return axes
+        else:
+            index = int(index)
+            try:
+                has_axis, axis = self._has_get_axis_from_index(index)
+            except IndexError:
+                axis = [None]
+                has_axis = False
+                return axis
+
+            if not has_axis and index in self.sig_indexes:
+                if create:
+                    warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, '
+                                                   f'creating a linear one...'))
+                    axis = Axis(index=index, offset=0, scaling=1)
+                    axis.size = self.get_shape_from_index(index)
+                else:
+                    warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, returning None'))
+
+            return [axis]
+
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        """in spread mode, different nav axes have the same index (but not
+        the same spread_order integer value)
+
+        """
         for axis in self.axes:
-            if axis.index == index:
-                axes.append(axis)
-        return axes
+            if axis.index == index and axis.spread_order == spread_order:
+                return axis
+
+    def get_sorted_index(self, axis_index: int = 0, spread_index=0) -> Tuple[np.ndarray, Tuple[slice]]:
+        """ Get the index to sort the specified axis
+
+        Parameters
+        ----------
+        axis_index: int
+            The index along which one should sort the data
+        spread_index: int
+            for spread data only, specifies which spread axis to use
+
+        Returns
+        -------
+        np.ndarray: the sorted index from the specified axis
+        tuple of slice:
+            used to slice the underlying data
+        """
+
+        if axis_index in self.nav_indexes:
+            axis = self.get_axis_from_index_spread(axis_index, spread_index)
+        else:
+            axis = self.get_axis_from_index(axis_index)[0]
+
+        if axis is not None:
+            sorted_index = np.argsort(axis.get_data())
+            slices = []
+            for ind in range(len(self.shape)):
+                if ind == axis_index:
+                    slices.append(sorted_index)
+                else:
+                    if slices[-1] is Ellipsis:  # only one ellipsis
+                        slices.append(Ellipsis)
+            slices = tuple(slices)
+
+            for nav_index in self.nav_indexes:
+                for axis in self.get_axis_from_index(nav_index):
+                    axis.data = axis.get_data()[sorted_index]
+
+            return sorted_index, slices
+        else:
+            return None, None
 
     def _get_dimension_str(self):
         try:
@@ -1318,19 +1454,31 @@ class DataWithAxes(DataBase):
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
 
-    def sort_data(self, nav_axis: int = 0):
-        """Sort data along a given navigation axis, default is 0"""
-        if nav_axis in self.nav_indexes:
-            axis = self.get_nav_axes()[nav_axis]
-            sorted_index = np.argsort(axis.get_data())
-            data = self.deepcopy()
-            for ind in range(len(data)):
-                data.data[ind] = data.data[ind][sorted_index]
-            for ind in range(len(data.axes)):
-                data.axes[ind].data = data.axes[ind].data[sorted_index]
-            return data
+    def sort_data(self, axis_index: int = 0, spread_index=0, inplace=False) -> DataWithAxes:
+        """ Sort data along a given axis, default is 0
+
+        Parameters
+        ----------
+        axis_index: int
+            The index along which one should sort the data
+        spread_index: int
+            for spread data only, specifies which spread axis to use
+        inplace: bool
+            modify in place or not the data (and its axes)
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        if inplace:
+            data = self
         else:
-            return self
+            data = self.deepcopy()
+        sorted_index, slices = data._am.get_sorted_index(axis_index, spread_index)
+        if sorted_index is not None:
+            for ind in range(len(data)):
+                data.data[ind] = data.data[ind][slices]
+        return data
 
     def transpose(self):
         """replace the data by their transposed version
@@ -1463,7 +1611,7 @@ class DataWithAxes(DataBase):
         """Get the data's navigation axes making sure there is data in the data field"""
         axes = self.get_nav_axes()
         for axis in axes:
-            if axis.data is None:
+            if axis.get_data() is None:
                 axis.create_linear_data(self.shape[axis.index])
         return axes
 
@@ -1477,7 +1625,7 @@ class DataWithAxes(DataBase):
     def create_missing_axes(self):
         """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
         axes = self.axes[:]
-        for index in range(len(self.shape)):
+        for index in self.nav_indexes + self.sig_indexes:
             if len(self.get_axis_from_index(index)) != 0 and self.get_axis_from_index(index)[0] is None:
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
@@ -1542,7 +1690,7 @@ class DataWithAxes(DataBase):
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            if len(ax) != 0:
+            if len(ax) != 0 and ax[0] is not None:
                 for ind in range(len(ax)):
                     ax[ind] = ax[ind].iaxis[_slice]
 

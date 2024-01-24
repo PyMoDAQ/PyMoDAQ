@@ -69,6 +69,13 @@ def init_data_spread():
                             axes=[nav_axis_0, sig_axis, nav_axis_1])
     return data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread
 
+@pytest.fixture()
+def init_spread_data_arrays():
+    return ([np.random.randn(5), np.random.randn(5)],  # 0D spread arrays
+            [np.random.randn(5, 4), np.random.randn(5, 4)],  # 1D spread arrays
+            [np.random.randn(5, 2, 4),np.random.randn(5, 2, 4)],  # 2D spread arrays
+            )
+
 
 @pytest.fixture()
 def init_data_uniform() -> data_mod.DataWithAxes:
@@ -511,6 +518,74 @@ class TestDataWithAxesUniform:
         assert len(new_data.get_axis_indexes()) == 2
         assert data.shape == data_ini.shape
 
+    def test_sorted_uniform_1D(self):
+        data_arrays = [np.array([10, 11, 12, 13, 14]), np.array([20, 21, 22, 23, 24])]
+        axis_array = np.array([5, 2, 3, 4, 1])
+        sorted_index = np.argsort(axis_array)
+        data = data_mod.DataRaw('mydata', distribution='uniform',
+                                data=data_arrays[:],
+                                axes=[data_mod.Axis('axis', data=axis_array)])
+
+        assert data.sort_data(axis_index=1, inplace=False) == data
+        AXIS_INDEX = 0
+        sorted_data = data.sort_data(axis_index=AXIS_INDEX)
+        for ind in range(len(data)):
+            assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index])
+        assert np.allclose(sorted_data.get_axis_from_index(AXIS_INDEX)[0].get_data(), axis_array[sorted_index])
+
+    def test_sorted_uniform_2D_not_inplace(self):
+        data_arrays = [np.array([[10, 11, 12, 13, 14],
+                                [20, 21, 22, 23, 24],
+                                [30, 31, 32, 33, 34],
+                                ])]
+        axis_0 = data_mod.Axis('axis_0', data=np.array([-10, -15, -20]), index=0)
+        axis_1 = data_mod.Axis('axis_1', data=np.array([-10, -20, -30, -40, -50]), index=1)
+
+        sorted_index_0 = np.argsort(axis_0.get_data())
+        sorted_index_1 = np.argsort(axis_1.get_data())
+
+        data = data_mod.DataRaw('mydata', distribution='uniform',
+                                data=data_arrays[:],
+                                axes=[axis_0, axis_1])
+
+        sorted_data_0 = data.sort_data(axis_index=0)
+        for ind in range(len(data)):
+            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+        assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
+
+        sorted_data_1 = data.sort_data(axis_index=1)
+        for ind in range(len(data)):
+            assert np.allclose(sorted_data_1.data[ind],  data_arrays[ind][:, sorted_index_1])
+        assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
+
+    def test_sorted_uniform_2D_inplace(self):
+        data_arrays = [np.array([[10, 11, 12, 13, 14],
+                                 [20, 21, 22, 23, 24],
+                                 [30, 31, 32, 33, 34],
+                                 ])]
+        axis_0 = data_mod.Axis('axis_0', data=np.array([-10, -15, -20]), index=0)
+        axis_1 = data_mod.Axis('axis_1', data=np.array([-10, -20, -30, -40, -50]), index=1)
+
+        sorted_index_0 = np.argsort(axis_0.get_data())
+        sorted_index_1 = np.argsort(axis_1.get_data())
+
+        data = data_mod.DataRaw('mydata', distribution='uniform',
+                                data=data_arrays[:],
+                                axes=[axis_0.copy(), axis_1.copy()])
+
+        sorted_data_0 = data.sort_data(axis_index=0, inplace=True)
+
+        for ind in range(len(data)):
+            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+        assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
+
+        sorted_data_1 = data.sort_data(axis_index=1)
+        for ind in range(len(data)):
+            assert np.allclose(sorted_data_1.data[ind],  sorted_data_0.data[ind][:, sorted_index_1])
+        assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
+        assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
+
+
 class TestNavIndexes:
 
     def test_set_nav_indexes(self):
@@ -599,6 +674,38 @@ class TestDataWithAxesSpread:
             assert len(new_data.axes) == 1
         else:
             assert len(new_data.axes) == 2
+
+    def test_sorted_spread_signal(self, init_spread_data_arrays):
+
+        for data_arrays in init_spread_data_arrays:
+            axis_0_0 = data_mod.Axis('axis_0_0', data=np.array([0, 4, 2, 45, -10]), index=0, spread_order=0)
+            axis_0_1 = data_mod.Axis('axis_0_1', data=np.array([-10, -20, -30, -40, -50]), index=0, spread_order=1)
+
+            axes = [axis_0_0.copy(), axis_0_1.copy()]
+
+            sorted_index_0_0 = np.argsort(axis_0_0.get_data())
+
+            data = data_mod.DataRaw('mydata', distribution='spread',
+                                    data=data_arrays[:],
+                                    axes=[axis_0_0.copy(), axis_0_1.copy()],
+                                    nav_indexes=(0,))
+            data.create_missing_axes()
+            data.inav[3]
+
+            assert data.sort_data(axis_index=3, spread_index=0) == data
+            sorted_data = data.sort_data(axis_index=0, spread_index=0)
+            for ind in range(len(data)):
+                assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index_0_0, ...])
+            for nav_index in sorted_data.nav_indexes:
+                for axis in sorted_data.get_axis_from_index(nav_index):
+                    assert np.allclose(axis.get_data(),
+                                       data._am.get_axis_from_index_spread(axis.index, axis.spread_order)
+                                       .get_data()[sorted_index_0_0])
+            for sig_index in sorted_data.sig_indexes:
+                for axis in sorted_data.get_axis_from_index(sig_index):
+                    assert np.allclose(axis.get_data(),
+                                       data._am.get_axis_from_index_spread(axis.index, axis.spread_order)
+                                       .get_data())
 
 
 class TestDataFromPlugins:

@@ -111,7 +111,7 @@ class TestAxisSaverLoader:
                 assert axis_node.attrs[attr] == pytest.approx(attrs_values[ind])
             else:
                 assert axis_node.attrs[attr] == attrs_values[ind]
-        assert axis_node.read() == pytest.approx(axis.data)
+        assert axis_node.read() == pytest.approx(axis.get_data())
 
     def test_load_axis(self, get_h5saver):
         h5saver = get_h5saver

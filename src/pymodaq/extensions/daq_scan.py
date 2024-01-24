@@ -80,7 +80,7 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
+        ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
             {'title': 'Get data', 'name': 'plot_probe', 'type': 'bool_push'},
@@ -203,7 +203,6 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('time_flow', 'timeout').setValue(config['scan']['timeflow']['timeout'])
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
-        self.settings.child('scan_options', 'sort_scan1D').setValue(config['scan']['sort1D'])
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui

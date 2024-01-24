@@ -193,12 +193,11 @@ class AxisSaverLoader(DataManagement):
             the path of a given node or the node itself
         axis: Axis
             the Axis object to add as a node in the h5file
+        enlargeable: bool
+            Specify if the underlying array will be enlargebale
         """
-        if axis.data is None:
-            axis.create_linear_data(axis.size)
-
         array = self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=axis.label,
-                                        array_to_save=axis.data, data_dimension=DataDim['Data1D'],
+                                        array_to_save=axis.get_data(), data_dimension=DataDim['Data1D'],
                                         enlargeable=enlargeable,
                                         metadata=dict(size=axis.size, label=axis.label, units=axis.units,
                                                       index=axis.index, offset=axis.offset, scaling=axis.scaling,
@@ -624,7 +623,7 @@ class DataToExportSaver:
         formatted as below"""
         return f'CH{ind:02d}'
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
+    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata=None):
         """
 
         Parameters
@@ -638,6 +637,8 @@ class DataToExportSaver:
             all extra metadata to be saved in the group node where data will be saved
 
         """
+        if metadata is None:
+            metadata = {}
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
@@ -679,7 +680,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._axis_units = axis_units
 
     def add_data(self, where: Union[Node, str], data: DataToExport, axis_value: Union[float, np.ndarray],
-                 settings_as_xml='', metadata={}):
+                 settings_as_xml='', metadata=None):
         """
 
         Parameters
@@ -720,7 +721,7 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     def __init__(self, h5saver: H5Saver):
         super().__init__(h5saver, 'time', 's')
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
+    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata=None):
         super().add_data(where, data, axis_value=data.timestamp, settings_as_xml=settings_as_xml, metadata=metadata)
 
 
