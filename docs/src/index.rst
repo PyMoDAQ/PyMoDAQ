@@ -74,7 +74,7 @@ List of available `plugins`__
 
 Video tutorials `here`__
 
-Mailing List: pymodaq@services.cnrs.fr
+Mailing List: https://listes.services.cnrs.fr/wws/info/pymodaq
 
 
 Credits
