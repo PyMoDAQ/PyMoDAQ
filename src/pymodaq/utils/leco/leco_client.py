@@ -1,4 +1,10 @@
 
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+    class StrEnum(str, Enum):
+        pass
 import logging
 
 import numpy as np
@@ -13,11 +19,25 @@ from pyleco.utils.listener import Listener
 from pyleco.directors.director import Director
 
 
-class PymodaqListener(Listener):
+class LECO_Client_Commands(StrEnum):
+    LECO_CONNECTED = "leco_connected"
+    LECO_DISCONNECTED = "leco_disconnected"
 
-    def __init__(self, name: str,
+
+class PymodaqListener(Listener):
+    """A Listener prepared for PyMoDAQ.
+
+    :param name: Name of this module.
+    :param server_name: Name of the module to talk to.
+    :param host: Host name of the communication server.
+    :param port: Port number of the communication server.
+    """
+
+    def __init__(self,
+                 name: str,
                  server_name: str,  # of the pymodaq server
-                 host: str = "localhost", port: int = COORDINATOR_PORT,
+                 host: str = "localhost",
+                 port: int = COORDINATOR_PORT,
                  logger: logging.Logger | None = None,
                  timeout: float = 1,
                  **kwargs) -> None:
@@ -43,13 +63,13 @@ class PymodaqListener(Listener):
         """
         # message = Signal(Message)
 
-    def start_listen(self, data_host: str | None = None, data_port: int | None = None) -> None:
-        super().start_listen(data_host, data_port)
+    def start_listen(self) -> None:
+        super().start_listen()
         # self.message_handler.finish_handle_commands = self.finish_handle_commands  # type: ignore
-        self.message_handler.name_changing_methods = [self.indicate_sign_in_out]
+        self.message_handler.register_on_name_change_method(self.indicate_sign_in_out)
         communicator = self.message_handler.get_communicator()
         if self.message_handler.namespace is not None:
-            self.signals.cmd_signal.emit(ThreadCommand("leco_connected"))
+            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
         self.director = Director(actor=self.server_name, communicator=communicator)
         for method in (
             self.set_info,
@@ -63,13 +83,13 @@ class PymodaqListener(Listener):
 
     def stop_listen(self) -> None:
         super().stop_listen()
-        self.signals.cmd_signal.emit(ThreadCommand("leco_disconnected"))
+        self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
 
     def indicate_sign_in_out(self, full_name: str):
         if "." in full_name:
-            self.signals.cmd_signal.emit(ThreadCommand("leco_connected"))
+            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
         else:
-            self.signals.cmd_signal.emit(ThreadCommand("leco_disconnected"))
+            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
 
     # def finish_handle_commands(self, message: Message) -> None:
     #     """Handle the list of commands: Redirect them to the application."""
@@ -123,7 +143,7 @@ class PymodaqListener(Listener):
         self.signals.cmd_signal.emit(ThreadCommand("stop_motion"))
 
     # @Slot(ThreadCommand)
-    def queue_command(self, command: ThreadCommand):
+    def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
 
         # generic commands

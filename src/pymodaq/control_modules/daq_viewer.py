@@ -44,7 +44,7 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-from pymodaq.utils.leco.leco_client import PymodaqListener
+from pymodaq.utils.leco.leco_client import PymodaqListener, LECO_Client_Commands
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -1112,7 +1112,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def connect_leco(self):
         if self.settings.child("main_settings", "leco", "connect_leco_server").value():
-            self._leco_client = PymodaqListener(name=self.settings.child('main_settings', 'leco', 'name').value(),
+            self._leco_client = PymodaqListener(name=self.settings.child('main_settings', 'module_name').value(),
                                                 server_name=self.settings.child('main_settings', 'leco', 'server_name').value(),
                                                 )
             self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
@@ -1121,7 +1121,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
 
     @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status):
+    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
         """Receive commands from the TCP Server (if connected) and process them
 
         Parameters
@@ -1147,10 +1147,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif status.command == 'disconnected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
 
-        elif status.command == 'leco_connected':
+        elif status.command == LECO_Client_Commands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
 
-        elif status.command == 'leco_disconnected':
+        elif status.command == LECO_Client_Commands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'Update_Status':
