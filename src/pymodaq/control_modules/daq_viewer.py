@@ -44,10 +44,7 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-try:
-    from pymodaq_plugins_thg.hardware.leco_client import PymodaqListener
-except ModuleNotFoundError:
-    PymodaqListener = False
+from pymodaq.utils.leco.leco_client import PymodaqListener
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -1114,7 +1111,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._tcpclient_thread.start()
 
     def connect_leco(self):
-        if self.settings.child("main_settings", "leco", "connect_leco_server").value() and PymodaqListener is not False:
+        if self.settings.child("main_settings", "leco", "connect_leco_server").value():
             self._leco_client = PymodaqListener(name=self.settings.child('main_settings', 'leco', 'name').value(),
                                                 server_name=self.settings.child('main_settings', 'leco', 'server_name').value(),
                                                 )
