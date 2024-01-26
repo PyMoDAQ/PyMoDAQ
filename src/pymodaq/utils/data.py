@@ -131,6 +131,8 @@ class Axis:
         The scaling to apply to a linspace version in order to obtain the proper scaling
     offset: float
         The offset to apply to a linspace/scaled version in order to obtain the proper axis
+    size: int
+        The size of the axis array (to be specified if data is None)
     spread_order: int
         An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
         spread_index dimension
@@ -140,13 +142,13 @@ class Axis:
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
     """
 
-    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
-                 offset=None, spread_order: int = 0):
+    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0,
+                 scaling=None, offset=None, size=None, spread_order: int = 0):
         super().__init__()
 
         self.iaxis: Axis = SpecialSlicersData(self, False)
 
-        self._size = None
+        self._size = size
         self._data = None
         self._index = None
         self._label = None
@@ -159,7 +161,7 @@ class Axis:
         self.data = data
         self.index = index
         self.spread_order = spread_order
-        if (scaling is None or offset is None) and data is not None:
+        if (scaling is None or offset is None or size is None) and data is not None:
             self.get_scale_offset_from_data(data)
 
     def copy(self):
@@ -208,7 +210,7 @@ class Axis:
             self._check_data_valid(data)
             self.get_scale_offset_from_data(data)
             self._size = data.size
-        else:
+        elif self.size is None:
             self._size = 0
         self._data = data
 
