@@ -61,6 +61,11 @@ Once you're ready with a working plugin, you can then:
    of a pypi repository
 #. do a pull request on the initial repository to merge your new implementations.
 
+.. note::
+
+  Starting with PyMoDAQ version 4.1.0 onwards, old github actions for publication and suite testing should be updated in
+  the plugin packages. You can just use the one from the template repository
+
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 All the packages published on pypi using the template and the naming convention will be available

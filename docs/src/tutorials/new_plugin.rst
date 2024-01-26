@@ -82,7 +82,7 @@ files and folders. :numref:`template_structure` highlight the package initial st
 
 .. _template_structure:
 
-.. figure:: /image/tutorial_template/create_new_repo.png
+.. figure:: /image/tutorial_template/template_repo_structure.png
 
    The template package initial structure
 
@@ -111,16 +111,89 @@ install it using pip. To do that you will need to create an account on Pypi:
   the account creation requires double identification (can use an authentication app on your mobile or a token). The
   configuration of the Github action for automatic publication requires also modifications... See below.
 
-The token will allow you to create new package on your account, see `API Token <https://pypi.org/help/#apitoken>`_ for
-more in depth explanation.
+You have to configure an API token with your pypi account.  This token will allow you to create new package on your
+account, see `API Token <https://pypi.org/help/#apitoken>`_ for more in depth explanation. This pypi package initial
+creation and later on subsequent versions upload may be directly triggered from Github using one of the configured
+Actions. An action will trigger some process execution on a distant server using the most recent code on your
+repository. The actions can be triggered on certain events. For instance, everytime a commit is made, an action is
+triggered that will run the tests suite and let developers know of possible issues. Another action is triggered when
+a *release* is created on github. This action will build the new version of the package (the released one) and upload
+the new version of  the code on pypi. However your github account (at least the one that is the owner of the repository)
+should configure what Github call Secrets. Originally they were the pypi user name and password. Now they should be the
+**__token__** string as username and the API token generated on your pypi account as the password. The *yaml* file
+corresponding to this action is called *python-publish.yml* stored in the *.github* folder at the root of your package.
+The content looks like this:
 
-.. _publish_action:
+.. code-block:: yaml
 
-.. figure:: /image/tutorial_template/python_publish_action.png
+    name: Upload Python Package
 
-   The modification on the github action for automatic publication on Pypi
+    on:
+       release:
+         types: [created]
+
+    jobs:
+      deploy:
+
+        runs-on: ubuntu-latest
+
+        steps:
+        - uses: actions/checkout@v2
+        - name: Set up Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: '3.11'
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install setuptools wheel twine toml "pymodaq>=4.1.0" pyqt5
+
+        - name: create local pymodaq folder and setting permissions
+          run: |
+            sudo mkdir /etc/.pymodaq
+            sudo chmod uo+rw /etc/.pymodaq
+
+        - name: Build and publish
+          env:
+            TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+            TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          run: |
+            python setup.py sdist bdist_wheel
+            twine upload dist/*
 
 
-#. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository, you'll just have to create an account on pypi and enter your credentials
-in the SECRETS on github)
+were different jobs, steps and actions (*run*) are defined, like:
+
+* execute all this on a ubuntu virtual machine (could be windows, macOS...)
+* Set up Python: configure the virtual machine to use python 3.11
+* Install dependencies: all the python packages necessary to build our package
+* create local pymodaq folder and setting permissions: make sure pymodaq can work
+* Build and publish: the actual thing we are interested in, building the application from the setup.py file
+  and uploading it on pypi using the twine application
+
+For this last step, some environment variable have been created from github secrets. Those are the *__token__* string
+and the API token. We therefore have to create those secrets on github. For this, you'll go in the *settings* tab (see
+:numref:`github_settings`) to create secrets either on the organization level or repository level (see PyMoDAQ example
+on the organisation level, :numref:`github_secrets`). That's it you should have a fully configured PyMoDAQ's plugin
+package!! You now just need to code your actual instrument or extension, for this look at :ref:`plugin_development`
+
+
+.. _github_settings:
+
+.. figure:: /image/tutorial_template/github_settings.png
+
+   Settings button on github
+
+
+
+.. _github_secrets:
+
+.. figure:: /image/tutorial_template/github_secrets.png
+
+   Secrets creation on Github
+
+
+.. note::
+
+  Starting with PyMoDAQ version 4.1.0 onwards, old github actions for publication and suite testing should be updated in
+  the plugin packages. You can just use the one from the template repository
