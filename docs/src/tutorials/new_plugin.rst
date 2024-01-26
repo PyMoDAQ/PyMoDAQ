@@ -94,7 +94,7 @@ Publishing on Pypi
 
 In the Python ecosystem, we often install packages using the `pip` application. But what happens when we execute
 `pip install mypackage`? Well `pip` is actually looking on a web server for the existence of such a package, then
-download it and install it. This server is the Pypi `Python Package Index<https://pypi.org/>`_
+download it and install it. This server is the Pypi `Python Package Index <https://pypi.org/>`_
 
 Developers who wish to share their package with others can therefore upload their package there as it is so easy to
 install it using pip. To do that you will need to create an account on Pypi:
@@ -174,8 +174,7 @@ were different jobs, steps and actions (*run*) are defined, like:
 For this last step, some environment variable have been created from github secrets. Those are the *__token__* string
 and the API token. We therefore have to create those secrets on github. For this, you'll go in the *settings* tab (see
 :numref:`github_settings`) to create secrets either on the organization level or repository level (see PyMoDAQ example
-on the organisation level, :numref:`github_secrets`). That's it you should have a fully configured PyMoDAQ's plugin
-package!! You now just need to code your actual instrument or extension, for this look at :ref:`plugin_development`
+on the organisation level, :numref:`github_secrets`).
 
 
 .. _github_settings:
@@ -192,8 +191,11 @@ package!! You now just need to code your actual instrument or extension, for thi
 
    Secrets creation on Github
 
+That's it you should have a fully configured PyMoDAQ's plugin
+package!! You now just need to code your actual instrument or extension, for this look at :ref:`plugin_development`
+
 
 .. note::
 
   Starting with PyMoDAQ version 4.1.0 onwards, old github actions for publication and suite testing should be updated in
-  the plugin packages. You can just use the one from the template repository
+  the plugin packages. So if you are a package maintainer, please do so using the files from the template repository.
