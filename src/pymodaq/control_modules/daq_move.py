@@ -37,6 +37,10 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
 
+try:
+    from pymodaq_plugins_thg.hardware.leco_client import PymodaqListener
+except ModuleNotFoundError:
+    PymodaqListener = False
 
 local_path = config_mod.get_set_local_dir()
 sys.path.append(local_path)
@@ -388,6 +392,12 @@ class DAQ_Move(ParameterManager, ControlModule):
                                                                                       'ip_address').value(),
                                                         port=self.settings.child('main_settings', 'tcpip',
                                                                                  'port').value())))
+        elif param.name() == 'connect_leco_server':
+            if param.value():
+                self.connect_leco()
+            else:
+                self._command_tcpip.emit(ThreadCommand('quit', ))
+
         elif param.name() == 'refresh_timeout':
             self._refresh_timer.setInterval(param.value())
 
@@ -601,6 +611,15 @@ class DAQ_Move(ParameterManager, ControlModule):
 
             self._tcpclient_thread.start()
 
+    def connect_leco(self):
+        if self.settings.child("main_settings", "leco", "connect_leco_server").value() and PymodaqListener is not False:
+            self._leco_client = PymodaqListener(name=self.settings.child('main_settings', 'leco', 'name').value(),
+                                                server_name=self.settings.child('main_settings', 'leco', 'server_name').value(),
+                                                )
+            self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
         if 'move_abs' in status.command:
@@ -626,6 +645,12 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         elif status.command == 'disconnected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == 'leco_connected':
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
+
+        elif status.command == 'leco_disconnected':
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'Update_Status':
             self.thread_status(status)

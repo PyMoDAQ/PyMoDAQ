@@ -57,6 +57,14 @@ params = [
              'value': config('network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
         ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect to server:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': "MyClient"},
+             {'title': 'Server name:', 'name': 'server_name', 'type': 'str', 'value': "MyServer"},
+         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -182,8 +190,11 @@ class DAQ_Viewer_base(QObject):
 
         self.ini_attributes()
 
-        self.data_grabed_signal.connect(self._emit_dte)
-        self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        try:
+            self.data_grabed_signal.connect(self._emit_dte)
+            self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        except Exception as exc:
+            print(f"Error with old message signal stuff: {exc}")
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
