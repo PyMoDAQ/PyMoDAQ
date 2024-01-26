@@ -11,21 +11,22 @@ jobs:
   deploy:
 
     runs-on: ubuntu-latest
-
+    
+    environment: release
+    permissions:
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
+      
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.11'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install hatch hatchling
-    - name: Build and publish
-      env:
-        HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
-        HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        hatch build
-        hatch publish
+    - name: Build
+      run: hatch build
+    - name: publish
+      uses: pypa/gh-action-pypi-publish@release/v1
