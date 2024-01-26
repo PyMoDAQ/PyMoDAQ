@@ -47,24 +47,18 @@ Two cases are possible: either you want to add a new hardware from a manufacture
 a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
 
 #. You have to fork the existing repo
-#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+#. you will use the `pymodaq_plugins_template`__  on github to create a new repo (see also the :ref:`new_plugin`
+   tutorial)
 
 Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
 the command line where you *cd* within the cloned package.
 This command will install the package but any change you apply on the local folder will be applied on the package.
 Then just add a new python file in the correct location.
 
-In the case of a new repository, you will have to
-* fill in the appropriate information in plugin_info.toml and README.rst,
-* rename the Pymodaq_plugins_template folder to the name of your package,
-* add your own instrument files in the right location, you might use the provided examples
-* add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder,
-* finally remove the unused example files of the template repository in the subfolders.
-
 Once you're ready with a working plugin, you can then:
 
 #. Publish your repo on pypi (just by doing a release on github will trigger the creation
-   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
+   of a pypi repository
 #. do a pull request on the initial repository to merge your new implementations.
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template

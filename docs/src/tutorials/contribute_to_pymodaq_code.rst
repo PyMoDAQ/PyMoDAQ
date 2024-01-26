@@ -1,5 +1,8 @@
 .. _contribute_to_pymodaq_code:
 
+How to modify existing PyMoDAQ’s code?
+======================================
+
 +------------------------------------+---------------------------------------+
 | Author email                       | david.bresteau@cea.fr                 |
 +------------------------------------+---------------------------------------+
@@ -11,8 +14,6 @@
 .. figure:: /image/tutorial_create_github_account/github_logo.png
     :width: 200
 
-How to contribute to PyMoDAQ’s code?
-====================================
 
 In this tutorial, we will learn how to propose a modification of the code of PyMoDAQ. By doing so, you will learn how to
 contribute to any open-source project!
