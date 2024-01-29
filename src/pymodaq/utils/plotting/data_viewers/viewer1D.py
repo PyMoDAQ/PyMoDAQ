@@ -185,10 +185,13 @@ class DataDisplayer(QObject):
                 self._overlay_items.append(pg.PlotDataItem(pen=pen))
                 self._plotitem.addItem(self._overlay_items[-1])
                 if self._do_sort:
-                    self._overlay_items[ind].setData(self._axis.get_data(),
-                                                     self._data.sort_data()[ind])
+                    self._overlay_items[ind].setData(
+                        self._data.sort_data().get_axis_from_index(0)[0].get_data(),
+                        self._data.sort_data()[ind])
                 else:
-                    self._overlay_items[ind].setData(self._axis.get_data(), self._data[ind])
+                    self._overlay_items[ind].setData(
+                        self._data.get_axis_from_index(0)[0].get_data(),
+                        self._data[ind])
 
 
 
@@ -483,7 +486,6 @@ class Viewer1D(ViewerBase):
     def process_roi_lineouts(self, roi_dte: DataToExport):
         self.view.display_roi_lineouts(roi_dte)
         self.measure_data_dict = dict([])
-
         self.measure_data_dict = roi_dte.merge_as_dwa('Data0D').to_dict()
         QtWidgets.QApplication.processEvents()
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
@@ -544,6 +546,8 @@ class Viewer1D(ViewerBase):
         if len(data.axes) == 0:
             self.get_axis_from_view(data)
 
+        self.view.display_data(data)
+
         if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
         else:
@@ -554,6 +558,8 @@ class Viewer1D(ViewerBase):
     def get_axis_from_view(self, data: DataWithAxes):
         if self.view.axis is not None:
             data.axes = [self.view.axis]
+        else:
+            data.create_missing_axes()
 
     def update_status(self, txt):
         logger.info(txt)

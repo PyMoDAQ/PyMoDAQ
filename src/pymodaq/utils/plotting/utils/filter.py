@@ -249,16 +249,18 @@ class Filter1DFromRois(Filter):
                         data_index = list(range(len(data.labels)))
                     else:
                         try:
-                            data_index = [data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])]
+                            data_index = [data.labels.index(self._roi_settings['ROIs', roi_key,
+                                          'use_channel'])]
                         except ValueError:
                             data_index = [0]
-                    dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key), data)
+                    dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
+                                                     data)
                     if self._roi_settings['ROIs', roi_key, 'use_channel'] == 'All':
                         dte.append(dte_tmp.data)
                     else:
                         for index in data_index:
-                            for dwa in dte_tmp:
-                                dte.append(dwa.pop(index))
+                            for dwa in dte_tmp.data:
+                                dte.data.append(dwa.pop(index))
 
         except Exception as e:
             pass
