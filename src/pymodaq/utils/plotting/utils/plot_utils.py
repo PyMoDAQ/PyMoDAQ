@@ -14,7 +14,7 @@ from qtpy import QtGui, QtCore, QtWidgets
 from scipy.spatial import Delaunay as Triangulation
 
 from pymodaq.utils import data as data_mod
-from pymodaq.utils.managers.roi_manager import LinearROI, RectROI, EllipseROI
+from pymodaq.utils.managers.roi_manager import LinearROI, RectROI, EllipseROI, pgROI, pgLinearROI
 
 
 def make_dashed_pens(color: tuple, nstyle=3):
@@ -36,7 +36,7 @@ class Point:
         if len(elt) == 1 and isinstance(elt[0], Iterable):
             elt = elt[0]
 
-        self._coordinates = np.atleast_1d(np.squeeze(elt))
+        self._coordinates: np.ndarray = np.atleast_1d(np.squeeze(elt))
         self._ndim = len(elt)
 
     @property
@@ -46,8 +46,8 @@ class Point:
     def copy(self):
         return Point(self.coordinates.copy())
 
-    def __getitem__(self, item: int):
-        return self._coordinates[item]
+    def __getitem__(self, item: int) -> float:
+        return float(self._coordinates[item])
 
     def __setitem__(self, key: int, value: float):
         self._coordinates[key] = value
@@ -519,9 +519,21 @@ class View_cust(pg.ViewBox):
 
 @dataclass
 class RoiInfo:
+    """ DataClass holding info about a given ROI
+
+    Parameters
+    ----------
+    origin
+    size
+    angle
+    centered
+    color
+    roi_class
+    index
+    """
+
     origin: Union[Point, Iterable[float]]
-    width: float
-    height: float = None
+    size: Union[Point, Iterable[float]]
     angle: float = None
     centered: bool = False
     color: Tuple[int, int, int] = (255, 0, 0)
@@ -531,14 +543,37 @@ class RoiInfo:
     @classmethod
     def info_from_linear_roi(cls, roi: LinearROI):
         pos = roi.pos()
-        return cls(Point((pos[0],)), width=(pos[1] - pos[0]), color=roi.color,
+        return cls(Point((pos[0],)), size=Point((pos[1] - pos[0],)), color=roi.color,
                    roi_class=type(roi), index=roi.index)
 
     @classmethod
     def info_from_rect_roi(cls, roi: RectROI):
-        return cls(Point(roi.pos()), width=roi.width(), height=roi.height(),
+        return cls(Point(list(roi.pos())[::-1]), size=Point((roi.height(), roi.width())),
                    color=roi.color, roi_class=type(roi), index=roi.index)
 
     def center_origin(self):
         if not self.centered:
-            self.origin += Point((self.width / 2, self.height / 2))
+            self.origin += Point((self.size[0] / 2, self.size[1] / 2))
+            self.centered = True
+
+    def to_slices(self) -> Iterable[slice]:
+        """Get slices to be used directly to slice DataWithAxes"""
+        if issubclass(self.roi_class, pgROI):
+            if self.centered:
+                return (slice(int(self.origin[0] - self.size[0] / 2),
+                              int(self.origin[0] + self.size[0] / 2)),
+                        slice(int(self.origin[1] - self.size[1] / 2),
+                              int(self.origin[1] + self.size[1] / 2)),
+                        )
+            else:
+                return (slice(int(self.origin[0]),
+                              int(self.origin[0] + self.size[0])),
+                        slice(int(self.origin[1]),
+                              int(self.origin[1] + self.size[1])),
+                        )
+        elif issubclass(self.roi_class, pgLinearROI):
+            if self.centered:
+                return (slice(int(self.origin[0] - self.size[0] / 2),
+                              int(self.origin[0] + self.size[0] / 2)),)
+            else:
+                return (slice(int(self.origin[0]), int(self.origin[0] + self.size[0])),)

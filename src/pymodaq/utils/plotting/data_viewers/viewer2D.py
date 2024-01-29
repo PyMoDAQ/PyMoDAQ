@@ -12,7 +12,8 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw, DataDistribution, DataWithAxes
+from pymodaq.utils.data import (Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw,
+                                DataDistribution, DataWithAxes)
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -26,7 +27,7 @@ from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Sc
 from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
-from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
 
 
 logger = set_logger(get_module_name(__file__))
@@ -694,8 +695,6 @@ class View2D(ActionManager, QtCore.QObject):
 class Viewer2D(ViewerBase):
     """Object managing plotting and manipulation of 2D data using a View2D"""
 
-    ROI_select_signal = Signal(QtCore.QRectF)
-
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__(parent, title)
 
@@ -902,7 +901,8 @@ class Viewer2D(ViewerBase):
         if self.view.is_action_checked('ROIselect'):
             pos = self.view.ROIselect.pos()
             size = self.view.ROIselect.size()
-            self.ROI_select_signal.emit(QtCore.QRectF(pos[0], pos[1], size[0], size[1]))
+            # self.ROI_select_signal.emit(QtCore.QRectF(pos[0], pos[1], size[0], size[1]))
+            self.roi_select_signal.emit(RoiInfo.info_from_rect_roi(self.view.ROIselect))
 
     @Slot(float, float)
     def double_clicked(self, posx, posy):

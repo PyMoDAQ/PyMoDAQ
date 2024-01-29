@@ -16,7 +16,7 @@ from pymodaq.utils import daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
-from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq.utils.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq.utils.plotting.widgets import PlotWidget
@@ -428,7 +428,6 @@ class Viewer1D(ViewerBase):
 
     Data and measurements are then exported with the signal data_to_export_signal
     """
-    ROI_select_signal = Signal(QRectF)
 
     def __init__(self, parent: QtWidgets.QWidget = None, title='', show_toolbar=True, no_margins=False,
                  flip_axes=False):
@@ -512,10 +511,8 @@ class Viewer1D(ViewerBase):
 
     def selected_region_changed(self):
         if self.view.is_action_checked('ROIselect'):
-            pos = self.view.ROIselect.getRegion()
-            self.ROI_select_signal.emit(QRectF(pos[0], pos[1], 0, 0))
+            self.roi_select_signal.emit(RoiInfo.info_from_linear_roi(self.view.ROIselect))
 
-    @Slot(float, float)
     def double_clicked(self, posx, posy=0):
         if self.view.is_action_checked('crosshair'):
             self.view.crosshair.set_crosshair_position(posx)

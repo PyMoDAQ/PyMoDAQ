@@ -378,8 +378,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 lambda roi_info: self.command_hardware.emit(ThreadCommand('ROISelect', roi_info)))
             #use that now
             viewer.roi_select_signal.connect(
-                lambda roi_info: self.command_hardware.emit(ThreadCommand('roi_select', dict(roi_info=roi_info,
-                                                                                             ind_viewer=ind_viewer))))
+                lambda roi_info: self.command_hardware.emit(
+                    ThreadCommand('roi_select',
+                                  dict(roi_info=roi_info, ind_viewer=ind_viewer))))
 
         self._viewers = viewers
 
