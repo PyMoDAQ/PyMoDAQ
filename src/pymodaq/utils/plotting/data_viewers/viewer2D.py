@@ -944,7 +944,7 @@ class Viewer2D(ViewerBase):
             if len(roi_dte) > 0:
                 self.view.display_roi_lineouts(roi_dte)
                 roi_dte_bis = roi_dte.deepcopy()
-                for dwa in roi_dte_bis:
+                for dwa in roi_dte_bis.data:
                     if dwa.name == 'hor':
                         dwa.name = f'Hlineout_{dwa.origin}'
                     elif dwa.name == 'ver':

@@ -1398,8 +1398,9 @@ class DAQ_Detector(QObject):
                 self.average_done = False
             self.waiting_for_data = False
 
-            # for live mode:two possibilities: either snap one data and regrab softwarewise (while True) or if
-            # self.detector.live_mode_available is True all data is continuously emitted from the plugin
+            # for live mode:two possibilities: either snap one data and regrab softwarewise
+            # (while True) or if self.detector.live_mode_available is True all data is continuously
+            # emitted from the plugin
             if self.detector.live_mode_available:
                 kwargs['wait_time'] = self.wait_time
             else:
@@ -1418,12 +1419,14 @@ class DAQ_Detector(QObject):
                             if self.average_done:
                                 break
                     else:
-                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time after acquisition
+                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time
+                        # after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.detector.live_mode_available and (not self.hardware_averaging and self.average_done):
-                        break  # if live can be done in the plugin breaks the while loop except if average is asked but
-                        # not done hardware wise
+                    if self.detector.live_mode_available and (not self.hardware_averaging and
+                                                              self.average_done):
+                        break  # if live can be done in the plugin breaks the while loop except
+                        # if average is asked but not done hardware wise
                 except Exception as e:
                     self.logger.exception(str(e))
             self.status_sig.emit(ThreadCommand('grab_stopped'))

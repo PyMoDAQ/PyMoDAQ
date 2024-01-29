@@ -79,10 +79,10 @@ class DataDisplayer(QObject):
         if data is not None:
             if data.labels != self.labels:
                 force_update = True
-        self._data = data
-        if len(data) != len(self._plot_items) or force_update:
-            self.update_display_items(data)
-        self.update_plot(do_xy, data, sort_data)
+            self._data = data
+            if len(data) != len(self._plot_items) or force_update:
+                self.update_display_items(data)
+            self.update_plot(do_xy, data, sort_data)
 
     def update_xy(self, do_xy=False):
         self._doxy = do_xy

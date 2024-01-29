@@ -260,7 +260,7 @@ class Filter1DFromRois(Filter):
                     else:
                         for index in data_index:
                             for dwa in dte_tmp.data:
-                                dte.data.append(dwa.pop(index))
+                                dte.append(dwa.pop(index))
 
         except Exception as e:
             pass
