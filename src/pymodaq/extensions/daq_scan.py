@@ -1117,8 +1117,7 @@ class DAQScanAcquisition(QObject):
                 if self.Naverage > 1:
                     for nav_axis in nav_axes:
                         nav_axis.index += 1
-                    nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1,
-                                                                              self.Naverage),
+                    nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                                   index=0))
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
