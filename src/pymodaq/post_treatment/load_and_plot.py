@@ -59,9 +59,12 @@ class LoaderPlotter:
     def data(self) -> DataToExport:
         return self._data
 
-    def load_data(self, filter_dims: List[Union[DataDim, str]] = None, filter_full_names: List[str] = None,
-                  remove_navigation: bool = True, group_0D=False, average_axis: int=None, average_index: int = 0):
-        """Load Data from the h5 node of the dataloader and apply some filtering/manipulation before plotting
+    def load_data(self, filter_dims: List[Union[DataDim, str]] = None,
+                  filter_full_names: List[str] = None, remove_navigation: bool = True,
+                  group_0D=False, average_axis: int=None, average_index: int = 0,
+                  last_step=False):
+        """Load Data from the h5 node of the dataloader and apply some filtering/manipulation before
+        plotting
 
         Parameters
         ----------
@@ -70,14 +73,17 @@ class LoaderPlotter:
         filter_full_names: List[str]
             load only data matching these names
         remove_navigation: bool
-            if True, make navigation axes as signal axes (means DataND could be plotted on Viewer1D or
-            Viewer2D by concatenation)
+            if True, make navigation axes as signal axes (means DataND could be plotted on Viewer1D
+            or Viewer2D by concatenation)
         group_0D: bool
             if True, group all (initial) Data0D into one DataFromPlugins
         average_axis: int or None
-            which axis in the data shapes should be interpereted as the average (in general it is 0 or None)
+            which axis in the data shapes should be interpereted as the average (in general it is 0
+            or None)
         average_index: int
             which step in the averaging process are we in.
+        last_step: bool
+            tells if this is the very last step of the (averaged) scan
 
         Returns
         -------
@@ -88,14 +94,15 @@ class LoaderPlotter:
         self.dataloader.load_all('/', self._data)
 
         if average_axis is not None:
-            self.average_axis(average_axis, average_index)
+            self.average_axis(average_axis, average_index, last_step=last_step)
 
         if filter_dims is not None:
             filter_dims[:] = [enum_checker(DataDim, dim) for dim in filter_dims]
             self._data.data[:] = [data for data in self._data if data.dim in filter_dims]
 
         if filter_full_names is not None:
-            self._data.data[:] = [data for data in self._data if data.get_full_name() in filter_full_names]
+            self._data.data[:] = [data for data in self._data if data.get_full_name() in
+                                  filter_full_names]
 
         if group_0D:  # 0D initial data
             self.group_0D_data()
@@ -105,31 +112,39 @@ class LoaderPlotter:
 
         return self._data
 
-    def average_axis(self, average_axis, average_index) -> None:
+    def average_axis(self, average_axis, average_index, last_step=False) -> None:
         """ Average the data along their average axis
 
         Parameters
         ----------
         average_axis: int or None
-            which axis in the data shapes should be interpereted as the average (in general it is 0 or None)
+            which axis in the data shapes should be interpreted as the average
+            (in general it is 0 or None)
         average_index: int
             which step in the averaging process are we in.
+        last_step: bool
+            tells if this is the very last step of the (averaged) scan
         """
         for ind, data in enumerate(self._data):
             current_data = data.inav[average_index, ...]
-            if average_index == 0:
-                data_to_append = data.inav[0:average_index + 1, ...]
-            else:
-                data_to_append = data.inav[0:average_index + 1, ...].mean(axis=average_axis)
-            data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
-            current_data.append(data_to_append)
+            if average_index > 0:
+                if last_step:
+                    data_to_append = data.inav[0:, ...].mean(axis=average_axis)
+                else:
+                    if average_index == 1:
+                        data_to_append = data.inav[0, ...]
+                    else:
+                        data_to_append = data.inav[0:average_index, ...].mean(axis=average_axis)
+
+                data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
+                current_data.append(data_to_append)
             self._data[ind] = current_data
 
     def remove_navigation_axes(self):
         """Make the navigation axes as signal axes
 
-        transforms DataND into Data1D or Data2D or error... depending the exact shape of the data and the number of
-        navigation axes
+        transforms DataND into Data1D or Data2D or error... depending the exact shape of the data
+        and the number of navigation axes
         """
         for data in self._data:
             data.nav_indexes = ()
@@ -164,10 +179,17 @@ class LoaderPlotter:
         -----
         load_data
         """
-        if 'target_at' in kwargs:
-            target_at = kwargs.pop('target_at')
+
+        target_at = kwargs.pop('target_at') if 'target_at' in kwargs else None
+        last_step = kwargs.pop('last_step') if 'last_step' in kwargs else False
+
         self.load_data(**kwargs)
         self.show_data(target_at=target_at)
+        if (last_step and 'average_index' in kwargs and kwargs['average_index']
+                is not None):
+            kwargs['last_step'] = last_step
+            self.load_data(**kwargs)
+            self.show_data(target_at=target_at)
 
     def show_data(self, **kwargs):
         """Send data to their dedicated viewers
@@ -197,7 +219,8 @@ class LoaderPlotter:
         self._viewers = dict(zip(viewers_name, self.dispatcher.viewers))
         self._viewer_docks = dict(zip(viewers_name, self.dispatcher.viewer_docks))
 
-    def set_data_to_viewers(self, data: DataToExport, temp=False, target_at: Iterable[float] = None):
+    def set_data_to_viewers(self, data: DataToExport, temp=False,
+                            target_at: Iterable[float] = None):
         """Process data dimensionality and send appropriate data to their data viewers
 
         Parameters

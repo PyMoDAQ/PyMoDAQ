@@ -43,8 +43,8 @@ class ModulesManager(QObject, ParameterManager):
 
     params = [
         {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
-            {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect'},
-            {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect'},
+            {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
+            {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
         ]},
 
         {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False},

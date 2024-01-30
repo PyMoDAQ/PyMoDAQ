@@ -705,8 +705,14 @@ class DAQScan(QObject, ParameterManager):
             average_axis = None
         try:
             self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
-                                             average_axis=average_axis, average_index=self.ind_average,
-                                             target_at=self.scanner.positions[self.ind_scan])
+                                             average_axis=average_axis,
+                                             average_index=self.ind_average,
+                                             target_at=self.scanner.positions[self.ind_scan],
+                                             last_step=(self.ind_scan ==
+                                                        self.scanner.positions.size - 1 and
+                                                        self.ind_average ==
+                                                        self.settings[
+                                                            'scan_options', 'scan_average'] - 1))
         except Exception as e:
             logger.exception(str(e))
     #################
