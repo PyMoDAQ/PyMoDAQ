@@ -70,7 +70,8 @@ class DAQScan(QObject, ParameterManager):
     live_data_1D_signal = Signal(list)
 
     params = [
-        {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
+        {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False,
+         'children': [
             {'title': 'Wait time step (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0,
              'tip': 'Wait time in ms after each step of acquisition (move and grab)'},
             {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int',
@@ -85,11 +86,13 @@ class DAQScan(QObject, ParameterManager):
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
             {'title': 'Get data', 'name': 'plot_probe', 'type': 'bool_push'},
             {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
-            {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
-            {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect'},
+            {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect', 'checkbox': True},
+            {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect', 'checkbox': True},
             {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'bool_push'},
-            {'title': 'Plot at each step?', 'name': 'plot_at_each_step', 'type': 'bool', 'value': True},
-            {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int', 'value': 1000, 'visible': False},
+            {'title': 'Plot at each step?', 'name': 'plot_at_each_step', 'type': 'bool',
+             'value': True},
+            {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int',
+             'value': 1000, 'visible': False},
             ]},
     ]
 
