@@ -682,6 +682,14 @@ class DAQScan(QObject, ParameterManager):
     def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
             nav_axes = self.scanner.get_nav_axes()
+            Naverage = self.settings['scan_options', 'scan_average']
+            if Naverage > 1:
+                for nav_axis in nav_axes:
+                    nav_axis.index += 1
+                nav_axes.append(data_mod.Axis('Average',
+                                              data=np.linspace(0, Naverage - 1, Naverage),
+                                              index=0))
+
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
 
         self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
@@ -697,8 +705,14 @@ class DAQScan(QObject, ParameterManager):
             average_axis = None
         try:
             self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
-                                             average_axis=average_axis, average_index=self.ind_average,
-                                             target_at=self.scanner.positions[self.ind_scan])
+                                             average_axis=average_axis,
+                                             average_index=self.ind_average,
+                                             target_at=self.scanner.positions[self.ind_scan],
+                                             last_step=(self.ind_scan ==
+                                                        self.scanner.positions.size - 1 and
+                                                        self.ind_average ==
+                                                        self.settings[
+                                                            'scan_options', 'scan_average'] - 1))
         except Exception as e:
             logger.exception(str(e))
     #################
@@ -1103,7 +1117,8 @@ class DAQScanAcquisition(QObject):
                 if self.Naverage > 1:
                     for nav_axis in nav_axes:
                         nav_axis.index += 1
-                    nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
+                    nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1,
+                                                                              self.Naverage),
                                                   index=0))
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
