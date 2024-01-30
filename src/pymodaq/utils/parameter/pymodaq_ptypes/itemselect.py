@@ -159,7 +159,7 @@ class ItemSelectParameterItem(WidgetParameterItem):
         self.hideWidget = False
         opts = self.param.opts
         
-        if 'checkbox' in opts:
+        if 'checkbox' in opts and opts['checkbox']:
             w = ItemSelect_pb(checkbox=opts['checkbox'])
             w.sigChanged = w.itemselect.itemChanged
         else:
