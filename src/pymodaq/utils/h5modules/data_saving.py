@@ -5,7 +5,7 @@ Created the 21/11/2022
 @author: Sebastien Weber
 """
 from time import time
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Iterable
 
 import numpy as np
 
@@ -308,7 +308,8 @@ class DataSaverLoader(DataManagement):
                 bkg_nodes.append(node)
         return bkg_nodes
 
-    def get_data_arrays(self, where: Union[Node, str], with_bkg=False, load_all=False) -> List[np.ndarray]:
+    def get_data_arrays(self, where: Union[Node, str], with_bkg=False,
+                        load_all=False) -> List[np.ndarray]:
         """
 
         Parameters
@@ -338,15 +339,17 @@ class DataSaverLoader(DataManagement):
             getter = self._get_nodes
 
         if with_bkg:
-            return [np.atleast_1d(np.squeeze(array.read()-bkg.read())) for array, bkg in zip(getter(where), bkg_nodes)]
+            return [np.atleast_1d(np.squeeze(array.read()-bkg.read()))
+                    for array, bkg in zip(getter(where), bkg_nodes)]
         else:
             return [np.atleast_1d(np.squeeze(array.read())) for array in getter(where)]
 
     def load_data(self, where, with_bkg=False, load_all=False) -> DataWithAxes:
-        """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
+        """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a
+        given Node
 
-        Does not include navigation axes stored elsewhere in the h5file. The node path is stored in the DatWithAxis
-        using the attribute path
+        Does not include navigation axes stored elsewhere in the h5file. The node path is stored in
+        the DatWithAxis using the attribute path
 
         Parameters
         ----------
@@ -383,18 +386,21 @@ class DataSaverLoader(DataManagement):
             axes = self.get_axes(parent_node)
 
         extra_attributes = data_node.attrs.to_dict()
-        for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension', 'distribution', 'label',
-                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size', 'EXTDIM', 'path']:
+        for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension',
+                     'distribution', 'label', 'origin', 'nav_indexes', 'dtype', 'data_type',
+                     'subdtype', 'shape', 'size', 'EXTDIM', 'path']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
-                            source=data_node.attrs['source'] if 'source' in data_node.attrs else 'raw',
+                            source=data_node.attrs['source'] if 'source' in data_node.attrs
+                            else 'raw',
                             dim=data_node.attrs['data_dimension'],
                             distribution=data_node.attrs['distribution'],
                             data=ndarrays,
                             labels=[node.attrs['label'] for node in data_nodes],
                             origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
-                            nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
+                            nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in
+                                                                          data_node.attrs else (),
                             axes=axes,
                             path=data_node.path,
                             **extra_attributes)
@@ -575,7 +581,7 @@ class DataExtendedSaver(DataSaverLoader):
         where: Union[Node, str]
             the path of a given node or the node itself
         data: DataWithAxes
-        indexes: List[int]
+        indexes: Iterable[int]
             indexes where to save data in the init h5array (should have the same length as extended_shape and with values
             coherent with this shape
         """
@@ -591,7 +597,8 @@ class DataExtendedSaver(DataSaverLoader):
         for ind_data in range(len(data)):
             #todo check that getting with index is safe...
             array: CARRAY = self.get_node_from_index(where, ind_data)
-            array[tuple(indexes)] = data[ind_data]  # maybe use array.__setitem__(indexes, data[ind_data]) if it's not working
+            array[tuple(indexes)] = data[ind_data]
+            # maybe use array.__setitem__(indexes, data[ind_data]) if it's not working
 
 
 class DataToExportSaver:
@@ -619,11 +626,12 @@ class DataToExportSaver:
 
     @staticmethod
     def channel_formatter(ind: int):
-        """All DataWithAxes included in the DataToExport will be saved into a channel group indexed and
-        formatted as below"""
+        """All DataWithAxes included in the DataToExport will be saved into a channel group indexed
+        and formatted as below"""
         return f'CH{ind:02d}'
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata=None):
+    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
+                 metadata=None):
         """
 
         Parameters
@@ -642,8 +650,10 @@ class DataToExportSaver:
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
-            for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
-                dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
+            for ind, dwa in enumerate(data.get_data_from_dim(dim)):
+                # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind),
+                                                        dwa.name)
                 # dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name)
                 self._data_saver.add_data(dwa_group, dwa)
 
@@ -651,8 +661,10 @@ class DataToExportSaver:
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
-            for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
-                dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
+            for ind, dwa in enumerate(data.get_data_from_dim(dim)):
+                # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_set_group(dim_group,
+                                                        self.channel_formatter(ind), dwa.name)
                 # dwa_group = self._get_node_from_title(dim_group, dwa.name)
                 if dwa_group is not None:
                     self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
@@ -679,8 +691,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._axis_name = axis_name
         self._axis_units = axis_units
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, axis_value: Union[float, np.ndarray],
-                 settings_as_xml='', metadata=None):
+    def add_data(self, where: Union[Node, str], data: DataToExport,
+                 axis_value: Union[float, np.ndarray], settings_as_xml='', metadata=None):
         """
 
         Parameters
@@ -712,7 +724,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     """Specialized DataToExportEnlargeableSaver to save data as a function of a time axis
 
-    Only one element ca be added at a time, the time axis value are enlarged using the data to be added timestamp
+    Only one element ca be added at a time, the time axis value are enlarged using the data to be
+    added timestamp
 
     Notes
     -----
@@ -721,8 +734,10 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     def __init__(self, h5saver: H5Saver):
         super().__init__(h5saver, 'time', 's')
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata=None):
-        super().add_data(where, data, axis_value=data.timestamp, settings_as_xml=settings_as_xml, metadata=metadata)
+    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
+                 metadata=None):
+        super().add_data(where, data, axis_value=data.timestamp, settings_as_xml=settings_as_xml,
+                         metadata=metadata)
 
 
 class DataToExportExtendedSaver(DataToExportSaver):
@@ -755,7 +770,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: List[int],
+    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Iterable[int],
                  distribution=DataDistribution['uniform'],
                  settings_as_xml='', metadata={}):
         """
@@ -766,8 +781,8 @@ class DataToExportExtendedSaver(DataToExportSaver):
             the path of a given node or the node itself
         data: DataToExport
         indexes: List[int]
-            indexes where to save data in the init h5array (should have the same length as extended_shape and with values
-            coherent with this shape
+            indexes where to save data in the init h5array (should have the same length as
+            extended_shape and with values coherent with this shape
         settings_as_xml: str
             The settings parameter as an XML string
         metadata: dict
@@ -777,9 +792,12 @@ class DataToExportExtendedSaver(DataToExportSaver):
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
-            for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
-                dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
-                self._data_saver.add_data(dwa_group, dwa, indexes=indexes, distribution=distribution)
+            for ind, dwa in enumerate(data.get_data_from_dim(dim)):
+                # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_set_group(dim_group,
+                                                        self.channel_formatter(ind), dwa.name)
+                self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
+                                          distribution=distribution)
 
 
 class DataLoader:
@@ -823,7 +841,8 @@ class DataLoader:
 
         Returns
         -------
-        GROUP: returns the group named SPECIAL_GROUP_NAMES['nav_axes'] holding all NavAxis for those data
+        GROUP: returns the group named SPECIAL_GROUP_NAMES['nav_axes'] holding all NavAxis for
+        those data
 
         See Also
         --------
@@ -874,10 +893,11 @@ class DataLoader:
         for child in children_dict:
             if isinstance(children_dict[child], GROUP):
                 self.load_all(children_dict[child], data, with_bkg=with_bkg)
-            elif 'data_type' in children_dict[child].attrs and 'data' in children_dict[child].attrs['data_type']:
+            elif ('data_type' in children_dict[child].attrs and 'data' in
+                  children_dict[child].attrs['data_type']):
 
-                data_list.append(self.load_data(children_dict[child].path, with_bkg=with_bkg, load_all=True))
+                data_list.append(self.load_data(children_dict[child].path,
+                                                with_bkg=with_bkg, load_all=True))
                 break
         data_tmp = DataToExport(name=where.name, data=data_list)
         data.append(data_tmp)
-

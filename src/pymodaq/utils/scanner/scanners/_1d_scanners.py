@@ -120,7 +120,8 @@ class Scan1DSparse(Scan1DBase):
         {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1', }
         ]
     n_axes = 1
-    distribution = DataDistribution['spread']
+    distribution = DataDistribution['uniform']  # because in 1D it doesn't matter is spread or
+    # uniform, one can easily plot both types on a regulat 1D plot
 
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
