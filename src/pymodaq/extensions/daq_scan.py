@@ -682,11 +682,12 @@ class DAQScan(QObject, ParameterManager):
     def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
             nav_axes = self.scanner.get_nav_axes()
-            if self.settings['scan_options', 'scan_average'] > 1:
+            Naverage = self.settings['scan_options', 'scan_average']
+            if Naverage > 1:
                 for nav_axis in nav_axes:
                     nav_axis.index += 1
-                nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1,
-                                                                          self.Naverage),
+                nav_axes.append(data_mod.Axis('Average',
+                                              data=np.linspace(0, Naverage - 1, Naverage),
                                               index=0))
 
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
