@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from qtpy import QtWidgets, QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
@@ -41,7 +43,7 @@ class ItemSelect_pb(QtWidgets.QWidget):
 
 
 class ItemSelect(QtWidgets.QListWidget):
-    def __init__(self, hasCheckbox=False):
+    def __init__(self, hasCheckbox=True):
         QtWidgets.QListWidget.__init__(self)
         self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
         self.selItems = [] # Dummy variable to keep track of click order
@@ -69,11 +71,11 @@ class ItemSelect(QtWidgets.QListWidget):
             # Clean up list with non existing entries      
             [self.selItems.remove(item) for item in self.selItems if item not in allitems]        
             for item in self.all_items():
-                if item.checkState()!=0: # Item is selected
+                if item.checkState() != 0: # Item is selected
                     if item.text() not in self.selItems: # if item not in list then add it
                         self.selItems.append(item.text())
                 else: # Item is not selected
-                    if item.text() in self.selItems: # if item in list then remove it
+                    if item.text() in self.selItems:  # if item in list then remove it
                         self.selItems.remove(item.text())
             selitems = self.selItems.copy() #need to copy to correctly emit signal when changed
             
@@ -83,7 +85,7 @@ class ItemSelect(QtWidgets.QListWidget):
             
         return dict(all_items=allitems, selected=selitems)
 
-    def all_items(self):
+    def all_items(self) -> list:
         """
             Get the all_items list from the self QtWidget attribute.
 
@@ -94,16 +96,16 @@ class ItemSelect(QtWidgets.QListWidget):
         """
         return [self.item(ind) for ind in range(self.count())]
     
-    def select_item(self, item:QtWidgets.QListWidgetItem, doSelect:bool = False):
+    def select_item(self, item: QtWidgets.QListWidgetItem, doSelect:bool = False):
         """
             Function to select item. The selection depends if the item uses checkbox or not.
         """        
         if self.hasCheckbox:
-            item.setCheckState(int(2*doSelect)) # 2=QtCore.Qt.Checked, 0=QtCore.Qt.Unchecked                                                   
+            item.setCheckState(int(2*doSelect))  # 2=QtCore.Qt.Checked, 0=QtCore.Qt.Unchecked
         else:
             item.setSelected(doSelect)
 
-    def set_value(self, values):
+    def set_value(self, values: dict):
         """
             Set values to the all_items attributes filtering values by the 'selected' key.
 
@@ -113,34 +115,35 @@ class ItemSelect(QtWidgets.QListWidget):
             =============== ============== =======================================
         """
         # Remove values in selected if they do not exist in all
-        [values['selected'].remove(value) for value in values['selected'] if value not in values['all_items']]
+        values = deepcopy(values)
+        [values['selected'].remove(value) for value in values['selected'] if value
+         not in values['all_items']]
         
         allitems_text = []
         # Check existing items and remove unused ones
         for item in self.all_items():     
-            if item.text() not in values['all_items']: # Remove items from list if text not in values
+            if item.text() not in values['all_items']:  # Remove items from list if text not
+                # in values
                 item = self.takeItem(self.row(item))
             else:
-                allitems_text.append(item.text()) # Add items to list
+                allitems_text.append(item.text())  # Add items to list
         # Create items if needed
-        for value in values['all_items']: # Loop through all values
-            if value not in allitems_text: # Test if object already exists
+        for value in values['all_items']:  # Loop through all values
+            if value not in allitems_text:  # Test if object already exists
                 item = QtWidgets.QListWidgetItem(value) # Create object
-                if self.hasCheckbox: # Add checkbox if required
+                if self.hasCheckbox:  # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)      
-                    self.select_item(item, doSelect=False) # Make sure item is not selected (checkbox not appearing somehow without)                                                       
-                self.addItem(item) # Add object to widget 
+                    self.select_item(item, doSelect=False)
+                    # Make sure item is not selected (checkbox not appearing somehow without)
+                self.addItem(item)  # Add object to widget
                  
-        allitems = self.all_items() # All selectable items                
-        # Selection process        
-        for value in values['selected']: # Loop through selected to retain selection order       
-            for item in allitems: # Loop through all items        
-                if item.text()==value:
-                    self.select_item(item, doSelect=True)
-                    allitems.remove(item) # Remove item from list if found
-                else:
-                    self.select_item(item, doSelect=False) 
-                    
+        allitems = self.all_items()  # All selectable items
+        # Selection process
+        for item in allitems:
+            self.select_item(item, doSelect=False)
+        for value in values['selected']:  # Loop through selected to retain selection order
+            item = allitems[[item.text() for item in allitems].index(value)]
+            self.select_item(item, doSelect=True)
         QtWidgets.QApplication.processEvents()
 
 
@@ -156,12 +159,13 @@ class ItemSelectParameterItem(WidgetParameterItem):
         self.hideWidget = False
         opts = self.param.opts
         
-        if 'checkbox' in opts and opts['checkbox']:      
+        if 'checkbox' in opts and opts['checkbox']:
             w = ItemSelect_pb(checkbox=opts['checkbox'])
             w.sigChanged = w.itemselect.itemChanged
         else:
             w = ItemSelect_pb()
             w.sigChanged = w.itemselect.itemSelectionChanged
+
             
         if 'dragdrop' in opts and opts['dragdrop']:        
             w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
