@@ -382,13 +382,11 @@ class LoggerSaver(ScanSaver):
     """
     group_type = GroupType['data_logger']
 
-    def __init__(self, module):
-        self._module_group: GROUP = None
-        self._module: H5Logger = module
-        self._h5saver = None
-
     def add_data(self, dte: DataToExport):
+        """Add data to it's corresponding control module
 
+        The name of the control module is the DataToExport name attribute
+        """
         if dte.name in self._module.modules_manager.detectors_name:
             control_module = self._module.modules_manager.detectors[
                 self._module.modules_manager.detectors_name.index(dte.name)]
