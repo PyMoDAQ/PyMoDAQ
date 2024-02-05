@@ -361,7 +361,8 @@ class ScanSaver(ModuleSaver):
         for detector in self._module.modules_manager.detectors:
             detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
-    def add_data(self, indexes: Tuple[int] = None, distribution=DataDistribution['uniform']):
+    def add_data(self, dte: DataToExport = None, indexes: Tuple[int] = None,
+                 distribution=DataDistribution['uniform']):
         for detector in self._module.modules_manager.detectors:
             try:
                 detector.insert_data(indexes, where=self._module_group, distribution=distribution)
@@ -386,15 +387,15 @@ class LoggerSaver(ScanSaver):
         self._module: H5Logger = module
         self._h5saver = None
 
-    def add_data(self):
-        for detector in self._module.modules_manager.detectors:
-            try:
-                detector.append_data(data=None, where=self._module_group)
-            except Exception as e:
-                pass
+    def add_data(self, dte: DataToExport):
 
-        for actuator in self._module.modules_manager.actuators:
-            try:
-                actuator.append_data(data=None, where=self._module_group)
-            except Exception as e:
-                pass
+        if dte.name in self._module.modules_manager.detectors_name:
+            control_module = self._module.modules_manager.detectors[
+                self._module.modules_manager.detectors_name.index(dte.name)]
+        elif dte.name in self._module.modules_manager.actuators_name:
+            control_module = self._module.modules_manager.actuators[
+                self._module.modules_manager.actuators_name.index(dte.name)]
+        else:
+            return
+
+        control_module.append_data(dte=dte, where=self._module_group)
