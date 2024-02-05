@@ -325,7 +325,8 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         processor = data_processors  # if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
 
-    def init_rois(self, data: DataRaw):
+    def init_rois(self, nav_axes_limits: List[Tuple[float, float]] = None,
+                  sig_axis_limits: List[Tuple[float, float]] = None):
         pass
 
     def update_viewer_data(self, posx=0, posy=0):
