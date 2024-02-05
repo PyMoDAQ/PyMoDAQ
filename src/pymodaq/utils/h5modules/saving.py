@@ -417,19 +417,19 @@ class H5SaverLowLevel(H5Backend):
         return group
 
     def show_file_content(self):
-        form = QtWidgets.QWidget()
+        win = QtWidgets.QMainWindow()
         if not self.isopen():
             if self.h5_file_path is not None:
                 if self.h5_file_path.exists():
-                    self.analysis_prog = browsing.H5Browser(form, h5file_path=self.h5_file_path)
+                    self.analysis_prog = browsing.H5Browser(win, h5file_path=self.h5_file_path)
                 else:
                     logger.warning('The h5 file path has not been defined yet')
             else:
                 logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
-            self.analysis_prog = browsing.H5Browser(form, h5file=self.h5file)
-        form.show()
+            self.analysis_prog = browsing.H5Browser(win, h5file=self.h5file)
+        win.show()
 
 
 class H5SaverBase(H5SaverLowLevel, ParameterManager):
@@ -806,8 +806,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
     def value_changed(self, param):
         if param.name() == 'show_file':
-            param.setValue(False)
-            self.show_file_content()
+            if param.value():
+                param.setValue(False)
+                self.show_file_content()
 
         elif param.name() == 'base_path':
             try:
@@ -823,21 +824,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
     def update_status(self, status):
         logger.warning(status)
-
-    def show_file_content(self):
-        win = QtWidgets.QMainWindow()
-        if not self.isopen():
-            if self.h5_file_path is not None:
-                if self.h5_file_path.exists():
-                    self.analysis_prog = browsing.H5Browser(win, h5file_path=self.h5_file_path)
-                else:
-                    logger.warning('The h5 file path has not been defined yet')
-            else:
-                logger.warning('The h5 file path has not been defined yet')
-        else:
-            self.flush()
-            self.analysis_prog = browsing.H5Browser(win, h5file=self.h5file)
-        win.show()
 
 
 class H5Saver(H5SaverBase, QObject):
