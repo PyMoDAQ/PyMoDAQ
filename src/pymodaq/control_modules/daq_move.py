@@ -172,7 +172,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
-    def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
+    def append_data(self, dte: DataToExport = None, where: Union[Node, str] = None):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
         Parameters
@@ -183,9 +183,9 @@ class DAQ_Move(ParameterManager, ControlModule):
         --------
         ActuatorEnlargeableSaver
         """
-        if data is None:
-            data = DataToExport(name=self.title, data=[self._current_value])
-        self._add_data_to_saver(data, where=where)
+        if dte is None:
+            dte = DataToExport(name=self.title, data=[self._current_value])
+        self._add_data_to_saver(dte, where=where)
         # todo: test this for logging
 
     def _add_data_to_saver(self, data: DataToExport, where=None, **kwargs):
