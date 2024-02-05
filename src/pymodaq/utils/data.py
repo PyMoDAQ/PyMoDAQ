@@ -1590,6 +1590,13 @@ class DataWithAxes(DataBase):
         """convenience property to set attribute from axis_manager"""
         self.set_axes_manager(self.shape, axes=axes, nav_indexes=self.nav_indexes)
 
+    def axes_limits(self, axes_indexes: List[int] = None) -> List[Tuple[float, float]]:
+        """Get the limits of specified axes (all if axes_indexes is None)"""
+        if axes_indexes is None:
+            return [(axis.min(), axis.max()) for axis in self.axes]
+        else:
+            return [(axis.min(), axis.max()) for axis in self.axes if axis.index in axes_indexes]
+
     @property
     def sig_indexes(self):
         """convenience property to fetch attribute from axis_manager"""

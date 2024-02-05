@@ -165,26 +165,34 @@ class UniformDataDisplayer(BaseDataDisplayer):
         processor: DataProcessorFactory = data_processors
         self.update_processor(processor)
 
-    def init_rois(self, data: DataRaw):
-        means = []
-        for axis in data.axes_manager.get_nav_axes():
-            means.append(axis.mean())
-        if len(data.nav_indexes) == 1:
-            self._navigator1D.set_crosshair_position(*means)
-        elif len(data.nav_indexes) == 2:
-            self._navigator2D.set_crosshair_position(*means)
+    def init_rois(self, nav_axes_limits: List[Tuple[float, float]] = None,
+                  sig_axis_limits: List[Tuple[float, float]] = None):
 
-        mins = []
-        maxs = []
-        for axis in data.axes_manager.get_signal_axes():
-            mins.append(axis.min())
-            maxs.append(axis.max())
-        if len(data.axes_manager.sig_indexes) == 1:
-            self._viewer1D.roi.setPos((mins[0], maxs[0]))
-        elif len(data.axes_manager.sig_indexes) > 1:
-            self._viewer2D.roi.setPos((0, 0))
-            self._viewer2D.roi.setSize((len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
-                                      len(data.get_axis_from_index(data.axes_manager.sig_indexes[0]))))
+        if len(nav_axes_limits) == 1:
+            self._navigator1D.crosshair.set_crosshair_position(np.mean(nav_axes_limits[0]))
+
+        if len(nav_axes_limits) == 2:
+            self._navigator2D.crosshair.set_crosshair_position(
+                *self._navigator2D.view.unscale_axis(np.mean(nav_axes_limits[1]),
+                                                     np.mean(nav_axes_limits[0]))
+            )
+        if len(sig_axis_limits) == 1:
+            self._viewer1D.roi.setPos((float(np.mean(sig_axis_limits[0]) -
+                                             np.abs(np.diff(sig_axis_limits[0])) / 3),
+                                       float(np.mean(sig_axis_limits[0]) +
+                                             np.abs(np.diff(sig_axis_limits[0])) / 3))
+                                      )
+        if len(sig_axis_limits) == 2:
+            scaled_axes = np.array(self._viewer2D.view.unscale_axis(np.array(sig_axis_limits[1]),
+                                                                    np.array(sig_axis_limits[0])))
+
+            self._viewer2D.roi.setSize(
+                float(np.diff(scaled_axes[0])) / 3,
+                float(np.diff(scaled_axes[1])) / 3)
+
+            self._viewer2D.roi.setPos(
+                float(np.mean(scaled_axes[0])) - float(np.diff(scaled_axes[0])) / 6,
+                float(np.mean(scaled_axes[1])) - float(np.diff(scaled_axes[1])) / 6)
 
     def updated_nav_integration(self):
         """ Means the ROI select of the 2D viewer has been moved """
@@ -520,13 +528,17 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                                                        self.axes_viewer)
 
         self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+
         self.navigator1D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
+
         self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+
         self.navigator2D.ROI_select_signal.connect(self.data_displayer.updated_nav_integration)
         self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
         self.data_displayer.data_dim_signal.connect(self.update_data_dim)
 
         self.viewer1D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
+
         self.viewer2D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
 
         self.get_action('filters').currentTextChanged.connect(self.data_displayer.update_filter)
@@ -553,7 +565,8 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         if force_update:
             self.update_widget_visibility(data)
-            self.data_displayer.init_rois(data)
+            self.data_displayer.init_rois(data.axes_limits(data.nav_indexes),
+                                          data.axes_limits(data.sig_indexes))
         self.data_to_export_signal.emit(self.data_to_export)
 
     def set_data_test(self, data_shape='3D'):
@@ -636,9 +649,10 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                                         Axis(data=t, index=2, label='t_axis', units='tunits')])
             elif data_shape == '2D':
                 data = [np.sum(data, axis=(2, 3))]
-                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
+                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0],
                                   axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
-                                        Axis(data=x, index=1, label='x_axis', units='xunits')])
+                                        Axis(data=x, index=1, label='x_axis', units='xunits')],
+                                  )
             elif data_shape == '1D':
                 data = [np.sum(data, axis=(0, 1, 2))]
                 dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[],
