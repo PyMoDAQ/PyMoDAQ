@@ -107,7 +107,6 @@ class TabularScanner(ScannerBase):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
         super().__init__(actuators=actuators)
-        self.update_model()
 
     @property
     def actuators(self):
