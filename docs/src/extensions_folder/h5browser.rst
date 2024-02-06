@@ -49,18 +49,18 @@ Associating H5Browser with .h5 files
 By default, the H5Browser always asks the user to select a file. One can instead open a specified .h5 file directly,
 using the --input optional command line argument as follows:
 
-``python h5browser.py --input my_h5_file.h5``.
+``h5browser --input my_h5_file.h5``.
 
 One can also associate H5Browser to all .h5 file so that it directly opens a file when double clicking on it. Here is
 how to do it on Windows. Let us assume that you have a conda environment named *my_env*, in which PyMoDAQ is installed.
 
 In Windows, the path to your conda executable will be something like:
 
-``C:\Miniconda\condabin\conda.bat``
+``C:\Miniconda3\condabin\conda.bat``
 
 and the path to the H5Browser will be (note that we are going into the *my_env* folder):
 
-``C:\Miniconda\envs\my_env\Lib\site-packages\pymodaq\h5browser.py``
+``C:\Miniconda3\envs\my_env\Lib\site-packages\pymodaq\h5browser.py``
 
 Now that you have written down these two paths, open your favorite text editing tool (e.g. notepad) and create a file
 called *H5Opener.bat* (for instance) with the following contents:
@@ -69,7 +69,7 @@ called *H5Opener.bat* (for instance) with the following contents:
 
     @ECHO OFF
     call C:\Miniconda\condabin\conda.bat activate my_env
-    python "C:\Miniconda\envs\my_env\Lib\site-packages\pymodaq\h5browser.py" --input %1
+    h5browser --input %1
 
 After creating the file, simply right click on any .h5 file, choose **Open with**, *Try an app on this PC*, you should see a list of programs, at the bottom
 you have to tick *Always use this app to open .h5 files* and then click *Look for another app on this PC*. You can browse to the location
