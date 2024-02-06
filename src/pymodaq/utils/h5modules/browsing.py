@@ -464,7 +464,8 @@ class H5Browser(QObject, ActionManager):
                 child.remove()
             params = []
             for attr in attr_dict:
-                params.append({'title': attr, 'name': attr, 'type': 'str', 'value': attr_dict[attr], 'readonly': True})
+                params.append({'title': attr, 'name': attr, 'type': 'str', 'value': attr_dict[attr],
+                               'readonly': True})
             self.settings_attributes.settings.addChildren(params)
 
             if settings is not None:
@@ -525,7 +526,7 @@ class H5Browser(QObject, ActionManager):
                 self.view.text_list.clear()
                 for txt in node.read():
                     self.view.text_list.addItem(txt)
-            else:
+            elif 'data_type' in node.attrs:
                 data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg, load_all=plot_all)
                 self.hyper_viewer.show_data(data_with_axes, force_update=True)
 
