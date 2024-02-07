@@ -29,14 +29,13 @@ class PymodaqListener(Listener):
     """A Listener prepared for PyMoDAQ.
 
     :param name: Name of this module.
-    :param remote_name: Name of the module to talk to.
     :param host: Host name of the communication server.
     :param port: Port number of the communication server.
     """
+    remote_name: str = ""
 
     def __init__(self,
                  name: str,
-                 remote_name: str,  # of the pymodaq server
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: logging.Logger | None = None,
@@ -48,7 +47,6 @@ class PymodaqListener(Listener):
         self.signals = self.ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
-        self.remote_name = remote_name
         self.request_buffer: dict[str, list[Message]] = {}
 
     local_methods = ["pong", "set_log_level"]

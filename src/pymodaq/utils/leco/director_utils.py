@@ -17,7 +17,7 @@ class GenericDirector(Director):
 
     def set_remote_name(self, name: Optional[str] = None):
         """Set the remote name of the Module (i.e. where it should send responses to)."""
-        self.ask_rpc(method="set_remote_name", name=name)
+        self.ask_rpc(method="set_remote_name", name=name or self.communicator.name)
 
     def set_info(self, param: Parameter):
         # It removes the first two parts (main_settings and detector_settings?)

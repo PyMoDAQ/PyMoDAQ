@@ -620,10 +620,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                 # HACK as a name is required
                 name = "move"
                 self.settings.child("main_settings", "module_name").setValue()
-            director_name = self.settings.child('main_settings', 'leco', 'director_name').value()
-            self._leco_client = PymodaqListener(name=name,
-                                                remote_name=director_name,
-                                                )
+            self._leco_client = PymodaqListener(name=name)
             self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()

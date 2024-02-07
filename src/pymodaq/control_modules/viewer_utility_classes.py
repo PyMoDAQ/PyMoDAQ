@@ -59,10 +59,9 @@ params = [
         ]},
         {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
-             {'title': 'Connect to server:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
-             {'title': 'Director name:', 'name': 'director_name', 'type': 'str', 'value': "director_name"},
          ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [

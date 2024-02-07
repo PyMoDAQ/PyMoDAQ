@@ -77,6 +77,7 @@ class LECOMoveDirector(LECODirector, DAQ_Move_base):
             old_controller=controller,
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
             )
+        self.controller.set_remote_name(self.communicator.full_name)
         self.settings.child('infos').addChildren(self.params_client)
 
         self.settings.child('units').hide()

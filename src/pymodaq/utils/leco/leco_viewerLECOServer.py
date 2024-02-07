@@ -63,6 +63,7 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
+        self.controller.set_remote_name(self.communicator.full_name)
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
