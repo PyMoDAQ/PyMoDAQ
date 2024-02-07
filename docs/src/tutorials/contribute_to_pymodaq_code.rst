@@ -59,7 +59,7 @@ __ https://github.com/PyMoDAQ/PyMoDAQ
 .. note::
     Be careful not to confuse the PyMoDAQ *GitHub account* and the *repository*.
 
-.. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_branches_2.png
+.. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_branches.png
 
 There are several branches of the PyMoDAQ repository. Branches are used to prepare future releases, to develop new
 features or to patch bugs, without risking modifying the stable version of the code. The full branch structure is described

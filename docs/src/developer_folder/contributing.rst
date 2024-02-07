@@ -38,11 +38,7 @@ Branch structure and release cycle
 ##################################
 .. _branches_release_cycle_doc:
 
-There are several branches of the PyMoDAQ repository, as shown below:
-
-.. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_branches_2.png
-
-Branches are directly linked to the *release cycle* of PyMoDAQ, which we
+There are several branches of the PyMoDAQ repository, directly linked to the *release cycle* of PyMoDAQ, which we
 define here. PyMoDAQ versioning follows usual practice, as described `in this link <https://en.wikipedia.org/wiki/Software_versioning>`_:
 
 .. figure:: https://upload.wikimedia.org/wikipedia/commons/8/82/Semver.jpg
@@ -55,7 +51,7 @@ bugfixes, and a **development** version (currently, 4.2.0), onto which new featu
 
 The release cycle is illustrated in this figure:
 
-.. figure:: /image/tutorial_contribute_to_pymodaq_code/release_cycle_pymodaq2.png
+.. figure:: /image/tutorial_contribute_to_pymodaq_code/release_cycle_pymodaq3.png
 
 This cycle makes use of several types of branches:
 
@@ -93,13 +89,8 @@ This cycle makes use of several types of branches:
 
     Let's consider the case where a bug is found on the **stable** branch. We create a new branch to fix it, open a pull request
     into the stable branch, and wait for it to be accepted. However, it is likely that the buggy code is also part of the
-    **development** version! To do so, we do not have to create another branch, and another pull request. If possible, we will use the
-    `rebase`__ method of git, to automatically update the dev branch from the patched stable branch. If not, we will need to
-    `cherrypick`__ the commit containing the bugfix. These are rather advanced git methods which are likely to be performed  only
-    by the maintainers, but when fixing bugs, one should always remember to check if it is present on several branches.
-
-    __ https://git-scm.com/docs/git-rebase
-    __ https://git-scm.com/docs/git-cherry-pick
+    **development** version, requiring another pull request on that branch! Thus, but when a bug is found, one should always
+    remember to check if it is present on several branches.
 
 Where to contribute
 ###################
