@@ -107,7 +107,6 @@ class TabularScanner(ScannerBase):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
         super().__init__(actuators=actuators)
-        self.update_model()
 
     @property
     def actuators(self):
@@ -209,13 +208,15 @@ class TabularScanner(ScannerBase):
 
 
 @ScannerFactory.register()
-class TabularScannerSubsegmented(TabularScanner):
-    scan_subtype = 'Subsegmented'
+class TabularScannerSubSegmented(TabularScanner):
+
+    scan_subtype = 'SubSegmented'
     save_settings = False
     params = [{'title': 'Step:', 'name': 'tabular_step', 'type': 'float', 'value': 0.1},
-              {'title': 'Points', 'name': 'tabular_points', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
+              {'title': 'Points', 'name': 'tabular_points', 'type': 'table_view',
+               'delegate': gutils.SpinBoxDelegate,
                'menu': True},
-             ] + TabularScanner.params
+              ] + TabularScanner.params
 
     def __init__(self, actuators: List[str]):
         self.table_model: TableModelTabularReadOnly = None
@@ -223,8 +224,6 @@ class TabularScannerSubsegmented(TabularScanner):
         self.table_model_points: TableModelTabular = None
         self.table_view_points: TableViewCustom = None
         super().__init__(actuators=actuators)
-        self.update_model()
-        self.update_model_points()
 
     @property
     def actuators(self):
