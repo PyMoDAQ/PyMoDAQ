@@ -1,13 +1,14 @@
 
 from typing import Callable, Sequence
 
-from pyleco.directors.director import Director
 from pyleco.utils.listener import Listener, CommunicatorPipe
 
 import pymodaq.utils.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import Parameter, ioxml
+from pymodaq.utils.parameter import Parameter
+
+from pymodaq.utils.leco.director_utils import GenericDirector
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
@@ -37,7 +38,7 @@ class LECODirector:
                     ]
     socket_types: list[str]
 
-    controller: Director
+    controller: GenericDirector
     settings: Parameter
 
     communicator: CommunicatorPipe
@@ -63,12 +64,10 @@ class LECODirector:
         raise NotImplementedError
 
     def commit_leco_settings(self, param: Parameter) -> None:
-        if param.name() == "remote_name":
+        if param.name() == "actor_name":
             self.controller.actor = param.value()
         elif param.name() in putils.iter_children(self.settings.child('settings_client'), []):
-            self.controller.ask_rpc(method="set_info",
-                                    path=putils.get_param_path(param)[2:],
-                                    param_dict_str=ioxml.parameter_to_xml_string(param))
+            self.controller.set_info(param=param)
 
     def close(self) -> None:
         self._listener.stop_listen()

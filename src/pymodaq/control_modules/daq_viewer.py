@@ -791,6 +791,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             dte = dte.deepcopy()
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
 
@@ -956,6 +958,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                if self.settings.child('main_settings', 'leco', 'leco_connected').value():
+                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def child_added(self, param, data):
         """ Adds a child in the settings attribute
@@ -1113,6 +1117,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def connect_leco(self):
         if self.settings.child("main_settings", "leco", "connect_leco_server").value():
             name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # HACK as a name is required
+                name = "viewer"
+                self.settings.child("main_settings", "module_name").setValue(name)
             director_name = self.settings.child('main_settings', 'leco', 'director_name').value()
             self._leco_client = PymodaqListener(name=name,
                                                 remote_name=director_name,

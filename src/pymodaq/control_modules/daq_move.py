@@ -478,6 +478,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.current_value_signal.emit(self._current_value)
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
         elif status.command == "move_done":
             data_act: DataActuator = status.attribute[0]
@@ -489,6 +491,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._move_done_bool = True
             self.move_done_signal.emit(data_act)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
         elif status.command == 'outofbounds':
@@ -612,6 +616,10 @@ class DAQ_Move(ParameterManager, ControlModule):
     def connect_leco(self):
         if self.settings.child("main_settings", "leco", "connect_leco_server").value():
             name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # HACK as a name is required
+                name = "move"
+                self.settings.child("main_settings", "module_name").setValue()
             director_name = self.settings.child('main_settings', 'leco', 'director_name').value()
             self._leco_client = PymodaqListener(name=name,
                                                 remote_name=director_name,

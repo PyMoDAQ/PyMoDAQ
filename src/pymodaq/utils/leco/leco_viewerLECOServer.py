@@ -1,25 +1,28 @@
 
 from easydict import EasyDict as edict
 
-from pyleco.directors.director import Director
-
-from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 
 from pymodaq.utils.data import DataFromPlugins, DataToExport
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
+from pymodaq.utils.leco.director_utils import DetectorDirector
 
 
 class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
     """A control module, which in the dashboard, allows to control a remote Viewer module"""
 
+    settings: Parameter
+    controller: DetectorDirector
+
     params_GRABBER = []
 
     message_list = LECODirector.message_list + ["Quit", "Send Data 0D", "Send Data 1D",
-                                              "Send Data 2D", "Send Data ND",
-                                              "Status", "Done", "Server Closed",
-                                              "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
+                                                "Send Data 2D", "Send Data ND",
+                                                "Status", "Done", "Server Closed",
+                                                "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
     params = [
     ] + comon_parameters + leco_parameters
@@ -55,10 +58,10 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
         """
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
                                  controller=None))
-        remote_name = self.settings.child("remote_name")
+        actor_name = self.settings.child("actor_name")
         self.controller = self.ini_detector_init(  # type: ignore
             old_controller=controller,
-            new_controller=Director(actor=remote_name, communicator=self.communicator),
+            new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
@@ -70,13 +73,11 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
             self.status.x_axis = self.x_axis
             self.status.y_axis = self.y_axis
             self.status.initialized = True
-            print("init done")
             return self.status
 
         except Exception as e:
             self.status.info = getLineInfo() + str(e)
             self.status.initialized = False
-            print("init failed")
             return self.status
 
     def get_xaxis(self):
@@ -121,7 +122,7 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
         try:
             self.ind_grabbed = 0  # to keep track of the current image in the average
             self.Naverage = Naverage
-            self.controller.ask_rpc(method="send_data", grabber_type=self.grabber_type)
+            self.controller.send_data(grabber_type=self.grabber_type)
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
@@ -150,3 +151,7 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
         """
         raise NotImplementedError()
         self.dte_signal.emit(DataToExport('TCP0D', data=[DataFromPlugins(name='LECOServer', data=data, dim='Data0D')]))
+
+
+if __name__ == '__main__':
+    main(__file__)

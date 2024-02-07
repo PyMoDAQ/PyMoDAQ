@@ -44,6 +44,7 @@ class PymodaqListener(Listener):
                  **kwargs) -> None:
         super().__init__(name, host, port, logger=logger, timeout=timeout,
                          **kwargs)
+        print("start listener as", name)
         self.signals = self.ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
@@ -65,6 +66,7 @@ class PymodaqListener(Listener):
         # message = Signal(Message)
 
     def start_listen(self) -> None:
+        print("start listening")
         super().start_listen()
         # self.message_handler.finish_handle_commands = self.finish_handle_commands  # type: ignore
         self.message_handler.register_on_name_change_method(self.indicate_sign_in_out)
@@ -73,6 +75,7 @@ class PymodaqListener(Listener):
             self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
         self.director = Director(actor=self.remote_name, communicator=communicator)
         for method in (
+            self.set_remote_name,
             self.set_info,
             self.move_abs,
             self.move_rel,
@@ -91,6 +94,14 @@ class PymodaqListener(Listener):
             self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
         else:
             self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
+
+    def set_remote_name(self, name: str) -> None:
+        """Define what the name of the remote for answers is."""
+        self.remote_name = name
+        try:
+            self.director.actor = name
+        except AttributeError:
+            pass
 
     # def finish_handle_commands(self, message: Message) -> None:
     #     """Handle the list of commands: Redirect them to the application."""
@@ -146,6 +157,7 @@ class PymodaqListener(Listener):
     # @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
+        print("command", command)
 
         # generic commands
         if command.command == "ini_connection":
@@ -170,7 +182,7 @@ class PymodaqListener(Listener):
             pass  # TODO change name?
 
         elif command.command == 'data_ready':
-            # code from the original
+            # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
             self.director.ask_rpc(method="set_data", data=command.attribute[0]['data'])
