@@ -58,18 +58,19 @@ In Windows, the path to your conda executable will be something like:
 
 ``C:\Miniconda3\condabin\conda.bat``
 
-and the path to the H5Browser will be (note that we are going into the *my_env* folder):
 
-``C:\Miniconda3\envs\my_env\Lib\site-packages\pymodaq\h5browser.py``
-
-Now that you have written down these two paths, open your favorite text editing tool (e.g. notepad) and create a file
+Now that you have written down this path, open your favorite text editing tool (e.g. notepad) and create a file
 called *H5Opener.bat* (for instance) with the following contents:
 
   .. code-block:: python
 
     @ECHO OFF
-    call C:\Miniconda\condabin\conda.bat activate my_env
+    call C:\Miniconda3\condabin\conda.bat activate my_env
     h5browser --input %1
+
+.. note::
+   The precise path of your environment may be different from the one we wrote just above. Check
+   your conda installation to verify this: `conda info` and `conda env list`
 
 After creating the file, simply right click on any .h5 file, choose **Open with**, *Try an app on this PC*, you should see a list of programs, at the bottom
 you have to tick *Always use this app to open .h5 files* and then click *Look for another app on this PC*. You can browse to the location
