@@ -127,8 +127,7 @@ params = [
              {'title': 'Connect to server:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
-             {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': "MyName"},
-             {'title': 'Server name:', 'name': 'server_name', 'type': 'str', 'value': "MyServer"},
+             {'title': 'Director name:', 'name': 'director_name', 'type': 'str', 'value': "director_name"},
          ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}

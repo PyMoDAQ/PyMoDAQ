@@ -62,8 +62,7 @@ params = [
              {'title': 'Connect to server:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
-             {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': "MyClient"},
-             {'title': 'Server name:', 'name': 'server_name', 'type': 'str', 'value': "MyServer"},
+             {'title': 'Director name:', 'name': 'director_name', 'type': 'str', 'value': "director_name"},
          ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
@@ -137,7 +136,7 @@ class DAQ_Viewer_base(QObject):
         *params*                list
         *settings*              instance of pyqtgraph Parameter
         *parent*                ???
-        *status*                dictionnary
+        *status*                dictionary
         ===================== ===================================
 
         See Also

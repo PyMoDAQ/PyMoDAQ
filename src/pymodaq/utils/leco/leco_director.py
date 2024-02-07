@@ -1,25 +1,23 @@
 
 from typing import Callable, Sequence
 
-from qtpy.QtCore import QObject, Signal
-
 from pyleco.directors.director import Director
 from pyleco.utils.listener import Listener, CommunicatorPipe
 
 import pymodaq.utils.parameter.utils as putils
-from pymodaq.utils.daq_utils import ThreadCommand  # object used to send info back to the main thread
+# object used to send info back to the main thread:
+from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter, ioxml
 
 leco_parameters = [
-    {'title': 'Server name:', 'name': 'server_name', 'type': 'str', 'value': 'server_name'},
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
-     'text': 'Name of the actor to communicate with.'},
+     'text': 'Name of the actor plugin to communicate with.'},
 ]
 
 
-class LECOServer(QObject):
+class LECODirector:
     """
-    This server has to be used as a mixin together with a Control Module
+    This is a mixin for a Control module to direct another, remote module (analogous to TCP Server).
 
         ================= ==============================
         **Attributes**      **Type**
@@ -33,8 +31,6 @@ class LECOServer(QObject):
         --------
         utility_classes.DAQ_TCP_server
     """
-    command_server = Signal(list)
-
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml",
                     "move_abs", 'move_home', 'move_rel', 'get_actuator_value', 'stop_motion',
                     'position_is', 'move_done',
@@ -47,12 +43,12 @@ class LECOServer(QObject):
     communicator: CommunicatorPipe
 
     def __init__(self, **kwargs) -> None:
-        print("init server")
         super().__init__(**kwargs)
-        print("init server super init done")
 
-        print("name", self.settings.child('server_name').value())
-        self._listener = Listener(name=self.settings.child('server_name').value())
+        name = self.settings.child('module_name').value()
+
+        print("name", name)
+        self._listener = Listener(name=name)
         self._listener.start_listen()
         self.communicator = self._listener.get_communicator()
         self.register_rpc_methods((
@@ -67,9 +63,7 @@ class LECOServer(QObject):
         raise NotImplementedError
 
     def commit_leco_settings(self, param: Parameter) -> None:
-        if param.name() == "server_name":
-            self.communicator.name = param.value()
-        elif param.name() == "actor_name":
+        if param.name() == "remote_name":
             self.controller.actor = param.value()
         elif param.name() in putils.iter_children(self.settings.child('settings_client'), []):
             self.controller.ask_rpc(method="set_info",

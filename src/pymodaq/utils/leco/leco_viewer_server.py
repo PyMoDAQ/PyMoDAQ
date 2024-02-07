@@ -8,24 +8,26 @@ from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, como
 from pymodaq.utils.data import DataFromPlugins, DataToExport
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 
-from pymodaq_plugins_thg.hardware.leco_server import LECOServer, leco_parameters
+from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 
 
-class LECOViewerServer(LECOServer, DAQ_Viewer_base):
+class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
+    """A control module, which in the dashboard, allows to control a remote Viewer module"""
 
     params_GRABBER = []
 
-    message_list = LECOServer.message_list + ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D",
-                                              "Send Data ND", "Status", "Done", "Server Closed",
+    message_list = LECODirector.message_list + ["Quit", "Send Data 0D", "Send Data 1D",
+                                              "Send Data 2D", "Send Data ND",
+                                              "Status", "Done", "Server Closed",
                                               "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
     params = [
     ] + comon_parameters + leco_parameters
 
     def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
-        print("init ViewerServer")
-        super().__init__(parent=parent,
-                         params_state=params_state, **kwargs)
+        # TODO change to super().__init__() once DAQ_Viewer_base is "cooperative"
+        DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state, **kwargs)
+        LECODirector.__init__(self)
         self.register_rpc_methods((
             self.set_x_axis,
             self.set_y_axis,
@@ -44,20 +46,25 @@ class LECOViewerServer(LECOServer, DAQ_Viewer_base):
         """
             | Initialisation procedure of the detector updating the status dictionary.
             |
-            | Init axes from image , here returns only None values (to tricky to di it with the server and not really
-             necessary for images anyway)
+            | Init axes from image , here returns only None values (to tricky to di it with the
+              server and not really necessary for images anyway)
 
             See Also
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
-        self.controller = self.ini_detector_init(old_controller=controller,
-                                                 new_controller=Director(actor=self.settings["actor_name"], communicator=self.communicator))  # type: ignore
+        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
+                                 controller=None))
+        remote_name = self.settings.child("remote_name")
+        self.controller = self.ini_detector_init(  # type: ignore
+            old_controller=controller,
+            new_controller=Director(actor=remote_name, communicator=self.communicator),
+            )
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
-            # init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+            # init axes from image , here returns only None values (to tricky to di it with the
+            # server and not really necessary for images anyway)
             self.x_axis = self.get_xaxis()
             self.y_axis = self.get_yaxis()
             self.status.x_axis = self.x_axis

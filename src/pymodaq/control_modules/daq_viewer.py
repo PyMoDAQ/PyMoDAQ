@@ -1112,8 +1112,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def connect_leco(self):
         if self.settings.child("main_settings", "leco", "connect_leco_server").value():
-            self._leco_client = PymodaqListener(name=self.settings.child('main_settings', 'module_name').value(),
-                                                server_name=self.settings.child('main_settings', 'leco', 'server_name').value(),
+            name = self.settings.child("main_settings", "module_name").value()
+            director_name = self.settings.child('main_settings', 'leco', 'director_name').value()
+            self._leco_client = PymodaqListener(name=name,
+                                                remote_name=director_name,
                                                 )
             self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)

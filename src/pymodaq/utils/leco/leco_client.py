@@ -1,14 +1,15 @@
 
 try:
-    from enum import StrEnum
+    from enum import StrEnum  # type: ignore
 except ImportError:
     from enum import Enum
+
     class StrEnum(str, Enum):
         pass
 import logging
 
 import numpy as np
-from qtpy.QtCore import QObject, Signal
+from qtpy.QtCore import QObject, Signal  # type: ignore
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
@@ -28,14 +29,14 @@ class PymodaqListener(Listener):
     """A Listener prepared for PyMoDAQ.
 
     :param name: Name of this module.
-    :param server_name: Name of the module to talk to.
+    :param remote_name: Name of the module to talk to.
     :param host: Host name of the communication server.
     :param port: Port number of the communication server.
     """
 
     def __init__(self,
                  name: str,
-                 server_name: str,  # of the pymodaq server
+                 remote_name: str,  # of the pymodaq server
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: logging.Logger | None = None,
@@ -46,7 +47,7 @@ class PymodaqListener(Listener):
         self.signals = self.ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
-        self.server_name = server_name
+        self.remote_name = remote_name
         self.request_buffer: dict[str, list[Message]] = {}
 
     local_methods = ["pong", "set_log_level"]
@@ -70,7 +71,7 @@ class PymodaqListener(Listener):
         communicator = self.message_handler.get_communicator()
         if self.message_handler.namespace is not None:
             self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
-        self.director = Director(actor=self.server_name, communicator=communicator)
+        self.director = Director(actor=self.remote_name, communicator=communicator)
         for method in (
             self.set_info,
             self.move_abs,
