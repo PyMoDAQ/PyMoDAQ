@@ -1,0 +1,145 @@
+
+from easydict import EasyDict as edict
+
+from pyleco.directors.director import Director
+
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters
+
+from pymodaq.utils.data import DataFromPlugins, DataToExport
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+
+from pymodaq_plugins_thg.hardware.leco_server import LECOServer, leco_parameters
+
+
+class LECOViewerServer(LECOServer, DAQ_Viewer_base):
+
+    params_GRABBER = []
+
+    message_list = LECOServer.message_list + ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D",
+                                              "Send Data ND", "Status", "Done", "Server Closed",
+                                              "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
+    socket_types = ["GRABBER"]
+    params = [
+    ] + comon_parameters + leco_parameters
+
+    def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
+        print("init ViewerServer")
+        super().__init__(parent=parent,
+                         params_state=params_state, **kwargs)
+        self.register_rpc_methods((
+            self.set_x_axis,
+            self.set_y_axis,
+            self.set_data,
+        ))
+
+        self.client_type = "GRABBER"
+        self.x_axis = None
+        self.y_axis = None
+        self.data = None
+        self.grabber_type = grabber_type
+        self.ind_data = 0
+        self.data_mock = None
+
+    def ini_detector(self, controller=None):
+        """
+            | Initialisation procedure of the detector updating the status dictionary.
+            |
+            | Init axes from image , here returns only None values (to tricky to di it with the server and not really
+             necessary for images anyway)
+
+            See Also
+            --------
+            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
+        """
+        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
+        self.controller = self.ini_detector_init(old_controller=controller,
+                                                 new_controller=Director(actor=self.settings["actor_name"], communicator=self.communicator))  # type: ignore
+        try:
+            self.settings.child(('infos')).addChildren(self.params_GRABBER)
+
+            # init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+            self.x_axis = self.get_xaxis()
+            self.y_axis = self.get_yaxis()
+            self.status.x_axis = self.x_axis
+            self.status.y_axis = self.y_axis
+            self.status.initialized = True
+            print("init done")
+            return self.status
+
+        except Exception as e:
+            self.status.info = getLineInfo() + str(e)
+            self.status.initialized = False
+            print("init failed")
+            return self.status
+
+    def get_xaxis(self):
+        """
+            Obtain the horizontal axis of the image.
+
+            Returns
+            -------
+            1D numpy array
+                Contains a vector of integer corresponding to the horizontal camera pixels.
+        """
+        pass
+        return self.x_axis
+
+    def get_yaxis(self):
+        """
+            Obtain the vertical axis of the image.
+
+            Returns
+            -------
+            1D numpy array
+                Contains a vector of integer corresponding to the vertical camera pixels.
+        """
+        pass
+        return self.y_axis
+
+    def grab_data(self, Naverage=1, **kwargs):
+        """
+            Start new acquisition.
+            Grabbed indice is used to keep track of the current image in the average.
+
+            ============== ========== ==============================
+            **Parameters**   **Type**  **Description**
+
+            *Naverage*        int       Number of images to average
+            ============== ========== ==============================
+
+            See Also
+            --------
+            utility_classes.DAQ_TCP_server.process_cmds
+        """
+        try:
+            self.ind_grabbed = 0  # to keep track of the current image in the average
+            self.Naverage = Naverage
+            self.controller.ask_rpc(method="send_data", grabber_type=self.grabber_type)
+
+        except Exception as e:
+            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
+
+    def stop(self):
+        """
+            not implemented.
+        """
+        pass
+        return ""
+
+    # Methods for RPC calls
+    def set_x_axis(self, data, label: str = "", units: str = ""):
+        self.x_axis = dict(data=data, label=label, units=units)
+        self.emit_x_axis()
+
+    def set_y_axis(self, data, label: str = "", units: str = ""):
+        self.y_axis = dict(data=data, label=label, units=units)
+        self.emit_y_axis()
+
+    def set_data(self, data: list) -> None:
+        """
+            Set the grabbed data signal.
+
+            corresponds to the "data_ready" signal
+        """
+        raise NotImplementedError()
+        self.dte_signal.emit(DataToExport('TCP0D', data=[DataFromPlugins(name='LECOServer', data=data, dim='Data0D')]))
