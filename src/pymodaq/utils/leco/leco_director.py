@@ -46,7 +46,11 @@ class LECODirector:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        name = self.settings.child('module_name').value()
+        try:
+            name = self.settings.child("main_settings", 'module_name').value()
+        except Exception as exc:
+            print("name not available", exc)
+            name = "director_whatever"
 
         print("name", name)
         self._listener = Listener(name=name)

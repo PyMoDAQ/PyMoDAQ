@@ -58,7 +58,7 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
         """
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
                                  controller=None))
-        actor_name = self.settings.child("actor_name")
+        actor_name = self.settings.child("actor_name").value()
         self.controller = self.ini_detector_init(  # type: ignore
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),

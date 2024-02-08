@@ -1,6 +1,6 @@
 from easydict import EasyDict as edict
 
-from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters, main,
+from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
 
 from pymodaq.utils.data import DataFromPlugins, DataToExport
@@ -11,7 +11,7 @@ from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
 
 
-class LECOMoveDirector(LECODirector, DAQ_Move_base):
+class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """A control module, which in the dashboard, allows to control a remote Move module.
 
         ================= ==============================
@@ -29,6 +29,8 @@ class LECOMoveDirector(LECODirector, DAQ_Move_base):
     settings: Parameter
     controller: ActuatorDirector
 
+    is_multiaxes = False
+    axes_names = []
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType['DataActuator']
 
@@ -37,7 +39,7 @@ class LECOMoveDirector(LECODirector, DAQ_Move_base):
                                                 'move_done']
     socket_types = ["ACTUATOR"]
     params = [
-    ] + comon_parameters() + leco_parameters
+    ] + comon_parameters_fun(is_multiaxes=is_multiaxes, axes_names=axes_names) + leco_parameters
 
     def __init__(self, parent=None, params_state=None, **kwargs) -> None:
         super().__init__(parent=parent,
@@ -58,7 +60,7 @@ class LECOMoveDirector(LECODirector, DAQ_Move_base):
     def commit_settings(self, param) -> None:
         self.commit_leco_settings(param=param)
 
-    def ini_stage(self, controller=None) -> tuple[str, bool]:
+    def ini_stage(self, controller=None):
         """Actuator communication initialization
 
         Parameters
@@ -72,17 +74,25 @@ class LECOMoveDirector(LECODirector, DAQ_Move_base):
         initialized: bool
             False if initialization failed otherwise True
         """
-        actor_name = self.settings.child("actor_name")
+        actor_name = self.settings.child("actor_name").value()
+        print("actor_name", actor_name)
         self.controller = self.ini_stage_init(  # type: ignore
             old_controller=controller,
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
             )
-        self.controller.set_remote_name(self.communicator.full_name)
+        try:
+            self.controller.set_remote_name(self.communicator.full_name)
+        except TimeoutError:
+            print("Timeout setting remote name.")
         self.settings.child('infos').addChildren(self.params_client)
 
         self.settings.child('units').hide()
         self.settings.child('epsilon').hide()
-        return "Initialized", True
+
+        self.status.info = info
+        self.status.controller = self.controller
+        self.status.initialized = True
+        return self.status
 
     def move_abs(self, position: DataActuator) -> None:
         position = self.check_bound(position)
