@@ -3,13 +3,13 @@
 How to modify existing PyMoDAQ’s code?
 ======================================
 
-+------------------------------------+---------------------------------------+
-| Author email                       | david.bresteau@cea.fr                 |
-+------------------------------------+---------------------------------------+
-| Last update                        | december 2023                         |
-+------------------------------------+---------------------------------------+
-| Difficulty                         | Intermediate                          |
-+------------------------------------+---------------------------------------+
++------------------------------------+---------------------------------------------+
+| Author email                       | david.bresteau@cea.fr romain.geneaux@cea.fr |
++------------------------------------+---------------------------------------------+
+| Last update                        | january 2024                                |
++------------------------------------+---------------------------------------------+
+| Difficulty                         | Intermediate                                |
++------------------------------------+---------------------------------------------+
 
 .. figure:: /image/tutorial_create_github_account/github_logo.png
     :width: 200
@@ -60,14 +60,16 @@ __ https://github.com/PyMoDAQ/PyMoDAQ
     Be careful not to confuse the PyMoDAQ *GitHub account* and the *repository*.
 
 .. figure:: /image/tutorial_contribute_to_pymodaq_code/pmd_branches.png
-    :width: 600
 
-There are several branches of the PyMoDAQ repository. The most important ones are:
+There are several branches of the PyMoDAQ repository. Branches are used to prepare future releases, to develop new
+features or to patch bugs, without risking modifying the stable version of the code. The full branch structure is described
+at length :ref:`in the Developer's guide <branches_release_cycle_doc>`. For our purposes here, let us just mention the two
+most important branches:
 
-* **main** This is the most stable branch. It is the present state of the code. When you install PyMoDAQ with pip, it
+* **the stable branch**. It is the present state of the code. When you install PyMoDAQ with pip, it
   is this version of the code that is downloaded.
 
-* **pymodaq-dev** This is the development branch. It is *ahead* of the main branch, in the sense that it contains more
+* **The development branch**. It is *ahead* of the main branch, in the sense that it contains more
   recent commits than the main branch. It is thus the future state of the code. This is where the last developments
   of the code of PyMoDAQ are pushed. When the developers are happy with the state of this branch, typically when they
   finished to develop a new functionality and they tested it, they will merge the develop branch into the main branch,
@@ -87,6 +89,11 @@ detail each step in the following.
 
 (1) Fork the upstream repository
 ++++++++++++++++++++++++++++++++
+
+.. note::
+    In the screenshots below, the stable and development branches are called *main* and *pymodaq-dev*. This naming scheme
+    is now deprecated. Branch names now correspond to the current PyMoDAQ versions. For instance, if the current stable
+    version is 5.6.2, the stable branch will be called *5.6.x* and the development branch will be called *5.7.x_dev*.
 
 While we are connected to our GitHub account, let’s go to the PyMoDAQ repository and select the *pymodaq-dev* branch.
 Then we click on the *Fork* button.

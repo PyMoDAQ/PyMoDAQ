@@ -32,8 +32,65 @@ Finally I advise to create a dedicated conda environment for this and install Py
 Then any change on the code will be *seen* by python interpreter so that you can see and test your modifications. Think about
 writing tests that will make sure your code is sound and that modification elsewhere doesn't change the expected behavior.
 
-When ready, you can create a pull request from your code into the main development branch.
+When ready, you can create a pull request from your code into the proper branch, as discussed in the next section.
 
+Branch structure and release cycle
+##################################
+.. _branches_release_cycle_doc:
+
+There are several branches of the PyMoDAQ repository, directly linked to the *release cycle* of PyMoDAQ, which we
+define here. PyMoDAQ versioning follows usual practice, as described `in this link <https://en.wikipedia.org/wiki/Software_versioning>`_:
+
+.. figure:: https://upload.wikimedia.org/wikipedia/commons/8/82/Semver.jpg
+    :width: 150
+    :align: center
+
+Starting from January 2024, the following structure was agreed upon by the contributors. At any given time,
+there is a **stable** version of PyMoDAQ - at the time of writing it is 4.1.0 - which is not to be modified except for
+bugfixes, and a **development** version (currently, 4.2.0), onto which new features may be added.
+
+The release cycle is illustrated in this figure:
+
+.. figure:: /image/tutorial_contribute_to_pymodaq_code/release_cycle_pymodaq3.png
+
+This cycle makes use of several types of branches:
+
+**Code flow branches:**
+
+* **the stable branch, eg: '4.1.x'** This is the branch representing the stable version of PyMoDAQ. No change should be
+  made on this branch except bugfixes and hotfixes (see below). This is the branch from which the official releases are
+  created, for instance version 4.1.0, 4.1.1, 4.1.2, etc.
+
+* **the development branch, eg: '4.2.x_dev** Note that the branch name differs from the stable branch by one increment
+  on the minor revision number (2 instead of 1), and the '_dev' suffix is added for clarity.
+  This is the development branch. It is *ahead* of the main branch, in the sense that it contains more
+  recent commits than the main branch. It is thus the future state of the code. This is where the last developments
+  of the code of PyMoDAQ are pushed. When the developers are happy with the state of this branch, typically when they
+  finished to develop a new functionality and they tested it, this will lead to a new *release* of PyMoDAQ (4.1.x -> 4.2.0 in our example).
+  In practice, the branch will simply be renamed from *4.2.x_dev* to *4.2.x*, and a new branch *4.3.x_dev* will be created
+  to continue the cycle.
+
+**Temporary branches:**
+
+* **Feature, eg: 'feature/new_colors'**: Any additional feature should be done on a feature branch. They are created based
+  on the current development branch. When the feature is complete, a Pull Request must be open to integrate the changes into
+  the development branch.
+
+* **Bugfix, eg: 'bugfix/remove_annoying_message'**: These branches are meant to correct small issues. It can be created based
+  on either the stable or development branch, depending on where the bug is located. Regardless, any bugfix must then be applied to
+  all branches, if applicable (see note below).
+
+* **Hotfix, eg: 'hotfix/fix_huge_bug'**: This is similar to a bugfix, but for more important bugs. More precisely, hotfixes
+  are important enough that when applied, they will trigger an immediate new release (e.g. *4.1.1* -> *4.1.2*) that incorporate the fix.
+  At the contrary bugfixes can wait for a future release.
+
+.. note::
+    **Applying fixes across several branches**
+
+    Let's consider the case where a bug is found on the **stable** branch. We create a new branch to fix it, open a pull request
+    into the stable branch, and wait for it to be accepted. However, it is likely that the buggy code is also part of the
+    **development** version, requiring another pull request on that branch! Thus, but when a bug is found, one should always
+    remember to check if it is present on several branches.
 
 Where to contribute
 ###################
