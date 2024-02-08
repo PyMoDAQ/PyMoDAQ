@@ -62,6 +62,8 @@ params = [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
          ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [

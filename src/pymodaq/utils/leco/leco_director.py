@@ -2,6 +2,7 @@
 from typing import Callable, Sequence
 
 from pyleco.utils.listener import Listener, CommunicatorPipe
+from pyleco.utils import listener
 
 import pymodaq.utils.parameter.utils as putils
 # object used to send info back to the main thread:
@@ -9,11 +10,16 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
+from pymodaq.utils.leco.leco_client import PymodaqPipeHandler
+
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'text': 'Name of the actor plugin to communicate with.'},
 ]
+
+
+listener.PipeHandler = PymodaqPipeHandler
 
 
 class LECODirector:
@@ -53,6 +59,7 @@ class LECODirector:
             name = "director_whatever"
 
         print("name", name)
+        # TODO use the same Listener as the LECOActorModule
         self._listener = Listener(name=name)
         self._listener.start_listen()
         self.communicator = self._listener.get_communicator()

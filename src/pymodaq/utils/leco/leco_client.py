@@ -7,22 +7,63 @@ except ImportError:
     class StrEnum(str, Enum):
         pass
 import logging
+from typing import Optional
 
 import numpy as np
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.leco.utils import create_pymodaq_message, PYMODAQ_MESSAGE_TYPE
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.core.message import Message
-from pyleco.utils.listener import Listener
+from pyleco.utils.listener import Listener, PipeHandler
+from pyleco.utils import listener
 from pyleco.directors.director import Director
 
 
 class LECO_Client_Commands(StrEnum):
     LECO_CONNECTED = "leco_connected"
     LECO_DISCONNECTED = "leco_disconnected"
+
+
+class PymodaqPipeHandler(PipeHandler):
+
+    current_msg: Optional[Message]
+    return_payload: Optional[list[bytes]]
+
+    def finish_handle_commands(self, message: Message) -> None:
+        if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
+            self.handle_pymodaq_commands(msg=message)
+        else:
+            super().finish_handle_commands(message)
+
+    def handle_pymodaq_commands(self, msg: Message) -> None:
+        if b'"method":' in msg.payload[0]:
+            # Prepare storage
+            self.current_msg = msg
+            self.return_payload = None
+            # Handle message
+            self.log.info(f"Handling commands of {msg}.")
+            reply = self.rpc.process_request(msg.payload[0])
+            response = create_pymodaq_message(
+                receiver=msg.sender,
+                conversation_id=msg.conversation_id,
+                data=reply,
+                pymodaq_data=self.return_payload)
+
+            if self.return_payload:
+                response.payload += self.return_payload
+            self.send_message(response)
+            # Reset storage
+            self.current_msg = None
+            self.return_payload = None
+        else:
+            self.log.error(f"Unknown message from {msg.sender!r} received: {msg.payload[0]!r}")
+
+
+listener.PipeHandler = PymodaqPipeHandler  # inject modified pipe handler
 
 
 class PymodaqListener(Listener):
@@ -101,30 +142,6 @@ class PymodaqListener(Listener):
         except AttributeError:
             pass
 
-    # def finish_handle_commands(self, message: Message) -> None:
-    #     """Handle the list of commands: Redirect them to the application."""
-    #     try:
-    #         method = message.data.get("method")  # type: ignore
-    #     except AttributeError:
-    #         method = None
-    #     if method in self.local_methods:
-    #         super(PipeHandler, self.message_handler).handle_commands(message)
-    #     else:
-    #         self.signals.message.emit(message)
-
-    # def handle_message(self, message: Message) -> None:
-    #     """Handle a message from the message_handler."""
-    #     if message.header_elements.message_type != MessageTypes.JSON:
-    #         raise IOError("Unknown message format received: {message}")
-    #     command: dict = message.data  # type: ignore
-    #     method = command.get("method")
-    #     if method is None:
-    #         raise IOError("invalid command received.")
-    #     try:
-    #         self.request_buffer[method].append(message)
-    #     except KeyError:
-    #         self.request_buffer[method] = [message]
-
     # generic commands
     def set_info(self, path: list[str], param_dict_str: str) -> None:
         self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
@@ -183,7 +200,15 @@ class PymodaqListener(Listener):
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
-            self.director.ask_rpc(method="set_data", data=command.attribute[0]['data'])
+            if True:  # TODO if we have a pymodaq data object
+                command_string = self.communicator.rpc_generator.build_request_str(method="set_data", data=None)
+                pymodaq_data = b""  # TODO serialized pymodaq data object
+                message = create_pymodaq_message(receiver=self.director.actor, data=command_string,
+                                                 pymodaq_data=pymodaq_data)
+                response = self.director.ask_message(message)
+                self.communicator.interpret_rpc_response(response)
+            else:  # it is a plain value
+                self.director.ask_rpc(method="set_data", data=command.attribute[0]['data'])
 
         elif command.command == 'send_info':
             self.director.ask_rpc(method="set_info",

@@ -1,4 +1,6 @@
 
+from typing import Optional
+
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
@@ -11,7 +13,7 @@ from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
 
 
-class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
+class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     """A control module, which in the dashboard, allows to control a remote Viewer module"""
 
     settings: Parameter
@@ -144,12 +146,24 @@ class LECOViewerDirector(LECODirector, DAQ_Viewer_base):
         self.y_axis = dict(data=data, label=label, units=units)
         self.emit_y_axis()
 
-    def set_data(self, data: list) -> None:
+    def set_data(self, data: Optional[list] = None) -> None:
         """
-            Set the grabbed data signal.
+        Set the grabbed data signal.
 
-            corresponds to the "data_ready" signal
+        corresponds to the "data_ready" signal
+
+        :param data: If None, look for the additional object
         """
+        if data is None:
+            try:
+                msg = self.communicator.handler.current_msg
+                serialized_object = msg.payload[1]
+            except AttributeError:
+                raise ValueError("Expected pymodaq message, but got normal JSON one.")
+            # TODO deserialize object
+            deserialized_object = 6
+            # TODO how to format that?
+            self.dte_signal.emit(DataToExport("TCP0D", data=[DataFromPlugins(name="LECODirector", data)]))
         raise NotImplementedError()
         self.dte_signal.emit(DataToExport('TCP0D', data=[DataFromPlugins(name='LECOServer', data=data, dim='Data0D')]))
 
