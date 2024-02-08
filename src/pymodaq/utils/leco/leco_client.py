@@ -201,11 +201,12 @@ class PymodaqListener(Listener):
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
             if True:  # TODO if we have a pymodaq data object
-                command_string = self.communicator.rpc_generator.build_request_str(method="set_data", data=None)
-                pymodaq_data = b""  # TODO serialized pymodaq data object
+                command_string = self.communicator.rpc_generator.build_request_str(
+                    method="set_data",
+                    data=None)  # None indicates to use the additional frames
                 message = create_pymodaq_message(receiver=self.director.actor, data=command_string,
-                                                 pymodaq_data=pymodaq_data)
-                response = self.director.ask_message(message)
+                                                 pymodaq_data=command.attribute[0]['data'])
+                response = self.communicator.ask_message(message)
                 self.communicator.interpret_rpc_response(response)
             else:  # it is a plain value
                 self.director.ask_rpc(method="set_data", data=command.attribute[0]['data'])

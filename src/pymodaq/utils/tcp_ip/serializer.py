@@ -105,6 +105,7 @@ class Serializer:
             return self.dte_serialization(self._obj)
         elif isinstance(self._obj, list):
             return self.list_serialization(self._obj)
+        raise ValueError
 
     @staticmethod
     def int_to_bytes(an_integer: int) -> bytes:

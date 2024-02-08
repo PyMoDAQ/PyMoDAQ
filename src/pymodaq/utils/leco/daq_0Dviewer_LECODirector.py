@@ -8,6 +8,7 @@ from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, como
 from pymodaq.utils.data import DataFromPlugins, DataToExport
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
@@ -160,10 +161,8 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                 serialized_object = msg.payload[1]
             except AttributeError:
                 raise ValueError("Expected pymodaq message, but got normal JSON one.")
-            # TODO deserialize object
-            deserialized_object = 6
-            # TODO how to format that?
-            self.dte_signal.emit(DataToExport("TCP0D", data=[DataFromPlugins(name="LECODirector", data)]))
+            dte = DeSerializer(serialized_object).dte_deserialization()
+            self.dte_signal.emit(dte)
         raise NotImplementedError()
         self.dte_signal.emit(DataToExport('TCP0D', data=[DataFromPlugins(name='LECOServer', data=data, dim='Data0D')]))
 
