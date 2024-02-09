@@ -9,6 +9,7 @@ from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
+from pymodaq.utils.leco.utils import create_pymodaq_message, PYMODAQ_MESSAGE_TYPE
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -32,7 +33,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     is_multiaxes = False
     axes_names = []
     params_client = []  # parameters of a client grabber
-    data_actuator_type = DataActuatorType['DataActuator']
+    data_actuator_type = DataActuatorType['float']  # DataActuatorType['DataActuator']
 
     message_list = LECODirector.message_list + ["move_abs", 'move_home', 'move_rel',
                                                 'get_actuator_value', 'stop_motion', 'position_is',
@@ -84,12 +85,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.controller.set_remote_name(self.communicator.full_name)
         except TimeoutError:
             print("Timeout setting remote name.")
-        self.settings.child('infos').addChildren(self.params_client)
+        # self.settings.child('infos').addChildren(self.params_client)
 
         self.settings.child('units').hide()
         self.settings.child('epsilon').hide()
 
-        self.status.info = info
+        self.status.info = "LECODirector"
         self.status.controller = self.controller
         self.status.initialized = True
         return self.status

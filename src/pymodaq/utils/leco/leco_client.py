@@ -33,23 +33,30 @@ class PymodaqPipeHandler(PipeHandler):
     current_msg: Optional[Message]
     return_payload: Optional[list[bytes]]
 
-    def finish_handle_commands(self, message: Message) -> None:
+    def handle_message(self, message: Message) -> None:
         if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
-            self.handle_pymodaq_commands(msg=message)
+            self.handle_pymodaq_message(message=message)
         else:
-            super().finish_handle_commands(message)
+            return super().handle_message(message)
 
-    def handle_pymodaq_commands(self, msg: Message) -> None:
-        if b'"method":' in msg.payload[0]:
+    def finish_handle_commands(self, message: Message) -> None:
+        # pyleco <0.1.1
+        if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
+            self.handle_pymodaq_message(message=message)
+        else:
+            super().finish_handle_commands(message)  # type: ignore
+
+    def handle_pymodaq_message(self, message: Message) -> None:
+        if b'"method":' in message.payload[0]:
             # Prepare storage
-            self.current_msg = msg
+            self.current_msg = message
             self.return_payload = None
             # Handle message
-            self.log.info(f"Handling commands of {msg}.")
-            reply = self.rpc.process_request(msg.payload[0])
+            self.log.info(f"Handling commands of {message}.")
+            reply = self.rpc.process_request(message.payload[0])
             response = create_pymodaq_message(
-                receiver=msg.sender,
-                conversation_id=msg.conversation_id,
+                receiver=message.sender,
+                conversation_id=message.conversation_id,
                 data=reply,
                 pymodaq_data=self.return_payload)
 
@@ -60,7 +67,8 @@ class PymodaqPipeHandler(PipeHandler):
             self.current_msg = None
             self.return_payload = None
         else:
-            self.log.error(f"Unknown message from {msg.sender!r} received: {msg.payload[0]!r}")
+            self.log.error(
+                f"Unknown message from {message.sender!r} received: {message.payload[0]!r}")
 
 
 listener.PipeHandler = PymodaqPipeHandler  # inject modified pipe handler
