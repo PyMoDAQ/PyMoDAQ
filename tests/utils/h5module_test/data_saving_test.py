@@ -212,15 +212,6 @@ class TestDataSaverLoader:
         assert len(loaded_data) == 1
         assert loaded_data.labels == ['mylabel2']
 
-    def test_data_axes(self):
-        h5saver = saving.H5SaverLowLevel()
-        file_path = Path(r'C:\Data\2024\Dataset_20240206_000.h5')
-        h5saver.init_file(file_path)
-        dwa_loader = DataLoader(h5saver)
-        dwa_loaded = dwa_loader.load_data('/RawData/Scan012/Detector000/Data0D/CH00/Data00')
-
-        dwa_cropped = dwa_loaded.inav[0:40, 70:390]
-
 
     def test_load_with_bkg(self, get_h5saver):
         h5saver = get_h5saver
