@@ -37,7 +37,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
 
-from pymodaq.utils.leco.leco_client import PymodaqListener
+from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 
 
 local_path = config_mod.get_set_local_dir()
@@ -619,6 +619,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             if not name:
                 # HACK as a name is required
                 name = "move"
+                print("no name given!")
                 self.settings.child("main_settings", "module_name").setValue()
             self._leco_client = PymodaqListener(name=name)
             self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)

@@ -7,6 +7,7 @@ except ImportError:
     class StrEnum(str, Enum):
         pass
 import logging
+from threading import Event
 from typing import Optional
 
 import numpy as np
@@ -15,11 +16,11 @@ from qtpy.QtCore import QObject, Signal  # type: ignore
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.leco.utils import create_pymodaq_message, PYMODAQ_MESSAGE_TYPE
+from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.core.message import Message
 from pyleco.utils.listener import Listener, PipeHandler
-from pyleco.utils import listener
 from pyleco.directors.director import Director
 
 
@@ -28,10 +29,37 @@ class LECO_Client_Commands(StrEnum):
     LECO_DISCONNECTED = "leco_disconnected"
 
 
+class ListenerSignals(QObject):
+    cmd_signal = Signal(ThreadCommand)
+    """
+    Possible messages sendable via `cmd_signal`
+        For all modules: Info, Infos, Info_xml, set_info
+
+        For a detector: Send Data 0D, Send Data 1D, Send Data 2D
+
+        For an actuator: move_abs, move_home, move_rel, check_position, stop_motion
+    """
+    # message = Signal(Message)
+
+
 class PymodaqPipeHandler(PipeHandler):
 
     current_msg: Optional[Message]
     return_payload: Optional[list[bytes]]
+
+    def __init__(self, name: str, signals: ListenerSignals, **kwargs):
+        super().__init__(name, **kwargs)
+        self.signals = signals
+
+    def register_rpc_methods(self) -> None:
+        super().register_rpc_methods()
+        self.register_rpc_method(self.set_info)
+        self.register_rpc_method(self.send_data)
+        self.register_rpc_method(self.move_abs)
+        self.register_rpc_method(self.move_rel)
+        self.register_rpc_method(self.move_home)
+        self.register_rpc_method(self.get_actuator_value)
+        self.register_rpc_method(self.stop_motion)
 
     def handle_message(self, message: Message) -> None:
         if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
@@ -70,8 +98,38 @@ class PymodaqPipeHandler(PipeHandler):
             self.log.error(
                 f"Unknown message from {message.sender!r} received: {message.payload[0]!r}")
 
+    # generic commands
+    def set_info(self, path: list[str], param_dict_str: str) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
 
-listener.PipeHandler = PymodaqPipeHandler  # inject modified pipe handler
+    # detector commands
+    def send_data(self, grabber_type: str = "") -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
+
+    # actuator commands
+    def move_abs(self, position: Optional[float]) -> None:
+        if position is None:
+            try:
+                serialized = self.current_msg.payload[1]
+            except (AttributeError, IndexError):
+                raise ValueError("You have to specify the position as float or as an object.")
+            position = DeSerializer(serialized).axis_deserialization()
+        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[position]))
+
+    def move_rel(self, position: Optional[float]) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[position]))
+
+    def move_home(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand("move_home"))
+
+    def get_actuator_value(self) -> None:
+        """Request that the actuator value is sent later on."""
+        # according to DAQ_Move, this supersedes "check_position"
+        self.signals.cmd_signal.emit(ThreadCommand("get_actuator_value"))
+
+    def stop_motion(self,) -> None:
+        # not implemented in DAQ_Move!
+        self.signals.cmd_signal.emit(ThreadCommand("stop_motion"))
 
 
 class PymodaqListener(Listener):
@@ -93,44 +151,29 @@ class PymodaqListener(Listener):
         super().__init__(name, host, port, logger=logger, timeout=timeout,
                          **kwargs)
         print("start listener as", name)
-        self.signals = self.ListenerSignals()
+        self.signals = ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
         self.request_buffer: dict[str, list[Message]] = {}
 
     local_methods = ["pong", "set_log_level"]
 
-    class ListenerSignals(QObject):
-        cmd_signal = Signal(ThreadCommand)
-        """
-        Possible messages sendable via `cmd_signal`
-            For all modules: Info, Infos, Info_xml, set_info
-
-            For a detector: Send Data 0D, Send Data 1D, Send Data 2D
-
-            For an actuator: move_abs, move_home, move_rel, check_position, stop_motion
-        """
-        # message = Signal(Message)
-
     def start_listen(self) -> None:
         print("start listening")
         super().start_listen()
-        # self.message_handler.finish_handle_commands = self.finish_handle_commands  # type: ignore
-        self.message_handler.register_on_name_change_method(self.indicate_sign_in_out)
         communicator = self.message_handler.get_communicator()
-        if self.message_handler.namespace is not None:
-            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
         self.director = Director(actor=self.remote_name, communicator=communicator)
-        for method in (
-            self.set_remote_name,
-            self.set_info,
-            self.move_abs,
-            self.move_rel,
-            self.move_home,
-            self.get_actuator_value,
-            self.stop_motion,
-        ):
-            communicator.register_rpc_method(method=method)
+
+    def _listen(self, name: str, stop_event: Event, coordinator_host: str, coordinator_port: int,
+                data_host: str, data_port: int) -> None:
+        self.message_handler = PymodaqPipeHandler(name,
+                                                  host=coordinator_host, port=coordinator_port,
+                                                  data_host=data_host, data_port=data_port,
+                                                  signals=self.signals,
+                                                  )
+        self.message_handler.register_on_name_change_method(self.indicate_sign_in_out)
+        self.message_handler.register_rpc_method(self.set_remote_name)
+        self.message_handler.listen(stop_event=stop_event)
 
     def stop_listen(self) -> None:
         super().stop_listen()
@@ -149,33 +192,6 @@ class PymodaqListener(Listener):
             self.director.actor = name
         except AttributeError:
             pass
-
-    # generic commands
-    def set_info(self, path: list[str], param_dict_str: str) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
-
-    # detector commands
-    def send_data(self, grabber_type: str = "") -> None:
-        self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
-
-    # actuator commands
-    def move_abs(self, position: float) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[position]))
-
-    def move_rel(self, position: float) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[position]))
-
-    def move_home(self) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("move_home"))
-
-    def get_actuator_value(self) -> None:
-        """Request that the actuator value is sent later on."""
-        # according to DAQ_Move, this supersedes "check_position"
-        self.signals.cmd_signal.emit(ThreadCommand("get_actuator_value"))
-
-    def stop_motion(self,) -> None:
-        # not implemented in DAQ_Move!
-        self.signals.cmd_signal.emit(ThreadCommand("stop_motion"))
 
     # @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand) -> None:
@@ -220,9 +236,10 @@ class PymodaqListener(Listener):
                 self.director.ask_rpc(method="set_data", data=command.attribute[0]['data'])
 
         elif command.command == 'send_info':
-            self.director.ask_rpc(method="set_info",
-                                  path=command.attribute['path'],
-                                  param_dict_str=ioxml.parameter_to_xml_string(command.attribute['param']))
+            self.director.ask_rpc(
+                method="set_info",
+                path=command.attribute['path'],
+                param_dict_str=ioxml.parameter_to_xml_string(command.attribute['param']))
 
         elif command.command == 'position_is':
             self.director.ask_rpc(method="set_position", position=command.attribute[0].value())

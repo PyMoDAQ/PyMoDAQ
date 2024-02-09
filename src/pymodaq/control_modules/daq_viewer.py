@@ -44,7 +44,7 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-from pymodaq.utils.leco.leco_client import PymodaqListener, LECO_Client_Commands
+from pymodaq.utils.leco.pymodaq_listener import PymodaqListener, LECO_Client_Commands
 
 logger = set_logger(get_module_name(__file__))
 config = Config()

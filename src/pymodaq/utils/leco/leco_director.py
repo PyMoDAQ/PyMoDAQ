@@ -10,7 +10,7 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
-from pymodaq.utils.leco.leco_client import PymodaqPipeHandler
+from pymodaq.utils.leco.pymodaq_listener import PymodaqPipeHandler
 
 
 leco_parameters = [
@@ -56,7 +56,8 @@ class LECODirector:
             name = self.settings.child("main_settings", 'module_name').value()
         except Exception as exc:
             print("name not available", exc)
-            name = "director_whatever"
+            name = "whatever"
+        name += "_director"  # to distinguish it from the DAQ_Move/Viewer listener
 
         print("name", name)
         # TODO use the same Listener as the LECOActorModule
