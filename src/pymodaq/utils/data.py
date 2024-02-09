@@ -26,7 +26,10 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils import math_utils as mutils
 
+
+
 logger = set_logger(get_module_name(__file__))
+
 
 
 class DataIndexWarning(Warning):
@@ -1445,6 +1448,12 @@ class DataWithAxes(DataBase):
 
         self.get_dim_from_data_axes()  # in DataBase, dim is processed from the shape of data, but if axes are provided
         #then use get_dim_from axes
+
+    def plot(self, plotter_backend: str):
+        from pymodaq.utils.plotting.data_viewers.plotter import PlotterFactory, register_plotter
+        plotter_factory = PlotterFactory()
+        register_plotter()
+        return plotter_factory.get(plotter_backend, self.dim.name).plot(self)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
