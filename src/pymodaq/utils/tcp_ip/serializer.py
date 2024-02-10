@@ -16,6 +16,18 @@ if TYPE_CHECKING:
     from pymodaq.utils.tcp_ip.mysocket import Socket
 
 
+SERIALIZABLE = Union[
+    int,
+    str,
+    numbers.Number,
+    list,
+    np.ndarray,
+    Axis,
+    DataWithAxes,
+    DataToExport,
+]
+
+
 class SocketString:
     """Mimic the Socket object but actually using a bytes string not a socket connection
 
@@ -70,7 +82,7 @@ class SocketString:
 class Serializer:
     """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and DataToExport objects"""
 
-    def __init__(self, obj: Union[int, str, numbers.Number, list, np.ndarray, Axis, DataWithAxes, DataToExport] = None):
+    def __init__(self, obj: SERIALIZABLE = None):
         self._bytes_string = b''
         self._obj = obj
 
@@ -122,17 +134,17 @@ class Serializer:
         if not isinstance(an_integer, int):
             raise TypeError(f'{an_integer} should be an integer, not a {type(an_integer)}')
         elif an_integer < 0:
-            raise ValueError(f'Can only serialize unsigned integer using this method')
+            raise ValueError('Can only serialize unsigned integer using this method')
         return an_integer.to_bytes(4, 'big')
 
     @staticmethod
     def str_to_bytes(message: str) -> bytes:
         if not isinstance(message, str):
-            raise TypeError(f'Can only serialize str object using this method')
+            raise TypeError('Can only serialize str object using this method')
         return message.encode()
 
     @classmethod
-    def str_len_to_bytes(cls, message: str) -> (bytes, bytes):
+    def str_len_to_bytes(cls, message: Union[str, bytes]) -> (bytes, bytes):
         """ Convert a string and its length to two bytes
         Parameters
         ----------

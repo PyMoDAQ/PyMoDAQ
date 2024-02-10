@@ -44,7 +44,7 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-from pymodaq.utils.leco.pymodaq_listener import PymodaqListener, LECO_Client_Commands
+from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECO_Client_Commands
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -1121,7 +1121,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 # HACK as a name is required
                 name = "viewer"
                 self.settings.child("main_settings", "module_name").setValue(name)
-            self._leco_client = PymodaqListener(name=name)
+            self._leco_client = ViewerActorListener(name=name)
             self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()

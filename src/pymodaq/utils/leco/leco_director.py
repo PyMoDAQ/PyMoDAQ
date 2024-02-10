@@ -1,25 +1,19 @@
 
 from typing import Callable, Sequence
 
-from pyleco.utils.listener import Listener, CommunicatorPipe
-from pyleco.utils import listener
-
 import pymodaq.utils.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
-from pymodaq.utils.leco.pymodaq_listener import PymodaqPipeHandler
+from pymodaq.utils.leco.pymodaq_listener import PymodaqListener, PymodaqCommunicator
 
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'text': 'Name of the actor plugin to communicate with.'},
 ]
-
-
-listener.PipeHandler = PymodaqPipeHandler
 
 
 class LECODirector:
@@ -47,7 +41,7 @@ class LECODirector:
     controller: GenericDirector
     settings: Parameter
 
-    communicator: CommunicatorPipe
+    communicator: PymodaqCommunicator
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -60,8 +54,8 @@ class LECODirector:
         name += "_director"  # to distinguish it from the DAQ_Move/Viewer listener
 
         print("name", name)
-        # TODO use the same Listener as the LECOActorModule
-        self._listener = Listener(name=name)
+        # TODO use the same Listener instance as the LECOActorModule
+        self._listener = PymodaqListener(name=name)
         self._listener.start_listen()
         self.communicator = self._listener.get_communicator()
         self.register_rpc_methods((

@@ -4,11 +4,12 @@ Utils for the Director Modules
 These directors correspond to the PymodaqListener
 """
 
-from typing import Optional
+from typing import Optional, Union
 
 import pymodaq.utils.parameter.utils as putils
 from pymodaq.utils.parameter import Parameter, ioxml
-
+from pymodaq.utils.leco.utils import create_pymodaq_message
+from pymodaq.control_modules.move_utility_classes import DataActuator
 from pyleco.directors.director import Director
 
 
@@ -27,6 +28,12 @@ class GenericDirector(Director):
     def set_info_str(self, path: list[str], param_dict_str: str) -> None:
         self.ask_rpc(method="sef_info", path=path, param_dict_str=param_dict_str)
 
+    def ask_rpc_pymodaq(self, method: str, pymodaq_data, actor: None = None):
+        string = self.communicator.rpc_generator.build_request_str(method=method, **kwargs)
+        message = create_pymodaq_message(receiver=self._actor_check(actor), data=string, pymodaq_data=pymodaq_data)
+        response = self.communicator.ask_message(message)
+        return self.communicator.rpc_generator.get_result_from_response(response.payload[0])
+
 
 class DetectorDirector(GenericDirector):
     def send_data(self, grabber_type: str = "") -> None:
@@ -34,10 +41,12 @@ class DetectorDirector(GenericDirector):
 
 
 class ActuatorDirector(GenericDirector):
-    def move_abs(self, position: float) -> None:
+    def move_abs(self, position: Union[float, DataActuator]) -> None:
+        if isinstance(position, DataActuator):
+            create_pymodaq_message(self.actor)
         self.ask_rpc("move_abs", position=position)
 
-    def move_rel(self, position: float) -> None:
+    def move_rel(self, position: Union[float, DataActuator]) -> None:
         self.ask_rpc("move_rel", position=position)
 
     def move_home(self) -> None:

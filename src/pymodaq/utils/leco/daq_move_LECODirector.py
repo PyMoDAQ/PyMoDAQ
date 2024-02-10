@@ -9,7 +9,6 @@ from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
-from pymodaq.utils.leco.utils import create_pymodaq_message, PYMODAQ_MESSAGE_TYPE
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
