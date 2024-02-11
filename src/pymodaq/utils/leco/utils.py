@@ -43,4 +43,4 @@ class PymodaqMessage(Message):
 
     @property
     def pymodaq_data(self) -> Optional[DeSerializer]:
-         return get_pymodaq_data(message=self)
+        return get_pymodaq_data(message=self)

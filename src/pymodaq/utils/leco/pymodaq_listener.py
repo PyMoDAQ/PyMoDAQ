@@ -10,7 +10,6 @@ import logging
 from threading import Event, get_ident
 from typing import Any, Optional, Union
 
-import numpy as np
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
 from pymodaq.utils.daq_utils import ThreadCommand
@@ -51,7 +50,6 @@ class PymodaqCommunicator(CommunicatorPipe):
         """Send a message with an optional pymodaq object and return the answer."""
         command_string = self.rpc_generator.build_request_str(
             method=method,
-            data=None,  # None indicates to use the additional frames
             **kwargs)
         message = PymodaqMessage(receiver=receiver, data=command_string, pymodaq_data=pymodaq_data)
         response = self.ask_message(message, timeout=timeout)
@@ -77,7 +75,7 @@ class PymodaqPipeHandler(PipeHandler):
     """
 
     current_msg: Optional[PymodaqMessage]
-    return_payload: Optional[list[bytes]]
+    return_paymodaq_data: Optional[SERIALIZABLE]
 
     def __init__(self, name: str, signals: ListenerSignals, **kwargs):
         super().__init__(name, **kwargs)
@@ -105,7 +103,7 @@ class PymodaqPipeHandler(PipeHandler):
         if b'"method":' in message.payload[0]:
             # Prepare storage
             self.current_msg = message
-            self.return_payload = None
+            self.return_paymodaq_data = None
             # Handle message
             self.log.info(f"Handling commands of {message}.")
             reply = self.rpc.process_request(message.payload[0])
@@ -113,12 +111,12 @@ class PymodaqPipeHandler(PipeHandler):
                 receiver=message.sender,
                 conversation_id=message.conversation_id,
                 data=reply,
-                pymodaq_data=self.return_payload,
+                pymodaq_data=self.return_paymodaq_data,
                 )
             self.send_message(response)
             # Reset storage
             self.current_msg = None
-            self.return_payload = None
+            self.return_paymodaq_data = None
         else:
             self.log.error(
                 f"Unknown message from {message.sender!r} received: {message.payload[0]!r}")
@@ -161,11 +159,11 @@ class ActorHandler(PymodaqPipeHandler):
         self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
 
     # actuator commands
-    def move_abs(self, position: Optional[float]) -> None:
+    def move_abs(self, position: Optional[float] = None) -> None:
         pos = self.extract_dwa_object() if position is None else position
         self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[pos]))
 
-    def move_rel(self, position: Optional[float]) -> None:
+    def move_rel(self, position: Optional[float] = None) -> None:
         pos = self.extract_dwa_object() if position is None else position
         self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[pos]))
 
