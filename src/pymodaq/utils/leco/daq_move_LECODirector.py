@@ -79,7 +79,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             False if initialization failed otherwise True
         """
         actor_name = self.settings.child("actor_name").value()
-        print("actor_name", actor_name)
         self.controller = self.ini_stage_init(  # type: ignore
             old_controller=controller,
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
@@ -87,7 +86,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         try:
             self.controller.set_remote_name(self.communicator.full_name)
         except TimeoutError:
-            print("Timeout setting remote name.")
+            print("Timeout setting remote name.")  # TODO change to real logging
         # self.settings.child('infos').addChildren(self.params_client)
 
         self.settings.child('units').hide()
@@ -143,11 +142,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             dta = get_pymodaq_data(self.listener.message_handler.current_msg)  # type: ignore
             if dta is None:
                 raise ValueError
-            try:
-                pos = dta.dwa_deserialization()
-            except Exception:
-                print("payload: ", self.listener.message_handler.current_msg.payload[1:])
-                raise
+            pos = dta.dwa_deserialization()
         else:
             pos = DataActuator(data=position)
         pos = self.get_position_with_scaling(pos)

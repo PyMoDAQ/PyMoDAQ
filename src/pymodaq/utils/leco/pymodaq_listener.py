@@ -218,7 +218,6 @@ class PymodaqListener(Listener):
                  **kwargs) -> None:
         super().__init__(name, host, port, logger=logger, timeout=timeout,
                          **kwargs)
-        print("start listener as", name)
         self.signals = ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
@@ -274,7 +273,6 @@ class ActorListener(PymodaqListener):
     # @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
-        print("COMMAND", command)
 
         # generic commands
         if command.command == "ini_connection":
