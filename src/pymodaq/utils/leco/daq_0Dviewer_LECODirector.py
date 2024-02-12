@@ -12,6 +12,7 @@ from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
+from pymodaq.utils.leco.utils import get_pymodaq_data
 
 
 class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
@@ -32,8 +33,7 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
     def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
         # TODO change to super().__init__() once DAQ_Viewer_base is "cooperative"
-        DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state, **kwargs)
-        LECODirector.__init__(self)
+        super().__init__(parent=parent, params_state=params_state, **kwargs)
         self.register_rpc_methods((
             self.set_x_axis,
             self.set_y_axis,
@@ -62,13 +62,14 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
                                  controller=None))
         actor_name = self.settings.child("actor_name").value()
+        print("actor_name", actor_name)
         self.controller = self.ini_detector_init(  # type: ignore
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
         self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         try:
-            self.settings.child(('infos')).addChildren(self.params_GRABBER)
+            # self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
             # init axes from image , here returns only None values (to tricky to di it with the
             # server and not really necessary for images anyway)
@@ -80,6 +81,7 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             return self.status
 
         except Exception as e:
+            print("e")
             self.status.info = getLineInfo() + str(e)
             self.status.initialized = False
             return self.status
@@ -126,6 +128,7 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         try:
             self.ind_grabbed = 0  # to keep track of the current image in the average
             self.Naverage = Naverage
+            self.controller.set_remote_name(self.communicator.full_name)
             self.controller.send_data(grabber_type=self.grabber_type)
 
         except Exception as e:
@@ -163,8 +166,6 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                 raise ValueError("Expected pymodaq message, but got normal JSON one.")
             dte = DeSerializer(serialized_object).dte_deserialization()
             self.dte_signal.emit(dte)
-        raise NotImplementedError()
-        self.dte_signal.emit(DataToExport('TCP0D', data=[DataFromPlugins(name='LECOServer', data=data, dim='Data0D')]))
 
 
 if __name__ == '__main__':

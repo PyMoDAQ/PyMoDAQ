@@ -3,9 +3,9 @@ from typing import Optional
 
 import pytest
 from pyleco.test import FakeContext
-from pyleco.core.message import Message
+from pyleco.core.message import Message, MessageTypes
 
-from pymodaq.utils.leco.utils import PymodaqMessage
+from pymodaq.utils.leco.utils import PymodaqMessage, PYMODAQ_MESSAGE_TYPE
 
 from pymodaq.utils.leco.pymodaq_listener import (PymodaqCommunicator, PymodaqPipeHandler,
                                                  PymodaqListener, ListenerSignals)
@@ -83,6 +83,48 @@ class Test_communicator_ask_rpc_pymodaq:
         self.read = self.pymodaq_response
         result = communicator_arp.ask_rpc_pymodaq(receiver="remote", method="test_method")
         assert result.scalar_deserialization() == obj
+
+
+class Test_communicator_ask_rpc_flexible:
+    json_response = PymodaqMessage("handler", "remote", conversation_id=cid,
+                                   data={"jsonrpc": "2.0", "id": 1, "result": 5})
+
+    send: Message
+    read: Message
+
+    @pytest.fixture
+    def communicator_arp(self, communicator: PymodaqCommunicator) -> PymodaqCommunicator:
+        def ask_message(message: Message, timeout=None) -> Message:
+            if not message.sender:
+                message.sender = b"handler"
+            message.header = cid + message.header[16:]
+            self.send = message
+            return self.read
+
+        communicator.ask_message = ask_message  # type: ignore
+        return communicator
+
+    def test_send_json(self, communicator_arp: PymodaqCommunicator):
+        obj = {'a': 123.456}  # anything not serializable by pymodaq
+        self.read = self.json_response
+        communicator_arp.ask_rpc_flexible(receiver="remote", method="some",
+                                          pymodaq_data=obj,
+                                          pymodaq_data_name="data_field")
+        assert self.send == Message(receiver="remote", sender="handler",
+                                    message_type=MessageTypes.JSON, conversation_id=cid,
+                                    data={"jsonrpc": "2.0", "id": 1, "method": "some",
+                                          "params": {"data_field": obj}})
+
+    def test_send_pymodaq(self, communicator_arp: PymodaqCommunicator):
+        self.read = self.json_response
+        communicator_arp.ask_rpc_flexible(receiver="remote", method="some", pymodaq_data=123,
+                                          pymodaq_data_name="data_field")
+        # assert
+        expected_sent = PymodaqMessage(receiver="remote", sender="handler",
+                                       conversation_id=cid, message_type=PYMODAQ_MESSAGE_TYPE,
+                                       data={"jsonrpc": "2.0", "id": 1, "method": "some"},
+                                       pymodaq_data=123)
+        assert self.send == expected_sent
 
 
 class Test_handler_handle_pymodaq_message:

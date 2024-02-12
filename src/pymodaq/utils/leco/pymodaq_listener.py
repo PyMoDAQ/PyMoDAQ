@@ -63,12 +63,13 @@ class PymodaqCommunicator(CommunicatorPipe):
 
     def ask_rpc_flexible(self, receiver: Union[bytes, str], method: str,
                          timeout: Optional[float] = None,
-                         pymodaq_data: Optional[SERIALIZABLE] = None,
+                         pymodaq_data: Optional[Union[SERIALIZABLE, Any]] = None,
                          pymodaq_data_name: str = "data",
                          **kwargs) -> Union[Any, DeSerializer]:
         """Send a value, either serialized, or via json."""
         if isinstance(pymodaq_data, SERIALIZABLE):
-            return self.ask_rpc_pymodaq(receiver=receiver, method=method, timeout=timeout, **kwargs)
+            return self.ask_rpc_pymodaq(receiver=receiver, method=method, timeout=timeout,
+                                        pymodaq_data=pymodaq_data, **kwargs)
         else:
             kwargs[pymodaq_data_name] = pymodaq_data
             return self.ask_rpc(receiver=receiver, method=method, timeout=timeout, **kwargs)
@@ -301,7 +302,7 @@ class ActorListener(PymodaqListener):
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
-            value = command.attribute[0]['data']  # type: ignore
+            value = command.attribute  # type: ignore
             self.communicator.ask_rpc_flexible(
                 receiver=self.remote_name,
                 method="set_data",
