@@ -395,6 +395,10 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self.connect_leco()
             else:
                 self._command_tcpip.emit(ThreadCommand('quit', ))
+                try:
+                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected
 
         elif param.name() == 'refresh_timeout':
             self._refresh_timer.setInterval(param.value())

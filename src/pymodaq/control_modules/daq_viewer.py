@@ -948,6 +948,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.connect_leco()
             else:
                 self._command_tcpip.emit(ThreadCommand('quit', ))
+                try:
+                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected
 
         elif param.name() == 'plugin_config':
             self.show_config(self.plugin_config)
