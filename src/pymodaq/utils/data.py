@@ -26,8 +26,10 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils import math_utils as mutils
 
+from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
 
 
+plotter_factory = PlotterFactory()
 logger = set_logger(get_module_name(__file__))
 
 
@@ -1450,9 +1452,6 @@ class DataWithAxes(DataBase):
         #then use get_dim_from axes
 
     def plot(self, plotter_backend: str):
-        from pymodaq.utils.plotting.data_viewers.plotter import PlotterFactory, register_plotter
-        plotter_factory = PlotterFactory()
-        register_plotter()
         return plotter_factory.get(plotter_backend, self.dim.name).plot(self)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
@@ -1949,6 +1948,10 @@ class DataToExport(DataLowLevel):
         self.data = data
         for key in kwargs:
             setattr(self, key, kwargs[key])
+
+    def plot(self, plotter_backend: str):
+        for dwa in self:
+            return plotter_factory.get(plotter_backend, dwa.dim.name).plot(dwa)
 
     def affect_name_to_origin_if_none(self):
         """Affect self.name to all DataWithAxes children's attribute origin if this origin is not defined"""

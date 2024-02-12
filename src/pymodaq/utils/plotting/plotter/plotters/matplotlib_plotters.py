@@ -1,4 +1,4 @@
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, TYPE_CHECKING
 import sys
 import datetime
 
@@ -8,10 +8,14 @@ from qtpy import QtWidgets
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import config as configmod
 from pymodaq.utils.data import DataDim, DataWithAxes
+
 from pymodaq.utils.gui_utils.utils import start_qapplication
-from pymodaq.utils.plotting.data_viewers.plotter import PlotterBase, PlotterFactory
+from pymodaq.utils.plotting.plotter.plotter import PlotterBase, PlotterFactory
 
 from matplotlib import pyplot as plt
+
+if TYPE_CHECKING:
+    pass
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -41,7 +45,6 @@ class Plotter1D(Plotter):
         return fig
 
 
-
 @PlotterFactory.register()
 class Plotter2D(Plotter):
     """ """
@@ -54,13 +57,13 @@ class Plotter2D(Plotter):
 
         x = xaxis.get_data()
         y = yaxis.get_data()
-
-        X, Y = np.meshgrid(x, y)
-        plt.pcolormesh(X, Y, dwa.data[0])
-        #plt.legend(dwa.labels)
-        plt.title(f'{dwa.name} taken the {datetime.datetime.fromtimestamp(dwa.timestamp)}')
-        plt.xlabel(f'{xaxis.label} ({xaxis.units})')
-        plt.ylabel(f'{yaxis.label} ({yaxis.units})')
+        for ind_plot, dwa_array in enumerate(dwa):
+            plt.subplot(1, len(dwa), ind_plot+1)
+            X, Y = np.meshgrid(x, y)
+            plt.pcolormesh(X, Y, dwa_array)
+            plt.title(f'{dwa.name}/{dwa.labels[ind_plot]} taken the {datetime.datetime.fromtimestamp(dwa.timestamp)}')
+            plt.xlabel(f'{xaxis.label} ({xaxis.units})')
+            plt.ylabel(f'{yaxis.label} ({yaxis.units})')
         return fig
 
 
@@ -68,7 +71,7 @@ if __name__ == '__main__':
     from pymodaq.utils import data as data_mod
     import numpy as np
     from pymodaq.utils.math_utils import gauss1D, gauss2D
-    from pymodaq.utils.plotting.data_viewers.plotter import PlotterFactory
+    from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
     plotter_factory = PlotterFactory()
 
     x = np.linspace(0, 100, 101)

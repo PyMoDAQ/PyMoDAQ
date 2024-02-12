@@ -20,17 +20,17 @@ if typing.TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-def register_plotter(parent_module_name: str = 'pymodaq.utils.plotting.data_viewers'):
+def register_plotter(parent_module_name: str = 'pymodaq.utils.plotting.plotter'):
     plotters = []
     try:
-        exporter_module = import_module(f'{parent_module_name}.plotters')
+        plotter_module = import_module(f'{parent_module_name}.plotters')
 
-        exporter_path = Path(exporter_module.__path__[0])
+        plotter_path = Path(plotter_module.__path__[0])
 
-        for file in exporter_path.iterdir():
+        for file in plotter_path.iterdir():
             if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
                 try:
-                    plotters.append(import_module(f'.{file.stem}', exporter_module.__name__))
+                    plotters.append(import_module(f'.{file.stem}', plotter_module.__name__))
                 except ModuleNotFoundError:
                     pass
     except ModuleNotFoundError:
@@ -56,7 +56,7 @@ class PlotterBase(metaclass=ABCMeta):
 
 
 class PlotterFactory(ObjectFactory):
-    """Factory class registering and storing Scanners"""
+    """Factory class registering and storing interactive plotter"""
 
     @classmethod
     def register(cls) -> Callable:
@@ -99,7 +99,3 @@ class PlotterFactory(ObjectFactory):
     def data_dims(self, backend: str) -> List[str]:
         """Returns the list of data_dim for a given backend"""
         return list(self.builders[self.__class__.__name__][backend].keys())
-
-
-plotter_factory = PlotterFactory()
-register_plotter()
