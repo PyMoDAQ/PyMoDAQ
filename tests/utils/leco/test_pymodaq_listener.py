@@ -91,6 +91,7 @@ class Test_handler_handle_pymodaq_message:
 
     stored_message: Optional[PymodaqMessage] = None
     previous_stored_data: None
+    result: PymodaqMessage
 
     @pytest.fixture
     def handler_storing_values(self, pipe_handler: PymodaqPipeHandler):
@@ -101,7 +102,7 @@ class Test_handler_handle_pymodaq_message:
 
         pipe_handler.register_rpc_method(checking_values)
         # act
-        pipe_handler.handle_pymodaq_message(self.msg)
+        self.result = pipe_handler.handle_pymodaq_message(self.msg)
         return pipe_handler
 
     def test_stored_message(self, handler_storing_values):
@@ -111,8 +112,8 @@ class Test_handler_handle_pymodaq_message:
         assert self.previous_stored_data is None
 
     def test_response(self, handler_storing_values):
-        assert Message.from_frames(*handler_storing_values.socket._s[0]) == PymodaqMessage(
-            receiver="remote", sender="handler", data={"jsonrpc": "2.0", "id": 1, "result": None},
+        assert self.result == PymodaqMessage(
+            receiver="remote", sender="", data={"jsonrpc": "2.0", "id": 1, "result": None},
             conversation_id=cid, pymodaq_data=123
         )
 

@@ -55,9 +55,9 @@ class LECODirector:
 
         print("name", name)
         # TODO use the same Listener instance as the LECOActorModule
-        self._listener = PymodaqListener(name=name)
-        self._listener.start_listen()
-        self.communicator = self._listener.get_communicator()
+        self.listener = PymodaqListener(name=name)
+        self.listener.start_listen()
+        self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((
             self.set_info,
         ))
@@ -76,7 +76,7 @@ class LECODirector:
             self.controller.set_info(param=param)
 
     def close(self) -> None:
-        self._listener.stop_listen()
+        self.listener.stop_listen()
 
     def stop(self):
         """

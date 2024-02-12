@@ -33,14 +33,13 @@ class PymodaqMessage(Message):
                  header: Optional[bytes] = None,
                  conversation_id: Optional[bytes] = None,
                  message_id: Optional[bytes] = None,
-                 message_type: Union[MessageTypes, int] = MessageTypes.JSON,
+                 message_type: Union[MessageTypes, int] = MessageTypes.NOT_DEFINED,
                  ) -> None:
-        if pymodaq_data:
-            message_type = PYMODAQ_MESSAGE_TYPE
+        if not message_type:
+            if pymodaq_data:
+                message_type = PYMODAQ_MESSAGE_TYPE
+            elif data:
+                message_type = MessageTypes.JSON
         super().__init__(receiver, sender, data, header, conversation_id, message_id, message_type)
         if pymodaq_data:
             self.payload.append(Serializer(pymodaq_data).to_bytes())
-
-    @property
-    def pymodaq_data(self) -> Optional[DeSerializer]:
-        return get_pymodaq_data(message=self)

@@ -1,3 +1,6 @@
+
+from typing import Optional
+
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
@@ -9,6 +12,7 @@ from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
+from pymodaq.utils.leco.utils import get_pymodaq_data
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -121,6 +125,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             daq_move_base.get_position_with_scaling, daq_utils.ThreadCommand
         """
         # TODO Change to async request and show the last value `self._current_value`, similar to TCPServer?
+        self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 
@@ -133,16 +138,28 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.controller.stop_motion()
 
     # Methods accessible via remote calls
-    def set_position(self, position: float) -> None:
-        pos = DataActuator(data=position)
+    def _set_position_value(self, position: Optional[float]) -> DataActuator:
+        if position is None:
+            dta = get_pymodaq_data(self.listener.message_handler.current_msg)  # type: ignore
+            if dta is None:
+                raise ValueError
+            try:
+                pos = dta.dwa_deserialization()
+            except Exception:
+                print("payload: ", self.listener.message_handler.current_msg.payload[1:])
+                raise
+        else:
+            pos = DataActuator(data=position)
         pos = self.get_position_with_scaling(pos)
         self._current_value = pos
+        return pos
+
+    def set_position(self, position: Optional[float] = None) -> None:
+        pos = self._set_position_value(position=position)
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
-    def set_move_done(self, position: float) -> None:
-        pos = DataActuator(data=position)
-        pos = self.get_position_with_scaling(pos)
-        self._current_value = pos
+    def set_move_done(self, position: Optional[float] = None) -> None:
+        pos = self._set_position_value(position=position)
         self.emit_status(ThreadCommand('move_done', [pos]))
 
     def set_x_axis(self, data, label: str = "", units: str = "") -> None:

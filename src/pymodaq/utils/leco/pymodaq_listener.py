@@ -61,6 +61,18 @@ class PymodaqCommunicator(CommunicatorPipe):
         else:
             return response_value
 
+    def ask_rpc_flexible(self, receiver: Union[bytes, str], method: str,
+                         timeout: Optional[float] = None,
+                         pymodaq_data: Optional[SERIALIZABLE] = None,
+                         pymodaq_data_name: str = "data",
+                         **kwargs) -> Union[Any, DeSerializer]:
+        """Send a value, either serialized, or via json."""
+        if isinstance(pymodaq_data, SERIALIZABLE):
+            return self.ask_rpc_pymodaq(receiver=receiver, method=method, timeout=timeout, **kwargs)
+        else:
+            kwargs[pymodaq_data_name] = pymodaq_data
+            return self.ask_rpc(receiver=receiver, method=method, timeout=timeout, **kwargs)
+
 
 class PymodaqPipeHandler(PipeHandler):
     """A pipe-MessageHandler which can read / write pymodaq messages.
@@ -88,38 +100,36 @@ class PymodaqPipeHandler(PipeHandler):
 
     def handle_message(self, message: PymodaqMessage) -> None:
         if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
-            self.handle_pymodaq_message(message=message)
+            response = self.handle_pymodaq_message(message=message)
+            self.send_message(response)
         else:
             return super().handle_message(message)
 
     def finish_handle_commands(self, message: PymodaqMessage) -> None:
         # pyleco <0.1.1
         if message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE:
-            self.handle_pymodaq_message(message=message)
+            response = self.handle_pymodaq_message(message=message)
+            self.send_message(response)
         else:
             super().finish_handle_commands(message)  # type: ignore
 
-    def handle_pymodaq_message(self, message: PymodaqMessage) -> None:
-        if b'"method":' in message.payload[0]:
-            # Prepare storage
-            self.current_msg = message
-            self.return_paymodaq_data = None
-            # Handle message
-            self.log.info(f"Handling commands of {message}.")
-            reply = self.rpc.process_request(message.payload[0])
-            response = PymodaqMessage(
-                receiver=message.sender,
-                conversation_id=message.conversation_id,
-                data=reply,
-                pymodaq_data=self.return_paymodaq_data,
-                )
-            self.send_message(response)
-            # Reset storage
-            self.current_msg = None
-            self.return_paymodaq_data = None
-        else:
-            self.log.error(
-                f"Unknown message from {message.sender!r} received: {message.payload[0]!r}")
+    def handle_pymodaq_message(self, message: PymodaqMessage) -> PymodaqMessage:
+        # Prepare storage
+        self.current_msg = message
+        self.return_paymodaq_data = None
+        # Handle message
+        self.log.info(f"Handling commands of {message}.")
+        reply = self.rpc.process_request(message.payload[0])
+        response = PymodaqMessage(
+            receiver=message.sender,
+            conversation_id=message.conversation_id,
+            data=reply,
+            pymodaq_data=self.return_paymodaq_data,
+            )
+        # Reset storage
+        self.current_msg = None
+        self.return_paymodaq_data = None
+        return response
 
     def create_communicator(self, **kwargs) -> PymodaqCommunicator:
         """Create a communicator wherever you want to access the pipe handler."""
@@ -144,7 +154,7 @@ class ActorHandler(PymodaqPipeHandler):
 
     def extract_dwa_object(self) -> DataWithAxes:
         """Extract a DataWithAxes object from the received message."""
-        if self.current_msg and (deserializer := self.current_msg.pymodaq_data):
+        if self.current_msg and (deserializer := get_pymodaq_data(self.current_msg)):
             return deserializer.dwa_deserialization()
         else:
             raise ValueError(
@@ -199,7 +209,7 @@ class PymodaqListener(Listener):
 
     def __init__(self,
                  name: str,
-                 handler_class: type[PipeHandler] = PymodaqPipeHandler,
+                 handler_class: type[PymodaqPipeHandler] = PymodaqPipeHandler,
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: Optional[logging.Logger] = None,
@@ -242,13 +252,14 @@ class ActorListener(PymodaqListener):
 
     def __init__(self,
                  name: str,
-                 handler_class: type[PipeHandler] = ActorHandler,
+                 handler_class: type[ActorHandler] = ActorHandler,
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: Optional[logging.Logger] = None,
                  timeout: float = 1,
                  **kwargs) -> None:
-        super().__init__(name, handler_class, host, port, logger=logger, timeout=timeout,
+        super().__init__(name, handler_class=handler_class, host=host, port=port,
+                         logger=logger, timeout=timeout,
                          **kwargs)
 
     def start_listen(self) -> None:
@@ -262,7 +273,7 @@ class ActorListener(PymodaqListener):
     # @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
-        print("command", command)
+        print("COMMAND", command)
 
         # generic commands
         if command.command == "ini_connection":
@@ -290,36 +301,38 @@ class ActorListener(PymodaqListener):
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
-            if True:  # TODO if we have a pymodaq data object
-                self.communicator.ask_rpc_pymodaq(method="set_data", receiver=self.remote_name,
-                                                  pymodaq_data=command.attribute[0]['data'])
-            else:  # it is a plain value
-                self.communicator.ask_rpc(method="set_data", receiver=self.remote_name,
-                                          data=command.attribute[0]['data'])
+            value = command.attribute[0]['data']  # type: ignore
+            self.communicator.ask_rpc_flexible(
+                receiver=self.remote_name,
+                method="set_data",
+                pymodaq_data=value,
+            )
 
         elif command.command == 'send_info':
+            path = command.attribute['path']  # type: ignore
+            param = command.attribute['param']  # type: ignore
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_info",
-                path=command.attribute['path'],
-                param_dict_str=ioxml.parameter_to_xml_string(command.attribute['param']).decode())
+                path=path,
+                param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
         elif command.command == 'position_is':
-            value = command.attribute[0].value()
-            if isinstance(value, SERIALIZABLE):
-                self.communicator.ask_rpc_pymodaq(receiver=self.remote_name, method="set_position",
-                                                  pymodaq_data=value)
-            else:
-                self.communicator.ask_rpc(receiver=self.remote_name,
-                                          method="set_position", position=value)
+            value = command.attribute[0]  # type: ignore
+            self.communicator.ask_rpc_flexible(receiver=self.remote_name,
+                                               method="set_position",
+                                               pymodaq_data=value,
+                                               pymodaq_data_name="position")
 
         elif command.command == 'move_done':
-            # name of parameter unknown
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_move_done", position=command.attribute[0].value())
+            value = command.attribute[0]  # type: ignore
+            self.communicator.ask_rpc_flexible(receiver=self.remote_name,
+                                               method="set_move_done",
+                                               pymodaq_data=value,
+                                               pymodaq_data_name="position")
 
         elif command.command == 'x_axis':
-            value = command.attribute[0]
+            value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc_pymodaq(receiver=self.remote_name,
                                                   method="set_x_axis", pymodaq_data=value)
@@ -329,7 +342,7 @@ class ActorListener(PymodaqListener):
                 raise ValueError("Nothing to send!")
 
         elif command.command == 'y_axis':
-            value = command.attribute[0]
+            value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc_pymodaq(receiver=self.remote_name,
                                                   method="set_y_axis", pymodaq_data=value)

@@ -66,7 +66,7 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
-        self.controller.set_remote_name(self.communicator.full_name)
+        self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
@@ -157,7 +157,7 @@ class DAQ_0DViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         """
         if data is None:
             try:
-                msg = self.communicator.handler.current_msg
+                msg = self.communicator.handler.current_msg  # type: ignore
                 serialized_object = msg.payload[1]
             except AttributeError:
                 raise ValueError("Expected pymodaq message, but got normal JSON one.")

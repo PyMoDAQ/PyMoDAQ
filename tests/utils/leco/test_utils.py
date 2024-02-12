@@ -3,7 +3,8 @@ import pytest
 
 from pyleco.core.message import MessageTypes
 
-from pymodaq.utils.leco.utils import PymodaqMessage, Serializer, PYMODAQ_MESSAGE_TYPE
+from pymodaq.utils.leco.utils import (PymodaqMessage, Serializer, PYMODAQ_MESSAGE_TYPE,
+                                      get_pymodaq_data)
 
 
 receiver = b"receiver"
@@ -27,7 +28,7 @@ class Test_PymodaqMessage_creator_without_pymodaq_payload:
         assert pymodaq_message.data == [5, 6.7]
 
     def test_pymodaq_data(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.pymodaq_data is None
+        assert get_pymodaq_data(pymodaq_message) is None
 
 
 class Test_PymodaqMessage_creator_with_pymodaq_payload:
@@ -50,4 +51,4 @@ class Test_PymodaqMessage_creator_with_pymodaq_payload:
         assert pymodaq_message.payload[1] == Serializer(obj).to_bytes()
 
     def test_pymodaq_data(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.pymodaq_data.scalar_deserialization() == obj  # type: ignore
+        assert get_pymodaq_data(pymodaq_message).scalar_deserialization() == obj  # type: ignore
