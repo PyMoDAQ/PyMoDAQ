@@ -1452,7 +1452,7 @@ class DataWithAxes(DataBase):
         #then use get_dim_from axes
 
     def plot(self, plotter_backend: str):
-        return plotter_factory.get(plotter_backend, self.dim.name).plot(self)
+        return plotter_factory.get(plotter_backend).plot(self)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
@@ -1950,8 +1950,7 @@ class DataToExport(DataLowLevel):
             setattr(self, key, kwargs[key])
 
     def plot(self, plotter_backend: str):
-        for dwa in self:
-            return plotter_factory.get(plotter_backend, dwa.dim.name).plot(dwa)
+        return plotter_factory.get(plotter_backend).plot(self)
 
     def affect_name_to_origin_if_none(self):
         """Affect self.name to all DataWithAxes children's attribute origin if this origin is not defined"""

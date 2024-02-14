@@ -43,8 +43,6 @@ class PlotterBase(metaclass=ABCMeta):
     """Base class for a plotter. """
 
     backend: str = abstract_attribute()
-    data_dim: str = abstract_attribute()
-
     def __init__(self):
         """Abstract Exporter Constructor"""
         pass
@@ -69,33 +67,27 @@ class PlotterFactory(ObjectFactory):
             if cls.__name__ not in cls._builders:
                 cls._builders[cls.__name__] = {}
             key = wrapped_class.backend
-            sub_key = wrapped_class.data_dim
 
             if key not in cls._builders[cls.__name__]:
-                cls._builders[cls.__name__][key] = {}
-            if sub_key not in cls._builders[cls.__name__][key]:
-                cls._builders[cls.__name__][key][sub_key] = wrapped_class
+                cls._builders[cls.__name__][key] = wrapped_class
             else:
-                logger.warning(f'The {cls.__name__}/{key}/{sub_key} builder is already registered.'
+                logger.warning(f'The {cls.__name__}/{key} builder is already registered.'
                                f' Replacing it')
             return wrapped_class
 
         return inner_wrapper
 
     @classmethod
-    def create(cls, key, sub_key, **kwargs) -> PlotterBase:
-        builder = cls._builders[cls.__name__].get(key).get(sub_key)
+    def create(cls, key, **kwargs) -> PlotterBase:
+        builder = cls._builders[cls.__name__].get(key)
         if not builder:
             raise ValueError(key)
         return builder(**kwargs)
 
-    def get(self, backend: str, data_dim: str, **kwargs):
-        return self.create(backend, data_dim, **kwargs)
+    def get(self, backend: str, **kwargs):
+        return self.create(backend, **kwargs)
 
     def backends(self) -> List[str]:
         """Returns the list of plotter backends, main identifier of a given plotter"""
         return sorted(list(self.builders[self.__class__.__name__].keys()))
 
-    def data_dims(self, backend: str) -> List[str]:
-        """Returns the list of data_dim for a given backend"""
-        return list(self.builders[self.__class__.__name__][backend].keys())
