@@ -50,9 +50,13 @@ class Plotter(PlotterBase):
 
     def plot_dwa(self, dwa: DataWithAxes):
         if dwa.dim.name == 'Data1D':
+            if len(dwa.axes) == 0:
+                dwa.create_missing_axes()
             self.ind_column = 0
             self.plot1D(dwa)
         elif dwa.dim.name == 'Data2D':
+            if len(dwa.axes) < 2:
+                dwa.create_missing_axes()
             self.plot2D(dwa)
 
     def plot_dte(self, dte: DataToExport):
