@@ -25,13 +25,12 @@ from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils import math_utils as mutils
-
+from pymodaq.utils.config import Config
 from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
 
-
+config = Config()
 plotter_factory = PlotterFactory()
 logger = set_logger(get_module_name(__file__))
-
 
 
 class DataIndexWarning(Warning):
@@ -1451,7 +1450,7 @@ class DataWithAxes(DataBase):
         self.get_dim_from_data_axes()  # in DataBase, dim is processed from the shape of data, but if axes are provided
         #then use get_dim_from axes
 
-    def plot(self, plotter_backend: str):
+    def plot(self, plotter_backend: str = config('plotting', 'backend')):
         return plotter_factory.get(plotter_backend).plot(self)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
@@ -1949,7 +1948,7 @@ class DataToExport(DataLowLevel):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-    def plot(self, plotter_backend: str):
+    def plot(self, plotter_backend: str = config('plotting', 'backend')):
         return plotter_factory.get(plotter_backend).plot(self)
 
     def affect_name_to_origin_if_none(self):
