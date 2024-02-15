@@ -6,6 +6,7 @@ Created the 21/11/2022
 """
 from time import time
 from typing import Union, List, Tuple, Iterable
+from pathlib import Path
 
 import numpy as np
 
@@ -811,15 +812,24 @@ class DataLoader:
     h5saver: H5Saver
     """
 
-    def __init__(self, h5saver: H5Saver):
+    def __init__(self, h5saver: Union[H5Saver, Path]):
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
+
+        if isinstance(h5saver, Path) or isinstance(h5saver, str):
+            h5saver_tmp = H5Saver()
+            h5saver_tmp.init_file(addhoc_file_path=Path(h5saver))
+            h5saver = h5saver_tmp
 
         self.h5saver = h5saver
 
     @property
     def h5saver(self):
         return self._h5saver
+
+    def walk_nodes(self, where: Union[str, Node] = '/RawData'):
+        """Return a Node generator iterating over the h5file content"""
+        return self.h5saver.walk_nodes(where)
 
     @h5saver.setter
     def h5saver(self, h5saver: H5Saver):
