@@ -1,18 +1,15 @@
 
-from typing import Optional
-
-from easydict import EasyDict as edict
+from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
 
-from pymodaq.utils.data import DataFromPlugins, DataToExport
-from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
-from pymodaq.utils.leco.utils import get_pymodaq_data
+from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -137,23 +134,21 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.controller.stop_motion()
 
     # Methods accessible via remote calls
-    def _set_position_value(self, position: Optional[float]) -> DataActuator:
-        if position is None:
-            dta = get_pymodaq_data(self.listener.message_handler.current_msg)  # type: ignore
-            if dta is None:
-                raise ValueError
-            pos = dta.dwa_deserialization()
+    def _set_position_value(self, position: Union[str, float]) -> DataActuator:
+        if isinstance(position, str):
+            deserializer = DeSerializer.from_b64_string(position)
+            pos = deserializer.dwa_deserialization()
         else:
             pos = DataActuator(data=position)
-        pos = self.get_position_with_scaling(pos)
+        pos = self.get_position_with_scaling(pos)  # type: ignore
         self._current_value = pos
         return pos
 
-    def set_position(self, position: Optional[float] = None) -> None:
+    def set_position(self, position: Union[str, float]) -> None:
         pos = self._set_position_value(position=position)
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
-    def set_move_done(self, position: Optional[float] = None) -> None:
+    def set_move_done(self, position: Union[str, float]) -> None:
         pos = self._set_position_value(position=position)
         self.emit_status(ThreadCommand('move_done', [pos]))
 

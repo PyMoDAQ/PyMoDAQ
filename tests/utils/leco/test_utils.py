@@ -1,54 +1,21 @@
 
 import pytest
 
-from pyleco.core.message import MessageTypes
+from pymodaq.control_modules.daq_move import DataActuator
 
-from pymodaq.utils.leco.utils import (PymodaqMessage, Serializer, PYMODAQ_MESSAGE_TYPE,
-                                      get_pymodaq_data)
-
-
-receiver = b"receiver"
-sender = b"sender"
-obj = 123
+from pymodaq.utils.leco.utils import serialize_object
 
 
-class Test_PymodaqMessage_creator_without_pymodaq_payload:
-    @pytest.fixture
-    def pymodaq_message(self) -> PymodaqMessage:
-        pmd_message = PymodaqMessage(receiver, sender, data="[5, 6.7]")
-        return pmd_message
-
-    def test_type_json(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.header_elements.message_type == MessageTypes.JSON
-
-    def test_receiver(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.receiver == receiver
-
-    def test_data(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.data == [5, 6.7]
-
-    def test_pymodaq_data(self, pymodaq_message: PymodaqMessage):
-        assert get_pymodaq_data(pymodaq_message) is None
+@pytest.mark.parametrize("value", (
+        5,
+        6.7,
+        "some value",
+))
+def test_native_json_object(value):
+    assert serialize_object(value) == value
 
 
-class Test_PymodaqMessage_creator_with_pymodaq_payload:
-    @pytest.fixture
-    def pymodaq_message(self) -> PymodaqMessage:
-        pmd_message = PymodaqMessage(receiver, sender, data="[5, 6.7]",
-                                     pymodaq_data=obj)
-        return pmd_message
-
-    def test_type_json(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.header_elements.message_type == PYMODAQ_MESSAGE_TYPE
-
-    def test_receiver(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.receiver == receiver
-
-    def test_data(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.data == [5, 6.7]
-
-    def test_payload(self, pymodaq_message: PymodaqMessage):
-        assert pymodaq_message.payload[1] == Serializer(obj).to_bytes()
-
-    def test_pymodaq_data(self, pymodaq_message: PymodaqMessage):
-        assert get_pymodaq_data(pymodaq_message).scalar_deserialization() == obj  # type: ignore
+def test_data_actuator():
+    value = DataActuator(data=10.5)
+    serialized = serialize_object(value)
+    assert isinstance(serialized, str)

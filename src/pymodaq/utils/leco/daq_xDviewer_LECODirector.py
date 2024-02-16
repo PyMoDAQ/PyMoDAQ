@@ -1,5 +1,5 @@
 
-from typing import Optional
+from typing import Union
 
 from easydict import EasyDict as edict
 
@@ -145,7 +145,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.y_axis = dict(data=data, label=label, units=units)
         self.emit_y_axis()
 
-    def set_data(self, data: Optional[list] = None) -> None:
+    def set_data(self, data: Union[list, str]) -> None:
         """
         Set the grabbed data signal.
 
@@ -153,14 +153,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         :param data: If None, look for the additional object
         """
-        if data is None:
-            try:
-                msg = self.communicator.handler.current_msg  # type: ignore
-                serialized_object = msg.payload[1]
-            except AttributeError:
-                raise ValueError("Expected pymodaq message, but got normal JSON one.")
-            dte = DeSerializer(serialized_object).dte_deserialization()
+        if isinstance(data, str):
+            deserializer = DeSerializer.from_b64_string(data)
+            dte = deserializer.dte_deserialization()
             self.dte_signal.emit(dte)
+        else:
+            raise NotImplementedError("Not implemented to set a list of values.")
 
 
 if __name__ == '__main__':
