@@ -4,6 +4,7 @@ Created the 20/10/2023
 
 @author: Sebastien Weber
 """
+from base64 import b64encode, b64decode
 import numbers
 from typing import Tuple, List, Union, TYPE_CHECKING
 
@@ -118,6 +119,10 @@ class Serializer:
         elif isinstance(self._obj, list):
             return self.list_serialization(self._obj)
         raise ValueError
+
+    def to_b64_string(self) -> str:
+        b = self.to_bytes()
+        return b64encode(b).decode()
 
     @staticmethod
     def int_to_bytes(an_integer: int) -> bytes:
@@ -458,6 +463,10 @@ class DeSerializer:
         if isinstance(bytes_string, bytes):
             bytes_string = SocketString(bytes_string)
         self._bytes_string = bytes_string
+
+    @classmethod
+    def from_b64_string(cls, b64_string: Union[bytes, str]) -> "DeSerializer":
+        return cls(b64decode(b64_string))
 
     @staticmethod
     def bytes_to_string(message: bytes) -> str:
