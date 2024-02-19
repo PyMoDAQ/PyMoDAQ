@@ -1534,7 +1534,40 @@ class DataWithAxes(DataBase):
         for dat in self.data:
             dat_sum.append(np.sum(dat, axis=axis))
         return self.deepcopy_with_new_data(dat_sum, remove_axes_index=axis)
-    
+
+    def interp(self,  new_axis_data: Union[Axis, np.ndarray]) -> DataWithAxes:
+        """Performs linear interpolation for 1D data only.
+        
+        For more complex ones, see scipy.interpolate
+
+        Parameters
+        ----------
+        new_axis_data: Union[Axis, np.ndarray]
+            The coordinates over which to do the interpolation
+
+        Returns
+        -------
+        DataWithAxes
+
+        See Also
+        --------
+        scipy.interpolate
+        """
+        if self.dim != DataDim['Data1D']:
+            raise ValueError('For basic interpolation, only 1D data are supported')
+
+        data_interpolated = []
+        axis_obj = self.get_axis_from_index(0)[0]
+        if isinstance(new_axis_data, Axis):
+            new_axis_data = new_axis_data.get_data()
+
+        for dat in self.data:
+            data_interpolated.append(np.interp(new_axis_data, axis_obj.get_data(), dat))
+        new_data = self.deepcopy_with_new_data(data_interpolated)
+        axis_obj = new_data.get_axis_from_index(0)[0]
+        axis_obj.data = new_data
+        return new_data
+
     def ft(self, axis: int = 0) -> DataWithAxes:
         """Process the Fourier Transform of the data on the specified axis and returns the new data
 
@@ -1547,12 +1580,21 @@ class DataWithAxes(DataBase):
         DataWithAxes
         """
         dat_ft = []
+        axis_obj = self.get_axis_from_index(axis)[0]
+        omega_grid, time_grid = mutils.ftAxis_time(len(axis_obj),
+                                                   np.abs(axis_obj.max() - axis_obj.min()))
         for dat in self.data:
             dat_ft.append(mutils.ft(dat, dim=axis))
-        return self.deepcopy_with_new_data(dat_ft)
+        new_data = self.deepcopy_with_new_data(dat_ft)
+        axis_obj = new_data.get_axis_from_index(axis)[0]
+        axis_obj.data = omega_grid
+        axis_obj.label = f'ft({axis_obj.label})'
+        axis_obj.units = f'2pi/{axis_obj.units}'
+        return new_data
 
     def ift(self, axis: int = 0) -> DataWithAxes:
-        """Process the inverse Fourier Transform of the data on the specified axis and returns the new data
+        """Process the inverse Fourier Transform of the data on the specified axis and returns the
+        new data
 
         Parameters
         ----------
@@ -1563,9 +1605,16 @@ class DataWithAxes(DataBase):
         DataWithAxes
         """
         dat_ift = []
+        axis_obj = self.get_axis_from_index(axis)[0]
+        omega_grid, time_grid = mutils.ftAxis_time(len(axis_obj),
+                                                   np.abs(axis_obj.max() - axis_obj.min()))
         for dat in self.data:
             dat_ift.append(mutils.ift(dat, dim=axis))
-        return self.deepcopy_with_new_data(dat_ift)
+        new_data = self.deepcopy_with_new_data(dat_ift)
+        axis_obj.data = omega_grid
+        axis_obj.label = f'ift({axis_obj.label})'
+        axis_obj.units = f'2pi/{axis_obj.units}'
+        return new_data
     
     def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
@@ -1643,10 +1692,12 @@ class DataWithAxes(DataBase):
         return self._am.get_axis_from_index(index, create)
 
     def create_missing_axes(self):
-        """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
+        """Check if given the data shape, some axes are missing to properly define the data
+        (especially for plotting)"""
         axes = self.axes[:]
         for index in self.nav_indexes + self.sig_indexes:
-            if len(self.get_axis_from_index(index)) != 0 and self.get_axis_from_index(index)[0] is None:
+            if (len(self.get_axis_from_index(index)) != 0 and
+                    self.get_axis_from_index(index)[0] is None):
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
 
@@ -1684,8 +1735,8 @@ class DataWithAxes(DataBase):
         Returns
         -------
         DataWithAxes
-            Object of the same type as the initial data, derived from DataWithAxes. But with lower data size due to the
-             slicing and with eventually less axes.
+            Object of the same type as the initial data, derived from DataWithAxes. But with lower
+            data size due to the slicing and with eventually less axes.
         """
 
         if isinstance(slices, numbers.Number) or isinstance(slices, slice):
@@ -1695,7 +1746,8 @@ class DataWithAxes(DataBase):
         tmp_axes = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
         axes_to_append = [copy.deepcopy(axis) for axis in tmp_axes]
 
-        # axes_to_append are the axes to append to the new produced data (basically the ones to keep)
+        # axes_to_append are the axes to append to the new produced data
+        # (basically the ones to keep)
 
         indexes_to_get = self.nav_indexes if is_navigation else self.sig_indexes
         # indexes_to_get are the indexes of the axes where the slice should be applied
@@ -1703,7 +1755,8 @@ class DataWithAxes(DataBase):
         _indexes = list(self.nav_indexes)
         _indexes.extend(self.sig_indexes)
         lower_indexes = dict(zip(_indexes, [0 for _ in range(len(_indexes))]))
-        # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
+        # lower_indexes will store for each *axis index* how much the index should be reduced
+        # because one axis has
         # been removed
 
         axes = []
@@ -1731,14 +1784,16 @@ class DataWithAxes(DataBase):
             axis.index -= lower_indexes[axis.index]
         for ind in range(len(nav_indexes)):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
-        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
+        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes),
+                            axes=axes,
                             source='calculated', origin=self.origin,
                             labels=self.labels[:],
-                            distribution=self.distribution if len(nav_indexes) != 0 else DataDistribution['uniform'])
+                            distribution=self.distribution if len(nav_indexes) != 0 else
+                            DataDistribution['uniform'])
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
-                               remove_axes_index: List[int] = None,
+                               remove_axes_index: Union[int, List[int]] = None,
                                source: DataSource = 'calculated',
                                keep_dim=False) -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
@@ -1770,7 +1825,6 @@ class DataWithAxes(DataBase):
             if source is not None:
                 source = enum_checker(DataSource, source)
                 new_data._source = source
-
 
             if remove_axes_index is not None:
                 if not isinstance(remove_axes_index, Iterable):
