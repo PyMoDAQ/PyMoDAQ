@@ -7,7 +7,7 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
-from pymodaq.utils.leco.pymodaq_listener import PymodaqListener, PymodaqCommunicator
+from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 
 
 leco_parameters = [
@@ -40,8 +40,6 @@ class LECODirector:
 
     controller: GenericDirector
     settings: Parameter
-
-    communicator: PymodaqCommunicator
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)

@@ -138,10 +138,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
     # Methods for RPC calls
     def set_x_axis(self, data, label: str = "", units: str = ""):
+        # TODO make to work
         self.x_axis = dict(data=data, label=label, units=units)
         self.emit_x_axis()
 
     def set_y_axis(self, data, label: str = "", units: str = ""):
+        # TODO make to work
         self.y_axis = dict(data=data, label=label, units=units)
         self.emit_y_axis()
 

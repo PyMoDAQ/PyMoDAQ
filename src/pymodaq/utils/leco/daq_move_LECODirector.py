@@ -67,7 +67,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         Parameters
         ----------
         controller: (object)
-            custom object of a PyMoDAQ plugin (Slave case). None if only one actuator by controller (Master case)
+            custom object of a PyMoDAQ plugin (Slave case). None if only one actuator by controller
+            (Master case)
 
         Returns
         -------
@@ -81,7 +82,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
             )
         try:
-            self.controller.set_remote_name(self.communicator.full_name)
+            self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         except TimeoutError:
             print("Timeout setting remote name.")  # TODO change to real logging
         # self.settings.child('infos').addChildren(self.params_client)
@@ -103,7 +104,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.target_value = position
 
     def move_rel(self, position: DataActuator) -> None:
-        position = self.check_bound(self.current_value + position) - self.current_value  # type: ignore
+        position = self.check_bound(self.current_value + position) - self.current_value  # type: ignore  # noqa
         self.target_value = position + self.current_value
 
         position = self.set_position_relative_with_scaling(position)
@@ -114,13 +115,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def get_actuator_value(self) -> DataActuator:
         """
-            Get the current hardware position with scaling conversion given by get_position_with_scaling.
+        Get the current hardware position with scaling conversion given by
+        `get_position_with_scaling`.
 
-            See Also
-            --------
+        See Also
+        --------
             daq_move_base.get_position_with_scaling, daq_utils.ThreadCommand
         """
-        # TODO Change to async request and show the last value `self._current_value`, similar to TCPServer?
         self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
