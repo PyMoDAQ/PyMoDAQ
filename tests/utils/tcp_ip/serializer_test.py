@@ -204,3 +204,17 @@ def test_dte_serialization(get_data):
     assert dte_back.timestamp == dte.timestamp
     for dwa in dte_back:
         assert dwa == dte.get_data_from_full_name(dwa.get_full_name())
+
+
+def test_base_64_de_serialization(get_data: DataToExport):
+    dte = get_data
+    ser = Serializer(dte)
+    serialized_string = ser.to_b64_string()
+    assert isinstance(serialized_string, str)
+    deser: DeSerializer = DeSerializer.from_b64_string(serialized_string)
+    dte_back = deser.dte_deserialization()
+
+    assert dte_back.name == dte.name
+    assert dte_back.timestamp == dte.timestamp
+    for dwa in dte_back:
+        assert dwa == dte.get_data_from_full_name(dwa.get_full_name())

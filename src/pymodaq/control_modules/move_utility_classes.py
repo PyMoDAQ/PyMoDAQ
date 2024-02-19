@@ -122,6 +122,14 @@ params = [
               'value': config('network', 'tcp-server', 'ip')},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
          ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
+         ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
@@ -280,7 +288,7 @@ class DAQ_Move_base(QObject):
     def ini_stage_init(self, old_controller=None, new_controller=None):
         """Manage the Master/Slave controller issue
 
-        First initialize the status dictionnary
+        First initialize the status dictionary
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here

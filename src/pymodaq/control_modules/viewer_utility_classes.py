@@ -57,6 +57,14 @@ params = [
              'value': config('network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
         ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
+         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -129,7 +137,7 @@ class DAQ_Viewer_base(QObject):
         *params*                list
         *settings*              instance of pyqtgraph Parameter
         *parent*                ???
-        *status*                dictionnary
+        *status*                dictionary
         ===================== ===================================
 
         See Also
@@ -182,8 +190,11 @@ class DAQ_Viewer_base(QObject):
 
         self.ini_attributes()
 
-        self.data_grabed_signal.connect(self._emit_dte)
-        self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        try:
+            self.data_grabed_signal.connect(self._emit_dte)
+            self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        except Exception as exc:
+            print(f"Error with old message signal stuff: {exc}")
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):

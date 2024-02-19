@@ -44,6 +44,8 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
+from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECO_Client_Commands
+
 logger = set_logger(get_module_name(__file__))
 config = Config()
 
@@ -789,6 +791,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             dte = dte.deepcopy()
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
 
@@ -939,6 +943,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                               dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
                                    port=self.settings['main_settings', 'tcpip', 'port'])))
 
+        elif param.name() == 'connect_leco_server':
+            if param.value():
+                self.connect_leco()
+            else:
+                self._command_tcpip.emit(ThreadCommand('quit', ))
+                try:
+                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected
+
         elif param.name() == 'plugin_config':
             self.show_config(self.plugin_config)
 
@@ -947,6 +961,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
 
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                if self.settings.child('main_settings', 'leco', 'leco_connected').value():
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def child_added(self, param, data):
@@ -1102,8 +1118,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             self._tcpclient_thread.start()
 
+    def connect_leco(self):
+        if self.settings.child("main_settings", "leco", "connect_leco_server").value():
+            name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # HACK as a name is required
+                name = "viewer"
+                self.settings.child("main_settings", "module_name").setValue(name)
+            self._leco_client = ViewerActorListener(name=name)
+            self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+            # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
+
     @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status):
+    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
         """Receive commands from the TCP Server (if connected) and process them
 
         Parameters
@@ -1128,6 +1157,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         elif status.command == 'disconnected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == LECO_Client_Commands.LECO_CONNECTED:
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
+
+        elif status.command == LECO_Client_Commands.LECO_DISCONNECTED:
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'Update_Status':
             self.thread_status(status)

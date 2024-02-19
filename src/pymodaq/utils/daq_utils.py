@@ -261,7 +261,7 @@ class ThreadCommand:
             raise TypeError(f'The command in a Threadcommand object should be a string, not a {type(command)}')
         self.command = command
         if attribute is None and attributes is not None:
-            deprecation_msg('ThreadCommand signature changed, use attribute in place of attribute')
+            deprecation_msg('ThreadCommand signature changed, use attribute in place of attributes')
             self.attribute = attributes
             self.attributes = attributes
         self.attribute = attribute

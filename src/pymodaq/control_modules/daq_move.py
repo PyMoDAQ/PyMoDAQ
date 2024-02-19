@@ -37,6 +37,8 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
 
+from pymodaq.utils.leco.pymodaq_listener import MoveActorListener
+
 
 local_path = config_mod.get_set_local_dir()
 sys.path.append(local_path)
@@ -388,6 +390,16 @@ class DAQ_Move(ParameterManager, ControlModule):
                                                                                       'ip_address').value(),
                                                         port=self.settings.child('main_settings', 'tcpip',
                                                                                  'port').value())))
+        elif param.name() == 'connect_leco_server':
+            if param.value():
+                self.connect_leco()
+            else:
+                self._command_tcpip.emit(ThreadCommand('quit', ))
+                try:
+                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected
+
         elif param.name() == 'refresh_timeout':
             self._refresh_timer.setInterval(param.value())
 
@@ -470,6 +482,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.current_value_signal.emit(self._current_value)
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
         elif status.command == "move_done":
             data_act: DataActuator = status.attribute[0]
@@ -481,6 +495,8 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._move_done_bool = True
             self.move_done_signal.emit(data_act)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
         elif status.command == 'outofbounds':
@@ -601,6 +617,19 @@ class DAQ_Move(ParameterManager, ControlModule):
 
             self._tcpclient_thread.start()
 
+    def connect_leco(self):
+        if self.settings.child("main_settings", "leco", "connect_leco_server").value():
+            name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # HACK as a name is required
+                name = "move"
+                print("no name given!")
+                self.settings.child("main_settings", "module_name").setValue()
+            self._leco_client = MoveActorListener(name=name)
+            self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
         if 'move_abs' in status.command:
@@ -626,6 +655,12 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         elif status.command == 'disconnected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == 'leco_connected':
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
+
+        elif status.command == 'leco_disconnected':
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'Update_Status':
             self.thread_status(status)

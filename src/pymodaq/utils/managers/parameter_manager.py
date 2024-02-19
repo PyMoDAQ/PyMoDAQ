@@ -96,7 +96,7 @@ class ParameterManager:
         self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings_slot)
         self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings_slot)
                                                                         
-        self.settings: Parameter = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
+        self.settings = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
 
     @property
@@ -108,7 +108,7 @@ class ParameterManager:
         return self._settings_tree.tree
 
     @property
-    def settings(self):
+    def settings(self) -> Parameter:
         return self._settings
 
     @settings.setter
