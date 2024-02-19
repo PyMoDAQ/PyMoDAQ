@@ -1,4 +1,6 @@
 
+import random
+
 from typing import Callable, Sequence
 
 import pymodaq.utils.parameter.utils as putils
@@ -44,13 +46,7 @@ class LECODirector:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        try:
-            name = self.settings.child("main_settings", 'module_name').value()
-        except Exception as exc:
-            print("name not available", exc)
-            name = "whatever"
-        name += "_director"  # to distinguish it from the DAQ_Move/Viewer listener
-
+        name = f'{self._title}_{random.randrange(0, 10000)}_director'
         print("name", name)
         # TODO use the same Listener instance as the LECOActorModule
         self.listener = PymodaqListener(name=name)
