@@ -10,26 +10,42 @@ Tutorial On Data Manipulation and analysis
 +------------------------------------+---------------------------------------+
 
 
-This tutorial is directly extracted from a jupyter notebook used to
-illustrate how to get your data back from a PyMoDAQ h5 file, analyze it
-and plot interactively these data.
+This tutorial is directly extracted from a jupyter notebook used to illustrate how to get your data back from a
+PyMoDAQ h5 file, analyze it and plot interactively these data.
 
-The analysis below is made on data taken from a Master student practical
-work. They had to setup and acquire a femtosecond pump-probe experiment
-on a gold thin film. The measured dynamic shows the electronic
-absorption of light from the pump laser, the quick thermalization of the
-electron gas with the gold film phonons and finally the
-expansions/contractions oscillations of the film due to the
-non-adiabatic energy transfer. To see the phonons oscillations, one need
-to repeat the pump-probe scan many times and average the data. The
-author thank Dr Arnaud Arbouet for the data and explanations. And if you
-don’t understand the physics, it’s not an issue as this notebook is here
-to show you how to load, manipulate and easily plot your data.
+This example is using experimental data collected on a time-resolved optical spectroscopy set-up developed
+by Arnaud Arbouet and "PyMoDAQed" by Sebastien Weber in CEMES.
+
+Practical work sessions exploiting this set-up and data analysis are organized every year in the framework of the
+Master PFIQMC at University Toulouse III PauL Sabatier.  The students have to align an ultrafast transient absorption
+experiment and acquire data from a gold thin film. In these pump-probe experiments, two femtosecond collinear
+light pulses are focused on the sample (see :numref:`pump_probe_fig`). The absorption by a first "pump" pulse
+places the sample out-of equilibrium. A second, delayed "probe" light pulse is used to measure the transmission
+of the sample during its relaxation.
+
+The measured dynamics shows (i) the transmission change associated with the injection of energy by the pump pulse
+(< ps timescale) followed by (ii) the quick thermalization of the electron gas with the gold film phonons
+(ps timescale) and (iii)  the oscillations induced by the mechanical vibrations of the film (10s ps timescale).
+To be able to detect these oscillations, one needs to repeat the pump-probe scan many times and average the data.
+
+PyMoDAQ allows this using the DAQ_Scan extension. One can specify how many scan should be performed and both the
+current scan and the averaged one are displayed live. However all the individual scans are saved as a multi-dimensional
+array. Moreover, because of the different time-scales (for electrons and for phonons) a "Sparse" 1D scan is used. It
+allows to quickly specify actuator values to be scanned in pieces (in the form of multiple `start:step:stop`). For
+instance scanning the electronic time window using a low step value and the phonon time window with a higher time step.
+The scan is therefore perfectly sampled but the time needed for one scan is reduced.
+
+The author thanks Dr Arnaud Arbouet for the data and explanations. And if you don't understand (or don’t care about)
+the physics, it's not an issue as this notebook is here to show you how to load, manipulate and easily plot your data.
+
+
+
+  .. _pump_probe_fig:
 
 .. figure:: /image/tutorial_data_analysis/setup.png
    :alt: python
 
-   python
+   Experimental Setup for time-resolved optical spectroscopy
 
 .. note::
 
