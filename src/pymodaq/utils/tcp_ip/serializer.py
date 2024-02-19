@@ -81,7 +81,8 @@ class SocketString:
 
 
 class Serializer:
-    """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and DataToExport objects"""
+    """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and
+    DataToExport objects"""
 
     def __init__(self, obj: SERIALIZABLE = None):
         self._bytes_string = b''
