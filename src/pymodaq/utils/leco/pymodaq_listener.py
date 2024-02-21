@@ -136,6 +136,10 @@ class PymodaqListener(Listener):
 
     def stop_listen(self) -> None:
         super().stop_listen()
+        try:
+            del self.communicator
+        except AttributeError:
+            pass
         self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
 
     def indicate_sign_in_out(self, full_name: str):

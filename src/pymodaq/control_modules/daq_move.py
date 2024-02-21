@@ -10,8 +10,9 @@ from __future__ import annotations
 import numbers
 from importlib import import_module
 from numbers import Number
+from random import randint
 import sys
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
@@ -105,7 +106,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         if parent is not None:
             self.ui = DAQ_Move_UI(parent, title)
         else:
-            self.ui: DAQ_Move_UI = None
+            self.ui: Optional[DAQ_Move_UI] = None
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_TYPES
@@ -174,7 +175,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
-    def append_data(self, dte: DataToExport = None, where: Union[Node, str] = None):
+    def append_data(self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
         Parameters
@@ -391,14 +392,14 @@ class DAQ_Move(ParameterManager, ControlModule):
                                                         port=self.settings.child('main_settings', 'tcpip',
                                                                                  'port').value())))
         elif param.name() == 'connect_leco_server':
-            if param.value():
-                self.connect_leco()
-            else:
-                self._command_tcpip.emit(ThreadCommand('quit', ))
-                try:
-                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
-                except TypeError:
-                    pass  # already disconnected
+            self.connect_leco(param.value())
+
+        elif param.name() == "name":
+            name = param.value()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                pass
 
         elif param.name() == 'refresh_timeout':
             self._refresh_timer.setInterval(param.value())
@@ -617,18 +618,30 @@ class DAQ_Move(ParameterManager, ControlModule):
 
             self._tcpclient_thread.start()
 
-    def connect_leco(self):
-        if self.settings.child("main_settings", "leco", "connect_leco_server").value():
-            name = self.settings.child("main_settings", "module_name").value()
+    def connect_leco(self, connect: bool) -> None:
+        if connect:
+            name = self.settings.child("main_settings", "leco", "name").value()
             if not name:
-                # HACK as a name is required
-                name = "move"
-                print("no name given!")
-                self.settings.child("main_settings", "module_name").setValue()
-            self._leco_client = MoveActorListener(name=name)
-            self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+                # take the module name as alternative
+                name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # a name is required, invent one
+                name = f"viewer_{randint(0, 10000)}"
+                name = self.settings.child("main_settings", "leco", "name").setValue(name)
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = MoveActorListener(name=name)
+                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
+            # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
+        else:
+            self._command_tcpip.emit(ThreadCommand('quit', ))
+            try:
+                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
@@ -693,10 +706,10 @@ class DAQ_Move_Hardware(QObject):
         super().__init__()
         self.logger = set_logger(f'{logger.name}.{title}.actuator')
         self._title = title
-        self.hardware: DAQ_Move_base = None
+        self.hardware: Optional[DAQ_Move_base] = None
         self.actuator_type = actuator_type
         self.current_position: DataActuator = position
-        self._target_value: DataActuator = None
+        self._target_value: Optional[DataActuator] = None
         self.hardware_adress = None
         self.axis_address = None
         self.motion_stoped = False
@@ -737,7 +750,7 @@ class DAQ_Move_Hardware(QObject):
             =============== =================================== ==========================================================================================================================
             **Parameters**   **Type**                             **Description**
 
-             *params_state*  ordered dictionnary list             The parameter state of the hardware class composed by a list representing the tree to keep a temporary save of the tree
+             *params_state*  ordered dictionary list             The parameter state of the hardware class composed by a list representing the tree to keep a temporary save of the tree
 
              *controller*    one or many instance of DAQ_Move     The controller id of the hardware
 
@@ -913,12 +926,12 @@ class DAQ_Move_Hardware(QObject):
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """
-            Update settings of hardware with dictionnary parameters in case of "Move_Settings" path, else update attribute with dictionnary parameters.
+            Update settings of hardware with dictionary parameters in case of "Move_Settings" path, else update attribute with dictionnary parameters.
 
             =========================  =========== ======================================================
             **Parameters**              **Type**    **Description**
 
-            *settings_parameter_dict*  dictionnary  Dictionnary containing the path and linked parameter
+            *settings_parameter_dict*  dictionary  Dictionary containing the path and linked parameter
             =========================  =========== ======================================================
 
             See Also

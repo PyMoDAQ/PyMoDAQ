@@ -10,8 +10,9 @@ from collections import OrderedDict
 import copy
 import os
 from pathlib import Path
+from random import randint
 import sys
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 import time
 
 from easydict import EasyDict as edict
@@ -120,7 +121,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                                    dock_settings=dock_settings,
                                                    dock_viewer=dock_viewer)
         else:
-            self.ui: DAQ_Viewer_UI = None
+            self.ui: Optional[DAQ_Viewer_UI] = None
 
         if self.ui is not None:
             QtWidgets.QApplication.processEvents()
@@ -133,10 +134,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._title = title
 
-        self.module_and_data_saver: Union[module_saving.DetectorSaver,
+        self.module_and_data_saver: Union[None,
+                                          module_saving.DetectorSaver,
                                           module_saving.DetectorEnlargeableSaver,
                                           module_saving.DetectorExtendedSaver] = None
-        self._h5saver_continuous: H5Saver = None
+        self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
         self.setup_continuous_saving()
 
@@ -156,14 +158,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._start_grab_time: float = 0.  # used for the refreshing rate
         self._received_data: int = 0
 
-        self._lcd: LCD = None
+        self._lcd: Optional[LCD] = None
 
-        self._bkg: DataToExport = None  # buffer to store background
+        self._bkg: Optional[DataToExport] = None  # buffer to store background
 
-        self._save_file_pathname: Path = None  # to store last active path, will be an Path object
+        self._save_file_pathname: Optional[Path] = None  # to store last active path, will be an Path object
         
-        self._snapshot_pathname: Path = None
-        self._data_to_save_export: DataToExport = None
+        self._snapshot_pathname: Optional[Path] = None
+        self._data_to_save_export: Optional[DataToExport] = None
 
         self._do_save_data: bool = False
 
@@ -944,14 +946,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                    port=self.settings['main_settings', 'tcpip', 'port'])))
 
         elif param.name() == 'connect_leco_server':
-            if param.value():
-                self.connect_leco()
-            else:
-                self._command_tcpip.emit(ThreadCommand('quit', ))
-                try:
-                    self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
-                except TypeError:
-                    pass  # already disconnected
+            self.connect_leco(param.value())
+
+        elif param.name() == "name":
+            name = param.value()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                pass
 
         elif param.name() == 'plugin_config':
             self.show_config(self.plugin_config)
@@ -1118,18 +1120,30 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             self._tcpclient_thread.start()
 
-    def connect_leco(self):
-        if self.settings.child("main_settings", "leco", "connect_leco_server").value():
-            name = self.settings.child("main_settings", "module_name").value()
+    def connect_leco(self, connect: bool) -> None:
+        if connect:
+            name = self.settings.child("main_settings", "leco", "name").value()
             if not name:
-                # HACK as a name is required
-                name = "viewer"
-                self.settings.child("main_settings", "module_name").setValue(name)
-            self._leco_client = ViewerActorListener(name=name)
-            self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+                # take the module name as alternative
+                name = self.settings.child("main_settings", "module_name").value()
+            if not name:
+                # a name is required, invent one
+                name = f"viewer_{randint(0, 10000)}"
+                name = self.settings.child("main_settings", "leco", "name").setValue(name)
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = ViewerActorListener(name=name)
+                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
             # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
+        else:
+            self._command_tcpip.emit(ThreadCommand('quit', ))
+            try:
+                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> None:
