@@ -35,7 +35,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
 
-from pymodaq.utils.leco.pymodaq_listener import MoveActorListener
+from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
 
 
 local_path = config_mod.get_set_local_dir()
@@ -452,7 +452,7 @@ class DAQ_Move(ParameterControlModule):
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
             if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
+                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, status.attribute))
 
         elif status.command == "move_done":
             data_act: DataActuator = status.attribute[0]
@@ -466,7 +466,7 @@ class DAQ_Move(ParameterControlModule):
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
             if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
+                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, status.attribute))
 
         elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)

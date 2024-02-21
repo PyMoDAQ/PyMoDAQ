@@ -20,9 +20,23 @@ from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerial
 from pymodaq.utils.leco.utils import serialize_object
 
 
-class LECO_Client_Commands(StrEnum):
+class LECOClientCommands(StrEnum):
     LECO_CONNECTED = "leco_connected"
     LECO_DISCONNECTED = "leco_disconnected"
+
+
+class LECOCommands(StrEnum):
+    CONNECT = "ini_connection"
+    QUIT = "quit"
+
+
+class LECOMoveCommands(StrEnum):
+    POSITION = 'position_is'
+    MOVE_DONE = 'move_done'
+
+
+class LECOViewerCommands(StrEnum):
+    DATA_READY = 'data_ready'
 
 
 class ListenerSignals(QObject):
@@ -140,13 +154,13 @@ class PymodaqListener(Listener):
             del self.communicator
         except AttributeError:
             pass
-        self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
 
     def indicate_sign_in_out(self, full_name: str):
         if "." in full_name:
-            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_CONNECTED))
+            self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_CONNECTED))
         else:
-            self.signals.cmd_signal.emit(ThreadCommand(LECO_Client_Commands.LECO_DISCONNECTED))
+            self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
 
 
 class ActorListener(PymodaqListener):
@@ -177,7 +191,7 @@ class ActorListener(PymodaqListener):
         """Queue a command to send it via LECO to the server."""
 
         # generic commands
-        if command.command == "ini_connection":
+        if command.command == LECOCommands.CONNECT:
             try:
                 if self.thread.is_alive():
                     return  # already started
@@ -185,7 +199,7 @@ class ActorListener(PymodaqListener):
                 pass  # start later on, as there is no thread.
             self.start_listen()
 
-        elif command.command == "quit":
+        elif command.command == LECOCommands.QUIT:
             try:
                 self.stop_listen()
             except Exception:
@@ -198,7 +212,7 @@ class ActorListener(PymodaqListener):
             # self.port = command.attribute['port']
             pass  # TODO change name?
 
-        elif command.command == 'data_ready':
+        elif command.command == LECOViewerCommands.DATA_READY:
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
@@ -218,14 +232,14 @@ class ActorListener(PymodaqListener):
                 path=path,
                 param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
-        elif command.command == 'position_is':
+        elif command.command == LECOMoveCommands.POSITION:
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
                                       position=serialize_object(value),
                                       )
 
-        elif command.command == 'move_done':
+        elif command.command == LECOMoveCommands.MOVE_DONE:
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",

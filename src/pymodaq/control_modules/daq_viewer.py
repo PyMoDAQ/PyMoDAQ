@@ -43,7 +43,7 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECO_Client_Commands
+from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -1092,10 +1092,10 @@ class DAQ_Viewer(ParameterControlModule):
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
 
-        elif status.command == LECO_Client_Commands.LECO_CONNECTED:
+        elif status.command == LECOClientCommands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
 
-        elif status.command == LECO_Client_Commands.LECO_DISCONNECTED:
+        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'get_axis':

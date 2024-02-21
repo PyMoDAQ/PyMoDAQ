@@ -21,7 +21,7 @@ from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
-from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECO_Client_Commands
+from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 
 
 class DAQTypesEnum(BaseEnum):
@@ -452,7 +452,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._leco_client.start_listen()
             # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
         else:
-            self._command_tcpip.emit(ThreadCommand('quit', ))
+            self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
             try:
                 self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
             except TypeError:
@@ -466,10 +466,10 @@ class ParameterControlModule(ParameterManager, ControlModule):
         elif status.command == 'disconnected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
 
-        elif status.command == LECO_Client_Commands.LECO_CONNECTED:
+        elif status.command == LECOClientCommands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
 
-        elif status.command == LECO_Client_Commands.LECO_DISCONNECTED:
+        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
         elif status.command == 'Update_Status':
