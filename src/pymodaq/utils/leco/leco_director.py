@@ -47,7 +47,6 @@ class LECODirector:
         super().__init__(**kwargs)
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
-        print("name", name)
         # TODO use the same Listener instance as the LECOActorModule
         self.listener = PymodaqListener(name=name)
         self.listener.start_listen()

@@ -22,9 +22,8 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
 from pymodaq.utils.data import DataFromPlugins, DataToExport, Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.control_modules.utils import ControlModule
+from pymodaq.control_modules.utils import ParameterControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
-from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
 from pymodaq.utils.config import Config, get_set_local_dir
 from pymodaq.utils.h5modules.browsing import browse_data
@@ -32,13 +31,12 @@ from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.h5modules.backends import Node
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.parameter import ioxml, Parameter
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
-from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
@@ -53,7 +51,7 @@ config = Config()
 local_path = get_set_local_dir()
 
 
-class DAQ_Viewer(ParameterManager, ControlModule):
+class DAQ_Viewer(ParameterControlModule):
     """ Main PyMoDAQ class to drive detectors
 
     Qt object and generic UI to drive actuators. The class is giving you full functionality to select (daq_detector),
@@ -83,26 +81,27 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     create if one want to receive infos from the ROI
     """
     settings_name = 'daq_viewer_settings'
-    custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
+    custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
     grab_done_signal = Signal(DataToExport)
 
-    _update_settings_signal = Signal(edict)
     overshoot_signal = Signal(bool)
     data_saved = Signal()
     grab_status = Signal(bool)
 
     params = daq_viewer_params
 
+    listener_class = ViewerActorListener
+
     def __init__(self, parent=None, title="Testing",
                  daq_type=config('viewer', 'daq_type'),
-                 dock_settings=None, dock_viewer=None):
+                 dock_settings=None, dock_viewer=None,
+                 **kwargs):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        ParameterManager.__init__(self, action_list = ('save','update'))
-        ControlModule.__init__(self)
+        super().__init__(action_list = ('save','update'), **kwargs)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
         self._daq_type: DAQTypesEnum = daq_type
@@ -894,6 +893,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         param: Parameter
             a given parameter whose value has been changed by user
         """
+        super().value_changed(param=param)
+
         path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
             self._h5saver_continuous.settings.child('do_save').setValue(False)
@@ -933,39 +934,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand('update_wait_time', [param.value()]))
 
-        elif param.name() == 'connect_server':
-            if param.value():
-                self.connect_tcp_ip()
-            else:
-                self._command_tcpip.emit(ThreadCommand('quit', ))
-
-        elif param.name() == 'ip_address' or param.name == 'port':
-            self._command_tcpip.emit(
-                ThreadCommand('update_connection',
-                              dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
-                                   port=self.settings['main_settings', 'tcpip', 'port'])))
-
-        elif param.name() == 'connect_leco_server':
-            self.connect_leco(param.value())
-
-        elif param.name() == "name":
-            name = param.value()
-            try:
-                self._leco_client.name = name
-            except AttributeError:
-                pass
-
-        elif param.name() == 'plugin_config':
-            self.show_config(self.plugin_config)
-
-        if path is not None:
-            if 'main_settings' not in path:
-                self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
-
-                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
-                if self.settings.child('main_settings', 'leco', 'leco_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+        self._update_settings(param=param)
 
     def child_added(self, param, data):
         """ Adds a child in the settings attribute
@@ -1096,54 +1065,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.stop_grab()
 
     def connect_tcp_ip(self):
-        """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
-
-        Use the settings: ip_address and port to specify the connection
-
-        See Also
-        --------
-        TCPServer
-        """
-        if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
-            self._tcpclient_thread = QThread()
-
-            tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
-                                  self.settings.child('main_settings', 'tcpip', 'port').value(),
-                                  self.settings.child('detector_settings'))
-            tcpclient.moveToThread(self._tcpclient_thread)
-            self._tcpclient_thread.tcpclient = tcpclient
-            tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
-
-            self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
-
-            self._tcpclient_thread.started.connect(tcpclient.init_connection)
-
-            self._tcpclient_thread.start()
-
-    def connect_leco(self, connect: bool) -> None:
-        if connect:
-            name = self.settings.child("main_settings", "leco", "name").value()
-            if not name:
-                # take the module name as alternative
-                name = self.settings.child("main_settings", "module_name").value()
-            if not name:
-                # a name is required, invent one
-                name = f"viewer_{randint(0, 10000)}"
-                name = self.settings.child("main_settings", "leco", "name").setValue(name)
-            try:
-                self._leco_client.name = name
-            except AttributeError:
-                self._leco_client = ViewerActorListener(name=name)
-                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
-            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
-            self._leco_client.start_listen()
-            # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
-        else:
-            self._command_tcpip.emit(ThreadCommand('quit', ))
-            try:
-                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+        super().connect_tcp_ip(params_state=self.settings.child('detector_settings'),
+                               client_type="GRABBER")
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> None:
@@ -1164,29 +1087,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         connect_tcp_ip, TCPServer
 
         """
+        if super().process_tcpip_cmds(status=status) is None:
+            return
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
-        elif status.command == 'connected':
-            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
-
-        elif status.command == 'disconnected':
-            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
 
         elif status.command == LECO_Client_Commands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
 
         elif status.command == LECO_Client_Commands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
-
-        elif status.command == 'Update_Status':
-            self.thread_status(status)
-
-        elif status.command == 'set_info':
-            param_dict = ioxml.XML_string_to_parameter(status.attribute[1])[0]
-            param_tmp = Parameter.create(**param_dict)
-            param = self.settings.child('detector_settings', *status.attribute[0][1:])
-
-            param.restoreState(param_tmp.saveState())
 
         elif status.command == 'get_axis':
             raise DeprecationWarning('Do not use this, the axis are in the data objects')
