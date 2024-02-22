@@ -1,6 +1,6 @@
 name: '3.8 PySide2'
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   call_workflow:
