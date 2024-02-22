@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 from qtpy import QtWidgets, QtCore
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -84,7 +84,10 @@ class ParameterManager:
     settings_name = 'custom_settings'
     params = []
 
-    def __init__(self, settings_name: str = None, action_list: tuple = ('save', 'update', 'load')):
+    def __init__(self, settings_name: Optional[str] = None,
+                 action_list: tuple = ('save', 'update', 'load'),
+                 **kwargs):
+        super().__init__(**kwargs)
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
