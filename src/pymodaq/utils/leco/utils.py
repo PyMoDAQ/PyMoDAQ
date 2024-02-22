@@ -4,7 +4,10 @@ from typing import Any, Union
 
 # import also the DeSerializer for easier imports in dependents
 from pymodaq.utils.tcp_ip.serializer import SERIALIZABLE, Serializer, DeSerializer  # type: ignore  # noqa
+from pymodaq.utils.logger import set_logger
 
+
+logger = set_logger('leco_utils')
 
 JSON_TYPES = Union[str, int, float]
 
@@ -20,10 +23,21 @@ def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any
                          "JSON serializable, nor via PyMoDAQ.")
 
 
-def start_coordinator():
-    from pyleco.directors.director import Director
+def run_coordinator():
+    command = [sys.executable, '-m', 'pyleco.coordinators.coordinator']
+    subprocess.Popen(command)
 
-    with Director(actor="COORDINATOR") as director:
-        if director.communicator.namespace is None:
-            command = [sys.executable, '-m', 'pyleco.coordinators.coordinator']
-            subprocess.run(command, shell=True)
+
+def start_coordinator():
+    # from pyleco.directors.director import Director
+    # try:
+    #     with Director(actor="COORDINATOR") as director:
+    #         if director.communicator.namespace is None:
+    #             run_coordinator()
+    #         else:
+    #             logger.info('Coordinator already running')
+    # except ConnectionRefusedError:
+    #     run_coordinator()
+    #     pass
+    run_coordinator()
+
