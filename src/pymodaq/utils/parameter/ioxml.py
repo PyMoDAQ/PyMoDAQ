@@ -466,6 +466,9 @@ def set_txt_from_elt(el, param_dict):
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
+    else:
+        if param_type == 'str':
+            param_dict.update(dict(value=''))
 
 
 def XML_file_to_parameter(file_name: Union[str, Path]) -> list:
@@ -535,4 +538,5 @@ def XML_string_to_pobject(xml_string) -> Parameter:
     --------
     parameter_to_xml_string
     """
-    return Parameter.create(name='settings', type='group', children=XML_string_to_parameter(xml_string))
+    return Parameter.create(name='settings', type='group',
+                            children=XML_string_to_parameter(xml_string))

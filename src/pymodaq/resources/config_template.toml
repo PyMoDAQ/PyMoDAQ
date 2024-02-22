@@ -56,6 +56,7 @@ allow_settings_edition = false
     port = 6341
 
     [network.leco-server]
+    run_coordinator_at_startup = false
     host = "localhost"
     port = 12300  # pyleco default Coordinator port
 

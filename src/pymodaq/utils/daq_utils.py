@@ -611,8 +611,10 @@ def get_instrument_plugins():  # pragma: no cover
                                      'type': 'daq_move'}
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
                                     if 'daq_move' in mod])
+                logger.info(f"Found Move Instrument: {plugin_list[-1]['name']}")
             except ModuleNotFoundError:
                 pass
+
             viewer_modules = {}
             for vtype in viewer_types:
                 try:
@@ -624,6 +626,7 @@ def get_instrument_plugins():  # pragma: no cover
                                      'type': f'daq_{vtype}viewer'}
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(viewer_modules[vtype].path.parent)])]
                                     if f'daq_{vtype}viewer' in mod])
+                    logger.info(f"Found Viewer Instrument: {plugin_list[-1]['name']}")
                 except ModuleNotFoundError:
                     pass
 
@@ -659,6 +662,7 @@ def get_instrument_plugins():  # pragma: no cover
         logger.debug(f'Impossible to import PID utility plugin: {str(e)}')
 
     return plugins_import
+
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """

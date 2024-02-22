@@ -127,7 +127,7 @@ params = [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
-             {'title': 'Name', 'name': 'name', 'type': 'str', 'value': "", 'default': ""},
+             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
              {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
          ]},

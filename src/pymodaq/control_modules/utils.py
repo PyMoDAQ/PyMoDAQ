@@ -356,6 +356,11 @@ class ParameterControlModule(ParameterManager, ControlModule):
 
     listener_class: type[ActorListener] = ActorListener
 
+    def __init__(self, **kwargs):
+        QObject.__init__(self)
+        ParameterManager.__init__(self, action_list=('save', 'update'))
+        ControlModule.__init__(self)
+
     def value_changed(self, param: Parameter) -> Optional[Parameter]:
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
 
@@ -430,14 +435,14 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._tcpclient_thread.start()
 
     def get_leco_name(self) -> str:
-        name = self.settings.child("main_settings", "leco", "name").value()
-        if not name:
+        name = self.settings["main_settings", "leco", "leco_name"]
+        if name == '':
             # take the module name as alternative
-            name = self.settings.child("main_settings", "module_name").value()
-        if not name:
+            name = self.settings["main_settings", "module_name"]
+        if name == '':
             # a name is required, invent one
             name = f"viewer_{randint(0, 10000)}"
-            name = self.settings.child("main_settings", "leco", "name").setValue(name)
+            name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
         return name
 
     def connect_leco(self, connect: bool) -> None:

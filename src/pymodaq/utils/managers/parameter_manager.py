@@ -86,8 +86,7 @@ class ParameterManager:
 
     def __init__(self, settings_name: Optional[str] = None,
                  action_list: tuple = ('save', 'update', 'load'),
-                 **kwargs):
-        super().__init__(**kwargs)
+                 ):
         if settings_name is None:
             settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock

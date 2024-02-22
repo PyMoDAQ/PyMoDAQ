@@ -101,7 +101,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(action_list = ('save','update'), **kwargs)
+        super().__init__(**kwargs)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
         self._daq_type: DAQTypesEnum = daq_type
@@ -790,9 +790,9 @@ class DAQ_Viewer(ParameterControlModule):
         """
         try:
             dte = dte.deepcopy()
-            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+            if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
-            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
@@ -978,6 +978,7 @@ class DAQ_Viewer(ParameterControlModule):
 
             det_params, _class = get_viewer_plugins(self.daq_type.name, self.detector)
             self.settings.child('detector_settings').addChildren(det_params.children())
+            self.settings.child('main_settings', 'module_name').setValue(self._title)
         except Exception as e:
             self.logger.exception(str(e))
 
