@@ -12,3 +12,4 @@ User's Guide
    user_folder/extensions
    user_folder/useful_modules
    user_folder/tcpip
+   user_folder/leco
