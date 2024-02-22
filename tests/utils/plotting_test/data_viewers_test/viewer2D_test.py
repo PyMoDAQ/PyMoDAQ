@@ -16,6 +16,7 @@ import pytest
 from pytest import fixture, approx
 import numpy as np
 import pyqtgraph as pg
+from pymodaq.utils.plotting.utils.plot_utils import RoiInfo, Point
 
 from pyqtgraph import mkPen
 from pymodaq.utils.conftests import qtbotskip
@@ -377,7 +378,7 @@ class TestROI:
 
     def test_remove_roi(self, init_viewer2D):
         prog, qtbot = init_viewer2D
-        data= init_data()
+        data = init_data()
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
@@ -576,19 +577,18 @@ class TestCrosshair:
 class TestRoiSelect:
     def test_ROIselect_action(self, init_viewer2D):
         prog, qtbot = init_viewer2D
-
+        SIZE = [20, 35]
+        POS = [45, 123]
         prog.view.get_action('ROIselect').trigger()
-        with qtbot.waitSignal(prog.ROI_select_signal, timeout=1000) as blocker:
-            prog.view.ROIselect.setSize((20, 35))
+        with qtbot.waitSignal(prog.roi_select_signal, timeout=1000) as blocker:
+            prog.view.ROIselect.setSize(SIZE)
 
-        with qtbot.waitSignal(prog.ROI_select_signal, timeout=1000) as blocker:
-            prog.view.ROIselect.setPos((45, 123))
+        with qtbot.waitSignal(prog.roi_select_signal, timeout=1000) as blocker:
+            prog.view.ROIselect.setPos(POS)
 
-        assert isinstance(blocker.args[0], QtCore.QRectF)
-        assert blocker.args[0].x() == 45
-        assert blocker.args[0].y() == 123
-        assert blocker.args[0].width() == 20
-        assert blocker.args[0].height() == 35
+        assert isinstance(blocker.args[0], RoiInfo)
+        assert blocker.args[0].origin == Point(POS[-1::-1])
+        assert blocker.args[0].size == Point(SIZE[-1::-1])
 
 
 class TestImageDisplayer:
