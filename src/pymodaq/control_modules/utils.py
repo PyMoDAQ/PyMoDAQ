@@ -435,14 +435,14 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._tcpclient_thread.start()
 
     def get_leco_name(self) -> str:
-        name = self.settings["main_settings", "leco", "name"]
+        name = self.settings["main_settings", "leco", "leco_name"]
         if name == '':
             # take the module name as alternative
             name = self.settings["main_settings", "module_name"]
         if name == '':
             # a name is required, invent one
             name = f"viewer_{randint(0, 10000)}"
-            name = self.settings.child("main_settings", "leco", "name").setValue(name)
+            name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
         return name
 
     def connect_leco(self, connect: bool) -> None:

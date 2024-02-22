@@ -790,9 +790,9 @@ class DAQ_Viewer(ParameterControlModule):
         """
         try:
             dte = dte.deepcopy()
-            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+            if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
-            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
