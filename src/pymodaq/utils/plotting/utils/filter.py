@@ -316,23 +316,24 @@ class Filter2DFromRois(Filter):
     def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
         dte = DataToExport('ROI')
         if dwa is not None:
+            try:
+                labels = []
+                for roi_key, roi in self._ROIs.items():
+                    label = self._roi_settings['ROIs', roi_key, 'use_channel']
+                    if label is not None:
+                        if label != 'All':
+                            sub_data = dwa.deepcopy()
+                            sub_data.data = [dwa[dwa.labels.index(label)]]
+                            sub_data.labels = [label]
+                        else:
+                            sub_data = dwa
+                        dte_temp = self.get_xydata_from_roi(roi, sub_data,
+                                                            self._roi_settings['ROIs',
+                                                            roi_key, 'math_function'])
 
-            labels = []
-            for roi_key, roi in self._ROIs.items():
-                label = self._roi_settings['ROIs', roi_key, 'use_channel']
-                if label is not None:
-                    if label != 'All':
-                        sub_data = dwa.deepcopy()
-                        sub_data.data = [dwa[dwa.labels.index(label)]]
-                        sub_data.labels = [label]
-                    else:
-                        sub_data = dwa
-                    dte_temp = self.get_xydata_from_roi(roi, sub_data,
-                                                        self._roi_settings['ROIs',
-                                                        roi_key, 'math_function'])
-
-                    dte.append(dte_temp)
-
+                        dte.append(dte_temp)
+            except Exception as e:
+                logger.warning(f'Issue with the ROI: {str(e)}')
         return dte
 
     def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
