@@ -21,5 +21,9 @@ def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any
 
 
 def start_coordinator():
-    command = [sys.executable, '-m', 'pyleco.coordinators.coordinator']
-    subprocess.run(command, shell=True)
+    from pyleco.directors.director import Director
+
+    with Director(actor="COORDINATOR") as director:
+        if director.communicator.namespace is None:
+            command = [sys.executable, '-m', 'pyleco.coordinators.coordinator']
+            subprocess.run(command, shell=True)
