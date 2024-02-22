@@ -22,7 +22,7 @@ from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 
 from pymodaq.utils import exceptions

@@ -999,6 +999,29 @@ class TestDataToExport:
         assert data.get_data_from_name_origin('data2D') == dat4
         assert dat1 not in data.data
 
+    def test_get_full_names(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORGIN1
+        dat2.origin = ORIGIN2
+
+        assert data.get_full_names() == [dat1.get_full_name(), dat2.get_full_name()]
+
+    def test_get_origins(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORIGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORIGIN1
+        dat2.origin = ORIGIN2
+
+        for origin in data.get_origins():
+            assert origin in [ORIGIN1, ORIGIN2]
+
+        dat2.origin = ORIGIN1
+
+        assert data.get_origins()  == [ORIGIN1]
+
     def test_get_data_from_name_origin(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
         # with origin
@@ -1115,8 +1138,10 @@ class TestDataToExport:
         dte = data_mod.DataToExport('merging', data=[dat1, dat2, dat3])
 
         dwa = dte.merge_as_dwa('Data1D')
-
+        assert dwa.name == dte.name
         assert len(dwa) == 6
         assert np.all(dwa[0] == pytest.approx(DATA1D))
         assert np.all(dwa[1] == pytest.approx(0.2*DATA1D))
         assert np.all(dwa[3] == pytest.approx(-0.7*DATA1D))
+
+        assert dwa.labels == dat1.labels + dat2.labels + dat3.labels

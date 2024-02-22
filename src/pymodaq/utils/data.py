@@ -12,6 +12,7 @@ import numpy as np
 from typing import List, Tuple, Union, Any
 from typing import Iterable as IterableType
 from collections.abc import Iterable
+from collections import OrderedDict
 import logging
 
 import warnings
@@ -393,6 +394,8 @@ class Axis:
             return int((threshold - self.offset) / self.scaling)
 
     def find_indexes(self, thresholds: IterableType[float]) -> IterableType[int]:
+        if isinstance(thresholds, numbers.Number):
+            thresholds = [thresholds]
         return [self.find_index(threshold) for threshold in thresholds]
 
 
@@ -674,6 +677,9 @@ class DataBase(DataLowLevel):
     def __gt__(self, other):
         return self._comparison_common(other, '__gt__')
 
+    def deepcopy(self):
+        return copy.deepcopy(self)
+
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
         """ Compute the weighted average between self and other DataBase
 
@@ -714,8 +720,15 @@ class DataBase(DataLowLevel):
         for dat in data:
             if dat.shape != self.shape:
                 raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
-        self.data = self.data + data.data
+        self.data += data.data
         self.labels.extend(data.labels)
+
+    def pop(self, index: int) -> DataBase:
+        """ Returns a copy of self but with data taken at the specified index"""
+        dwa = self.deepcopy()
+        dwa.data = [dwa.data[index]]
+        dwa.labels = [dwa.labels[index]]
+        return dwa
 
     @property
     def shape(self):
@@ -799,7 +812,7 @@ class DataBase(DataLowLevel):
         if isinstance(data, list):
             if len(data) == 0:
                 is_valid = False
-            if not isinstance(data[0], np.ndarray):
+            elif not isinstance(data[0], np.ndarray):
                 is_valid = False
             elif len(data[0].shape) == 0:
                 is_valid = False
@@ -868,6 +881,12 @@ class DataBase(DataLowLevel):
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
         self._data = data
+
+    def to_dict(self):
+        data_dict = OrderedDict([])
+        for ind in range(len(self)):
+            data_dict[self.labels[ind]] = self[ind]
+        return data_dict
 
 
 class AxesManagerBase:
@@ -1076,6 +1095,10 @@ class AxesManagerBase:
 
     @abstractmethod
     def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
+        ...
+
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        """Only valid for Spread data"""
         ...
 
     def get_nav_axes(self) -> List[Axis]:
@@ -1386,6 +1409,11 @@ class AxesManagerSpread(AxesManagerBase):
         else:
             return None, None
 
+    def get_axis_from_index_spread(self, index: int, spread_order: int) -> Axis:
+        for axis in self.axes:
+            if axis.index == index and axis.spread_order == spread_order:
+                return axis
+
     def _get_dimension_str(self):
         try:
             string = "("
@@ -1496,6 +1524,15 @@ class DataWithAxes(DataBase):
             for axis in self.axes:
                 axis.index = 0 if axis.index == 1 else 1
 
+    def crop_at_along(self, coordinates_tuple: Tuple):
+        slices = []
+        for coordinates in coordinates_tuple:
+            axis = self.get_axis_from_index(0)[0]
+            indexes = axis.find_indexes(coordinates)
+            slices.append(slice(indexes))
+
+        return self._slicer(slices, False)
+
     def mean(self, axis: int = 0) -> DataWithAxes:
         """Process the mean of the data on the specified axis and returns the new data
 
@@ -1509,7 +1546,10 @@ class DataWithAxes(DataBase):
         """
         dat_mean = []
         for dat in self.data:
-            dat_mean.append(np.mean(dat, axis=axis))
+            mean = np.mean(dat, axis=axis)
+            if isinstance(mean, numbers.Number):
+                mean = np.array([mean])
+            dat_mean.append(mean)
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
     
     def sum(self, axis: int = 0) -> DataWithAxes:
@@ -1634,6 +1674,25 @@ class DataWithAxes(DataBase):
 
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)
+
+    def get_axis_from_index_spread(self, index: int, spread: int):
+        return self._am.get_axis_from_index_spread(index, spread)
+
+    def get_axis_from_label(self, label: str) -> Axis:
+        """Get the axis referred by a given label
+
+        Parameters
+        ----------
+        label: str
+            The label of the axis
+
+        Returns
+        -------
+        Axis or None: return the axis instance if it has the right label else None
+        """
+        for axis in self.axes:
+            if axis.label == label:
+                return axis
 
     def create_missing_axes(self):
         """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
@@ -1814,8 +1873,7 @@ class DataWithAxes(DataBase):
         finally:
             self._data = old_data
 
-    def deepcopy(self):
-        return copy.deepcopy(self)
+
 
     @property
     def _am(self) -> AxesManagerBase:
@@ -2009,14 +2067,17 @@ class DataToExport(DataLowLevel):
         Only possible if all dwa and underlying data have same shape
         """
         dim = enum_checker(DataDim, dim)
-        if name is None:
-            name = self.name
+
         filtered_data = self.get_data_from_dim(dim)
-        ndarrays = []
-        for dwa in filtered_data:
-            ndarrays.extend(dwa.data)
-        dwa = DataRaw(name, dim=dim, data=ndarrays)
-        return dwa
+        if len(filtered_data) != 0:
+            dwa = filtered_data[0].deepcopy()
+            for dwa_tmp in filtered_data[1:]:
+                if dwa_tmp.shape == dwa.shape and dwa_tmp.distribution == dwa.distribution:
+                    dwa.append(dwa_tmp)
+            if name is None:
+                name = self.name
+            dwa.name = name
+            return dwa
 
     def __repr__(self):
         repr = f'{self.__class__.__name__}: {self.name} <len:{len(self)}>\n'
@@ -2087,6 +2148,27 @@ class DataToExport(DataLowLevel):
             return [data.get_full_name() for data in self.data]
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
+
+    def get_origins(self, dim: DataDim = None):
+        """Get the origins of the underlying data into the returned value,  eventually filtered by dim
+
+        Parameters
+        ----------
+        dim: DataDim or str
+
+        Returns
+        -------
+        list of str: the origins of the (filtered) DataWithAxes data
+
+        Examples
+        --------
+        d0 = DataWithAxes(name='datafromdet0', origin='det0')
+        """
+        if dim is None:
+            return list({dwa.origin for dwa in self.data})
+        else:
+            return list({dwa.origin for dwa in self.get_data_from_dim(dim).data})
+
 
     def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
         """Get the DataWithAxes with matching full name"""

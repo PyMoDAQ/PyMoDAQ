@@ -13,7 +13,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.logger import set_logger, get_module_name
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils.logger import set_logger, get_module_name
-
+from pymodaq.utils.data import DataCalculated
 
 logger = set_logger(get_module_name(__file__))
 IMAGE_TYPES = ['red', 'green', 'blue']
@@ -81,14 +81,15 @@ class LineoutPlotter(QObject):
 
     def plot_roi_lineouts(self, roi_dicts):
         self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
-        for roi_key, lineout_data in roi_dicts.items():
-            if roi_key in self._roi_curves:
-                self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
-                                                         self.integrated_data.datas[roi_key])
-        self.plot_other_lineouts(roi_dicts)
 
-        logger.debug('roi lineouts plotted')
-        self.roi_lineout_plotted.emit(roi_dicts)
+        # for roi_key, lineout_data in roi_dicts.items():
+        #     if roi_key in self._roi_curves:
+        #         self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
+        #                                                  self.integrated_data.datas[roi_key])
+        # self.plot_other_lineouts(roi_dicts)
+        #
+        # logger.debug('roi lineouts plotted')
+        # self.roi_lineout_plotted.emit(roi_dicts)
 
     def plot_other_lineouts(self, roi_dicts):
         raise NotImplementedError
@@ -112,8 +113,9 @@ class LineoutPlotter(QObject):
         param, param_value = param_changed
 
         if param.name() == 'Color':
-            for curve in self._roi_curves[roi_key].values():
-                curve.setPen(param_value)
+            if roi_key in self._roi_curves:
+                for curve in self._roi_curves[roi_key].values():
+                    curve.setPen(param_value)
 
         self.roi_changed.emit(self._roi_manager.ROIs)
 
@@ -130,7 +132,7 @@ class LineoutPlotter(QObject):
         item_param = self._roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
         color = item_param.child('Color').value()
 
-        self.add_roi_lineout_items(newindex, color)
+        #self.add_roi_lineout_items(newindex, color)
         self.roi_changed.emit(self._roi_manager.ROIs)
 
     def add_roi_lineout_items(self, index, pen):

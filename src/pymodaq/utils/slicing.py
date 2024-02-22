@@ -17,7 +17,7 @@ class SpecialSlicers(object):
         self.is_navigation = is_navigation
         self.obj = obj
 
-    def __getitem__(self, slices):
+    def __getitem__(self, slices) -> Union['DataWithAxes', 'Axis']:
         return self.obj._slicer(slices, self.is_navigation)
 
 

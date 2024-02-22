@@ -13,7 +13,7 @@ from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_lis
 from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import Parameter
 from pymodaq.utils.enums import BaseEnum, enum_checker
-from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
 
