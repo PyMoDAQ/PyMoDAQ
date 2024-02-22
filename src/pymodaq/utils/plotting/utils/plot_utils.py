@@ -532,8 +532,8 @@ class RoiInfo:
     index
     """
 
-    origin: Union[Point, Iterable[float]]
-    size: Union[Point, Iterable[float]]
+    origin: Union[Point, IterableType[float]]
+    size: Union[Point, IterableType[float]]
     angle: float = None
     centered: bool = False
     color: Tuple[int, int, int] = (255, 0, 0)
@@ -556,7 +556,7 @@ class RoiInfo:
             self.origin += Point((self.size[0] / 2, self.size[1] / 2))
             self.centered = True
 
-    def to_slices(self) -> Iterable[slice]:
+    def to_slices(self) -> IterableType[slice]:
         """Get slices to be used directly to slice DataWithAxes"""
         if issubclass(self.roi_class, pgROI):
             if self.centered:
