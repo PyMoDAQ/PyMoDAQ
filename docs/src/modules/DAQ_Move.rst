@@ -227,12 +227,12 @@ Other settings
 * ``epsilon``: -**very important feature**- the actuator will try to reach the target position with a precision
   *epsilon*. So one could use it if one want to be sure the actuator really reached a given position before moving on.
   However if the set precision is too small, the actuator may never reached it and will issue a timeout
-* ``Timeout``: maximum amout of time the module will wait for the actuator to reach the desired position.
+* ``Timeout``: maximum amount of time the module will wait for the actuator to reach the desired position.
 
 
 .. _daq_move_grabing:
 
-Grabing the actuator's value
+Grabbing the actuator's value
 ----------------------------
 
 

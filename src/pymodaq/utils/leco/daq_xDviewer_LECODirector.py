@@ -14,7 +14,10 @@ from pymodaq.utils.leco.director_utils import DetectorDirector
 
 
 class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
-    """A control module, which in the dashboard, allows to control a remote Viewer module"""
+    """A control module, which in the dashboard, allows to control a remote Viewer module.
+
+    This is the base class for the viewer LECO director modules.
+    """
 
     settings: Parameter
     controller: DetectorDirector
