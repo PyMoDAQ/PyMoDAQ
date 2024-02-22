@@ -27,8 +27,8 @@ class BuilderBase(ABCMeta):
 
 
 class ObjectFactory(metaclass=ABCMeta):
-    """Generic ObjectFactory with a decorator register to add object builders to the factory with a unique key
-    identifier
+    """Generic ObjectFactory with a decorator register to add object builders to the factory with a
+    unique key identifier
 
     See https://realpython.com/factory-method-python/ for some details
 
