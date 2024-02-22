@@ -1,4 +1,5 @@
-
+import subprocess
+import sys
 from typing import Any, Union
 
 # import also the DeSerializer for easier imports in dependents
@@ -17,3 +18,8 @@ def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any
     else:
         raise ValueError(f"{pymodaq_object} of type '{type(pymodaq_object).__name__}' is neither "
                          "JSON serializable, nor via PyMoDAQ.")
+
+
+def start_coordinator():
+    command = [sys.executable, '-m', 'pyleco.coordinators.coordinator']
+    subprocess.run(command, shell=True)
