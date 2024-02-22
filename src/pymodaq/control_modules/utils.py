@@ -356,6 +356,11 @@ class ParameterControlModule(ParameterManager, ControlModule):
 
     listener_class: type[ActorListener] = ActorListener
 
+    def __init__(self, **kwargs):
+        QObject.__init__(self)
+        ParameterManager.__init__(self, action_list=('save', 'update'))
+        ControlModule.__init__(self)
+
     def value_changed(self, param: Parameter) -> Optional[Parameter]:
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
 
