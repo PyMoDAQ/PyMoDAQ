@@ -83,10 +83,10 @@ try:
     Q_ = ureg.Quantity
     logger.info('')
     logger.info('')
-    # logger.info('************************')
-    # logger.info(f"Getting the list of instrument plugins...")
-    # logger.info('************************')
-    # get_instrument_plugins()
+    logger.info('************************')
+    logger.info(f"Getting the list of instrument plugins...")
+    logger.info('************************')
+    get_instrument_plugins()
 
     if config('network', 'leco-server', 'run_coordinator_at_startup'):
         try:
