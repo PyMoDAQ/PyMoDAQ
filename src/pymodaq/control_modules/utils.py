@@ -435,11 +435,11 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._tcpclient_thread.start()
 
     def get_leco_name(self) -> str:
-        name = self.settings.child("main_settings", "leco", "name").value()
-        if not name:
+        name = self.settings["main_settings", "leco", "name"]
+        if name == '':
             # take the module name as alternative
-            name = self.settings.child("main_settings", "module_name").value()
-        if not name:
+            name = self.settings["main_settings", "module_name"]
+        if name == '':
             # a name is required, invent one
             name = f"viewer_{randint(0, 10000)}"
             name = self.settings.child("main_settings", "leco", "name").setValue(name)
