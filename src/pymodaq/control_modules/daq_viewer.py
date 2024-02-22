@@ -978,6 +978,7 @@ class DAQ_Viewer(ParameterControlModule):
 
             det_params, _class = get_viewer_plugins(self.daq_type.name, self.detector)
             self.settings.child('detector_settings').addChildren(det_params.children())
+            self.settings.child('main_settings', 'module_name').setValue(self._title)
         except Exception as e:
             self.logger.exception(str(e))
 
