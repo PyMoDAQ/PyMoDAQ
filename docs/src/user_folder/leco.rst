@@ -58,3 +58,31 @@ You can start the *LECODirector* module from the mock plugins package, either in
 3. Initialize the detector/actuator.
 4. Read values or control the module remotely.
 
+
+Developing with LECO for PyMoDAQ
+--------------------------------
+
+Here are some hints about the use of LECO in PyMoDAQ, that you might write your own programs.
+
+Overview
+........
+
+Both, the *Actor* and the *Director* have a ``pyleco.Listener`` which offers some methods via JSON-RPC_, which is used by LECO.
+
+.. _JSON-RPC: https://www.jsonrpc.org/specification
+
+The Actor offers methods to do an action like initializing a movement or requesting a data readout.
+After the movement or data acquisition has finished, it will call a method on some remote Component.
+If you want, that the Actor sends the request to your Director, you have to tell the Actor about your name via the ``set_remote_name()`` method.
+
+The :mod:`pymodaq.utils.leco.director_utils` module offers director classes, which makes it easier to call the corresponding methods of the Actor.
+
+Serialization
+.............
+
+PyMoDAQ data objects have to be transferred between modules.
+The payload of LECO messages are typically JSON encoded messages.
+Therefore, the :class:`~pymodaq.utils.tcp_ip.serializer.Serializer` and :class:`~pymodaq.utils.tcp_ip.serializer.DeSerializer` can encode/decode the data objects to bytes.
+For more information about serialization see :ref:`tcpip`.
+In order to make a JSON string, base64 is used.
+The Serializer offers the :meth:`~pymodaq.utils.tcp_ip.serializer.Serializer.to_b64_string` and the DeSerializer the :meth:`~pymodaq.utils.tcp_ip.serializer.DeSerializer.from_b64_string` method.
