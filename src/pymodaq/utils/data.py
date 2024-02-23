@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numbers
 import numpy as np
-from typing import List, Tuple, Union, Any
+from typing import List, Tuple, Union, Any, Callable
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 import logging
@@ -171,6 +171,12 @@ class Axis:
     def copy(self):
         return copy.copy(self)
 
+    def as_dwa(self) -> DataWithAxes:
+        dwa = DataRaw(self.label, data=[self.get_data()],
+                      labels=[f'{self.label}_{self.units}'])
+        dwa.create_missing_axes()
+        return dwa
+
     @property
     def label(self) -> str:
         """str: get/set the label of this axis"""
@@ -221,6 +227,18 @@ class Axis:
     def get_data(self) -> np.ndarray:
         """Convenience method to obtain the axis data (usually None because scaling and offset are used)"""
         return self._data if self._data is not None else self._linear_data(self.size)
+
+    def get_data_at(self, indexes: Union[int, IterableType, slice]) -> np.ndarray:
+        """ Get data at specified indexes
+
+        Parameters
+        ----------
+        indexes:
+        """
+        if not (isinstance(indexes, np.ndarray) or isinstance(indexes, slice) or
+                isinstance(indexes, int)):
+            indexes = np.array(indexes)
+        return self.get_data()[indexes]
 
     def get_scale_offset_from_data(self, data: np.ndarray = None):
         """Get the scaling and offset from the axis's data
@@ -702,6 +720,18 @@ class DataBase(DataLowLevel):
         new_data.data = [np.abs(dat) for dat in new_data]
         return new_data
 
+    def real(self):
+        """ Take the real part of itself"""
+        new_data = copy.copy(self)
+        new_data.data = [np.real(dat) for dat in new_data]
+        return new_data
+
+    def imag(self):
+        """ Take the imaginary part of itself"""
+        new_data = copy.copy(self)
+        new_data.data = [np.imag(dat) for dat in new_data]
+        return new_data
+
     def flipud(self):
         """Reverse the order of elements along axis 0 (up/down)"""
         new_data = copy.copy(self)
@@ -778,8 +808,8 @@ class DataBase(DataLowLevel):
             labels.append(f'CH{len(labels):02d}')
         self._labels = labels
 
-    def get_data_index(self, index: int = 0):
-        """Get the data by its index in the list"""
+    def get_data_index(self, index: int = 0) -> np.ndarray:
+        """Get the data by its index in the list, same as self[index]"""
         return self.data[index]
 
     @staticmethod
@@ -1450,8 +1480,8 @@ class DataWithAxes(DataBase):
         self.get_dim_from_data_axes()  # in DataBase, dim is processed from the shape of data, but if axes are provided
         #then use get_dim_from axes
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend')):
-        return plotter_factory.get(plotter_backend).plot(self)
+    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, **kwargs):
+        return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
@@ -1535,15 +1565,17 @@ class DataWithAxes(DataBase):
             dat_sum.append(np.sum(dat, axis=axis))
         return self.deepcopy_with_new_data(dat_sum, remove_axes_index=axis)
 
-    def interp(self,  new_axis_data: Union[Axis, np.ndarray]) -> DataWithAxes:
+    def interp(self,  new_axis_data: Union[Axis, np.ndarray], **kwargs) -> DataWithAxes:
         """Performs linear interpolation for 1D data only.
         
-        For more complex ones, see scipy.interpolate
+        For more complex ones, see :py:meth:`scipy.interpolate`
 
         Parameters
         ----------
         new_axis_data: Union[Axis, np.ndarray]
             The coordinates over which to do the interpolation
+        kwargs: dict
+            extra named parameters to be passed to the :py:meth:`~numpy.interp` method
 
         Returns
         -------
@@ -1551,21 +1583,23 @@ class DataWithAxes(DataBase):
 
         See Also
         --------
-        scipy.interpolate
+        :py:meth:`~numpy.interp`
+        :py:meth:`~scipy.interpolate`
         """
         if self.dim != DataDim['Data1D']:
             raise ValueError('For basic interpolation, only 1D data are supported')
 
         data_interpolated = []
         axis_obj = self.get_axis_from_index(0)[0]
-        if isinstance(new_axis_data, Axis):
-            new_axis_data = new_axis_data.get_data()
+        if isinstance(new_axis_data, np.ndarray):
+            new_axis_data = Axis(axis_obj.label, axis_obj.units, data=new_axis_data)
 
         for dat in self.data:
-            data_interpolated.append(np.interp(new_axis_data, axis_obj.get_data(), dat))
-        new_data = self.deepcopy_with_new_data(data_interpolated)
-        axis_obj = new_data.get_axis_from_index(0)[0]
-        axis_obj.data = new_data
+            data_interpolated.append(np.interp(new_axis_data.get_data(), axis_obj.get_data(), dat,
+                                               **kwargs))
+        new_data = DataCalculated(f'{self.name}_interp', data=data_interpolated,
+                                  axes=[new_axis_data],
+                                  labels=self.labels)
         return new_data
 
     def ft(self, axis: int = 0) -> DataWithAxes:
@@ -1578,6 +1612,10 @@ class DataWithAxes(DataBase):
         Returns
         -------
         DataWithAxes
+
+        See Also
+        --------
+        :py:meth:`~pymodaq.utils.math_utils.ft`, :py:meth:`~numpy.fft.fft`
         """
         dat_ft = []
         axis_obj = self.get_axis_from_index(axis)[0]
@@ -1603,6 +1641,10 @@ class DataWithAxes(DataBase):
         Returns
         -------
         DataWithAxes
+
+        See Also
+        --------
+        :py:meth:`~pymodaq.utils.math_utils.ift`, :py:meth:`~numpy.fft.ifft`
         """
         dat_ift = []
         axis_obj = self.get_axis_from_index(axis)[0]
@@ -1615,7 +1657,92 @@ class DataWithAxes(DataBase):
         axis_obj.label = f'ift({axis_obj.label})'
         axis_obj.units = f'2pi/{axis_obj.units}'
         return new_data
-    
+
+    def fit(self, function: Callable, initial_guess: IterableType, data_index: int = None,
+            axis_index: int = 0, **kwargs) -> DataCalculated:
+        """ Apply 1D curve fitting using the scipy optimization package
+
+        Parameters
+        ----------
+        function: Callable
+            a callable to be used for the fit
+        initial_guess: Iterable
+            The initial parameters for the fit
+        data_index: int
+            The index of the data over which to do the fit, if None apply the fit to all
+        axis_index: int
+            the axis index to use for the fit (if multiple) but there should be only one
+        kwargs: dict
+            extra named parameters applied to the curve_fit scipy method
+
+        Returns
+        -------
+        DataCalculated containing the evaluation of the fit on the specified axis
+
+        See Also
+        --------
+        :py:meth:`~scipy.optimize.curve_fit`
+        """
+        import scipy.optimize as opt
+        if self.dim != DataDim['Data1D']:
+            raise ValueError('Integrated fitting only works for 1D data')
+        axis = self.get_axis_from_index(axis_index)[0].copy()
+        axis_array = axis.get_data()
+        if data_index is None:
+            datalist_to_fit = self.data
+            labels = [f'{label}_fit' for label in self.labels]
+        else:
+            datalist_to_fit = [self.data[data_index]]
+            labels = [f'{self.labels[data_index]}_fit']
+
+        datalist_fitted = []
+        fit_coeffs = []
+        for data_array in datalist_to_fit:
+            popt, pcov = opt.curve_fit(function, axis_array, data_array, p0=initial_guess, **kwargs)
+            datalist_fitted.append(function(axis_array, *popt))
+            fit_coeffs.append(popt)
+
+        return DataCalculated(f'{self.name}_fit', data=datalist_fitted,
+                              labels=labels,
+                              axes=[axis], fit_coeffs=fit_coeffs)
+
+    def find_peaks(self, height=None, threshold=None, **kwargs) -> DataToExport:
+        """ Apply the scipy find_peaks method to 1D data
+
+        Parameters
+        ----------
+        height: number or ndarray or sequence, optional
+        threshold: number or ndarray or sequence, optional
+        kwargs: dict
+            extra named parameters applied to the find_peaks scipy method
+
+        Returns
+        -------
+        DataCalculated
+
+        See Also
+        --------
+        :py:meth:`~scipy.optimize.find_peaks`
+        """
+        if self.dim != DataDim['Data1D']:
+            raise ValueError('Finding peaks only works for 1D data')
+        from scipy.signal import find_peaks
+        peaks_indices = []
+        dte = DataToExport('peaks')
+        for ind in range(len(self)):
+            peaks, properties = find_peaks(self[ind], height, threshold, **kwargs)
+            peaks_indices.append(peaks)
+
+            dte.append(DataCalculated(f'{self.labels[ind]}',
+                                      data=[self[ind][peaks_indices[-1]],
+                                            peaks_indices[-1]
+                                            ],
+                                      labels=['peak value', 'peak indexes'],
+                                      axes=[Axis('peak position', self.axes[0].units,
+                                                 data=self.axes[0].get_data_at(peaks_indices[-1]))])
+                       )
+        return dte
+
     def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
         """
@@ -1885,6 +2012,10 @@ class DataWithAxes(DataBase):
     def get_data_dimension(self) -> str:
         return str(self._am)
 
+    def get_data_as_dwa(self, index: int = 0) -> DataWithAxes:
+        """ Get the underlying data selected from the list at index, returned as a DataWithAxes"""
+        return self.deepcopy_with_new_data([self[index]])
+
 
 class DataRaw(DataWithAxes):
     """Specialized DataWithAxes set with source as 'raw'. To be used for raw data"""
@@ -2002,8 +2133,8 @@ class DataToExport(DataLowLevel):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend')):
-        return plotter_factory.get(plotter_backend).plot(self)
+    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, **kwargs):
+        return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
 
     def affect_name_to_origin_if_none(self):
         """Affect self.name to all DataWithAxes children's attribute origin if this origin is not defined"""

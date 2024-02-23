@@ -48,7 +48,7 @@ class PlotterBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def plot(self, data) -> None:
+    def plot(self, data, *args, **kwargs) -> None:
         """Abstract method to plot data object with a given backend"""
         pass
 

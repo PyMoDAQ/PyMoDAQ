@@ -34,47 +34,47 @@ class Plotter(PlotterBase):
         self.ind_line = 0
         self.ind_column = 0
 
-    def plot(self, data: Union[DataWithAxes, DataToExport]) -> plt.Figure:
+    def plot(self, data: Union[DataWithAxes, DataToExport], *args, **kwargs) -> plt.Figure:
         fig = plt.figure()
 
         if isinstance(data, DataWithAxes):
             self.n_columns = len(data) if data.dim.name == 'Data2D' else 1
-            self.plot_dwa(data)
+            self.plot_dwa(data, *args, **kwargs)
         elif isinstance(data, DataToExport):
             self.n_columns = max([len(dwa) if dwa.dim.name == 'Data2D' else 1 for dwa in data])
             self.n_lines = len(data)
-            self.plot_dte(data)
+            self.plot_dte(data, *args, **kwargs)
         plt.tight_layout()
         fig.suptitle(f'{data.name} taken the {datetime.datetime.fromtimestamp(data.timestamp)}')
         return fig
 
-    def plot_dwa(self, dwa: DataWithAxes):
+    def plot_dwa(self, dwa: DataWithAxes, *args, **kwargs):
         if dwa.dim.name == 'Data1D':
             if len(dwa.axes) == 0:
                 dwa.create_missing_axes()
             self.ind_column = 0
-            self.plot1D(dwa)
+            self.plot1D(dwa, *args, **kwargs)
         elif dwa.dim.name == 'Data2D':
             if len(dwa.axes) < 2:
                 dwa.create_missing_axes()
-            self.plot2D(dwa)
+            self.plot2D(dwa, *args, **kwargs)
 
-    def plot_dte(self, dte: DataToExport):
+    def plot_dte(self, dte: DataToExport, *args, **kwargs):
         for ind in range(len(dte)):
             self.ind_line = ind
-            self.plot_dwa(dte[ind])
+            self.plot_dwa(dte[ind], *args, **kwargs)
 
-    def plot1D(self, dwa: DataWithAxes):
+    def plot1D(self, dwa: DataWithAxes, *args, **kwargs):
         plt.subplot(self.n_lines, self.n_columns,
                     (self.n_columns * self.ind_line) + 1)
         for data_array in dwa:
-            plt.plot(dwa.axes[0].get_data(), data_array)
+            plt.plot(dwa.axes[0].get_data(), data_array, *args, **kwargs)
         plt.legend(dwa.labels)
-        plt.title(f'{dwa.name}')
+        #plt.title(f'{dwa.name}')
         plt.xlabel(f'{dwa.axes[0].label} ({dwa.axes[0].units})')
         plt.ylabel(dwa.name)
 
-    def plot2D(self, dwa: DataWithAxes):
+    def plot2D(self, dwa: DataWithAxes, *args, **kwargs):
         xaxis = dwa.get_axis_from_index(1)[0]
         yaxis = dwa.get_axis_from_index(0)[0]
 
@@ -85,7 +85,7 @@ class Plotter(PlotterBase):
             plt.subplot(self.n_lines, self.n_columns,
                         (self.n_columns * self.ind_line) + ind_plot + 1)
             X, Y = np.meshgrid(x, y)
-            plt.pcolormesh(X, Y, dwa_array)
+            plt.pcolormesh(X, Y, dwa_array, *args, **kwargs)
             plt.title(f'{dwa.name}/{dwa.labels[ind_plot]}')
             plt.xlabel(f'{xaxis.label} ({xaxis.units})')
             plt.ylabel(f'{yaxis.label} ({yaxis.units})')
