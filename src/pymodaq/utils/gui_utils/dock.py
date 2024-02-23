@@ -9,9 +9,9 @@ from pyqtgraph.widgets.VerticalLabel import VerticalLabel
 
 class Dock(Dock):
     dock_focused = Signal(str)
-    def __init__(self, name, *args, fontSize='14px', **kwargs):
-        label = DockLabel(name, fontSize=fontSize)
-        super().__init__(name, *args, label=label, **kwargs)
+    def __init__(self, name, *args, fontSize='20px', **kwargs):
+        kwargs['fontSize'] = fontSize
+        super().__init__(name, *args, **kwargs)
 
     def removeWidgets(self):
         for widget in self.widgets:
@@ -76,3 +76,32 @@ class DockArea(DockArea, QObject):
             area = self.home.addTempArea()
         # print "added temp area", area, area.window()
         return area
+
+
+if __name__ == '__main__':
+    import sys
+    from pymodaq.utils.parameter import ParameterTree
+    app = QtWidgets.QApplication(sys.argv)
+    import qdarkstyle
+    app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+
+    labelv = DockLabel('mysuperlabel', fontSize='25px')
+    docky = Dock('MysuperDockLogger', fontSize='30px')
+    dockx = Dock('MysuperDockLoggerx', fontSize='30px')
+    area = DockArea()
+    area.addDock(docky)
+    area.addDock(dockx)
+    dockx.addWidget(ParameterTree())
+    labelv.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+    f = labelv.font()
+    f.setPixelSize(25)
+    labelv.setFont(f)
+    docky.label.setFont(f)
+    labelv.show()
+    area.show()
+    QtWidgets.QApplication.processEvents()
+    print(f'labelv size hint: {labelv.sizeHint()}')
+    print(f'labelv size: {labelv.size()}')
+    print(f'labelv margins: {labelv.contentsMargins().top()}, {labelv.contentsMargins().bottom()}')
+
+    sys.exit(app.exec())

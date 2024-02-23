@@ -1,8 +1,9 @@
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 
 import copy
 from numbers import Real, Number
-from typing import List, Union
+from typing import List, Union, Tuple
 from typing import Iterable as IterableType
 
 from easydict import EasyDict as edict
@@ -13,10 +14,15 @@ from qtpy import QtGui, QtCore, QtWidgets
 from scipy.spatial import Delaunay as Triangulation
 
 from pymodaq.utils import data as data_mod
-from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
-from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.managers.roi_manager import LinearROI, RectROI, EllipseROI, pgROI, pgLinearROI
+
+
+def make_dashed_pens(color: tuple, nstyle=3):
+    pens = [dict(color=color)]
+    if nstyle > 1:
+        for ind in range(nstyle - 1):
+            pens.append(dict(color=color, dash=np.array([5, 5]) * (ind + 1)))
+    return pens
 
 
 class Point:
@@ -30,7 +36,7 @@ class Point:
         if len(elt) == 1 and isinstance(elt[0], Iterable):
             elt = elt[0]
 
-        self._coordinates = np.atleast_1d(np.squeeze(elt))
+        self._coordinates: np.ndarray = np.atleast_1d(np.squeeze(elt))
         self._ndim = len(elt)
 
     @property
@@ -40,8 +46,8 @@ class Point:
     def copy(self):
         return Point(self.coordinates.copy())
 
-    def __getitem__(self, item: int):
-        return self._coordinates[item]
+    def __getitem__(self, item: int) -> float:
+        return float(self._coordinates[item])
 
     def __setitem__(self, key: int, value: float):
         self._coordinates[key] = value
@@ -52,6 +58,12 @@ class Point:
     def _compare_length(self, other: 'Point'):
         if len(self) != len(other):
             raise ValueError('Those points should be expressed in the same coordinate system and dimensions')
+
+    def __eq__(self, other):
+        if isinstance(other, Point):
+            return np.allclose(self.coordinates, other.coordinates)
+        else:
+            return False
 
     def __add__(self, other: Union['Point', 'Vector']):
         self._compare_length(other)
@@ -403,6 +415,7 @@ class Data0DWithHistory:
     def __init__(self, Nsamples=200):
         super().__init__()
         self._datas = dict([])
+        self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
         self._data_length = 0
@@ -424,19 +437,21 @@ class Data0DWithHistory:
         return self.length
 
     @dispatch(data_mod.DataWithAxes)
-    def add_datas(self, data: data_mod.DataRaw):
+    def add_datas(self, data: data_mod.DataWithAxes):
+        self.last_data = data
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
         self.add_datas(datas)
 
     @dispatch(list)
-    def add_datas(self, datas: list):
+    def add_datas(self, data: list):
         """
         Add datas to the history
         Parameters
         ----------
-        datas: (list) list of floats or np.array(float)
+        data: (list) list of floats or np.array(float)
         """
-        datas = {f'data_{ind:02d}': datas[ind] for ind in range(len(datas))}
+        self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
+        datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
         self.add_datas(datas)
 
     @dispatch(dict)
@@ -500,3 +515,65 @@ class View_cust(pg.ViewBox):
         if ev.double():
             pos = self.mapToView(ev.pos())
             self.sig_double_clicked.emit(pos.x(), pos.y())
+
+
+@dataclass
+class RoiInfo:
+    """ DataClass holding info about a given ROI
+
+    Parameters
+    ----------
+    origin
+    size
+    angle
+    centered
+    color
+    roi_class
+    index
+    """
+
+    origin: Union[Point, IterableType[float]]
+    size: Union[Point, IterableType[float]]
+    angle: float = None
+    centered: bool = False
+    color: Tuple[int, int, int] = (255, 0, 0)
+    roi_class: type = None
+    index: int = 0
+
+    @classmethod
+    def info_from_linear_roi(cls, roi: LinearROI):
+        pos = roi.pos()
+        return cls(Point((pos[0],)), size=Point((pos[1] - pos[0],)), color=roi.color,
+                   roi_class=type(roi), index=roi.index)
+
+    @classmethod
+    def info_from_rect_roi(cls, roi: RectROI):
+        return cls(Point(list(roi.pos())[::-1]), size=Point((roi.height(), roi.width())),
+                   color=roi.color, roi_class=type(roi), index=roi.index)
+
+    def center_origin(self):
+        if not self.centered:
+            self.origin += Point((self.size[0] / 2, self.size[1] / 2))
+            self.centered = True
+
+    def to_slices(self) -> IterableType[slice]:
+        """Get slices to be used directly to slice DataWithAxes"""
+        if issubclass(self.roi_class, pgROI):
+            if self.centered:
+                return (slice(int(self.origin[0] - self.size[0] / 2),
+                              int(self.origin[0] + self.size[0] / 2)),
+                        slice(int(self.origin[1] - self.size[1] / 2),
+                              int(self.origin[1] + self.size[1] / 2)),
+                        )
+            else:
+                return (slice(int(self.origin[0]),
+                              int(self.origin[0] + self.size[0])),
+                        slice(int(self.origin[1]),
+                              int(self.origin[1] + self.size[1])),
+                        )
+        elif issubclass(self.roi_class, pgLinearROI):
+            if self.centered:
+                return (slice(int(self.origin[0] - self.size[0] / 2),
+                              int(self.origin[0] + self.size[0] / 2)),)
+            else:
+                return (slice(int(self.origin[0]), int(self.origin[0] + self.size[0])),)

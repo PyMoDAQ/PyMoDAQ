@@ -14,6 +14,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.data import DataFromRoi, DataToExport, Axis, DataWithAxes
 
 
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
@@ -47,7 +48,7 @@ class Filter:
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
 
-    def _filter_data(self, data: data_mod.DataFromPlugins):
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
         raise NotImplementedError
 
 
@@ -67,18 +68,22 @@ class Filter1DFromCrosshair(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins):
-        data_dict = dict([])
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('Crosshair')
         if data is not None:
             axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
 
                 self._x, self._y = self.crosshair.get_positions()
-                ind_x = self._axis.find_index(self._x)
-                for label, dat in zip(data.labels, data.data):
-                    data_dict[label] = dict(pos=self._axis.get_data()[ind_x], value=dat[ind_x])
-        return data_dict
+                dwa = data.isig[data.axes[0].find_indexes([self._x])[0]]
+                dwa.axes = [Axis('x', data=np.array([self._x]))]
+                dte.append(dwa)
+                # for label, dat in zip(data.labels, data.data):
+                # dte.append(DataFromRoi('crosshair', data=[np.array([dat[ind_x]]) for dat in data.data],
+                #                        axes=[Axis(data=np.array([self._axis.get_data()[ind_x]]))],
+                #                        labels=data.labels))
+        return dte
 
 
 class Filter2DFromCrosshair(Filter):
@@ -107,70 +112,95 @@ class Filter2DFromCrosshair(Filter):
         if activate:
             self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
 
-    def _filter_data(self, datas: data_mod.DataFromPlugins):
-        data_dict = dict([])
-        if datas is not None:
+    def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('Crosshair')
+        if dwa is not None:
             self._x, self._y = self.crosshair.get_positions()
-            data_type = datas.distribution
-            for data_index in range(len(self._image_keys)):
-                if data_index < len(datas.data):
-                    data = datas.data[data_index]
-                    image_type = self._image_keys[data_index]
-                    if data_type == 'uniform':
-                        data_dict[image_type] = self.get_data_from_uniform(image_type, data)
-                    elif data_type == 'spread':
-                        data_dict[image_type] = self.get_data_from_spread(image_type, data)
-        return data_dict
+            data_type = dwa.distribution
+            if data_type == 'uniform':
+                dte = self.get_data_from_uniform(dwa)
+            elif data_type == 'spread':
+                dte = self.get_data_from_spread(dwa)
+        return dte
 
-    def get_data_from_uniform(self, data_key, data):
-        hor_axis, ver_axis = \
-            np.linspace(0, self._graph_items[data_key].width() - 1, self._graph_items[data_key].width()),\
-            np.linspace(0, self._graph_items[data_key].height() - 1, self._graph_items[data_key].height())
-
-        indx, indy = self.mapfromview(self._x, self._y, data_key)
+    def get_data_from_uniform(self, dwa: DataWithAxes) -> DataToExport:
+        indx, indy = self.mapfromview(self._x, self._y, 'red')
 
         data_H_index = slice(None, None, 1)
         data_V_index = slice(None, None, 1)
         H_indexes = (utils.rint(indy), data_H_index)
         V_indexes = (data_V_index, utils.rint(indx))
+        dte = DataToExport('Crosshair')
+        try:
+            if not (0 <= utils.rint(indy) < dwa.shape[0]):
+                raise IndexError
+            dwa_hor = dwa.isig[H_indexes]
+            dwa_hor.labels = [f'Crosshair/{label}' for label in dwa_hor.labels]
+            dwa_hor.name = 'hor'
+            dte.append(dwa_hor)
+        except IndexError:
+            pass
+        try:
+            if not (0 <= utils.rint(indx) < dwa.shape[1]):
+                raise IndexError
+            dwa_ver = dwa.isig[V_indexes]
+            dwa_ver.labels = [f'Crosshair/{label}' for label in dwa_ver.labels]
+            dwa_ver.name = 'ver'
+            dte.append(dwa_ver)
+        except IndexError:
+            pass
+        try:
+            if not (0 <= utils.rint(indy) < dwa.shape[0]) \
+                or \
+                    not (0 <= utils.rint(indx) < dwa.shape[1]):
+                raise IndexError
+            dwa_int = dwa.isig[utils.rint(indy), utils.rint(indx)]
+            dwa_int.labels = [f'Crosshair/{label}' for label in dwa_int.labels]
+            dwa_int.name = 'int'
+            dte.append(dwa_int)
+        except IndexError:
+            pass
+        return dte
 
-        out_of_bounds = False
-        if 0 <= H_indexes[0] < len(ver_axis):
-            hor_data = data[H_indexes]
-        else:
-            out_of_bounds = True
-            hor_data = np.zeros(hor_axis.shape)
-        if 0 <= V_indexes[1] < len(hor_axis):
-            ver_data = data[V_indexes]
-        else:
-            out_of_bounds = True
-            ver_data = np.zeros(ver_axis.shape)
-        if out_of_bounds:
-            ind_data = 0.
-        else:
-            ind_data = data[utils.rint(indy), utils.rint(indx)]
-        return LineoutData(hor_axis=hor_axis, ver_axis=ver_axis, hor_data=hor_data, ver_data=ver_data,
-                           int_data=ind_data)
+    def get_data_from_spread(self, dwa: DataWithAxes) -> DataToExport:
 
-    def get_data_from_spread(self, data_key, data):
         data_H_index = slice(None, None, 1)
         data_V_index = slice(None, None, 1)
-        posx, posy = self.mapfromview(self._x, self._y, data_key)
+        posx, posy = self.mapfromview(self._x, self._y, 'red')
 
-        points, data = self._graph_items[data_key].get_points_at(axis='y', val=posy)
-        x_sorted_indexes = np.argsort(points[:, 0])
-        hor_axis = points[x_sorted_indexes, 0][data_H_index]
+        hor_data = []
+        ver_data = []
+        int_data = []
+        hor_axis = None
+        ver_axis = None
 
-        hor_data = data[x_sorted_indexes][data_H_index]
+        for ind, data_key in enumerate(self._graph_items):
+            if ind < len(dwa):
+                points, data = self._graph_items[data_key].get_points_at(axis='y', val=posy)
+                x_sorted_indexes = np.argsort(points[:, 0])
+                hor_axis = points[x_sorted_indexes, 0][data_H_index]
 
-        points, data = self._graph_items[data_key].get_points_at(axis='x', val=posx)
-        y_sorted_indexes = np.argsort(points[:, 1])
-        ver_axis = points[y_sorted_indexes, 1][data_V_index]
+                hor_data.append(data[x_sorted_indexes][data_H_index])
 
-        ver_data = data[y_sorted_indexes][data_V_index]
+                points, data = self._graph_items[data_key].get_points_at(axis='x', val=posx)
+                y_sorted_indexes = np.argsort(points[:, 1])
+                ver_axis = points[y_sorted_indexes, 1][data_V_index]
 
-        return LineoutData(hor_axis=hor_axis, ver_axis=ver_axis, hor_data=hor_data, ver_data=ver_data,
-                           int_data=self._graph_items[data_key].get_val_at((posx, posy)))
+                ver_data.append(data[y_sorted_indexes][data_V_index])
+
+                int_data.append(np.array([self._graph_items[data_key].get_val_at((posx, posy))]))
+
+        dte = DataToExport('Crosshair')
+        if len(hor_data) > 0 and len(hor_axis) > 0:
+            dte.append(DataFromRoi('hor', data=hor_data,
+                                   axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]),)
+        if len(ver_data) > 0 and len(ver_axis) > 0:
+            dte.append(DataFromRoi('ver', data=ver_data,
+                                   axes=[Axis(dwa.axes[0].label, dwa.axes[0].units, data=ver_axis)]))
+        if len(int_data) > 0:
+            dte.append(DataFromRoi('int', data=int_data))
+
+        return dte
 
     def mapfromview(self, x, y, item_key='red'):
         """
@@ -207,39 +237,53 @@ class Filter1DFromRois(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
-        data_dict = dict([])
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('roi1D')
         try:
             axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
             if data is not None:
                 for roi_key, roi in self._ROIs.items():
-                    try:
-                        data_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
-                    except ValueError:
-                        data_index = 0
-                    data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                                data, data_index)
+                    if self._roi_settings['ROIs', roi_key, 'use_channel'] == 'All':
+                        data_index = list(range(len(data.labels)))
+                    else:
+                        try:
+                            data_index = [data.labels.index(self._roi_settings['ROIs', roi_key,
+                                          'use_channel'])]
+                        except ValueError:
+                            data_index = [0]
+                    dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
+                                                     data)
+                    if self._roi_settings['ROIs', roi_key, 'use_channel'] == 'All':
+                        dte.append(dte_tmp.data)
+                    else:
+                        for index in data_index:
+                            for dwa in dte_tmp.data:
+                                dte.append(dwa.pop(index))
+
         except Exception as e:
             pass
-        return data_dict
+        finally:
+            return dte
 
-    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
+    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
         if data is not None:
+            dte = DataToExport('ROI1D')
             _slice = self.get_slice_from_roi(roi, data)
-            sub_data = data.isig[_slice]
+            sub_data: DataFromRoi = data.isig[_slice]
+            sub_data.name = 'HorData'
+            sub_data.origin = roi_param.name()
+            sub_data.labels = [f'{roi_param.name()}/{label}' for label in sub_data.labels]
+            dte.append(sub_data)
             if sub_data.size != 0:
                 processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
             else:
                 processed_data = None
-            if processed_data is None:
-                return LineoutData()
-            else:
-                if len(sub_data.axes) == 0:
-                    pass
-                return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
-                                   int_data=processed_data.data[data_index])
+            if processed_data is not None:
+                processed_data.name = 'IntData'
+                dte.append(processed_data)
+            return dte
 
     def get_slice_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> slice:
         ind_x_min, ind_x_max = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())
@@ -269,39 +313,47 @@ class Filter2DFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
-        data_dict = dict([])
-        try:
-            if data is not None:
+    def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
+        dte = DataToExport('ROI')
+        if dwa is not None:
+            try:
+                labels = []
                 for roi_key, roi in self._ROIs.items():
-                    image_key = self._roi_settings['ROIs', roi_key, 'use_channel']
-                    image_index = self._image_keys.index(image_key)
+                    label = self._roi_settings['ROIs', roi_key, 'use_channel']
+                    if label is not None:
+                        if label != 'All':
+                            sub_data = dwa.deepcopy()
+                            sub_data.data = [dwa[dwa.labels.index(label)]]
+                            sub_data.labels = [label]
+                        else:
+                            sub_data = dwa
+                        dte_temp = self.get_xydata_from_roi(roi, sub_data,
+                                                            self._roi_settings['ROIs',
+                                                            roi_key, 'math_function'])
 
-                    sub_data = data.deepcopy()
-                    sub_data.data = [data[image_index]]
-                    data_dict[roi_key] = self.get_xydata_from_roi(roi, sub_data,
-                                                                  self._roi_settings['ROIs', roi_key, 'math_function'])
-        except Exception as e:
-            pass
-        return data_dict
+                        dte.append(dte_temp)
+            except Exception as e:
+                logger.warning(f'Issue with the ROI: {str(e)}')
+        return dte
 
-    def get_slices_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> Tuple[slice]:
+    def get_slices_from_roi(self, roi: RectROI, data_shape: tuple) -> Tuple[slice, slice]:
         x, y = roi.pos().x(), roi.pos().y()
         width, height = roi.size().x(), roi.size().y()
-        size_x = data.get_axis_from_index(1)[0].size
-        size_y = data.get_axis_from_index(0)[0].size
+        size_y, size_x = data_shape
         ind_x_min = int(min(max(x, 0), size_x))
         ind_y_min = int(min(max(y, 0), size_y))
         ind_x_max = int(max(0, min(x+width, size_x)))
         ind_y_max = int(max(0, min(y+height, size_y)))
-
         return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
 
-    def get_xydata_from_roi(self, roi, data: data_mod.DataWithAxes, math_function: str):
-
-        if data is not None:
-            if data.distribution.name == 'spread':
-                xvals, yvals, data = self.get_xydata_spread(data, roi)
+    def get_xydata_from_roi(self, roi: RectROI, dwa: DataWithAxes, math_function: str) -> DataToExport:
+        dte = DataToExport(roi.name)
+        if dwa is not None:
+            labels = [f'{roi.name}/{label}' for label in dwa.labels]
+            if dwa.distribution.name == 'spread':
+                xvals, yvals, data = self.get_xydata_spread(dwa, roi)
+                if len(data) == 0:
+                    return dte
                 ind_xaxis = np.argsort(xvals)
                 ind_yaxis = np.argsort(yvals)
                 xvals = xvals[ind_xaxis]
@@ -309,34 +361,51 @@ class Filter2DFromRois(Filter):
                 data_H = data[ind_xaxis]
                 data_V = data[ind_yaxis]
                 int_data = np.array([np.mean(data)])
-                math_data = int_data
+
+                _x_axis = dwa.get_axis_from_index_spread(0, 0)
+                x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
+                _y_axis = dwa.get_axis_from_index_spread(0, 1)
+                y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
+                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis],)
+                sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
+                math_data = DataFromRoi('int', data=int_data)
             else:
-                xvals, yvals, data_array = self.get_xydata(data.data[0], roi)
-                slices = self.get_slices_from_roi(roi, data)
-                sub_data = data.isig[slices[0], slices[1]]
-                data_H = np.mean(data_array, axis=0)
-                data_V = np.mean(data_array, axis=1)
-                int_data = np.array([np.mean(data_array)])
-                math_data = data_processors.get(math_function).process(sub_data).data
+                slices = self.get_slices_from_roi(roi, dwa.shape)
+                sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
+                sub_data_hor = sub_data.mean(0)
+                sub_data_ver = sub_data.mean(1)
+                math_data = data_processors.get(math_function).process(sub_data)
 
-            return LineoutData(hor_axis=xvals, ver_axis=yvals, hor_data=data_H, ver_data=data_V, int_data=int_data,
-                               math_data=math_data)
+            sub_data_hor.name = 'hor'
+            sub_data_hor.origin = roi.name
+            sub_data_hor.labels = labels
+            sub_data_ver.name = 'ver'
+            sub_data_ver.origin = roi.name
+            sub_data_ver.labels = labels
+            math_data.name = 'int'
+            math_data.origin = roi.name
+            math_data.labels = labels
 
-    def get_xydata(self, data: np.ndarray, roi: RectROI):
-        data, coords = self.data_from_roi(data, roi)
+            dte.append([sub_data_hor, sub_data_ver, math_data])
+            return dte
 
-        if data is not None:
-            xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])),
-                                data.shape[1])
-            yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])),
-                                data.shape[0])
-        else:
-            xvals = yvals = data = np.array([])
-        return xvals, yvals, data
-
-    def data_from_roi(self, data, roi):
-        data, coords = roi.getArrayRegion(data, self._graph_item, self.axes, returnMappedCoords=True)
-        return data, coords
+    #TODO possibly not used anymore to be deleted
+    #
+    # def get_xydata(self, data: np.ndarray, roi: RectROI):
+    #     data, coords = self.data_from_roi(data, roi)
+    #
+    #     if data is not None:
+    #         xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])),
+    #                             data.shape[1])
+    #         yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])),
+    #                             data.shape[0])
+    #     else:
+    #         xvals = yvals = data = np.array([])
+    #     return xvals, yvals, data
+    #
+    # def data_from_roi(self, data, roi):
+    #     data, coords = roi.getArrayRegion(data, self._graph_item, self.axes, returnMappedCoords=True)
+    #     return data, coords
 
     def get_xydata_spread(self, data, roi):
         xvals = []
@@ -353,28 +422,6 @@ class Filter2DFromRois(Filter):
         xvals = np.array(xvals)
         yvals = np.array(yvals)
         return xvals, yvals, data_out
-
-
-class LineoutData:
-    def __init__(self, hor_axis=np.array([]), ver_axis=np.array([]), hor_data=np.array([]), ver_data=np.array([]),
-                 int_data: np.ndarray = None, math_data: List[np.ndarray] = None):
-        super().__init__()
-        if len(hor_axis) != len(hor_data):
-            raise ValueError(f'Horizontal lineout data and axis must have the same size')
-        if len(ver_axis) != len(ver_data):
-            raise ValueError(f'Horizontal lineout data and axis must have the same size')
-
-        self.hor_axis = hor_axis
-        self.ver_axis = ver_axis
-        self.hor_data = hor_data
-        self.ver_data = ver_data
-        if int_data is None:
-            self.int_data = np.array([np.sum(self.ver_data)])
-        else:
-            self.int_data = int_data
-        if math_data is None:
-            math_data = self.int_data
-        self.math_data = math_data
 
 
 class FourierFilterer(QObject):

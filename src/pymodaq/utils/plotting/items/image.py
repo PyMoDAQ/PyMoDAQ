@@ -8,12 +8,13 @@ from qtpy import QtCore, QtGui
 
 
 class PymodaqImage(pg.ImageItem):
-    def __init__(self, image=None, **kargs):
+    def __init__(self, image=None, pen='r', **kargs):
         super().__init__(image, **kargs)
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
         self.rescale = None
+        self.opts = {'pen': pen}
 
     def get_val_at(self, xy):
         """
