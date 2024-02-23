@@ -1,7 +1,12 @@
+import sys
+
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
+from pymodaq.utils.config import Config
+
+config = Config()
 
 
 dashboard_submodules_params = [
@@ -138,3 +143,11 @@ def pngbinary2Qlabel(databinary, scale_height: int = None):
     label = QtWidgets.QLabel()
     label.setPixmap(pixmap)
     return label
+
+
+def start_qapplication() -> QtWidgets.QApplication:
+    app = QtWidgets.QApplication(sys.argv)
+    if config('style', 'darkstyle'):
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+    return app

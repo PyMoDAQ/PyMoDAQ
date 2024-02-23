@@ -41,7 +41,8 @@ try:
     from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
 
     from pymodaq.utils.config import Config
-
+    from pymodaq.utils.scanner.utils import register_scanners
+    from pymodaq.utils.plotting.plotter.plotter import register_plotter, PlotterFactory
 
     # issue on windows when using .NET code within multithreads, this below allows it but requires the
     # pywin32 (pythoncom) package
@@ -86,6 +87,20 @@ try:
     logger.info('************************')
     logger.info(f"Getting the list of instrument plugins...")
     logger.info('************************')
+    logger.info('')
+    logger.info('')
+    logger.info('************************')
+    logger.info(f"Registering Scanners...")
+    logger.info('************************')
+    register_scanners()
+    logger.info('')
+    logger.info('')
+    logger.info('************************')
+    logger.info(f"Registering plotters...")
+    logger.info('************************')
+    register_plotter()
+    pass
+
 
 except Exception as e:
     try:

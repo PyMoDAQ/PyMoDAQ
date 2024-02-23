@@ -68,8 +68,9 @@ This means you have to install one of these backends on your environment using e
 __ https://pypi.org/project/QtPy/
 
   .. _linux_installation_section:
+
 Linux installation
-+++++++++++
+++++++++++++++++++
 For Linux installation, only Ubuntu operating system are currently being tested. In particular, one needs to make sure that the QT environment can be used. Running the following command should be sufficient to start with:
 
 ``sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils``

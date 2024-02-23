@@ -16,6 +16,7 @@ import numpy as np
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.utils.gui_utils.layout as layout_mod
+from pymodaq.utils.gui_utils.utils import start_qapplication
 from pymodaq.utils.messenger import messagebox
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils import daq_utils as utils
@@ -1395,10 +1396,7 @@ class DashBoard(QObject):
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config('style', 'darkstyle'):
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+        app = start_qapplication()
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
