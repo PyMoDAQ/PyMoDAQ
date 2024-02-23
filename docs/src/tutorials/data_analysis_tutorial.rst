@@ -301,17 +301,21 @@ Electrons:
 
     def my_lifetime(x, A, B, C, tau):
         return A + C * np.exp(-(x - B)/tau)
-    
+
     time_axis = dwa_electrons.axes[0].get_data()
-    initial_guess = (2e-7, 0.5e-10, 7e-6, 3e-11)
-    popt, pcov = opt.curve_fit(my_lifetime, time_axis, dwa_electrons[0], p0=initial_guess)
-    
-    dwa_electrons_fitted = dwa_electrons.deepcopy()
-    dwa_electrons_fitted.append(DataRaw('fit', data=[my_lifetime(time_axis, *popt)],
-                                        axes = [dwa_electrons.axes[0]],
-                                       labels=['fit']))
-    
+    initial_guess = (2e-7, 10e-12, 7e-6, 3e-11)
+
+    dwa_electrons_fitted = dwa_electrons.fit(my_lifetime, initial_guess=initial_guess)
+    dwa_electrons_fitted.append(dwa_electrons)
     dwa_electrons_fitted.plot('qt')
+
+
+
+
+.. parsed-literal::
+
+    <pymodaq.utils.plotting.data_viewers.viewer1D.Viewer1D at 0x2ae0556cb80>
+
 
 
 .. figure:: /image/tutorial_data_analysis/fit_electrons.png
@@ -323,47 +327,143 @@ One get a life time of about:
 
 .. code:: ipython3
 
-    f'Life time: {popt[3] *1e12} ps'
+    f'Life time: {dwa_electrons_fitted.fit_coeffs[0][3] *1e12} ps'
+
+
 
 
 .. parsed-literal::
 
-    'Life time: 1.0680750019461165 ps'
+    'Life time: 1.0688184683663233 ps'
 
 
 
 Phonons:
 ~~~~~~~~
 
+For the phonons, it seems we have to analyse oscillations. The best for
+this is a Fourier Transform analysis. However because of the sparse scan
+the sampling at the begining is different from the one at the end. We’ll
+have to resample our data on a regular grid before doing Fourier
+Transform
+
+Resampling
+^^^^^^^^^^
+
 .. code:: ipython3
 
-    def my_sine(x, offset, amplitude, T, x0):
-        return offset + amplitude * np.cos(2*np.pi / T * (x -x0))
-    
-    
-    time_axis = dwa_phonons.axes[0].get_data()
-    initial_guess = (2e-7, 1.5e-7, 15e-12, 1.78e-11)
-    popt_sinus, pcov = opt.curve_fit(my_sine, time_axis, dwa_phonons[0], p0=initial_guess)
-    
-    dwa_phonons_fitted = dwa_phonons.deepcopy()
-    dwa_phonons_fitted.append(DataRaw('fit', data=[my_sine(time_axis, *popt_sinus)],
-                                      axes = [dwa_phonons.axes[0]],
-                                      labels=['fit']))
-    
-    dwa_phonons_fitted.plot()
-    f'Crapy period of the signal: {popt_sinus[2] * 1e12} ps... One should use Fourier Transform here'
+    from pymodaq.utils import math_utils as mutils
+    from pymodaq.utils.data import Axis
+    phonon_axis_array = dwa_phonons.get_axis_from_index(0)[0].get_data()
+    phonon_axis_array -= phonon_axis_array[0]
+    time_step = phonon_axis_array[-1] - phonon_axis_array[-2]
+    time_array_linear = mutils.linspace_step(0, phonon_axis_array[-1], time_step)
+    dwa_phonons_interp = dwa_phonons.interp(time_array_linear)
+
+    dwa_phonons_interp.plot('qt')
 
 
+.. figure:: /image/tutorial_data_analysis/phonons_interpolated.png
+   :alt: python
+
+   Interpolated data on a regular time axis
+
+
+
+FFT
+^^^
+
+.. code:: ipython3
+
+    dwa_fft = dwa_phonons_interp.ft()
+
+    dwa_phonons_fft = DataToExport('FFT', data=[
+        dwa_phonons_interp,
+        dwa_fft.abs(),
+        dwa_fft.abs(),
+        dwa_fft.abs()])
+    dwa_phonons_fft.plot('qt')
+
+
+
+.. figure:: /image/tutorial_data_analysis/data_fft.png
+   :alt: python
+
+   Temporal data and FFT amplitude (top). Zoom over the two first harmonics (bottom)
+
+Using advanced math processors to extract data from dwa:
+
+.. code:: ipython3
+
+    from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
+    data_processors = DataProcessorFactory()
+    print('Implemented possible processing methods, can be applied to any data type and dimensionality')
+    print(data_processors.keys)
+    dwa_processed = data_processors.get('argmax').process(dwa_fft.abs())
+    print(dwa_processed[0])
 
 
 .. parsed-literal::
 
-    'Crapy period of the signal: 18.352773587058007 ps... One should use Fourier Transform here'
+    Implemented possible processing methods, can be applied to any data type and dimensionality
+    ['argmax', 'argmean', 'argmin', 'argstd', 'max', 'mean', 'min', 'std', 'sum']
+    [0.]
+
+
+or using builtin math methods applicable only to 1D data:
+
+.. code:: ipython3
+
+    dte_peaks = dwa_fft.abs().find_peaks(height=1e-6)
+    print(dte_peaks[0].axes[0].get_data() / (2*np.pi))
+
+    dte_peaks[0].axes[0].as_dwa().plot('matplotlib', 'o-r')  # transforms an Axis object to dwa for quick plotting
+
+    dte_peaks[0].get_data_as_dwa(0).plot('matplotlib', 'o-b')  # select part of the data object for "selected" plotting
+
+
+.. parsed-literal::
+
+    [-1.06435192e+11 -5.32175961e+10  0.00000000e+00  5.32175961e+10
+      1.06435192e+11]
 
 
 
 
-.. image:: /image/tutorial_data_analysis/output_33_1.png
+.. image:: /image/tutorial_data_analysis/output_40_1.png
+
+
+
+
+.. image:: /image/tutorial_data_analysis/output_40_2.png
+
+
+
+*From this one get a fundamental frequency of 5.32e10 Hz that
+corresponds to a period of:*
+
+.. code:: ipython3
+
+    T_phonons = 1/5.32e10
+    print(f'Period T = {T_phonons * 1e12} ps')
+
+.. parsed-literal::
+
+    Period T = 18.796992481203006 ps
+
+
+From this period and the speed of sound in gold, one can infer the gold film thickness:
+
+.. code:: ipython3
+
+    thickness = T_phonons / 2 * SOUND_SPEED_GOLD
+    print(f"Gold Thickness: {thickness * 1e9} nm")
+
+
+.. parsed-literal::
+
+    Gold Thickness: 30.45112781954887 nm
+
 
 Summary
 +++++++
@@ -374,6 +474,6 @@ To summarize this tutorial, we learned to:
   method to print all nodes from a file)
 * easily plot loaded data using the `plot` method (together with the adapted backend)
 * manipulate the data using its axes, navigation indexes, slicers and built in mathematical methods
-  such as `mean`.
+  such as `mean`, 'abs', Fourier transforms, interpolation, fit...
 
 For more details, see :ref:`data_management`
