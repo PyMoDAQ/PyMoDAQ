@@ -698,8 +698,6 @@ class TestDataWithAxesUniform:
                                      ],
                                axes=[time_axis])
         dwa_ft = dwa.ft()
-        fig = dwa_ft.abs().plot('matplotlib')
-        fig.savefig('fft.png')
 
         dte_peak = dwa.ft().abs().find_peaks(height=50)
 
