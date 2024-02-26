@@ -2627,6 +2627,34 @@ class DataScan(DataToExport):
         super().__init__(name, data, **kwargs)
 
 
+class DataToActuators(DataToExport):
+    """ Particular case of a DataToExport adding one named parameter to indicate what kind of change
+    should be applied to the actuators, absolute or relative
+
+    Attributes
+    ----------
+    mode: str
+        Adds an attribute called mode holding a string describing the type of change:
+        relative or absolute
+
+    Parameters
+    ---------
+    mode: str
+        either 'rel' or 'abs' for a relative or absolute change of the actuator's values
+    """
+
+    def __init__(self, *args, mode='rel', **kwargs):
+        if mode not in ['rel', 'abs']:
+            warnings.warn('Incorrect mode for the actuators, switching to default relative mode: rel')
+            mode = 'rel'
+        kwargs.update({'mode': mode})
+        super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return f'{super().__repr__()}: {self.mode}'
+
+
+
 if __name__ == '__main__':
 
 
