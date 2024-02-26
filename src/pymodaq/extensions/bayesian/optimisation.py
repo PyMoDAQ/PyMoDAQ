@@ -1,22 +1,21 @@
-from typing import List, Union
+from typing import List, Union, Optional
 
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.parameter import utils as putils
+
 from qtpy import QtWidgets, QtCore
 import time
 import numpy as np
+
+
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
-
-
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
                                                BayesianAlgorithm)
-
 from pymodaq.utils.gui_utils import QLED
 from pymodaq.utils.managers.modules_manager import ModulesManager
-
+from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.parameter import utils as putils
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
@@ -48,11 +47,13 @@ class BayesianOptimisation(gutils.CustomApp):
     def __init__(self, dockarea, dashboard):
         super().__init__(dockarea, dashboard)
 
-        self.viewer_fitness: Viewer0D = None
-        self.viewer_observable: ViewerDispatcher = None
-        self.model_class: BayesianModelGeneric = None
+        self.algorithm: Optional[BayesianAlgorithm] = None
+        self.viewer_fitness: Optional[Viewer0D] = None
+        self.viewer_observable: Optional[ViewerDispatcher] = None
+        self.model_class: Optional[BayesianModelGeneric] = None
         self._modules_manager = ModulesManager(self.dashboard.detector_modules,
                                                self.dashboard.actuators_modules)
+        self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.setup_ui()
@@ -96,9 +97,8 @@ class BayesianOptimisation(gutils.CustomApp):
         self.settings.child('models', 'model_params').clearChildren()
         if len(self.models) > 0:
             model_class = utils.find_dict_in_list_from_key_val(self.models, 'name', model_name)['class']
-            main_params = getattr(model_class, 'main_params')
             params = getattr(model_class, 'params')
-            self.settings.child('models', 'model_params').addChildren(main_params + params)
+            self.settings.child('models', 'model_params').addChildren(params)
 
     def setup_menu(self):
         '''
@@ -153,6 +153,7 @@ class BayesianOptimisation(gutils.CustomApp):
         self.connect_action('ini_runner', self.ini_optimisation_runner)
         self.connect_action('run', self.run_optimisation)
         self.connect_action('pause', self.pause_runner)
+        self.modules_manager
 
     def pause_runner(self):
         self.command_runner.emit(utils.ThreadCommand('pause_PID', self.is_action_checked('pause')))
@@ -165,13 +166,31 @@ class BayesianOptimisation(gutils.CustomApp):
         self.model_class = utils.find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
         self.model_class.ini_model()
 
-    def format_bounds(self, bounds: Parameter):
-        pass
+    def update_actuators(self, actuators: List[str]):
+        if self.is_action_checked('ini_runner'):
+            self.get_action('ini_runner').trigger()
+            QtWidgets.QApplication.processEvents()
+
+        for child in self.settings.child('main_settings', 'bounds').children():
+            self.settings.child('main_settings', 'bounds').removeChild(child)
+        params = []
+        for actuator in actuators:
+            params.append({'title': actuator, 'name': actuator, 'type': 'group', 'children': [
+                {'title': 'min', 'name': 'min', 'type': 'float', 'value': -5},
+                {'title': 'max', 'name': 'max', 'type': 'float', 'value': 5},
+            ]})
+        self.settings.child('main_settings', 'bounds').addChildren(params)
+
+    def format_bounds(self):
+        bound_dict = {}
+        for bound in self.settings.child('main_settings', 'bounds').children():
+            bound_dict.update({bound.name(): (bound['min'], bound['max'])})
+        return bound_dict
 
     def set_algorithm(self):
-        self.algorithm = BayesianAlgorithm(random_state=self.settings['main_settings', 'ini_random'],
-                                           bounds=self.format_bounds(self.settings['main_settings',
-                                           'bounds']),)
+        self.algorithm = BayesianAlgorithm(
+            ini_random=self.settings['main_settings', 'ini_random'],
+            bounds=self.format_bounds(),)
 
     def ini_model(self):
         try:
@@ -193,8 +212,10 @@ class BayesianOptimisation(gutils.CustomApp):
 
     def ini_optimisation_runner(self):
         if self.is_action_checked('ini_runner'):
+            self.set_algorithm()
+
             self.runner_thread = QtCore.QThread()
-            runner = OptimisationRunner(self.model_class, self.modules_manager)
+            runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm)
             self.runner_thread.runner = runner
             runner.algo_output_signal.connect(self.process_output)
             self.command_runner.connect(runner.queue_command)
@@ -235,7 +256,8 @@ class BayesianOptimisation(gutils.CustomApp):
 class OptimisationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
 
-    def __init__(self, model_class: BayesianModelGeneric, modules_manager: ModulesManager):
+    def __init__(self, model_class: BayesianModelGeneric, modules_manager: ModulesManager,
+                 algorithm: BayesianAlgorithm):
         super().__init__()
 
         self.det_done_datas: DataToExport = None
@@ -249,7 +271,7 @@ class OptimisationRunner(QtCore.QObject):
         self.running = True
         self.paused = False
 
-        self.optimisation_algorithm: BayesianAlgorithm = self.model_class.bayesian_algorithm
+        self.optimisation_algorithm: BayesianAlgorithm = algorithm
 
     @QtCore.Slot(utils.ThreadCommand)
     def queue_command(self, command: utils.ThreadCommand):
@@ -303,7 +325,7 @@ class OptimisationRunner(QtCore.QObject):
                     self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
 
                     # Run the algo internal mechanic
-                    self.optimisation_algorithm.tell(float(self.input_from_dets.data[0].data[0][0]))
+                    self.optimisation_algorithm.tell(float(self.input_from_dets))
 
                     dte = DataToExport('algo',
                                        data=[self.individual_as_data(np.array([self.optimisation_algorithm.best_fitness]),
@@ -354,7 +376,7 @@ def main(init_qt=True):
     file = Path(get_set_preset_path()).joinpath(f"{'complex_data'}.xml")
     if file.exists():
         dashboard.set_preset_mode(file)
-        daq_scan = dashboard.load_extension_from_name('BayesianOptimisation')
+        daq_scan = dashboard.load_bayesian()
     else:
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"

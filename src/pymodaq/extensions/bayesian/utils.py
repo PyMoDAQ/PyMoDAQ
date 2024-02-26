@@ -17,13 +17,12 @@ from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
 
 
-from pymodaq.extensions.pid.utils import DataToExport
+from pymodaq.extensions.pid.utils import DataToExport, DataActuator, DataToActuators
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.data import DataToActuators
 
 
 logger = set_logger(get_module_name(__file__))
@@ -34,8 +33,8 @@ class BayesianAlgorithm:
     def __init__(self, ini_random: int, bounds: dict, **kwargs):
 
         self._algo = BayesianOptimization(f=None,
-                                          random_state=ini_random,
                                           pbounds=bounds,
+                                          random_state=ini_random,
                                           **kwargs
                                           )
 
@@ -183,8 +182,27 @@ class BayesianModelDefault(BayesianModelGeneric):
 
         """
         data_name: str = self.settings['optimizing_signal', 'optimize_0d']['selected'][0]
-        origin, name = data_name.split('//')
-        return measurements.get_data_from_name_origin(name, origin)
+        origin, name = data_name.split('/')
+        return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
+
+    def convert_output(self, outputs: List[np.ndarray]) -> DataToActuators:
+        """ Convert the output of the Optimisation Controller in units to be fed into the actuators
+        Parameters
+        ----------
+        outputs: list of numpy ndarray
+            output value from the controller from which the model extract a value of the same units
+            as the actuators
+
+        Returns
+        -------
+        DataToActuators: derived from DataToExport. Contains value to be fed to the actuators
+        with a mode            attribute, either 'rel' for relative or 'abs' for absolute.
+
+        """
+        return DataToActuators('outputs', mode='abs',
+                               data=[DataActuator(self.modules_manager.actuators_name[ind],
+                                                  data=float(outputs[ind])) for ind in
+                                     range(len(outputs))])
 
 
 def get_bayesian_models(model_name=None):
