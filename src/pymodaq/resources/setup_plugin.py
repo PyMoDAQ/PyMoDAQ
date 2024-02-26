@@ -47,7 +47,7 @@ def setup(path: Path):
             entrypoints['pymodaq.instruments'] = f'{SHORT_PLUGIN_NAME} = {PLUGIN_NAME}'
         if config['features'].get('extensions', False):
             entrypoints['pymodaq.extensions'] = f'{SHORT_PLUGIN_NAME} = {PLUGIN_NAME}'
-        if config['features'].get('pid_models', False):
+        if config['features'].get('pid_models', False):  # deprecated use 'models'
             entrypoints['pymodaq.pid_models'] = f'{SHORT_PLUGIN_NAME} = {PLUGIN_NAME}'
         if config['features'].get('models', False):
             entrypoints['pymodaq.models'] = f'{SHORT_PLUGIN_NAME} = {PLUGIN_NAME}'
