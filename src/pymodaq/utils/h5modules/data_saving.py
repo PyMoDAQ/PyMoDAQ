@@ -282,8 +282,9 @@ class DataSaverLoader(DataManagement):
                             if data.nav_indexes is not None else None)
             for name in data.extra_attributes:
                 metadata[name] = getattr(data, name)
-            self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
-                                    array_to_save=data[ind_data], data_dimension=data.dim.name, metadata=metadata)
+            self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
+                                    title=data.name, array_to_save=data[ind_data],
+                                    data_dimension=data.dim.name, metadata=metadata)
         if save_axes:
             for axis in data.axes:
                 self._axis_saver.add_axis(where, axis)
@@ -427,9 +428,11 @@ class BkgSaver(DataSaverLoader):
 
 
 class DataEnlargeableSaver(DataSaverLoader):
-    """Specialized Object to save and load enlargeable DataWithAxes saved object to and from a h5file
+    """ Specialized Object to save and load enlargeable DataWithAxes saved object to and from a
+    h5file
 
-    Particular case of DataND will a single *nav_indexes* parameter will be appended as chunks of signal data
+    Particular case of DataND with a single *nav_indexes* parameter will be appended as chunks
+    of signal data
 
     Parameters
     ----------
@@ -447,10 +450,17 @@ class DataEnlargeableSaver(DataSaverLoader):
     """
     data_type = DataType['data_enlargeable']
 
-    def __init__(self, h5saver: H5Saver):
+    def __init__(self, h5saver: H5Saver,
+                 enl_axis_names: Iterable[str] = ('nav axis',),
+                 enl_axis_units: Iterable[str] = ('',)):
         super().__init__(h5saver)
 
-    def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
+        self._n_enl_axes = len(enl_axis_names)
+        self._enl_axis_names = enl_axis_names
+        self._enl_axis_units = enl_axis_units
+
+    def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True,
+                            add_enl_axes=True):
         """ Create enlargeable array to store data
 
         Parameters
@@ -459,45 +469,69 @@ class DataEnlargeableSaver(DataSaverLoader):
             the path of a given node or the node itself
         data: DataWithAxes
         save_axes: bool
+            if True, will save signal axes as data nodes
+        add_enl_axes: bool
+            if True, will save enlargeable axes as data nodes (depending on the self._enl_axis_names
+            field)
 
         Notes
         -----
-        Because data will be saved at a given index in the enlargeable array, related axes will have their index
-        increased by one unity
+        Because data will be saved at a given index in the enlargeable array, related signal axes
+        will have their index increased by 1)
         """
 
         if self.get_last_node_name(where) is None:
             for ind_data in range(len(data)):
                 nav_indexes = list(data.nav_indexes)
-                nav_indexes = [0] + list(np.array(nav_indexes, dtype=int) + 1)
+                nav_indexes = ([0] +
+                               list(np.array(nav_indexes, dtype=int) + 1))
 
-                self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
+                self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
+                                        title=data.name,
                                         array_to_save=data[ind_data],
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
                                         enlargeable=True,
                                         data_dimension=data.dim.name,
-                                        metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                                                      source=data.source.name, distribution=data.distribution.name,
+                                        metadata=dict(timestamp=data.timestamp,
+                                                      label=data.labels[ind_data],
+                                                      source=data.source.name,
+                                                      distribution='spread',
                                                       origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
+            if add_enl_axes:
+                for ind_enl_axis in range(self._n_enl_axes):
+                    self._axis_saver.add_axis(where,
+                                              Axis(self._enl_axis_names[ind_enl_axis],
+                                                   self._enl_axis_units[ind_enl_axis],
+                                                   data=np.array([0., 1.]),
+                                                   index=0, spread_order=ind_enl_axis),
+                                              enlargeable=True)
             if save_axes:
                 for axis in data.axes:
                     axis.index += 1  # because of enlargeable data will have an extra shape
                     self._axis_saver.add_axis(where, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes):
+    def add_data(self, where: Union[Node, str], data: DataWithAxes,
+                 axis_values: Iterable[float] = None, add_enl_axes=True):
         """ Append data to an enlargeable array node
 
-        Data of dim (0, 1 or 2) will be just appended to the enlargeable array. DataND with one navigation axis of
-        length (Lnav) will be considered as a collection of Lnav signal data of dim (0, 1 or 2) and will therefore be
-        appended as Lnav signal data
+        Data of dim (0, 1 or 2) will be just appended to the enlargeable array.
+
+        Uniform DataND with one navigation axis of length (Lnav) will be considered as a collection
+        of Lnav signal data of dim (0, 1 or 2) and will therefore be appended as Lnav signal data
 
         Parameters
         ----------
         where: Union[Node, str]
             the path of a given node or the node itself
         data: DataWithAxes
+        axis_values: optional, list of floats
+            the new spread axis values added to the data
+        add_enl_axes: bool
+            if True enlargeable axes are created and populated from axis_values (that should no more
+            be None)
+
         """
         if self.get_last_node_name(where) is None:
             if len(data.nav_indexes) == 0:
@@ -507,11 +541,15 @@ class DataEnlargeableSaver(DataSaverLoader):
                 data_init.source = data.source  # because slicing returns a calculated one
             else:
                 raise DataDimError('It is not possible to append DataND with more than 1 navigation axis')
-            self._create_data_arrays(where, data_init, save_axes=True)
+            self._create_data_arrays(where, data_init, save_axes=True, add_enl_axes=True)
 
         for ind_data in range(len(data)):
             array: EARRAY = self.get_node_from_index(where, ind_data)
             array.append(data[ind_data])
+        if add_enl_axes:
+            for ind_axis in range(self._n_enl_axes):
+                array: EARRAY = self._axis_saver.get_node_from_index(where, ind_axis)
+                array.append(np.array([axis_values[ind_axis]]))
 
 
 class DataExtendedSaver(DataSaverLoader):
@@ -632,7 +670,7 @@ class DataToExportSaver:
         return f'CH{ind:02d}'
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
-                 metadata=None):
+                 metadata=None, **kwargs):
         """
 
         Parameters
@@ -656,7 +694,7 @@ class DataToExportSaver:
                 dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind),
                                                         dwa.name)
                 # dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name)
-                self._data_saver.add_data(dwa_group, dwa)
+                self._data_saver.add_data(dwa_group, dwa, **kwargs)
 
     def add_bkg(self, where: Union[Node, str], data: DataToExport):
         dims = data.get_dim_presents()
@@ -684,16 +722,27 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     axis_units: str
         the units of the enlarged axis array
     """
-    def __init__(self, h5saver: H5Saver, axis_name: str = 'nav axis', axis_units: str = ''):
+    def __init__(self, h5saver: H5Saver, axis_names: Iterable[str] = None,
+                 axis_name: str = 'nav axis', axis_units: Iterable[str] = ('',)):
 
         super().__init__(h5saver)
-        self._data_saver = DataEnlargeableSaver(h5saver)
-        self._nav_axis_saver = AxisSaverLoader(h5saver)
-        self._axis_name = axis_name
+        if axis_names is None:
+            axis_names = [axis_name]
+        if isinstance(axis_units, str):
+            axis_units = (axis_units)
+
+        if len(axis_names) != len(axis_units):
+            raise ValueError('Both axis_names and axis_units should have the same length')
+
+        self._axis_names = axis_names
         self._axis_units = axis_units
 
+        self._data_saver = DataEnlargeableSaver(h5saver)
+        self._nav_axis_saver = AxisSaverLoader(h5saver)
+
     def add_data(self, where: Union[Node, str], data: DataToExport,
-                 axis_value: Union[float, np.ndarray], settings_as_xml='', metadata=None):
+                 axis_value: Union[float, np.ndarray], settings_as_xml='', metadata=None,
+                 ):
         """
 
         Parameters
@@ -709,7 +758,10 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         metadata: dict
             all extra metadata to be saved in the group node where data will be saved
         """
-        super().add_data(where, data, settings_as_xml, metadata)
+        super().add_data(where, data, settings_as_xml, metadata,
+                 add_enl_axes=False)  # add_enl_axes is False because enl nax axes will be added in
+        # a parent navigation group (same for all data nodes)
+
         where = self._get_node(where)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
