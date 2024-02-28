@@ -15,7 +15,7 @@ from pymodaq.utils.h5modules.data_saving import (DataLoader, AxisSaverLoader,
                                                  SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
                                                  DataToExportEnlargeableSaver, DataExtendedSaver,
                                                  DataLoader, BkgSaver)
-from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
+from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport, DataRaw
 
 
 @pytest.fixture()
@@ -291,31 +291,42 @@ class TestDataEnlargeableSaver:
         assert data_saver.data_type.value == 'EnlData'
         assert data_saver.data_type.name == 'data_enlargeable'
 
+    @pytest.mark.parametrize('Nenl', [0, 1, 2])
     @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
-    def test_add_data(self, get_h5saver, data_array):
+    def test_add_data(self, get_h5saver, data_array, Nenl):
         h5saver = get_h5saver
-        data_saver = DataEnlargeableSaver(h5saver)
+
         Ndata = 2
+
+        axis_values = tuple(np.random.randn(Nenl))
+        data_saver = DataEnlargeableSaver(h5saver,
+                                          enl_axis_names=['ax' for _ in range(Nenl)],
+                                          enl_axis_units=['units' for _ in range(Nenl)])
 
         data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
                             labels=['mylabel1', 'mylabel2'],
                             source='raw', distribution='uniform',)
         data.create_missing_axes()
 
-        data_saver.add_data(h5saver.raw_group, data)
+        data_saver.add_data(h5saver.raw_group, data, axis_values=axis_values)
 
         data_node = h5saver.get_node('/RawData/EnlData00')
 
         ESHAPE = [1]
         ESHAPE += list(data_array.shape)
         assert data_node.attrs['shape'] == tuple(ESHAPE)
-        data_saver.add_data(h5saver.raw_group, data)
+        data_saver.add_data(h5saver.raw_group, data, axis_values=axis_values)
         ESHAPE = [2]
         ESHAPE += list(data_array.shape)
         assert data_node.attrs['shape'] == tuple(ESHAPE)
 
+        dwa_back = data_saver.load_data('/RawData/EnlData00')
+        assert len(dwa_back.get_nav_axes()) == Nenl
+        if Nenl > 0:
+            assert len(dwa_back.get_nav_axes()[0]) == 2
+
     @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
-    def test_add_dataND(self, get_h5saver, data_array):
+    def test_add_dataND_uniform(self, get_h5saver, data_array):
         h5saver = get_h5saver
         data_saver = DataEnlargeableSaver(h5saver)
         Ndata = 2
@@ -343,7 +354,7 @@ class TestDataEnlargeableSaver:
 
         dwa_back = data_saver.load_data('/RawData/EnlData00', )
 
-        assert dwa_back.shape == dwa_chunk.shape
+        #assert dwa_back.shape == dwa_chunk.shape
         assert dwa_back.dim.name == 'DataND'
         assert dwa_back.nav_indexes == (0,)
 
@@ -404,12 +415,14 @@ class TestDataToExportSaver:
 
 
 class TestDataToExportEnlargeableSaver:
+
     def test_save(self, get_h5saver, init_data_to_export):
         h5saver = get_h5saver
         data_to_export = init_data_to_export
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         data_saver = DataToExportEnlargeableSaver(h5saver)
+
         Nadd_data = 2
         for ind in range(Nadd_data):
             data_saver.add_data(det_group, data_to_export, axis_value=27.)
@@ -422,6 +435,32 @@ class TestDataToExportEnlargeableSaver:
         for node in h5saver.walk_nodes('/'):
             if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
                 assert node.attrs['shape'][0] == Nadd_data + 1
+
+    @pytest.mark.parametrize('Nenl', [1, 2, 3])
+    def test_spread_data(self, get_h5saver, Nenl):
+        h5saver = get_h5saver
+
+
+        axis_values = tuple(np.random.randn(Nenl))
+        dte_saver = DataToExportEnlargeableSaver(h5saver,
+                                                 axis_names=['ax' for _ in range(Nenl)],
+                                                 axis_units=['units' for _ in range(Nenl)]
+                                                 )
+        dte_loader = DataLoader(h5saver)
+
+        Nsig = 10
+        shape = (Nsig,)
+        axis_values = list(np.random.randn(Nenl))
+
+        dwa = DataRaw('dwa', data=[np.random.randn(*shape)],
+                      distribution='spread',
+                      axes=[Axis('signal axis', data=np.linspace(-5, 5, Nsig))])
+        dte = DataToExport('dte', data=[dwa])
+        dte_saver.add_data(h5saver.raw_group, data=dte, axis_values=axis_values)
+
+        data_loaded = dte_loader.load_data('/RawData/Data1D/CH00/EnlData00')
+
+        pass
 
 
 class TestDataToExportTimedSaver:

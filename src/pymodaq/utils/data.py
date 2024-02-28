@@ -1843,6 +1843,9 @@ class DataWithAxes(DataBase):
     def get_nav_axes(self) -> List[Axis]:
         return self._am.get_nav_axes()
 
+    def get_sig_index(self) -> List[Axis]:
+        return self._am.get_signal_axes()
+
     def get_nav_axes_with_data(self) -> List[Axis]:
         """Get the data's navigation axes making sure there is data in the data field"""
         axes = self.get_nav_axes()
@@ -1970,12 +1973,17 @@ class DataWithAxes(DataBase):
             axis.index -= lower_indexes[axis.index]
         for ind in range(len(nav_indexes)):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
+
+        if len(nav_indexes) != 0:
+            distribution = self.distribution
+        elif np.all([axis.is_axis_linear() for axis in self.get_sig_index()]):
+            distribution = DataDistribution['uniform']
+
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes),
                             axes=axes,
                             source='calculated', origin=self.origin,
                             labels=self.labels[:],
-                            distribution=self.distribution if len(nav_indexes) != 0 else
-                            DataDistribution['uniform'])
+                            distribution=distribution)
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,

@@ -727,16 +727,24 @@ class TestNavIndexes:
 class TestDataWithAxesSpread:
     def test_init_data(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
-        data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                              distribution=data_mod.DataDistribution['spread'], data=[data_array],
-                              nav_indexes=(0,),
-                              axes=[sig_axis, nav_axis_0, nav_axis_1])
+        dwa = data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                    dim=data_mod.DataDim['Data1D'],
+                                    distribution=data_mod.DataDistribution['spread'],
+                                    data=[data_array],
+                                    nav_indexes=(0,),
+                                    axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+        assert dwa.distribution.name == 'spread'
+        assert dwa.inav[10].distribution.name == 'uniform'  # because the remangin signal data has uniform axes
+        assert dwa.isig[5].distribution.name == 'spread'
 
     def test_nav_index(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         with pytest.raises(ValueError):
-            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                  dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'],
+                                  data=[data_array],
                                   nav_indexes=(0, 1),
                                   axes=[sig_axis, nav_axis_0, nav_axis_1])
 
@@ -744,8 +752,10 @@ class TestDataWithAxesSpread:
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1,])))
         with pytest.raises(data_mod.DataLengthError):
-            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                  dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'],
+                                  data=[data_array],
                                   nav_indexes=(0,),
                                   axes=[sig_axis, nav_axis_0, nav_axis_1])
 
