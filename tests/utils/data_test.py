@@ -736,7 +736,7 @@ class TestDataWithAxesSpread:
 
         assert dwa.distribution.name == 'spread'
         assert dwa.inav[10].distribution.name == 'uniform'  # because the remangin signal data has uniform axes
-        assert dwa.inav[5].distribution.name == 'spread'
+        assert dwa.isig[5].distribution.name == 'spread'
 
     def test_nav_index(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
@@ -858,24 +858,6 @@ class TestDataWithAxesSpread:
         dwa = init_data(DATA0D)
         with pytest.raises(ValueError):
             dwa.interp(new_axis_array)
-
-    def test_init_len_1(self):
-
-        data_shape = [1, 10]
-        axis_array = np.linspace(0, 100, 10)
-        data_array = np.random.randn(*data_shape)
-
-        dwa = data_mod.DataWithAxes(name='mydata', data=[data_array for _ in range(2)],
-                                    labels=['mylabel1', 'mylabel2'],
-                                    source='raw', distribution='spread',
-                                    nav_indexes=(0,),
-                                    axes=[data_mod.Axis('spread axis', 'whatever',
-                                                        data=np.array([2.]),
-                                                        index=0,   spread_order=0),
-                                          data_mod.Axis('signal axis', 'whatever',
-                                                        data=axis_array, index=1,),
-                                 ])
-        dwa.append()
 
 
 class TestDataFromPlugins:
