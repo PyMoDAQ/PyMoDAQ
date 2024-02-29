@@ -40,6 +40,17 @@ class ViewersEnum(BaseEnum):
             dim = 'N'
         return ViewersEnum[f'Viewer{dim}D']
 
+    @classmethod
+    def from_n_axes(cls, n_axes: int):
+        if n_axes == 0:
+            return ViewersEnum['Viewer0D']
+        elif n_axes == 1:
+            return ViewersEnum['Viewer1D']
+        elif n_axes == 2:
+            return ViewersEnum['Viewer2D']
+        elif n_axes > 2:
+            return ViewersEnum['ViewerND']
+
 
 class ViewerBase(QObject):
     """Base Class for data viewers implementing all common functionalities
