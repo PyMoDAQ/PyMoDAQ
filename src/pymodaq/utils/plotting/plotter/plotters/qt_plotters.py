@@ -8,8 +8,9 @@ from pymodaq.utils import config as configmod
 from pymodaq.utils.gui_utils.utils import start_qapplication
 from pymodaq.utils.plotting.plotter.plotter import PlotterBase, PlotterFactory
 from pymodaq.utils.data import DataWithAxes, DataToExport
-from pymodaq.utils.plotting.data_viewers import Viewer1D, Viewer2D, ViewerND, ViewerDispatcher
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.plotting.data_viewers import (Viewer1D, Viewer2D, ViewerND, ViewerDispatcher,
+                                                 Viewer0D, ViewersEnum)
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, viewer_factory
 from pymodaq.utils.gui_utils.dock import DockArea
 
 logger = set_logger(get_module_name(__file__))
@@ -37,12 +38,8 @@ class Plotter(PlotterBase):
             viewer = ViewerDispatcher(widget)
         else:
             widget = QtWidgets.QWidget()
-            if data.dim.name == 'Data1D':
-                viewer = Viewer1D(widget)
-            elif data.dim.name == 'Data2D':
-                viewer = Viewer2D(widget)
-            elif data.dim.name == 'DataND':
-                viewer = ViewerND(widget)
+            viewer_enum = ViewersEnum.get_viewers_enum_from_data(data)
+            viewer = viewer_factory.get(viewer_enum.name, parent=widget)
 
         if viewer is not None:
             widget.show()

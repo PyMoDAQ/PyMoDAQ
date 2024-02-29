@@ -51,6 +51,40 @@ class ViewersEnum(BaseEnum):
         elif n_axes > 2:
             return ViewersEnum['ViewerND']
 
+    @staticmethod
+    def get_viewers_enum_from_data(dwa: DataWithAxes) -> 'ViewersEnum':
+        if dwa.dim.name == 'Data0D':
+            viewer = 'Viewer0D'
+        elif dwa.dim.name == 'Data1D':
+            viewer = 'Viewer1D'
+        elif dwa.dim.name == 'Data2D':
+            viewer = 'Viewer2D'
+        else:
+            if dwa.distribution.name == 'uniform':
+                if len(dwa.shape) < 3:
+                    dwa.nav_indexes = ()
+                    if len(dwa.shape) == 1 and dwa.size == 1:
+                        viewer = 'Viewer0D'
+                    elif len(dwa.shape) == 1 and dwa.size > 1:
+                        viewer = 'Viewer1D'
+                    elif len(dwa.shape) == 2:
+                        viewer = 'Viewer2D'
+                    else:
+                        viewer = 'ViewerND'
+                else:
+                    viewer = 'ViewerND'
+            else:
+                if len(dwa.sig_indexes) == 0:
+                    if len(dwa.get_nav_axes()) == 1:
+                        viewer = 'Viewer1D'
+                    elif len(dwa.get_nav_axes()) == 2:
+                        viewer = 'Viewer2D'
+                    else:
+                        viewer = 'ViewerND'
+                else:
+                    viewer = 'ViewerND'
+        return ViewersEnum[viewer]
+
 
 class ViewerBase(QObject):
     """Base Class for data viewers implementing all common functionalities

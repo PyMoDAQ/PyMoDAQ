@@ -70,7 +70,6 @@ def create_viewerND(parent: QtWidgets.QWidget, **_ignored):
 viewer_factory = ViewerFactory()
 
 
-
 class ViewerDispatcher:
     """MixIn class to add easy control for adding multuiple data viewers in docks depending on data to be plotted"""
 
@@ -188,7 +187,7 @@ class ViewerDispatcher:
 
     def show_data(self, data: DataToExport):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
-        viewer_types = [ViewersEnum(dwa.dim.name) for dwa in data]
+        viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types)
         for viewer, dwa in zip(self.viewers, data):
