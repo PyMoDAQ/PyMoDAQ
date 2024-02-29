@@ -26,10 +26,7 @@ from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoi
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.parameter import Parameter
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq.utils.h5modules import data_saving
-from pymodaq.post_treatment.load_and_plot import LoaderPlotter
+
 
 
 logger = set_logger(get_module_name(__file__))
@@ -81,28 +78,6 @@ class BayesianModelGeneric(ABC):
         self.settings = self.optimisation_controller.settings.child('models', 'model_params')  # set of parameters
         self.check_modules(self.modules_manager)
 
-        self.h5temp: H5Saver = None
-        self.temp_path: tempfile.TemporaryDirectory = None
-        self.enlargeable_saver: data_saving.DataToExportExtendedSaver = None
-        self.live_plotter = LoaderPlotter(self.optimisation_controller.dockarea)
-
-    def ini_temp_file(self):
-        if self.temp_path is not None:
-            try:
-                self.h5temp.close()
-                self.temp_path.cleanup()
-            except Exception as e:
-                logger.exception(str(e))
-
-        self.h5temp = H5Saver()
-        self.temp_path = tempfile.TemporaryDirectory(prefix='pymo')
-        addhoc_file_path = Path(self.temp_path.name).joinpath('temp_data.h5')
-        self.h5temp.init_file(custom_naming=True, addhoc_file_path=addhoc_file_path)
-        self.enlargeable_saver = \
-            data_saving.DataToExportEnlargeableSaver(self.h5temp, axis_name='nav axis',
-                                                     axis_units='')
-        self.live_plotter.h5saver = self.h5temp
-
     def check_modules(self, modules_manager):
         for act in self.actuators_name:
             if act not in modules_manager.actuators_name:
@@ -129,9 +104,20 @@ class BayesianModelGeneric(ABC):
         """
         ...
 
-    def ini_model(self):
+    def ini_model_base(self):
         self.modules_manager.selected_actuators_name = self.actuators_name
         self.modules_manager.selected_detectors_name = self.detectors_name
+
+        self.ini_temp_file()
+
+        self.ini_model()
+
+    def ini_model(self):
+        """ To be subclassed
+
+        Initialize whatever is needed by your custom model
+        """
+        raise NotImplementedError
 
     def convert_input(self, measurements: DataToExport) -> float:
         """
@@ -169,7 +155,6 @@ class BayesianModelDefault(BayesianModelGeneric):
 
     actuators_name: List[str] = []  # to be populated dynamically at instantiation
     detectors_name: List[str] = []  # to be populated dynamically at instantiation
-    observables_dim: List[ViewersEnum] = []
 
     params = [{'title': 'Optimizing signal', 'name': 'optimizing_signal', 'type': 'group',
                 'children': [
@@ -182,8 +167,6 @@ class BayesianModelDefault(BayesianModelGeneric):
         self.actuators_name = optimisation_controller.modules_manager.actuators_name
         self.detectors_name = optimisation_controller.modules_manager.detectors_name
         super().__init__(optimisation_controller)
-
-
 
     def ini_model(self):
         pass

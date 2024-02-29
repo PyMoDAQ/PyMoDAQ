@@ -1,14 +1,15 @@
 from typing import List, Union, Optional
-
+import tempfile
+from pathlib import Path
 
 from qtpy import QtWidgets, QtCore
 import time
 import numpy as np
 
 
-from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated
+from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
                                                BayesianAlgorithm)
 from pymodaq.utils.gui_utils import QLED
@@ -16,6 +17,10 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.h5modules.saving import H5Saver
+from pymodaq.utils.h5modules.data_saving import DataEnlargeableSaver
+from pymodaq.post_treatment.load_and_plot import LoaderPlotter
+
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
@@ -57,6 +62,12 @@ class BayesianOptimisation(gutils.CustomApp):
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.setup_ui()
+
+        self.h5temp: H5Saver = None
+        self.temp_path: tempfile.TemporaryDirectory = None
+
+        self.enlargeable_saver: DataEnlargeableSaver = None
+        self.live_plotter = LoaderPlotter(self.dockarea)
 
     @property
     def modules_manager(self) -> ModulesManager:
@@ -163,8 +174,30 @@ class BayesianOptimisation(gutils.CustomApp):
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()
-        self.model_class = utils.find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
-        self.model_class.ini_model()
+        self.model_class = utils.find_dict_in_list_from_key_val(self.models,
+                                                                'name',
+                                                                model_name)['class'](self)
+        self.model_class.ini_model_base()
+
+    def ini_temp_file(self):
+        self.clean_h5_temp()
+
+        self.h5temp = H5Saver()
+        self.temp_path = tempfile.TemporaryDirectory(prefix='pymo')
+        addhoc_file_path = Path(self.temp_path.name).joinpath('bayesian_temp_data.h5')
+        self.h5temp.init_file(custom_naming=True, addhoc_file_path=addhoc_file_path)
+        act_names = [child.name() for child in self.settings.child( 'main_settings',
+                                                                    'bounds').children()]
+        act_units = [self.modules_manager.get_mod_from_name(act_name, 'act').units for act_name
+                     in act_names]
+        self.enlargeable_saver = DataEnlargeableSaver(
+            self.h5temp,
+            enl_axis_names=act_names,
+            enl_axis_units=act_units)
+
+        self.live_plotter.h5saver = self.h5temp
+        self.live_plotter.prepare_viewers(['ViewerND'],
+                                          viewers_name=['algo/ProbedData'])
 
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked('ini_runner'):
@@ -204,7 +237,7 @@ class BayesianOptimisation(gutils.CustomApp):
             self.get_action('model_led').set_as_true()
             self.set_action_enabled('ini_model', False)
 
-            self.viewer_observable.update_viewers(['Viewer0D'] + self.model_class.observables_dim,
+            self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
                                                   ['Fitness', 'Individual'])
 
         except Exception as e:
@@ -213,6 +246,8 @@ class BayesianOptimisation(gutils.CustomApp):
     def ini_optimisation_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
+
+            self.ini_temp_file()
 
             self.runner_thread = QtCore.QThread()
             runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm)
@@ -233,8 +268,26 @@ class BayesianOptimisation(gutils.CustomApp):
             self.runner_thread.terminate()
             self.get_action('runner_led').set_as_false()
 
-    def process_output(self, data: DataToExport):
-        self.viewer_observable.show_data(data)
+    def clean_h5_temp(self):
+        if self.temp_path is not None:
+            try:
+                self.h5temp.close()
+                self.temp_path.cleanup()
+            except Exception as e:
+                logger.exception(str(e))
+
+    def process_output(self, dte: DataToExport):
+        dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
+        dwa_actuators = dte.remove(dte.get_data_from_name('Actuators'))
+
+        self.viewer_observable.show_data(dte)
+        self.enlargeable_saver.add_data('/RawData', dwa_data,
+                                        axis_values=dwa_actuators.values())
+
+        self.update_data_plot()
+
+    def update_data_plot(self):
+        self.live_plotter.load_plot_data(remove_navigation=False)
 
     def enable_controls_opti(self, enable: bool):
         pass
@@ -328,10 +381,17 @@ class OptimisationRunner(QtCore.QObject):
                     self.optimisation_algorithm.tell(float(self.input_from_dets))
 
                     dte = DataToExport('algo',
-                                       data=[self.individual_as_data(np.array([self.optimisation_algorithm.best_fitness]),
-                                                                     'Fitness'),
-                                             self.individual_as_data(self.optimisation_algorithm.best_individual,
-                                                                     'Individual'),
+                                       data=[self.individual_as_data(
+                                           np.array([self.optimisation_algorithm.best_fitness]),
+                                           'Fitness'),
+                                           self.individual_as_data(
+                                               self.optimisation_algorithm.best_individual,
+                                               'Individual'),
+                                           DataCalculated('ProbedData',
+                                                          data=[np.array([self.input_from_dets])],
+                                                          ),
+                                           self.output_to_actuators.merge_as_dwa('Data0D',
+                                                                                 'Actuators')
                                              ])
                     self.algo_output_signal.emit(dte)
 
