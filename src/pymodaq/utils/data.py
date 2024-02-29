@@ -94,12 +94,13 @@ class DataDim(BaseEnum):
     Data1D = 1
     Data2D = 2
     DataND = 3
-    Data3D = 4
 
     def __le__(self, other_dim: 'DataDim'):
+        other_dim = enum_checker(DataDim, other_dim)
         return self.value.__le__(other_dim.value)
 
     def __lt__(self, other_dim: 'DataDim'):
+        other_dim = enum_checker(DataDim, other_dim)
         return self.value.__lt__(other_dim.value)
 
     def __ge__(self, other_dim: 'DataDim'):
@@ -107,11 +108,23 @@ class DataDim(BaseEnum):
         return self.value.__ge__(other_dim.value)
 
     def __gt__(self, other_dim: 'DataDim'):
+        other_dim = enum_checker(DataDim, other_dim)
         return self.value.__gt__(other_dim.value)
 
     @property
     def dim_index(self):
        return self.value
+
+    @staticmethod
+    def from_data_array(data_array: np.ndarray):
+        if len(data_array.shape) == 1 and data_array.size == 1:
+            return DataDim['Data0D']
+        elif len(data_array.shape) == 1 and data_array.size > 1:
+            return DataDim['Data1D']
+        elif len(data_array.shape) == 2:
+            return DataDim['Data2D']
+        else:
+            return DataDim['DataND']
 
 
 class DataSource(BaseEnum):
