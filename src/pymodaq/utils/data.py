@@ -769,6 +769,27 @@ class DataBase(DataLowLevel):
         """The shape of the nd-arrays"""
         return self._shape
 
+    def stack_as_array(self, axis=0, dtype=None) -> np.ndarray:
+        """ Stack all data arrays in a single numpy array
+
+        Parameters
+        ----------
+        axis: int
+            The new stack axis index, default 0
+        dtype: str or np.dtype
+            the dtype of the stacked array
+
+        Returns
+        -------
+        np.ndarray
+
+        See Also
+        --------
+        :meth:`np.stack`
+        """
+
+        return np.stack(self.data, axis=axis, dtype=dtype)
+
     @property
     def size(self):
         """The size of the nd-arrays"""
@@ -2109,13 +2130,21 @@ class DataActuator(DataRaw):
         else:
             return f'{self.__class__.__name__} <{self.shape}>>'
 
-    def value(self):
-        """Returns the underlying float value if this data holds only a float otherwise returns a mean of the
-        underlying data"""
+    def value(self) -> float:
+        """Returns the underlying float value (of the first elt in the data list) if this data
+        holds only a float otherwise returns a mean of the underlying data"""
         if self.length == 1 and self.size == 1:
             return float(self.data[0][0])
         else:
             return float(np.mean(self.data))
+
+    def values(self) -> List[float]:
+        """Returns the underlying float value (for each data array in the data list) if this data
+        holds only a float otherwise returns a mean of the underlying data"""
+        if self.length == 1 and self.size == 1:
+            return [float(data_array[0]) for data_array in self.data]
+        else:
+            return [float(np.mean(data_array)) for data_array in self.data]
 
 
 class DataFromPlugins(DataRaw):
@@ -2264,10 +2293,17 @@ class DataToExport(DataLowLevel):
             raise TypeError(f'Could not average a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
-    def merge_as_dwa(self, dim: DataDim, name: str = None) -> DataRaw:
-        """ attempt to merge all dwa into one
+    def merge_as_dwa(self, dim: Union[str, DataDim], name: str = None) -> DataRaw:
+        """ attempt to merge filtered dwa into one
 
-        Only possible if all dwa and underlying data have same shape
+        Only possible if all filtered dwa and underlying data have same shape
+
+        Parameters
+        ----------
+        dim: DataDim or str
+            will only try to merge dwa having this dimensionality
+        name: str
+            The new name of the returned dwa
         """
         dim = enum_checker(DataDim, dim)
 
