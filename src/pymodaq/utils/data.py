@@ -34,6 +34,14 @@ plotter_factory = PlotterFactory()
 logger = set_logger(get_module_name(__file__))
 
 
+def squeeze(data_array: np.ndarray, do_squeeze=True) -> np.ndarray:
+    """ Squeeze numpy arrays return at least 1D arrays except if do_squeeze is False"""
+    if do_squeeze:
+        return np.atleast_1d(np.squeeze(data_array))
+    else:
+        return np.atleast_1d(data_array)
+
+
 class DataIndexWarning(Warning):
     pass
 
@@ -86,6 +94,7 @@ class DataDim(BaseEnum):
     Data1D = 1
     Data2D = 2
     DataND = 3
+    Data3D = 4
 
     def __le__(self, other_dim: 'DataDim'):
         return self.value.__le__(other_dim.value)
@@ -544,7 +553,8 @@ class DataBase(DataLowLevel):
     """
 
     def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
-                 distribution: DataDistribution = DataDistribution['uniform'], data: List[np.ndarray] = None,
+                 distribution: DataDistribution = DataDistribution['uniform'],
+                 data: List[np.ndarray] = None,
                  labels: List[str] = [], origin: str = '', **kwargs):
 
         super().__init__(name=name)
@@ -933,6 +943,7 @@ class DataBase(DataLowLevel):
     @data.setter
     def data(self, data: List[np.ndarray]):
         data = self._check_data_type(data)
+        #data = [squeeze(data_array) for data_array in data]
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
         self._data = data
@@ -1952,7 +1963,7 @@ class DataWithAxes(DataBase):
         if isinstance(slices, numbers.Number) or isinstance(slices, slice):
             slices = [slices]
         total_slices = self._compute_slices(slices, is_navigation)
-        new_arrays_data = [np.atleast_1d(np.squeeze(dat[total_slices])) for dat in self.data]
+        new_arrays_data = [squeeze(dat[total_slices]) for dat in self.data]
         tmp_axes = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
         axes_to_append = [copy.deepcopy(axis) for axis in tmp_axes]
 
