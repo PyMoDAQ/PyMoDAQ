@@ -730,26 +730,32 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     Parameters
     ----------
     h5saver: H5Saver
-    axis_name: str
+    enl_axis_names: Iterable[str]
+        The names of the enlargeable axis, default ['nav_axis']
+    enl_axis_units: Iterable[str]
+        The names of the enlargeable axis, default ['']
+    axis_name: str, deprecated use enl_axis_names
         the name of the enlarged axis array
-    axis_units: str
+    axis_units: str, deprecated use enl_axis_units
         the units of the enlarged axis array
     """
-    def __init__(self, h5saver: H5Saver, axis_names: Iterable[str] = None,
-                 axis_name: str = 'nav axis', axis_units: Iterable[str] = ('',)):
+    def __init__(self, h5saver: H5Saver,
+                 enl_axis_names: Iterable[str] = None,
+                 enl_axis_units: Iterable[str] = None,
+                 axis_name: str = 'nav axis', axis_units: str = ''):
 
         super().__init__(h5saver)
-        if axis_names is None:  # for backcompatibility
-            axis_names = [axis_name]
-        if isinstance(axis_units, str):  # for backcompatibilitu
-            axis_units = (axis_units)
+        if enl_axis_names is None:  # for backcompatibility
+            enl_axis_names = [axis_name]
+        if enl_axis_units is None:  # for backcompatibilitu
+            enl_axis_units = (axis_units)
 
-        if len(axis_names) != len(axis_units):
-            raise ValueError('Both axis_names and axis_units should have the same length')
+        if len(enl_axis_names) != len(enl_axis_units):
+            raise ValueError('Both enl_axis_names and enl_axis_units should have the same length')
 
-        self._enl_axis_names = axis_names
-        self._enl_axis_units = axis_units
-        self._n_enl = len(axis_names)
+        self._enl_axis_names = enl_axis_names
+        self._enl_axis_units = enl_axis_units
+        self._n_enl = len(enl_axis_names)
 
         self._data_saver = DataEnlargeableSaver(h5saver)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
@@ -811,7 +817,7 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     This object is made for continuous saving mode of DAQViewer and logging to h5file for DAQLogger
     """
     def __init__(self, h5saver: H5Saver):
-        super().__init__(h5saver, axis_names=('time',), axis_units=('s',))
+        super().__init__(h5saver, enl_axis_names=('time',), axis_units=('s',))
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
                  metadata=None, **kwargs):

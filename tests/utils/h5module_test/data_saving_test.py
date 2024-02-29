@@ -443,8 +443,8 @@ class TestDataToExportEnlargeableSaver:
 
         axis_values = tuple(np.random.randn(Nenl))
         dte_saver = DataToExportEnlargeableSaver(h5saver,
-                                                 axis_names=['ax' for _ in range(Nenl)],
-                                                 axis_units=['units' for _ in range(Nenl)]
+                                                 enl_axis_names=['ax' for _ in range(Nenl)],
+                                                 enl_axis_units=['units' for _ in range(Nenl)]
                                                  )
         dte_loader = DataLoader(h5saver)
 
