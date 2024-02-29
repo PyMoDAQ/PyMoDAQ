@@ -14,7 +14,7 @@ from pymodaq.utils.h5modules.data_saving import (DataLoader, AxisSaverLoader,
                                                  DataEnlargeableSaver, DataToExportTimedSaver,
                                                  SPECIAL_GROUP_NAMES, DataToExportExtendedSaver,
                                                  DataToExportEnlargeableSaver, DataExtendedSaver,
-                                                 DataLoader, BkgSaver, squeeze)
+                                                 DataLoader, BkgSaver, squeeze, DataDim)
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport, DataRaw
 
 
@@ -400,31 +400,29 @@ class TestDataToExportEnlargeableSaver:
             if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
                 assert node.attrs['shape'][0] == Nadd_data + 1
 
+    @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
     @pytest.mark.parametrize('Nenl', [1, 2, 3])
-    def test_spread_data(self, get_h5saver, Nenl):
+    def test_spread_data(self, get_h5saver, Nenl, data_array):
         h5saver = get_h5saver
 
-
-        axis_values = tuple(np.random.randn(Nenl))
         dte_saver = DataToExportEnlargeableSaver(h5saver,
                                                  enl_axis_names=['ax' for _ in range(Nenl)],
                                                  enl_axis_units=['units' for _ in range(Nenl)]
                                                  )
         dte_loader = DataLoader(h5saver)
 
-        Nsig = 10
-        shape = (Nsig,)
         axis_values = list(np.random.randn(Nenl))
 
-        dwa = DataRaw('dwa', data=[np.random.randn(*shape)],
-                      distribution='spread',
-                      axes=[Axis('signal axis', data=np.linspace(-5, 5, Nsig))])
+        dwa = DataRaw('dwa', data=[data_array],
+                      distribution='spread',)
+        dwa.create_missing_axes()
+
         dte = DataToExport('dte', data=[dwa])
         dte_saver.add_data(h5saver.raw_group, data=dte, axis_values=axis_values)
 
-        data_loaded = dte_loader.load_data('/RawData/Data1D/CH00/EnlData00')
-
-        pass
+        data_loaded = dte_loader.load_data(
+            f'/RawData/{DataDim.from_data_array(data_array).name}/CH00/EnlData00')
+        assert data_loaded.inav[0] == dwa
 
 
 class TestDataToExportTimedSaver:
