@@ -1374,7 +1374,7 @@ class AxesManagerSpread(AxesManagerBase):
             elif len(self.nav_indexes) != 1:
                 raise ValueError('Spread data should have only one specified index in self.nav_indexes')
             elif axis.index in self.nav_indexes:
-                if axis.size != self._data_shape[self.nav_indexes[0]]:
+                if axis.size != 1 and (axis.size != self._data_shape[self.nav_indexes[0]]):
                     raise DataLengthError('all navigation axes should have the same size')
 
     def compute_shape_from_axes(self):
@@ -1559,10 +1559,12 @@ class DataWithAxes(DataBase):
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
             self._distribution = DataDistribution['uniform']
-            self.axes_manager = AxesManagerUniform(data_shape=data_shape, axes=axes, nav_indexes=nav_indexes,
+            self.axes_manager = AxesManagerUniform(data_shape=data_shape, axes=axes,
+                                                   nav_indexes=nav_indexes,
                                                    **kwargs)
         elif self.distribution.name == 'spread':
-            self.axes_manager = AxesManagerSpread(data_shape=data_shape, axes=axes, nav_indexes=nav_indexes,
+            self.axes_manager = AxesManagerSpread(data_shape=data_shape, axes=axes,
+                                                  nav_indexes=nav_indexes,
                                                   **kwargs)
         else:
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
@@ -1956,6 +1958,16 @@ class DataWithAxes(DataBase):
         total_slices = tuple(total_slices)
         return total_slices
 
+    def check_squeeze(self, total_slices: List[slice], is_navigation: bool):
+
+        do_squeeze = True
+        if 1 in self.data[0][total_slices].shape:
+            if not is_navigation and self.data[0][total_slices].shape.index(1) in self.nav_indexes:
+                do_squeeze = False
+            elif is_navigation and self.data[0][total_slices].shape.index(1) in self.sig_indexes:
+                do_squeeze = False
+        return do_squeeze
+
     def _slicer(self, slices, is_navigation=True):
         """Apply a given slice to the data either navigation or signal dimension
 
@@ -1976,7 +1988,9 @@ class DataWithAxes(DataBase):
         if isinstance(slices, numbers.Number) or isinstance(slices, slice):
             slices = [slices]
         total_slices = self._compute_slices(slices, is_navigation)
-        new_arrays_data = [squeeze(dat[total_slices]) for dat in self.data]
+
+        do_squeeze = self.check_squeeze(total_slices, is_navigation)
+        new_arrays_data = [squeeze(dat[total_slices], do_squeeze) for dat in self.data]
         tmp_axes = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
         axes_to_append = [copy.deepcopy(axis) for axis in tmp_axes]
 
@@ -1996,22 +2010,23 @@ class DataWithAxes(DataBase):
         axes = []
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
-            ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            if len(ax) != 0 and ax[0] is not None:
-                for ind in range(len(ax)):
-                    ax[ind] = ax[ind].iaxis[_slice]
+            if ind_slice in indexes_to_get:
+                ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
+                if len(ax) != 0 and ax[0] is not None:
+                    for ind in range(len(ax)):
+                        ax[ind] = ax[ind].iaxis[_slice]
 
-                if not(ax[0] is None or ax[0].size <= 1):  # means the slice kept part of the axis
-                    if is_navigation:
-                        nav_indexes.append(self._am.nav_indexes[ind_slice])
-                    axes.extend(ax)
-                else:
-                    for axis in axes_to_append:  # means we removed one of the axes (and data dim),
-                        # hence axis index above current index should be lowered by 1
-                        if axis.index > indexes_to_get[ind_slice]:
-                            lower_indexes[axis.index] += 1
-                    for index in indexes_to_get[ind_slice+1:]:
-                        lower_indexes[index] += 1
+                    if not(ax[0] is None or ax[0].size <= 1):  # means the slice kept part of the axis
+                        if is_navigation:
+                            nav_indexes.append(self._am.nav_indexes[ind_slice])
+                        axes.extend(ax)
+                    else:
+                        for axis in axes_to_append:  # means we removed one of the axes (and data dim),
+                            # hence axis index above current index should be lowered by 1
+                            if axis.index > indexes_to_get[ind_slice]:
+                                lower_indexes[axis.index] += 1
+                        for index in indexes_to_get[ind_slice+1:]:
+                            lower_indexes[index] += 1
 
         axes.extend(axes_to_append)
         for axis in axes:
@@ -2078,7 +2093,8 @@ class DataWithAxes(DataBase):
                 sig_indexes = list(new_data.sig_indexes)
                 for index in remove_axes_index:
                     for axis in new_data.get_axis_from_index(index):
-                        new_data.axes.remove(axis)
+                        if axis is not None:
+                            new_data.axes.remove(axis)
 
                     if index in new_data.nav_indexes:
                         nav_indexes.pop(nav_indexes.index(index))
