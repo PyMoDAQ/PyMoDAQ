@@ -1953,8 +1953,10 @@ class DataWithAxes(DataBase):
         for ind in range(len(self.shape)):
             if ind in indexes:
                 total_slices.append(slices.pop(0))
-            elif len(total_slices) == 0 or total_slices[-1] != Ellipsis:
+            elif len(total_slices) == 0:
                 total_slices.append(Ellipsis)
+            elif not (Ellipsis in total_slices and total_slices[-1] is Ellipsis):
+                total_slices.append(slice(None))
         total_slices = tuple(total_slices)
         return total_slices
 
@@ -2010,7 +2012,7 @@ class DataWithAxes(DataBase):
         axes = []
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
-            if ind_slice in indexes_to_get:
+            if ind_slice < len(indexes_to_get):
                 ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
                 if len(ax) != 0 and ax[0] is not None:
                     for ind in range(len(ax)):
