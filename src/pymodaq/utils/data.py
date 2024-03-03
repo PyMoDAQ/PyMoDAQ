@@ -2038,7 +2038,7 @@ class DataWithAxes(DataBase):
 
         if len(nav_indexes) != 0:
             distribution = self.distribution
-        elif np.all([axis.is_axis_linear() for axis in self.get_sig_index()]):
+        else:
             distribution = DataDistribution['uniform']
 
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes),
