@@ -22,8 +22,9 @@ blocks for custom application. In that sense, :ref:`DAQ_Viewer_module` and
 :ref:`DAQ_Move_module` can also be used as building blocks to control actuators and display datas in a
 custom application.
 
+.. _viewer0D:
 
-0D Viewer
+Viewer0D
 +++++++++
 
    .. _figure_0Dviewer:
