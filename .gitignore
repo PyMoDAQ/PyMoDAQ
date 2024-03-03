@@ -119,7 +119,7 @@ venv.bak/
 
 .tox
 *.h5
-!data_single.h5
+!data.h5
 
 *yacctab.py
 *lextab.py
