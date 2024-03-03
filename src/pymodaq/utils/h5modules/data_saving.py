@@ -845,7 +845,7 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     This object is made for continuous saving mode of DAQViewer and logging to h5file for DAQLogger
     """
     def __init__(self, h5saver: H5Saver):
-        super().__init__(h5saver, enl_axis_names=('time',), axis_units=('s',))
+        super().__init__(h5saver, enl_axis_names=('time',), enl_axis_units=('s',))
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
                  metadata=None, **kwargs):
