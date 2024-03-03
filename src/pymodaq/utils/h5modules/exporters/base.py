@@ -38,8 +38,14 @@ class H5h5Exporter(H5Exporter):
         new_file = H5Backend(backend="tables")
         new_file.open_file(str(filename), 'a')
 
-        new_file.h5file.move_node(new_file.get_node_path(node), newparent=new_file.h5file.get_node('/'))
+        new_file.h5file.move_node(new_file.get_node_path(node), newparent='/')
         new_file.h5file.remove_node('/RawData', recursive=True)
+        new_file.flush()
+
+        new_file.get_set_group('/', 'RawData')
+        new_file.h5file.move_node(f'/{node.name}',
+                                  newparent='/RawData')
+
         new_file.close_file()
 
 
