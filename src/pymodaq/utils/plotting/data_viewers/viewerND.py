@@ -178,21 +178,21 @@ class UniformDataDisplayer(BaseDataDisplayer):
             )
         if len(sig_axis_limits) == 1:
             self._viewer1D.roi.setPos((float(np.mean(sig_axis_limits[0]) -
-                                             np.abs(np.diff(sig_axis_limits[0])) / 3),
+                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3),
                                        float(np.mean(sig_axis_limits[0]) +
-                                             np.abs(np.diff(sig_axis_limits[0])) / 3))
+                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3))
                                       )
         if len(sig_axis_limits) == 2:
             scaled_axes = np.array(self._viewer2D.view.unscale_axis(np.array(sig_axis_limits[1]),
                                                                     np.array(sig_axis_limits[0])))
 
             self._viewer2D.roi.setSize(
-                float(np.diff(scaled_axes[0])) / 3,
-                float(np.diff(scaled_axes[1])) / 3)
+                float(np.diff(scaled_axes[0])[0]) / 3,
+                float(np.diff(scaled_axes[1])[0]) / 3)
 
             self._viewer2D.roi.setPos(
-                float(np.mean(scaled_axes[0])) - float(np.diff(scaled_axes[0])) / 6,
-                float(np.mean(scaled_axes[1])) - float(np.diff(scaled_axes[1])) / 6)
+                float(np.mean(scaled_axes[0])) - float(np.diff(scaled_axes[0])[0]) / 6,
+                float(np.mean(scaled_axes[1])) - float(np.diff(scaled_axes[1])[0]) / 6)
 
     def updated_nav_integration(self):
         """ Means the ROI select of the 2D viewer has been moved """
