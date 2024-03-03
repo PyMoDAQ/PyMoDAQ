@@ -905,7 +905,7 @@ class DataLoader:
     def h5saver(self):
         return self._h5saver
 
-    def walk_nodes(self, where: Union[str, Node] = '/RawData'):
+    def walk_nodes(self, where: Union[str, Node] = '/'):
         """Return a Node generator iterating over the h5file content"""
         return self.h5saver.walk_nodes(where)
 
