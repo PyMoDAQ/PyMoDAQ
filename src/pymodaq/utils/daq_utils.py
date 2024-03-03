@@ -554,7 +554,7 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
         return None
 
 
-def get_entrypoints(group='pymodaq.plugins'):
+def get_entrypoints(group='pymodaq.plugins') -> List[metadata.EntryPoint]:
     """ Get the list of modules defined from a group entry point
 
     Because of evolution in the package, one or another of the forms below may be deprecated.
@@ -573,6 +573,8 @@ def get_entrypoints(group='pymodaq.plugins'):
         except AttributeError:
             discovered_entrypoints = metadata.entry_points().get(group, [])
     if isinstance(discovered_entrypoints, tuple):  # API for python > 3.8
+        discovered_entrypoints = list(discovered_entrypoints)
+    if not isinstance(discovered_entrypoints, list):
         discovered_entrypoints = list(discovered_entrypoints)
     return discovered_entrypoints
 
