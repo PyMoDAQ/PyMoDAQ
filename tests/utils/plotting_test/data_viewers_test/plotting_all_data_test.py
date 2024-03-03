@@ -41,8 +41,8 @@ def get_3D_array():
     #
     #     # Get a plain NumPy array, without all the metadata
     #     array_3D = struct.get_fdata()
-
-    array_3D = np.load('../../data/my_brain.npy')
+    p = Path(__file__).parent.parent.parent
+    array_3D = np.load(p.joinpath('data/my_brain.npy'))
 
     return array_3D
 
