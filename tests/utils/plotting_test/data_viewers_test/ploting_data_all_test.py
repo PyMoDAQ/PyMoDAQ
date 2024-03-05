@@ -314,6 +314,33 @@ class Test4DPlot:
         assert dwa.dim == 'DataND'
         dwa.plot('qt')
 
+    def test_plot_4D_spread(self, qtbot):
+        N = 100
+
+        x = np.sin(np.linspace(0, 4 * np.pi, N))
+        y = np.sin(np.linspace(0, 4 * np.pi, N) + np.pi / 6)
+        z = np.sin(np.linspace(0, 4 * np.pi, N) + np.pi / 3)
+
+        Nsig = 200
+        axis = datamod.Axis('signal axis', 'signal units', data=np.linspace(-10, 10, Nsig), index=1)
+        data = np.zeros((N, Nsig))
+        for ind in range(N):
+            data[ind, :] = mutils.gauss1D(axis.get_data(),
+                                          np.sqrt(x[ind] ** 2 + y[ind] ** 2 + z[ind] ** 2),
+                                          2) + np.random.rand(Nsig)
+
+        dwa = datamod.DataRaw('NDdata', data=data, distribution='spread', dim='DataND',
+                              nav_indexes=(0,),
+                              axes=[datamod.Axis(data=x, index=0, label='x_axis', units='xunits',
+                                                 spread_order=0),
+                                    datamod.Axis(data=y, index=0, label='y_axis', units='yunits',
+                                                 spread_order=0),
+                                    datamod.Axis(data=z, index=0, label='z_axis', units='zunits',
+                                                 spread_order=0),
+                                    axis
+                                    ])
+
+        dwa.plot('qt')
 
 if __name__ == '__main__':
     from qtpy import QtWidgets
@@ -326,8 +353,8 @@ if __name__ == '__main__':
     #     h5saver.init_file(file_name=Path(d).joinpath('myh5.h5'))
 
     app = QtWidgets.QApplication(sys.argv)
-    test = Test3DPlot()
-    test.test_plot_0D_3D_uniform(None, np.load(r'C:\Users\weber\Labo\Programmes Python\PyMoDAQ_Git\pymodaq\tests\utils\data/my_brain.npy'))
+    test = Test4DPlot()
+    test.test_plot_4D_spread(None)
 
         # h5saver.close_file()
 

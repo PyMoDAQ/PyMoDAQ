@@ -35,7 +35,7 @@ class Plotter(PlotterBase):
 
         if isinstance(data, DataToExport):
             widget = DockArea()
-            viewer = ViewerDispatcher(widget)
+            viewer = ViewerDispatcher(widget, title=data.name)
         else:
             widget = QtWidgets.QWidget()
             viewer_enum = ViewersEnum.get_viewers_enum_from_data(data)

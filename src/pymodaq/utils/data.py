@@ -2660,8 +2660,8 @@ class DataToExport(DataLowLevel):
     def data(self, new_data: List[DataWithAxes]):
         for dat in new_data:
             self._check_data_type(dat)
-        self._data[:] = [dat for dat in new_data]  # shallow copyto make sure that if the original list
-        # is changed, the change will not be applied in here
+        self._data[:] = [dat for dat in new_data]  # shallow copyto make sure that if the original
+        # list is changed, the change will not be applied in here
 
         self.affect_name_to_origin_if_none()
 
