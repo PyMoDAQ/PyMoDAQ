@@ -1,4 +1,5 @@
 .. _plotting_data:
+.. _data_viewers:
 
 Plotting Data
 =============
@@ -18,6 +19,8 @@ your PyMoDAQ's data using the builtin data viewers.
 
   To execute this notebook properly, you'll need PyMoDAQ >=
   4.0.2 (if not released yet, you can get it from github)
+
+.. _viewer0D:
 
 Plotting scalars: Viewer0D
 --------------------------
@@ -323,6 +326,8 @@ the red colorbar to saturate the red plot and make the tiny Gaussian that was hi
 appear. We also activated the crosshair that induced the plotting of `Data1D`
 (taken for both channel along the crosshair lines) and
 `Data0D` (at the crosshair position and plotted on the bottom right).
+
+.. _NDviewer:
 
 Plotting all other data
 -----------------------
