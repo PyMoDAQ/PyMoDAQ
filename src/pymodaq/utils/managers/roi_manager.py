@@ -426,7 +426,7 @@ class ROIManager(QObject):
             if change == 'childAdded':  # new roi to create
                 par: Parameter = data[0]
                 newindex = int(par.name()[-2:])
-
+                roi_type = ''
                 if par.child('type').value() == '1D':
                     roi_type = ''
 

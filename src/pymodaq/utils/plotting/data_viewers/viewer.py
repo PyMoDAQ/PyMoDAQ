@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import numpy as np
 
 from qtpy import QtWidgets
@@ -68,7 +68,6 @@ def create_viewerND(parent: QtWidgets.QWidget, **_ignored):
 
 
 viewer_factory = ViewerFactory()
-
 
 
 class ViewerDispatcher:
@@ -148,7 +147,7 @@ class ViewerDispatcher:
         #     self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
         self.dockarea.addDock(self.viewer_docks[-1], 'right')
 
-    def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
+    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]], viewers_name: List[str] = None, force=False):
         """
 
         Parameters
@@ -188,7 +187,7 @@ class ViewerDispatcher:
 
     def show_data(self, data: DataToExport):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
-        viewer_types = [ViewersEnum(dwa.dim.name) for dwa in data]
+        viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
         if self.viewer_types != viewer_types:
             self.update_viewers(viewer_types)
         for viewer, dwa in zip(self.viewers, data):

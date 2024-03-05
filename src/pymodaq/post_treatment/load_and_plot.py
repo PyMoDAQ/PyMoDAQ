@@ -204,7 +204,8 @@ class LoaderPlotter:
         self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
         self.prepare_viewers(self._viewer_types)
 
-    def prepare_viewers(self, viewers_enum: List[ViewersEnum], viewers_name: List[str] = None):
+    def prepare_viewers(self, viewers_enum: List[Union[ViewersEnum, str]],
+                        viewers_name: List[str] = None):
         if self._viewers is not None:
             while len(self._viewers) > 0:
                 self._viewers.pop(list(self._viewers.keys())[0])

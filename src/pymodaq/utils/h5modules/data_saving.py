@@ -12,21 +12,14 @@ import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute
 from pymodaq.utils.enums import enum_checker
-from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution, DataDimError
+from pymodaq.utils.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
+                                DataDimError, squeeze)
 from .saving import DataType, H5Saver
 from .backends import GROUP, CARRAY, Node, EARRAY, NodeError
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.scanner.utils import ScanType
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
-
-
-def squeeze(data_array: np.ndarray, do_squeeze=True) -> np.ndarray:
-    """ Squeeze numpy arrays return at least 1D arrays except if do_squeeze is False"""
-    if do_squeeze:
-        return np.atleast_1d(np.squeeze(data_array))
-    else:
-        return np.atleast_1d(data_array)
 
 
 class AxisError(Exception):
@@ -57,6 +50,15 @@ class DataManagement(metaclass=ABCMeta):
         str: the future name of the node
         """
         return f'{capitalize(cls.data_type.value)}{ind:02d}'
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_file()
+
+    def close_file(self):
+        self._h5saver.close_file()
 
     def _get_next_node_name(self, where: Union[str, Node]) -> str:
         """Get the formatted next node name given the ones already saved
@@ -245,7 +247,13 @@ class AxisSaverLoader(DataManagement):
         -------
         List[Axis]: the list of all Axis object
         """
-        return [self.load_axis(node) for node in self._get_nodes_from_data_type(where)]
+        axes = []
+        for node in self._get_nodes_from_data_type(where):
+            axis = self.load_axis(node)
+            # if axis.size > 1:
+            #     axes.append(axis)
+            axes.append(axis)
+        return axes
 
 
 class DataSaverLoader(DataManagement):
@@ -253,7 +261,7 @@ class DataSaverLoader(DataManagement):
 
     Parameters
     ----------
-    h5saver: H5Saver
+    h5saver: H5Saver or Path or str
 
     Attributes
     ----------
@@ -262,8 +270,14 @@ class DataSaverLoader(DataManagement):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5Saver):
+    def __init__(self, h5saver: Union[H5Saver, Path]):
         self.data_type = enum_checker(DataType, self.data_type)
+
+        if isinstance(h5saver, Path) or isinstance(h5saver, str):
+            h5saver_tmp = H5Saver()
+            h5saver_tmp.init_file(addhoc_file_path=Path(h5saver))
+            h5saver = h5saver_tmp
+
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
 
@@ -354,6 +368,8 @@ class DataSaverLoader(DataManagement):
                     for array, bkg in zip(getter(where), bkg_nodes)]
         else:
 
+            # return [squeeze(array.read(),
+            #                 array.attrs['data_type'] != 'data_enlargeable') for array in getter(where)]
             return [squeeze(array.read(),
                             array.attrs['data_type'] != 'data_enlargeable') for array in getter(where)]
 
@@ -520,6 +536,7 @@ class DataEnlargeableSaver(DataSaverLoader):
                                               enlargeable=True)
             if save_axes:
                 for axis in data.axes:
+                    axis = axis.copy()
                     axis.index += 1  # because of enlargeable data will have an extra shape
                     self._axis_saver.add_axis(where, axis)
 
@@ -548,11 +565,8 @@ class DataEnlargeableSaver(DataSaverLoader):
         if self.get_last_node_name(where) is None:
             if len(data.nav_indexes) == 0:
                 data_init = data
-            elif len(data.nav_indexes) == 1:
-                data_init = data.inav[0]
-                data_init.source = data.source  # because slicing returns a calculated one
             else:
-                raise DataDimError('It is not possible to append DataND with more than 1 navigation axis')
+                raise DataDimError('It is not possible to append DataND')
             self._create_data_arrays(where, data_init, save_axes=True, add_enl_axes=add_enl_axes)
 
         for ind_data in range(len(data)):
@@ -661,7 +675,12 @@ class DataToExportSaver:
     h5saver: H5Saver
 
     """
-    def __init__(self, h5saver: H5Saver):
+    def __init__(self, h5saver: Union[H5Saver, Path, str]):
+        if isinstance(h5saver, Path) or isinstance(h5saver, str):
+            h5saver_tmp = H5Saver()
+            h5saver_tmp.init_file(addhoc_file_path=Path(h5saver))
+            h5saver = h5saver_tmp
+
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(h5saver)
         self._bkg_saver = BkgSaver(h5saver)
@@ -671,6 +690,15 @@ class DataToExportSaver:
 
     def close(self):
         self._h5saver.close()
+
+    def close_file(self):
+        self._h5saver.close_file()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_file()
 
     def isopen(self) -> bool:
         """ Get the opened status of the underlying hdf5 file"""
@@ -730,26 +758,32 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     Parameters
     ----------
     h5saver: H5Saver
-    axis_name: str
+    enl_axis_names: Iterable[str]
+        The names of the enlargeable axis, default ['nav_axis']
+    enl_axis_units: Iterable[str]
+        The names of the enlargeable axis, default ['']
+    axis_name: str, deprecated use enl_axis_names
         the name of the enlarged axis array
-    axis_units: str
+    axis_units: str, deprecated use enl_axis_units
         the units of the enlarged axis array
     """
-    def __init__(self, h5saver: H5Saver, axis_names: Iterable[str] = None,
-                 axis_name: str = 'nav axis', axis_units: Iterable[str] = ('',)):
+    def __init__(self, h5saver: H5Saver,
+                 enl_axis_names: Iterable[str] = None,
+                 enl_axis_units: Iterable[str] = None,
+                 axis_name: str = 'nav axis', axis_units: str = ''):
 
         super().__init__(h5saver)
-        if axis_names is None:  # for backcompatibility
-            axis_names = [axis_name]
-        if isinstance(axis_units, str):  # for backcompatibilitu
-            axis_units = (axis_units)
+        if enl_axis_names is None:  # for backcompatibility
+            enl_axis_names = (axis_name,)
+        if enl_axis_units is None:  # for backcompatibilitu
+            enl_axis_units = (axis_units,)
 
-        if len(axis_names) != len(axis_units):
-            raise ValueError('Both axis_names and axis_units should have the same length')
+        if len(enl_axis_names) != len(enl_axis_units):
+            raise ValueError('Both enl_axis_names and enl_axis_units should have the same length')
 
-        self._enl_axis_names = axis_names
-        self._enl_axis_units = axis_units
-        self._n_enl = len(axis_names)
+        self._enl_axis_names = enl_axis_names
+        self._enl_axis_units = enl_axis_units
+        self._n_enl = len(enl_axis_names)
 
         self._data_saver = DataEnlargeableSaver(h5saver)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
@@ -811,7 +845,7 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
     This object is made for continuous saving mode of DAQViewer and logging to h5file for DAQLogger
     """
     def __init__(self, h5saver: H5Saver):
-        super().__init__(h5saver, axis_names=('time',), axis_units=('s',))
+        super().__init__(h5saver, enl_axis_names=('time',), enl_axis_units=('s',))
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='',
                  metadata=None, **kwargs):
@@ -905,6 +939,15 @@ class DataLoader:
     def h5saver(self):
         return self._h5saver
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_file()
+
+    def close_file(self):
+        self._h5saver.close_file()
+
     def walk_nodes(self, where: Union[str, Node] = '/'):
         """Return a Node generator iterating over the h5file content"""
         return self.h5saver.walk_nodes(where)
@@ -968,7 +1011,9 @@ class DataLoader:
             nav_group = self.get_nav_group(where)
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
-                data.axes.extend(nav_axes)
+                axes = data.axes[:]
+                axes.extend(nav_axes)
+                data.axes = axes
                 data.get_dim_from_data_axes()
         data.create_missing_axes()
         return data

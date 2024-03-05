@@ -15,11 +15,11 @@ from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_va
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.gui_utils.widgets import QLED
-from pymodaq.extensions.pid.utils import DataToActuatorPID, get_models
+from pymodaq.extensions.pid.utils import get_models
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.widgets.label import LabelWithFont
-from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataRaw
+from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataRaw, DataToActuators
 from pymodaq.utils.config import Config
 
 config = Config()
@@ -479,7 +479,7 @@ class PIDRunner(QObject):
                                                                             data=[np.array([setpoints[ind]])])
                                                              for ind in range(Nsetpoints)])
         self.outputs = [0. for _ in range(Nsetpoints)]
-        self.outputs_to_actuators = DataToActuatorPID('pid',
+        self.outputs_to_actuators = DataToActuators('pid',
                                                       mode='rel',
                                                       data=[DataActuator(self.model_class.actuators_name[ind],
                                                                          data=self.outputs[ind])
@@ -582,8 +582,8 @@ class PIDRunner(QObject):
                     self.outputs = [pid.setpoint for pid in self.pids]
 
                 dt = time.perf_counter() - self.current_time
-                self.outputs_to_actuators: DataToActuatorPID = self.model_class.convert_output(self.outputs, dt,
-                                                                                               stab=True)
+                self.outputs_to_actuators: DataToActuators = (
+                    self.model_class.convert_output(self.outputs, dt, stab=True))
 
                 if not self.paused:
                     self.modules_manager.move_actuators(self.outputs_to_actuators,

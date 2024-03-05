@@ -143,7 +143,9 @@ class ImageDisplayer(QObject):
                     self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
                 else:
                     nav_axes = dwa.get_nav_axes()
-                    data_array = np.stack((nav_axes[0].data, nav_axes[1].data, data_array), axis=0).T
+                    data_array = np.stack((nav_axes[0].get_data(),
+                                           nav_axes[1].get_data(),
+                                           data_array), axis=0).T
                     self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
 
     def update_display_items(self, labels: List[str] = None):

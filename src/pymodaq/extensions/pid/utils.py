@@ -9,9 +9,11 @@ from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
-from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator
+from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataToActuators
+from pymodaq.utils.messenger import deprecation_msg
 
 logger = set_logger(get_module_name(__file__))
+
 
 DAQ_Move_Stage_type = get_plugins('daq_move')
 DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
@@ -20,31 +22,11 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class DataToActuatorPID(DataToExport):
-    """ Particular case of a DataToExport adding one named parameter to indicate what kind of change should be applied
-    to the actuators, absolute or relative
+class DataToActuatorPID(DataToActuators):
 
-    Attributes
-    ----------
-    mode: str
-        Adds an attribute called mode holding a string describing the type of change: relative or absolute
-
-    Parameters
-    ---------
-    mode: str
-        either 'rel' or 'abs' for a relative or absolute change of the actuator's values
-    """
-
-    def __init__(self, *args, mode='rel', **kwargs):
-        if mode not in ['rel', 'abs']:
-            warnings.warn('Incorrect mode for the actuators, switching to default relative mode: rel')
-            mode = 'rel'
-        kwargs.update({'mode': mode})
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-    def __repr__(self):
-        return f'{super().__repr__()}: {self.mode}'
-
+        deprecation_msg('DataToActuatorPID object is deprecated use: pymodaq.utils.data:DataToActuators')
 
 class PIDModelGeneric:
     limits = dict(max=dict(state=False, value=1),
@@ -130,7 +112,7 @@ class PIDModelGeneric:
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[float], dt, stab=True) -> DataToActuatorPID:
+    def convert_output(self, outputs: List[float], dt, stab=True) -> DataToActuators:
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
@@ -143,7 +125,7 @@ class PIDModelGeneric:
 
         """
         self.curr_output = outputs
-        return DataToActuatorPID('pid', mode='rel',
+        return DataToActuators('pid', mode='rel',
                                  data=[DataActuator(self.actuators_name[ind], data=outputs[ind])
                                        for ind in range(len(outputs))])
 
@@ -195,6 +177,7 @@ def get_models(model_name=None):
     from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
     discovered_models = get_entrypoints(group='pymodaq.pid_models')
+    discovered_models = get_entrypoints(group='pymodaq.models')
     if len(discovered_models) > 0:
         for pkg in discovered_models:
             try:

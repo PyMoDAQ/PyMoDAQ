@@ -178,21 +178,21 @@ class UniformDataDisplayer(BaseDataDisplayer):
             )
         if len(sig_axis_limits) == 1:
             self._viewer1D.roi.setPos((float(np.mean(sig_axis_limits[0]) -
-                                             np.abs(np.diff(sig_axis_limits[0])) / 3),
+                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3),
                                        float(np.mean(sig_axis_limits[0]) +
-                                             np.abs(np.diff(sig_axis_limits[0])) / 3))
+                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3))
                                       )
         if len(sig_axis_limits) == 2:
             scaled_axes = np.array(self._viewer2D.view.unscale_axis(np.array(sig_axis_limits[1]),
                                                                     np.array(sig_axis_limits[0])))
 
             self._viewer2D.roi.setSize(
-                float(np.diff(scaled_axes[0])) / 3,
-                float(np.diff(scaled_axes[1])) / 3)
+                float(np.diff(scaled_axes[0])[0]) / 3,
+                float(np.diff(scaled_axes[1])[0]) / 3)
 
             self._viewer2D.roi.setPos(
-                float(np.mean(scaled_axes[0])) - float(np.diff(scaled_axes[0])) / 6,
-                float(np.mean(scaled_axes[1])) - float(np.diff(scaled_axes[1])) / 6)
+                float(np.mean(scaled_axes[0])) - float(np.diff(scaled_axes[0])[0]) / 6,
+                float(np.mean(scaled_axes[1])) - float(np.diff(scaled_axes[1])[0]) / 6)
 
     def updated_nav_integration(self):
         """ Means the ROI select of the 2D viewer has been moved """
@@ -286,7 +286,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
         try:
             navigator_data = None
             if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
-                navigator_data = data
+                navigator_data = data.deepcopy()
 
             elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
                 indx, indy = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes((x, y))
@@ -660,25 +660,29 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                                   axes=[Axis(data=z, index=0, label='z_axis', units='zunits')])
         self._show_data(dataraw, force_update=True)
 
-    def update_widget_visibility(self, data: DataRaw = None):
+    def update_widget_visibility(self, data: DataRaw = None,
+                                 nav_indexes:Tuple[int] = None):
         if data is None:
             data = self._data
-        self.viewer0D.setVisible(len(data.shape) - len(data.nav_indexes) == 0)
-        self.viewer1D.setVisible(len(data.shape) - len(data.nav_indexes) == 1)
-        self.viewer2D.setVisible(len(data.shape) - len(data.nav_indexes) == 2)
-        self.viewer1D.roi.setVisible(len(data.nav_indexes) != 0)
-        self.viewer2D.roi.setVisible(len(data.nav_indexes) != 0)
-        self._dock_navigation.setVisible(len(data.nav_indexes) != 0)
-        nav_axes = data.get_nav_axes()
+        if nav_indexes is None:
+            nav_indexes = data.nav_indexes
+        self.viewer0D.setVisible(len(data.shape) - len(nav_indexes) == 0)
+        self.viewer1D.setVisible(len(data.shape) - len(nav_indexes) == 1)
+        self.viewer2D.setVisible(len(data.shape) - len(nav_indexes) == 2)
+        self.viewer1D.roi.setVisible(len(nav_indexes) != 0)
+        self.viewer2D.roi.setVisible(len(nav_indexes) != 0)
+        self._dock_navigation.setVisible(len(nav_indexes) != 0)
+        #nav_axes = data.get_nav_axes()
 
         if data.distribution.name == 'uniform':
-            self.navigator1D.setVisible(len(nav_axes) == 1)
-            self.navigator2D.setVisible(len(nav_axes) == 2)
-            self.axes_viewer.setVisible(len(data.nav_indexes) > 2)
+            self.navigator1D.setVisible(len(nav_indexes) == 1)
+            self.navigator2D.setVisible(len(nav_indexes) == 2)
+            self.axes_viewer.setVisible(len(nav_indexes) > 2)
         else:
-            self.navigator2D.setVisible(len(nav_axes) == 2 and self.data_displayer.triangulation)
-            self.navigator1D.setVisible(len(nav_axes) == 1 or len(nav_axes) > 2 or
-                                        len(nav_axes) == 2 and not self.data_displayer.triangulation)
+            self.navigator2D.setVisible(len(nav_indexes) == 2 and self.data_displayer.triangulation)
+            self.navigator1D.setVisible(len(nav_indexes) == 1 or len(nav_indexes) > 2 or
+                                        len(nav_indexes) == 2 and
+                                        not self.data_displayer.triangulation)
 
     def update_filters(self, processor: DataProcessorFactory):
         self.get_action('filters').clear()
@@ -705,7 +709,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
     def reshape_data(self):
         _nav_indexes = [int(index) for index in
                         self.settings.child('data_shape_settings', 'navigator_axes').value()['selected']]
-        self.update_widget_visibility()
+        self.update_widget_visibility(nav_indexes=_nav_indexes)
         self.data_displayer.update_nav_indexes(_nav_indexes)
 
     def connect_things(self):
