@@ -196,7 +196,13 @@ class BayesianOptimisation(gutils.CustomApp):
             enl_axis_units=act_units)
 
         self.live_plotter.h5saver = self.h5temp
-        self.live_plotter.prepare_viewers(['ViewerND'],
+        if len(act_names) == 1:
+            viewer_enum = 'Viewer1D'
+        elif len(act_names) == 2:
+            viewer_enum = 'Viewer2D'
+        else:
+            viewer_enum = 'ViewerND'
+        self.live_plotter.prepare_viewers([viewer_enum],
                                           viewers_name=['algo/ProbedData'])
 
     def update_actuators(self, actuators: List[str]):

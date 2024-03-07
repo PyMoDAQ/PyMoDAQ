@@ -108,8 +108,6 @@ class BayesianModelGeneric(ABC):
         self.modules_manager.selected_actuators_name = self.actuators_name
         self.modules_manager.selected_detectors_name = self.detectors_name
 
-        self.ini_temp_file()
-
         self.ini_model()
 
     def ini_model(self):
