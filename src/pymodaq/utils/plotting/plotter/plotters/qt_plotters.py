@@ -31,7 +31,7 @@ class Plotter(PlotterBase):
             do_exit = True
             qapp = start_qapplication()
 
-        viewer = None
+
 
         if isinstance(data, DataToExport):
             widget = DockArea()
