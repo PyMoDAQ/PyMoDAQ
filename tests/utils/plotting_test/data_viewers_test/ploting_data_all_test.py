@@ -15,6 +15,7 @@ from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import data as datamod
 from pymodaq.utils.h5modules.saving import H5SaverLowLevel
 from pymodaq.utils.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
+from pymodaq.utils.plotting.data_viewers import Viewer1D
 
 
 @pytest.fixture(scope="module")
@@ -134,25 +135,33 @@ class Test1DPlot:
         np.random.shuffle(axis_spread_array)
         data_array_1D_spread = mutils.gauss1D(axis_spread_array, 20, 5)
 
-        axis_spread = datamod.Axis('axis spread', 'units', data=axis_spread_array)
+        axis_name = 'axis spread'
+        axis_units = 'spread units'
 
-        data1D_spread = datamod.DataRaw('data1DSpread', data=[data_array_1D_spread],
-                                        distribution='spread',
-                                        nav_indexes=(0,),
-                                        axes=[axis_spread])
-        print(data1D_spread)
-        assert data1D_spread.distribution.name == 'spread'
-        assert data1D_spread.dim.name == 'DataND'
-        assert data1D_spread.shape == (NX,)
-        data1D_spread.plot('qt')
+        axis_spread = datamod.Axis(axis_name, axis_units, data=axis_spread_array)
 
         with tempfile.TemporaryDirectory() as d:
-            with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
-                saver_loader.add_data('/RawData', data1D_spread)
+            with DataEnlargeableSaver(Path(d).joinpath('mydatafile.h5'),
+                                      enl_axis_names=[axis_name],
+                                      enl_axis_units=[axis_units]) as saver_loader:
+                for ind in range(NX):
+                    data0D = datamod.DataRaw('data0D',
+                                             data=[np.array([float(data_array_1D_spread[ind])])],
+                                             distribution='uniform',)
+                    saver_loader.add_data('/RawData', data0D,
+                                          axis_values=[float(axis_spread_array[ind])])
 
-                dwa_back = saver_loader.load_data('/RawData/Data00', load_all=True)
+                data1D_spread = saver_loader.load_data('/RawData/EnlData00', load_all=True)
+                assert data1D_spread.get_axis_from_index(0)[0] == axis_spread
+                print(data1D_spread)
+                assert data1D_spread.distribution.name == 'spread'
+                assert data1D_spread.dim.name == 'DataND'
+                assert data1D_spread.shape == (NX,)
 
-                assert dwa_back == data1D_spread
+                assert data1D_spread.inav[-1] == data0D
+
+                viewer = data1D_spread.plot('qt')
+                assert isinstance(viewer, Viewer1D)
 
     def test_plot_0D_1D_spread(self, qtbot, get_h5saver):
         # when loading data from an enlarged array with a nav axis of size 0, there is an extra dimension

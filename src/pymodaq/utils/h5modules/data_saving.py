@@ -364,14 +364,21 @@ class DataSaverLoader(DataManagement):
 
         if with_bkg:
             return [squeeze(array.read()-bkg.read(),
-                            array.attrs['data_type'] != 'data_enlargeable')
+                            squeeze_indexes=self._get_signal_indexes_to_squeeze(array))
                     for array, bkg in zip(getter(where), bkg_nodes)]
         else:
-
-            # return [squeeze(array.read(),
-            #                 array.attrs['data_type'] != 'data_enlargeable') for array in getter(where)]
             return [squeeze(array.read(),
-                            array.attrs['data_type'] != 'data_enlargeable') for array in getter(where)]
+                            squeeze_indexes=self._get_signal_indexes_to_squeeze(array))
+                    for array in getter(where)]
+
+    def _get_signal_indexes_to_squeeze(self, array: Union[CARRAY, EARRAY]):
+        """ Get the tuple of indexes in the array shape that are not navigation and should be
+        squeezed"""
+        sig_indexes = []
+        for ind in range(len(array.attrs['shape'])):
+            if ind not in array.attrs['nav_indexes'] and array.attrs['shape'][ind] == 1:
+                sig_indexes.append(ind)
+        return tuple(sig_indexes)
 
     def load_data(self, where, with_bkg=False, load_all=False) -> DataWithAxes:
         """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a
@@ -477,7 +484,7 @@ class DataEnlargeableSaver(DataSaverLoader):
     """
     data_type = DataType['data_enlargeable']
 
-    def __init__(self, h5saver: H5Saver,
+    def __init__(self, h5saver: Union[H5Saver, Path],
                  enl_axis_names: Iterable[str] = ('nav axis',),
                  enl_axis_units: Iterable[str] = ('',)):
         super().__init__(h5saver)

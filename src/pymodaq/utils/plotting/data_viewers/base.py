@@ -6,7 +6,7 @@ from pyqtgraph.graphicsItems import InfiniteLine, ROI
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, QRectF
 
-from pymodaq.utils.data import DataToExport, DataWithAxes
+from pymodaq.utils.data import DataToExport, DataWithAxes, DataDim, DataDistribution
 from pymodaq.utils.exceptions import ViewerError
 from pymodaq.utils.plotting.utils.plot_utils import RoiInfo
 
@@ -50,6 +50,44 @@ class ViewersEnum(BaseEnum):
             return ViewersEnum['Viewer2D']
         elif n_axes > 2:
             return ViewersEnum['ViewerND']
+
+    @staticmethod
+    def get_viewers_enum_from_metadata(dim: DataDim,
+                                       distribution: DataDistribution,
+                                       n_nav_axes: int,
+                                       n_sig_indexes: int,
+                                       shape_len: int,
+                                       size: int) -> 'ViewersEnum':
+        if dim.name == 'Data0D':
+            viewer = 'Viewer0D'
+        elif dim.name == 'Data1D':
+            viewer = 'Viewer1D'
+        elif dim.name == 'Data2D':
+            viewer = 'Viewer2D'
+        else:
+            if distribution.name == 'uniform':
+                if shape_len < 3:
+                    if shape_len == 1 and size == 1:
+                        viewer = 'Viewer0D'
+                    elif shape_len == 1 and size > 1:
+                        viewer = 'Viewer1D'
+                    elif shape_len == 2:
+                        viewer = 'Viewer2D'
+                    else:
+                        viewer = 'ViewerND'
+                else:
+                    viewer = 'ViewerND'
+            else:
+                if n_sig_indexes == 0:
+                    if n_nav_axes == 1:
+                        viewer = 'Viewer1D'
+                    elif n_nav_axes == 2:
+                        viewer = 'Viewer2D'
+                    else:
+                        viewer = 'ViewerND'
+                else:
+                    viewer = 'ViewerND'
+        return ViewersEnum[viewer]
 
     @staticmethod
     def get_viewers_enum_from_data(dwa: DataWithAxes) -> 'ViewersEnum':

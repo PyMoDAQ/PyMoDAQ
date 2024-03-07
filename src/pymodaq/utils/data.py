@@ -34,10 +34,10 @@ plotter_factory = PlotterFactory()
 logger = set_logger(get_module_name(__file__))
 
 
-def squeeze(data_array: np.ndarray, do_squeeze=True) -> np.ndarray:
+def squeeze(data_array: np.ndarray, do_squeeze=True, squeeze_indexes: Tuple[int]=None) -> np.ndarray:
     """ Squeeze numpy arrays return at least 1D arrays except if do_squeeze is False"""
     if do_squeeze:
-        return np.atleast_1d(np.squeeze(data_array))
+        return np.atleast_1d(np.squeeze(data_array, axis=squeeze_indexes))
     else:
         return np.atleast_1d(data_array)
 
@@ -695,6 +695,8 @@ class DataBase(DataLowLevel):
         if isinstance(other, DataBase):
             if not(self.name == other.name and len(self) == len(other)):
                 return False
+            if self.dim != other.dim:
+                return False
             eq = True
             for ind in range(len(self)):
                 if self[ind].shape != other[ind].shape:
@@ -1194,8 +1196,13 @@ class AxesManagerBase:
     def get_signal_axes(self):
         if self.sig_indexes is None:
             self._sig_indexes = tuple([int(axis.index) for axis in self.axes if axis.index not in self.nav_indexes])
-        return list(mutils.flatten([copy.copy(self.get_axis_from_index(index, create=True))
-                                    for index in self.sig_indexes]))
+        axes = []
+        for index in self._sig_indexes:
+            axes_tmp = copy.copy(self.get_axis_from_index(index, create=True))
+            for ax in axes_tmp:
+                if ax.size > 1:
+                    axes.append(ax)
+        return axes
 
     def is_axis_signal(self, axis: Axis) -> bool:
         """Check if an axis is considered signal or navigation"""
@@ -1569,6 +1576,19 @@ class DataWithAxes(DataBase):
         else:
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
+    def __eq__(self, other):
+        is_equal = super().__eq__(other)
+        if isinstance(other, DataWithAxes):
+            for ind in list(self.nav_indexes) + list(self.sig_indexes):
+                axes_self = self.get_axis_from_index(ind)
+                axes_other = other.get_axis_from_index(ind)
+                if len(axes_other) != len(axes_self):
+                    return False
+                for ind_ax in range(len(axes_self)):
+                    if axes_self[ind_ax] != axes_other[ind_ax]:
+                        return False
+        return is_equal
+
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
 
@@ -1934,7 +1954,10 @@ class DataWithAxes(DataBase):
         for index in self.nav_indexes + self.sig_indexes:
             if (len(self.get_axis_from_index(index)) != 0 and
                     self.get_axis_from_index(index)[0] is None):
-                axes.extend(self.get_axis_from_index(index, create=True))
+                axes_tmp = self.get_axis_from_index(index, create=True)
+                for ax in axes_tmp:
+                    if ax.size > 1:
+                        axes.append(ax)
         self.axes = axes
 
     def _compute_slices(self, slices, is_navigation=True):
