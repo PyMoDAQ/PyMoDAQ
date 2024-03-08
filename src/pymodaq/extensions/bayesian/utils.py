@@ -25,12 +25,19 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.enums import BaseEnum
 from pymodaq.utils.parameter import Parameter
 
 if TYPE_CHECKING:
     from pymodaq.extensions.bayesian.optimisation import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
+
+
+class UtilityKind(BaseEnum):
+    ucb = 'Upper Confidence Bound'
+    ei = 'Expected Improvement'
+    poi = 'Probability of Improvement'
 
 
 class BayesianAlgorithm:
@@ -44,6 +51,10 @@ class BayesianAlgorithm:
                                           )
 
         self._utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
+
+    def set_utility_function(self, kind: str, **kwargs):
+        if kind in UtilityKind.names():
+            self._utility = UtilityFunction(kind, **kwargs)
 
     def ask(self) -> np.ndarray:
         self._next_points = self._algo.space.params_to_array(self._algo.suggest(self._utility))
