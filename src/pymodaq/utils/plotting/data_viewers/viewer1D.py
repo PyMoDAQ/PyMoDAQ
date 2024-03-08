@@ -139,6 +139,7 @@ class DataDisplayer(QObject):
             elif not scatter and self.get_plot_items()[0].opts['symbol'] is not None:
                 self.plot_with_scatter(False)
 
+
     def update_xyplot(self, do_xy=True, dwa: DataWithAxes=None):
         if dwa is None:
             dwa = self._data
