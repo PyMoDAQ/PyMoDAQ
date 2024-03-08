@@ -5,7 +5,7 @@ Created the 31/08/2023
 @author: Sebastien Weber
 """
 from abc import ABC, abstractproperty, abstractmethod
-from typing import List
+from typing import List, TYPE_CHECKING, Union
 from pathlib import Path
 import importlib
 import pkgutil
@@ -27,7 +27,8 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.parameter import Parameter
 
-
+if TYPE_CHECKING:
+    from pymodaq.extensions.bayesian.optimisation import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
 
@@ -56,8 +57,11 @@ class BayesianAlgorithm:
         return self._algo.max['target']
 
     @property
-    def best_individual(self) -> np.ndarray:
-        return self._algo.space.params_to_array(self._algo.max['params'])
+    def best_individual(self) -> Union[np.ndarray, None]:
+        max_param = self._algo.max.get('params', None)
+        if max_param is None:
+            return None
+        return self._algo.space.params_to_array(max_param)
 
 
 class BayesianModelGeneric(ABC):
@@ -71,7 +75,7 @@ class BayesianModelGeneric(ABC):
 
     params = []  # to be subclassed
 
-    def __init__(self, optimisation_controller: 'Optimisation'):
+    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
         self.optimisation_controller = optimisation_controller  # instance of the pid_controller using this model
         self.modules_manager: ModulesManager = optimisation_controller.modules_manager
 
@@ -133,13 +137,14 @@ class BayesianModelGeneric(ABC):
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[np.ndarray]) -> DataToActuators:
+    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
         """ Convert the output of the Optimisation Controller in units to be fed into the actuators
         Parameters
         ----------
         outputs: list of numpy ndarray
             output value from the controller from which the model extract a value of the same units as the actuators
-
+        best_individual: np.ndarray
+            the coordinates of the best individual so far
         Returns
         -------
         DataToActuatorOpti: derived from DataToExport. Contains value to be fed to the actuators with a a mode
@@ -197,13 +202,14 @@ class BayesianModelDefault(BayesianModelGeneric):
         origin, name = data_name.split('/')
         return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
 
-    def convert_output(self, outputs: List[np.ndarray]) -> DataToActuators:
+    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
         """ Convert the output of the Optimisation Controller in units to be fed into the actuators
         Parameters
         ----------
         outputs: list of numpy ndarray
-            output value from the controller from which the model extract a value of the same units
-            as the actuators
+            output value from the controller from which the model extract a value of the same units as the actuators
+        best_individual: np.ndarray
+            the coordinates of the best individual so far
 
         Returns
         -------
@@ -233,25 +239,30 @@ def get_bayesian_models(model_name=None):
                 module = importlib.import_module(pkg.value)
                 module_name = pkg.value
 
-                for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
+                for mod in pkgutil.iter_modules([
+                    str(Path(module.__file__).parent.joinpath('models'))]):
                     try:
-                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
+                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}',
+                                                               module)
                         classes = inspect.getmembers(model_module, inspect.isclass)
                         for name, klass in classes:
-                            if isinstance(klass.__name__, BayesianModelGeneric):
-                                models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
-                                break
+                            if issubclass(klass, BayesianModelGeneric):
+                                if find_dict_in_list_from_key_val(models_import, 'name', mod.name)\
+                                        is None:
+                                    models_import.append({'name': klass.__name__,
+                                                          'module': model_module,
+                                                          'class': klass})
 
-                    except Exception as e:  # pragma: no cover
+                    except Exception as e:
                         logger.warning(str(e))
 
-            except Exception as e:  # pragma: no cover
-                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
-
-    models_import.append({'name': 'BayesianModelDefault',
-                          'module': inspect.getmodule(BayesianModelDefault),
-                          'class': BayesianModelDefault})
-
+            except Exception as e:
+                logger.warning(f'Impossible to import the {pkg.value} bayesian model: {str(e)}')
+    if find_dict_in_list_from_key_val(models_import, 'name', 'BayesianModelDefault') \
+            is None:
+        models_import.append({'name': 'BayesianModelDefault',
+                              'module': inspect.getmodule(BayesianModelDefault),
+                              'class': BayesianModelDefault})
     if model_name is None:
         return models_import
     else:

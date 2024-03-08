@@ -89,8 +89,10 @@ class BayesianOptimisation(gutils.CustomApp):
         """
         self.docks['settings'] = gutils.Dock('Settings')
         self.dockarea.addDock(self.docks['settings'])
-        self.docks['settings'].addWidget(self.modules_manager.settings_tree)
-        self.docks['settings'].addWidget(self.settings_tree)
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self.docks['settings'].addWidget(splitter)
+        splitter.addWidget(self.settings_tree)
+        splitter.addWidget(self.modules_manager.settings_tree)
 
         widget_observable = QtWidgets.QWidget()
         widget_observable.setLayout(QtWidgets.QHBoxLayout())
@@ -202,8 +204,13 @@ class BayesianOptimisation(gutils.CustomApp):
             viewer_enum = 'Viewer2D'
         else:
             viewer_enum = 'ViewerND'
-        self.live_plotter.prepare_viewers([viewer_enum],
-                                          viewers_name=['algo/ProbedData'])
+        viewers = self.live_plotter.prepare_viewers([viewer_enum],
+                                                    viewers_name=['algo/ProbedData'])
+        for viewer in viewers:
+            if viewer.has_action('crosshair'):
+                viewer.get_action('crosshair').trigger()
+            if viewer.has_action('sort'):
+                viewer.get_action('sort').trigger()
 
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked('ini_runner'):
@@ -284,16 +291,21 @@ class BayesianOptimisation(gutils.CustomApp):
 
     def process_output(self, dte: DataToExport):
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
-        dwa_actuators = dte.remove(dte.get_data_from_name('Actuators'))
+        dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
+
+        best_individual = dte.get_data_from_name('Individual')
 
         self.viewer_observable.show_data(dte)
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=dwa_actuators.values())
 
-        self.update_data_plot()
+        self.update_data_plot(target_at=dwa_actuators.values(),
+                              crosshair_at=best_individual.data[0])
 
-    def update_data_plot(self):
-        self.live_plotter.load_plot_data(remove_navigation=False)
+    def update_data_plot(self, target_at=None, crosshair_at=None):
+        self.live_plotter.load_plot_data(remove_navigation=False,
+                                         crosshair_at=crosshair_at,
+                                         target_at=target_at)
 
     def enable_controls_opti(self, enable: bool):
         pass
@@ -373,7 +385,10 @@ class OptimisationRunner(QtCore.QObject):
 
                     self.outputs = next_target
                     self.output_to_actuators: DataToActuators =\
-                        self.model_class.convert_output(self.outputs)
+                        self.model_class.convert_output(
+                            self.outputs,
+                            best_individual=self.optimisation_algorithm.best_individual
+                        )
 
                     self.modules_manager.move_actuators(self.output_to_actuators,
                                                         self.output_to_actuators.mode,
