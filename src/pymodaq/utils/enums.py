@@ -19,6 +19,14 @@ class BaseEnum(Enum):
         """Returns all the names of the enum"""
         return [cls[name].value for name in cls.names()]
 
+    @classmethod
+    def to_dict(cls):
+        """ Returns the enum in form of a dict with names os keys
+
+        New in 4.0.2
+        """
+        return {name: cls[name].value for name in cls.names()}
+
     def __eq__(self, other: Union[str, Enum]):
         """testing for equality using the enum name"""
         if isinstance(other, str):
