@@ -11,7 +11,7 @@ from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, Da
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
-                                               BayesianAlgorithm)
+                                               BayesianAlgorithm, UtilityKind)
 from pymodaq.utils.gui_utils import QLED
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils import gui_utils as gutils
@@ -34,8 +34,15 @@ class BayesianOptimisation(gutils.CustomApp):
 
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
-         'children': [{'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
-                      {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []}]},
+         'children': [
+             {'title': 'Utility Function:', 'name': 'utility', 'expanded': True, 'type': 'group',
+              'children': [
+                  {'title': 'Kind', 'name': 'kind', 'type': 'list',
+                   'limits': UtilityKind.to_dict_value()},
+              ]},
+             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
+             {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
+         ]},
 
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
          'children': [
