@@ -316,8 +316,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.image_widget = ImageWidget()
         self.roi_manager = ROIManager(self.image_widget, '2D')
 
-        self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False, resizable=False)
-        self.roi_target.setVisible(False)
+        self.roi_target: Union[pgROI, Crosshair] = None
 
         self.setup_widgets()
 
@@ -352,29 +351,43 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.histogrammer.affect_histo_to_imageitems(self.data_displayer.get_images())
 
+        if data_distribution.name == 'uniform':
+            self.roi_target = pgROI(pos=(0, 0), size=(20, 20), movable=False, rotatable=False,
+                                    resizable=False)
+            self.plotitem.addItem(self.roi_target)
+
+        elif data_distribution.name == 'spread':
+            self.roi_target = Crosshair(self.image_widget, pen=(255, 255, 255))
+        self.roi_target.setVisible(False)
+        
     def show_roi_target(self, show=True):
         self.roi_target.setVisible(show)
 
     def move_scale_roi_target(self, pos=None, size=None):
         """
-        Move and scale the target ROI (used to display a particular area, for instance the currently scanned points
+        Move and scale the target ROI (used to display a particular area,
+        for instance the currently scanned points
         during a scan
         Parameters
         ----------
-        pos: (iterable) precising the central position of the ROI in the view
-        size: (iterable) precising the size of the ROI
+        pos: (iterable) setting the central position of the ROI in the view
+        size: (iterable) setting the size of the ROI
         """
-        if size is not None:
-            x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
-            size = list(np.divide(list(size), [x_scaling, y_scaling]))
-            if list(self.roi_target.size()) != size:
-                self.roi_target.setSize(size, center=(0.5, 0.5))
+        if isinstance(self.roi_target, pgROI):
+            if size is not None:
+                x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
+                size = list(np.divide(list(size), [x_scaling, y_scaling]))
+                if list(self.roi_target.size()) != size:
+                    self.roi_target.setSize(size, center=(0.5, 0.5))
 
-        if pos is not None:
-            pos = self.unscale_axis(*list(pos))
-            pos = list(pos)
-            if list(self.roi_target.pos()) != pos:
-                self.roi_target.setPos(pos)
+            if pos is not None:
+                pos = self.unscale_axis(*list(pos))
+                pos = list(pos)
+                if list(self.roi_target.pos()) != pos:
+                    self.roi_target.setPos(pos)
+
+        else:
+            self.roi_target.set_crosshair_position(*list(pos))
 
     def setup_widgets(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -391,7 +404,6 @@ class View2D(ActionManager, QtCore.QObject):
         splitter_vertical.addWidget(self.graphs_widget)
 
         self.plotitem.addItem(self.ROIselect)
-        self.plotitem.addItem(self.roi_target)
 
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)

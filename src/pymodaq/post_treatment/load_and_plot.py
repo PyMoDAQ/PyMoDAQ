@@ -16,6 +16,10 @@ from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewerDispatcher
 from pymodaq.utils.plotting.data_viewers import ViewersEnum, Viewer1D, Viewer2D, ViewerND
 from pymodaq.utils.gui_utils import Dock, DockArea
+from pymodaq.utils.logger import set_logger, get_module_name
+
+
+logger = set_logger(get_module_name(__file__))
 
 
 class LoaderPlotter:
@@ -198,7 +202,10 @@ class LoaderPlotter:
     def show_data(self, **kwargs):
         """Send data to their dedicated viewers
         """
-        self.set_data_to_viewers(self._data, **kwargs)
+        try:
+            self.set_data_to_viewers(self._data, **kwargs)
+        except Exception as e:
+            logger.warning(f'Could not show data: {str(e)}')
 
     def _init_show_data(self, data: DataToExport):
         """Processing before showing data
@@ -263,17 +270,19 @@ class LoaderPlotter:
                 viewer.show_roi_target(True)
                 if isinstance(viewer, Viewer1D):
                     viewer.move_roi_target(target_at)
-                elif isinstance(viewer, Viewer2D) and _data.distribution == 'uniform':
+                elif isinstance(viewer, Viewer2D):
                     _target_at = target_at.copy()
-
-                    size = [_data.get_axis_from_index(1)[0].scaling]
-                    if len(_target_at) == 1:  # means concatenation of 1D data
-                        axis = _data.get_axis_from_index(0)[0]
-                        size.append(axis.scaling * axis.size)
-                        _target_at = list(_target_at) + [axis.offset]
+                    if _data.distribution == 'uniform':
+                        size = [_data.get_axis_from_index(1)[0].scaling]
+                        if len(_target_at) == 1:  # means concatenation of 1D data
+                            axis = _data.get_axis_from_index(0)[0]
+                            size.append(axis.scaling * axis.size)
+                            _target_at = list(_target_at) + [axis.offset]
+                        else:
+                            size.append(_data.get_axis_from_index(0)[0].scaling)
+                        viewer.move_roi_target(_target_at, size)
                     else:
-                        size.append(_data.get_axis_from_index(0)[0].scaling)
-                    viewer.move_roi_target(_target_at, size)
+                        viewer.move_roi_target(_target_at)
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite
