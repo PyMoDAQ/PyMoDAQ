@@ -13,7 +13,7 @@ import inspect
 import numpy as np
 from qtpy import QtWidgets
 import tempfile
-
+from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
@@ -38,6 +38,10 @@ class UtilityKind(BaseEnum):
     ucb = 'Upper Confidence Bound'
     ei = 'Expected Improvement'
     poi = 'Probability of Improvement'
+
+
+UtilityParameters = namedtuple('UtilityParameters',
+                               ['kind', 'kappa', 'xi', 'kappa_decay', 'kappa_decay_delay'])
 
 
 class BayesianAlgorithm:
