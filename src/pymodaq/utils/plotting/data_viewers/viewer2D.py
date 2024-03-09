@@ -359,7 +359,7 @@ class View2D(ActionManager, QtCore.QObject):
         elif data_distribution.name == 'spread':
             self.roi_target = Crosshair(self.image_widget, pen=(255, 255, 255))
         self.roi_target.setVisible(False)
-        
+
     def show_roi_target(self, show=True):
         self.roi_target.setVisible(show)
 
