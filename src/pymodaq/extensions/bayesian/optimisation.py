@@ -11,7 +11,8 @@ from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, Da
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
-                                               BayesianAlgorithm, UtilityKind)
+                                               BayesianAlgorithm, UtilityKind,
+                                               UtilityParameters)
 from pymodaq.utils.gui_utils import QLED
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils import gui_utils as gutils
@@ -39,6 +40,20 @@ class BayesianOptimisation(gutils.CustomApp):
               'children': [
                   {'title': 'Kind', 'name': 'kind', 'type': 'list',
                    'limits': UtilityKind.to_dict_value()},
+                  {'title': 'Kappa:', 'name': 'kappa', 'type': 'slide', 'value': 2.576,
+                   'min': 0.01, 'max': 10, 'subtype': 'log',
+                   'tip': 'Parameter to indicate how closed are the next parameters sampled.'
+                          'Higher value = favors spaces that are least explored.'
+                          'Lower value = favors spaces where the regression function is the '
+                          'highest.'},
+                  {'title': 'xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
+                   'tip': 'Governs the exploration/exploitation tradeoff.'
+                          'Lower prefers exploitation, higher prefers exploration.'},
+                  {'title': 'Kappa decay:', 'name': 'kappa_decay', 'type': 'float', 'value': 1,
+                   'tip': 'kappa is multiplied by this factor every iteration.'},
+                  {'title': 'Kappa decay delay:', 'name': 'kappa_decay_delay', 'type': 'int',
+                   'value': 0, 'tip': 'Number of iterations that must have passed before applying '
+                                      'the decay to kappa.'},
               ]},
              {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
              {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
@@ -75,6 +90,8 @@ class BayesianOptimisation(gutils.CustomApp):
 
         self.enlargeable_saver: DataEnlargeableSaver = None
         self.live_plotter = LoaderPlotter(self.dockarea)
+
+        self.enl_index = 0
 
     @property
     def modules_manager(self) -> ModulesManager:
@@ -154,6 +171,18 @@ class BayesianOptimisation(gutils.CustomApp):
         elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
             if self.model_class is not None:
                 self.model_class.update_settings(param)
+        elif param.name() in putils.iter_children(
+                self.settings.child('main_settings', 'utility'), []):
+            self.update_utility_function()
+
+    def update_utility_function(self):
+        utility_settings = self.settings.child('main_settings', 'utility')
+        uparams = UtilityParameters(utility_settings['kind'], utility_settings['kappa'],
+                                    utility_settings['xi'], utility_settings['kappa_decay'],
+                                    utility_settings['kappa_decay_delay'])
+
+        self.command_runner.emit(utils.ThreadCommand('utility', uparams))
+
 
     def setup_actions(self):
         logger.debug('setting actions')
@@ -266,6 +295,7 @@ class BayesianOptimisation(gutils.CustomApp):
     def ini_optimisation_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
+            self.enl_index = 0
 
             self.ini_temp_file()
 
@@ -297,17 +327,21 @@ class BayesianOptimisation(gutils.CustomApp):
                 logger.exception(str(e))
 
     def process_output(self, dte: DataToExport):
+
+        self.enl_index += 1
+
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
 
         best_individual = dte.get_data_from_name('Individual')
-
+        best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
         self.viewer_observable.show_data(dte)
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=dwa_actuators.values())
-
-        self.update_data_plot(target_at=dwa_actuators.values(),
-                              crosshair_at=best_individual.data[0])
+        if len(best_indiv_as_list) == 1 or (
+                len(best_indiv_as_list) == 2 and self.enl_index >= 3):
+            self.update_data_plot(target_at=dwa_actuators.values(),
+                                  crosshair_at=best_indiv_as_list)
 
     def update_data_plot(self, target_at=None, crosshair_at=None):
         self.live_plotter.load_plot_data(remove_navigation=False,
@@ -363,6 +397,15 @@ class OptimisationRunner(QtCore.QObject):
 
         elif command.command == "stop":
             self.running = False
+
+        elif command.command == 'utility':
+            utility_params: UtilityParameters = command.attribute
+            self.optimisation_algorithm.set_utility_function(
+                utility_params.kind,
+                kappa=utility_params.kappa,
+                xi=utility_params.xi,
+                kappa_decay=utility_params.kappa_decay,
+                kappa_decay_delay=utility_params.kappa_decay_delay)
 
     def pause_opti(self, pause_state: bool):
         self.paused = pause_state
