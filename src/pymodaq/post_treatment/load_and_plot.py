@@ -226,7 +226,8 @@ class LoaderPlotter:
             viewers_name = [f'DataPlot{ind:02d}' for ind in range(len(self._viewer_types))]
 
         if self.dispatcher.viewer_types != self._viewer_types:
-            self.dispatcher.update_viewers(self._viewer_types)
+            self.dispatcher.update_viewers(self._viewer_types,
+                                           viewers_name=viewers_name)
 
         self._viewers = dict(zip(viewers_name, self.dispatcher.viewers))
         self._viewer_docks = dict(zip(viewers_name, self.dispatcher.viewer_docks))
