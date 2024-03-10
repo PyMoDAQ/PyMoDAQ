@@ -136,6 +136,14 @@ class BayesianModelGeneric(ABC):
         """
         raise NotImplementedError
 
+    def runner_initialized(self):
+        """ To be subclassed
+
+        Initialize whatever is needed by your custom model after the optimization runner is
+        initialized
+        """
+        pass
+
     def convert_input(self, measurements: DataToExport) -> float:
         """
         Convert the measurements in the units to be fed to the Optimisation Controller
@@ -176,7 +184,7 @@ class BayesianModelDefault(BayesianModelGeneric):
 
     params = [{'title': 'Optimizing signal', 'name': 'optimizing_signal', 'type': 'group',
                 'children': [
-                    {'title': 'Get data', 'name': 'data_probe', 'type': 'bool_push'},
+                    {'title': 'Get data', 'name': 'data_probe', 'type': 'action'},
                     {'title': 'Optimize 0Ds:', 'name': 'optimize_0d', 'type': 'itemselect',
                      'checkbox': True},
         ]},]
@@ -185,6 +193,9 @@ class BayesianModelDefault(BayesianModelGeneric):
         self.actuators_name = optimisation_controller.modules_manager.actuators_name
         self.detectors_name = optimisation_controller.modules_manager.detectors_name
         super().__init__(optimisation_controller)
+
+        self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
+            self.optimize_from)
 
     def ini_model(self):
         pass
@@ -196,8 +207,7 @@ class BayesianModelDefault(BayesianModelGeneric):
         self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
 
     def update_settings(self, param: Parameter):
-        if param.name() == 'data_probe':
-            self.optimize_from()
+        pass
 
     def convert_input(self, measurements: DataToExport) -> float:
         """ Convert the measurements in the units to be fed to the Optimisation Controller
