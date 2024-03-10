@@ -32,11 +32,12 @@ CLASS_NAME = 'BayesianOptimisation'
 class BayesianOptimisation(gutils.CustomApp):
     command_runner = QtCore.Signal(utils.ThreadCommand)
     models = get_bayesian_models()
+    explored_viewer_name = 'algo/ProbedData'
 
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
          'children': [
-             {'title': 'Utility Function:', 'name': 'utility', 'expanded': True, 'type': 'group',
+             {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
               'children': [
                   {'title': 'Kind', 'name': 'kind', 'type': 'list',
                    'limits': UtilityKind.to_dict_value()},
@@ -96,10 +97,10 @@ class BayesianOptimisation(gutils.CustomApp):
         self.enl_index = 0
 
         self.settings.child('models', 'ini_model').sigActivated.connect(
-            self.get_action('ini_model').trigger())
+            self.get_action('ini_model').trigger)
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
-            self.get_action('ini_runner').trigger())
+            self.get_action('ini_runner').trigger)
     @property
     def modules_manager(self) -> ModulesManager:
         return self._modules_manager
@@ -200,7 +201,6 @@ class BayesianOptimisation(gutils.CustomApp):
                         enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
         self.add_action('run', 'Run Optimisation', 'run2', checkable=True)
-        self.add_action('pause', 'Pause Optimisation', 'pause', checkable=True)
         logger.debug('actions set')
 
     def connect_things(self):
@@ -209,20 +209,15 @@ class BayesianOptimisation(gutils.CustomApp):
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimisation_runner)
         self.connect_action('run', self.run_optimisation)
-        self.connect_action('pause', self.pause_runner)
-        self.modules_manager
-
-    def pause_runner(self):
-        self.command_runner.emit(utils.ThreadCommand('pause_PID', self.is_action_checked('pause')))
 
     def quit(self):
         self.dockarea.parent().close()
+        self.clean_h5_temp()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()
-        self.model_class = utils.find_dict_in_list_from_key_val(self.models,
-                                                                'name',
-                                                                model_name)['class'](self)
+        self.model_class = utils.find_dict_in_list_from_key_val(
+            self.models, 'name', model_name)['class'](self)
         self.model_class.ini_model_base()
 
     def ini_temp_file(self):
@@ -249,12 +244,16 @@ class BayesianOptimisation(gutils.CustomApp):
         else:
             viewer_enum = 'ViewerND'
         viewers = self.live_plotter.prepare_viewers([viewer_enum],
-                                                    viewers_name=['algo/ProbedData'])
+                                                    viewers_name=[self.explored_viewer_name])
         for viewer in viewers:
             if viewer.has_action('crosshair'):
                 viewer.get_action('crosshair').trigger()
             if viewer.has_action('sort'):
-                viewer.get_action('sort').trigger()
+                if not viewer.is_action_checked('sort'):
+                   viewer.get_action('sort').trigger()
+            if viewer.has_action('scatter'):
+                if not viewer.is_action_checked('scatter'):
+                    viewer.get_action('scatter').trigger()
 
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked('ini_runner'):
@@ -297,6 +296,13 @@ class BayesianOptimisation(gutils.CustomApp):
             self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
                                                   ['Fitness', 'Individual'])
             self.settings.child('models', 'ini_model').setValue(True)
+            self.settings.child('models', 'ini_runner').setOpts(enabled=True)
+            self.set_action_enabled('ini_runner', True)
+
+            try:  # this is correct for Default Model and probably for all models...
+                self.model_class.settings.child('optimizing_signal', 'data_probe').activate()
+            except Exception:
+                pass
 
         except Exception as e:
             logger.exception(str(e))
@@ -319,6 +325,7 @@ class BayesianOptimisation(gutils.CustomApp):
 
             self.runner_thread.start()
             self.get_action('runner_led').set_as_true()
+            self.model_class.runner_initialized()
 
         else:
             if self.is_action_checked('run'):
