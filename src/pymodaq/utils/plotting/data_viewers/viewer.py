@@ -178,7 +178,8 @@ class ViewerDispatcher:
         ind_loop = 0
         while len(self.viewers) < len(viewers_type):
             self.add_viewer(viewers_type[Nviewers_to_leave + ind_loop],
-                            dock_name=viewers_name[Nviewers_to_leave + ind_loop] if viewers_name is not None else None)
+                            dock_name=viewers_name[Nviewers_to_leave + ind_loop]
+                            if viewers_name is not None else None)
             ind_loop += 1
         QtWidgets.QApplication.processEvents()
 
