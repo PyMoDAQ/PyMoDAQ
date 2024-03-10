@@ -63,6 +63,8 @@ class BayesianOptimisation(gutils.CustomApp):
          'children': [
             {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
              'limits': [d['name'] for d in models]},
+            {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
+            {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
             {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
         ]},
         {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
@@ -93,6 +95,11 @@ class BayesianOptimisation(gutils.CustomApp):
 
         self.enl_index = 0
 
+        self.settings.child('models', 'ini_model').sigActivated.connect(
+            self.get_action('ini_model').trigger())
+
+        self.settings.child('models', 'ini_runner').sigActivated.connect(
+            self.get_action('ini_runner').trigger())
     @property
     def modules_manager(self) -> ModulesManager:
         return self._modules_manager
@@ -189,7 +196,8 @@ class BayesianOptimisation(gutils.CustomApp):
         self.add_action('quit', 'Quit', 'close2', "Quit program")
         self.add_action('ini_model', 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
-        self.add_action('ini_runner', 'Init the Optimisation Algorithm', 'ini', checkable=True)
+        self.add_action('ini_runner', 'Init the Optimisation Algorithm', 'ini', checkable=True,
+                        enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
         self.add_action('run', 'Run Optimisation', 'run2', checkable=True)
         self.add_action('pause', 'Pause Optimisation', 'pause', checkable=True)
@@ -288,6 +296,7 @@ class BayesianOptimisation(gutils.CustomApp):
 
             self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
                                                   ['Fitness', 'Individual'])
+            self.settings.child('models', 'ini_model').setValue(True)
 
         except Exception as e:
             logger.exception(str(e))
@@ -295,6 +304,7 @@ class BayesianOptimisation(gutils.CustomApp):
     def ini_optimisation_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
+            self.settings.child('models', 'ini_runner').setValue(True)
             self.enl_index = 0
 
             self.ini_temp_file()
@@ -353,7 +363,7 @@ class BayesianOptimisation(gutils.CustomApp):
 
     def run_optimisation(self):
         if self.is_action_checked('run'):
-            self.get_action('run').set_icon('stop')
+            self.get_action('run').set_icon('pause')
             self.command_runner.emit(utils.ThreadCommand('start', {}))
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.processEvents()
@@ -381,7 +391,6 @@ class OptimisationRunner(QtCore.QObject):
         self.modules_manager: ModulesManager = modules_manager
 
         self.running = True
-        self.paused = False
 
         self.optimisation_algorithm: BayesianAlgorithm = algorithm
 
@@ -391,9 +400,6 @@ class OptimisationRunner(QtCore.QObject):
         """
         if command.command == "run":
             self.run_opti(**command.attribute)
-
-        elif command.command == "pause":
-            self.pause_opti(command.attribute)
 
         elif command.command == "stop":
             self.running = False
@@ -406,9 +412,6 @@ class OptimisationRunner(QtCore.QObject):
                 xi=utility_params.xi,
                 kappa_decay=utility_params.kappa_decay,
                 kappa_decay_delay=utility_params.kappa_decay_delay)
-
-    def pause_opti(self, pause_state: bool):
-        self.paused = pause_state
 
     def run_opti(self, sync_detectors=True, sync_acts=False):
         """Start the optimisation loop
@@ -430,44 +433,43 @@ class OptimisationRunner(QtCore.QObject):
             self.current_time = time.perf_counter()
             logger.info('Optimisation loop starting')
             while self.running:
-                if not self.paused:
-                    next_target = self.optimisation_algorithm.ask()
+                next_target = self.optimisation_algorithm.ask()
 
-                    self.outputs = next_target
-                    self.output_to_actuators: DataToActuators =\
-                        self.model_class.convert_output(
-                            self.outputs,
-                            best_individual=self.optimisation_algorithm.best_individual
-                        )
+                self.outputs = next_target
+                self.output_to_actuators: DataToActuators =\
+                    self.model_class.convert_output(
+                        self.outputs,
+                        best_individual=self.optimisation_algorithm.best_individual
+                    )
 
-                    self.modules_manager.move_actuators(self.output_to_actuators,
-                                                        self.output_to_actuators.mode,
-                                                        polling=False)
+                self.modules_manager.move_actuators(self.output_to_actuators,
+                                                    self.output_to_actuators.mode,
+                                                    polling=False)
 
-                    # Do the evaluation (measurements)
-                    self.det_done_datas = self.modules_manager.grab_datas()
-                    self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
+                # Do the evaluation (measurements)
+                self.det_done_datas = self.modules_manager.grab_datas()
+                self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
 
-                    # Run the algo internal mechanic
-                    self.optimisation_algorithm.tell(float(self.input_from_dets))
+                # Run the algo internal mechanic
+                self.optimisation_algorithm.tell(float(self.input_from_dets))
 
-                    dte = DataToExport('algo',
-                                       data=[self.individual_as_data(
-                                           np.array([self.optimisation_algorithm.best_fitness]),
-                                           'Fitness'),
-                                           self.individual_as_data(
-                                               self.optimisation_algorithm.best_individual,
-                                               'Individual'),
-                                           DataCalculated('ProbedData',
-                                                          data=[np.array([self.input_from_dets])],
-                                                          ),
-                                           self.output_to_actuators.merge_as_dwa('Data0D',
-                                                                                 'Actuators')
-                                             ])
-                    self.algo_output_signal.emit(dte)
+                dte = DataToExport('algo',
+                                   data=[self.individual_as_data(
+                                       np.array([self.optimisation_algorithm.best_fitness]),
+                                       'Fitness'),
+                                       self.individual_as_data(
+                                           self.optimisation_algorithm.best_individual,
+                                           'Individual'),
+                                       DataCalculated('ProbedData',
+                                                      data=[np.array([self.input_from_dets])],
+                                                      ),
+                                       self.output_to_actuators.merge_as_dwa('Data0D',
+                                                                             'Actuators')
+                                         ])
+                self.algo_output_signal.emit(dte)
 
-                self.current_time = time.perf_counter()
-                QtWidgets.QApplication.processEvents()
+            self.current_time = time.perf_counter()
+            QtWidgets.QApplication.processEvents()
 
 
             logger.info('Optimisation loop exiting')
