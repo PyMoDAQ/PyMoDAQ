@@ -577,6 +577,9 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter_VLeft.splitterMoved[int, int].emit(int(ratio * self.parent_widget.height()), 1)
         QtGui.QGuiApplication.processEvents()
 
+    def collapse_lineout_widgets(self):
+        self.prepare_image_widget_for_lineouts(ratio=1)
+
     def get_view_range(self):
         return self.image_widget.view.viewRange()
 
