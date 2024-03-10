@@ -517,6 +517,9 @@ class DashBoard(QObject):
         try:
             self.remote_timer.stop()
 
+            for ext in self.extensions:
+                if hasattr(self.extensions[ext], 'quit_fun'):
+                    self.extensions[ext].quit_fun()
             for mov in self.actuators_modules:
                 mov.init_signal.disconnect(self.update_init_tree)
             for det in self.detector_modules:
