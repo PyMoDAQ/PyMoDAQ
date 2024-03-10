@@ -50,7 +50,8 @@ class QAction(QAction):
 
 def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, checked=False,
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
-              menu: QtWidgets.QMenu = None, visible=True, shortcut=None):
+              menu: QtWidgets.QMenu = None, visible=True, shortcut=None,
+              enabled=True):
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -73,6 +74,10 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, chec
         a menu where action should be added.
     visible: bool
         display or not the action in the toolbar/menu
+    shortcut: str
+        a string defining a shortcut for this action
+    enabled: bool
+        set the enabled state
     """
     if icon_name != '':
         action = QAction(create_icon(icon_name), name, None)
@@ -92,6 +97,7 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, chec
     if shortcut is not None:
         action.setShortcut(shortcut)
     action.setVisible(visible)
+    action.setEnabled(enabled)
     return action
 
 
@@ -182,9 +188,11 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name: str = '', name: str = '', icon_name: str = '', tip='', checkable=False,
+    def add_action(self, short_name: str = '', name: str = '', icon_name: str = '', tip='',
+                   checkable=False,
                    checked=False, toolbar=None, menu=None,
-                   visible=True, shortcut=None, auto_toolbar=True, auto_menu=True):
+                   visible=True, shortcut=None, auto_toolbar=True, auto_menu=True,
+                   enabled=True):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -207,7 +215,12 @@ class ActionManager:
             a menu where action should be added. Actions can also be added later see *affect_to*
         visible: bool
             display or not the action in the toolbar/menu
-
+        auto_toolbar: bool
+            if True add this action to the defined toolbar
+        auto_menu: bool
+            if True add this action to the defined menu
+        enabled: bool
+            set the enabled state of this action
         See Also
         --------
         affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
@@ -219,8 +232,9 @@ class ActionManager:
         if auto_menu:
             if menu is None:
                 menu = self._menu
-        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, checked=checked, toolbar=toolbar, menu=menu,
-                                              visible=visible, shortcut=shortcut)
+        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
+                                              checked=checked, toolbar=toolbar, menu=menu,
+                                              visible=visible, shortcut=shortcut, enabled=enabled)
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget], *args, tip='',
                    toolbar: QtWidgets.QToolBar = None, visible=True, signal_str=None, slot: Callable=None, **kwargs):
