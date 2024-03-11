@@ -67,7 +67,7 @@ class TestDAQMove:
         assert blocker.args[0] is True
 
         POSITION = 34.5
-        TIMEOUT = 2 * daq_move.settings['move_settings', 'tau']
+        TIMEOUT = int(2 * daq_move.settings['move_settings', 'tau'])
         with qtbot.waitSignal(daq_move.move_done_signal, timeout=TIMEOUT) as blocker:
             with qtbot.waitSignal(daq_move.current_value_signal, timeout=1000) as val_blocker:
                 daq_move.move_abs(POSITION)
@@ -77,7 +77,8 @@ class TestDAQMove:
         data = blocker.args[0]
         assert isinstance(data, DataActuator)
 
-        assert data.value() == pytest.approx(POSITION, abs=daq_move.settings['move_settings', 'epsilon'])
+        assert data.value() == pytest.approx(POSITION,
+                                             abs=daq_move.settings['move_settings', 'epsilon'])
         assert data.name == daq_move.title
 
         daq_move.quit_fun()
