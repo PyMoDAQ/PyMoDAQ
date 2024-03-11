@@ -36,7 +36,7 @@ dependencies = [
     "easydict",
     "importlib_metadata; python_version<\"3.8\"",
     "multipledispatch",
-    "numpy",
+    "numpy < 2.0.0", # should be tested once numpy 2.0.0 major will be released
     "packaging",
     "pint",
     "pymodaq_plugin_manager>=0.0.17",
