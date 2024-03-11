@@ -30,11 +30,11 @@ class RealParameterManager(ParameterManager):
     params = {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
         {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
          'tip': 'displays this text as a tooltip'},
-        {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
-         'min': 0,
+        {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50,
+         'default': 50, 'min': 0,
          'max': 123, 'subtype': 'linear'},
-        {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
-         'min': 1e-5,
+        {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50,
+         'default': 50, 'min': 1e-5,
          'max': 1e5, 'subtype': 'log'},
     ]},
 
