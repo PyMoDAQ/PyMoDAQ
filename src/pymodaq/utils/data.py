@@ -647,9 +647,10 @@ class DataBase(DataLowLevel):
                     eq = False
                     break
                 eq = eq and np.all(getattr(self[ind], operator)(other[ind]))
-            eq = self.extra_attributes == other.extra_attributes
-            for attribute in self.extra_attributes:
-                eq = eq and getattr(self, attribute) == getattr(other, attribute)
+            # extra attributes are not relevant as they may contain module specific data...
+            # eq = eq and (self.extra_attributes == other.extra_attributes)
+            # for attribute in self.extra_attributes:
+            #     eq = eq and (getattr(self, attribute) == getattr(other, attribute))
             return eq
         elif isinstance(other, numbers.Number):
             return np.all(getattr(self[0], operator)(other))

@@ -388,7 +388,7 @@ class DataSaverLoader(DataManagement):
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension',
                      'distribution', 'label', 'origin', 'nav_indexes', 'dtype', 'data_type',
-                     'subdtype', 'shape', 'size', 'EXTDIM', 'path']:
+                     'subdtype', 'shape', 'size', 'EXTDIM', 'path', 'timestamp']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
@@ -404,6 +404,7 @@ class DataSaverLoader(DataManagement):
                             axes=axes,
                             path=data_node.path,
                             **extra_attributes)
+        data.timestamp = data_node.attrs['timestamp']
         return data
 
 

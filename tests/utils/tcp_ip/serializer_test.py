@@ -185,6 +185,9 @@ def test_dwa_serialization_deserialization(get_data):
     dte = get_data
 
     for dwa in dte:
+        dwa.extra_attributes = ['extra1', 'extra2']
+        dwa.extra1 = True
+        dwa.extra2 = 12.4
         ser = Serializer(dwa)
         assert isinstance(ser.to_bytes(), bytes)
         dwa_back = DeSerializer(ser.to_bytes()).dwa_deserialization()
@@ -192,6 +195,9 @@ def test_dwa_serialization_deserialization(get_data):
         assert dwa_back.__class__.__name__ in DwaType.names()
         assert dwa_back.__class__.__name__ == dwa.__class__.__name__
         assert dwa == dwa_back
+        assert dwa.extra_attributes == dwa_back.extra_attributes
+        for attr in dwa.extra_attributes:
+            assert getattr(dwa, attr) == getattr(dwa_back, attr)
 
 
 def test_dte_serialization(get_data):
