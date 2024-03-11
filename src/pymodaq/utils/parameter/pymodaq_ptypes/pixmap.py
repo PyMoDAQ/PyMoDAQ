@@ -111,6 +111,14 @@ class PixmapCheckParameterItem(WidgetParameterItem):
         return w
 
 
+class PixmapCheckParameter(SimpleParameter):
+    itemClass = PixmapCheckParameterItem
+
+
+class PixmapParameter(SimpleParameter):
+    itemClass = PixmapParameterItem
+
+
 def main_widget():
     import sys
     app = QtWidgets.QApplication(sys.argv)
