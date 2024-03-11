@@ -140,3 +140,6 @@ class SliderParameterItem(WidgetParameterItem):
 
 class SliderParameter(SimpleParameter):
     itemClass = SliderParameterItem
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
