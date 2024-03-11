@@ -39,7 +39,7 @@ def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSo
     if data is None:
         data = DATA2D
     return klass(name, source=source, data=[data for ind in range(Ndata)],
-                 axes=axes, labels=labels)
+                 axes=axes, labels=labels, extra1=True, extra2=[1, 2, 3])
 
 
 @pytest.fixture()
@@ -168,7 +168,8 @@ def test_axis_serialization_deserialization():
                                                                             [-45, -67, -87654]])],  # homogeneous ndarrays
                                       [init_axis(), init_axis()],  # homogeneous axis
                                       [init_data(), init_data(), init_data()],  # homogeneous dwa
-                                      ['hjk', 34, np.array([45, 67, 87654]), init_data(), init_axis()]))  # inhomogeneous
+                                      ['hjk', 34, np.array([45, 67, 87654]), init_data(),
+                                       init_axis(), True, 23, False]))  # inhomogeneous
 def test_list_serialization_deserialization(get_data, obj_list):
     ser = Serializer(obj_list)
     list_back = DeSerializer(ser.to_bytes()).list_deserialization()
