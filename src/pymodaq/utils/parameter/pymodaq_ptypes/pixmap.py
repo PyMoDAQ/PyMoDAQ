@@ -114,9 +114,15 @@ class PixmapCheckParameterItem(WidgetParameterItem):
 class PixmapCheckParameter(SimpleParameter):
     itemClass = PixmapCheckParameterItem
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
 
 class PixmapParameter(SimpleParameter):
     itemClass = PixmapParameterItem
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 def main_widget():

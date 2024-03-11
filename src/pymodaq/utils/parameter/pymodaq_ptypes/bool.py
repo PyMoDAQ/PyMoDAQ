@@ -26,3 +26,6 @@ class BoolPushParameterItem(WidgetParameterItem):
 
 class BoolPushParameter(SimpleParameter):
     itemClass = BoolPushParameterItem
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
