@@ -167,7 +167,7 @@ def test_set_param_from_param(qtbot):
             {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
              'readonly': True},
             {'title': 'axis names:', 'name': 'axis', 'type': 'list',
-             'limits': {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}, 'readonly': True},
+             'limits': {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}, 'value': 'DAQ1D',' readonly': True},
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
