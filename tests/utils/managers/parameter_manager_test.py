@@ -11,7 +11,7 @@ from qtpy import QtWidgets
 from pymodaq.examples.parameter_ex import ParameterEx, Parameter
 from pymodaq.utils.parameter.utils import (iter_children_params, compareParameters,
                                            compareStructureParameter,
-                                           compareValuesParameter, iter_get_values)
+                                           compareValuesParameter)
 from pymodaq.utils.gui_utils.widgets.table import TableModel
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
