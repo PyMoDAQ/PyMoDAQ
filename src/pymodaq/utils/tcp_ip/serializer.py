@@ -5,7 +5,7 @@ Created the 20/10/2023
 @author: Sebastien Weber
 """
 import numbers
-from typing import Tuple, List, Union, TYPE_CHECKING
+from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
 
 
 import numpy as np
@@ -105,6 +105,8 @@ class Serializer:
             return self.dte_serialization(self._obj)
         elif isinstance(self._obj, list):
             return self.list_serialization(self._obj)
+        elif isinstance(self._obj, bool):
+            return self.scalar_serialization(int(self._obj))
 
     @staticmethod
     def int_to_bytes(an_integer: int) -> bytes:
@@ -322,30 +324,45 @@ class Serializer:
 
         bytes_string += self._int_serialization(len(list_object))
         for obj in list_object:
-            if isinstance(obj, DataWithAxes):
-                bytes_string += self.string_serialization('dwa')
-                bytes_string += self.dwa_serialization(obj)
-
-            elif isinstance(obj, Axis):
-                bytes_string += self.string_serialization('axis')
-                bytes_string += self.axis_serialization(obj)
-
-            elif isinstance(obj, np.ndarray):
-                bytes_string += self.string_serialization('array')
-                bytes_string += self.ndarray_serialization(obj)
-
-            elif isinstance(obj, str):
-                bytes_string += self.string_serialization('string')
-                bytes_string += self.string_serialization(obj)
-
-            elif isinstance(obj, numbers.Number):
-                bytes_string += self.string_serialization('scalar')
-                bytes_string += self.scalar_serialization(obj)
-
-            else:
-                raise TypeError(f'the element {obj} type cannot be serialized into bytes, only numpy arrays'
-                                f', strings, or scalars (int or float)')
+            bytes_string += self.type_and_object_serialization(obj)
         self._bytes_string += bytes_string
+        return bytes_string
+
+    def type_and_object_serialization(self, obj):
+        bytes_string = b''
+        if isinstance(obj, DataWithAxes):
+            bytes_string += self.string_serialization('dwa')
+            bytes_string += self.dwa_serialization(obj)
+
+        elif isinstance(obj, Axis):
+            bytes_string += self.string_serialization('axis')
+            bytes_string += self.axis_serialization(obj)
+
+        elif isinstance(obj, np.ndarray):
+            bytes_string += self.string_serialization('array')
+            bytes_string += self.ndarray_serialization(obj)
+
+        elif isinstance(obj, str):
+            bytes_string += self.string_serialization('string')
+            bytes_string += self.string_serialization(obj)
+
+        elif isinstance(obj, numbers.Number):
+            bytes_string += self.string_serialization('scalar')
+            bytes_string += self.scalar_serialization(obj)
+
+        elif isinstance(obj, bool):
+            bytes_string += self.string_serialization('bool')
+            bytes_string += self.scalar_serialization(int(obj))
+
+        elif isinstance(obj, list):
+            bytes_string += self.string_serialization('list')
+            bytes_string += self.list_serialization(obj)
+
+        else:
+            raise TypeError(
+                f'the element {obj} type cannot be serialized into bytes, only numpy arrays'
+                f', strings, or scalars (int or float)')
+
         return bytes_string
 
     def dwa_serialization(self, dwa: DataWithAxes) -> bytes:
@@ -374,6 +391,8 @@ class Serializer:
         * serialize the origin
         * serialize the nav_index tuple as a list of int
         * serialize the list of axis
+        * serialize the list of names of extra attributes
+        * serialize the extra attributes
         """
         if not isinstance(dwa, DataWithAxes):
             raise TypeError(f'{dwa} should be a DataWithAxes, not a {type(dwa)}')
@@ -390,6 +409,9 @@ class Serializer:
         bytes_string += self.string_serialization(dwa.origin)
         bytes_string += self.list_serialization(list(dwa.nav_indexes))
         bytes_string += self.list_serialization(dwa.axes)
+        bytes_string += self.list_serialization(dwa.extra_attributes)
+        for attribute in dwa.extra_attributes:
+            bytes_string += self.type_and_object_serialization(getattr(dwa, attribute))
         self._bytes_string += bytes_string
         return bytes_string
 
@@ -530,6 +552,19 @@ class DeSerializer:
             number = int(number)  # because one get numpy int type
         return number
 
+    def boolean_deserialization(self) -> bool:
+        """Convert bytes into a boolean object
+
+        Get first the data type from a string deserialization, then the data length and finally
+        convert this length of bytes into a number (float, int) and cast it to a bool
+
+        Returns
+        -------
+        bool: the decoded boolean
+        """
+        number = self.scalar_deserialization()
+        return bool(number)
+
     def ndarray_deserialization(self) -> np.ndarray:
         """Convert bytes into a numpy ndarray object
 
@@ -552,6 +587,27 @@ class DeSerializer:
         ndarray = np.atleast_1d(ndarray)  # remove singleton dimensions
         return ndarray
 
+    def object_deserialization(self):
+        obj_type = self.string_deserialization()
+        elt = None
+        if obj_type == 'scalar':
+            elt = self.scalar_deserialization()
+        elif obj_type == 'string':
+            elt = self.string_deserialization()
+        elif obj_type == 'array':
+            elt = self.ndarray_deserialization()
+        elif obj_type == 'dwa':
+            elt = self.dwa_deserialization()
+        elif obj_type == 'axis':
+            elt = self.axis_deserialization()
+        elif obj_type == 'bool':
+            elt = self.boolean_deserialization()
+        elif obj_type == 'list':
+            elt = self.list_deserialization()
+        else:
+            print(f'invalid object type {obj_type}')
+        return elt
+
     def list_deserialization(self) -> list:
         """Convert bytes into a list of homogeneous objects
 
@@ -565,18 +621,7 @@ class DeSerializer:
         list_len = self._int_deserialization()
 
         for ind in range(list_len):
-            obj_type = self.string_deserialization()
-            if obj_type == 'scalar':
-                list_elt = self.scalar_deserialization()
-            elif obj_type == 'string':
-                list_elt = self.string_deserialization()
-            elif obj_type == 'array':
-                list_elt = self.ndarray_deserialization()
-            elif obj_type == 'dwa':
-                list_elt = self.dwa_deserialization()
-            elif obj_type == 'axis':
-                list_elt = self.axis_deserialization()
-            list_obj.append(list_elt)
+            list_obj.append(self.object_deserialization())
         return list_obj
 
     def axis_deserialization(self) -> Axis:
@@ -598,7 +643,8 @@ class DeSerializer:
         axis_index = self.scalar_deserialization()
         axis_spread_order = self.scalar_deserialization()
 
-        axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index, spread_order=axis_spread_order)
+        axis = Axis(axis_label, axis_units, data=axis_array, index=axis_index,
+                    spread_order=axis_spread_order)
         return axis
 
     def dwa_deserialization(self) -> DataWithAxes:
@@ -624,6 +670,10 @@ class DeSerializer:
                                             nav_indexes=tuple(self.list_deserialization()),
                                             axes=self.list_deserialization(),
                                             )
+        dwa.extra_attributes = self.list_deserialization()
+        for attribute in dwa.extra_attributes:
+            setattr(dwa, attribute, self.object_deserialization())
+
         dwa.timestamp = timestamp
         return dwa
 
