@@ -1,7 +1,7 @@
 import sys
 import datetime
 from collections import OrderedDict
-from typing import List, Iterable, Union, Dict
+from typing import List, Iterable, Union, Dict, Tuple
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
@@ -37,10 +37,16 @@ class DataDisplayer(QObject):
 
     def __init__(self, plotitem: pg.PlotItem, flip_axes=False, plot_colors=PLOT_COLORS):
         super().__init__()
+        self._doxy = False
+        self._do_sort = False
+        self._do_scatter = False
+        self._show_errors = False
         self._flip_axes = flip_axes
         self._plotitem = plotitem
         self._plotitem.addLegend()
         self._plot_items: List[pg.PlotDataItem] = []
+        self._boundary_items: List[Tuple[pg.PlotDataItem, pg.PlotDataItem]] = []
+        self._fill_items: List[pg.FillBetweenItem] = []
         self._overlay_items: List[pg.PlotDataItem] = []
         self._axis: Axis = None
         self._data: DataWithAxes = None
@@ -75,14 +81,15 @@ class DataDisplayer(QObject):
     def get_plot_item(self, index: int):
         return self._plot_items[index]
 
-    def update_data(self, data: DataRaw, do_xy=False, sort_data=False, force_update=False):
+    def update_data(self, data: DataRaw, do_xy=False, sort_data=False, force_update=False,
+                    do_scatter=False, show_errors=False):
         if data is not None:
-            if data.labels != self.labels:
+            if data.labels != self.labels or self._show_errors != show_errors:
                 force_update = True
             self._data = data
             if len(data) != len(self._plot_items) or force_update:
-                self.update_display_items(data)
-            self.update_plot(do_xy, data, sort_data)
+                self.update_display_items(data, show_errors)
+            self.update_plot(do_xy, data, sort_data, do_scatter, show_errors)
 
     def update_xy(self, do_xy=False):
         self._doxy = do_xy
@@ -92,16 +99,26 @@ class DataDisplayer(QObject):
         self._do_sort = do_sort
         self.update_plot(self._doxy, sort_data=self._do_sort)
 
-    def update_plot(self, do_xy=True, data=None, sort_data=False):
+    def update_scatter(self, do_scatter=False):
+        self._do_scatter = do_scatter
+        self.update_plot(self._doxy, sort_data=self._do_sort, scatter=self._do_scatter)
+
+    def update_errors(self, show_errors=False):
+        self._show_errors = show_errors
+        self.update_data(self._data, self._doxy, sort_data=self._do_sort, force_update=True,
+                         do_scatter=self._do_scatter, show_errors=show_errors)
+
+    def update_plot(self, do_xy=True, data=None, sort_data=False, scatter=False, show_errors=False):
         if data is None:
             data = self._data
-        if sort_data:
-            data = data.sort_data()
-            if len(data.axes) == 0:
-                data.create_missing_axes()
-        self._doxy = do_xy
-        self._do_sort = sort_data
-
+        if data is not None:
+            if sort_data:
+                data = data.sort_data()
+                if len(data.axes) == 0:
+                    data.create_missing_axes()
+            self._doxy = do_xy
+            self._do_sort = sort_data
+            self._show_errors = show_errors
         self.update_xyplot(do_xy, data)
 
     def update_xyplot(self, do_xy=True, dwa: DataWithAxes=None):
@@ -116,6 +133,13 @@ class DataDisplayer(QObject):
                         self._plot_items[ind_data].setData(dat, _axis_array)
                     else:
                         self._plot_items[ind_data].setData(_axis_array, dat)
+                        if self._show_errors:
+                            self._boundary_items[ind_data][0].setData(
+                                _axis_array,
+                                dat + dwa.get_error(ind_data))
+                            self._boundary_items[ind_data][1].setData(
+                                _axis_array,
+                                dat - dwa.get_error(ind_data))
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 
@@ -153,14 +177,29 @@ class DataDisplayer(QObject):
             plot_item.setSymbol(symbol)
             plot_item.setSymbolSize(symbol_size)
 
-    def update_display_items(self, data: DataWithAxes = None):
+    def update_display_items(self, data: DataWithAxes = None, show_errors=False):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
+            if len(self._boundary_items) > 0:
+                b_items = self._boundary_items.pop(0)
+                self._plotitem.removeItem(b_items[0])
+                self._plotitem.removeItem(b_items[1])
+                self._plotitem.removeItem(self._fill_items.pop(0))
+
         if data is not None:
             for ind in range(len(data)):
                 self._plot_items.append(pg.PlotDataItem(pen=self._plot_colors[ind]))
                 self._plotitem.addItem(self._plot_items[-1])
                 self.legend.addItem(self._plot_items[-1], data.labels[ind])
+                if show_errors:
+                    self._boundary_items.append((pg.PlotDataItem(pen=list(self._plot_colors[ind]) + [100]),
+                                                 pg.PlotDataItem(pen=list(self._plot_colors[ind]) + [100])))
+                    self._plotitem.addItem(self._boundary_items[-1][0])
+                    self._plotitem.addItem(self._boundary_items[-1][1])
+                    self._fill_items.append(pg.FillBetweenItem(*self._boundary_items[-1],
+                                                               list(self._plot_colors[ind]) + [100]))
+                    self._plotitem.addItem(self._fill_items[-1])
+
             self.updated_item.emit(self._plot_items)
             self.labels_changed.emit(data.labels)
 
@@ -362,6 +401,7 @@ class View1D(ActionManager, QObject):
         self.connect_action('sort', self.data_displayer.update_sort)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('overlay', self.data_displayer.show_overlay)
+        self.connect_action('errors', self.data_displayer.update_errors)
         self.connect_action('ROIselect', self.show_ROI_select)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
@@ -387,8 +427,13 @@ class View1D(ActionManager, QObject):
         self.add_action('xyplot', 'XYPlotting', '2d',
                         'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
                         visible=False)
-        self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data', checkable=True)
-        self.add_action('sort', 'Sort Data', 'sort_ascend', 'Display data in a sorted fashion with respect to axis',
+        self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data',
+                        checkable=True)
+        self.add_action('errors', 'Errors', 'Statistics2', 'Plot boundaries (~error bars) of '
+                                                           'the data',
+                        checkable=True)
+        self.add_action('sort', 'Sort Data', 'sort_ascend',
+                        'Display data in a sorted fashion with respect to axis',
                         checkable=True)
         self.add_action('ROIselect', 'ROI Select', 'Select_24',
                         tip='Show/Hide ROI selection area', checkable=True)
@@ -645,6 +690,28 @@ def main_random():
     sys.exit(app.exec_())
 
 
+def main_errors():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    prog = Viewer1D(widget)
+
+    from pymodaq.utils.math_utils import gauss1D
+    x = np.linspace(0, 200, 201)
+    y1 = gauss1D(x, 75, 25)
+    y2 = gauss1D(x, 120, 50, 2)
+
+    QtWidgets.QApplication.processEvents()
+    data = DataRaw('mydata', data=[y1, y2],
+                   axes=[Axis('myaxis', 'units', data=x, index=0, spread_order=0)],
+                   errors=(np.random.random_sample(x.shape),
+                           np.random.random_sample(x.shape)))
+
+
+    widget.show()
+    prog.show_data(data)
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())
+
 def main_view1D():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
@@ -675,6 +742,7 @@ def main_nans():
 
 if __name__ == '__main__':  # pragma: no cover
     # main()
-    main_random()
+    # main_random()
+    main_errors()
     #main_view1D()
     #main_nans()
