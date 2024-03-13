@@ -512,7 +512,6 @@ class DataBase(DataLowLevel):
     origin: str
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
         DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
-    errors: Number or list of Number or list of ndarray (if a list, should match the length of the data attribute)
     kwargs: named parameters
         All other parameters are stored dynamically using the name/value pair. The name of these extra parameters are
         added into the extra_attributes attribute
@@ -572,7 +571,6 @@ class DataBase(DataLowLevel):
                  distribution: DataDistribution = DataDistribution['uniform'],
                  data: List[np.ndarray] = None,
                  labels: List[str] = None, origin: str = '',
-                 errors: Union[numbers.Number, List[numbers.Number], List[np.ndarray]] = None,
                  **kwargs):
 
         super().__init__(name=name)
@@ -595,32 +593,8 @@ class DataBase(DataLowLevel):
         self.data = data  # dim consistency is actually checked within the setter method
 
         self._check_labels(labels)
-        self._check_errors(errors)
         self.extra_attributes = []
         self.add_extra_attribute(**kwargs)
-
-    def _check_errors(self, errors):
-        check = False
-        if isinstance(errors, numbers.Number):
-            check = True
-        elif isinstance(errors, (tuple, list)) and len(errors) == len(self):
-            check = np.all([isinstance(error, numbers.Number) for error in errors]) or \
-                np.all([isinstance(error, np.ndarray) for error in errors])
-        if not check:
-            logger.warning('the errors field is incompatible with the structure of the data')
-            self._errors = None
-        else:
-            self._errors = errors
-
-    def get_error(self, index):
-        if isinstance(self._errors, numbers.Number):
-            return self._errors
-        elif isinstance(self._errors, (tuple, list)) and len(self._errors) == len(self):
-            if isinstance(self._errors[index], numbers.Number):
-                return np.array([self._errors[index]])
-            elif isinstance(self._errors[index], np.ndarray):
-                return self._errors[index]
-        return np.array([0])  # this could be added to any numpy array of any shape
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
@@ -1566,9 +1540,15 @@ class DataWithAxes(DataBase):
         For instance, nav_indexes = (3,2), means that the axis with index 3 in a at least 4D ndarray data is the first
         navigation axis while the axis with index 2 is the second navigation Axis. Axes with index 0 and 1 are signal
         axes of 2D ndarray data
+    errors: list of ndarray.
+        The list should match the length of the data attribute while the ndarrays
+        should match the data ndarray
     """
 
-    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
+    def __init__(self, *args, axes: List[Axis] = [],
+                 nav_indexes: Tuple[int] = (),
+                 errors: Iterable[np.ndarray] = None,
+                 **kwargs):
 
         if 'nav_axes' in kwargs:
             deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
@@ -1593,6 +1573,67 @@ class DataWithAxes(DataBase):
 
         self.get_dim_from_data_axes()  # in DataBase, dim is processed from the shape of data, but if axes are provided
         #then use get_dim_from axes
+        self._check_errors(errors)
+
+    def _check_errors(self, errors: Iterable[np.ndarray]):
+        """ Make sure the errors object is adapted to the len/shape of the dwa object
+
+        new in 4.2.0
+        """
+        check = False
+        if errors is None:
+            self._errors = None
+            return
+        if isinstance(errors, (tuple, list)) and len(errors) == len(self):
+            if np.all([isinstance(error, np.ndarray) for error in errors]):
+                if np.all([error_array.shape == self.shape for error_array in errors]):
+                    check = True
+                else:
+                    logger.warning(f'All error objects should have the same shape as the data'
+                                   f'objects')
+            else:
+                logger.warning(f'All error objects should be np.ndarray')
+
+        if not check:
+            logger.warning('the errors field is incompatible with the structure of the data')
+            self._errors = None
+        else:
+            self._errors = errors
+
+    @property
+    def errors(self):
+        """ Get/Set the errors bar values as a list of np.ndarray
+
+        new in 4.2.0
+        """
+        return self._errors
+
+    @errors.setter
+    def errors(self, errors: Iterable[np.ndarray]):
+        self._check_errors(errors)
+
+    def get_error(self, index):
+        """ Get a particular error ndarray at the given index in the list
+
+        new in 4.2.0
+        """
+        if self._errors is not None:  #because to the initial check we know it is a list of ndarrays
+            return self._errors[index]
+        else:
+            return np.array([0])  # this could be added to any numpy array of any shape
+
+    def errors_as_dwa(self):
+        """ Get a dwa from self replacing the data content with the error attribute (if not None)
+
+        New in 4.2.0
+        """
+        if self.errors is not None:
+            dwa = self.deepcopy_with_new_data(self.errors)
+            dwa.name = f'{self.name}_errors'
+            dwa.errors = None
+            return dwa
+        else:
+            raise ValueError(f'Cannot create a dwa from a None, should be a list of ndarray')
 
     def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, **kwargs):
         return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
