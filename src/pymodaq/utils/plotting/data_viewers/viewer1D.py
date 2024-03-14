@@ -119,7 +119,6 @@ class DataDisplayer(QObject):
             self._doxy = do_xy
             self._do_sort = sort_data
             self._show_errors = show_errors
-
             self.update_xyplot(do_xy, data)
 
             if scatter and self.get_plot_items()[0].opts['symbol'] is None:
@@ -138,12 +137,6 @@ class DataDisplayer(QObject):
                 self.plot_with_scatter(True, symbol_size, symbol, color)
             elif not scatter and self.get_plot_items()[0].opts['symbol'] is not None:
                 self.plot_with_scatter(False)
-
-
-        if scatter and self.get_plot_items()[0].opts['symbol'] is None:
-            self.plot_with_scatter(True)
-        elif not scatter and self.get_plot_items()[0].opts['symbol'] is not None:
-            self.plot_with_scatter(False)
 
     def update_xyplot(self, do_xy=True, dwa: DataWithAxes=None):
         if dwa is None:

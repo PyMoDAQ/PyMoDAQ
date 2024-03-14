@@ -349,6 +349,8 @@ class BayesianOptimisation(gutils.CustomApp):
 
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
+        dwa_observations = self.algorithm.get_dwa_obervations(
+            self.modules_manager.selected_actuators_name)
 
         best_individual = dte.get_data_from_name('Individual')
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]

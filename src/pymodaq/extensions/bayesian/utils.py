@@ -20,7 +20,8 @@ from bayes_opt import UtilityFunction
 
 
 from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.data import DataToExport, DataActuator, DataToActuators, DataCalculated
+from pymodaq.utils.data import (DataToExport, DataActuator, DataToActuators, DataCalculated,
+                                DataRaw, Axis)
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq.utils.logger import set_logger, get_module_name
@@ -77,6 +78,46 @@ class BayesianAlgorithm:
         if max_param is None:
             return None
         return self._algo.space.params_to_array(max_param)
+
+    def _posterior(self, x_obs, y_obs, grid):
+        self._algo._gp.fit(x_obs, y_obs)
+
+        mu, sigma = self._algo._gp.predict(grid, return_std=True)
+        return mu, sigma
+
+    def get_dwa_obervations(self, actuators_name):
+        try:
+            axes = [Axis(act, data=np.array([res['params'][act] for res in self._algo.res])) for
+                    act in actuators_name]
+            data_arrays = [np.array([res['target'] for res in self._algo.res])]
+
+            return DataRaw('Observations', data=data_arrays, labels=actuators_name,
+                           axes=axes)
+
+        except Exception as e:
+            pass
+
+    def get_1D_dwa_gp(self, x: np.ndarray, actuator_name: str):
+        """ Get Measurements and predictions as DataWithAxes
+
+        Parameters
+        ----------
+        x: np.ndarray
+            linear grid to get the Bayesian Optimisation On
+        """
+
+        dwa_obervation = self.get_dwa_obervations([actuator_name])
+
+        mu, sigma = self._posterior(dwa_obervation.axes[0].get_data(),
+                                    dwa_obervation.data[0], x)
+
+        dwa_measured = DataCalculated('Measurements', data=[dwa_obervation.data[0]],
+                                      axes=[Axis('measured_axis',
+                                                 data=dwa_obervation.axes[0].get_data())])
+        dwa_prediction = DataCalculated('Prediction', data=[mu],
+                                        axes=[Axis('tested_pos', data=x)],
+                                        errors=[1.96 * sigma])
+        return dwa_measured, dwa_prediction
 
 
 class BayesianModelGeneric(ABC):
