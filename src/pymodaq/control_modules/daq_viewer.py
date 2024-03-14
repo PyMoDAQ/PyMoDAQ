@@ -668,8 +668,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
 
         dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
-                           [dwa for dwa in dte if ('save' not in dwa.extra_attributes) or
-                            ('save' in dwa.extra_attributes and dwa.save)])
+                           [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
+                            ('do_save' in dwa.extra_attributes and dwa.do_save)])
 
         self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
 
@@ -825,8 +825,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 refresh = True  # if single
             if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
                 self._received_data = 0  # so that data send back from viewers can be properly counted
-                data_to_plot = self._data_to_save_export.get_data_from_attribute('plot', True, deepcopy=True)
-                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('plot', deepcopy=True))
+                data_to_plot = self._data_to_save_export.get_data_from_attribute('do_plot', True, deepcopy=True)
+                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('do_plot', deepcopy=True))
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
@@ -857,8 +857,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._process_overshoot(dte)
 
         self._viewer_types = [ViewersEnum(dwa.dim.name) for dwa in dte if
-                              ('plot' not in dwa.extra_attributes) or
-                              ('plot' in dwa.extra_attributes and dwa.plot)]
+                              ('do_plot' not in dwa.extra_attributes) or
+                              ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
                 self.ui.update_viewers(self._viewer_types)
@@ -877,8 +877,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
         for ind, dwa in enumerate(dte):
-            if ('plot' not in dwa.extra_attributes) or \
-                    ('plot' in dwa.extra_attributes and dwa.plot):
+            if ('do_plot' not in dwa.extra_attributes) or \
+                    ('do_plot' in dwa.extra_attributes and dwa.do_plot):
                 self.viewers[ind].title = dwa.name
                 self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
 
