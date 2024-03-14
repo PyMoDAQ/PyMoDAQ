@@ -95,7 +95,8 @@ class Test1DPlot:
         assert dwa_1D.dim.name == 'Data1D'
         assert dwa_1D.shape == (NX,)
 
-        dwa_1D.plot('qt')
+        viewer = dwa_1D.plot('qt')
+        assert isinstance(viewer, Viewer1D)
 
         with tempfile.TemporaryDirectory() as d:
             with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
@@ -119,8 +120,8 @@ class Test1DPlot:
         assert dwa_1D.dim.name == 'DataND'
         assert dwa_1D.shape == (NX,)
 
-        dwa_1D.plot('qt')
-
+        viewer = dwa_1D.plot('qt')
+        assert isinstance(viewer, Viewer1D)
         with tempfile.TemporaryDirectory() as d:
             with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
                 saver_loader.add_data('/RawData', dwa_1D)
@@ -191,8 +192,8 @@ class Test1DPlot:
         data_saver.add_data('/RawData', data_to_append, axis_values=[axis_value + 2])
         dwa_back = data_saver.load_data('/RawData/EnlData00', load_all=True)
         assert dwa_back.inav[2] == data_to_append
-        dwa_back.plot('qt')
-
+        viewer = dwa_back.plot('qt')
+        assert isinstance(viewer, Viewer1D)
 
 class Test2DPlot:
     def test_plot_0D_2D_uniform(self, qtbot):

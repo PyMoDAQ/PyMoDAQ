@@ -3,7 +3,7 @@ import typing
 from abc import ABCMeta, abstractmethod
 from importlib import import_module
 from pathlib import Path
-from typing import Callable, List
+from typing import Callable, List, Union
 
 # 3rd party imports
 import numpy as np
@@ -16,6 +16,7 @@ from pymodaq.utils.factory import ObjectFactory
 
 if typing.TYPE_CHECKING:
     from pymodaq.utils.data import DataWithAxes, DataDim
+    from pymodaq.utils.plotting.data_viewers import Viewer0D, Viewer1D, Viewer2D, ViewerND
 
 logger = set_logger(get_module_name(__file__))
 
