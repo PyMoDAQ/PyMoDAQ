@@ -391,6 +391,7 @@ class Serializer:
         * serialize the origin
         * serialize the nav_index tuple as a list of int
         * serialize the list of axis
+        * serialize the errors attributes (None or list(np.ndarray))
         * serialize the list of names of extra attributes
         * serialize the extra attributes
         """
@@ -409,6 +410,12 @@ class Serializer:
         bytes_string += self.string_serialization(dwa.origin)
         bytes_string += self.list_serialization(list(dwa.nav_indexes))
         bytes_string += self.list_serialization(dwa.axes)
+        if dwa.errors is None:
+            errors = []  # have to use this extra attribute as if I force dwa.errors = [], it will be
+            #internally modified as None again
+        else:
+            errors = dwa.errors
+        bytes_string += self.list_serialization(errors)
         bytes_string += self.list_serialization(dwa.extra_attributes)
         for attribute in dwa.extra_attributes:
             bytes_string += self.type_and_object_serialization(getattr(dwa, attribute))
@@ -670,6 +677,9 @@ class DeSerializer:
                                             nav_indexes=tuple(self.list_deserialization()),
                                             axes=self.list_deserialization(),
                                             )
+        errors = self.list_deserialization()
+        if len(errors) != 0:
+            dwa.errors = errors
         dwa.extra_attributes = self.list_deserialization()
         for attribute in dwa.extra_attributes:
             setattr(dwa, attribute, self.object_deserialization())
