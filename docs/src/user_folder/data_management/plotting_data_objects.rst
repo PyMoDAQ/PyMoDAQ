@@ -101,7 +101,8 @@ will translate into rich plots:
     dwa1D = DataRaw('my_1D_data', data=[mutils.gauss1D(axis.get_data(), 3300, 2500),
                                         mutils.gauss1D(axis.get_data(), -4000, 1500) * 0.5],
                     labels=['a gaussian', 'another gaussian'],
-                    axes=[axis])
+                    axes=[axis],
+                    errors=[0.1* np.random.random_sample((axis.size,)) for _ in range(2)])
     dwa.plot('qt')
 
 
@@ -141,6 +142,7 @@ As for the buttons in the toolbar (you can try them from the notebook):
 -  |sort|: if the axis data is not monotonous, data will be
    represented as a scrambled solid line, using this button will reorder
    the data by ascending values of its axis. See below and figure xx
+-  |errors|: when activated, will display errors (error bars) in the form of a area around the curve
 -  |roiselect|: extra ROI that can be used independantly of the ROI manager
 
 .. figure:: plotting_data/viewer1D_with_roi_crosshair_dot.png
@@ -155,7 +157,17 @@ As for the buttons in the toolbar (you can try them from the notebook):
 .. |xy| image:: plotting_data/viewer1D_xy.png
 .. |overlay| image:: plotting_data/viewer1D_overlay.png
 .. |sort| image:: plotting_data/viewer1D_sort.png
+.. |errors| image:: plotting_data/viewer1D_errors.png
 .. |roiselect| image:: plotting_data/viewer1D_roi_select.png
+
+
+If :ref:`errors` are defined in the data object, the Viewer1D can easily plot them:
+
+.. _errors_fig_1D:
+.. figure:: plotting_data/viewer1D_errors_plot.png
+   :alt: Showing Data1D with errors
+
+   Showing Data1D with error bars as an area around the curves.
 
 If the axis data is not monotonous, data will be represented as a
 scrambled solid line, for instance:

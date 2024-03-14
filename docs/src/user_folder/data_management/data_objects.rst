@@ -11,6 +11,7 @@ Data in PyMoDAQ are objects with many characteristics:
 *  units
 *  axes
 *  actual data as numpy arrays
+*  uncertainty/error bars
 
 .. figure:: /image/data/data.png
    :alt: What is data?
@@ -42,9 +43,12 @@ PyMoDAQ, which are also described below with examples on how to use them.
 DataBase
 --------
 
-`DataBase`, see :ref:`data_api`, is the most basic object to store data. It takes as argument a name,
-a :term:`DataSource`, a :term:`DataDim`, a :term:`DataDistribution`, the actual data as a list of numpy arrays (even for scalars), labels (a name for each element
-in the list), eventually an origin (a string from which module it originates) and optional named arguments.
+`DataBase`, see :ref:`data_api`, is the most basic object to store data (it should in fact not be used for real cases,
+please use DataWithAxes). It takes as argument a name,
+a :term:`DataSource`, a :term:`DataDim`, a :term:`DataDistribution`, the actual data
+as a list of numpy arrays (even for scalars), labels (a name for each element
+in the list), eventually an origin (a string from which module it originates) and
+optional named arguments.
 
 
 >>> import numpy as np
@@ -145,7 +149,8 @@ array([11., 15.])
 DataWithAxes
 ------------
 
-When dealing with data having axes, the ``DataBase`` object is no more enough to describe the data.
+When dealing with data having axes (even 0D data can be defined as DataWithAxes),
+the ``DataBase`` object is no more enough to describe the data.
 PyMoDAQ therefore introduces ``DataWithAxes`` which inherits from ``DataBase`` and introduces more
 metadata and functionalities.
 
@@ -175,6 +180,26 @@ array([5, 6])
 array([[2, 3],
        [5, 6]])
 
+
+.. _errors:
+
+Uncertainty/error bars
+----------------------
+The result of a measurement can be captured through averaging of several identical data. This
+batch of data can be saved as a higher dimensionality data (see :ref:`DAQ_Scan_module` averaging).
+However the data could also be represented by the mean of this average and the standard deviation from
+the mean. `DataWithAxes` introduces therefore this concept as another object attribute: `errors`.
+
+.. code-block::
+
+  data = DataWithAxes('mydata', source=DataSource['raw'], dim=DataDim['Data1D'],
+                      data=[np.array([1,2,3])],
+                      axes=[Axis('axis', index=0, data=np.array([-1, 0, 1])),
+                      errors=[np.array([0.01, 0.03, 0,1])])
+
+
+The `errors` parameter should be either None (default) or a list of numpy arrays (list as long as there are
+data numpy arrays) having the same shape as the actual data.
 
 .. _navigation_signal:
 
