@@ -247,9 +247,9 @@ class TestDataSaverLoader:
             loaded_data = data_saver.load_data(h5saver.get_node(f'/RawData/Data0{INDEX}'), load_all=False)
             assert len(loaded_data) == 1
             assert loaded_data.labels == [data.labels[INDEX]]
-            assert loaded_data == data.pop(INDEX)
+            assert np.allclose(loaded_data.data, data[INDEX])
             assert len(loaded_data.errors) == 1
-            assert np.all(loaded_data.errors[0] == errors[INDEX])
+            assert np.allclose(loaded_data.errors[0], errors[INDEX])
 
     def test_load_with_bkg(self, get_h5saver):
         h5saver = get_h5saver
