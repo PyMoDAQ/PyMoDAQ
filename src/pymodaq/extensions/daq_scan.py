@@ -384,7 +384,8 @@ class DAQScan(QObject, ParameterManager):
 
     def show_file_content(self):
         try:
-            self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
+            self.h5saver.init_file(addhoc_file_path=
+                                   self.h5saver.settings.child('current_h5_file').value())
             self.h5saver.show_file_content()
         except Exception as e:
             logger.exception(str(e))

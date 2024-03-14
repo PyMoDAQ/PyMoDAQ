@@ -240,12 +240,22 @@ data objects, see :ref:`data_objects`
 .. note::
   *New in version 4.1.0*
 
+  *Deprecated in version 4.2.0, but still working*
+
   The behaviour of the `DAQ_Viewer` can be even more tailored using two extra boolean attributes in the DataWithAxes objects.
 
   * ``save``: will tell the DAQ_Viewer whether it should save the corresponding dwa (short for ``DataWithAwes``)
   * ``plot``: will tell the DAQ_Viewer whether it should plot the corresponding dwa
 
+  *New in version 4.2.0*
+
+  the `save` and `plot` extra-attributes have been replaced by:
+
+  * ``do_save``: will tell the DAQ_Viewer whether it should save the corresponding dwa (short for ``DataWithAwes``)
+  * ``do_plot``: will tell the DAQ_Viewer whether it should plot the corresponding dwa
+
   ``DataFromPlugins`` objects have these two extra attributes by default with values set to True
+
 
 .. _data_ready:
 
