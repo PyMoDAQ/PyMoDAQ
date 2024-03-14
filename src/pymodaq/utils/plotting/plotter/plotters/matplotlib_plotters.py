@@ -8,8 +8,7 @@ from qtpy import QtWidgets
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import config as configmod
 from pymodaq.utils.data import DataDim, DataWithAxes, DataToExport
-
-from pymodaq.utils.gui_utils.utils import start_qapplication
+from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.plotting.plotter.plotter import PlotterBase, PlotterFactory
 
 from matplotlib import pyplot as plt
@@ -20,7 +19,9 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
-
+PLOT_COLORS = utils.plot_colors.copy()
+PLOT_COLORS.remove((255, 255, 255))  # remove white color as plotted on white background
+PLOT_COLORS = [(np.array(color) / 255).tolist() for color in PLOT_COLORS]  # translation to matplotlib
 
 
 @PlotterFactory.register()
@@ -67,8 +68,13 @@ class Plotter(PlotterBase):
     def plot1D(self, dwa: DataWithAxes, *args, **kwargs):
         plt.subplot(self.n_lines, self.n_columns,
                     (self.n_columns * self.ind_line) + 1)
-        for data_array in dwa:
-            plt.plot(dwa.axes[0].get_data(), data_array, *args, **kwargs)
+        for ind_data, data_array in enumerate(dwa):
+            plt.plot(dwa.axes[0].get_data(), data_array, *args,  color=PLOT_COLORS[ind_data],
+                     **kwargs)
+            if dwa.errors is not None:
+                plt.fill_between(dwa.axes[0].get_data(), data_array - dwa.get_error(ind_data),
+                                 data_array + dwa.get_error(ind_data), *args,
+                                 color=PLOT_COLORS[ind_data] + [0.3], **kwargs)
         plt.legend(dwa.labels)
         #plt.title(f'{dwa.name}')
         plt.xlabel(f'{dwa.axes[0].label} ({dwa.axes[0].units})')
@@ -91,37 +97,37 @@ class Plotter(PlotterBase):
             plt.ylabel(f'{yaxis.label} ({yaxis.units})')
 
 
-if __name__ == '__main__':
-    from pymodaq.utils import data as data_mod
-    import numpy as np
-    from pymodaq.utils.math_utils import gauss1D, gauss2D
-    from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
-    plotter_factory = PlotterFactory()
-
-    x = np.linspace(0, 100, 101)
-    y = np.linspace(0, 100, 101)
-    y1 = gauss2D(x, 50, 20, y, 40, 7)
-
-
-    QtWidgets.QApplication.processEvents()
-    dwa = data_mod.DataRaw('mydata', data=[y1, y1, y1],
-                           axes=[data_mod.Axis('xaxis', 'x units', data=x, index=0,
-                                                spread_order=0),
-                                  data_mod.Axis('yaxis', 'y units', data=y, index=1,
-                                                spread_order=0)
-                                  ],
-                           labels=['MAG', 'PHASE'],
-                           nav_indexes=())
-    dte = dwa.as_dte('mydte')
-    dwa_mean = dwa.mean()
-    dwa_mean.name = 'mean'
-    dwa_mean_2 = dwa.mean(1)
-    dwa_mean_2.name = 'mean2'
-    dte.append(dwa_mean)
-    dte.append(dwa_mean_2)
-
-    fig = dwa.plot('matplotlib')
-    fig.savefig('myplot.png')
-
-    fig2 = dte.plot('matplotlib')
-    fig2.savefig('mydte.png')
+# if __name__ == '__main__':
+#     from pymodaq.utils import data as data_mod
+#     import numpy as np
+#     from pymodaq.utils.math_utils import gauss1D, gauss2D
+#     from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
+#     plotter_factory = PlotterFactory()
+#
+#     x = np.linspace(0, 100, 101)
+#     y = np.linspace(0, 100, 101)
+#     y1 = gauss2D(x, 50, 20, y, 40, 7)
+#
+#
+#     QtWidgets.QApplication.processEvents()
+#     dwa = data_mod.DataRaw('mydata', data=[y1, y1, y1],
+#                            axes=[data_mod.Axis('xaxis', 'x units', data=x, index=0,
+#                                                 spread_order=0),
+#                                   data_mod.Axis('yaxis', 'y units', data=y, index=1,
+#                                                 spread_order=0)
+#                                   ],
+#                            labels=['MAG', 'PHASE'],
+#                            nav_indexes=())
+#     dte = dwa.as_dte('mydte')
+#     dwa_mean = dwa.mean()
+#     dwa_mean.name = 'mean'
+#     dwa_mean_2 = dwa.mean(1)
+#     dwa_mean_2.name = 'mean2'
+#     dte.append(dwa_mean)
+#     dte.append(dwa_mean_2)
+#
+#     fig = dwa.plot('matplotlib')
+#     fig.savefig('myplot.png')
+#
+#     fig2 = dte.plot('matplotlib')
+#     fig2.savefig('mydte.png')
