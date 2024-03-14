@@ -69,19 +69,23 @@ def init_data_to_export():
                           axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
                                      index=0),
                                 Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                     index=1), ])
+                                     index=1), ],
+                          errors=[np.random.random_sample(DATA2D.shape) for _ in range(Ndata)])
 
     data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
                           source='raw',
                           dim='Data1D', distribution='uniform',
                           axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
-                                     index=0)])
+                                     index=0)],
+                          errors=None)
 
     data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                          source='raw', dim='Data0D', distribution='uniform')
+                          source='raw', dim='Data0D', distribution='uniform',
+                          errors=[np.random.random_sample(DATA0D.shape) for _ in range(Ndata)])
 
     data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
-                             labels=['mylabel1bis', 'mylabel2bis'], source='raw', dim='Data0D', distribution='uniform')
+                             labels=['mylabel1bis', 'mylabel2bis'], source='raw', dim='Data0D',
+                             distribution='uniform')
 
     data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
     return data_to_export
@@ -185,34 +189,67 @@ class TestDataSaverLoader:
         for axis_in, axis_out in zip(data.axes, data_saver.get_axes(h5saver.raw_group)):
             assert axis_in == axis_out
 
-    def test_load_data(self, get_h5saver):
+    def test_add_data_with_errors(self, get_h5saver):
         h5saver = get_h5saver
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
+
+        errors = [np.random.random_sample(DATA2D.shape) for _ in range(Ndata)]
+
         data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
                             source='raw',
                             dim='Data2D', distribution='uniform',
                             axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1),])
+                                       index=1)],
+                            errors=errors)
+
+        data_saver.add_data(h5saver.raw_group, data)
+        assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
+        for axis_in, axis_out in zip(data.axes, data_saver.get_axes(h5saver.raw_group)):
+            assert axis_in == axis_out
+
+        assert np.all(errors[0] == data_saver._error_saver.get_node_from_index('/RawData', 0).read())
+        assert np.all(errors[1] == data_saver._error_saver.get_node_from_index('/RawData', 1).read())
+
+
+    def test_load_data(self, get_h5saver):
+        h5saver = get_h5saver
+        data_saver = DataSaverLoader(h5saver)
+        Ndata = 2
+        errors = [np.random.random_sample(DATA1D.shape) for _ in range(Ndata)]
+
+        data = DataWithAxes(name='mydata', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                            source='raw',
+                            dim='Data2D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
+                                       index=0),
+                                 ],
+                            errors=errors)
         data_saver.add_data(h5saver.raw_group, data)
 
         loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data00'), load_all=True)
         assert len(loaded_data) == 2
         assert loaded_data == data
         assert loaded_data.labels == data.labels
+        for ind in range(Ndata):
+            assert np.all(loaded_data.errors[ind] == errors[ind])
 
         loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=True)
         assert len(loaded_data) == 2
         assert loaded_data == data
         assert loaded_data.labels == data.labels
+        for ind in range(Ndata):
+            assert np.all(loaded_data.errors[ind] == errors[ind])
 
-        loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=False)
-        assert len(loaded_data) == 1
-        assert loaded_data.labels == ['mylabel2']
-        assert loaded_data == data.pop(0)
-
+        for INDEX in range(2):
+            loaded_data = data_saver.load_data(h5saver.get_node(f'/RawData/Data0{INDEX}'), load_all=False)
+            assert len(loaded_data) == 1
+            assert loaded_data.labels == [data.labels[INDEX]]
+            assert np.allclose(loaded_data.data, data[INDEX])
+            assert len(loaded_data.errors) == 1
+            assert np.allclose(loaded_data.errors[0], errors[INDEX])
 
     def test_load_with_bkg(self, get_h5saver):
         h5saver = get_h5saver

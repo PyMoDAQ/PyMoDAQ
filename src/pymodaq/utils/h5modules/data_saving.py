@@ -95,6 +95,14 @@ class DataManagement(metaclass=ABCMeta):
     def get_node_from_index(self, where: Union[str, Node], index: int) -> Node:
         return self._h5saver.get_node(where, self._format_node_name(index))
 
+    def get_index_from_node_name(self, where: Union[str, Node]):
+        node = self._h5saver.get_node(where)
+        try:
+            index = int(node.name.split(self.data_type.value)[1])
+        except IndexError:
+            return None
+        return index
+
     def _get_next_data_type_index_in_group(self, where: Union[Node, str]) -> int:
         """Check how much node with a given data_type are already present within the GROUP where
         Parameters
@@ -280,6 +288,8 @@ class DataSaverLoader(DataManagement):
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
+        if not isinstance(self, ErrorSaverLoader):
+            self._error_saver = ErrorSaverLoader(h5saver)
 
     def isopen(self) -> bool:
         """ Get the opened status of the underlying hdf5 file"""
@@ -301,15 +311,19 @@ class DataSaverLoader(DataManagement):
                             source=data.source.name, distribution=data.distribution.name,
                             origin=data.origin,
                             nav_indexes=tuple(data.nav_indexes)
-                            if data.nav_indexes is not None else None)
+                            if data.nav_indexes is not None else None,)
             for name in data.extra_attributes:
                 metadata[name] = getattr(data, name)
             self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type,
                                     title=data.name, array_to_save=data[ind_data],
                                     data_dimension=data.dim.name, metadata=metadata)
+
         if save_axes:
             for axis in data.axes:
                 self._axis_saver.add_axis(where, axis)
+
+        if data.errors is not None:
+            self._error_saver.add_data(where, data.errors_as_dwa(), save_axes=False)
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """
@@ -407,11 +421,17 @@ class DataSaverLoader(DataManagement):
             parent_node = data_node.parent_node
             data_nodes = self._get_nodes_from_data_type(parent_node)
             data_node = data_nodes[0]
+            error_node = data_node
         else:
             parent_node = data_node.parent_node
             if not isinstance(data_node, CARRAY):
                 return
             data_nodes = [data_node]
+            try:
+                error_node_index = self.get_index_from_node_name(data_node)
+                error_node = self._error_saver.get_node_from_index(parent_node, error_node_index)
+            except NodeError as e:
+                error_node = None
 
         if 'axis' in self.data_type.name:
             ndarrays = [squeeze(data_node.read()) for data_node in data_nodes]
@@ -420,6 +440,12 @@ class DataSaverLoader(DataManagement):
         else:
             ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
+            if error_node is not None:
+                error_arrays = self._error_saver.get_data_arrays(error_node, load_all=load_all)
+                if len(error_arrays) == 0:
+                    error_arrays = None
+            else:
+                error_arrays = None
 
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension',
@@ -438,6 +464,7 @@ class DataSaverLoader(DataManagement):
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in
                                                                           data_node.attrs else (),
                             axes=axes,
+                            errors=error_arrays,
                             path=data_node.path,
                             **extra_attributes)
         data.timestamp = data_node.attrs['timestamp']
@@ -454,9 +481,27 @@ class BkgSaver(DataSaverLoader):
     Attributes
     ----------
     data_type: DataType
-        The enum for this type of data, here 'data'
+        The enum for this type of data, here 'bkg'
     """
     data_type = DataType['bkg']
+
+    def __init__(self, h5saver: H5Saver):
+        super().__init__(h5saver)
+
+
+class ErrorSaverLoader(DataSaverLoader):
+    """Specialized Object to save and load DataWithAxes errors bars to and from a h5file
+
+    Parameters
+    ----------
+    hsaver: H5Saver
+
+    Attributes
+    ----------
+    data_type: DataType
+        The enum for this type of data, here 'error'
+    """
+    data_type = DataType['error']
 
     def __init__(self, h5saver: H5Saver):
         super().__init__(h5saver)
@@ -746,6 +791,18 @@ class DataToExportSaver:
                 self._data_saver.add_data(dwa_group, dwa, **kwargs)
 
     def add_bkg(self, where: Union[Node, str], data: DataToExport):
+        dims = data.get_dim_presents()
+        for dim in dims:
+            dim_group = self._h5saver.get_set_group(where, dim)
+            for ind, dwa in enumerate(data.get_data_from_dim(dim)):
+                # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_set_group(dim_group,
+                                                        self.channel_formatter(ind), dwa.name)
+                # dwa_group = self._get_node_from_title(dim_group, dwa.name)
+                if dwa_group is not None:
+                    self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
+
+    def add_error(self, where: Union[Node, str], data: DataToExport):
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)

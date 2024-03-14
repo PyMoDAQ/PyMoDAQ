@@ -31,8 +31,6 @@ class Plotter(PlotterBase):
             do_exit = True
             qapp = start_qapplication()
 
-
-
         if isinstance(data, DataToExport):
             widget = DockArea()
             viewer = ViewerDispatcher(widget, title=data.name)
@@ -44,6 +42,8 @@ class Plotter(PlotterBase):
         if viewer is not None:
             widget.show()
             viewer.show_data(data)
+            if isinstance(viewer, Viewer1D):
+                viewer.get_action('errors').trigger()
             QtWidgets.QApplication.processEvents()
 
         if do_exit:

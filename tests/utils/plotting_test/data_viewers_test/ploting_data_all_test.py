@@ -15,7 +15,7 @@ from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import data as datamod
 from pymodaq.utils.h5modules.saving import H5SaverLowLevel
 from pymodaq.utils.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
-from pymodaq.utils.plotting.data_viewers import Viewer1D
+from pymodaq.utils.plotting.data_viewers import Viewer1D, ViewerND, Viewer2D
 
 
 @pytest.fixture(scope="module")
@@ -95,7 +95,8 @@ class Test1DPlot:
         assert dwa_1D.dim.name == 'Data1D'
         assert dwa_1D.shape == (NX,)
 
-        dwa_1D.plot('qt')
+        viewer = dwa_1D.plot('qt')
+        assert isinstance(viewer, Viewer1D)
 
         with tempfile.TemporaryDirectory() as d:
             with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
@@ -119,8 +120,8 @@ class Test1DPlot:
         assert dwa_1D.dim.name == 'DataND'
         assert dwa_1D.shape == (NX,)
 
-        dwa_1D.plot('qt')
-
+        viewer = dwa_1D.plot('qt')
+        assert isinstance(viewer, Viewer1D)
         with tempfile.TemporaryDirectory() as d:
             with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
                 saver_loader.add_data('/RawData', dwa_1D)
@@ -164,8 +165,6 @@ class Test1DPlot:
                 assert isinstance(viewer, Viewer1D)
 
     def test_plot_0D_1D_spread(self, qtbot, get_h5saver):
-        # when loading data from an enlarged array with a nav axis of size 0, there is an extra dimension
-        #in the array of len 1: shape = (1, N) simulated here by using expand_dims
         h5saver = get_h5saver
         data_saver = DataEnlargeableSaver(h5saver)
         NX = 100
@@ -191,8 +190,8 @@ class Test1DPlot:
         data_saver.add_data('/RawData', data_to_append, axis_values=[axis_value + 2])
         dwa_back = data_saver.load_data('/RawData/EnlData00', load_all=True)
         assert dwa_back.inav[2] == data_to_append
-        dwa_back.plot('qt')
-
+        viewer = dwa_back.plot('qt')
+        assert isinstance(viewer, ViewerND)
 
 class Test2DPlot:
     def test_plot_0D_2D_uniform(self, qtbot):
@@ -208,7 +207,8 @@ class Test2DPlot:
         print(data2D)
         assert data2D.distribution == 'uniform'
         assert data2D.dim == 'Data2D'
-        data2D.plot('qt')
+        viewer = data2D.plot('qt')
+        assert isinstance(viewer, Viewer2D)
 
     @pytest.mark.parametrize('nav_index', (0, 1))
     def test_plot_1D_1D_uniform(self, qtbot, nav_index):
@@ -225,7 +225,8 @@ class Test2DPlot:
         print(data2D)
         assert data2D.distribution == 'uniform'
         assert data2D.dim == 'DataND'
-        data2D.plot('qt')
+        viewer = data2D.plot('qt')
+        assert isinstance(viewer, Viewer2D)
 
     def test_plot_2D_0D_uniform(self, qtbot):
         NX = 100
@@ -241,7 +242,8 @@ class Test2DPlot:
         print(data2D)
         assert data2D.distribution == 'uniform'
         assert data2D.dim == 'DataND'
-        data2D.plot('qt')
+        viewer = data2D.plot('qt')
+        assert isinstance(viewer, Viewer2D)
 
     def test_plot_2D_0D_spread(self, qtbot):
         N = 100
@@ -265,8 +267,8 @@ class Test2DPlot:
         assert data2D_spread.distribution == 'spread'
         assert data2D_spread.dim == 'DataND'
 
-        data2D_spread.plot('qt')
-
+        viewer = data2D_spread.plot('qt')
+        assert isinstance(viewer, Viewer2D)
 
     def test_plot_1D_1D_spread(self, qtbot):
         N = 10
@@ -292,8 +294,8 @@ class Test2DPlot:
         assert data2D_spread.distribution == 'spread'
         assert data2D_spread.dim == 'DataND'
 
-        data2D_spread.plot('qt')
-
+        viewer = data2D_spread.plot('qt')
+        assert isinstance(viewer, ViewerND)
 
 class Test3DPlot:
     @pytest.mark.parametrize('nav_index', ((0,), (1,), (2,), (0, 1), (0, 2), (1, 2)))
@@ -307,8 +309,8 @@ class Test3DPlot:
         print(data3D)
         assert data3D.distribution == 'uniform'
         assert data3D.dim == 'DataND'
-        data3D.plot('qt')
-
+        viewer = data3D.plot('qt')
+        assert isinstance(viewer, ViewerND)
 
 class Test4DPlot:
     @pytest.mark.parametrize('nav_indexes',
@@ -321,7 +323,8 @@ class Test4DPlot:
         print(dwa)
         assert dwa.distribution == 'uniform'
         assert dwa.dim == 'DataND'
-        dwa.plot('qt')
+        viewer = dwa.plot('qt')
+        assert isinstance(viewer, ViewerND)
 
     def test_plot_4D_spread(self, qtbot):
         N = 100
@@ -349,22 +352,5 @@ class Test4DPlot:
                                     axis
                                     ])
 
-        dwa.plot('qt')
-
-if __name__ == '__main__':
-    from qtpy import QtWidgets
-    import sys
-    import tempfile
-    from pathlib import Path
-
-    # with tempfile.TemporaryDirectory() as d:
-    #     h5saver = H5SaverLowLevel()
-    #     h5saver.init_file(file_name=Path(d).joinpath('myh5.h5'))
-
-    app = QtWidgets.QApplication(sys.argv)
-    test = Test4DPlot()
-    test.test_plot_4D_spread(None)
-
-        # h5saver.close_file()
-
-    sys.exit(app.exec_())
+        viewer = dwa.plot('qt')
+        assert isinstance(viewer, ViewerND)
