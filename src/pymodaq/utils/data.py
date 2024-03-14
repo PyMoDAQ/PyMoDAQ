@@ -1662,6 +1662,12 @@ class DataWithAxes(DataBase):
                 for ind_ax in range(len(axes_self)):
                     if axes_self[ind_ax] != axes_other[ind_ax]:
                         return False
+            if self.errors is None:
+                is_equal = is_equal and other.errors is None
+            else:
+                for ind_error in range(len(self.errors)):
+                    if not np.allclose(self.errors[ind_error], other.errors[ind_error]):
+                        return False
         return is_equal
 
     def __repr__(self):
@@ -2266,9 +2272,9 @@ class DataActuator(DataRaw):
 
     def __repr__(self):
         if self.dim.name == 'Data0D':
-            return f'{self.__class__.__name__} <{self.data[0][0]}>'
+            return f'<{self.__class__.__name__} ({self.data[0][0]})>'
         else:
-            return f'{self.__class__.__name__} <{self.shape}>>'
+            return f'<{self.__class__.__name__} ({self.shape})>'
 
     def value(self) -> float:
         """Returns the underlying float value (of the first elt in the data list) if this data
