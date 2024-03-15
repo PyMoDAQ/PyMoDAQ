@@ -101,6 +101,7 @@ class BayesianOptimisation(gutils.CustomApp):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+
     @property
     def modules_manager(self) -> ModulesManager:
         return self._modules_manager
@@ -190,7 +191,6 @@ class BayesianOptimisation(gutils.CustomApp):
                                     utility_settings['kappa_decay_delay'])
 
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
-
 
     def setup_actions(self):
         logger.debug('setting actions')

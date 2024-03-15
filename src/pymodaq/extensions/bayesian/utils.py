@@ -80,6 +80,12 @@ class BayesianAlgorithm:
         return self._algo.space.params_to_array(max_param)
 
     def _posterior(self, x_obs, y_obs, grid):
+
+        if len(x_obs.shape) == 1:
+            x_obs = x_obs.reshape(-1, 1)
+            y_obs = y_obs.reshape(-1, 1)
+            grid = grid.reshape(-1, 1)
+
         self._algo._gp.fit(x_obs, y_obs)
 
         mu, sigma = self._algo._gp.predict(grid, return_std=True)
