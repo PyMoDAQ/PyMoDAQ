@@ -119,7 +119,8 @@ class BayesianAlgorithm:
 
         dwa_measured = DataCalculated('Measurements', data=[dwa_obervation.data[0]],
                                       axes=[Axis('measured_axis',
-                                                 data=dwa_obervation.axes[0].get_data())])
+                                                 data=dwa_obervation.axes[0].get_data())],
+                                      labels=['Sampled'])
         dwa_prediction = DataCalculated('Prediction', data=[mu],
                                         axes=[Axis('tested_pos', data=x)],
                                         errors=[1.96 * sigma])
@@ -169,6 +170,10 @@ class BayesianModelGeneric(ABC):
         To be overwritten in child class
         """
         ...
+
+    def update_plots(self):
+        """ Called when updating the live plots """
+        pass
 
     def ini_model_base(self):
         self.modules_manager.selected_actuators_name = self.actuators_name

@@ -349,9 +349,9 @@ class BayesianOptimisation(gutils.CustomApp):
 
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
-        dwa_observations = self.algorithm.get_dwa_obervations(
-            self.modules_manager.selected_actuators_name)
-
+        # dwa_observations = self.algorithm.get_dwa_obervations(
+        #     self.modules_manager.selected_actuators_name)
+        self.model_class.update_plots()
         best_individual = dte.get_data_from_name('Individual')
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
         self.viewer_observable.show_data(dte)
@@ -422,7 +422,7 @@ class OptimisationRunner(QtCore.QObject):
                 kappa_decay=utility_params.kappa_decay,
                 kappa_decay_delay=utility_params.kappa_decay_delay)
 
-    def run_opti(self, sync_detectors=True, sync_acts=False):
+    def run_opti(self, sync_detectors=True, sync_acts=True):
         """Start the optimisation loop
 
         Parameters
@@ -442,6 +442,7 @@ class OptimisationRunner(QtCore.QObject):
             self.current_time = time.perf_counter()
             logger.info('Optimisation loop starting')
             while self.running:
+
                 next_target = self.optimisation_algorithm.ask()
 
                 self.outputs = next_target
@@ -453,7 +454,7 @@ class OptimisationRunner(QtCore.QObject):
 
                 self.modules_manager.move_actuators(self.output_to_actuators,
                                                     self.output_to_actuators.mode,
-                                                    polling=False)
+                                                    polling=sync_acts)
 
                 # Do the evaluation (measurements)
                 self.det_done_datas = self.modules_manager.grab_datas()
