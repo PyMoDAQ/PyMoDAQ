@@ -119,7 +119,25 @@ class DataDisplayer(QObject):
             self._doxy = do_xy
             self._do_sort = sort_data
             self._show_errors = show_errors
-        self.update_xyplot(do_xy, data)
+
+            self.update_xyplot(do_xy, data)
+
+            if scatter and self.get_plot_items()[0].opts['symbol'] is None:
+                if 'symbol_size' in data.extra_attributes:
+                    symbol_size = data.symbol_size
+                else:
+                    symbol_size = 5
+                if 'symbol' in data.extra_attributes:
+                    symbol = data.symbol
+                else:
+                    symbol = 'o'
+                if 'color' in data.extra_attributes:
+                    color = data.color
+                else:
+                    color = None
+                self.plot_with_scatter(True, symbol_size, symbol, color)
+            elif not scatter and self.get_plot_items()[0].opts['symbol'] is not None:
+                self.plot_with_scatter(False)
 
     def update_xyplot(self, do_xy=True, dwa: DataWithAxes=None):
         if dwa is None:
@@ -159,22 +177,24 @@ class DataDisplayer(QObject):
             axis.setLabel(text='', units='')
             self.legend.setVisible(True)
 
-    def plot_with_scatter(self, with_scatter=True):
-        symbol_size = 5
+    def plot_with_scatter(self, with_scatter=True, symbol_size=5, symbol='o', color=None):
+
         for ind, plot_item in enumerate(self.get_plot_items()):
+            if color is None:
+                color = self._plot_colors[ind]
             if with_scatter:
                 pen = None
-                symbol = 'o'
-                brush = self._plot_colors[ind]
+                symbol_type = symbol
+                brush = color
 
             else:
-                pen = self._plot_colors[ind]
-                symbol = None
+                pen = color
+                symbol_type = None
                 brush = None
 
             plot_item.setPen(pen)
             plot_item.setSymbolBrush(brush)
-            plot_item.setSymbol(symbol)
+            plot_item.setSymbol(symbol_type)
             plot_item.setSymbolSize(symbol_size)
 
     def update_display_items(self, data: DataWithAxes = None, show_errors=False):
@@ -277,7 +297,8 @@ class View1D(ActionManager, QObject):
             self.splitter_ver.setSizes([0, 1])
 
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
-        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes, plot_colors)
+        self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,
+                                                                   plot_colors)
 
     def remove_data_displayer(self, displayer_name: str):
         displayer = self.other_data_displayers.pop(displayer_name, None)
@@ -469,9 +490,17 @@ class View1D(ActionManager, QObject):
 
 
 class Viewer1D(ViewerBase):
-    """this plots 1D data on a plotwidget. Math and measurement can be done on it.
+    """ DataWithAxis of type Data1D can be plotted using this data viewer
 
-    Data and measurements are then exported with the signal data_to_export_signal
+    Methods
+    -------
+    show_data:
+        parameter:
+        * dwa: a DataWithaxis
+        * scatter_dwa: an optional extra DataWithAxis to be plotted with scatter points
+          it could define extra_attributes such as symbol: str (to define the symbol layout
+          default: 'o') and symbol_size: int (to define the symbol size)
+
     """
 
     def __init__(self, parent: QtWidgets.QWidget = None, title='', show_toolbar=True, no_margins=False,
@@ -583,12 +612,19 @@ class Viewer1D(ViewerBase):
         if labels != self._labels:
             self._labels = labels
 
-    def _show_data(self, data: DataWithAxes):
+    def _show_data(self, data: DataWithAxes, *args, scatter_dwa: DataWithAxes =None,
+                   **kwargs):
         self.labels = data.labels
         if len(data.axes) == 0:
             self.get_axis_from_view(data)
 
         self.view.display_data(data)
+
+        if scatter_dwa is not None:
+            if isinstance(scatter_dwa, DataWithAxes):
+                self.view.add_data_displayer(scatter_dwa.name, [(255, 0, 0)])
+                self.view.other_data_displayers[scatter_dwa.name].update_data(
+                    scatter_dwa, do_scatter=True)
 
         if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
@@ -689,6 +725,33 @@ def main_random():
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
 
+def main_extra_scatter():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    prog = Viewer1D(widget)
+
+    from pymodaq.utils.math_utils import gauss1D
+    x = np.linspace(0, 200, 201)
+    xlow = np.linspace(0, 200, 21)
+    y = gauss1D(x, 75, 25)
+    ylow = gauss1D(xlow, 75, 25)
+
+    QtWidgets.QApplication.processEvents()
+    data = DataRaw('mydata', data=[y],
+                   axes=[Axis('myaxis', 'units', data=x, index=0, spread_order=0)],
+                   labels=['Initial data'],
+                   )
+    scatter_dwa = DataRaw('scatter', data=[ylow],
+                          axes=[Axis('myaxis', 'units', data=xlow, index=0, spread_order=0)],
+                          labels=['subsampled'],
+                          symbol='d',
+                          symbol_size=18,
+                          color='b')
+
+    widget.show()
+    prog.show_data(data, scatter_dwa=scatter_dwa)
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())
 
 def main_errors():
     app = QtWidgets.QApplication(sys.argv)
@@ -743,6 +806,7 @@ def main_nans():
 if __name__ == '__main__':  # pragma: no cover
     # main()
     # main_random()
-    main_errors()
+    #main_errors()
+    main_extra_scatter()
     #main_view1D()
     #main_nans()
