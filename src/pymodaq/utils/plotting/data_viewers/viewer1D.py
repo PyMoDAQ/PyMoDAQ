@@ -354,11 +354,15 @@ class View1D(ActionManager, QObject):
             if isinstance(data, DataWithAxes):
                 self.set_action_visible('xyplot', len(data) == 2)
                 self.data_displayer.update_data(data, self.is_action_checked('xyplot'),
-                                                self.is_action_checked('sort'))
+                                                self.is_action_checked('sort'),
+                                                do_scatter=self.is_action_checked('scatter'),
+                                                show_errors=self.is_action_checked('errors'))
             elif isinstance(data, DataToExport):
                 self.set_action_visible('xyplot', len(data[0]) == 2)
                 self.data_displayer.update_data(data.pop(0), self.is_action_checked('xyplot'),
-                                                self.is_action_checked('sort'))
+                                                self.is_action_checked('sort'),
+                                                do_scatter=self.is_action_checked('scatter'),
+                                                show_errors=self.is_action_checked('errors'))
                 if len(data) > 0:
                     self.data_displayer.add_other_data(data)
         elif displayer in self.other_data_displayers:
@@ -622,7 +626,8 @@ class Viewer1D(ViewerBase):
 
         if scatter_dwa is not None:
             if isinstance(scatter_dwa, DataWithAxes):
-                self.view.add_data_displayer(scatter_dwa.name, [(255, 0, 0)])
+                if scatter_dwa.name not in self.view.other_data_displayers:
+                    self.view.add_data_displayer(scatter_dwa.name, [(255, 0, 0)])
                 self.view.other_data_displayers[scatter_dwa.name].update_data(
                     scatter_dwa, do_scatter=True)
 
