@@ -246,7 +246,7 @@ class ViewerBase(QObject):
         self._display_temporary = True
         self.show_data(data, **kwargs)
 
-    def _show_data(self, data: DataWithAxes):
+    def _show_data(self, data: DataWithAxes, *args, **kwargs):
         """Specific viewers should implement it"""
         raise NotImplementedError
 

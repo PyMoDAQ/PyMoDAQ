@@ -16,7 +16,7 @@ from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2
 from pymodaq.utils.conftests import qtbotskip
 
 
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+#pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 
 @pytest.fixture
@@ -86,5 +86,21 @@ class TestViewer1D:
         prog.trigger_action('crosshair')
         assert prog.is_action_visible('x_label')
         assert prog.is_action_visible('y_label')
+
+    def test_extra_scatter(self, init_viewer1d):
+        prog, data = init_viewer1d
+
+        from pymodaq.utils.math_utils import gauss1D
+        xlow = np.linspace(0, 200, 21)
+        ylow = gauss1D(xlow, 75, 25)
+
+        scatter_dwa = data_mod.DataRaw(
+            'scatter', data=[ylow],
+            axes=[data_mod.Axis('myaxis', 'units', data=xlow, index=0, spread_order=0)],
+            labels=['subsampled'],
+            symbol='d',
+            symbol_size=18)
+
+        prog.show_data(data, scatter_dwa=scatter_dwa)
 
 
