@@ -200,7 +200,9 @@ class BayesianOptimisation(gutils.CustomApp):
         self.add_action('ini_runner', 'Init the Optimisation Algorithm', 'ini', checkable=True,
                         enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
-        self.add_action('run', 'Run Optimisation', 'run2', checkable=True)
+        self.add_action('run', 'Run Optimisation', 'run2', checkable=True, enabled=False)
+        self.add_action('gotobest', 'Got to best individual', 'move_contour', enabled=False,
+                        tip='Go to the best individual guessed by the algorithm')
         logger.debug('actions set')
 
     def connect_things(self):
@@ -209,6 +211,16 @@ class BayesianOptimisation(gutils.CustomApp):
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimisation_runner)
         self.connect_action('run', self.run_optimisation)
+        self.connect_action('gotobest', self.go_to_best)
+
+    def go_to_best(self):
+        best_individual = self.algorithm.best_individual
+        actuators = self.modules_manager.selected_actuators_name
+        dte_act = DataToActuators('best', data=[
+            DataActuator(actuators[ind], data=float(best_individual[ind])) for ind in range(len(best_individual))
+        ],
+                                  mode='abs')
+        self.modules_manager.move_actuators(dte_act)
 
     def quit(self):
         self.dockarea.parent().close()
@@ -325,13 +337,13 @@ class BayesianOptimisation(gutils.CustomApp):
 
             self.runner_thread.start()
             self.get_action('runner_led').set_as_true()
+            self.set_action_enabled('run', True)
             self.model_class.runner_initialized()
 
         else:
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
-
             self.runner_thread.terminate()
             self.get_action('runner_led').set_as_false()
 
@@ -349,12 +361,16 @@ class BayesianOptimisation(gutils.CustomApp):
 
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
+        self.viewer_observable.show_data(dte)
+
         # dwa_observations = self.algorithm.get_dwa_obervations(
         #     self.modules_manager.selected_actuators_name)
         self.model_class.update_plots()
+
         best_individual = dte.get_data_from_name('Individual')
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
-        self.viewer_observable.show_data(dte)
+
+
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=dwa_actuators.values())
         if len(best_indiv_as_list) == 1 or (
@@ -380,6 +396,7 @@ class BayesianOptimisation(gutils.CustomApp):
         else:
             self.get_action('run').set_icon('run2')
             self.command_runner.emit(utils.ThreadCommand('stop', {}))
+            self.set_action_enabled('gotobest', True)
 
             QtWidgets.QApplication.processEvents()
 
@@ -517,6 +534,8 @@ def main(init_qt=True):
     dashboard = DashBoard(area)
     daq_scan = None
     file = Path(get_set_preset_path()).joinpath(f"{'complex_data'}.xml")
+    #file = Path(get_set_preset_path()).joinpath(f"{'beam_steering_mock'}.xml")
+
     if file.exists():
         dashboard.set_preset_mode(file)
         daq_scan = dashboard.load_bayesian()
