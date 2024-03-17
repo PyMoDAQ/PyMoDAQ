@@ -5,7 +5,7 @@ Created the 31/08/2023
 @author: Sebastien Weber
 """
 from abc import ABC, abstractproperty, abstractmethod
-from typing import List, TYPE_CHECKING, Union
+from typing import List, TYPE_CHECKING, Union, Dict, Tuple
 from pathlib import Path
 import importlib
 import pkgutil
@@ -60,6 +60,9 @@ class BayesianAlgorithm:
     def set_utility_function(self, kind: str, **kwargs):
         if kind in UtilityKind.names():
             self._utility = UtilityFunction(kind, **kwargs)
+
+    def set_bounds(self, bounds: Dict[str, Tuple[float, float]]):
+        self._algo.set_bounds(bounds)
 
     def ask(self) -> np.ndarray:
         self._next_points = self._algo.space.params_to_array(self._algo.suggest(self._utility))

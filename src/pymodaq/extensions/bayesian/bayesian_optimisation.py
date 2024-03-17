@@ -183,6 +183,9 @@ class BayesianOptimisation(gutils.CustomApp):
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'utility'), []):
             self.update_utility_function()
+        elif param.name() in putils.iter_children(
+                self.settings.child('main_settings', 'bounds'), []):
+            self.update_bounds()
 
     def update_utility_function(self):
         utility_settings = self.settings.child('main_settings', 'utility')
@@ -191,6 +194,13 @@ class BayesianOptimisation(gutils.CustomApp):
                                     utility_settings['kappa_decay_delay'])
 
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
+
+    def update_bounds(self):
+        bounds = {}
+        for child in self.settings.child('main_settings', 'bounds').children():
+            bounds[child.name()] = (child['min'], child['max'])
+
+        self.command_runner.emit(utils.ThreadCommand('bounds', bounds))
 
     def setup_actions(self):
         logger.debug('setting actions')
@@ -249,6 +259,13 @@ class BayesianOptimisation(gutils.CustomApp):
             enl_axis_units=act_units)
 
         self.live_plotter.h5saver = self.h5temp
+        self.ini_live_plot()
+
+    def ini_live_plot(self):
+        act_names = [child.name() for child in self.settings.child('main_settings',
+                                                                   'bounds').children()]
+        act_units = [self.modules_manager.get_mod_from_name(act_name, 'act').units for act_name
+                     in act_names]
         if len(act_names) == 1:
             viewer_enum = 'Viewer1D'
         elif len(act_names) == 2:
@@ -260,12 +277,16 @@ class BayesianOptimisation(gutils.CustomApp):
         for viewer in viewers:
             if viewer.has_action('crosshair'):
                 viewer.get_action('crosshair').trigger()
+                if hasattr(viewer.view, 'collapse_lineout_widgets'):
+                    viewer.view.collapse_lineout_widgets()
             if viewer.has_action('sort'):
                 if not viewer.is_action_checked('sort'):
                    viewer.get_action('sort').trigger()
             if viewer.has_action('scatter'):
                 if not viewer.is_action_checked('scatter'):
                     viewer.get_action('scatter').trigger()
+
+        self.docks['settings'].container.setSizes(1, 2, 2)
 
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked('ini_runner'):
@@ -438,6 +459,9 @@ class OptimisationRunner(QtCore.QObject):
                 xi=utility_params.xi,
                 kappa_decay=utility_params.kappa_decay,
                 kappa_decay_delay=utility_params.kappa_decay_delay)
+
+        elif command.command == 'bounds':
+            self.optimisation_algorithm.set_bounds(command.attribute)
 
     def run_opti(self, sync_detectors=True, sync_acts=True):
         """Start the optimisation loop
