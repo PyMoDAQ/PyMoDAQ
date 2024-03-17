@@ -61,6 +61,10 @@ class BayesianAlgorithm:
         if kind in UtilityKind.names():
             self._utility = UtilityFunction(kind, **kwargs)
 
+    def update_utility_function(self):
+        """ Update the parameters of the Utility function (kappa decay for instance)"""
+        self._utility.update_params()
+
     def set_bounds(self, bounds: Dict[str, Tuple[float, float]]):
         self._algo.set_bounds(bounds)
 

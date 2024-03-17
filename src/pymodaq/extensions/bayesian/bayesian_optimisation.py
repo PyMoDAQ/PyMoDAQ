@@ -488,7 +488,7 @@ class OptimisationRunner(QtCore.QObject):
             self.current_time = time.perf_counter()
             logger.info('Optimisation loop starting')
             while self.running:
-
+                self.optimisation_algorithm.update_utility_function()
                 next_target = self.optimisation_algorithm.ask()
 
                 self.outputs = next_target
