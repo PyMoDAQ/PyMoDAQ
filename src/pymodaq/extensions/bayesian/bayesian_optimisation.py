@@ -126,12 +126,14 @@ class BayesianOptimisation(gutils.CustomApp):
         self.docks['settings'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
+        splitter.setSizes((int(self.dockarea.height() / 2),
+                           int(self.dockarea.height() / 2)))
 
         widget_observable = QtWidgets.QWidget()
         widget_observable.setLayout(QtWidgets.QHBoxLayout())
         observable_dockarea = gutils.DockArea()
         widget_observable.layout().addWidget(observable_dockarea)
-        self.viewer_observable = ViewerDispatcher(observable_dockarea)
+        self.viewer_observable = ViewerDispatcher(observable_dockarea, direction='bottom')
         self.docks['observable'] = gutils.Dock('Observable')
         self.dockarea.addDock(self.docks['observable'], 'right', self.docks['settings'])
         self.docks['observable'].addWidget(widget_observable)
@@ -258,10 +260,8 @@ class BayesianOptimisation(gutils.CustomApp):
             enl_axis_names=act_names,
             enl_axis_units=act_units)
 
-        self.live_plotter.h5saver = self.h5temp
-        self.ini_live_plot()
-
     def ini_live_plot(self):
+        self.live_plotter.h5saver = self.h5temp
         act_names = [child.name() for child in self.settings.child('main_settings',
                                                                    'bounds').children()]
         act_units = [self.modules_manager.get_mod_from_name(act_name, 'act').units for act_name
@@ -286,7 +286,11 @@ class BayesianOptimisation(gutils.CustomApp):
                 if not viewer.is_action_checked('scatter'):
                     viewer.get_action('scatter').trigger()
 
-        self.docks['settings'].container.setSizes(1, 2, 2)
+        QtWidgets.QApplication.processEvents()
+        win_width = self.dockarea.width()
+        self.docks['settings'].container().setSizes((int(win_width / 5),
+                                                     int(2 * win_width / 5),
+                                                     int(2 * win_width / 5), 10, 10))
 
     def update_actuators(self, actuators: List[str]):
         if self.is_action_checked('ini_runner'):
@@ -347,6 +351,7 @@ class BayesianOptimisation(gutils.CustomApp):
             self.enl_index = 0
 
             self.ini_temp_file()
+            self.ini_live_plot()
 
             self.runner_thread = QtCore.QThread()
             runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm)
