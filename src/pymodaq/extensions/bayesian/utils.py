@@ -30,7 +30,7 @@ from pymodaq.utils.enums import BaseEnum
 from pymodaq.utils.parameter import Parameter
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.bayesian.optimisation import BayesianOptimisation
+    from pymodaq.extensions.bayesian.bayesian_optimisation import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
 
