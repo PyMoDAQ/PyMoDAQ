@@ -700,6 +700,8 @@ class Viewer2D(ViewerBase):
     def __init__(self, parent: QtWidgets.QWidget = None, title=''):
         super().__init__(parent, title)
 
+        self.just_init = True
+
         self._datas = None
         self.isdata = dict([])
         self._is_gradient_manually_set = False
@@ -793,6 +795,15 @@ class Viewer2D(ViewerBase):
         self.set_visible_items()
         if not self.view.is_action_checked('roi'):
             self.data_to_export_signal.emit(self.data_to_export)
+
+        self.autolevels_first()
+
+    def autolevels_first(self):
+        if self.just_init and not self.is_action_checked('autolevels'):
+            self.get_action('autolevels').trigger()
+            self.update_data()
+            self.get_action('autolevels').trigger()
+            self.just_init = False
 
     def get_axes_from_view(self, data: DataWithAxes):
         """Obtain axes info from the view
