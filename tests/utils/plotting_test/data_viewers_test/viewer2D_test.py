@@ -309,13 +309,15 @@ class TestActions:
         prog, qtbot = init_viewer2D
         data = init_data(3)
         prog.show_data(data)
-        prog.view.get_action('histo').trigger()
 
-        assert prog.view.histogrammer.get_histogram('red').getLevels() == approx((0, 1.))
-        assert prog.view.histogrammer.get_histogram('green').getLevels() == approx((0, 1.))
-        assert prog.view.histogrammer.get_histogram('blue').getLevels() == approx((0, 1.))
-
-        prog.view.get_action('autolevels').trigger()
+        # the 4.2.x_dev added the autotriggering of this autolevels on first display of data
+        # prog.view.get_action('histo').trigger()
+        #
+        # assert prog.view.histogrammer.get_histogram('red').getLevels() == approx((0, 1.))
+        # assert prog.view.histogrammer.get_histogram('green').getLevels() == approx((0, 1.))
+        # assert prog.view.histogrammer.get_histogram('blue').getLevels() == approx((0, 1.))
+        #
+        # prog.view.get_action('autolevels').trigger()
 
         assert prog.view.histogrammer.get_histogram('red').getLevels() == approx((0, 2.9392557954529277))
         assert prog.view.histogrammer.get_histogram('green').getLevels() == approx((0., 24.0))
