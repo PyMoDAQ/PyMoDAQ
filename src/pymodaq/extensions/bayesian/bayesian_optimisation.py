@@ -232,7 +232,11 @@ class BayesianOptimisation(gutils.CustomApp):
             DataActuator(actuators[ind], data=float(best_individual[ind])) for ind in range(len(best_individual))
         ],
                                   mode='abs')
-        self.modules_manager.move_actuators(dte_act)
+        self.modules_manager.connect_actuators(True)
+        self.modules_manager.move_actuators(dte_act, polling=True)
+        self.modules_manager.connect_actuators(False)
+
+        self.modules_manager.grab_datas()
 
     def quit(self):
         self.dockarea.parent().close()
