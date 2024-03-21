@@ -505,8 +505,13 @@ class PIDRunner(QObject):
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
-        dte = DataToExport('toplot', data=[self.outputs_to_actuators.merge_as_dwa('Data0D', name='outputs')])
-        dte.append(self.inputs_from_dets.merge_as_dwa('Data0D', name='inputs'))
+        outputs_dwa = self.outputs_to_actuators.merge_as_dwa('Data0D', name='outputs')
+        outputs_dwa.labels = self.modules_manager.selected_actuators_name
+        dte = DataToExport('toplot', data=[outputs_dwa])
+
+        inputs_dwa = self.inputs_from_dets.merge_as_dwa('Data0D', name='inputs')
+        inputs_dwa.labels = self.modules_manager.selected_actuators_name
+        dte.append(inputs_dwa)
         self.pid_output_signal.emit(dte)
 
     @Slot(ThreadCommand)
