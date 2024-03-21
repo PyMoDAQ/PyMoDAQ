@@ -126,6 +126,7 @@ class BayesianOptimisation(gutils.CustomApp):
         self.docks['settings'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
+        self.modules_manager.show_only_control_modules(False)
         splitter.setSizes((int(self.dockarea.height() / 2),
                            int(self.dockarea.height() / 2)))
 

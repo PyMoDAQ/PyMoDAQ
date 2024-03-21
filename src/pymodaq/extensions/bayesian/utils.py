@@ -248,7 +248,7 @@ class BayesianModelDefault(BayesianModelGeneric):
                      'checkbox': True},
         ]},]
 
-    def __init__(self, optimisation_controller: 'Optimisation'):
+    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
         self.actuators_name = optimisation_controller.modules_manager.actuators_name
         self.detectors_name = optimisation_controller.modules_manager.detectors_name
         super().__init__(optimisation_controller)
