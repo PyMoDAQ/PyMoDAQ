@@ -71,16 +71,33 @@ viewer_factory = ViewerFactory()
 
 
 class ViewerDispatcher:
-    """MixIn class to add easy control for adding multuiple data viewers in docks depending on data to be plotted"""
+    """MixIn class to add easy control for adding multuiple data viewers in docks depending on
+    data to be plotted
 
-    def __init__(self, dockarea: DockArea = None, title: str = '', next_to_dock: Dock = None):
+    Parameters
+    ----------
+    dockarea: DockArea
+    title: str
+    next_to_dock: Dock
+        (deprecated) has no effect
+    direction: str
+        either 'right', 'left', 'bottom', 'top'.
+
+    """
+
+    def __init__(self, dockarea: DockArea = None, title: str = '', next_to_dock: Dock = None,
+                 direction='right'):
         super().__init__()
         self._title = title
+
         self._next_to_dock = next_to_dock
+
         if dockarea is None:
             dockarea = DockArea()
             dockarea.show()
         self.dockarea = dockarea
+
+        self._direction = direction
 
         self._viewer_docks = []
         self._viewer_widgets = []
@@ -145,9 +162,10 @@ class ViewerDispatcher:
         #         self.dockarea.addDock(self.viewer_docks[-1])
         # else:
         #     self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
-        self.dockarea.addDock(self.viewer_docks[-1], 'right')
+        self.dockarea.addDock(self.viewer_docks[-1], self._direction)
 
-    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]], viewers_name: List[str] = None, force=False):
+    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
+                       viewers_name: List[str] = None, force=False):
         """
 
         Parameters
@@ -177,7 +195,8 @@ class ViewerDispatcher:
         ind_loop = 0
         while len(self.viewers) < len(viewers_type):
             self.add_viewer(viewers_type[Nviewers_to_leave + ind_loop],
-                            dock_name=viewers_name[Nviewers_to_leave + ind_loop] if viewers_name is not None else None)
+                            dock_name=viewers_name[Nviewers_to_leave + ind_loop]
+                            if viewers_name is not None else None)
             ind_loop += 1
         QtWidgets.QApplication.processEvents()
 

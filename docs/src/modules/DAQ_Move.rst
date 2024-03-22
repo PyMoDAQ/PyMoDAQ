@@ -198,7 +198,7 @@ in :numref:`daq_move_gui_settings`).
 * ``Status``: Master or Slave
 * ``Axis``: identifier defined in the plugin script
 
-See :download:`daq_move_Template.py <daq_move_Template.py>` for a detailed example. These settings are
+These settings are
 really valid only when the module is used within the Dashboard framework that deals with multiple modules
 at the same time as configured in the :ref:`preset_manager` interface.
 

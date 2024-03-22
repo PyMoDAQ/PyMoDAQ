@@ -36,3 +36,7 @@ def test_enum_checker():
     assert isinstance(enums.enum_checker(Enum, 'NAME2'), Enum)
 
 
+def test_enum_to_dict():
+
+    assert Enum.to_dict() == {'name1': 45, 'name2': 'str', 'name3': -2}
+    assert Enumbis.to_dict() == {'name4': 45, 'name5': 'str', 'name6': -2}

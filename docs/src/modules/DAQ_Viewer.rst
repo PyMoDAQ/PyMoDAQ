@@ -93,7 +93,7 @@ The toolbar, :numref:`figure_DAQ_Viewer_toolbar` allows data acquisition and oth
     :width: 20pt
     :height: 20pt
 
-.. |green_led| image:: /image/DAQ_Move/green_led.PNG
+.. |green_led| image:: /image/DAQ_Viewer/green_led.PNG
     :width: 20pt
     :height: 20pt
 

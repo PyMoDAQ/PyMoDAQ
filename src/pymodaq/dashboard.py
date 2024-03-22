@@ -215,6 +215,19 @@ class DashBoard(QObject):
 
         return qtconsole
 
+    def load_bayesian(self, win=None):
+        if win is None:
+            self.bayesian_window = QtWidgets.QMainWindow()
+        else:
+            self.bayesian_window = win
+        dockarea = DockArea()
+        self.bayesian_window.setCentralWidget(dockarea)
+        self.bayesian_window.setWindowTitle('Bayesian Optimiser')
+        self.bayesian_module = extmod.BayesianOptimisation(dockarea=dockarea, dashboard=self)
+        self.extensions['bayesian'] = self.bayesian_module
+        self.bayesian_window.show()
+        return self.bayesian_module
+
     def load_extension_from_name(self, name: str) -> dict:
         self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
 
@@ -349,6 +362,8 @@ class DashBoard(QObject):
         action_pid.triggered.connect(lambda: self.load_pid_module())
         action_console = self.actions_menu.addAction('IPython Console')
         action_console.triggered.connect(lambda: self.load_console())
+        action_bayesian = self.actions_menu.addAction('Bayesian Optimisation')
+        action_bayesian.triggered.connect(lambda: self.load_bayesian())
 
         extensions_actions = []
         for ext in extensions:
@@ -502,6 +517,9 @@ class DashBoard(QObject):
         try:
             self.remote_timer.stop()
 
+            for ext in self.extensions:
+                if hasattr(self.extensions[ext], 'quit_fun'):
+                    self.extensions[ext].quit_fun()
             for mov in self.actuators_modules:
                 mov.init_signal.disconnect(self.update_init_tree)
             for det in self.detector_modules:

@@ -396,17 +396,20 @@ class Axis:
                 ax._offset += offset
             return ax
 
-    def __eq__(self, other):
-        eq = self.label == other.label
-        eq = eq and (self.units == other.units)
-        eq = eq and (self.index == other.index)
-        if self.data is not None and other.data is not None:
-            eq = eq and (np.allclose(self.data, other.data))
-        else:
-            eq = eq and self.offset == other.offset
-            eq = eq and self.scaling == other.scaling
+    def __eq__(self, other: Axis):
+        if isinstance(other, Axis):
+            eq = self.label == other.label
+            eq = eq and (self.units == other.units)
+            eq = eq and (self.index == other.index)
+            if self.data is not None and other.data is not None:
+                eq = eq and (np.allclose(self.data, other.data))
+            else:
+                eq = eq and self.offset == other.offset
+                eq = eq and self.scaling == other.scaling
 
-        return eq
+            return eq
+        else:
+            return False
 
     def mean(self):
         if self._data is not None:

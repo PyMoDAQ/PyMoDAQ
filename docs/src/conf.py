@@ -14,13 +14,13 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('./src'))
-
-
-# -- Project information -----------------------------------------------------
 import datetime
-import os
-import sys
+
+sys.path.insert(0, os.path.abspath('./src'))
+sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions'))
+sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions/bayesian'))
+sys.path.insert(0, os.path.abspath('./src/pymodaq/utils.plotting.data_viewers'))
+sys.path.insert(0, os.path.abspath('./src/pymodaq.utils.data'))
 
 # -- Project information -----------------------------------------------------
 # General information about the project.
@@ -80,6 +80,7 @@ autodoc_member_order = "groupwise"
 autoclass_content = "class"
 autosummary_generate = []
 numpydoc_show_inherited_class_members = False
+numpydoc_class_members_toctree = False
 
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False

@@ -10,7 +10,7 @@ class Crosshair(pg.GraphicsObject):
     crosshair_dragged = Signal(float, float, name='crosshair_dragged')
     # signal used to pass crosshair position to other methods
 
-    def __init__(self, plotitem, orientation='both'):
+    def __init__(self, plotitem, orientation='both', pen=None):
         super().__init__()
         
         if hasattr(plotitem, 'plotitem'):
@@ -30,8 +30,8 @@ class Crosshair(pg.GraphicsObject):
             self.vline_visible = False
             self.hline_visible = True
 
-        self.vLine = pg.InfiniteLine(angle=90, movable=True)
-        self.hLine = pg.InfiniteLine(angle=0, movable=True)
+        self.vLine = pg.InfiniteLine(angle=90, movable=True, pen=pen)
+        self.hLine = pg.InfiniteLine(angle=0, movable=True, pen=pen)
 
         self.plotitem.addItem(self.vLine, ignoreBounds=True)
         self.plotitem.addItem(self.hLine, ignoreBounds=True)
