@@ -76,6 +76,11 @@ def test_ThreadCommand():
     assert threadcomm.attribute is attributes
 
 
+def test_recursive_iterable_flattening():
+
+    flattened = utils.recursive_iterable_flattening([1, 3, ['klm', 4], 'poi', [1, [[1, 2], 'uio']]])
+    assert flattened == [1, 3, 'klm', 4, 'poi', 1, 1, 2, 'uio']
+
 
 def test_recursive_find_files_extension():
     path = Path(os.path.dirname(os.path.realpath(__file__)))
