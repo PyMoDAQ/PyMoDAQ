@@ -21,6 +21,8 @@ from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules.data_saving import DataEnlargeableSaver
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
+from pymodaq.extensions.bayesian.bayesian_config import BayesianConfig
+from pymodaq.utils import config as configmod
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -92,6 +94,8 @@ class BayesianOptimisation(gutils.CustomApp):
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.setup_ui()
 
+        self.bayesian_config = BayesianConfig()
+
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
 
@@ -105,6 +109,40 @@ class BayesianOptimisation(gutils.CustomApp):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+
+    def load_bounds_config(self, param: putils.Parameter = None):
+        if param is None:
+            param = self.settings.child('bounds')
+        base_path = self.get_bounds_config_base_path()
+        for child in putils.iter_children_params(param, []):
+            if len(child.children()) == 0:  #means it is not a group parameter
+
+                path = base_path + putils.get_param_path(child)[1:]
+
+                try:
+                    child.setValue(self.config(*path))  # first try to load the config including the actuators name
+                except configmod.ConfigError as e:
+                    pass
+            else:
+                self.set_settings_values(child)
+
+    def get_bounds_config_base_path(self) -> List[str]:
+        path = [self.dashboard.preset_file, self.model_class.__class__.__name__]
+        path_actuators = self.modules_manager.selected_actuators_name
+        path.extend(path_actuators)
+        return path
+
+    def save_bounds_config(self):
+        path = self.get_bounds_config_base_path()
+
+        for param in putils.iter_children_params(self.settings.child('bounds'), []):
+            path_param = path[:]
+            path_param.extend(putils.get_param_path(param)[1:])
+            try:
+                self.config[tuple(path)] = param.value()
+            except Exception as e:
+                pass
+        self.config.save()
 
     @property
     def modules_manager(self) -> ModulesManager:

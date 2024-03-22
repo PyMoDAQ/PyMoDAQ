@@ -4,10 +4,13 @@ from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any
+from typing import Union, Dict, TypeVar, Any, List
 
 import toml
 
+from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.daq_utils import recursive_iterable_flattening
+from pymodaq.utils.parameter import utils as putils
 
 try:
     USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
@@ -383,8 +386,40 @@ class Config(BaseConfig):
         return dict(user=dict(name=USER))
 
 
+class ConfigSaverLoader:
+    config: abstractproperty
 
-    
+    def __init__(self, *args, base_param: Parameter):
+        self.base_path = recursive_iterable_flattening(args)
+        self.base_param = base_param
+
+    def load_config(self):
+        base_path = self.base_path[:]
+        for child in putils.iter_children_params(self.base_param, []):
+            if len(child.children()) == 0:  # means it is not a group parameter
+
+                path = base_path + putils.get_param_path(child)[1:]
+
+                try:
+                    child.setValue(self.config(
+                        *path))  # first try to load the config including the actuators name
+                except ConfigError as e:
+                    pass
+            else:
+                self.set_settings_values(child)
+
+
+    def save_bounds_config(self):
+        for param in putils.iter_children_params(self.base_param, []):
+            path_param = self.base_path[:]
+            path_param.extend(putils.get_param_path(param)[1:])
+            try:
+                self.config[tuple(path_param)] = param.value()
+            except Exception as e:
+                pass
+        self.config.save()
+
+
 if __name__ == '__main__':
 
     config = Config()
