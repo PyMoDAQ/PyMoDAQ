@@ -4,8 +4,11 @@ from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pyqtgraph.dockarea import DockArea
 from qtpy import QtCore, QtWidgets
-from typing import Union
+from typing import Union, TYPE_CHECKING
 from pymodaq.utils.managers.modules_manager import ModulesManager
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -38,7 +41,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     log_signal = QtCore.Signal(str)
     params = []
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard=None):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: 'DashBoard'=None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self)
