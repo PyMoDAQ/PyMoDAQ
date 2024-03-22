@@ -30,6 +30,10 @@ CLASS_NAME = 'BayesianOptimisation'
 
 
 class BayesianOptimisation(gutils.CustomApp):
+    """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
+    taken form the detectors as a function of one or more parameters controlled by the actuators.
+    """
+
     command_runner = QtCore.Signal(utils.ThreadCommand)
     models = get_bayesian_models()
     explored_viewer_name = 'algo/ProbedData'
