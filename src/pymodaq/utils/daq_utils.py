@@ -15,6 +15,8 @@ import pkgutil
 import traceback
 import platform
 from typing import Union, List
+from typing import Iterable as IterableType
+from collections.abc import Iterable
 
 import numpy as np
 from qtpy import QtCore
@@ -48,32 +50,6 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 config = Config()
-
-
-def __getattr__(name):
-    if name in ['Axis', 'NavAxis', 'ScaledAxis', 'ScalingOptions', 'Data', 'DataTimeStamped', 'DataFromPlugins',
-                'DataToEmit', 'DataToExport']:
-        data_mod = importlib.import_module('.data', 'pymodaq.utils')
-        deprecation_msg('Loading Axis or Data and their derived classes from daq_utils is deprecated, import them from'
-                        ' pymodaq.utils.data module', 3)
-        return getattr(data_mod, name)
-    else:
-        raise AttributeError
-
-
-def load_config():
-    deprecation_msg(f'config methods must now be  imported from the pymodaq.utils.messenger.cnfig module')
-    return Config()
-
-
-def set_logger(*args, **kwargs):
-    deprecation_msg(f'Logger methods must now be  imported from the pymodaq.utils.logger module', 3)
-    return logger_module.set_logger(*args, **kwargs)
-
-
-def get_module_name(*args, **kwargs):
-    deprecation_msg(f'Logger methods must now be  imported from the pymodaq.utils.logger module', 3)
-    return logger_module.get_module_name(*args, **kwargs)
 
 
 def is_64bits():
@@ -297,6 +273,16 @@ def setLocale():
     language = getattr(QLocale, config('style', 'language'))
     country = getattr(QLocale, config('style', 'country'))
     QLocale.setDefault(QLocale(language, country))
+
+
+def recursive_iterable_flattening(aniterable: IterableType):
+    flatten_iter = []
+    for elt in aniterable:
+        if not isinstance(elt, str) and isinstance(elt, Iterable):
+            flatten_iter.extend(recursive_iterable_flattening(elt))
+        else:
+            flatten_iter.append(elt)
+    return flatten_iter
 
 
 def recursive_find_files_extension(ini_path, ext, paths=[]):
@@ -768,91 +754,6 @@ def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path'
 
     file = f'{base_name}_{index:03d}'
     return file, curr_dir
-
-
-# ##############
-# Math utilities
-# math utility functions, should now be imported from the math_utils module
-import pymodaq.utils.math_utils as mutils
-
-def my_moment(x, y):
-    deprecation_msg(f'my_moment function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.my_moment(x, y)
-
-def normalize(x):
-    deprecation_msg(f'normalize function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.normalize(x)
-
-
-def odd_even(x):
-    deprecation_msg(f'odd_even function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.odd_even(x)
-
-
-def greater2n(x):
-    deprecation_msg(f'greater2n function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.greater2n(x)
-
-
-def linspace_step(start, stop, step):
-    deprecation_msg(f'linspace_step function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.linspace_step(start, stop, step)
-
-
-def linspace_step_N(start, step, Npts):
-    deprecation_msg(f'linspace_step_N function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.linspace_step_N(start, step, Npts)
-
-
-def find_index(x, threshold):
-    deprecation_msg(f'find_index function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.find_index(x, threshold)
-
-
-def find_common_index(x, y, x0, y0):
-    deprecation_msg(f'find_common_index function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.find_common_index(x, y, x0, y0)
-
-
-def gauss1D(x, x0, dx, n=1):
-    deprecation_msg(f'gauss1D function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.gauss1D(x, x0, dx, n=n)
-
-
-def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
-    deprecation_msg(f'gauss2D function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.gauss2D(x, x0, dx, y, y0, dy, n, angle)
-
-def ftAxis(Npts, omega_max):
-    deprecation_msg(f'ftAxis function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ftAxis(Npts, omega_max)
-
-
-def ftAxis_time(Npts, time_max):
-    deprecation_msg(f'ftAxis_time function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ftAxis_time(Npts, time_max)
-
-
-def ft(x, dim=-1):
-    deprecation_msg(f'ft function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ft(x, dim)
-
-
-def ift(x, dim=0):
-    deprecation_msg(f'ift function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ift(x, dim)
-
-
-def ft2(x, dim=(-2, -1)):
-    deprecation_msg(f'ft2 function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ft2(x, dim)
-
-
-def ift2(x, dim=(-2, -1)):
-    deprecation_msg(f'ift2 function should now be imported from the {mutils.__name__} module', stacklevel=3)
-    return mutils.ift2(x, dim)
-
-
 
 
 if __name__ == '__main__':
