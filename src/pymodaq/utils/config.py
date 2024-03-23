@@ -1,16 +1,18 @@
 from abc import abstractproperty
+from collections.abc import Iterable
 
 from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any, List
+from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
+from typing import Iterable as IterableType
 
 import toml
 
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.daq_utils import recursive_iterable_flattening
-from pymodaq.utils.parameter import utils as putils
+if TYPE_CHECKING:
+    from pymodaq.utils.parameter import Parameter
+
 
 try:
     USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
@@ -81,6 +83,16 @@ def getitem_recursive(dic, *args, ndepth=0, create_if_missing=False):
             else:
                 raise e
     return dic
+
+
+def recursive_iterable_flattening(aniterable: IterableType):
+    flatten_iter = []
+    for elt in aniterable:
+        if not isinstance(elt, str) and isinstance(elt, Iterable):
+            flatten_iter.extend(recursive_iterable_flattening(elt))
+        else:
+            flatten_iter.append(elt)
+    return flatten_iter
 
 
 def get_set_path(a_base_path: Path, dir_name: str) -> Path:
@@ -252,7 +264,7 @@ def copy_template_config(config_file_name: str = 'config', source_path: Union[Pa
     dest_path_with_filename = dest_path.joinpath(file_name)
 
     if source_path is None:
-        config_template_dict = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
+        config_template_dict = {}
     else:
         config_template_dict = toml.load(Path(source_path))
 
@@ -325,9 +337,18 @@ class BaseConfig:
         else:
             return self._config[item]
 
+    # def __setitem__(self, key, value):
+    #     if isinstance(key, tuple):
+    #         dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
+    #         dic[key[-1]] = value
+    #     else:
+    #         self._config[key] = value
+
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
-            dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
+            dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
+            if value is None:  # means the setting is a group
+                value = {}
             dic[key[-1]] = value
         else:
             self._config[key] = value
@@ -340,7 +361,10 @@ class BaseConfig:
         toml_user_path = get_config_file(config_file_name, user=True)
         if toml_base_path.is_file():
             config = toml.load(toml_base_path)
-            config_template = toml.load(template_path)
+            if template_path is not None:
+                config_template = toml.load(template_path)
+            else:
+                config_template = {}
             if check_config(config_template, config):  # check if all fields from template are there
                 # (could have been  modified by some commits)
                 create_toml_from_dict(config, toml_base_path)
@@ -387,15 +411,50 @@ class Config(BaseConfig):
 
 
 class ConfigSaverLoader:
-    config: abstractproperty
+    """ Allows to set Parameters values from previously saved one in a configuration file
 
-    def __init__(self, *args, base_param: Parameter):
-        self.base_path = recursive_iterable_flattening(args)
-        self.base_param = base_param
+    This plays the role of a cache for these Parameters
 
-    def load_config(self):
+    Parameters
+    ----------
+    base_param: Parameter
+        The parent Parameter whose children should be cached in the config file
+    config: BaseConfig
+        The Config object that will cache the Parameter values
+    base_path: Iterable[str]
+        an iterable of string defining a "category"
+    """
+
+    def __init__(self, base_param: 'Parameter', config: BaseConfig, base_path: IterableType[str]):
+        self.config = config
+        self._base_path: List[str] = list(recursive_iterable_flattening(base_path))
+        self._base_param = base_param
+
+    @property
+    def base_path(self):
+        """ Get/Set the iterable of string defining a particular configuration to be loaded/saved"""
+        return self._base_path
+
+    @base_path.setter
+    def base_path(self, path: IterableType[str]):
+        self._base_path = list(recursive_iterable_flattening(path))
+
+    @property
+    def base_param(self):
+        """ Get/Set the parent Parameter whose children should be saved in the config file"""
+        return self._base_param
+
+    @base_param.setter
+    def base_param(self, param: 'Parameter'):
+        self._base_param = param
+
+    def load_config(self, param: 'Parameter' = None):
+        from pymodaq.utils.parameter import utils as putils
+
+        if param is None:
+            param = self.base_param
         base_path = self.base_path[:]
-        for child in putils.iter_children_params(self.base_param, []):
+        for child in putils.iter_children_params(param, []):
             if len(child.children()) == 0:  # means it is not a group parameter
 
                 path = base_path + putils.get_param_path(child)[1:]
@@ -406,10 +465,11 @@ class ConfigSaverLoader:
                 except ConfigError as e:
                     pass
             else:
-                self.set_settings_values(child)
+                self.load_config(child)
 
+    def save_config(self):
+        from pymodaq.utils.parameter import utils as putils
 
-    def save_bounds_config(self):
         for param in putils.iter_children_params(self.base_param, []):
             path_param = self.base_path[:]
             path_param.extend(putils.get_param_path(param)[1:])
