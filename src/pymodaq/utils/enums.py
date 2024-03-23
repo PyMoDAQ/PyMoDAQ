@@ -1,5 +1,5 @@
 from enum import Enum
-from pymodaq.utils.daq_utils import find_index
+from pymodaq.utils.math_utils import find_index
 from pymodaq.utils.math_utils import my_moment
 import numpy as np
 from scipy.optimize import curve_fit
