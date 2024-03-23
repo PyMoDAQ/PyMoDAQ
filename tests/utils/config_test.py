@@ -5,6 +5,7 @@ import datetime
 import toml
 
 from pymodaq.utils import config as config_mod
+from pymodaq.utils.parameter import Parameter
 
 TOML_DICT = dict(
     scan=dict(scan1d=
@@ -225,9 +226,50 @@ def test_nested_update_from_user(tmp_path):
     assert 'stop' in config_dict['scan']['scan1d']  # making sure the entry that is not in the user is still present
 
 
+class CustomConfig(config_mod.BaseConfig):
+    """Main class to deal with configuration values for this plugin"""
+    config_template_path = None
+    config_name = f"custom_settings"
 
 
+class TestConfigSaverLoader:
+    params = [
+        {'name': 'aparent', 'type': 'group', 'children': [
+            {'name': 'aparam', 'type': 'group', 'children': [
+                {'name': 'min', 'type': 'float', 'value': 2.},
+                {'name': 'max', 'type': 'float', 'value': 6.}
+            ]},
+        {'name': 'anotherparam', 'type': 'group', 'children': [
+            {'name': 'min', 'type': 'bool', 'value': True},
+            {'name': 'max', 'type': 'str', 'value': 'klj'}
+        ]},
+    ]}]
 
 
+    def test_init(self, qtbot):
+        settings = Parameter.create(name='settings', type='group', children=self.params)
+        base_path = ['aparent', 'anotherparent']
+        config = CustomConfig()
+        saver_loader = config_mod.ConfigSaverLoader(settings, config, base_path)
+
+        saver_loader.save_config()
+        saver_loader.load_config(settings)
+
+    def test_modified(self, qtbot):
+        settings = Parameter.create(name='settings', type='group', children=self.params)
+        base_path = ['aparent', 'anotherparent']
+        config = CustomConfig()
+        saver_loader = config_mod.ConfigSaverLoader(settings, config, base_path)
+
+        saver_loader.save_config()
+        value_before = settings['aparent', 'anotherparam', 'max']
+        settings.child('aparent', 'anotherparam', 'max').setValue('hjkfrd')
+        saver_loader.load_config(settings)
+
+        assert settings['aparent', 'anotherparam', 'max'] == value_before
 
 
+def test_recursive_iterable_flattening():
+
+    flattened = config_mod.recursive_iterable_flattening([1, 3, ['klm', 4], 'poi', [1, [[1, 2], 'uio']]])
+    assert flattened == [1, 3, 'klm', 4, 'poi', 1, 1, 2, 'uio']
