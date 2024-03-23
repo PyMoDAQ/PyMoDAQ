@@ -275,16 +275,6 @@ def setLocale():
     QLocale.setDefault(QLocale(language, country))
 
 
-def recursive_iterable_flattening(aniterable: IterableType):
-    flatten_iter = []
-    for elt in aniterable:
-        if not isinstance(elt, str) and isinstance(elt, Iterable):
-            flatten_iter.extend(recursive_iterable_flattening(elt))
-        else:
-            flatten_iter.append(elt)
-    return flatten_iter
-
-
 def recursive_find_files_extension(ini_path, ext, paths=[]):
     with os.scandir(ini_path) as it:
         for entry in it:
