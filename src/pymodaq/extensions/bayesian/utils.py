@@ -28,6 +28,8 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.enums import BaseEnum
 from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.config import BaseConfig
+
 
 if TYPE_CHECKING:
     from pymodaq.extensions.bayesian.bayesian_optimisation import BayesianOptimisation
@@ -351,3 +353,9 @@ def get_bayesian_models(model_name=None):
         return models_import
     else:
         return find_dict_in_list_from_key_val(models_import, 'name', model_name)
+
+
+class BayesianConfig(BaseConfig):
+    """Main class to deal with configuration values for this plugin"""
+    config_template_path = None
+    config_name = f"bayesian_settings"
