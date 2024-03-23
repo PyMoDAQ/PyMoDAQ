@@ -60,7 +60,7 @@ class Scan1DLinear(Scan1DBase):
     distribution = DataDistribution['uniform']
 
     def __init__(self, actuators: List = None, **_ignored):
-        ScannerBase.__init__(self, actuators=actuators)
+        super().__init__(actuators=actuators)
 
     def set_scan(self):
         self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
