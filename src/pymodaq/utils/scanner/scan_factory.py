@@ -81,15 +81,14 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         super().__init__()
         self.positions: np.ndarray = None
         self.n_steps = 1
-        self._actuators: List[DAQ_Move] = actuators
-
         self.config = ScanConfig()
-
-        base_path = self.actuators_name + [self.scan_type, self.scan_subtype]
+        base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
 
         self.config_saver_loader = configmod.ConfigSaverLoader(self.settings,
                                                                self.config,
                                                                base_path)
+
+        self.actuators: List[DAQ_Move] = actuators
 
         self.set_settings_titles()
         self.set_settings_values()

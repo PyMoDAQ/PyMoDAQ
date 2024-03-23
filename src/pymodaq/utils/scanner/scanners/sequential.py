@@ -96,8 +96,10 @@ class SequentialScanner(ScannerBase):
         return self._actuators
 
     @actuators.setter
-    def actuators(self, actuators_name):
-        self._actuators = actuators_name
+    def actuators(self, actuators):
+        self._actuators = actuators
+        base_path = self.actuators_name + [self.scan_type, self.scan_subtype]
+        self.config_saver_loader.base_path = base_path
         self.update_model()
 
     def update_model(self, init_data=None):

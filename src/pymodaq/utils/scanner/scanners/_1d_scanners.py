@@ -59,7 +59,7 @@ class Scan1DLinear(Scan1DBase):
     n_axes = 1
     distribution = DataDistribution['uniform']
 
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
