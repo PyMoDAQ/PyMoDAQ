@@ -425,8 +425,11 @@ class ConfigSaverLoader:
         an iterable of string defining a "category"
     """
 
-    def __init__(self, base_param: 'Parameter', config: BaseConfig, base_path: IterableType[str]):
+    def __init__(self, base_param: 'Parameter', config: BaseConfig,
+                 base_path: IterableType[str] = None):
         self.config = config
+        if base_path is None:
+            base_path = []
         self._base_path: List[str] = list(recursive_iterable_flattening(base_path))
         self._base_param = base_param
 

@@ -21,14 +21,15 @@ from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules.data_saving import DataEnlargeableSaver
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.bayesian.bayesian_config import BayesianConfig
+from pymodaq.extensions.bayesian.utils import BayesianConfig
 from pymodaq.utils import config as configmod
+from pymodaq.utils.logger import set_logger, get_module_name
 
-
-logger = utils.set_logger(utils.get_module_name(__file__))
 
 EXTENSION_NAME = 'BayesianOptimisation'
 CLASS_NAME = 'BayesianOptimisation'
+
+logger = set_logger(get_module_name(__file__))
 
 
 class BayesianOptimisation(gutils.CustomApp):
@@ -87,6 +88,7 @@ class BayesianOptimisation(gutils.CustomApp):
         self.viewer_fitness: Optional[Viewer0D] = None
         self.viewer_observable: Optional[ViewerDispatcher] = None
         self.model_class: Optional[BayesianModelGeneric] = None
+        self._save_main_settings = True
         self._modules_manager = ModulesManager(self.dashboard.detector_modules,
                                                self.dashboard.actuators_modules)
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
@@ -95,6 +97,8 @@ class BayesianOptimisation(gutils.CustomApp):
         self.setup_ui()
 
         self.bayesian_config = BayesianConfig()
+        self.mainsettings_saver_loader = configmod.ConfigSaverLoader(
+            self.settings.child('main_settings'), self.bayesian_config)
 
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
@@ -109,40 +113,6 @@ class BayesianOptimisation(gutils.CustomApp):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
-
-    def load_bounds_config(self, param: putils.Parameter = None):
-        if param is None:
-            param = self.settings.child('bounds')
-        base_path = self.get_bounds_config_base_path()
-        for child in putils.iter_children_params(param, []):
-            if len(child.children()) == 0:  #means it is not a group parameter
-
-                path = base_path + putils.get_param_path(child)[1:]
-
-                try:
-                    child.setValue(self.config(*path))  # first try to load the config including the actuators name
-                except configmod.ConfigError as e:
-                    pass
-            else:
-                self.set_settings_values(child)
-
-    def get_bounds_config_base_path(self) -> List[str]:
-        path = [self.dashboard.preset_file, self.model_class.__class__.__name__]
-        path_actuators = self.modules_manager.selected_actuators_name
-        path.extend(path_actuators)
-        return path
-
-    def save_bounds_config(self):
-        path = self.get_bounds_config_base_path()
-
-        for param in putils.iter_children_params(self.settings.child('bounds'), []):
-            path_param = path[:]
-            path_param.extend(putils.get_param_path(param)[1:])
-            try:
-                self.config[tuple(path)] = param.value()
-            except Exception as e:
-                pass
-        self.config.save()
 
     @property
     def modules_manager(self) -> ModulesManager:
@@ -231,6 +201,9 @@ class BayesianOptimisation(gutils.CustomApp):
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'bounds'), []):
             self.update_bounds()
+        if self._save_main_settings and param.name() in putils.iter_children(
+                self.settings.child('main_settings'), []):
+            self.mainsettings_saver_loader.save_config()
 
     def update_utility_function(self):
         utility_settings = self.settings.child('main_settings', 'utility')
@@ -344,6 +317,8 @@ class BayesianOptimisation(gutils.CustomApp):
             self.get_action('ini_runner').trigger()
             QtWidgets.QApplication.processEvents()
 
+        self._save_main_settings = False
+
         for child in self.settings.child('main_settings', 'bounds').children():
             self.settings.child('main_settings', 'bounds').removeChild(child)
         params = []
@@ -353,6 +328,10 @@ class BayesianOptimisation(gutils.CustomApp):
                 {'title': 'max', 'name': 'max', 'type': 'float', 'value': 5},
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
+        self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
+            self.modules_manager.selected_actuators_name
+        self.mainsettings_saver_loader.load_config()
+        self._save_main_settings = True
 
     def format_bounds(self):
         bound_dict = {}
@@ -382,6 +361,10 @@ class BayesianOptimisation(gutils.CustomApp):
             self.settings.child('models', 'ini_model').setValue(True)
             self.settings.child('models', 'ini_runner').setOpts(enabled=True)
             self.set_action_enabled('ini_runner', True)
+
+            self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
+                self.modules_manager.selected_actuators_name
+            self.mainsettings_saver_loader.load_config()
 
             try:  # this is correct for Default Model and probably for all models...
                 self.model_class.settings.child('optimizing_signal', 'data_probe').activate()
@@ -609,8 +592,7 @@ def main(init_qt=True):
 
     dashboard = DashBoard(area)
     daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{'complex_data'}.xml")
-    #file = Path(get_set_preset_path()).joinpath(f"{'beam_steering_mock'}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{'beam_steering_mock'}.xml")
 
     if file.exists():
         dashboard.set_preset_mode(file)
