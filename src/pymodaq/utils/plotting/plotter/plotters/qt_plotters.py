@@ -24,7 +24,7 @@ class Plotter(PlotterBase):
     def __init__(self, **_ignored):
         super().__init__()
 
-    def plot(self, data: Union[DataWithAxes, DataToExport]) -> ViewerBase:
+    def plot(self, data: Union[DataWithAxes, DataToExport], **kwargs) -> ViewerBase:
         do_exit = False
         qapp = QtWidgets.QApplication.instance()
         if qapp is None:
@@ -41,7 +41,7 @@ class Plotter(PlotterBase):
 
         if viewer is not None:
             widget.show()
-            viewer.show_data(data)
+            viewer.show_data(data, **kwargs)
             if isinstance(viewer, Viewer1D):
                 viewer.get_action('errors').trigger()
             QtWidgets.QApplication.processEvents()
