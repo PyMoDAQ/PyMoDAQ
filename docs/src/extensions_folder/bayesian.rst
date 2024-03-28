@@ -45,7 +45,7 @@ the acquisition function.
 .. note::
   GPs are themselves based on various kernels (or covariance matrix or *function generator*). Which kernel to use
   may depend on your particular problem, even if the standard ones (as provided in PyMoDAQ) should just work fine.
-  If you want to know more on this just browse  `here <https://www.cs.toronto.edu/~duvenaud/cookbook/>`__.
+  If you want to know more on this just browse this `thesis <https://www.cs.toronto.edu/~duvenaud/thesis.pdf>`__.
 
 Acquisition function:
 ---------------------
@@ -66,6 +66,11 @@ You can find details and implementation of each in `here <https://medium.com/@ok
 PyMoDAQ uses by default the Upper Confidence Bound function together with its `kappa` hyperparameter,
 see :ref:`bayesian_settings` and `here <http://bayesian-optimization.github.io/BayesianOptimization/exploitation_vs_exploration.html>`__.
 
+.. note::
+
+  You can find a notebook illustrating the whole optimisation process on PyMoDAQ's Github:
+  `here <https://github.com/PyMoDAQ/notebooks/blob/main/notebooks/gaussian_process.ipynb>`__, where you can
+  define your black box function (that in general you don't know) and play with kernels and utility functions.
 
 Usage
 +++++

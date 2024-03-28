@@ -15,7 +15,7 @@ that. PyMoDAQ is featured with various data viewers allowing you to plot
 any kind of data. You'll see below some nice examples of how to plot
 your PyMoDAQ's data using the builtin data viewers.
 
-.. note:: The content of this chapter is available as a `notebook <https://github.com/PyMoDAQ/PyMoDAQ/tree/4.2.x_dev/notebooks>`__.
+.. note:: The content of this chapter is available as a `notebook <https://github.com/PyMoDAQ/notebooks/tree/main/notebooks>`__.
 
   To execute this notebook properly, you'll need PyMoDAQ >=
   4.0.2 (if not released yet, you can get it from github)
