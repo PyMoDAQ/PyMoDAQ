@@ -1638,9 +1638,10 @@ class DataWithAxes(DataBase):
         else:
             raise ValueError(f'Cannot create a dwa from a None, should be a list of ndarray')
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, **kwargs):
+    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, viewer=None,
+             **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
-        return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
+        return plotter_factory.get(plotter_backend).plot(self, *args, viewer=viewer, **kwargs)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:

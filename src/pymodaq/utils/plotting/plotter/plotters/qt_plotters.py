@@ -24,26 +24,28 @@ class Plotter(PlotterBase):
     def __init__(self, **_ignored):
         super().__init__()
 
-    def plot(self, data: Union[DataWithAxes, DataToExport], **kwargs) -> ViewerBase:
+    def plot(self, data: Union[DataWithAxes, DataToExport], viewer=None, **kwargs) -> ViewerBase:
         do_exit = False
         qapp = QtWidgets.QApplication.instance()
         if qapp is None:
             do_exit = True
             qapp = start_qapplication()
 
-        if isinstance(data, DataToExport):
-            widget = DockArea()
-            viewer = ViewerDispatcher(widget, title=data.name)
-        else:
-            widget = QtWidgets.QWidget()
-            viewer_enum = ViewersEnum.get_viewers_enum_from_data(data)
-            viewer = viewer_factory.get(viewer_enum.name, parent=widget)
+        if viewer is None:
+            if isinstance(data, DataToExport):
+                widget = DockArea()
+                viewer = ViewerDispatcher(widget, title=data.name)
+            else:
+                widget = QtWidgets.QWidget()
+                viewer_enum = ViewersEnum.get_viewers_enum_from_data(data)
+                viewer = viewer_factory.get(viewer_enum.name, parent=widget)
+            widget.show()
 
         if viewer is not None:
-            widget.show()
             viewer.show_data(data, **kwargs)
             if isinstance(viewer, Viewer1D):
-                viewer.get_action('errors').trigger()
+                if not viewer.is_action_checked('errors'):
+                    viewer.get_action('errors').trigger()
             QtWidgets.QApplication.processEvents()
 
         if do_exit:
