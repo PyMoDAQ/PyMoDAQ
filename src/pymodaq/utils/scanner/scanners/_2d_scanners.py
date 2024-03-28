@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from pymodaq.utils.data import Axis, DataDistribution
@@ -18,6 +18,9 @@ from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
+
 
 class Scan2DBase(ScannerBase):    
     params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
@@ -29,7 +32,7 @@ class Scan2DBase(ScannerBase):
                 ]
     axes = ('axis1','axis2')    
     n_axes = 2
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
         self.axes_unique = []
 
@@ -61,7 +64,7 @@ class Scan2DLinear(Scan2DBase):
     scan_type = 'Scan2D'
     scan_subtype = 'Linear'
 
-    def __init__(self, actuators: List = None, **_ignored):        
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def get_pos(self):
@@ -130,7 +133,7 @@ class Scan2DLinear(Scan2DBase):
 class Scan2DLinearBF(Scan2DLinear):
     scan_subtype = 'LinearBackForce'
 
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
@@ -160,7 +163,7 @@ class Scan2DLinearBF(Scan2DLinear):
 class Scan2DRandom(Scan2DLinear):
     scan_subtype = 'Random'
 
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
@@ -194,7 +197,7 @@ class Scan2DSpiral(Scan2DLinear):
                ]},
               ]  
    
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_settings_titles(self):
@@ -317,7 +320,7 @@ try:
             ]
         distribution = DataDistribution['spread']
 
-        def __init__(self, actuators: List = None, **_ignored):
+        def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
             super().__init__(actuators=actuators)
 
         def set_scan(self):
