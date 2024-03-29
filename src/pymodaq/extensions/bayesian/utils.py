@@ -53,11 +53,14 @@ class BayesianAlgorithm:
 
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
-                                          random_state=ini_random,
                                           **kwargs
                                           )
 
-        self._utility = UtilityFunction(kind="ucb", kappa=2.5, xi=0.0)
+        self._algo._prime_queue(ini_random)
+
+        self.kappa = 2.5
+        self._utility = UtilityFunction(kind="ucb", kappa=self.kappa, xi=0.0)
+
 
     def set_utility_function(self, kind: str, **kwargs):
         if kind in UtilityKind.names():
@@ -66,6 +69,7 @@ class BayesianAlgorithm:
     def update_utility_function(self):
         """ Update the parameters of the Utility function (kappa decay for instance)"""
         self._utility.update_params()
+        self.kappa = self._utility.kappa
 
     def set_bounds(self, bounds: Dict[str, Tuple[float, float]]):
         self._algo.set_bounds(bounds)
