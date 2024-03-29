@@ -54,13 +54,15 @@ class BayesianOptimisation(gutils.CustomApp):
                           'Higher value = favors spaces that are least explored.'
                           'Lower value = favors spaces where the regression function is the '
                           'highest.'},
+                  {'title': 'Kappa actual:', 'name': 'kappa_actual', 'type': 'float', 'value': 2.576,
+                   'tip': 'Current value of the kappa parameter', 'readonly': True},
                   {'title': 'xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
                    'tip': 'Governs the exploration/exploitation tradeoff.'
                           'Lower prefers exploitation, higher prefers exploration.'},
-                  {'title': 'Kappa decay:', 'name': 'kappa_decay', 'type': 'float', 'value': 1,
+                  {'title': 'Kappa decay:', 'name': 'kappa_decay', 'type': 'float', 'value': 0.9,
                    'tip': 'kappa is multiplied by this factor every iteration.'},
                   {'title': 'Kappa decay delay:', 'name': 'kappa_decay_delay', 'type': 'int',
-                   'value': 0, 'tip': 'Number of iterations that must have passed before applying '
+                   'value': 20, 'tip': 'Number of iterations that must have passed before applying '
                                       'the decay to kappa.'},
               ]},
              {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
@@ -197,7 +199,8 @@ class BayesianOptimisation(gutils.CustomApp):
                 self.model_class.update_settings(param)
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'utility'), []):
-            self.update_utility_function()
+            if param.name() != 'kappa_actual':
+                self.update_utility_function()
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'bounds'), []):
             self.update_bounds()
@@ -210,7 +213,6 @@ class BayesianOptimisation(gutils.CustomApp):
         uparams = UtilityParameters(utility_settings['kind'], utility_settings['kappa'],
                                     utility_settings['xi'], utility_settings['kappa_decay'],
                                     utility_settings['kappa_decay_delay'])
-
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
 
     def update_bounds(self):
@@ -377,6 +379,7 @@ class BayesianOptimisation(gutils.CustomApp):
     def ini_optimisation_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
+
             self.settings.child('models', 'ini_runner').setValue(True)
             self.enl_index = 0
 
@@ -395,7 +398,7 @@ class BayesianOptimisation(gutils.CustomApp):
             self.get_action('runner_led').set_as_true()
             self.set_action_enabled('run', True)
             self.model_class.runner_initialized()
-
+            self.update_utility_function()
         else:
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
@@ -414,6 +417,10 @@ class BayesianOptimisation(gutils.CustomApp):
     def process_output(self, dte: DataToExport):
 
         self.enl_index += 1
+        dwa_kappa = dte.remove(dte.get_data_from_name('kappa'))
+        self.settings.child('main_settings', 'utility', 'kappa_actual').setValue(
+            float(dwa_kappa[0][0])
+        )
 
         dwa_data = dte.remove(dte.get_data_from_name('ProbedData'))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name('Actuators'))
@@ -518,7 +525,6 @@ class OptimisationRunner(QtCore.QObject):
             self.current_time = time.perf_counter()
             logger.info('Optimisation loop starting')
             while self.running:
-                self.optimisation_algorithm.update_utility_function()
                 next_target = self.optimisation_algorithm.ask()
 
                 self.outputs = next_target
@@ -550,9 +556,15 @@ class OptimisationRunner(QtCore.QObject):
                                                       data=[np.array([self.input_from_dets])],
                                                       ),
                                        self.output_to_actuators.merge_as_dwa('Data0D',
-                                                                             'Actuators')
+                                                                             'Actuators'),
+                                       DataCalculated(
+                                           'kappa',
+                                           data=[
+                                               np.array([self.optimisation_algorithm.kappa])])
                                          ])
                 self.algo_output_signal.emit(dte)
+
+                self.optimisation_algorithm.update_utility_function()
 
             self.current_time = time.perf_counter()
             QtWidgets.QApplication.processEvents()
