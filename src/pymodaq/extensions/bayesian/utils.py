@@ -125,8 +125,8 @@ class BayesianAlgorithm:
         if ind_iter >= stopping_parameters.niter:
             return True
         if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            return np.all(np.std(np.array(
-                self._suggested_coordinates[-stopping_parameters.npoints:]), axis=1)
+            coordinates = np.array(self._suggested_coordinates[-stopping_parameters.npoints:]).T
+            return np.all(np.std(coordinates, axis=1)
                           < stopping_parameters.tolerance)
         return False
 

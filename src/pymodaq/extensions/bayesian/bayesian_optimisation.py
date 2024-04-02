@@ -553,6 +553,7 @@ class OptimisationRunner(QtCore.QObject):
          before calling the model
         """
         self.running = True
+        converged = False
         try:
             if sync_detectors:
                 self.modules_manager.connect_detectors()
@@ -606,7 +607,7 @@ class OptimisationRunner(QtCore.QObject):
                 self.optimisation_algorithm.update_utility_function()
 
                 if self.optimisation_algorithm.stopping(self._ind_iter, self.stopping_params):
-                    self.algo_finished.emit(dte)
+                    converged = True
                     break
 
             self.current_time = time.perf_counter()
@@ -615,6 +616,9 @@ class OptimisationRunner(QtCore.QObject):
             logger.info('Optimisation loop exiting')
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
+
+            if converged:
+                self.algo_finished.emit(dte)
 
         except Exception as e:
             logger.exception(str(e))
