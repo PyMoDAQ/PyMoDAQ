@@ -12,7 +12,7 @@ from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
                                                BayesianAlgorithm, UtilityKind,
-                                               UtilityParameters)
+                                               UtilityParameters, StopType, StoppingParameters)
 from pymodaq.utils.gui_utils import QLED
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils import gui_utils as gutils
@@ -40,6 +40,7 @@ class BayesianOptimisation(gutils.CustomApp):
     command_runner = QtCore.Signal(utils.ThreadCommand)
     models = get_bayesian_models()
     explored_viewer_name = 'algo/ProbedData'
+    optimisation_done_signal = QtCore.Signal(DataToExport)
 
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
@@ -49,7 +50,7 @@ class BayesianOptimisation(gutils.CustomApp):
                   {'title': 'Kind', 'name': 'kind', 'type': 'list',
                    'limits': UtilityKind.to_dict_value()},
                   {'title': 'Kappa:', 'name': 'kappa', 'type': 'slide', 'value': 2.576,
-                   'min': 0.01, 'max': 10, 'subtype': 'log',
+                   'min': 0.001, 'max': 100, 'subtype': 'log',
                    'tip': 'Parameter to indicate how closed are the next parameters sampled.'
                           'Higher value = favors spaces that are least explored.'
                           'Lower value = favors spaces where the regression function is the '
@@ -64,6 +65,15 @@ class BayesianOptimisation(gutils.CustomApp):
                   {'title': 'Kappa decay delay:', 'name': 'kappa_decay_delay', 'type': 'int',
                    'value': 20, 'tip': 'Number of iterations that must have passed before applying '
                                       'the decay to kappa.'},
+              ]},
+             {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
+              'children': [
+                  {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
+                  {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
+                   'limits': StopType.names()},
+                  {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
+                   'min': 1e-8, 'max': 1, 'subtype': 'log',},
+                  {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
               ]},
              {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
              {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
@@ -204,6 +214,9 @@ class BayesianOptimisation(gutils.CustomApp):
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'bounds'), []):
             self.update_bounds()
+        elif param.name() in putils.iter_children(
+            self.settings.child('main_settings', 'stopping'), []):
+            self.update_stopping_criteria()
         if self._save_main_settings and param.name() in putils.iter_children(
                 self.settings.child('main_settings'), []):
             self.mainsettings_saver_loader.save_config()
@@ -214,6 +227,17 @@ class BayesianOptimisation(gutils.CustomApp):
                                     utility_settings['xi'], utility_settings['kappa_decay'],
                                     utility_settings['kappa_decay_delay'])
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
+
+    def get_stopping_parameters(self) -> StoppingParameters:
+        stopping_settings = self.settings.child('main_settings', 'stopping')
+        stopping_params = StoppingParameters(stopping_settings['niter'],
+                                             stopping_settings['stop_type'],
+                                             stopping_settings['tolerance'],
+                                             stopping_settings['npoints'])
+        return stopping_params
+
+    def update_stopping_criteria(self):
+        self.command_runner.emit(utils.ThreadCommand('stopping', self.get_stopping_parameters()))
 
     def update_bounds(self):
         bounds = {}
@@ -387,9 +411,11 @@ class BayesianOptimisation(gutils.CustomApp):
             self.ini_live_plot()
 
             self.runner_thread = QtCore.QThread()
-            runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm)
+            runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm,
+                                        self.get_stopping_parameters())
             self.runner_thread.runner = runner
             runner.algo_output_signal.connect(self.process_output)
+            runner.algo_finished.connect(self.optimisation_done)
             self.command_runner.connect(runner.queue_command)
 
             runner.moveToThread(self.runner_thread)
@@ -413,6 +439,10 @@ class BayesianOptimisation(gutils.CustomApp):
                 self.temp_path.cleanup()
             except Exception as e:
                 logger.exception(str(e))
+
+    def optimisation_done(self, dte: DataToExport):
+        self.go_to_best()
+        self.optimisation_done_signal.emit(dte)
 
     def process_output(self, dte: DataToExport):
 
@@ -466,15 +496,17 @@ class BayesianOptimisation(gutils.CustomApp):
 
 class OptimisationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
+    algo_finished = QtCore.Signal(DataToExport)
 
     def __init__(self, model_class: BayesianModelGeneric, modules_manager: ModulesManager,
-                 algorithm: BayesianAlgorithm):
+                 algorithm: BayesianAlgorithm, stopping_params: StoppingParameters):
         super().__init__()
 
         self.det_done_datas: DataToExport = None
         self.input_from_dets: float = None
         self.outputs: List[np.ndarray] = []
         self.dte_actuators: DataToExport = None
+        self.stopping_params: StoppingParameters = stopping_params
 
         self.model_class: BayesianModelGeneric = model_class
         self.modules_manager: ModulesManager = modules_manager
@@ -482,6 +514,8 @@ class OptimisationRunner(QtCore.QObject):
         self.running = True
 
         self.optimisation_algorithm: BayesianAlgorithm = algorithm
+
+        self._ind_iter: int = 0
 
     @QtCore.Slot(utils.ThreadCommand)
     def queue_command(self, command: utils.ThreadCommand):
@@ -501,6 +535,9 @@ class OptimisationRunner(QtCore.QObject):
                 xi=utility_params.xi,
                 kappa_decay=utility_params.kappa_decay,
                 kappa_decay_delay=utility_params.kappa_decay_delay)
+
+        elif command.command == 'stopping':
+            self.stopping_params: StoppingParameters = command.attribute
 
         elif command.command == 'bounds':
             self.optimisation_algorithm.set_bounds(command.attribute)
@@ -525,6 +562,8 @@ class OptimisationRunner(QtCore.QObject):
             self.current_time = time.perf_counter()
             logger.info('Optimisation loop starting')
             while self.running:
+                self._ind_iter += 1
+
                 next_target = self.optimisation_algorithm.ask()
 
                 self.outputs = next_target
@@ -566,9 +605,12 @@ class OptimisationRunner(QtCore.QObject):
 
                 self.optimisation_algorithm.update_utility_function()
 
+                if self.optimisation_algorithm.stopping(self._ind_iter, self.stopping_params):
+                    self.algo_finished.emit(dte)
+                    break
+
             self.current_time = time.perf_counter()
             QtWidgets.QApplication.processEvents()
-
 
             logger.info('Optimisation loop exiting')
             self.modules_manager.connect_actuators(False)

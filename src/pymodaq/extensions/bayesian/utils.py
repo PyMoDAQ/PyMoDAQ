@@ -5,7 +5,7 @@ Created the 31/08/2023
 @author: Sebastien Weber
 """
 from abc import ABC, abstractproperty, abstractmethod
-from typing import List, TYPE_CHECKING, Union, Dict, Tuple
+from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
 from pathlib import Path
 import importlib
 import pkgutil
@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
+class StopType(BaseEnum):
+    Predict = 0
+
+
 class UtilityKind(BaseEnum):
     ucb = 'Upper Confidence Bound'
     ei = 'Expected Improvement'
@@ -47,6 +51,10 @@ UtilityParameters = namedtuple('UtilityParameters',
                                ['kind', 'kappa', 'xi', 'kappa_decay', 'kappa_decay_delay'])
 
 
+StoppingParameters = namedtuple('StoppingParameters',
+                                ['niter', 'stop_type', 'tolerance', 'npoints'])
+
+
 class BayesianAlgorithm:
 
     def __init__(self, ini_random: int, bounds: dict, **kwargs):
@@ -55,12 +63,12 @@ class BayesianAlgorithm:
                                           pbounds=bounds,
                                           **kwargs
                                           )
-
-        self._algo._prime_queue(ini_random)
-
+        self._next_point: np.ndarray = None
+        self._suggested_coordinates: List[np.ndarray] = []
+        self.ini_random_points = ini_random
         self.kappa = 2.5
-        self._utility = UtilityFunction(kind="ucb", kappa=self.kappa, xi=0.0)
 
+        self._utility = UtilityFunction(kind="ucb", kappa=self.kappa, xi=0.0)
 
     def set_utility_function(self, kind: str, **kwargs):
         if kind in UtilityKind.names():
@@ -71,15 +79,36 @@ class BayesianAlgorithm:
         self._utility.update_params()
         self.kappa = self._utility.kappa
 
-    def set_bounds(self, bounds: Dict[str, Tuple[float, float]]):
-        self._algo.set_bounds(bounds)
+    @property
+    def bounds(self) -> List[np.ndarray]:
+        return [bound for bound in self._algo._space.bounds]
+
+    @bounds.setter
+    def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
+        if isinstance(bounds, dict):
+            self._algo.set_bounds(bounds)
+        else:
+            self._algo.set_bounds(self._algo._space.array_to_params(np.array(bounds)))
+
+    def get_random_point(self) -> np.ndarray:
+        """ Get a random point coordinates in the defined bounds"""
+        point = []
+        for bound in self.bounds:
+            point.append((np.max(bound) - np.min(bound)) * np.random.random_sample() +
+                         np.min(bound))
+        return np.array(point)
 
     def ask(self) -> np.ndarray:
-        self._next_points = self._algo.space.params_to_array(self._algo.suggest(self._utility))
-        return self._next_points
+        if self.ini_random_points > 0:
+            self.ini_random_points -= 1
+            self._next_point = self.get_random_point()
+        else:
+            self._next_point = self._algo.space.params_to_array(self._algo.suggest(self._utility))
+        self._suggested_coordinates.append(self._next_point)
+        return self._next_point
 
     def tell(self, function_value: float):
-        self._algo.register(params=self._next_points, target=function_value)
+        self._algo.register(params=self._next_point, target=function_value)
 
     @property
     def best_fitness(self) -> float:
@@ -91,6 +120,15 @@ class BayesianAlgorithm:
         if max_param is None:
             return None
         return self._algo.space.params_to_array(max_param)
+
+    def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
+        if ind_iter >= stopping_parameters.niter:
+            return True
+        if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
+            return np.all(np.std(np.array(
+                self._suggested_coordinates[-stopping_parameters.npoints:]), axis=1)
+                          < stopping_parameters.tolerance)
+        return False
 
     def _posterior(self, x_obs, y_obs, grid):
 
