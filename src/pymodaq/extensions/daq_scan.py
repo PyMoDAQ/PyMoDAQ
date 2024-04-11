@@ -570,7 +570,12 @@ class DAQScan(QObject, ParameterManager):
             print(f'clicked at: {posx}, {posy}')
         positions = [posx, posy]
         positions = positions[:self.scanner.n_axes]
-        self.modules_manager.move_actuators(positions)
+        actuators = self.modules_manager.actuators
+        dte = DataToExport(name="move_at")
+        for ind, pos in enumerate(positions):
+            dte.append(DataActuator(actuators[ind].title, data=float(pos)))
+
+        self.modules_manager.move_actuators(dte)
 
     def value_changed(self, param):
         """
