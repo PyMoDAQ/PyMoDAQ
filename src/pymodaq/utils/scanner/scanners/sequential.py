@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -21,6 +21,10 @@ from pymodaq.utils.plotting.scan_selector import Selector
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
+
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 class TableModelSequential(gutils.TableModel):
@@ -84,7 +88,7 @@ class SequentialScanner(ScannerBase):
     distribution = DataDistribution['uniform']
     n_axes = 1
 
-    def __init__(self, actuators: List[str]):
+    def __init__(self, actuators: List['DAQ_Move']):
 
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
@@ -96,8 +100,10 @@ class SequentialScanner(ScannerBase):
         return self._actuators
 
     @actuators.setter
-    def actuators(self, actuators_name):
-        self._actuators = actuators_name
+    def actuators(self, actuators):
+        self._actuators = actuators
+        base_path = self.actuators_name + [self.scan_type, self.scan_subtype]
+        self.config_saver_loader.base_path = base_path
         self.update_model()
 
     def update_model(self, init_data=None):

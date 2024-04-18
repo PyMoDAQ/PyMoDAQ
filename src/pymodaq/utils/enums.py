@@ -1,5 +1,5 @@
 from enum import Enum
-from pymodaq.utils.daq_utils import find_index
+from pymodaq.utils.math_utils import find_index
 from pymodaq.utils.math_utils import my_moment
 import numpy as np
 from scipy.optimize import curve_fit
@@ -18,6 +18,22 @@ class BaseEnum(Enum):
     def values(cls) -> List[str]:
         """Returns all the names of the enum"""
         return [cls[name].value for name in cls.names()]
+
+    @classmethod
+    def to_dict(cls):
+        """ Returns the enum in form of a dict with names os keys
+
+        New in 4.0.2
+        """
+        return {name: cls[name].value for name in cls.names()}
+
+    @classmethod
+    def to_dict_value(cls):
+        """ Returns the enum in form of a dict with values os keys
+
+        New in 4.0.2
+        """
+        return {cls[name].value: name for name in cls.names()}
 
     def __eq__(self, other: Union[str, Enum]):
         """testing for equality using the enum name"""

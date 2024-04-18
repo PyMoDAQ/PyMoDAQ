@@ -93,11 +93,11 @@ class DataDisplayer(QObject):
 
     def update_xy(self, do_xy=False):
         self._doxy = do_xy
-        self.update_plot(do_xy, sort_data=self._do_sort)
+        self.update_plot(do_xy, sort_data=self._do_sort, scatter=self._do_scatter)
 
     def update_sort(self, do_sort=False):
         self._do_sort = do_sort
-        self.update_plot(self._doxy, sort_data=self._do_sort)
+        self.update_plot(self._doxy, sort_data=self._do_sort, scatter=self._do_scatter)
 
     def update_scatter(self, do_scatter=False):
         self._do_scatter = do_scatter
@@ -119,7 +119,6 @@ class DataDisplayer(QObject):
             self._doxy = do_xy
             self._do_sort = sort_data
             self._show_errors = show_errors
-
             self.update_xyplot(do_xy, data)
 
             if scatter and self.get_plot_items()[0].opts['symbol'] is None:
@@ -293,8 +292,9 @@ class View1D(ActionManager, QObject):
         self.roi_target.setVisible(False)
         self.ROIselect.setVisible(False)
 
-        if not show_toolbar:
-            self.splitter_ver.setSizes([0, 1])
+        self.show_toolbar = show_toolbar
+        if not self.show_toolbar:
+            self.splitter_ver.setSizes([0, 1, 0])
 
     def add_data_displayer(self, displayer_name: str, plot_colors=PLOT_COLORS):
         self.other_data_displayers[displayer_name] = DataDisplayer(self.plotitem, self.flip_axes,
@@ -421,7 +421,7 @@ class View1D(ActionManager, QObject):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
         self.connect_action('do_math', self.do_math)
-        self.connect_action('scatter', self.data_displayer.plot_with_scatter)
+        self.connect_action('scatter', self.data_displayer.update_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xy)
         self.connect_action('sort', self.data_displayer.update_sort)
         self.connect_action('crosshair', self.show_hide_crosshair)
@@ -447,10 +447,13 @@ class View1D(ActionManager, QObject):
     def setup_actions(self):
         self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
         self.add_action('crosshair', 'Crosshair', 'reset', 'Show data cursor', checkable=True)
-        self.add_action('aspect_ratio', 'AspectRatio', 'Zoom_1_1', 'Fix the aspect ratio', checkable=True)
-        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots', checkable=True)
+        self.add_action('aspect_ratio', 'AspectRatio', 'Zoom_1_1', 'Fix the aspect ratio',
+                        checkable=True)
+        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
+                        checkable=True)
         self.add_action('xyplot', 'XYPlotting', '2d',
-                        'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
+                        'Switch between normal or XY representation (valid for 2 channels)',
+                        checkable=True,
                         visible=False)
         self.add_action('overlay', 'Overlay', 'overlay', 'Plot overlays of current data',
                         checkable=True)

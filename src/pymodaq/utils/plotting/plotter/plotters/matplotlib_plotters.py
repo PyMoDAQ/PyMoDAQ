@@ -35,7 +35,8 @@ class Plotter(PlotterBase):
         self.ind_line = 0
         self.ind_column = 0
 
-    def plot(self, data: Union[DataWithAxes, DataToExport], *args, **kwargs) -> plt.Figure:
+    def plot(self, data: Union[DataWithAxes, DataToExport], *args, viewer=None,
+             **kwargs) -> plt.Figure:
         fig = plt.figure()
 
         if isinstance(data, DataWithAxes):

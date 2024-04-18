@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -19,6 +19,9 @@ from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.plotting.scan_selector import Selector
 from pymodaq.utils.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 logger = set_logger(get_module_name(__file__))
@@ -103,7 +106,7 @@ class TabularScanner(ScannerBase):
               ]
     distribution = DataDistribution['spread']
 
-    def __init__(self, actuators: List[str]):
+    def __init__(self, actuators: List['DAQ_Move']):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
         super().__init__(actuators=actuators)
@@ -113,8 +116,10 @@ class TabularScanner(ScannerBase):
         return self._actuators
 
     @actuators.setter
-    def actuators(self, actuators_name):
-        self._actuators = actuators_name
+    def actuators(self, actuators):
+        self._actuators = actuators
+        base_path = self.actuators_name + [self.scan_type, self.scan_subtype]
+        self.config_saver_loader.base_path = base_path
         self.update_model()
 
     def update_model(self, init_data=None):
@@ -218,7 +223,7 @@ class TabularScannerSubSegmented(TabularScanner):
                'menu': True},
               ] + TabularScanner.params
 
-    def __init__(self, actuators: List[str]):
+    def __init__(self, actuators: List['DAQ_Move']):
         self.table_model: TableModelTabularReadOnly = None
         self.table_view: TableViewCustom = None
         self.table_model_points: TableModelTabular = None

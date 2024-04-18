@@ -396,17 +396,20 @@ class Axis:
                 ax._offset += offset
             return ax
 
-    def __eq__(self, other):
-        eq = self.label == other.label
-        eq = eq and (self.units == other.units)
-        eq = eq and (self.index == other.index)
-        if self.data is not None and other.data is not None:
-            eq = eq and (np.allclose(self.data, other.data))
-        else:
-            eq = eq and self.offset == other.offset
-            eq = eq and self.scaling == other.scaling
+    def __eq__(self, other: Axis):
+        if isinstance(other, Axis):
+            eq = self.label == other.label
+            eq = eq and (self.units == other.units)
+            eq = eq and (self.index == other.index)
+            if self.data is not None and other.data is not None:
+                eq = eq and (np.allclose(self.data, other.data))
+            else:
+                eq = eq and self.offset == other.offset
+                eq = eq and self.scaling == other.scaling
 
-        return eq
+            return eq
+        else:
+            return False
 
     def mean(self):
         if self._data is not None:
@@ -1635,9 +1638,10 @@ class DataWithAxes(DataBase):
         else:
             raise ValueError(f'Cannot create a dwa from a None, should be a list of ndarray')
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, **kwargs):
+    def plot(self, plotter_backend: str = config('plotting', 'backend'), *args, viewer=None,
+             **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
-        return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
+        return plotter_factory.get(plotter_backend).plot(self, *args, viewer=viewer, **kwargs)
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:

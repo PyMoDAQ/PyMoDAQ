@@ -76,7 +76,6 @@ def test_ThreadCommand():
     assert threadcomm.attribute is attributes
 
 
-
 def test_recursive_find_files_extension():
     path = Path(os.path.dirname(os.path.realpath(__file__)))
     assert path.is_dir()

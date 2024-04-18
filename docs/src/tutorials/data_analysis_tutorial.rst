@@ -12,7 +12,7 @@ Tutorial On Data Manipulation and analysis
 
 This tutorial is directly extracted from a jupyter notebook used to illustrate how to get your data back from a
 PyMoDAQ h5 file, analyze it and plot interactively these data. You'll find the notebook
-`here <https://github.com/PyMoDAQ/PyMoDAQ/blob/4.2.x_dev/notebooks/data_analysis_tutorial.ipynb>`_.
+`here <https://github.com/PyMoDAQ/notebooks/blob/main/notebooks/data_analysis_tutorial.ipynb>`_.
 
 This example is using experimental data collected on a time-resolved optical spectroscopy set-up developed
 by Arnaud Arbouet and "PyMoDAQed" by Sebastien Weber in CEMES.
