@@ -12,7 +12,9 @@ from .daq_scan import DAQScan
 from .daq_logger import DAQ_Logger
 from .pid.pid_controller import DAQ_PID
 from .h5browser import H5Browser
+
 from .bayesian.bayesian_optimisation import BayesianOptimisation
 from .bayesian.utils import BayesianModelDefault, BayesianModelGeneric
+
 
 
