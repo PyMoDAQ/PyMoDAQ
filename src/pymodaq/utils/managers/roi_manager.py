@@ -571,7 +571,7 @@ class ROIManager(QObject):
         try:
             if params is None:
                 if path is None:
-                    path = select_file(start_path=Path.home(), save=False, ext='xml', filter=['xml'])
+                    path = select_file(start_path=Path.home(), save=False, ext='xml', filter='XML files (*.xml)')
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
                                                   children=ioxml.XML_file_to_parameter(path))
