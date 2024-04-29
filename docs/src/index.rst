@@ -34,8 +34,8 @@ Training
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Second edition of the PyMoDAQ's Days: Paris 16/17 October 2023. Register on https://pymodaq-jt2022.sciencesconf.org/
-   * Training session in Paris, France 18/19/20 October 2023
+   * Third edition of the PyMoDAQ's Days: Lyon 20/22 October 2024. Register on https://pymodaq-jt2022.sciencesconf.org/
+   * Training session in Toulouse, France 17/19 June 2024
 
 PyMoDAQ has two purposes:
 
