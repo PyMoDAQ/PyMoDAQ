@@ -40,12 +40,6 @@ else:
     from functools import lru_cache as cache
 
 
-if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
-    # from version 3.9 the cache decorator is available
-    from functools import cache
-else:
-    from functools import lru_cache as cache
-
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
