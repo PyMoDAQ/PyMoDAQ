@@ -129,7 +129,7 @@ class Viewer1DBasic(QObject):
 
     @Slot(list)
     def show_data(self, datas):
-        if datas is not None:
+        if datas is not None and datas[0] is not None:
             self.datas = datas
 
             if self.labels == [] or len(self.labels) != len(datas):

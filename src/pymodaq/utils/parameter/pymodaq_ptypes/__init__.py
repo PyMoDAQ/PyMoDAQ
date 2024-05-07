@@ -1,7 +1,8 @@
-from pyqtgraph.parametertree.parameterTypes.basetypes import SimpleParameter, GroupParameter, GroupParameterItem
-from .bool import BoolPushParameterItem
-from .pixmap import PixmapParameterItem, PixmapCheckParameterItem
-from .slide import SliderSpinBox, SliderParameterItem
+from pyqtgraph.parametertree.parameterTypes.basetypes import (SimpleParameter, GroupParameter,
+                                                              GroupParameterItem)
+from .bool import BoolPushParameter
+from .pixmap import PixmapParameter, PixmapCheckParameter
+from .slide import SliderSpinBox, SliderParameter
 from .led import LedPushParameter, LedParameter
 from .date import DateParameter, DateTimeParameter, TimeParameter
 from .list import ListParameter
@@ -12,14 +13,15 @@ from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
 from .numeric import NumericParameter
 
-from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
+from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType, Parameter
 
 registerParameterType('float', NumericParameter, override=True)
 registerParameterType('int',   NumericParameter, override=True)
-registerParameterItemType('bool_push', BoolPushParameterItem, SimpleParameter, override=True)
-registerParameterItemType('pixmap', PixmapParameterItem, SimpleParameter, override=True)
-registerParameterItemType('pixmap_check', PixmapCheckParameterItem, SimpleParameter, override=True)
-registerParameterItemType('slide', SliderParameterItem, SimpleParameter, override=True)
+registerParameterType('bool_push', BoolPushParameter, override=True)
+registerParameterType('pixmap', PixmapParameter, override=True)
+registerParameterType('pixmap_check', PixmapCheckParameter, override=True)
+
+registerParameterType('slide', SliderParameter, override=True)
 
 registerParameterType('led', LedParameter, override=True)
 registerParameterType('led_push', LedPushParameter, override=True)

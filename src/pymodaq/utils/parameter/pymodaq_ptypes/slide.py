@@ -1,6 +1,6 @@
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.widgets.SpinBox import SpinBox
-from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
+from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 from pymodaq.utils.parameter.utils import scroll_log, scroll_linear
 import numpy as np
 
@@ -136,3 +136,10 @@ class SliderParameterItem(WidgetParameterItem):
         w = SliderSpinBox(subtype=opts['subtype'], bounds=defs['bounds'], value=defs['value'], int=defs['int'])
         self.setSizeHint(1, QtCore.QSize(50, 50))
         return w
+
+
+class SliderParameter(SimpleParameter):
+    itemClass = SliderParameterItem
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)

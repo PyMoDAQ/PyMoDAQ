@@ -10,8 +10,6 @@ Summary of the classes in the scanner module
     ScanInfo
     ScanParameters
     Scanner
-    TableModelSequential
-    TableModelTabular
 
 
 The scanner module contains all functionalities to defines a particular scan see :ref:`scanner_paragrah`.
@@ -38,9 +36,3 @@ The scanner module contains all functionalities to defines a particular scan see
    :members:
 
 
-.. autoclass:: TableModelSequential
-   :members:
-
-
-.. autoclass:: TableModelTabular
-   :members:

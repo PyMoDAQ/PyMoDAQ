@@ -105,7 +105,7 @@ def linspace_step(start, stop, step):
     scalar array
         The computed distribution axis as an array.
     """
-    if np.abs(step) < 1e-12 or np.sign(stop - start) != np.sign(step) or start == stop:
+    if np.sign(stop - start) != np.sign(step) or start == stop:
         raise ValueError('Invalid value for one parameter')
     Nsteps = int(np.ceil((stop - start) / step))
     new_stop = start + (Nsteps - 1) * step

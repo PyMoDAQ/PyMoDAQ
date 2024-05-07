@@ -1,6 +1,7 @@
+from abc import abstractmethod
 import os
 import sys
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -83,10 +84,25 @@ class ROIPositionMapper(QtWidgets.QWidget):
 
 
 class ROI(pgROI):
-    def __init__(self, *args, **kwargs):
+    index_signal = Signal(int)
+
+    def __init__(self, *args, index=0, name='roi', **kwargs):
         super().__init__(*args, **kwargs)
+        self.name = name
+        self.index = index
         self._menu = QtWidgets.QMenu()
         self._menu.addAction('Set ROI positions', self.set_positions)
+        self.sigRegionChangeFinished.connect(self.emit_index_signal)
+
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
+
+    @property
+    def color(self):
+        return self.pen.color()
+
+    def center(self):
+        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
 
     def set_positions(self):
         mapper = ROIPositionMapper(self.pos(), self.size())
@@ -99,6 +115,12 @@ class ROI(pgROI):
     def contextMenuEvent(self, event):
         if self._menu is not None:
             self._menu.exec(event.screenPos())
+
+    def width(self) -> float:
+        return self.size().x()
+
+    def height(self) -> float:
+        return self.size().y()
 
 
 class ROIBrushable(ROI):
@@ -133,19 +155,28 @@ class ROIBrushable(ROI):
 class LinearROI(pgLinearROI):
     index_signal = Signal(int)
 
-    def __init__(self, index=0, pos=[0, 10], **kwargs):
+    def __init__(self, index=0, pos=[0, 10], name = 'roi', **kwargs):
         super().__init__(values=pos, **kwargs)
+        self.name = name
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
-    def pos(self):
+    def pos(self) -> Tuple[float, float]:
         return self.getRegion()
 
-    def setPos(self, pos):
+    def center(self) -> float:
+        pos = self.pos()
+        return (pos[0] + pos[1]) / 2
+
+    def setPos(self, pos: Tuple[int, int]):
         self.setRegion(pos)
 
     def setPen(self, color):
         self.setBrush(color)
+
+    @property
+    def color(self):
+        return self.brush.color()
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
@@ -164,23 +195,13 @@ class EllipseROI(ROI):
     ============== =============================================================
 
     """
-    index_signal = Signal(int)
+
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        super().__init__(pos=pos, size=size, **kwargs)
+        super().__init__(pos=pos, size=size, index=index, **kwargs)
         self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):       
-        # Project width/height in rotated frame         
-        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
-        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
 
     def getArrayRegion(self, arr, img=None, axes=(0, 1), **kwds):
         """
@@ -211,9 +232,6 @@ class EllipseROI(ROI):
         else:
             return arr * mask
 
-    def height(self):
-        return self.size().y()
-
     def paint(self, p, opt, widget):
         r = self.boundingRect()
         p.setRenderHint(QtGui.QPainter.Antialiasing)
@@ -228,9 +246,6 @@ class EllipseROI(ROI):
         self.path = QtGui.QPainterPath()
         self.path.addEllipse(self.boundingRect())
         return self.path
-
-    def width(self):
-        return self.size().x()
 
 
 class SimpleRectROI(ROI):
@@ -252,22 +267,10 @@ class SimpleRectROI(ROI):
 
 
 class RectROI(ROI):
-    index_signal = Signal(int)
-
-    def __init__(self, index=0, pos=[0, 0], size=[10, 10]):
-        super().__init__(pos=pos, size=size)  # , scaleSnap=True, translateSnap=True)
+    def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
+        super().__init__(pos=pos, size=size, index=index, **kwargs)  # , scaleSnap=True, translateSnap=True)
         self.addScaleHandle([1, 1], [0, 0])
         self.addRotateHandle([0, 0], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):       
-        # Project width/height in rotated frame         
-        width,height = rotate2D((0,0),(self.size().x(),self.size().y()),np.deg2rad(self.angle()))
-        return QPointF(self.pos().x() + width / 2, self.pos().y() + height / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
 
 
 ROI_NAME_PREFIX = 'ROI_'
@@ -298,7 +301,7 @@ class ROIScalableGroup(GroupParameter):
         if self.roi_type == '2D':
             children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
                              {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
-                              'limits': ['red', 'green', 'blue', 'spread']}, ])
+                              'limits': ['red', 'green', 'blue']}, ])
             children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list',
                              'limits': data_processors.functions_filtered('Data2D')})
         else:
@@ -332,15 +335,13 @@ class ROIScalableGroup(GroupParameter):
 
 
 class ROIManager(QObject):
-    ROI_changed = Signal()
-    ROI_changed_finished = Signal()
 
-    new_ROI_signal = Signal(int, str)
+    new_ROI_signal = Signal(int, str, str)
     remove_ROI_signal = Signal(str)
     roi_value_changed = Signal(str, tuple)
-
+    color_signal = Signal(list)
     roi_update_children = Signal(list)
-
+    roi_changed = Signal()
     color_list = np.array(plot_colors)
 
     def __init__(self, viewer_widget=None, ROI_type='1D'):
@@ -348,7 +349,7 @@ class ROIManager(QObject):
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
         self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
-        self._ROIs = OrderedDict([])
+        self._ROIs: OrderedDict[str, ROI] = OrderedDict([])
         self.setupUI()
 
     @staticmethod
@@ -373,6 +374,9 @@ class ROIManager(QObject):
             return self.ROIs[roi_key]
         else:
             raise KeyError(f'{roi_key} is not a valid ROI identifier for {self.ROIs}')
+
+    def emit_colors(self):
+        self.color_signal.emit([self._ROIs[roi_key].color for roi_key in self._ROIs])
 
     def add_roi_programmatically(self, roitype=ROI2D_TYPES[0]):
         self.settings.child('ROIs').addNew(roitype)
@@ -420,15 +424,16 @@ class ROIManager(QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':  # new roi to create
-                par = data[0]
+                par: Parameter = data[0]
                 newindex = int(par.name()[-2:])
-
+                roi_type = ''
                 if par.child('type').value() == '1D':
                     roi_type = ''
 
                     pos = self.viewer_widget.plotItem.vb.viewRange()[0]
                     pos = pos[0] + np.diff(pos)*np.array([2,4])/6
                     newroi = LinearROI(index=newindex, pos=pos)
+
                     newroi.setZValue(-10)
                     newroi.setBrush(par.child('Color').value())
                     newroi.setOpacity(0.2)
@@ -443,14 +448,13 @@ class ROIManager(QObject):
 
                     if roi_type == 'RectROI':
                         newroi = RectROI(index=newindex, pos=pos,
-                                         size=[width, height])
+                                         size=[width, height], name=par.name())
                     else:
                         newroi = EllipseROI(index=newindex, pos=pos,
-                                            size=[width, height])
+                                            size=[width, height], name=par.name())
                     newroi.setPen(par['Color'])
 
-                newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
-                newroi.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
+                newroi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
                 newroi.index_signal[int].connect(self.update_roi_tree)
                 try:
                     self.settings.sigTreeStateChanged.disconnect()
@@ -461,27 +465,31 @@ class ROIManager(QObject):
 
                 self._set_roi_from_index(newindex, newroi)
 
-                self.new_ROI_signal.emit(newindex, roi_type)
+                self.new_ROI_signal.emit(newindex, roi_type, par.name())
                 self.update_roi_tree(newindex)
+                self.emit_colors()
+                self.roi_changed.emit()
 
             elif change == 'value':
                 if param.name() in putils.iter_children(self.settings.child('ROIs'), []):
                     parent_name = putils.get_param_path(param)[putils.get_param_path(param).index('ROIs')+1]
                     self.update_roi(parent_name, param)
                     self.roi_value_changed.emit(parent_name, (param, param.value()))
+                if param.name() == 'Color':
+                    self.emit_colors()
 
             elif change == 'parent':
                 if 'ROI' in param.name():
                     roi = self._ROIs.pop(param.name())
                     self.viewer_widget.plotItem.removeItem(roi)
                     self.remove_ROI_signal.emit(param.name())
-
-        self.ROI_changed_finished.emit()
+                    self.emit_colors()
 
     def update_use_channel(self, channels: List[str]):
+        channels.append('All')
         for ind in range(len(self)):
             val = self.settings['ROIs', self.roi_format(ind), 'use_channel']
-            self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setOpts(limits=channels)
+            self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setLimits(channels)
             if val not in channels:
                 self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
 
@@ -489,6 +497,7 @@ class ROIManager(QObject):
         self._ROIs[roi_key].index_signal[int].disconnect()
         if param.name() == 'Color':
             self._ROIs[roi_key].setPen(param.value())
+            self.emit_colors()
         elif param.name() == 'left' or param.name() == 'x':
             pos = self._ROIs[roi_key].pos()
             poss = [param.value(), pos[1]]
@@ -562,7 +571,7 @@ class ROIManager(QObject):
         try:
             if params is None:
                 if path is None:
-                    path = select_file(start_path=Path.home(), save=False, ext='xml', filter=['xml'])
+                    path = select_file(start_path=Path.home(), save=False, ext='xml', filter='XML files (*.xml)')
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
                                                   children=ioxml.XML_file_to_parameter(path))

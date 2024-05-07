@@ -81,7 +81,8 @@ class Scanner(QObject, ParameterManager):
     def set_scanner(self):
         try:
             self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
-                                                             self.settings['scan_sub_type'], actuators=self.actuators)
+                                                             self.settings['scan_sub_type'],
+                                                             actuators=self.actuators)
 
             while True:
                 child = self._scanner_settings_widget.layout().takeAt(0)
@@ -93,7 +94,7 @@ class Scanner(QObject, ParameterManager):
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
 
-        except ValueError:
+        except ValueError as e:
             pass
 
     @property

@@ -51,11 +51,15 @@ class ParameterEx(ParameterManager):
         {'title': 'An action', 'name': 'action', 'type': 'action'},  # action whose displayed text corresponds to title
 
         {'title': 'Lists:', 'name': 'lists', 'type': 'group', 'children': [
-            {'title': 'Standard list:', 'name': 'alist', 'type': 'list', 'limits': ['a value', 'another one']},
-            {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list', 'limits': ['a value', 'another one'],
+            {'title': 'Standard list:', 'name': 'alist', 'type': 'list',
+             'limits': ['a value', 'another one'], 'value': 'a value'},
+            {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list',
+             'limits': ['a value', 'another one'], 'value': 'a value',
              'show_pb': True, 'tip': 'when using the "show_pb" option, displays a plus button to add elt to the list'},
             {'title': 'List defined from a dict:', 'name': 'dict_list', 'type': 'list',
-             'limits': {'xaxis': 0, 'yaxis': [0, 1, 2]}, 'tip': 'Such a parameter display text that are keys of a dict while'
+             'limits': {'xaxis': 0, 'yaxis': [0, 1, 2]},
+             'value': 'yaxis',
+             'tip': 'Such a parameter display text that are keys of a dict while'
                                                         'values could be any object'
              },
         ]},

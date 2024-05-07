@@ -381,8 +381,16 @@ class EARRAY(CARRAY):
         The data to append could be:
 
         * a single element (without the enlargeable shape index that is always the first
-        index, that is of shape length n). In that case the first index of the enlargeable array is increased by one.
+        index, that is of shape length n). In that case the first index of the enlargeable array
+        is increased by one.
         * an ensemble of elements (a ndarray) of shape length of (n+1).
+
+        Parameters
+        ----------
+        data: np.ndarray
+            the data array to append to the enlargeable node
+        expand: bool
+            If True the data array will have its shape expanded by one dim
 
         """
         if not isinstance(data, np.ndarray):

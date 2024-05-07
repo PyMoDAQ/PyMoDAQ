@@ -81,11 +81,14 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         super().__init__()
         self.positions: np.ndarray = None
         self.n_steps = 1
-        self._actuators: List[DAQ_Move] = None
-
-        self.actuators = actuators
-
         self.config = ScanConfig()
+        base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
+
+        self.config_saver_loader = configmod.ConfigSaverLoader(self.settings,
+                                                               self.config,
+                                                               base_path)
+
+        self.actuators: List[DAQ_Move] = actuators
 
         self.set_settings_titles()
         self.set_settings_values()
@@ -93,32 +96,12 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         if self.check_steps():
             self.set_scan()
 
-
     def set_settings_titles(self):
         """Update the settings accordingly with the selected actuators"""
         ...
 
     def set_settings_values(self, param: Parameter = None):
-        if param is None:
-            param = self.settings
-        for child in param.children():
-            if len(child.children()) == 0:  #means it is not a group parameter
-                path = self.actuators_name
-                path_scan = [self.scan_type, self.scan_subtype]
-                path_param = get_param_path(child)[1:]
-                path.extend(path_scan)
-                path.extend(path_param)
-                try:
-                    child.setValue(self.config(*path))  # first try to load the config including the actuators name
-                except configmod.ConfigError as e:
-                    try:
-                        path = path_scan
-                        path.extend(path_param)
-                        child.setValue(self.config(*path))   # then without the actuators name
-                    except Exception as e:
-                        pass
-            else:
-                self.set_settings_values(child)
+        self.config_saver_loader.load_config(param)
 
     @property
     def actuators(self) -> List[DAQ_Move]:
@@ -127,6 +110,8 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     @actuators.setter
     def actuators(self, actuators: List[DAQ_Move]):
         self._actuators = actuators
+        base_path = self.actuators_name + [self.scan_type, self.scan_subtype]
+        self.config_saver_loader.base_path = base_path
 
     @property
     def actuators_name(self) -> List[str]:
@@ -198,18 +183,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     def save_scan_parameters(self):
         if self.save_settings:
-            path_actuators = self.actuators_name
-            path_scan = [self.scan_type, self.scan_subtype]
-            path_actuators.extend(path_scan)
-            for param in iter_children_params(self.settings, []):
-                path = path_actuators[:]
-                path_param = get_param_path(param)[1:]
-                path.extend(path_param)
-                try:
-                    self.config[tuple(path)] = param.value()
-                except Exception as e:
-                    pass
-            self.config.save()
+            self.config_saver_loader.save_config()
 
     @abstractmethod
     def update_from_scan_selector(self, scan_selector: Selector):

@@ -39,7 +39,8 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
@@ -373,11 +374,17 @@ class DAQ_Viewer(ParameterControlModule):
                 viewer.data_to_export_signal.disconnect()
             except:
                 pass
-        for viewer in viewers:
+        for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
-            if hasattr(viewer, 'ROI_select_signal'):
-                viewer.ROI_select_signal.connect(
-                    lambda roi_pos_size: self.command_hardware.emit(ThreadCommand('ROISelect', roi_pos_size)))
+            #deprecated:
+            viewer.ROI_select_signal.connect(
+                lambda roi_info: self.command_hardware.emit(ThreadCommand('ROISelect', roi_info)))
+            #use that now
+            viewer.roi_select_signal.connect(
+                lambda roi_info: self.command_hardware.emit(
+                    ThreadCommand('roi_select',
+                                  dict(roi_info=roi_info, ind_viewer=ind_viewer))))
+
         self._viewers = viewers
 
     def quit_fun(self):
@@ -664,8 +671,8 @@ class DAQ_Viewer(ParameterControlModule):
             dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
 
         dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
-                           [dwa for dwa in dte if ('save' not in dwa.extra_attributes) or
-                            ('save' in dwa.extra_attributes and dwa.save)])
+                           [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
+                            ('do_save' in dwa.extra_attributes and dwa.do_save)])
 
         self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
 
@@ -823,8 +830,8 @@ class DAQ_Viewer(ParameterControlModule):
                 refresh = True  # if single
             if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
                 self._received_data = 0  # so that data send back from viewers can be properly counted
-                data_to_plot = self._data_to_save_export.get_data_from_attribute('plot', True, deepcopy=True)
-                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('plot', deepcopy=True))
+                data_to_plot = self._data_to_save_export.get_data_from_attribute('do_plot', True, deepcopy=True)
+                data_to_plot.append(self._data_to_save_export.get_data_from_missing_attribute('do_plot', deepcopy=True))
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
@@ -855,8 +862,8 @@ class DAQ_Viewer(ParameterControlModule):
         self._process_overshoot(dte)
 
         self._viewer_types = [ViewersEnum(dwa.dim.name) for dwa in dte if
-                              ('plot' not in dwa.extra_attributes) or
-                              ('plot' in dwa.extra_attributes and dwa.plot)]
+                              ('do_plot' not in dwa.extra_attributes) or
+                              ('do_plot' in dwa.extra_attributes and dwa.do_plot)]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
                 self.ui.update_viewers(self._viewer_types)
@@ -875,8 +882,8 @@ class DAQ_Viewer(ParameterControlModule):
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
         for ind, dwa in enumerate(dte):
-            if ('plot' not in dwa.extra_attributes) or \
-                    ('plot' in dwa.extra_attributes and dwa.plot):
+            if ('do_plot' not in dwa.extra_attributes) or \
+                    ('do_plot' in dwa.extra_attributes and dwa.do_plot):
                 self.viewers[ind].title = dwa.name
                 self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
 
@@ -1230,7 +1237,12 @@ class DAQ_Detector(QObject):
         else:  # custom commands for particular plugins
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
-                cmd(command.attribute)
+                if isinstance(command.attribute, list):
+                    cmd(*command.attribute)
+                elif isinstance(command.attribute, dict):
+                    cmd(**command.attribute)
+                else:
+                    cmd(command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
         """ Initialize an instrument plugin class and tries to apply preset settings
@@ -1347,8 +1359,9 @@ class DAQ_Detector(QObject):
                 self.average_done = False
             self.waiting_for_data = False
 
-            # for live mode:two possibilities: either snap one data and regrab softwarewise (while True) or if
-            # self.detector.live_mode_available is True all data is continuously emitted from the plugin
+            # for live mode:two possibilities: either snap one data and regrab softwarewise
+            # (while True) or if self.detector.live_mode_available is True all data is continuously
+            # emitted from the plugin
             if self.detector.live_mode_available:
                 kwargs['wait_time'] = self.wait_time
             else:
@@ -1367,12 +1380,14 @@ class DAQ_Detector(QObject):
                             if self.average_done:
                                 break
                     else:
-                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time after acquisition
+                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time
+                        # after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop
-                    if self.detector.live_mode_available and (not self.hardware_averaging and self.average_done):
-                        break  # if live can be done in the plugin breaks the while loop except if average is asked but
-                        # not done hardware wise
+                    if self.detector.live_mode_available and (not self.hardware_averaging and
+                                                              self.average_done):
+                        break  # if live can be done in the plugin breaks the while loop except
+                        # if average is asked but not done hardware wise
                 except Exception as e:
                     self.logger.exception(str(e))
             self.status_sig.emit(ThreadCommand('grab_stopped'))

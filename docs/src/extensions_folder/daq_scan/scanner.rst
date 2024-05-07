@@ -1,5 +1,5 @@
 
-.. _scanner_paragrah:
+.. _scanner_paragraph:
 
 Scanner
 -------

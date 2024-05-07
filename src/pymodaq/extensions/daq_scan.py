@@ -22,7 +22,7 @@ from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 
 from pymodaq.utils import exceptions
@@ -384,7 +384,8 @@ class DAQScan(QObject, ParameterManager):
 
     def show_file_content(self):
         try:
-            self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
+            self.h5saver.init_file(addhoc_file_path=
+                                   self.h5saver.settings.child('current_h5_file').value())
             self.h5saver.show_file_content()
         except Exception as e:
             logger.exception(str(e))
@@ -570,7 +571,12 @@ class DAQScan(QObject, ParameterManager):
             print(f'clicked at: {posx}, {posy}')
         positions = [posx, posy]
         positions = positions[:self.scanner.n_axes]
-        self.modules_manager.move_actuators(positions)
+        actuators = self.modules_manager.actuators
+        dte = DataToExport(name="move_at")
+        for ind, pos in enumerate(positions):
+            dte.append(DataActuator(actuators[ind].title, data=float(pos)))
+
+        self.modules_manager.move_actuators(dte)
 
     def value_changed(self, param):
         """

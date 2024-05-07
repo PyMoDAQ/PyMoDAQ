@@ -57,6 +57,7 @@ class DataType(BaseEnum):
     strings = 'Strings'
     bkg = 'Bkg'
     data_enlargeable = 'EnlData'
+    error = 'ErrorBar'
 
 
 class H5SaverLowLevel(H5Backend):

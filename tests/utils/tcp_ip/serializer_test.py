@@ -35,19 +35,25 @@ def init_axis(data=None, index=0):
 
 
 def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
-              labels=None, klass=data_mod.DataWithAxes) -> data_mod.DataWithAxes:
+              labels=None, klass=data_mod.DataWithAxes, errors=True) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return klass(name, source=source, data=[data for ind in range(Ndata)],
-                 axes=axes, labels=labels)
+    if errors:
+        errors = [np.random.random_sample(data.shape) for _ in range(Ndata)]
+    else:
+        errors = None
+    return klass(name, source=source, data=[data for _ in range(Ndata)],
+                 axes=axes, labels=labels, errors=errors,
+                 extra1=True, extra2=[1, 2, 3])
 
 
 @pytest.fixture()
 def get_data():
-    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw', errors=True)
     dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated',
-                                 klass=data_mod.DataCalculated)
-    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', klass=data_mod.DataFromPlugins)
+                                 klass=data_mod.DataCalculated, errors=True)
+    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', klass=data_mod.DataFromPlugins,
+                          errors=False)
     dat_act = data_mod.DataActuator(data=45)
     dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw, dat_act])
     return dte
@@ -168,7 +174,8 @@ def test_axis_serialization_deserialization():
                                                                             [-45, -67, -87654]])],  # homogeneous ndarrays
                                       [init_axis(), init_axis()],  # homogeneous axis
                                       [init_data(), init_data(), init_data()],  # homogeneous dwa
-                                      ['hjk', 34, np.array([45, 67, 87654]), init_data(), init_axis()]))  # inhomogeneous
+                                      ['hjk', 34, np.array([45, 67, 87654]), init_data(),
+                                       init_axis(), True, 23, False]))  # inhomogeneous
 def test_list_serialization_deserialization(get_data, obj_list):
     ser = Serializer(obj_list)
     list_back = DeSerializer(ser.to_bytes()).list_deserialization()
@@ -184,6 +191,9 @@ def test_dwa_serialization_deserialization(get_data):
     dte = get_data
 
     for dwa in dte:
+        dwa.extra_attributes = ['extra1', 'extra2']
+        dwa.extra1 = True
+        dwa.extra2 = 12.4
         ser = Serializer(dwa)
         assert isinstance(ser.to_bytes(), bytes)
         dwa_back = DeSerializer(ser.to_bytes()).dwa_deserialization()
@@ -191,6 +201,9 @@ def test_dwa_serialization_deserialization(get_data):
         assert dwa_back.__class__.__name__ in DwaType.names()
         assert dwa_back.__class__.__name__ == dwa.__class__.__name__
         assert dwa == dwa_back
+        assert dwa.extra_attributes == dwa_back.extra_attributes
+        for attr in dwa.extra_attributes:
+            assert getattr(dwa, attr) == getattr(dwa_back, attr)
 
 
 def test_dte_serialization(get_data):

@@ -16,6 +16,7 @@ import numpy as np
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.utils.gui_utils.layout as layout_mod
+from pymodaq.utils.gui_utils.utils import start_qapplication
 from pymodaq.utils.messenger import messagebox
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils import daq_utils as utils
@@ -214,6 +215,19 @@ class DashBoard(QObject):
 
         return qtconsole
 
+    def load_bayesian(self, win=None):
+        if win is None:
+            self.bayesian_window = QtWidgets.QMainWindow()
+        else:
+            self.bayesian_window = win
+        dockarea = DockArea()
+        self.bayesian_window.setCentralWidget(dockarea)
+        self.bayesian_window.setWindowTitle('Bayesian Optimiser')
+        self.bayesian_module = extmod.BayesianOptimisation(dockarea=dockarea, dashboard=self)
+        self.extensions['bayesian'] = self.bayesian_module
+        self.bayesian_window.show()
+        return self.bayesian_module
+
     def load_extension_from_name(self, name: str) -> dict:
         self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
 
@@ -350,6 +364,8 @@ class DashBoard(QObject):
         action_pid.triggered.connect(lambda: self.load_pid_module())
         action_console = self.actions_menu.addAction('IPython Console')
         action_console.triggered.connect(lambda: self.load_console())
+        action_bayesian = self.actions_menu.addAction('Bayesian Optimisation')
+        action_bayesian.triggered.connect(lambda: self.load_bayesian())
 
         extensions_actions = []
         for ext in extensions:
@@ -503,6 +519,9 @@ class DashBoard(QObject):
         try:
             self.remote_timer.stop()
 
+            for ext in self.extensions:
+                if hasattr(self.extensions[ext], 'quit_fun'):
+                    self.extensions[ext].quit_fun()
             for mov in self.actuators_modules:
                 mov.init_signal.disconnect(self.update_init_tree)
             for det in self.detector_modules:
@@ -1397,10 +1416,7 @@ class DashBoard(QObject):
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config('style', 'darkstyle'):
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+        app = start_qapplication()
 
     win = QtWidgets.QMainWindow()
     area = DockArea()

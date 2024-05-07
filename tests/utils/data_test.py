@@ -13,7 +13,8 @@ import time
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import DataDim
-
+from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
+data_processors = DataProcessorFactory()
 
 LABEL = 'A Label'
 UNITS = 'units'
@@ -30,7 +31,7 @@ Nn0 = 10
 Nn1 = 5
 
 
-def init_axis(data=None, index=0):
+def init_axis(data=None, index=0) -> data_mod.Axis:
     if data is None:
         data = DATA
     return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
@@ -236,6 +237,34 @@ class TestAxis:
         assert np.allclose(ax.data[ind_start:ind_end], axis_to_put_in.get_data())
         assert len(ax) == length
 
+    def test_get_data(self):
+        # spread axis
+        DATA = np.array([0, 1, 6, 8, 9])
+        axis = init_axis(DATA)
+        assert axis.data is not None
+        assert axis.offset is None
+        assert axis.scaling is None
+        assert np.allclose(axis.get_data(), DATA)
+
+        # linear axis
+        DATA = np.array([1, 2, 3, 4])
+        axis = init_axis(DATA)
+        assert axis.data is None
+        assert axis.offset == 1
+        assert axis.scaling == 1
+        assert np.allclose(axis.get_data(), DATA)
+
+    def test_get_data_at(self):
+        DATA = np.array([0, 1, 6, 8, 9])
+        axis = init_axis(DATA)
+        INDEX = 2
+        INDEXES = (0, 3, 4)
+        INDEXES_array = np.array(INDEXES)
+        SLICE = slice(0, None, 2)
+        assert np.allclose(axis.get_data_at(INDEX), DATA[INDEX])
+        assert np.allclose(axis.get_data_at(INDEXES), DATA[np.array(INDEXES)])
+        assert np.allclose(axis.get_data_at(INDEXES_array), DATA[INDEXES_array])
+        assert np.allclose(axis.get_data_at(SLICE), DATA[SLICE])
 
 class TestDataLowLevel:
     def test_init(self):
@@ -585,6 +614,97 @@ class TestDataWithAxesUniform:
         assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
+    def test_interp(self):
+        data_arrays = [np.array([11, 12, 14, 15]), np.array([21, 22, 24, 25])]
+        data_arrays_expected = [np.array([11, 12, 13, 14, 15]), np.array([21, 22, 23, 24, 25])]
+        axis_array = np.array([1, 2, 4, 5])
+        new_axis_array = np.array([1, 2, 3, 4, 5])
+
+        dwa = data_mod.DataRaw('mydata', distribution='uniform',
+                               data=data_arrays[:],
+                               axes=[data_mod.Axis('axis', data=axis_array)])
+
+        dwa_interp = dwa.interp(new_axis_array)
+        for ind in range(len(data_arrays_expected)):
+            assert np.allclose(dwa_interp.data[ind], data_arrays_expected[ind])
+
+        dwa = init_data(DATA0D)
+        with pytest.raises(ValueError):
+            dwa.interp(new_axis_array)
+
+        dwa = init_data(DATA0D)
+        with pytest.raises(ValueError):
+            dwa.interp(new_axis_array)
+
+    def test_ft_ift(self):
+        omega0 = 5
+        time_axis = data_mod.Axis('time', 's', data=np.linspace(0, 10*2*np.pi, 2**10))
+        dwa = data_mod.DataRaw('sinus', data=[np.sin(omega0 * time_axis.get_data())], labels=['sinus'],
+                               axes=[time_axis])
+
+        dwa_fft = dwa.ft(0)
+        dwa_processed = data_processors.get('argmax').process(dwa_fft.abs())
+        assert dwa_processed.abs().data[0][0] == pytest.approx(omega0, 0.1)
+
+        dwa_ift = dwa_fft.ift(0)
+        assert np.allclose(dwa[0], dwa_ift.real())
+
+    def test_fit(self):
+        OMEGA0 = 5
+        OFFSET = -4
+        AMPLITUDE = 2
+        PHI = 2 * np.pi /3
+
+        OMEGA02 = 5
+        OFFSET2 = -4
+        AMPLITUDE2 = 2
+        PHI2 = 2 * np.pi /6
+
+        time_axis = data_mod.Axis('time', 's', data=np.linspace(0, 2 * 2 * np.pi, 2 ** 8))
+        dwa = data_mod.DataRaw('sinus',
+                               data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
+                                                                 PHI),
+                                     OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
+                                                                 PHI2)
+                                     ],
+                               labels=['sinus1', 'sinus2'],
+                               axes=[time_axis])
+        def my_sinus(x, a, offset, omega0, phi):
+            return offset + a * np.sin(omega0 * x +phi)
+
+        dwa_fit = dwa.fit(my_sinus, initial_guess=(AMPLITUDE, OFFSET, OMEGA0, PHI))
+        for ind in range(len(dwa)):
+            assert np.allclose(dwa_fit[ind], dwa[ind])
+
+        assert hasattr(dwa_fit, 'fit_coeffs')
+
+    def test_find_peaks(self):
+        OMEGA0 = 5
+        OFFSET = -4
+        AMPLITUDE = 2
+        PHI = np.pi /3
+
+        OMEGA02 = 20
+        OFFSET2 = 2
+        AMPLITUDE2 = 1
+        PHI2 = np.pi /6
+
+        time_axis = data_mod.Axis('time', 's', data=np.linspace(0, 10 * 2 * np.pi, 2 ** 10))
+        dwa = data_mod.DataRaw('sinus',
+                               data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
+                                                                 PHI),
+                                     OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
+                                                                 PHI2)
+                                     ],
+                               axes=[time_axis])
+        dwa_ft = dwa.ft()
+
+        dte_peak = dwa.ft().abs().find_peaks(height=50)
+
+        assert np.allclose(dte_peak[0].axes[0].get_data(), np.array([-OMEGA0, 0, OMEGA0]), atol=0.1)
+        assert np.allclose(dte_peak[1].axes[0].get_data(), np.array([-OMEGA02, 0, OMEGA02]),
+                           atol=0.1)
+
 
 class TestNavIndexes:
 
@@ -607,16 +727,24 @@ class TestNavIndexes:
 class TestDataWithAxesSpread:
     def test_init_data(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
-        data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                              distribution=data_mod.DataDistribution['spread'], data=[data_array],
-                              nav_indexes=(0,),
-                              axes=[sig_axis, nav_axis_0, nav_axis_1])
+        dwa = data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                    dim=data_mod.DataDim['Data1D'],
+                                    distribution=data_mod.DataDistribution['spread'],
+                                    data=[data_array],
+                                    nav_indexes=(0,),
+                                    axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+        assert dwa.distribution.name == 'spread'
+        assert dwa.inav[10].distribution.name == 'uniform'  # because the remangin signal data has uniform axes
+        assert dwa.isig[5].distribution.name == 'spread'
 
     def test_nav_index(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         with pytest.raises(ValueError):
-            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                  dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'],
+                                  data=[data_array],
                                   nav_indexes=(0, 1),
                                   axes=[sig_axis, nav_axis_0, nav_axis_1])
 
@@ -624,8 +752,10 @@ class TestDataWithAxesSpread:
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1,])))
         with pytest.raises(data_mod.DataLengthError):
-            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
-                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
+                                  dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'],
+                                  data=[data_array],
                                   nav_indexes=(0,),
                                   axes=[sig_axis, nav_axis_0, nav_axis_1])
 
@@ -707,16 +837,38 @@ class TestDataWithAxesSpread:
                                        data._am.get_axis_from_index_spread(axis.index, axis.spread_order)
                                        .get_data())
 
+    def test_interp(self):
+        data_arrays = [np.array([11, 12, 14, 15]), np.array([21, 22, 24, 25])]
+        data_arrays_expected = [np.array([11, 12, 13, 14, 15]), np.array([21, 22, 23, 24, 25])]
+        axis_array = np.array([1, 2, 4, 5])
+        new_axis_array = np.array([1, 2, 3, 4, 5])
+
+        dwa = data_mod.DataRaw('mydata', distribution='spread',
+                               data=data_arrays[:],
+                               axes=[data_mod.Axis('axis', data=axis_array)])
+
+        dwa_interp = dwa.interp(new_axis_array)
+        for ind in range(len(data_arrays_expected)):
+            assert np.allclose(dwa_interp.data[ind], data_arrays_expected[ind])
+
+        dwa = init_data(DATA0D)
+        with pytest.raises(ValueError):
+            dwa.interp(new_axis_array)
+
+        dwa = init_data(DATA0D)
+        with pytest.raises(ValueError):
+            dwa.interp(new_axis_array)
+
 
 class TestDataFromPlugins:
     def test_attributes(self):
         dwa = data_mod.DataFromPlugins(name='blabla', data=[DATA1D])
 
-        assert hasattr(dwa, 'plot')
-        assert dwa.plot == True
+        assert hasattr(dwa, 'do_plot')
+        assert dwa.do_plot == True
 
-        assert hasattr(dwa, 'save')
-        assert dwa.save == True
+        assert hasattr(dwa, 'do_save')
+        assert dwa.do_save == True
 
 
 class TestSlicingUniform:
@@ -999,6 +1151,29 @@ class TestDataToExport:
         assert data.get_data_from_name_origin('data2D') == dat4
         assert dat1 not in data.data
 
+    def test_get_full_names(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORGIN1
+        dat2.origin = ORIGIN2
+
+        assert data.get_full_names() == [dat1.get_full_name(), dat2.get_full_name()]
+
+    def test_get_origins(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        ORIGIN1 = 'origin1'
+        ORIGIN2 = 'origin2'
+        dat1.origin = ORIGIN1
+        dat2.origin = ORIGIN2
+
+        for origin in data.get_origins():
+            assert origin in [ORIGIN1, ORIGIN2]
+
+        dat2.origin = ORIGIN1
+
+        assert data.get_origins()  == [ORIGIN1]
+
     def test_get_data_from_name_origin(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
         # with origin
@@ -1115,8 +1290,12 @@ class TestDataToExport:
         dte = data_mod.DataToExport('merging', data=[dat1, dat2, dat3])
 
         dwa = dte.merge_as_dwa('Data1D')
-
+        assert dwa.name == dte.name
         assert len(dwa) == 6
         assert np.all(dwa[0] == pytest.approx(DATA1D))
         assert np.all(dwa[1] == pytest.approx(0.2*DATA1D))
         assert np.all(dwa[3] == pytest.approx(-0.7*DATA1D))
+
+
+        assert dwa.labels == dat1.labels + dat2.labels + dat3.labels
+

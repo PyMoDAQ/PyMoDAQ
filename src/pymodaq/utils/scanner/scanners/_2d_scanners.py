@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from pymodaq.utils.data import Axis, DataDistribution
@@ -18,6 +18,9 @@ from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
+
 
 class Scan2DBase(ScannerBase):    
     params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
@@ -29,7 +32,7 @@ class Scan2DBase(ScannerBase):
                 ]
     axes = ('axis1','axis2')    
     n_axes = 2
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
         self.axes_unique = []
 
@@ -40,20 +43,20 @@ class Scan2DLinear(Scan2DBase):
     params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
                'children':[
               {'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start1')},
+               'value': 0.},
               {'title': 'Stop Ax1:', 'name': 'stop_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop1')},              
+               'value': 1.},
               {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step1')},
+               'value': 0.1},
               ]}, 
               {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
                'children':[
               {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'start2')},
+               'value': 0.},
               {'title': 'Stop Ax2:', 'name': 'stop_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'stop2')},              
+               'value': 1.},
               {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
-               'value': config('scan', 'scan2D', 'linear', 'step2')},              
+               'value': 0.1},
                ]},
               ]    
     n_axes = 2
@@ -61,13 +64,13 @@ class Scan2DLinear(Scan2DBase):
     scan_type = 'Scan2D'
     scan_subtype = 'Linear'
 
-    def __init__(self, actuators: List = None, **_ignored):        
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def get_pos(self):
-        starts = np.array([self.settings[ax,f'start_{ax}'] for ax in self.axes])
-        stops = np.array([self.settings[ax,f'stop_{ax}'] for ax in self.axes])
-        steps = np.array([self.settings[ax,f'step_{ax}'] for ax in self.axes])        
+        starts = np.array([self.settings[ax, f'start_{ax}'] for ax in self.axes])
+        stops = np.array([self.settings[ax, f'stop_{ax}'] for ax in self.axes])
+        steps = np.array([self.settings[ax, f'step_{ax}'] for ax in self.axes])
         return starts, stops, steps
 
     def evaluate_steps(self) -> int:
@@ -101,10 +104,9 @@ class Scan2DLinear(Scan2DBase):
             for i,ax in enumerate(self.axes):            
                 title = self.actuators[i].title
                 self.settings.child(ax).setOpts(title=title)                
-                self.settings.child(ax,f'start_{ax}').setOpts(title=f'{title} start:')
-                self.settings.child(ax,f'stop_{ax}').setOpts(title=f'{title} stop:')
-                self.settings.child(ax,f'step_{ax}').setOpts(title=f'{title} step:')
-
+                self.settings.child(ax, f'start_{ax}').setOpts(title=f'{title} start:')
+                self.settings.child(ax, f'stop_{ax}').setOpts(title=f'{title} stop:')
+                self.settings.child(ax, f'step_{ax}').setOpts(title=f'{title} step:')
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}',
@@ -127,12 +129,11 @@ class Scan2DLinear(Scan2DBase):
                 self.settings.child(ax,f'stop_{ax}').setValue(coordinates[1, i])
 
 
-
 @ScannerFactory.register()
 class Scan2DLinearBF(Scan2DLinear):
     scan_subtype = 'LinearBackForce'
 
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
@@ -162,7 +163,7 @@ class Scan2DLinearBF(Scan2DLinear):
 class Scan2DRandom(Scan2DLinear):
     scan_subtype = 'Random'
 
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
@@ -175,28 +176,28 @@ class Scan2DRandom(Scan2DLinear):
 class Scan2DSpiral(Scan2DLinear):
     scan_subtype = 'Spiral'
     params = [{'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
-               'value': config('scan', 'scan2D', 'spiral', 'npts')},
+               'value': 10},
               {'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
                'children': [
                    {'title': 'Center Ax1:', 'name': 'center_axis1', 'type': 'float',
-                    'value': config('scan', 'scan2D', 'linear', 'start1')},
+                    'value': 0.},
                    {'title': 'Rmax Ax1:', 'name': 'rmax_axis1', 'type': 'float',
-                    'value': config('scan', 'scan2D', 'linear', 'stop1')},
+                    'value': 5.},
                    {'title': 'Step Ax1:', 'name': 'step_axis1', 'type': 'float',
                     'value': 0., 'readonly': True},
                ]},
               {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
                'children': [
                    {'title': 'Center Ax2:', 'name': 'center_axis2', 'type': 'float',
-                    'value': config('scan', 'scan2D', 'linear', 'start2')},
+                    'value': 0.},
                    {'title': 'Rmax Ax2:', 'name': 'rmax_axis2', 'type': 'float',
-                    'value': config('scan', 'scan2D', 'linear', 'stop2')},
+                    'value': 5.},
                    {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float',
                     'value': 0., 'readonly': True},
                ]},
               ]  
    
-    def __init__(self, actuators: List = None, **_ignored):
+    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
         super().__init__(actuators=actuators)
 
     def set_settings_titles(self):
@@ -204,17 +205,9 @@ class Scan2DSpiral(Scan2DLinear):
             for i,ax in enumerate(self.axes):            
                 title = self.actuators[i].title
                 self.settings.child(ax).setOpts(title=title)                
-                self.settings.child(ax,f'center_{ax}').setOpts(title=f'{title} center:')
-                self.settings.child(ax,f'rmax_{ax}').setOpts(title=f'{title} rmax:')
-                self.settings.child(ax,f'step_{ax}').setOpts(title=f'{title} step:')
-
-            
-            # self.settings.child('center_axis1').setOpts(title=f'Center {self.actuators[0].title}:')
-            # self.settings.child('rmax_axis1').setOpts(title=f'Rmax {self.actuators[0].title}:')
-            # self.settings.child('step_axis1').setOpts(title=f'Step {self.actuators[0].title}:')
-            # self.settings.child('center_axis2').setOpts(title=f'Center {self.actuators[1].title}:')
-            # self.settings.child('rmax_axis2').setOpts(title=f'Rmax {self.actuators[1].title}:')
-            # self.settings.child('step_axis2').setOpts(title=f'Step {self.actuators[1].title}:')
+                self.settings.child(ax, f'center_{ax}').setOpts(title=f'{title} center:')
+                self.settings.child(ax, f'rmax_{ax}').setOpts(title=f'{title} rmax:')
+                self.settings.child(ax, f'step_{ax}').setOpts(title=f'{title} step:')
 
     def value_changed(self, param):
         starts, rmaxs, rsteps = self.get_pos()
@@ -234,10 +227,8 @@ class Scan2DSpiral(Scan2DLinear):
         r_steps: np.ndarray
             steps size in both directions
         """
-        centers = np.array([self.settings[ax,f'center_{ax}'] for ax in self.axes])
-        rmaxs = np.array([self.settings[ax,f'rmax_{ax}'] for ax in self.axes])
-        # centers = np.array([self.settings['center_axis1'], self.settings['center_axis2']])
-        # rmaxs = np.array([self.settings['rmax_axis1'], self.settings['rmax_axis2']])
+        centers = np.array([self.settings[ax, f'center_{ax}'] for ax in self.axes])
+        rmaxs = np.array([self.settings[ax, f'rmax_{ax}'] for ax in self.axes])
         r_steps = 2 * rmaxs / self.settings['npts_by_axis']
         return centers, rmaxs, r_steps
 
@@ -290,14 +281,10 @@ class Scan2DSpiral(Scan2DLinear):
         coordinates = scan_selector.get_coordinates()
         if coordinates.shape == (2, 2):
             for i,ax in enumerate(self.axes):            
-                self.settings.child(ax,f'center_{ax}').setValue((coordinates[0, i] + coordinates[1, i]) / 2)
-                self.settings.child(ax,f'rmax_{ax}').setValue((coordinates[0, i] - coordinates[1, i]) / 2)
-            #     self.settings.child(ax,f'center_{ax}').setValue((coordinates[0, i] - coordinates[1, i]) / 2)
-            #     self.settings.child(ax,f'rmax_{ax}').setValue(coordinates[1, i])            
-            # self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
-            # self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
-            # self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
-            # self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
+                self.settings.child(ax, f'center_{ax}').setValue(
+                    (coordinates[0, i] + coordinates[1, i]) / 2)
+                self.settings.child(ax, f'rmax_{ax}').setValue(
+                    (coordinates[0, i] - coordinates[1, i]) / 2)
 
 
 try:
@@ -333,7 +320,7 @@ try:
             ]
         distribution = DataDistribution['spread']
 
-        def __init__(self, actuators: List = None, **_ignored):
+        def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
             super().__init__(actuators=actuators)
 
         def set_scan(self):

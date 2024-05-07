@@ -1,5 +1,5 @@
 from qtpy import QtWidgets
-from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
+from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 
 
 class BoolPushParameterItem(WidgetParameterItem):
@@ -23,3 +23,9 @@ class BoolPushParameterItem(WidgetParameterItem):
         self.hideWidget = False
         return w
 
+
+class BoolPushParameter(SimpleParameter):
+    itemClass = BoolPushParameterItem
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

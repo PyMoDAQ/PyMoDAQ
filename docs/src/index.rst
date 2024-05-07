@@ -34,8 +34,8 @@ Training
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Second edition of the PyMoDAQ's Days: Paris 16/17 October 2023. Register on https://pymodaq-jt2022.sciencesconf.org/
-   * Training session in Paris, France 18/19/20 October 2023
+   * Third edition of the PyMoDAQ's Days: Lyon 20/22 October 2024. Register on https://pymodaq-jt2022.sciencesconf.org/
+   * Training session in Toulouse, France 17/19 June 2024
 
 PyMoDAQ has two purposes:
 
@@ -70,6 +70,10 @@ GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
 
+Scientific `article`__ on Review of Scientific Instruments journal
+
+General public `article`__ on Scientia
+
 List of available `plugins`__
 
 Video tutorials `here`__
@@ -83,6 +87,10 @@ Credits
 Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
+
+__ https://doi.org/10.1063/5.0032116
+
+__ https://www.scientia.global/dr-sebastien-weber-pymodaq-navigating-the-future-of-data-acquisition/
 
 __ https://github.com/PyMoDAQ/pymodaq_plugin_manager/
 

@@ -18,7 +18,7 @@ from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.parameter import Parameter, ioxml
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.enums import BaseEnum, enum_checker
-from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands

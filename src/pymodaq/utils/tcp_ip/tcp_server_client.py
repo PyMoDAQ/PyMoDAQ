@@ -8,6 +8,7 @@ from collections import OrderedDict
 import select
 from typing import List
 import socket
+from threading import Timer
 
 import numpy as np
 from qtpy.QtCore import QObject, Signal, Slot, QThread
@@ -23,6 +24,7 @@ from pymodaq.utils.parameter import Parameter
 from pymodaq.utils.data import DataToExport
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 config = Config()
 
@@ -36,18 +38,13 @@ tcp_parameters = [
 
 
 class TCPClientTemplate:
-    params = []
-
-    def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None, client_type=""):
+    def __init__(self, ipaddress="192.168.1.62", port=6341, client_type=""):
         """Create a socket client
 
         Parameters
         ----------
         ipaddress: (str) the IP address of the server
         port: (int) the port where to communicate with the server
-        params_state: (dict) state of the Parameter settings of the module instantiating this client and wishing to
-                            export its settings to the server. Obtained from param.saveState() where param is an
-                            instance of Parameter object, see pyqtgraph.parametertree::Parameter
         client_type: (str) should be one of the accepted client_type by the TCPServer instance (within pymodaq it is
                             either 'GRABBER' or 'ACTUATOR'
         """
@@ -58,14 +55,8 @@ class TCPClientTemplate:
         self._socket: Socket = None
         self._deserializer: DeSerializer = None
         self.connected = False
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        if params_state is not None:
-            if isinstance(params_state, dict):
-                self.settings.restoreState(params_state)
-            elif isinstance(params_state, Parameter):
-                self.settings.restoreState(params_state.saveState())
-
         self.client_type = client_type
+        self.timer = Timer(0.1, self.poll_connection)
 
     @property
     def socket(self) -> Socket:
@@ -87,12 +78,15 @@ class TCPClientTemplate:
         self.socket.connect((self.ipaddress, self.port))
 
     def init_connection(self, extra_commands=[]):
-        """init the socket connection then call the post_init method where to place custom initialization"""
+        """init the socket connection then call the post_init method where to place custom
+        initialization"""
         try:
             self._connect_socket()
             self.post_init(extra_commands)
             self.connected = True
+
             self.poll_connection()
+            #self.timer.start()
 
         except ConnectionRefusedError as e:
             self.not_connected(e)
@@ -110,7 +104,7 @@ class TCPClientTemplate:
                 if len(in_error) != 0:
                     self.ready_with_error()
 
-                if  len(ready_to_write) != 0:
+                if len(ready_to_write) != 0:
                     self.ready_to_write()
 
                 QtWidgets.QApplication.processEvents()
@@ -154,11 +148,18 @@ class TCPClient(TCPClientTemplate, QObject):
     The client itself communicate with a TCP server, it is best to use a server object subclassing the TCPServer
     class defined within this python module
 
+    Parameters
+    ----------
+    params_state: (dict) state of the Parameter settings of the module instantiating this client and wishing to
+                    export its settings to the server. Obtained from param.saveState() where param is an
+                    instance of Parameter object, see pyqtgraph.parametertree::Parameter
+
     """
     cmd_signal = Signal(ThreadCommand)  # signal to connect with a module slot in order to start communication back
     params = []
 
-    def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None, client_type="GRABBER"):
+    def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None,
+                 client_type="GRABBER"):
         """Create a socket client particularly fit to be used with PyMoDAQ's TCPServer
 
         Parameters
@@ -172,7 +173,14 @@ class TCPClient(TCPClientTemplate, QObject):
                             either 'GRABBER' or 'ACTUATOR'
         """
         QObject.__init__(self)
-        TCPClientTemplate.__init__(self, ipaddress, port, params_state, client_type)
+        TCPClientTemplate.__init__(self, ipaddress, port, client_type)
+
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
+        if params_state is not None:
+            if isinstance(params_state, dict):
+                self.settings.restoreState(params_state)
+            elif isinstance(params_state, Parameter):
+                self.settings.restoreState(params_state.saveState())
 
     def send_data(self, data: DataToExport):
         # first send 'Done' and then send the length of the list

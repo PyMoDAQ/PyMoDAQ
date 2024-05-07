@@ -6,15 +6,20 @@ Created the 22/01/2023
 """
 import os
 import sys
-from typing import List, Union, Callable, Iterable
+from typing import List, Union, Callable, Iterable, Dict
 
 from qtpy import QtWidgets, QtCore
 
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker
 from pymodaq.utils.h5modules.data_saving import DataLoader
 from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewerDispatcher
+from pymodaq.utils.plotting.data_viewers import ViewersEnum, Viewer1D, Viewer2D, ViewerND
 from pymodaq.utils.gui_utils import Dock, DockArea
+from pymodaq.utils.logger import set_logger, get_module_name
+
+
+logger = set_logger(get_module_name(__file__))
 
 
 class LoaderPlotter:
@@ -182,20 +187,25 @@ class LoaderPlotter:
 
         target_at = kwargs.pop('target_at') if 'target_at' in kwargs else None
         last_step = kwargs.pop('last_step') if 'last_step' in kwargs else False
+        crosshair_at = kwargs.pop('crosshair_at') if 'crosshair_at' in kwargs else None
 
         self.load_data(**kwargs)
-        self.show_data(target_at=target_at)
+        self.show_data(target_at=target_at,
+                       crosshair_at=crosshair_at)
         if (last_step and 'average_index' in kwargs and kwargs['average_index']
                 is not None):
             kwargs['last_step'] = last_step
             self.load_data(**kwargs)
-            self.show_data(target_at=target_at)
+            self.show_data(target_at=target_at,
+                           crosshair_at=crosshair_at)
 
     def show_data(self, **kwargs):
         """Send data to their dedicated viewers
         """
-        #self._init_show_data(self._data)
-        self.set_data_to_viewers(self._data, **kwargs)
+        try:
+            self.set_data_to_viewers(self._data, **kwargs)
+        except Exception as e:
+            logger.warning(f'Could not show data: {str(e)}')
 
     def _init_show_data(self, data: DataToExport):
         """Processing before showing data
@@ -203,7 +213,9 @@ class LoaderPlotter:
         self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
         self.prepare_viewers(self._viewer_types)
 
-    def prepare_viewers(self, viewers_enum: List[ViewersEnum], viewers_name: List[str] = None):
+    def prepare_viewers(self, viewers_enum: List[Union[ViewersEnum, str]],
+                        viewers_name: List[str] = None) -> List[ViewerBase]:
+
         if self._viewers is not None:
             while len(self._viewers) > 0:
                 self._viewers.pop(list(self._viewers.keys())[0])
@@ -214,13 +226,16 @@ class LoaderPlotter:
             viewers_name = [f'DataPlot{ind:02d}' for ind in range(len(self._viewer_types))]
 
         if self.dispatcher.viewer_types != self._viewer_types:
-            self.dispatcher.update_viewers(self._viewer_types)
+            self.dispatcher.update_viewers(self._viewer_types,
+                                           viewers_name=viewers_name)
 
         self._viewers = dict(zip(viewers_name, self.dispatcher.viewers))
         self._viewer_docks = dict(zip(viewers_name, self.dispatcher.viewer_docks))
+        return self.dispatcher.viewers
 
     def set_data_to_viewers(self, data: DataToExport, temp=False,
-                            target_at: Iterable[float] = None):
+                            target_at: Iterable[float] = None,
+                            crosshair_at: Iterable[float] = None):
         """Process data dimensionality and send appropriate data to their data viewers
 
         Parameters
@@ -230,6 +245,8 @@ class LoaderPlotter:
             if True notify the data viewers to display data as temporary (meaning not exporting processed data from roi)
         target_at: Iterable[float]
             if specified show and plot the roi_target of each viewer at the given position
+        crosshair_at: Iterable[float]
+            if specified show and plot the viewer crosshair of each viewer at the given position
         See Also
         --------
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
@@ -246,21 +263,27 @@ class LoaderPlotter:
                 viewer.show_data_temp(_data)
             else:
                 viewer.show_data(_data)
+            if crosshair_at is not None:
+                if not viewer.is_action_checked('crosshair'):
+                    viewer.get_action('crosshair').trigger()
+                viewer.double_clicked(*crosshair_at)
             if target_at is not None:
                 viewer.show_roi_target(True)
-                if _data.dim == 'Data1D':
+                if isinstance(viewer, Viewer1D):
                     viewer.move_roi_target(target_at)
-                elif _data.dim == 'Data2D' and _data.distribution == 'uniform':
+                elif isinstance(viewer, Viewer2D):
                     _target_at = target_at.copy()
-
-                    size = [_data.get_axis_from_index(1)[0].scaling]
-                    if len(_target_at) == 1:  # means concatenation of 1D data
-                        axis = _data.get_axis_from_index(0)[0]
-                        size.append(axis.scaling * axis.size)
-                        _target_at = list(_target_at) + [axis.offset]
+                    if _data.distribution == 'uniform':
+                        size = [_data.get_axis_from_index(1)[0].scaling]
+                        if len(_target_at) == 1:  # means concatenation of 1D data
+                            axis = _data.get_axis_from_index(0)[0]
+                            size.append(axis.scaling * axis.size)
+                            _target_at = list(_target_at) + [axis.offset]
+                        else:
+                            size.append(_data.get_axis_from_index(0)[0].scaling)
+                        viewer.move_roi_target(_target_at, size)
                     else:
-                        size.append(_data.get_axis_from_index(0)[0].scaling)
-                    viewer.move_roi_target(_target_at, size)
+                        viewer.move_roi_target(_target_at)
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite
