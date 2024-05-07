@@ -58,6 +58,11 @@ backend = 'matplotlib'  # either 'matplotlib' or 'qt' or any other custom backen
     ip = "10.47.0.39"
     port = 6341
 
+    [network.leco-server]
+    run_coordinator_at_startup = false
+    host = "localhost"
+    port = 12300  # pyleco default Coordinator port
+
 [presets]
 default_preset_for_scan = "preset_default"
 default_preset_for_logger = "preset_default"
@@ -65,7 +70,7 @@ default_preset_for_pid = "beam_steering_mock"
 
 [actuator]
     epsilon_default = 1
-    polling_interval_ms = 100  # ms Carefull when using TCP/IP connection as you can saturate the connection with too much polling
+    polling_interval_ms = 100  # ms Careful when using TCP/IP connection as you can saturate the connection with too much polling
     polling_timeout_s = 20  # s
     refresh_timeout_ms = 500  # ms
     timeout = 10000  # default duration in ms to wait for data to be acquirred

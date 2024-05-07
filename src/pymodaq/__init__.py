@@ -39,7 +39,7 @@ try:
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
     from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
     from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
-
+    from pymodaq.utils.daq_utils import get_instrument_plugins
     from pymodaq.utils.config import Config
     from pymodaq.utils.scanner.utils import register_scanners
     from pymodaq.utils.plotting.plotter.plotter import register_plotter, PlotterFactory
@@ -87,6 +87,24 @@ try:
     logger.info('************************')
     logger.info(f"Getting the list of instrument plugins...")
     logger.info('************************')
+
+    get_instrument_plugins()
+
+    if config('network', 'leco-server', 'run_coordinator_at_startup'):
+        try:
+            from pymodaq.utils.leco.utils import start_coordinator
+            logger.info('')
+            logger.info('')
+            logger.info('************************')
+            logger.info(f"Starting the LECO Coordinator...")
+            logger.info('************************')
+            logger.info('')
+            logger.info('')
+            start_coordinator()
+        except ImportError:
+            pass
+
+
     logger.info('')
     logger.info('')
     logger.info('************************')
@@ -99,7 +117,6 @@ try:
     logger.info(f"Registering plotters...")
     logger.info('************************')
     register_plotter()
-    pass
 
 
 except Exception as e:

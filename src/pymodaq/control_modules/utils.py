@@ -4,18 +4,24 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+from random import randint
+from typing import Optional
+
 from easydict import EasyDict as edict
 
 from qtpy import QtCore
-from qtpy.QtCore import Signal, QObject, Qt
+from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 from pymodaq.utils.gui_utils import CustomApp
 from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
 from pymodaq.utils.config import Config
-from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
+from pymodaq.utils.parameter import Parameter, ioxml
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
+from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 
 
 class DAQTypesEnum(BaseEnum):
@@ -116,7 +122,7 @@ class ControlModule(QObject):
         self._tcpclient_thread = None
         self._hardware_thread = None
         self.module_and_data_saver = None
-        self.plugin_config: configmod.Config = None
+        self.plugin_config: Optional[configmod.Config] = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
@@ -253,7 +259,7 @@ class ControlModule(QObject):
         raise NotImplementedError
 
     def quit_fun(self):
-        """Programmatic entry to quit the controle module"""
+        """Programmatic entry to quit the control module"""
         raise NotImplementedError
 
     def init_hardware(self, do_init=True):
@@ -341,6 +347,148 @@ class ControlModule(QObject):
                         attr(value)
                     else:
                         attr = value
+
+
+class ParameterControlModule(ParameterManager, ControlModule):
+    """Base class for a control module with parameters."""
+
+    _update_settings_signal = Signal(edict)
+
+    listener_class: type[ActorListener] = ActorListener
+
+    def __init__(self, **kwargs):
+        QObject.__init__(self)
+        ParameterManager.__init__(self, action_list=('save', 'update'))
+        ControlModule.__init__(self)
+
+    def value_changed(self, param: Parameter) -> Optional[Parameter]:
+        """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
+
+        Parameters
+        ----------
+        param: Parameter
+            a given parameter whose value has been changed by user
+        """
+        if param.name() == 'plugin_config':
+            self.show_config(self.plugin_config)
+
+        elif param.name() == 'connect_server':
+            if param.value():
+                self.connect_tcp_ip()
+            else:
+                self._command_tcpip.emit(ThreadCommand('quit', ))
+
+        elif param.name() == 'ip_address' or param.name == 'port':
+            self._command_tcpip.emit(
+                ThreadCommand('update_connection',
+                              dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
+                                   port=self.settings['main_settings', 'tcpip', 'port'])))
+
+        elif param.name() == 'connect_leco_server':
+            self.connect_leco(param.value())
+
+        elif param.name() == "name":
+            name = param.value()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                pass
+
+        else:
+            # not handled
+            return param
+
+    def _update_settings(self, param: Parameter):
+        # I do not understand what it does
+        path = self.settings.childPath(param)
+        if path is not None:
+            if 'main_settings' not in path:
+                self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
+                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                if self.settings.child('main_settings', 'leco', 'leco_connected').value():
+                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+
+    def connect_tcp_ip(self, params_state=None, client_type: str = "GRABBER") -> None:
+        """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
+
+        Use the settings: ip_address and port to specify the connection
+
+        See Also
+        --------
+        TCPServer
+        """
+        if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
+            self._tcpclient_thread = QThread()
+
+            tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+                                  self.settings.child('main_settings', 'tcpip', 'port').value(),
+                                  params_state=params_state,
+                                  client_type=client_type)
+            tcpclient.moveToThread(self._tcpclient_thread)
+            self._tcpclient_thread.tcpclient = tcpclient
+            tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
+
+            self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+            self._tcpclient_thread.started.connect(tcpclient.init_connection)
+
+            self._tcpclient_thread.start()
+
+    def get_leco_name(self) -> str:
+        name = self.settings["main_settings", "leco", "leco_name"]
+        if name == '':
+            # take the module name as alternative
+            name = self.settings["main_settings", "module_name"]
+        if name == '':
+            # a name is required, invent one
+            name = f"viewer_{randint(0, 10000)}"
+            name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
+        return name
+
+    def connect_leco(self, connect: bool) -> None:
+        if connect:
+            name = self.get_leco_name()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = self.listener_class(name=name)
+                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+            # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
+        else:
+            self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
+            try:
+                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
+
+    @Slot(ThreadCommand)
+    def process_tcpip_cmds(self, status: ThreadCommand) -> Optional[ThreadCommand]:
+        if status.command == 'connected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
+
+        elif status.command == 'disconnected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == LECOClientCommands.LECO_CONNECTED:
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
+
+        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
+            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
+
+        elif status.command == 'Update_Status':
+            self.thread_status(status)
+
+        elif status.command == 'set_info':
+            param_dict = ioxml.XML_string_to_parameter(status.attribute[1])[0]
+            param_tmp = Parameter.create(**param_dict)
+            param = self.settings.child('move_settings', *status.attribute[0][1:])
+
+            param.restoreState(param_tmp.saveState())
+        else:
+            # not handled
+            return status
 
 
 class ControlModuleUI(CustomApp):

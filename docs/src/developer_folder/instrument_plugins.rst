@@ -151,7 +151,7 @@ The list of available types of parameters (defined in ``pymodaq.utils.parameter.
 * ``browsepath``: a text area and a pushbutton to select a given path or file
 * ``text`` : a text area (for comments for instance)
 
-**Important**: the *name* key in the dictionnaries must **not** contain any space, please use underscore if necessary!
+**Important**: the *name* key in the dictionaries must **not** contain any space, please use underscore if necessary!
 
 .. note::
 
@@ -505,12 +505,28 @@ Modifying the UI from the instrument plugin class
 -------------------------------------------------
 
 The user interface control module and the instrument plugin class are not in the same thread, moreover, the plugin
-class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``). Therefore, you'll find below ways to interact with
-the UI from the plugin class.
+class is not aware of the UI object (``DAQ_Move`` or ``DAQ_Viewer``).
+The following shows, how the instrument plugin class ``DAQ_Move_MyPluginClass`` relates to ``DAQ_Move``:
+
+.. code-block:: python
+
+   class DAQ_Move:
+      def init_hardware(self...):
+         hardware: DAQ_Move_Hardware
+         hardware.moveToThread()
+
+   class DAQ_Move_Hardware:
+      hardware: DAQ_Move_Base
+
+   class DAQ_Move_MyPluginClass(DAQ_Move_Base):
+      """Plugin class defined in a plugins repository."""
+
+
+Therefore, you'll find below ways to interact with the UI from the plugin class.
 
 The most generic way (valid for both control modules) is to use the ``emit_status`` method, defined in the parent class
-of the instrument plugin class. Such a method takes one argument, a ``ThreadCommand`` and will send this object
-to the ``thread_status`` method of the UI main class.
+of the instrument plugin class.
+Such a method takes one argument, a ``ThreadCommand`` and will send this object to the ``thread_status`` method of the UI main class.
 
 .. note::
   A :py:class:`ThreadCommand<pymodaq.utils.daq_utils.ThreadCommand>` is an object taking two arguments a string (the command) and a named attribute called attribute

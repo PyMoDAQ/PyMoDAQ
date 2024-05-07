@@ -57,6 +57,15 @@ params = [
              'value': config('network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
         ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
+         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -129,7 +138,7 @@ class DAQ_Viewer_base(QObject):
         *params*                list
         *settings*              instance of pyqtgraph Parameter
         *parent*                ???
-        *status*                dictionnary
+        *status*                dictionary
         ===================== ===================================
 
         See Also
@@ -182,22 +191,25 @@ class DAQ_Viewer_base(QObject):
 
         self.ini_attributes()
 
-        self.data_grabed_signal.connect(self._emit_dte)
-        self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        try:
+            self.data_grabed_signal.connect(self._emit_dte)
+            self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+        except Exception as exc:
+            print(f"Error with old message signal stuff: {exc}")
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
-                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
-                            f'instrument_plugins.html#emission-of-data')
+            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance'
+                            'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
         self.dte_signal.emit(dte)
 
     def _emit_dte_temp(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
-                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
-                            f'instrument_plugins.html#emission-of-data')
+            deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance'
+                            'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
         self.dte_signal_temp.emit(dte)
 
@@ -210,7 +222,7 @@ class DAQ_Viewer_base(QObject):
     def ini_detector_init(self, old_controller=None, new_controller=None):
         """Manage the Master/Slave controller issue
 
-        First initialize the status dictionnary
+        First initialize the status dictionary
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here
@@ -241,28 +253,28 @@ class DAQ_Viewer_base(QObject):
         Mandatory
         To be reimplemented in subclass
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def close(self):
         """
         Mandatory
         To be reimplemented in subclass
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def grab_data(self, Naverage=1, **kwargs):
         """
         Mandatory
         To be reimplemented in subclass
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def stop(self):
         """
         Mandatory
         To be reimplemented in subclass
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def commit_settings(self, param):
         """
@@ -296,7 +308,7 @@ class DAQ_Viewer_base(QObject):
             print(status)
 
     def update_scanner(self, scan_parameters):
-        #todo check this because ScanParameters has been removed
+        # todo check this because ScanParameters has been removed
         self.scan_parameters = scan_parameters
 
     @Slot(edict)
@@ -307,7 +319,7 @@ class DAQ_Viewer_base(QObject):
 
             ========================== ============= =====================================================
             **Parameters**              **Type**      **Description**
-            *settings_parameter_dict*   dictionnnary  a dictionnary listing path and associated parameter
+            *settings_parameter_dict*   dictionnnary  a dictionary listing path and associated parameter
             ========================== ============= =====================================================
 
             See Also
@@ -378,7 +390,6 @@ class DAQ_Viewer_base(QObject):
             pass
 
 
-
 class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     """
         ================= ==============================
@@ -413,7 +424,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         grabber_type: (str) either '0D', '1D' or '2D'
         """
         self.client_type = "GRABBER"
-        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with commom attribute and methods
+        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with common attribute and methods
         TCPServer.__init__(self, self.client_type)
 
         self.x_axis = None
@@ -469,7 +480,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def data_ready(self, data: DataToExport):
         """
-            Send the grabed data signal.
+            Send the grabbed data signal.
         """
         self.dte_signal.emit(data)
 
@@ -505,7 +516,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def ini_detector(self, controller=None):
         """
-            | Initialisation procedure of the detector updating the status dictionnary.
+            | Initialisation procedure of the detector updating the status dictionary.
             |
             | Init axes from image , here returns only None values (to tricky to di it with the server and not really
              necessary for images anyway)

@@ -13,3 +13,4 @@ User's Guide
    user_folder/data_management
    user_folder/useful_modules
    user_folder/tcpip
+   user_folder/leco

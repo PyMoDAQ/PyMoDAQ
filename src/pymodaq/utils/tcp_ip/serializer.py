@@ -4,6 +4,7 @@ Created the 20/10/2023
 
 @author: Sebastien Weber
 """
+from base64 import b64encode, b64decode
 import numbers
 from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
 
@@ -14,6 +15,18 @@ from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
 
 if TYPE_CHECKING:
     from pymodaq.utils.tcp_ip.mysocket import Socket
+
+
+SERIALIZABLE = Union[
+    int,
+    str,
+    numbers.Number,
+    list,
+    np.ndarray,
+    Axis,
+    DataWithAxes,
+    DataToExport,
+]
 
 
 class SocketString:
@@ -68,9 +81,10 @@ class SocketString:
 
 
 class Serializer:
-    """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and DataToExport objects"""
+    """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and
+    DataToExport objects"""
 
-    def __init__(self, obj: Union[int, str, numbers.Number, list, np.ndarray, Axis, DataWithAxes, DataToExport] = None):
+    def __init__(self, obj: SERIALIZABLE = None):
         self._bytes_string = b''
         self._obj = obj
 
@@ -107,6 +121,11 @@ class Serializer:
             return self.list_serialization(self._obj)
         elif isinstance(self._obj, bool):
             return self.scalar_serialization(int(self._obj))
+        raise ValueError
+
+    def to_b64_string(self) -> str:
+        b = self.to_bytes()
+        return b64encode(b).decode()
 
     @staticmethod
     def int_to_bytes(an_integer: int) -> bytes:
@@ -123,17 +142,17 @@ class Serializer:
         if not isinstance(an_integer, int):
             raise TypeError(f'{an_integer} should be an integer, not a {type(an_integer)}')
         elif an_integer < 0:
-            raise ValueError(f'Can only serialize unsigned integer using this method')
+            raise ValueError('Can only serialize unsigned integer using this method')
         return an_integer.to_bytes(4, 'big')
 
     @staticmethod
     def str_to_bytes(message: str) -> bytes:
         if not isinstance(message, str):
-            raise TypeError(f'Can only serialize str object using this method')
+            raise TypeError('Can only serialize str object using this method')
         return message.encode()
 
     @classmethod
-    def str_len_to_bytes(cls, message: str) -> (bytes, bytes):
+    def str_len_to_bytes(cls, message: Union[str, bytes]) -> (bytes, bytes):
         """ Convert a string and its length to two bytes
         Parameters
         ----------
@@ -474,6 +493,10 @@ class DeSerializer:
         if isinstance(bytes_string, bytes):
             bytes_string = SocketString(bytes_string)
         self._bytes_string = bytes_string
+
+    @classmethod
+    def from_b64_string(cls, b64_string: Union[bytes, str]) -> "DeSerializer":
+        return cls(b64decode(b64_string))
 
     @staticmethod
     def bytes_to_string(message: bytes) -> str:

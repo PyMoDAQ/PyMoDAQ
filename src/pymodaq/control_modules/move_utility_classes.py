@@ -1,5 +1,5 @@
 from time import perf_counter
-from typing import Union, List, Dict, TYPE_CHECKING
+from typing import Union, List, Dict, TYPE_CHECKING, Optional
 from numbers import Number
 
 from easydict import EasyDict as edict
@@ -122,6 +122,15 @@ params = [
               'value': config('network', 'tcp-server', 'ip')},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
          ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
+         ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
@@ -197,7 +206,8 @@ class DAQ_Move_base(QObject):
     data_actuator_type = DataActuatorType['float']
     data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
-    def __init__(self, parent: 'DAQ_Move_Hardware' = None, params_state: dict = None):
+    def __init__(self, parent: Optional['DAQ_Move_Hardware'] = None,
+                 params_state: Optional[dict] = None):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
@@ -280,7 +290,7 @@ class DAQ_Move_base(QObject):
     def ini_stage_init(self, old_controller=None, new_controller=None):
         """Manage the Master/Slave controller issue
 
-        First initialize the status dictionnary
+        First initialize the status dictionary
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here
@@ -438,7 +448,7 @@ class DAQ_Move_base(QObject):
     def commit_common_settings(self, param):
         pass
 
-    def move_done(self, position: DataActuator = None):  # the position argument is just there to match some signature of child classes
+    def move_done(self, position: Optional[DataActuator] = None):  # the position argument is just there to match some signature of child classes
         """
             | Emit a move done signal transmitting the float position to hardware.
             | The position argument is just there to match some signature of child classes.
@@ -494,7 +504,7 @@ class DAQ_Move_base(QObject):
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped', ))
-                logger.info(f'Move has been stopped')
+                logger.info('Move has been stopped')
             self.current_value = self.get_actuator_value()
 
             self.emit_value(self._current_value)
@@ -503,7 +513,7 @@ class DAQ_Move_base(QObject):
             if perf_counter() - self.start_time >= self.settings['timeout']:
                 self.poll_timer.stop()
                 self.emit_status(ThreadCommand('raise_timeout', ))
-                logger.info(f'Timeout activated')
+                logger.info('Timeout activated')
         else:
             self.poll_timer.stop()
             logger.debug(f'Current value: {self._current_value}')
@@ -661,7 +671,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
     def ini_stage(self, controller=None):
         """
-            | Initialisation procedure of the detector updating the status dictionnary.
+            | Initialisation procedure of the detector updating the status dictionary.
             |
             | Init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
 

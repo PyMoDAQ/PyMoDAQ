@@ -29,7 +29,7 @@ from pymodaq.utils.managers.roi_manager import ROISaver
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError, MasterSlaveError
 from pymodaq.utils import config as configmod
 from pymodaq.utils.parameter import ParameterTree, Parameter
-
+from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
@@ -276,6 +276,8 @@ class DashBoard(QObject):
         restart_action.triggered.connect(self.restart_fun)
 
         self.settings_menu = menubar.addMenu('Settings')
+        action_leco = self.settings_menu.addAction('Run Leco Coordinator')
+        action_leco.triggered.connect(start_coordinator)
         docked_menu = self.settings_menu.addMenu('Docked windows')
         action_load = docked_menu.addAction('Load Layout')
         action_save = docked_menu.addAction('Save Layout')
