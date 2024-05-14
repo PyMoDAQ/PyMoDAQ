@@ -39,7 +39,7 @@ from pymodaq.utils.h5modules.backends import Node
 
 
 local_path = config_mod.get_set_local_dir()
-sys.path.append(local_path)
+sys.path.append(str(local_path))
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
