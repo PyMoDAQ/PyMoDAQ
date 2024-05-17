@@ -67,8 +67,8 @@ try:
     logger.info('')
     logger.info('************************')
     logger.info(f"Setting Qt backend to: {config['qtbackend']['backend']} ...")
-    logger.info('************************')
     set_qt_backend()
+    logger.info('************************')
     logger.info('')
     logger.info('')
     logger.info('************************')
@@ -84,41 +84,45 @@ try:
     Q_ = ureg.Quantity
     logger.info('')
     logger.info('')
-    logger.info('************************')
+    logger.info('*************************************************************************')
     logger.info(f"Getting the list of instrument plugins...")
-    logger.info('************************')
-
+    logger.info('')
     get_instrument_plugins()
+    logger.info('*************************************************************************')
 
     if config('network', 'leco-server', 'run_coordinator_at_startup'):
         try:
             from pymodaq.utils.leco.utils import start_coordinator
             logger.info('')
             logger.info('')
-            logger.info('************************')
+            logger.info(f'********************************')
             logger.info(f"Starting the LECO Coordinator...")
-            logger.info('************************')
-            logger.info('')
-            logger.info('')
             start_coordinator()
+            logger.info(f"Done")
         except ImportError as e:
             logger.warning(f'Issue while importing the pyleco package: {str(e)}')
         except Exception as e:
             logger.warning(f'Issue while starting the pyleco coordinator: {str(e)}')
+        finally:
+            logger.info('************************')
+            logger.info('')
+            logger.info('')
 
     logger.info('')
     logger.info('')
     logger.info('************************')
     logger.info(f"Registering Scanners...")
-    logger.info('************************')
     register_scanners()
+    logger.info(f"Done")
+    logger.info('************************')
+
     logger.info('')
     logger.info('')
     logger.info('************************')
     logger.info(f"Registering plotters...")
-    logger.info('************************')
     register_plotter()
-
+    logger.info(f"Done")
+    logger.info('************************')
 
 except Exception as e:
     try:
