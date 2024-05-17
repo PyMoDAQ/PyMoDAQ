@@ -101,9 +101,10 @@ try:
             logger.info('')
             logger.info('')
             start_coordinator()
-        except ImportError:
-            pass
-
+        except ImportError as e:
+            logger.warning(f'Issue while importing the pyleco package: {str(e)}')
+        except Exception as e:
+            logger.warning(f'Issue while starting the pyleco coordinator: {str(e)}')
 
     logger.info('')
     logger.info('')
