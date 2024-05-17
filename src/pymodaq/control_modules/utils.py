@@ -5,7 +5,7 @@ Created the 03/10/2022
 @author: Sebastien Weber
 """
 from random import randint
-from typing import Optional
+from typing import Optional, Type
 
 from easydict import EasyDict as edict
 
@@ -354,7 +354,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
 
     _update_settings_signal = Signal(edict)
 
-    listener_class: type[ActorListener] = ActorListener
+    listener_class: Type[ActorListener] = ActorListener
 
     def __init__(self, **kwargs):
         QObject.__init__(self)
