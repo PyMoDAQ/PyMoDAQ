@@ -1,7 +1,7 @@
 
 import random
 
-from typing import Callable, Sequence
+from typing import Callable, Sequence, List
 
 import pymodaq.utils.parameter.utils as putils
 # object used to send info back to the main thread:
@@ -38,7 +38,7 @@ class LECODirector:
                     "move_abs", 'move_home', 'move_rel', 'get_actuator_value', 'stop_motion',
                     'position_is', 'move_done',
                     ]
-    socket_types: list[str]
+    socket_types: List[str]
 
     controller: GenericDirector
     settings: Parameter
@@ -84,5 +84,5 @@ class LECODirector:
         super().emit_status(status=status)  # type: ignore
 
     # Methods accessible via remote calls
-    def set_info(self, path: list[str], param_dict_str: str) -> None:
+    def set_info(self, path: List[str], param_dict_str: str) -> None:
         self.emit_status(ThreadCommand("set_info", attribute=[path, param_dict_str]))

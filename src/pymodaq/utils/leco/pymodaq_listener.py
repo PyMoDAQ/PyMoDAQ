@@ -8,7 +8,7 @@ except ImportError:
         pass
 import logging
 from threading import Event
-from typing import Optional, Union
+from typing import Optional, Union, List, Type
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.utils.listener import Listener, PipeHandler
@@ -78,7 +78,7 @@ class ActorHandler(PymodaqPipeHandler):
         return desererializer.dwa_deserialization()
 
     # generic commands
-    def set_info(self, path: list[str], param_dict_str: str) -> None:
+    def set_info(self, path: List[str], param_dict_str: str) -> None:
         self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
 
     # detector commands
@@ -125,7 +125,7 @@ class PymodaqListener(Listener):
 
     def __init__(self,
                  name: str,
-                 handler_class: type[PymodaqPipeHandler] = PymodaqPipeHandler,
+                 handler_class: Type[PymodaqPipeHandler] = PymodaqPipeHandler,
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: Optional[logging.Logger] = None,
@@ -168,7 +168,7 @@ class ActorListener(PymodaqListener):
 
     def __init__(self,
                  name: str,
-                 handler_class: type[ActorHandler] = ActorHandler,
+                 handler_class: Type[ActorHandler] = ActorHandler,
                  host: str = "localhost",
                  port: int = COORDINATOR_PORT,
                  logger: Optional[logging.Logger] = None,

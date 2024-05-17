@@ -12,7 +12,7 @@ from importlib import import_module
 from numbers import Number
 from random import randint
 import sys
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Type
 import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
