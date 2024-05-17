@@ -4,7 +4,7 @@ Utils for the Director Modules
 These directors correspond to the PymodaqListener
 """
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from pyleco.directors.director import Director
 
@@ -26,7 +26,7 @@ class GenericDirector(Director):
         self.set_info_str(path=putils.get_param_path(param)[2:],
                           param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
-    def set_info_str(self, path: list[str], param_dict_str: str) -> None:
+    def set_info_str(self, path: List[str], param_dict_str: str) -> None:
         self.ask_rpc(method="sef_info", path=path, param_dict_str=param_dict_str)
 
 
