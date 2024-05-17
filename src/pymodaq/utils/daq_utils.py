@@ -605,6 +605,8 @@ def get_instrument_plugins():  # pragma: no cover
                                      'type': 'daq_move'}
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
                                     if 'daq_move' in mod])
+                if len(plugin_list) > 0:
+                    logger.info(f"Found Move Instrument: {plugin_list[-1]['name']}")
             except ModuleNotFoundError:
                 pass
             viewer_modules = {}
@@ -618,6 +620,8 @@ def get_instrument_plugins():  # pragma: no cover
                                      'type': f'daq_{vtype}viewer'}
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(viewer_modules[vtype].path.parent)])]
                                     if f'daq_{vtype}viewer' in mod])
+                    if len(plugin_list) > 0:
+                        logger.info(f"Found Viewer Instrument: {plugin_list[-1]['name']}")
                 except ModuleNotFoundError:
                     pass
 
