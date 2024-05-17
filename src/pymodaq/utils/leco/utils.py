@@ -30,9 +30,12 @@ def run_coordinator():
 
 def start_coordinator():
     from pyleco.directors.director import Director
-    with Director(actor="COORDINATOR") as director:
-        if director.communicator.namespace is None:
-            run_coordinator()
-        else:
-            logger.info('Coordinator already running')
+    try:
+        with Director(actor="COORDINATOR") as director:
+            if director.communicator.namespace is None:
+                run_coordinator()
+            else:
+                logger.info('Coordinator already running')
+    except ConnectionRefusedError as e:
+        run_coordinator()
 
