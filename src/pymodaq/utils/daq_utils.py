@@ -564,16 +564,18 @@ def get_instrument_plugins():  # pragma: no cover
     """
     plugins_import = []
     discovered_plugins = []
-    discovered_plugins_all = get_entrypoints(group='pymodaq.plugins')  # old naming of the instrument plugins
-    discovered_plugins_all.extend(get_entrypoints(group='pymodaq.instruments'))  # new naming convention
+    discovered_plugins_all = list(get_entrypoints(group='pymodaq.plugins'))  # old naming of the instrument plugins
+    discovered_plugins_all.extend(list(get_entrypoints(group='pymodaq.instruments')))  # new naming convention
     for entry in discovered_plugins_all:
         if entry.name not in [ent.name for ent in discovered_plugins]:
             discovered_plugins.append(entry)
+    discovered_plugins = list(set(discovered_plugins))
     logger.debug(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     viewer_types = ['0D', '1D', '2D', 'ND']
+    plugin_list = []
     for entrypoint in discovered_plugins:
         #print(f'Looking for valid instrument plugins in package: {module.value}')
-        plugin_list = []
+
         try:
             try:
                 movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
@@ -584,7 +586,7 @@ def get_instrument_plugins():  # pragma: no cover
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(movemodule.path.parent)])]
                                     if 'daq_move' in mod])
                 if len(plugin_list) > 0:
-                    logger.info(f"Found Move Instrument:"
+                    logger.debug(f"Found Move Instrument:"
                                 f" {plugin_list[-1]['module'].__name__}/{plugin_list[-1]['name']}")
             except ModuleNotFoundError:
                 pass
@@ -601,29 +603,31 @@ def get_instrument_plugins():  # pragma: no cover
                                     for mod in [mod[1] for mod in pkgutil.iter_modules([str(viewer_modules[vtype].path.parent)])]
                                     if f'daq_{vtype}viewer' in mod])
                     if len(plugin_list) > 0:
-                        logger.info(f"Found Viewer Instrument: "
+                        logger.debug(f"Found Viewer Instrument: "
                                     f"{plugin_list[-1]['module'].__name__}/{plugin_list[-1]['name']}")
                 except ModuleNotFoundError:
                     pass
 
-            # check if modules are importable
-            for mod in plugin_list:
-                try:
-                    plugin_type = mod['type']
-                    if plugin_type == 'daq_move':
-                        submodule = mod['module']
-                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
-                    else:
-                        submodule = mod['module']
-                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
-                    plugins_import.append(mod)
-                except Exception as e:  # pragma: no cover
-                    """If an error is generated at the import, then exclude this plugin"""
-                    logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
-                                 f' from module: {mod["parent_module"].__package__}')
         except Exception as e:  # pragma: no cover
             logger.debug(str(e))
-            
+
+    for mod in plugin_list:
+        try:
+            plugin_type = mod['type']
+            if plugin_type == 'daq_move':
+                submodule = mod['module']
+                importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+            else:
+                submodule = mod['module']
+                importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+            plugins_import.append(mod)
+            logger.info(f"{mod['module'].__name__}/{mod['name']} available")
+        except Exception as e:  # pragma: no cover
+            """If an error is generated at the import, then exclude this plugin"""
+            logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
+                         f' from module: {mod["parent_module"].__package__}')
+
+
     # add utility plugin for PID
     try:
         pidmodule = importlib.import_module('pymodaq.extensions.pid')
