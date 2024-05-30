@@ -22,6 +22,7 @@ from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
+from pymodaq.utils.logger import get_base_logger
 
 
 class DAQTypesEnum(BaseEnum):
@@ -294,7 +295,7 @@ class ControlModule(QObject):
     def show_log(self):
         """Open the log file in the default text editor"""
         import webbrowser
-        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
+        webbrowser.open(get_base_logger(self.logger).handlers[0].baseFilename)
 
     def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""
