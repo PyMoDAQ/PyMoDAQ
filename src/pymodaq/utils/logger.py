@@ -66,6 +66,12 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     return logger
 
 
+def get_base_logger(logger: logging.Logger) -> logging.Logger:
+    while logger.name != 'pymodaq':
+        logger = logger.parent
+    return logger
+
+
 def get_module_name(module__file__path):
     """from the full path of a module extract its name"""
     path = Path(module__file__path)
