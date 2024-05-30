@@ -11,3 +11,8 @@ from pymodaq.utils import logger as logger_mod
 def test_get_module_name():
     config_path = config_mod.get_set_config_dir()
     assert logger_mod.get_module_name(config_path) == 'config'
+
+
+def test_get_base_logger():
+    logger = logger_mod.set_logger('random_name')
+    assert logger_mod.get_base_logger(logger).name == 'pymodaq'
