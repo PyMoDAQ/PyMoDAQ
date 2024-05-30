@@ -652,7 +652,7 @@ class View2D(ActionManager, QtCore.QObject):
     def set_image_labels(self, labels: List[str]):
         action_names =['red', 'green', 'blue']
         for action_name, label in zip(action_names[:len(labels)], labels):
-            self.get_action(action_name).setToolTip(f'{self.get_action(action_name).toolTip()}'
+            self.get_action(action_name).setToolTip('Show/Hide'
                                                     f' - '
                                                     f'{label}')
 
