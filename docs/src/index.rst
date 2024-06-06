@@ -34,7 +34,7 @@ Training
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Third edition of the PyMoDAQ's Days: Lyon 20/22 October 2024. Register on https://pymodaq-jt2022.sciencesconf.org/
+   * Third edition of the PyMoDAQ's Days: Lyon 20/22 October 2024. Register on https://pymodaq-days.sciencesconf.org
    * Training session in Toulouse, France 17/19 June 2024
 
 PyMoDAQ has two purposes:

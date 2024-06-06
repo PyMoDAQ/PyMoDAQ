@@ -666,19 +666,20 @@ class DAQ_Viewer(ParameterControlModule):
         DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
 
         """
-        detector_node = self.module_and_data_saver.get_set_node(where)
-        dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
-            dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
+        if dte is not None:
+            detector_node = self.module_and_data_saver.get_set_node(where)
+            dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
+                dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
 
-        dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
-                           [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
-                            ('do_save' in dwa.extra_attributes and dwa.do_save)])
+            dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
+                               [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
+                                ('do_save' in dwa.extra_attributes and dwa.do_save)])
 
-        self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
+            self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
 
-        if init_step:
-            if self._do_bkg and self._bkg is not None:
-                self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+            if init_step:
+                if self._do_bkg and self._bkg is not None:
+                    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
 
     def _save_data(self, path=None, dte: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
