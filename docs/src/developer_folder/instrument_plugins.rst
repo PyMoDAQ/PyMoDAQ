@@ -9,7 +9,7 @@ Instrument Plugins
 
 Any new hardware has to be included in PyMoDAQ within a :term:`plugin`. A PyMoDAQ's plugin is a python package
 containing several added functionalities such as instruments objects. A instrument object is a class inheriting from either
-a ``DAQ_Move_Base`` or a ``DAQ_Viewer_Base`` class`and implementing mandatory methods for easy and quick inclusion of the instrument
+a ``DAQ_Move_base`` or a ``DAQ_Viewer_base`` class and implementing mandatory methods for easy and quick inclusion of the instrument
 within the PyMoDAQ control modules.
 
 Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
