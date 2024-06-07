@@ -94,7 +94,7 @@ class DAQ_Viewer(ParameterControlModule):
 
     listener_class = ViewerActorListener
 
-    def __init__(self, parent=None, title="Testing",
+    def __init__(self, parent: DockArea=None, title="Testing",
                  daq_type=config('viewer', 'daq_type'),
                  dock_settings=None, dock_viewer=None,
                  **kwargs):
@@ -1068,6 +1068,7 @@ class DAQ_Viewer(ParameterControlModule):
             QtWidgets.QApplication.processEvents()
 
         elif status.command == 'lcd':
+            """status.attribute should be a list of numpy arrays of shape (1,)"""
             self._lcd.setvalues(status.attribute)
 
         elif status.command == 'stop':
