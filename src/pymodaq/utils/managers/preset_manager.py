@@ -119,7 +119,9 @@ class PresetManager:
         for param, change, data in changes:
             path = self.preset_params.childPath(param)
             if change == 'childAdded':
-                data[0].child('params', 'main_settings', 'module_name').setValue(data[0].child('name').value())
+                if len(data) > 1:
+                    if 'params' in data[0].children():
+                        data[0].child('params', 'main_settings', 'module_name').setValue(data[0].child('name').value())
 
             elif change == 'value':
 
