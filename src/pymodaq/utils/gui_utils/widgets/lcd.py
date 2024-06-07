@@ -106,6 +106,6 @@ if __name__ == '__main__':
     prog = LCD(Form, Nvals=2)
     Form.show()
     for ind, data in enumerate(y1):
-        prog.setvalues([data])
+        prog.setvalues([np.array([data])])
         QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
