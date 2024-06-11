@@ -69,3 +69,9 @@ extension class called ``MyExtension`` (from the *pymodaq_plugins_template* pack
         def __init__(self, dockarea, dashboard):
             super().__init__(dockarea, dashboard)
             self.setup_ui()
+
+With such a file in the extensions folder, the dashboard will be able to see it and will lists it into its available
+extensions. Then you'll have to code the inners of your extension following the ``CustomApp`` class
+(see :ref:`custom_app`). The big difference between extensions and Standalone apps resides in the fact that your
+dashboard instance is available here, hence all the control modules it contains. You'll be able to use all their
+functionalities only focusing on your extension layout!
