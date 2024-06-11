@@ -5,6 +5,7 @@ from typing import Any, Union, get_args
 # import also the DeSerializer for easier imports in dependents
 from pymodaq.utils.tcp_ip.serializer import SERIALIZABLE, Serializer, DeSerializer  # type: ignore  # noqa
 from pymodaq.utils.logger import set_logger
+from pymodaq.utils.daq_utils import ThreadCommand
 
 
 logger = set_logger('leco_utils')
@@ -21,6 +22,25 @@ def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any
     else:
         raise ValueError(f"{pymodaq_object} of type '{type(pymodaq_object).__name__}' is neither "
                          "JSON serializable, nor via PyMoDAQ.")
+
+
+def create_leco_transfer_tuple(pymodaq_object: Union[SERIALIZABLE, Any]) -> tuple[Any, list[bytes]]:
+    """Create a tuple to send via LECO, either directly or binary encoded."""
+    if isinstance(pymodaq_object, get_args(JSON_TYPES)):
+        return pymodaq_object, []
+    elif isinstance(pymodaq_object, get_args(SERIALIZABLE)):
+        return None, [Serializer(pymodaq_object).to_bytes()]
+    else:
+        raise ValueError(f"{pymodaq_object} of type '{type(pymodaq_object).__name__}' is neither "
+                         "JSON serializable, nor via PyMoDAQ.")
+
+
+def thread_command_to_dict(thread_command: ThreadCommand) -> dict[str, Any]:
+    return {
+        "type": "ThreadCommand",
+        "command": thread_command.command,
+        "attribute": thread_command.attribute,
+    }
 
 
 def run_coordinator():
