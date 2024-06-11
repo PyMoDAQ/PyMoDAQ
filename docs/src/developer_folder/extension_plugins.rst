@@ -13,7 +13,7 @@ extensions such as the :ref:`DAQ_Scan_module`.
 
 For your package to be considered as a PyMoDAQ's dashboard extension, you should make sure of a few things:
 
-* The entrypoint in the setup file should be correctly configured, see :numref:`extension_entrypoint_fig`
+* The entrypoint in the *plugin_info.toml* file should be correctly configured, see :numref:`extension_entrypoint_fig`
 * The presence of an *extensions* module at the root of the package
 * each module within the *extensions* module will define an extension. It should contains three attributes:
 

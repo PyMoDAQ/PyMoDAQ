@@ -19,6 +19,21 @@ to be added to PyMoDAQ
 
     Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins
 
+The best way to start creating a PyMoDAQ plugin is to use the template one on `github`__ and read this `tutorial`__.
+
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+__ https://pymodaq.cnrs.fr/en/latest/tutorials/new_plugin.html
+
+Each new functionality type can be activated within a plugin from the *plugin_info.toml* file (see below) within the
+features section.
+
+.. figure:: /image/plugin_development/plugin_info_toml.png
+   :alt: plugin_info.toml
+
+   Content of a *plugin_info.toml* file
+
+
 
 .. toctree::
    :maxdepth: 2
