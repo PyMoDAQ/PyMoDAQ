@@ -17,7 +17,7 @@ from qtpy.QtCore import QObject, Signal  # type: ignore
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
-from pymodaq.utils.leco.utils import serialize_object
+from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
 
 
 class LECOClientCommands(StrEnum):
@@ -220,7 +220,7 @@ class ActorListener(PymodaqListener):
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_data",
-                data=serialize_object(value),
+                **binary_serialization_to_kwargs(value),
             )
 
         elif command.command == 'send_info':
@@ -236,14 +236,14 @@ class ActorListener(PymodaqListener):
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
-                                      position=serialize_object(value),
+                                      **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
-                                      position=serialize_object(value),
+                                      **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
 
         elif command.command == 'x_axis':
@@ -251,7 +251,7 @@ class ActorListener(PymodaqListener):
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
                                           method="set_x_axis",
-                                          data=serialize_object(value),
+                                          **binary_serialization_to_kwargs(value),
                                           )
             elif isinstance(value, dict):
                 self.communicator.ask_rpc(receiver=self.remote_name, method="set_x_axis", **value)
@@ -263,7 +263,7 @@ class ActorListener(PymodaqListener):
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
                                           method="set_y_axis",
-                                          data=serialize_object(value),
+                                          **binary_serialization_to_kwargs(value),
                                           )
             elif isinstance(value, dict):
                 self.communicator.ask_rpc(receiver=self.remote_name, method="set_y_axis", **value)
