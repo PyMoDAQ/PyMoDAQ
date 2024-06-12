@@ -6,7 +6,7 @@ Created the 20/10/2023
 """
 from base64 import b64encode, b64decode
 import numbers
-from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
+from typing import Optional, Tuple, List, Union, TYPE_CHECKING
 
 
 import numpy as np
@@ -563,7 +563,7 @@ class DeSerializer:
         str_obj = self._bytes_string.get_first_nbytes(string_len).decode()
         return str_obj
 
-    def scalar_deserialization(self) -> numbers.Number:
+    def scalar_deserialization(self, data_type: Optional[str] = None) -> numbers.Number:
         """Convert bytes into a numbers.Number object
 
         Get first the data type from a string deserialization, then the data length and finally convert this
@@ -573,7 +573,7 @@ class DeSerializer:
         -------
         numbers.Number: the decoded number
         """
-        data_type = self.string_deserialization()
+        data_type = self.string_deserialization() if data_type is None else data_type
         data_len = self._int_deserialization()
         number = np.frombuffer(self._bytes_string.get_first_nbytes(data_len), dtype=data_type)[0]
         if 'f' in data_type:
@@ -595,7 +595,7 @@ class DeSerializer:
         number = self.scalar_deserialization()
         return bool(number)
 
-    def ndarray_deserialization(self) -> np.ndarray:
+    def ndarray_deserialization(self, data_type: Optional[str] = None) -> np.ndarray:
         """Convert bytes into a numpy ndarray object
 
         Convert the first bytes into a ndarray reading first information about the array's data
@@ -604,7 +604,7 @@ class DeSerializer:
         -------
         ndarray: the decoded numpy array
         """
-        ndarray_type = self.string_deserialization()
+        data_type = self.string_deserialization() if data_type is None else data_type
         ndarray_len = self._int_deserialization()
         shape_len = self._int_deserialization()
         shape = []
@@ -612,28 +612,29 @@ class DeSerializer:
             shape_elt = self._int_deserialization()
             shape.append(shape_elt)
 
-        ndarray = np.frombuffer(self._bytes_string.get_first_nbytes(ndarray_len), dtype=ndarray_type)
+        ndarray = np.frombuffer(self._bytes_string.get_first_nbytes(ndarray_len), dtype=data_type)
         ndarray = ndarray.reshape(tuple(shape))
         ndarray = np.atleast_1d(ndarray)  # remove singleton dimensions
         return ndarray
 
-    def object_deserialization(self):
+    def object_deserialization(self, read_once: bool = False):
         obj_type = self.string_deserialization()
+        obj = obj_type if read_once else None
         elt = None
         if obj_type == 'scalar':
-            elt = self.scalar_deserialization()
+            elt = self.scalar_deserialization(obj)
         elif obj_type == 'string':
-            elt = self.string_deserialization()
+            elt = self.string_deserialization(obj)
         elif obj_type == 'array':
-            elt = self.ndarray_deserialization()
+            elt = self.ndarray_deserialization(obj)
         elif obj_type == 'dwa':
-            elt = self.dwa_deserialization()
+            elt = self.dwa_deserialization(obj)
         elif obj_type == 'axis':
-            elt = self.axis_deserialization()
+            elt = self.axis_deserialization(obj)
         elif obj_type == 'bool':
-            elt = self.boolean_deserialization()
+            elt = self.boolean_deserialization(obj)
         elif obj_type == 'list':
-            elt = self.list_deserialization()
+            elt = self.list_deserialization(obj)
         else:
             print(f'invalid object type {obj_type}')
         return elt
