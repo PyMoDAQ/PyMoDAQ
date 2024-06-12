@@ -8,9 +8,10 @@ import numbers
 
 import numpy as np
 import pytest
+from typing import Union
 
 from pymodaq.utils import data as data_mod
-from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
+from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType, DataActuator
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
 
 LABEL = 'A Label'
@@ -59,6 +60,12 @@ def get_data():
     return dte
 
 
+@pytest.fixture
+def serialized_data(get_data: DataToExport) -> bytes:
+    ser = Serializer(get_data)
+    return ser.to_bytes()
+
+
 class TestStaticClassMethods:
 
     def test_int_to_bytes(self):
@@ -100,6 +107,34 @@ class TestStaticClassMethods:
         assert DeSerializer.bytes_to_string(bytes_string) == MESSAGE
 
 
+class Test_bytes_serialization:
+    obj = b"original object"
+    serialized = b"14original object"
+
+    def test_serialize(self):
+        assert Serializer().bytes_serialization(self.obj) == self.serialized
+
+    def test_to_bytes(self):
+        assert Serializer(self.obj).to_bytes() == self.serialized
+
+    def test_object_deserialize(self):
+        assert DeSerializer(self.serialized).object_deserialization() == self.obj
+
+
+class Test_string_serialization:
+    obj = "original object"
+    serialized = b"14original object"
+
+    def test_serialize(self):
+        assert Serializer().string_serialization(self.obj) == self.serialized
+
+    def test_to_bytes(self):
+        assert Serializer(self.obj).to_bytes() == self.serialized
+
+    def test_object_deserialize(self):
+        assert DeSerializer(self.serialized).object_deserialization() == self.obj
+
+
 def test_string_serialization_deserialization():
 
     string = 'Hello World'
@@ -122,6 +157,28 @@ def test_scalar_serialization_deserialization():
         pass
 
 
+class Test_scalar_serialization:
+    @pytest.fixture(params=((5, b""), (123.456, b"")))
+    def obj_serialized(self, request: pytest.FixtureRequest) -> tuple[Union[float, int], bytes]:
+        return request.param
+
+    def test_serialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer().scalar_serialization(obj) == serialized
+
+    def test_to_bytes(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer(obj).to_bytes() == serialized
+
+    def test_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).scalar_deserialization() == obj
+
+    def test_object_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
+
+
 def test_ndarray_serialization_deserialization():
 
     ndarrays = [np.array([12, 56, 78,]),
@@ -137,6 +194,35 @@ def test_ndarray_serialization_deserialization():
         assert np.allclose(DeSerializer(ser.to_bytes()).ndarray_deserialization(), ndarray)
 
 
+class Test_ndarray_serialization:
+    @pytest.fixture
+    def obj_serialized(self):
+        ndarrays = [
+            np.array([12, 56, 78,]),
+            np.array([-12.8, 56, 78]),
+            np.array([12]),
+            np.array([[12, 56, 78, ], [12, 56, 78, ], [12, 56, 78, ]]),
+        ]
+        serialized = b""
+        return ndarrays, serialized
+
+    def test_serialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer().ndarray_serialization(obj) == serialized
+
+    def test_to_bytes(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer(obj).to_bytes() == serialized
+
+    def test_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).ndarray_deserialization() == obj
+
+    def test_object_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
+
+
 def test_object_type_serialization(get_data):
     dte = get_data
     ser = Serializer()
@@ -145,7 +231,9 @@ def test_object_type_serialization(get_data):
     objects.extend(dte.get_data_from_dim('Data1D')[0].axes)
 
     for obj in objects:
-        assert ser.object_type_serialization(obj)[4:].decode() == obj.__class__.__name__
+        bytes_string = ser.object_type_serialization(obj)
+        assert bytes_string[4:].decode() == obj.__class__.__name__
+        assert DeSerializer(bytes_string).string_deserialization() == obj.__class__.__name__
 
 
 def test_axis_serialization_deserialization():
@@ -161,11 +249,37 @@ def test_axis_serialization_deserialization():
     assert axis_deser.units == axis.units
     assert np.allclose(axis_deser.get_data(), axis.get_data())
 
+
+def test_axis_serialization_deserialization_with_errors():
     ser = Serializer('bjkdbjk')
     with pytest.raises(TypeError):
         ser.axis_serialization()
     with pytest.raises(TypeError):
         DeSerializer(ser.string_serialization()).axis_deserialization()
+
+
+class Test_axis_serialization:
+    @pytest.fixture
+    def obj_serialized(self):
+        axis = init_axis()
+        serialized = b""
+        return axis, serialized
+
+    def test_serialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer().ndarray_serialization(obj) == serialized
+
+    def test_to_bytes(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert Serializer(obj).to_bytes() == serialized
+
+    def test_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).ndarray_deserialization() == obj
+
+    def test_object_deserialize(self, obj_serialized):
+        obj, serialized = obj_serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
 
 
 @pytest.mark.parametrize('obj_list', (['hjk', 'jkgjg', 'lkhlkhl'],  # homogeneous string
@@ -231,3 +345,26 @@ def test_base_64_de_serialization(get_data: DataToExport):
     assert dte_back.timestamp == dte.timestamp
     for dwa in dte_back:
         assert dwa == dte.get_data_from_full_name(dwa.get_full_name())
+
+
+def test_object_deserialization(serialized_data: bytes):
+    deser = DeSerializer(serialized_data)
+    obj_back = deser.object_deserialization(manual=True)
+    assert isinstance(obj_back, DataToExport)
+
+
+class Test_Data_Actuator:
+    cm = b"\x00\x00\x00\x0cDataActuator\x00\x00\x00\x03<f8\x00\x00\x00\x08(\xb0\x18\xa8h\x9a\xd9A\x00\x00\x00\x04test\x00\x00\x00\x03raw\x00\x00\x00\x06Data0D\x00\x00\x00\x07uniform\x00\x00\x00\x01\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x00\x08\x00\x00\x00\x01\x00\x00\x00\x01\xa0\x8d\x086\xe7\xff#@\x00\x00\x00\x01\x00\x00\x00\x06string\x00\x00\x00\x04CH00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    dm = b"\x00\x00\x00\x0cDataActuator\x00\x00\x00\x03<f8\x00\x00\x00\x08(\xb0\x18\xa8h\x9a\xd9A\x00\x00\x00\x08actuator\x00\x00\x00\x03raw\x00\x00\x00\x06Data0D\x00\x00\x00\x07uniform\x00\x00\x00\x01\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x00\x08\x00\x00\x00\x01\x00\x00\x00\x01\xa0\x8d\x086\xe7\xff#@\x00\x00\x00\x01\x00\x00\x00\x06string\x00\x00\x00\x04CH00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+
+    def test_whatever(self):
+        pass
+
+    def test_deserialization(self):
+        des = DeSerializer(self.cm).object_deserialization(manual=True)
+        assert des is not None
+        assert isinstance(des, DataActuator)
+
+    def test_deserialization2(self):
+        des = DeSerializer(self.dm).dwa_deserialization()
+        assert des is not None
