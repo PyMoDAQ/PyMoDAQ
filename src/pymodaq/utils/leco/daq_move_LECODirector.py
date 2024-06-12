@@ -85,12 +85,14 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             False if initialization failed otherwise True
         """
         actor_name = self.settings.child("actor_name").value()
+        self.communicator.unsubscribe_all()
+        self.communicator.subscribe(actor_name if "." in actor_name else ".".join((self.communicator.namespace, actor_name)))
         self.controller = self.ini_stage_init(  # type: ignore
             old_controller=controller,
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
             )
         try:
-            self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+            pass  # self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         except TimeoutError:
             print("Timeout setting remote name.")  # TODO change to real logging
         # self.settings.child('infos').addChildren(self.params_client)
