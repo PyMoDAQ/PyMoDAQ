@@ -55,11 +55,14 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
                          params_state=params_state, **kwargs)
         self.register_rpc_methods((
             self.set_info,
+        ))
+        for method in (
             self.set_position,
             self.set_move_done,
             self.set_x_axis,
             self.set_y_axis,
-        ))
+        ):
+            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
         # copied, I think it is good:
         self.settings.child('bounds').hide()
@@ -143,22 +146,29 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.controller.stop_motion()
 
     # Methods accessible via remote calls
-    def _set_position_value(self, position: Union[str, float]) -> DataActuator:
-        if isinstance(position, str):
-            deserializer = DeSerializer.from_b64_string(position)
-            pos = deserializer.dwa_deserialization()
+    def _set_position_value(
+        self, position: Union[str, float, None], additional_payload=None
+    ) -> DataActuator:
+        if position:
+            if isinstance(position, str):
+                deserializer = DeSerializer.from_b64_string(position)
+                pos = deserializer.dwa_deserialization()
+            else:
+                pos = DataActuator(data=position)
+        elif additional_payload is not None:
+            pos = DeSerializer(additional_payload[0]).dwa_deserialization()
         else:
-            pos = DataActuator(data=position)
+            raise ValueError("No position given")
         pos = self.get_position_with_scaling(pos)  # type: ignore
         self._current_value = pos
         return pos
 
-    def set_position(self, position: Union[str, float]) -> None:
-        pos = self._set_position_value(position=position)
+    def set_position(self, position: Union[str, float, None], additional_payload=None) -> None:
+        pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
-    def set_move_done(self, position: Union[str, float]) -> None:
-        pos = self._set_position_value(position=position)
+    def set_move_done(self, position: Union[str, float, None], additional_payload=None) -> None:
+        pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('move_done', [pos]))
 
     def set_x_axis(self, data, label: str = "", units: str = "") -> None:
