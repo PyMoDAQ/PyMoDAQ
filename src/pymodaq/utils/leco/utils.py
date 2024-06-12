@@ -1,3 +1,4 @@
+from __future__ import annotations
 import subprocess
 import sys
 from typing import Any, Union, get_args
@@ -41,6 +42,38 @@ def thread_command_to_dict(thread_command: ThreadCommand) -> dict[str, Any]:
         "command": thread_command.command,
         "attribute": thread_command.attribute,
     }
+
+
+def thread_command_to_leco_tuple(thread_command: ThreadCommand) -> tuple[dict[str, Any], list[bytes]]:
+    """Convert a thread_command to a dictionary and a list of bytes."""
+    d: dict[str, Any] = {"type": "ThreadCommand", "command": thread_command.command}
+    b: list[bytes] = []
+    binary_dict: list[int] = []
+    if thread_command.attribute is None:
+        pass
+    elif isinstance(thread_command.attribute, list):
+        # quite often it is a list of attributes
+        attribute = thread_command.attribute.copy()
+        for i, el in enumerate(attribute):
+            if isinstance(el, get_args(JSON_TYPES)):
+                continue
+            elif isinstance(el, get_args(SERIALIZABLE)):
+                b.append(Serializer(el).to_bytes())
+                binary_dict.append(i)
+                attribute[i] = None
+        d["binary"] = binary_dict
+    d["attribute"] = attribute
+    return d, b
+
+
+def leco_tuple_to_thread_command(command_dict: dict[str, Any], additional: list[bytes]) -> ThreadCommand:
+    """Convert a leco tuple to a ThreadCommand."""
+    assert command_dict.pop("type") == "ThreadCommand", "The message is not a ThreadCommand!"
+    binary = command_dict.pop("binary", [])
+    attribute = command_dict.pop("attribute", None)
+    for i, position in enumerate(binary):
+        attribute[position] = DeSerializer(additional[i]).object_deserialization()
+    return ThreadCommand(attribute=attribute, **command_dict)
 
 
 def run_coordinator():

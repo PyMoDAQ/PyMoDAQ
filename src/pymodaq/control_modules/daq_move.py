@@ -422,6 +422,9 @@ class DAQ_Move(ParameterControlModule):
               :meth:`daq_move_ui.set_abs_spinbox_properties`
             * stop: stop the motion
         """
+        if self.settings['main_settings', 'leco', 'leco_connected']:
+            if status.command not in ("ini_stage",):
+                self._leco_client.publish_thread_command(status)
 
         super().thread_status(status, 'move')
 

@@ -19,7 +19,7 @@ from qtpy.QtCore import QObject, Signal  # type: ignore
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
-from pymodaq.utils.leco.utils import serialize_object, create_leco_transfer_tuple, thread_command_to_dict
+from pymodaq.utils.leco.utils import serialize_object, create_leco_transfer_tuple, thread_command_to_dict, thread_command_to_leco_tuple
 
 
 class LECOClientCommands(StrEnum):
@@ -171,18 +171,12 @@ class PymodaqListener(Listener):
 
     def publish_thread_command(self, thread_command: ThreadCommand) -> None:
         """Publish a ThreadCommand via the data protocol."""
-        v, b = create_leco_transfer_tuple(thread_command.attribute)
-        thread_command.attribute = v
-        d = thread_command_to_dict(thread_command)
-        message = DataMessage(topic=self.communicator.full_name, data=d)
+        try:
+            v, b = thread_command_to_leco_tuple(thread_command)
+        except:
+            raise
+        message = DataMessage(topic=self.communicator.full_name, data=v)
         message.payload.extend(b)
-        self.publisher.send_message(message)
-
-    def publish_parameter_thread_command(self, thread_command: ThreadCommand) -> None:
-        """Publish a ThreadCommand via the data protocol."""
-        thread_command.attribute["param"] = ioxml.parameter_to_xml_string(thread_command.attribute["param"]).decode()  # type: ignore
-        d = thread_command_to_dict(thread_command)
-        message = DataMessage(topic=self.communicator.full_name, data=d)
         self.publisher.send_message(message)
 
 
@@ -240,7 +234,6 @@ class ActorListener(PymodaqListener):
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
             value = command.attribute  # type: ignore
-            self.publish_thread_command(thread_command=command)
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_data",
@@ -248,7 +241,6 @@ class ActorListener(PymodaqListener):
             )
 
         elif command.command == 'send_info':
-            self.publish_parameter_thread_command(command)
             path = command.attribute['path']  # type: ignore
             param = command.attribute['param']  # type: ignore
             self.communicator.ask_rpc(
@@ -258,7 +250,6 @@ class ActorListener(PymodaqListener):
                 param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
         elif command.command == LECOMoveCommands.POSITION:
-            self.publish_thread_command(command)
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
@@ -266,7 +257,6 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
-            self.publish_thread_command(command)
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
@@ -274,7 +264,6 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == 'x_axis':
-            self.publish_thread_command(command)
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
@@ -287,7 +276,6 @@ class ActorListener(PymodaqListener):
                 raise ValueError("Nothing to send!")
 
         elif command.command == 'y_axis':
-            self.publish_thread_command(command)
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
