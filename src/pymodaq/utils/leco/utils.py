@@ -83,6 +83,11 @@ def run_coordinator():
     subprocess.Popen(command)
 
 
+def run_proxy_server() -> None:
+    command = [sys.executable, "-m", "pyleco.coordinators.proxy_server"]
+    subprocess.Popen(command)
+
+
 def start_coordinator():
     from pyleco.directors.director import Director
     try:
@@ -93,4 +98,5 @@ def start_coordinator():
                 logger.info('Coordinator already running')
     except ConnectionRefusedError as e:
         run_coordinator()
+        run_proxy_server()
 
