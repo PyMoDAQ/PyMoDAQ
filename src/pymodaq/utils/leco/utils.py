@@ -62,7 +62,7 @@ def thread_command_to_leco_tuple(thread_command: ThreadCommand) -> tuple[dict[st
                 binary_dict.append(i)
                 attribute[i] = None
         d["binary"] = binary_dict
-    d["attribute"] = attribute
+        d["attribute"] = attribute
     return d, b
 
 

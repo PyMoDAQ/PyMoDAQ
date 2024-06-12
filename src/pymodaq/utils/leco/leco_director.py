@@ -1,6 +1,6 @@
 
 import random
-from typing import Callable, Sequence, List
+from typing import Any, Callable, Optional, Sequence, List
 
 from pyleco.core.data_message import DataMessage
 
@@ -12,6 +12,7 @@ from pymodaq.utils.parameter import Parameter
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq.utils.leco.utils import leco_tuple_to_thread_command
+from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 
 leco_parameters = [
@@ -86,16 +87,38 @@ class LECODirector:
         """
         super().emit_status(status=status)  # type: ignore
 
+    def emit_signal(self, name: str, content: Optional[Any] = None):
+        """Emit a signal."""
+        if content:
+            getattr(self, name).emit(content)
+        else:
+            getattr(self, name).emit()
+
     def handle_data_message(self, message: DataMessage) -> None:
         try:
-            thread_command = leco_tuple_to_thread_command(
-                command_dict=message.data,  # type: ignore
-                additional=message.payload[1:]
-            )
+            data: dict[str, Any] = message.data  # type: ignore
+            typ = data.pop("type")
         except TypeError as exc:
             print("Error decoding the message", exc)
-        else:
-            self.emit_status(status=thread_command)
+            return
+        if typ == "ThreadCommand":
+            try:
+                thread_command = leco_tuple_to_thread_command(
+                    command_dict=message.data,  # type: ignore
+                    additional=message.payload[1:],
+                )
+            except:
+                pass
+            else:
+                self.emit_status(status=thread_command)
+        elif typ == "signal":
+            if data.get("content", -1) is None:
+                try:
+                    deser = DeSerializer(message.payload[1])
+                    data["content"] = deser.object_deserialization(manual=True)
+                except IndexError:
+                    pass
+            self.emit_signal(**data)
 
     # Methods accessible via remote calls
     def set_info(self, path: List[str], param_dict_str: str) -> None:

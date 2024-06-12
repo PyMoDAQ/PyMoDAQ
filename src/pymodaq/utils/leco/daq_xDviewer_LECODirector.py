@@ -62,11 +62,13 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
                                  controller=None))
         actor_name = self.settings.child("actor_name").value()
+        self.communicator.unsubscribe_all()
+        self.communicator.subscribe(actor_name if "." in actor_name else ".".join((self.communicator.namespace, actor_name)))
         self.controller = self.ini_detector_init(  # type: ignore
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
-        self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+        # self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         try:
             # self.settings.child(('infos')).addChildren(self.params_GRABBER)
 

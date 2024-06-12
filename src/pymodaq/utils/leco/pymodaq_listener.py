@@ -8,7 +8,7 @@ except ImportError:
         pass
 import logging
 from threading import Event
-from typing import Optional, Union, List, Type
+from typing import Any, Optional, Union, List, Type
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.utils.listener import Listener, PipeHandler
@@ -19,7 +19,7 @@ from qtpy.QtCore import QObject, Signal  # type: ignore
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
-from pymodaq.utils.leco.utils import serialize_object, create_leco_transfer_tuple, thread_command_to_dict, thread_command_to_leco_tuple
+from pymodaq.utils.leco.utils import serialize_object, create_leco_transfer_tuple, thread_command_to_leco_tuple
 
 
 class LECOClientCommands(StrEnum):
@@ -177,6 +177,17 @@ class PymodaqListener(Listener):
             raise
         message = DataMessage(topic=self.communicator.full_name, data=v)
         message.payload.extend(b)
+        self.publisher.send_message(message)
+
+    def publish_signal(self, signal_name: str, signal_payload: Optional[Any]) -> None:
+        d = {"type": "signal", "name": signal_name}
+        additional_payload = []
+        if signal_payload is not None:
+            d["content"], additional_payload = create_leco_transfer_tuple(
+                signal_payload
+            )
+        message = DataMessage(topic=self.communicator.full_name, data=d)
+        message.payload.extend(additional_payload)
         self.publisher.send_message(message)
 
 
