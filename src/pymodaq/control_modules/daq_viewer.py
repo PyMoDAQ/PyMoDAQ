@@ -845,6 +845,8 @@ class DAQ_Viewer(ParameterControlModule):
 
         except Exception as e:
             self.logger.exception(str(e))
+        if self.settings['main_settings', 'leco', 'leco_connected']:
+            self._leco_client.publish_signal("dte_signal_temp", dte)
 
     def _init_show_data(self, dte: DataToExport):
         """Processing before showing data
@@ -1035,6 +1037,10 @@ class DAQ_Viewer(ParameterControlModule):
                 * lcd: display on the LCD panel, the content of the attribute
                 * stop: stop the grab
         """
+        if self.settings['main_settings', 'leco', 'leco_connected']:
+            if status.command not in ("ini_detector",):
+                self._leco_client.publish_thread_command(status)
+
         super().thread_status(status, 'detector')
 
         if status.command == "ini_detector":
