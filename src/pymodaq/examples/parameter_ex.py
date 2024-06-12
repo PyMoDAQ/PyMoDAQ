@@ -25,12 +25,15 @@ class ParameterEx(ParameterManager):
             {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 0,
              'max': 123, 'subtype': 'linear'},
-            {'title': 'Linear int Slide', 'name': 'linearslideint', 'type': 'slide', 'value': 50, 'default': 50,
+            {'title': 'Linear int Slide', 'name': 'linearslideint', 'type': 'slide', 'value': 50, 'default': 50, 'step':1,
              'min': 0,
              'max': 123, 'subtype': 'linear', 'int': True},
+            {'title': 'Linear Slide with suffix', 'name': 'linearslidewithsuffixandsiPrefix', 'type': 'slide', 'value': 50, 'default': 50,
+             'min': 0,
+             'max': 1e6, 'subtype': 'linear','suffix':'V','siPrefix':True},             
             {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 1e-5,
-             'max': 1e5, 'subtype': 'log'},
+             'max': 1e5, 'subtype': 'log','suffix':'V','siPrefix':True},
         ]},
 
         {'title': 'Booleans:', 'name': 'booleans', 'type': 'group', 'children': [

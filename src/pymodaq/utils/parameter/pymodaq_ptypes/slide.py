@@ -60,6 +60,7 @@ class SliderSpinBox(QtWidgets.QWidget):
 
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
+        self.spinbox.valueChanged.emit(value) #Initializing slider from value
 
     def update_spinbox(self, val):
         """
@@ -106,7 +107,7 @@ class SliderSpinBox(QtWidgets.QWidget):
 
     def value(self):
         return self.spinbox.value()
-
+    
 
 class SliderParameterItem(WidgetParameterItem):
     """Registered parameter type which displays a QLineEdit"""
@@ -115,10 +116,15 @@ class SliderParameterItem(WidgetParameterItem):
         opts = self.param.opts
         defs = {
             'value': 0, 'min': None, 'max': None,
-            'step': 1.0, 'dec': False,
+             'dec': False,
             'siPrefix': False, 'suffix': '', 'decimals': 12,
             'int': False
         }
+        #Update relevant opts
+        for k in defs:
+            if k in opts:
+                defs[k] = opts[k]    
+        #Additional changes according to user syntax
         if 'subtype' not in opts:
             opts['subtype'] = 'linear'
         defs['bounds'] = [0., self.param.value()]  # max value set to default value when no max given
@@ -130,12 +136,20 @@ class SliderParameterItem(WidgetParameterItem):
         else:
             defs['bounds'] = opts['limits']
 
-        if 'int' in opts:
-            defs['int'] = opts['int']
-
-        w = SliderSpinBox(subtype=opts['subtype'], bounds=defs['bounds'], value=defs['value'], int=defs['int'])
+        w = SliderSpinBox(subtype=opts['subtype'],**defs)
         self.setSizeHint(1, QtCore.QSize(50, 50))
         return w
+
+    def updateDisplayLabel(self, value=None):
+        # Reimplement display label to show the spinbox text with its suffix
+        if value is None:
+            value = self.widget.spinbox.text()
+        super().updateDisplayLabel(value)    
+
+    def showEditor(self):
+        # Reimplement show Editor to specifically select the numbers
+        super().showEditor()
+        self.widget.spinbox.setFocus()     
 
 
 class SliderParameter(SimpleParameter):
