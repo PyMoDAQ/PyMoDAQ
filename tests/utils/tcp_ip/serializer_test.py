@@ -12,7 +12,7 @@ import pytest
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
-from pymodaq.utils.parameter import Parameter, utils as putils, ioxml
+from pymodaq.utils.parameter import Parameter, utils as putils
 
 
 LABEL = 'A Label'
