@@ -51,7 +51,7 @@ dependencies = [
     "toml",
     "qtconsole",
     "tables<3.9",  # issue with some version of required package blosc2>=2.2.8
-    "pyleco; python_version>=\"3.8\"",
+    "pyleco>0.3; python_version>=\"3.8\"",
     "bayesian-optimization"
 ]
 
