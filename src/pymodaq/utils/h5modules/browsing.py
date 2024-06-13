@@ -266,26 +266,13 @@ class H5Browser(QObject, ActionManager):
 
         # construct the h5 interface and load the file (or open a select file message)
         self.h5utils = H5BrowserUtil(backend=backend)
-        if h5file is None:
-            if h5file_path is None:
-                h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
-            if h5file_path != '':
-                self.h5utils.open_file(h5file_path, 'r+')
-            else:
-                return
-        else:
-            self.h5utils.h5file = h5file
-            
-        self.data_loader = data_saving.DataLoader(self.h5utils)
-
-        self.check_version()
-        self.populate_tree()
-        self.view.h5file_tree.expand_all()
+        self.data_loader = None
+        self.load_file(h5file, h5file_path)
 
     def connect_things(self):
         self.connect_action('export', self.export_data)
         self.connect_action('comment', self.add_comments)
-        self.connect_action('load', self.load_file)
+        self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
         self.connect_action('quit', self.quit_fun)
         self.connect_action('about', self.show_about)
@@ -302,9 +289,24 @@ class H5Browser(QObject, ActionManager):
     def get_node_and_plot(self, with_bkg, plot_all=False):
         self.show_h5_data(item=None, with_bkg=with_bkg, plot_all=plot_all)
 
-    def load_file(self):
-        #todo
-        pass
+    def load_file(self, h5file=None, h5file_path=None):
+        if h5file is None:
+            if h5file_path is None:
+                h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
+            if h5file_path != '':
+                if self.h5utils.isopen():
+                    self.h5utils.close_file()
+
+                self.h5utils.open_file(h5file_path, 'r+')
+            else:
+                return
+        else:
+            self.h5utils.h5file = h5file
+
+        self.data_loader = data_saving.DataLoader(self.h5utils)
+        self.check_version()
+        self.populate_tree()
+        self.view.h5file_tree.expand_all()
 
     def setup_menu(self):
         menubar = self.main_window.menuBar()
