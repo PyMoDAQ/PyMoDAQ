@@ -231,3 +231,57 @@ def test_base_64_de_serialization(get_data: DataToExport):
     assert dte_back.timestamp == dte.timestamp
     for dwa in dte_back:
         assert dwa == dte.get_data_from_full_name(dwa.get_full_name())
+
+
+class TestObjectSerializationDeSerialization:
+
+    def test_bool(self):
+        obj = True
+        serialized = b'\x00\x00\x00\x06scalar\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'
+
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
+
+    def test_scalar(self):
+        obj = 10.45
+        serialized = b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'
+
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
+
+    def test_string(self):
+        obj = 'hello world'
+        serialized = b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'
+
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert DeSerializer(serialized).object_deserialization() == obj
+
+    def test_array(self):
+        obj = np.array([[0.1, 0.5], [5, 7], [8, 9]])
+        serialized = (b'\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x000\x00\x00\x00\x02\x00'
+                      b'\x00\x00\x03\x00\x00\x00\x02\x9a\x99\x99\x99\x99\x99\xb9?\x00\x00\x00\x00'
+                      b'\x00\x00\xe0?\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x1c@\x00'
+                      b'\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@')
+
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert np.allclose(DeSerializer(serialized).object_deserialization(), obj)
+
+    def test_dwa(self, get_data):
+        dte = get_data
+        for obj in dte:
+            assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                    object_deserialization() == obj)
+
+    def test_axis(self, get_data):
+        dte = get_data
+        for dwa in dte:
+            for obj in dwa.axes:
+                assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                        object_deserialization() == obj)
+
+    def test_list(self, get_data):
+        dte = get_data
+        obj = [True, 12.4, dte[0], [False, 78]]
+
+        assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                object_deserialization() == obj)

@@ -270,7 +270,8 @@ class Serializer:
         return bytes_string
 
     def object_type_serialization(self, obj: Union[Axis, DataToExport, DataWithAxes]) -> bytes:
-        """ Convert an object type into a bytes message as a string together with the info to convert it back
+        """ Convert an object type into a bytes message as a string together with the info to
+        convert it back
 
         Applies to Data object from the pymodaq.utils.data module
         """
@@ -618,6 +619,14 @@ class DeSerializer:
         return ndarray
 
     def object_deserialization(self):
+        """ Deserialize specific objects from their binary representation. To be used only within
+        dwa_deserialization, dte_deserialization, list_deserialization
+
+        See Also
+        --------
+        Serializer.dwa_serialization, Serializer.dte_serialization
+
+        """
         obj_type = self.string_deserialization()
         elt = None
         if obj_type == 'scalar':
