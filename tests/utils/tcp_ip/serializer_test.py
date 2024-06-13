@@ -242,20 +242,15 @@ class TestObjectSerializationDeSerialization:
         (10.45, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'),
         ('hello world', b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'),
         (b'hello binary world', b'\x00\x00\x00\x05bytes\x00\x00\x00\x12hello binary world'),
+        (np.array([[0.1, 0.5], [5, 7], [8, 9]]),
+         b'\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x000\x00\x00\x00\x02\x00'
+         b'\x00\x00\x03\x00\x00\x00\x02\x9a\x99\x99\x99\x99\x99\xb9?\x00\x00\x00\x00'
+         b'\x00\x00\xe0?\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x1c@\x00'
+         b'\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@')
     ))
     def test_serialization(self, obj, serialized):
         assert Serializer().type_and_object_serialization(obj) == serialized
         assert DeSerializer(serialized).type_and_object_deserialization() == obj
-
-    def test_array(self):
-        obj = np.array([[0.1, 0.5], [5, 7], [8, 9]])
-        serialized = (b'\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x000\x00\x00\x00\x02\x00'
-                      b'\x00\x00\x03\x00\x00\x00\x02\x9a\x99\x99\x99\x99\x99\xb9?\x00\x00\x00\x00'
-                      b'\x00\x00\xe0?\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x1c@\x00'
-                      b'\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@')
-
-        assert Serializer().type_and_object_serialization(obj) == serialized
-        assert np.allclose(DeSerializer(serialized).type_and_object_deserialization(), obj)
 
     def test_dwa(self, get_data):
         dte = get_data
