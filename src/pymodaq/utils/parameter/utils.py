@@ -27,11 +27,11 @@ class ParameterWithPath:
         self._path = path
 
     @property
-    def parameter(self):
+    def parameter(self) -> Parameter:
         return self._parameter
 
     @property
-    def path(self):
+    def path(self) -> List[str]:
         return self._path
 
 
