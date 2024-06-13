@@ -481,12 +481,6 @@ class ParameterControlModule(ParameterManager, ControlModule):
         elif status.command == 'Update_Status':
             self.thread_status(status)
 
-        elif status.command == 'set_info':
-            param_dict = ioxml.XML_string_to_parameter(status.attribute[1])[0]
-            param_tmp = Parameter.create(**param_dict)
-            param = self.settings.child('move_settings', *status.attribute[0][1:])
-
-            param.restoreState(param_tmp.saveState())
         else:
             # not handled
             return status

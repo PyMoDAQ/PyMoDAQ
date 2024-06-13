@@ -12,6 +12,8 @@ import pytest
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
+from pymodaq.utils.parameter import Parameter, utils as putils, ioxml
+
 
 LABEL = 'A Label'
 UNITS = 'units'
@@ -231,3 +233,78 @@ def test_base_64_de_serialization(get_data: DataToExport):
     assert dte_back.timestamp == dte.timestamp
     for dwa in dte_back:
         assert dwa == dte.get_data_from_full_name(dwa.get_full_name())
+
+
+class TestObjectSerializationDeSerialization:
+
+    @pytest.mark.parametrize("obj, serialized", (
+        (True, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'),
+        (10.45, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'),
+        ('hello world', b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'),
+        (b'hello binary world', b'\x00\x00\x00\x05bytes\x00\x00\x00\x12hello binary world'),
+    ))
+    def test_serialization(self, obj, serialized):
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert DeSerializer(serialized).type_and_object_deserialization() == obj
+
+    def test_array(self):
+        obj = np.array([[0.1, 0.5], [5, 7], [8, 9]])
+        serialized = (b'\x00\x00\x00\x05array\x00\x00\x00\x03<f8\x00\x00\x000\x00\x00\x00\x02\x00'
+                      b'\x00\x00\x03\x00\x00\x00\x02\x9a\x99\x99\x99\x99\x99\xb9?\x00\x00\x00\x00'
+                      b'\x00\x00\xe0?\x00\x00\x00\x00\x00\x00\x14@\x00\x00\x00\x00\x00\x00\x1c@\x00'
+                      b'\x00\x00\x00\x00\x00 @\x00\x00\x00\x00\x00\x00"@')
+
+        assert Serializer().type_and_object_serialization(obj) == serialized
+        assert np.allclose(DeSerializer(serialized).type_and_object_deserialization(), obj)
+
+    def test_dwa(self, get_data):
+        dte = get_data
+        for obj in dte:
+            assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                    type_and_object_deserialization() == obj)
+
+    def test_axis(self, get_data):
+        dte = get_data
+        for dwa in dte:
+            for obj in dwa.axes:
+                assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                        type_and_object_deserialization() == obj)
+
+    def test_list(self, get_data):
+        dte = get_data
+        obj = [True, 12.4, dte[0], [False, 78]]
+
+        assert (DeSerializer(Serializer().type_and_object_serialization(obj)).
+                type_and_object_deserialization() == obj)
+
+    def test_parameter(self):
+
+        param = {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+            {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20.,
+             'min': 1.,
+             'tip': 'displays this text as a tooltip'},
+            {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide',
+             'value': 50, 'default': 50,
+             'min': 0,
+             'max': 123, 'subtype': 'linear'}]}
+
+        param_parent = Parameter.create(**param)
+        param_obj = param_parent.child('afloat')
+        path = putils.get_param_path(param_obj)
+        param_with_path = putils.ParameterWithPath(param_obj)
+
+        serialized = Serializer().type_and_object_serialization(param_with_path)
+
+        pwp_back = DeSerializer(serialized).type_and_object_deserialization()
+
+        assert path == pwp_back.path
+        assert putils.compareParameters(param_obj, pwp_back.parameter)
+
+    def test_dte(self, get_data):
+        dte_in = get_data
+
+        serialized = Serializer().type_and_object_serialization(dte_in)
+        dte_out = DeSerializer(serialized).type_and_object_deserialization()
+
+        for dwa_name in dte_in.get_full_names():
+            assert dte_in.get_data_from_full_name(dwa_name) == dte_out.get_data_from_full_name(dwa_name)
