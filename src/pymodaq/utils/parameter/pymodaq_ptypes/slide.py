@@ -50,6 +50,8 @@ class SliderSpinBox(QtWidgets.QWidget):
                 value = kwargs['bounds'][0]
             else:
                 value = 1
+        if value is None:
+            value = 0                
         self.spinbox = SpinBox(parent=None, value=value, **kwargs)
 
         self.vlayout.addWidget(self.slider)
@@ -62,12 +64,14 @@ class SliderSpinBox(QtWidgets.QWidget):
         self.spinbox.valueChanged.connect(self.update_slide)
         self.spinbox.valueChanged.emit(value) #Initializing slider from value
 
+    def get_bounds(self,):
+        return [float(bound) for bound in self.opts['bounds']]
+
     def update_spinbox(self, val):
         """
         val is a percentage [0-100] used in order to set the spinbox value between its min and max
         """
-        min_val = float(self.opts['bounds'][0])
-        max_val = float(self.opts['bounds'][1])
+        min_val,max_val = self.get_bounds()
         if self.subtype == 'log':
             val_out = scroll_log(val, min_val, max_val)
         else:
@@ -86,9 +90,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         """
         val is the spinbox value between its min and max
         """
-        min_val = float(self.opts['bounds'][0])
-        max_val = float(self.opts['bounds'][1])
-
+        min_val,max_val = self.get_bounds()
         try:
             self.slider.valueChanged.disconnect(self.update_spinbox)
             self.spinbox.valueChanged.disconnect(self.update_slide)
@@ -127,7 +129,7 @@ class SliderParameterItem(WidgetParameterItem):
         #Additional changes according to user syntax
         if 'subtype' not in opts:
             opts['subtype'] = 'linear'
-        defs['bounds'] = [0., self.param.value()]  # max value set to default value when no max given
+        defs['bounds'] = [0., float(self.param.value() or 1)]  # max value set to default value when no max given or 1 if no default
         if 'limits' not in opts:
             if 'min' in opts:
                 defs['bounds'][0] = opts['min']
@@ -135,7 +137,7 @@ class SliderParameterItem(WidgetParameterItem):
                 defs['bounds'][1] = opts['max']
         else:
             defs['bounds'] = opts['limits']
-
+                                
         w = SliderSpinBox(subtype=opts['subtype'],**defs)
         self.setSizeHint(1, QtCore.QSize(50, 50))
         return w
