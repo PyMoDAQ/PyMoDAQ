@@ -26,7 +26,7 @@ from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.control_modules.move_utility_classes import MoveCommand, DAQ_Move_base
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.parameter import Parameter, utils as putils
+from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
@@ -34,6 +34,7 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
 from pymodaq.utils.h5modules.backends import Node
+from pymodaq.utils.parameter import ioxml, Parameter
 
 from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
 
@@ -595,6 +596,14 @@ class DAQ_Move(ParameterControlModule):
         elif 'get_actuator_value' in status.command:
             self._send_to_tcpip = True
             self.command_hardware.emit(ThreadCommand('get_actuator_value', ))
+
+        elif status.command == 'set_info':
+            path_in_settings = status.attribute[0]
+            param_as_xml = status.attribute[1]
+            param_dict = ioxml.XML_string_to_parameter(param_as_xml)[0]
+            param_tmp = Parameter.create(**param_dict)
+            param = self.settings.child('move_settings', *path_in_settings[1:])
+            param.restoreState(param_tmp.saveState())
 
 
 class DAQ_Move_Hardware(QObject):
