@@ -1108,6 +1108,14 @@ class DAQ_Viewer(ParameterControlModule):
         elif status.command == LECOClientCommands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
+        elif status.command == 'set_info':
+            path_in_settings = status.attribute[0]
+            param_as_xml = status.attribute[1]
+            param_dict = ioxml.XML_string_to_parameter(param_as_xml)[0]
+            param_tmp = Parameter.create(**param_dict)
+            param = self.settings.child('detector_settings', *path_in_settings[1:])
+            param.restoreState(param_tmp.saveState())
+
         elif status.command == 'get_axis':
             raise DeprecationWarning('Do not use this, the axis are in the data objects')
             self.command_hardware.emit(
