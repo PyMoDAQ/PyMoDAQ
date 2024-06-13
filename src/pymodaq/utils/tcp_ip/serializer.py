@@ -12,6 +12,8 @@ from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
 import numpy as np
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
+from pymodaq.utils.parameter import Parameter, utils as putils, ioxml
+
 
 if TYPE_CHECKING:
     from pymodaq.utils.tcp_ip.mysocket import Socket
@@ -362,6 +364,10 @@ class Serializer:
             bytes_string += self.string_serialization('array')
             bytes_string += self.ndarray_serialization(obj)
 
+        elif isinstance(obj, bytes):
+            bytes_string += self.string_serialization('bytes')
+            bytes_string += self.bytes_serialization(obj)
+
         elif isinstance(obj, str):
             bytes_string += self.string_serialization('string')
             bytes_string += self.string_serialization(obj)
@@ -377,6 +383,17 @@ class Serializer:
         elif isinstance(obj, list):
             bytes_string += self.string_serialization('list')
             bytes_string += self.list_serialization(obj)
+
+        elif isinstance(obj, putils.ParameterWithPath):
+            path = obj.path
+            param_as_xml = ioxml.parameter_to_xml_string(obj.parameter)
+            bytes_string += self.string_serialization('parameter')
+            bytes_string += self.list_serialization(path)
+            bytes_string += self.string_serialization(param_as_xml)
+
+        elif isinstance(obj, DataToExport):
+            bytes_string += self.string_serialization('dte')
+            bytes_string += self.dte_serialization(obj)
 
         else:
             raise TypeError(
@@ -551,6 +568,11 @@ class DeSerializer:
         int_obj = self.bytes_to_int(self._bytes_string.get_first_nbytes(4))
         return int_obj
 
+    def bytes_deserialization(self) -> bytes:
+        bstring_len = self._int_deserialization()
+        bstr = self._bytes_string.get_first_nbytes(bstring_len)
+        return bstr
+
     def string_deserialization(self) -> str:
         """Convert bytes into a str object
 
@@ -618,9 +640,8 @@ class DeSerializer:
         ndarray = np.atleast_1d(ndarray)  # remove singleton dimensions
         return ndarray
 
-    def object_deserialization(self):
-        """ Deserialize specific objects from their binary representation. To be used only within
-        dwa_deserialization, dte_deserialization, list_deserialization
+    def type_and_object_deserialization(self):
+        """ Deserialize specific objects from their binary representation.
 
         See Also
         --------
@@ -633,16 +654,22 @@ class DeSerializer:
             elt = self.scalar_deserialization()
         elif obj_type == 'string':
             elt = self.string_deserialization()
+        elif obj_type == 'bytes':
+            elt = self.bytes_deserialization()
         elif obj_type == 'array':
             elt = self.ndarray_deserialization()
         elif obj_type == 'dwa':
             elt = self.dwa_deserialization()
+        elif obj_type == 'dte':
+            elt = self.dte_deserialization()
         elif obj_type == 'axis':
             elt = self.axis_deserialization()
         elif obj_type == 'bool':
             elt = self.boolean_deserialization()
         elif obj_type == 'list':
             elt = self.list_deserialization()
+        elif obj_type == 'parameter':
+            elt = self.parameter_deserialization()
         else:
             print(f'invalid object type {obj_type}')
         return elt
@@ -660,8 +687,15 @@ class DeSerializer:
         list_len = self._int_deserialization()
 
         for ind in range(list_len):
-            list_obj.append(self.object_deserialization())
+            list_obj.append(self.type_and_object_deserialization())
         return list_obj
+
+    def parameter_deserialization(self) -> putils.ParameterWithPath:
+        path = self.list_deserialization()
+        param_as_xml = self.string_deserialization()
+        param_dict = ioxml.XML_string_to_parameter(param_as_xml)
+        param_obj = Parameter(**param_dict[0])
+        return putils.ParameterWithPath(param_obj, path)
 
     def axis_deserialization(self) -> Axis:
         """Convert bytes into an Axis object
@@ -714,7 +748,7 @@ class DeSerializer:
             dwa.errors = errors
         dwa.extra_attributes = self.list_deserialization()
         for attribute in dwa.extra_attributes:
-            setattr(dwa, attribute, self.object_deserialization())
+            setattr(dwa, attribute, self.type_and_object_deserialization())
 
         dwa.timestamp = timestamp
         return dwa

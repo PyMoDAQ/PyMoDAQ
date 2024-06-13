@@ -1,12 +1,38 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 import numpy as np
 from collections import OrderedDict
-
+from dataclasses import dataclass
 from pymodaq.utils.daq_utils import find_keys_from_val
 
 if TYPE_CHECKING:
     from pymodaq.utils.parameter import Parameter
+
+
+class ParameterWithPath:
+    """ holds together a Parameter object and its full path
+
+    To be used when communicating between TCPIP to reconstruct properly the Parameter
+
+    Parameters
+    ----------
+    parameter: Parameter
+        a Parameter object
+    path: full path of the parameter, if None it is constructed from the parameter parents
+    """
+    def __init__(self, parameter: Parameter, path: List[str] = None):
+        self._parameter = parameter
+        if path is None:
+            path = get_param_path(parameter)
+        self._path = path
+
+    @property
+    def parameter(self):
+        return self._parameter
+
+    @property
+    def path(self):
+        return self._path
 
 
 def get_widget_from_tree(parameter_tree, widget_instance):
@@ -18,22 +44,25 @@ def get_widget_from_tree(parameter_tree, widget_instance):
     return widgets
 
 
-def get_param_path(param):
-    """
+def get_param_path(param: Parameter) -> List[str]:
+    """ Get the parameter path from its highest parent down to the given parameter including its
+    identifier (name)
 
     Parameters
     ----------
-    param
+    param: Parameter
+        The parameter object
 
     Returns
     -------
-
+    List[str]: the path as a list of parameter identifiers
     """
     path = [param.name()]
     while param.parent() is not None:
         path.append(param.parent().name())
         param = param.parent()
     return path[::-1]
+
 
 def getOpts(param:Parameter,) -> OrderedDict:
     """Return an OrderedDict with tree structures of all opts for all children of this parameter
