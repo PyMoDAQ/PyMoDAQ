@@ -89,8 +89,38 @@ To recreate back the initial object, one should use the :class:`~pymodaq.utils.t
     >>> DeSerializer(b'\x00\x00\x00\x03<f8\x00\x00\x00\x08fffffF_@').scalar_deserialization()
     125.1
 
-As you see you have to know in advance which method to apply first. Therefore there is a recipe for each type of
-objects.
+As you see you have to know in advance which method to apply first. Therefore there is a generic
+recipe for each type of objects that doesn't need to know in advance what this object is.
+
+.. note::
+
+  Each main type of object has its serializing/deserializing method. However the easiest way to use this class is
+  by using their generic and symmetric methods:
+
+  .. code-block::
+
+    serialized = Serializer().type_and_object_serialization(obj)
+
+  that will encode in bytes any kind of objects among:
+
+  * bytes
+  * str
+  * numbers (float or integer)
+  * bool
+  * ndarray
+  * ParameterWithPath (kind of Parameter object)
+  * Axis
+  * DataWithAxes (and all its derived flavors)
+  * DataToExport
+  * list (of any kind of objects above)
+
+  and
+
+  .. code-block::
+
+    obj_back = DeSerializer(serialized).type_and_object_deserialization()
+
+  that will return the same objects that has been serialized
 
 Making sure messages are complete:
 ----------------------------------
