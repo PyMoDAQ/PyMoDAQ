@@ -641,7 +641,7 @@ class DeSerializer:
         return ndarray
 
     def type_and_object_deserialization(self):
-        """ Deserialize specific objects from their binary representation.
+        """ Deserialize specific objects from their binary representation (inverse of `Serializer.type_and_object_serialization`).
 
         See Also
         --------
