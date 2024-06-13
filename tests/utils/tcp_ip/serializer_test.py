@@ -237,30 +237,13 @@ def test_base_64_de_serialization(get_data: DataToExport):
 
 class TestObjectSerializationDeSerialization:
 
-    def test_bool(self):
-        obj = True
-        serialized = b'\x00\x00\x00\x06scalar\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'
-
-        assert Serializer().type_and_object_serialization(obj) == serialized
-        assert DeSerializer(serialized).type_and_object_deserialization() == obj
-
-    def test_scalar(self):
-        obj = 10.45
-        serialized = b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'
-
-        assert Serializer().type_and_object_serialization(obj) == serialized
-        assert DeSerializer(serialized).type_and_object_deserialization() == obj
-
-    def test_string(self):
-        obj = 'hello world'
-        serialized = b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'
-
-        assert Serializer().type_and_object_serialization(obj) == serialized
-        assert DeSerializer(serialized).type_and_object_deserialization() == obj
-
-    def test_bytes(self):
-        obj = b'hello binary world'
-        serialized = b'\x00\x00\x00\x05bytes\x00\x00\x00\x12hello binary world'
+    @pytest.mark.parametrize("obj, serialized", (
+        (True, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'),
+        (10.45, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'),
+        ('hello world', b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'),
+        (b'hello binary world', b'\x00\x00\x00\x05bytes\x00\x00\x00\x12hello binary world'),
+    ))
+    def test_serialization(self, obj, serialized):
         assert Serializer().type_and_object_serialization(obj) == serialized
         assert DeSerializer(serialized).type_and_object_deserialization() == obj
 
