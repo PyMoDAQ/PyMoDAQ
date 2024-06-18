@@ -197,6 +197,10 @@ class DAQ_Viewer_base(QObject):
         except Exception as exc:
             print(f"Error with old message signal stuff: {exc}")
 
+    @property
+    def is_master(self):
+        return self.settings['controller_status'] == 'Master'
+
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
             deprecation_msg('Data emitted from the instrument plugins should be a DataToExport instance'
