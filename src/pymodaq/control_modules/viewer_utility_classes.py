@@ -199,6 +199,10 @@ class DAQ_Viewer_base(QObject):
 
     @property
     def is_master(self):
+        """ Get the controller master/slave status
+
+        new in version 4.3.0
+        """
         return self.settings['controller_status'] == 'Master'
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
