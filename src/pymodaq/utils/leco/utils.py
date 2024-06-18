@@ -72,7 +72,9 @@ def leco_tuple_to_thread_command(command_dict: dict[str, Any], additional: list[
     binary = command_dict.pop("binary", [])
     attribute = command_dict.pop("attribute", None)
     for i, position in enumerate(binary):
-        attribute[position] = DeSerializer(additional[i]).object_deserialization()
+        attribute[position] = DeSerializer(
+            additional[i]
+        ).type_and_object_deserialization()
     return ThreadCommand(attribute=attribute, **command_dict)
 
 

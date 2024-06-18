@@ -6,7 +6,7 @@ Created the 20/10/2023
 """
 from base64 import b64encode, b64decode
 import numbers
-from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
+from typing import Tuple, List, Union, TYPE_CHECKING
 
 
 import numpy as np
@@ -20,14 +20,19 @@ if TYPE_CHECKING:
 
 
 SERIALIZABLE = Union[
-    int,
+    # native
+    bool,
+    bytes,
     str,
-    numbers.Number,
+    complex,  # float and int are subtypes for type hinting
     list,
+    # numpy
     np.ndarray,
+    # pymodaq
     Axis,
     DataWithAxes,
     DataToExport,
+    putils.ParameterWithPath,
 ]
 
 
@@ -86,7 +91,7 @@ class Serializer:
     """Used to Serialize to bytes python objects, numpy arrays and PyMoDAQ DataWithAxes and
     DataToExport objects"""
 
-    def __init__(self, obj: SERIALIZABLE = None):
+    def __init__(self, obj: SERIALIZABLE = None) -> None:
         self._bytes_string = b''
         self._obj = obj
 
@@ -154,7 +159,7 @@ class Serializer:
         return message.encode()
 
     @classmethod
-    def str_len_to_bytes(cls, message: Union[str, bytes]) -> (bytes, bytes):
+    def str_len_to_bytes(cls, message: Union[str, bytes]) -> Tuple[bytes, bytes]:
         """ Convert a string and its length to two bytes
         Parameters
         ----------
@@ -174,7 +179,7 @@ class Serializer:
         return message, cls.int_to_bytes(len(message))
 
     def _int_serialization(self, int_obj: int) -> bytes:
-        """serialize an unsigned integer used for getting the length of messages internaly, for outside integer
+        """Serialize an unsigned integer used for getting the length of messages internally, for outside integer
         serialization or deserialization use scalar_serialization"""
         int_bytes = self.int_to_bytes(int_obj)
         bytes_string = int_bytes
@@ -210,7 +215,7 @@ class Serializer:
 
         Parameters
         ----------
-        scalar: str
+        scalar: A python number (complex or subtypes like float and int)
 
         Returns
         -------
@@ -350,7 +355,11 @@ class Serializer:
         self._bytes_string += bytes_string
         return bytes_string
 
-    def type_and_object_serialization(self, obj):
+    def type_and_object_serialization(self, obj: SERIALIZABLE) -> bytes:
+        """Serialize an object with its type, such that it can be retrieved by
+        `DeSerializer.type_and_object_deserialization`.
+        """
+
         bytes_string = b''
         if isinstance(obj, DataWithAxes):
             bytes_string += self.string_serialization('dwa')
@@ -372,13 +381,13 @@ class Serializer:
             bytes_string += self.string_serialization('string')
             bytes_string += self.string_serialization(obj)
 
+        elif isinstance(obj, bool):
+            bytes_string += self.string_serialization("bool")
+            bytes_string += self.scalar_serialization(int(obj))
+
         elif isinstance(obj, numbers.Number):
             bytes_string += self.string_serialization('scalar')
             bytes_string += self.scalar_serialization(obj)
-
-        elif isinstance(obj, bool):
-            bytes_string += self.string_serialization('bool')
-            bytes_string += self.scalar_serialization(int(obj))
 
         elif isinstance(obj, list):
             bytes_string += self.string_serialization('list')
@@ -389,7 +398,7 @@ class Serializer:
             param_as_xml = ioxml.parameter_to_xml_string(obj.parameter)
             bytes_string += self.string_serialization('parameter')
             bytes_string += self.list_serialization(path)
-            bytes_string += self.string_serialization(param_as_xml)
+            bytes_string += self.bytes_serialization(param_as_xml)
 
         elif isinstance(obj, DataToExport):
             bytes_string += self.string_serialization('dte')
@@ -509,7 +518,7 @@ class DeSerializer:
     :py:class:`~pymodaq.utils.tcp_ip.mysocket.Socket`
     """
 
-    def __init__(self, bytes_string:  Union[bytes, 'Socket'] = None):
+    def __init__(self, bytes_string:  Union[bytes, 'Socket'] = None) -> None:
         if isinstance(bytes_string, bytes):
             bytes_string = SocketString(bytes_string)
         self._bytes_string = bytes_string
@@ -642,7 +651,7 @@ class DeSerializer:
         ndarray = np.atleast_1d(ndarray)  # remove singleton dimensions
         return ndarray
 
-    def type_and_object_deserialization(self):
+    def type_and_object_deserialization(self) -> SERIALIZABLE:
         """ Deserialize specific objects from their binary representation (inverse of `Serializer.type_and_object_serialization`).
 
         See Also
