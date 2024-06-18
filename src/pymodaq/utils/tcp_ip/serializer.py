@@ -5,6 +5,7 @@ Created the 20/10/2023
 @author: Sebastien Weber
 """
 from base64 import b64encode, b64decode
+from enum import Enum
 import numbers
 from typing import Tuple, List, Union, TYPE_CHECKING
 
@@ -34,6 +35,20 @@ SERIALIZABLE = Union[
     DataToExport,
     putils.ParameterWithPath,
 ]
+
+
+class SerializableTypes(Enum):
+    """Type names of serializable types"""
+    BOOL = "bool"
+    BYTES = "bytes"
+    STRING = "string"
+    SCALAR = "scalar"
+    LIST = "list"
+    ARRAY = "array"
+    AXIS = "axis"
+    DATA_WITH_AXES = "dwa"
+    DATA_TO_EXPORT = "dte"
+    PARAMETER = "parameter"
 
 
 class SocketString:
@@ -210,7 +225,7 @@ class Serializer:
         self._bytes_string += bytes_string
         return bytes_string
 
-    def scalar_serialization(self, scalar: numbers.Number) -> bytes:
+    def scalar_serialization(self, scalar: complex) -> bytes:
         """ Convert a scalar into a bytes message together with the info to convert it back
 
         Parameters
@@ -222,6 +237,7 @@ class Serializer:
         bytes: the total bytes message to serialize the scalar
         """
         if not isinstance(scalar, numbers.Number):
+            # type hint is complex, instance comparison Number
             raise TypeError(f'{scalar} should be an integer or a float, not a {type(scalar)}')
         scalar_array = np.array([scalar])
         data_type = scalar_array.dtype.descr[0][1]
@@ -362,46 +378,46 @@ class Serializer:
 
         bytes_string = b''
         if isinstance(obj, DataWithAxes):
-            bytes_string += self.string_serialization('dwa')
+            bytes_string += self.string_serialization(SerializableTypes.DATA_WITH_AXES.value)
             bytes_string += self.dwa_serialization(obj)
 
         elif isinstance(obj, Axis):
-            bytes_string += self.string_serialization('axis')
+            bytes_string += self.string_serialization(SerializableTypes.AXIS.value)
             bytes_string += self.axis_serialization(obj)
 
         elif isinstance(obj, np.ndarray):
-            bytes_string += self.string_serialization('array')
+            bytes_string += self.string_serialization(SerializableTypes.ARRAY.value)
             bytes_string += self.ndarray_serialization(obj)
 
         elif isinstance(obj, bytes):
-            bytes_string += self.string_serialization('bytes')
+            bytes_string += self.string_serialization(SerializableTypes.BYTES.value)
             bytes_string += self.bytes_serialization(obj)
 
         elif isinstance(obj, str):
-            bytes_string += self.string_serialization('string')
+            bytes_string += self.string_serialization(SerializableTypes.STRING.value)
             bytes_string += self.string_serialization(obj)
 
         elif isinstance(obj, bool):
-            bytes_string += self.string_serialization("bool")
+            bytes_string += self.string_serialization(SerializableTypes.BOOL.value)
             bytes_string += self.scalar_serialization(int(obj))
 
         elif isinstance(obj, numbers.Number):
-            bytes_string += self.string_serialization('scalar')
+            bytes_string += self.string_serialization(SerializableTypes.SCALAR.value)
             bytes_string += self.scalar_serialization(obj)
 
         elif isinstance(obj, list):
-            bytes_string += self.string_serialization('list')
+            bytes_string += self.string_serialization(SerializableTypes.LIST.value)
             bytes_string += self.list_serialization(obj)
 
         elif isinstance(obj, putils.ParameterWithPath):
             path = obj.path
             param_as_xml = ioxml.parameter_to_xml_string(obj.parameter)
-            bytes_string += self.string_serialization('parameter')
+            bytes_string += self.string_serialization(SerializableTypes.PARAMETER.value)
             bytes_string += self.list_serialization(path)
             bytes_string += self.bytes_serialization(param_as_xml)
 
         elif isinstance(obj, DataToExport):
-            bytes_string += self.string_serialization('dte')
+            bytes_string += self.string_serialization(SerializableTypes.DATA_TO_EXPORT.value)
             bytes_string += self.dte_serialization(obj)
 
         else:
@@ -540,7 +556,7 @@ class DeSerializer:
         return int.from_bytes(bytes_string, 'big')
 
     @staticmethod
-    def bytes_to_scalar(data: bytes, dtype: np.dtype) -> numbers.Number:
+    def bytes_to_scalar(data: bytes, dtype: np.dtype) -> complex:
         """Convert bytes to a scalar given a certain numpy dtype
 
         Parameters
@@ -597,8 +613,8 @@ class DeSerializer:
         str_obj = self._bytes_string.get_first_nbytes(string_len).decode()
         return str_obj
 
-    def scalar_deserialization(self) -> numbers.Number:
-        """Convert bytes into a numbers.Number object
+    def scalar_deserialization(self) -> complex:
+        """Convert bytes into a python number object
 
         Get first the data type from a string deserialization, then the data length and finally convert this
         length of bytes into a number (float, int)
@@ -611,9 +627,11 @@ class DeSerializer:
         data_len = self._int_deserialization()
         number = np.frombuffer(self._bytes_string.get_first_nbytes(data_len), dtype=data_type)[0]
         if 'f' in data_type:
-            number = float(number)  # because one get numpy  float type
+            number = float(number)  # because one get numpy float type
         elif 'i' in data_type:
             number = int(number)  # because one get numpy int type
+        elif 'c' in data_type:
+            number = complex(number)  # because one get numpy complex type
         return number
 
     def boolean_deserialization(self) -> bool:
@@ -661,28 +679,29 @@ class DeSerializer:
         """
         obj_type = self.string_deserialization()
         elt = None
-        if obj_type == 'scalar':
+        if obj_type == SerializableTypes.SCALAR.value:
             elt = self.scalar_deserialization()
-        elif obj_type == 'string':
+        elif obj_type == SerializableTypes.STRING.value:
             elt = self.string_deserialization()
-        elif obj_type == 'bytes':
+        elif obj_type == SerializableTypes.BYTES.value:
             elt = self.bytes_deserialization()
-        elif obj_type == 'array':
+        elif obj_type == SerializableTypes.ARRAY.value:
             elt = self.ndarray_deserialization()
-        elif obj_type == 'dwa':
+        elif obj_type == SerializableTypes.DATA_WITH_AXES.value:
             elt = self.dwa_deserialization()
-        elif obj_type == 'dte':
+        elif obj_type == SerializableTypes.DATA_TO_EXPORT.value:
             elt = self.dte_deserialization()
-        elif obj_type == 'axis':
+        elif obj_type == SerializableTypes.AXIS.value:
             elt = self.axis_deserialization()
-        elif obj_type == 'bool':
+        elif obj_type == SerializableTypes.BOOL.value:
             elt = self.boolean_deserialization()
-        elif obj_type == 'list':
+        elif obj_type == SerializableTypes.LIST.value:
             elt = self.list_deserialization()
-        elif obj_type == 'parameter':
+        elif obj_type == SerializableTypes.PARAMETER.value:
             elt = self.parameter_deserialization()
         else:
             print(f'invalid object type {obj_type}')
+            elt = None  # desired behavior?
         return elt
 
     def list_deserialization(self) -> list:
