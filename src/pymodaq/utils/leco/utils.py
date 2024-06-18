@@ -36,14 +36,6 @@ def create_leco_transfer_tuple(pymodaq_object: Union[SERIALIZABLE, Any]) -> tupl
                          "JSON serializable, nor via PyMoDAQ.")
 
 
-def thread_command_to_dict(thread_command: ThreadCommand) -> dict[str, Any]:
-    return {
-        "type": "ThreadCommand",
-        "command": thread_command.command,
-        "attribute": thread_command.attribute,
-    }
-
-
 def thread_command_to_leco_tuple(thread_command: ThreadCommand) -> tuple[dict[str, Any], list[bytes]]:
     """Convert a thread_command to a dictionary and a list of bytes."""
     d: dict[str, Any] = {"type": "ThreadCommand", "command": thread_command.command}
@@ -100,4 +92,3 @@ def start_coordinator():
     except ConnectionRefusedError as e:
         run_coordinator()
         run_proxy_server()
-

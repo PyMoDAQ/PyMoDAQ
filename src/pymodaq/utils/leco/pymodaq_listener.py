@@ -169,18 +169,22 @@ class PymodaqListener(Listener):
         else:
             self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
 
-    def publish_thread_command(self, thread_command: ThreadCommand) -> None:
-        """Publish a ThreadCommand via the data protocol."""
+    # pymodaq messages
+    def create_thread_command_message(self, thread_command: ThreadCommand) -> DataMessage:
         try:
             v, b = thread_command_to_leco_tuple(thread_command)
         except:
             raise
         message = DataMessage(topic=self.communicator.full_name, data=v)
         message.payload.extend(b)
-        self.publisher.send_message(message)
+        return message
 
-    def publish_signal(self, signal_name: str, signal_payload: Optional[Any]) -> None:
-        d = {"type": "signal", "name": signal_name}
+    def publish_thread_command(self, thread_command: ThreadCommand) -> None:
+        """Publish a ThreadCommand via the data protocol."""
+        self.publisher.send_message(self.create_thread_command_message(thread_command))
+
+    def create_signal_message(self, signal_name: str, signal_payload: Optional[Any]) -> DataMessage:
+        d = {"type": "Signal", "name": signal_name}
         additional_payload = []
         if signal_payload is not None:
             d["content"], additional_payload = create_leco_transfer_tuple(
@@ -188,7 +192,14 @@ class PymodaqListener(Listener):
             )
         message = DataMessage(topic=self.communicator.full_name, data=d)
         message.payload.extend(additional_payload)
-        self.publisher.send_message(message)
+        return message
+
+    def publish_signal(self, signal_name: str, signal_payload: Optional[Any]) -> None:
+        self.publisher.send_message(
+            self.create_signal_message(
+                signal_name=signal_name, signal_payload=signal_payload
+            )
+        )
 
 
 class ActorListener(PymodaqListener):
