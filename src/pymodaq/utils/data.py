@@ -81,6 +81,7 @@ class DataDimError(Exception):
 
 
 class DwaType(BaseEnum):
+    """Different types of `DataWithAxes`."""
     DataWithAxes = 0
     DataRaw = 1
     DataActuator = 2
