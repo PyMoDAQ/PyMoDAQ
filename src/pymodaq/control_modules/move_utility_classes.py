@@ -364,6 +364,10 @@ class DAQ_Move_base(QObject):
 
     @property
     def is_master(self) -> bool:
+        """ Get the controller master/slave status
+
+        new in version 4.3.0
+        """
         return self.settings['multiaxes', 'multi_status'] == 'Master'
 
     @property
