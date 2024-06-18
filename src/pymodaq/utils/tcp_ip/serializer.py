@@ -26,6 +26,8 @@ SERIALIZABLE = Union[
     bytes,
     str,
     complex,  # float and int are subtypes for type hinting
+    float,
+    int,
     list,
     # numpy
     np.ndarray,
@@ -399,7 +401,7 @@ class Serializer:
 
         elif isinstance(obj, bool):
             bytes_string += self.string_serialization(SerializableTypes.BOOL.value)
-            bytes_string += self.scalar_serialization(int(obj))
+            bytes_string += self.scalar_serialization(obj)
 
         elif isinstance(obj, numbers.Number):
             bytes_string += self.string_serialization(SerializableTypes.SCALAR.value)
