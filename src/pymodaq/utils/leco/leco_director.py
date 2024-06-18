@@ -111,7 +111,7 @@ class LECODirector:
                 pass
             else:
                 self.emit_status(status=thread_command)
-        elif typ == "signal":
+        elif typ == "Signal":
             if data.get("content", -1) is None:
                 try:
                     deser = DeSerializer(message.payload[1])
