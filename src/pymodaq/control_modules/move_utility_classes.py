@@ -363,6 +363,10 @@ class DAQ_Move_base(QObject):
         self.target_value = value
 
     @property
+    def is_master(self) -> bool:
+        return self.settings['multiaxes', 'multi_status'] == 'Master'
+
+    @property
     def controller_units(self):
         """ Get/Set the units of this plugin"""
         return self._controller_units
