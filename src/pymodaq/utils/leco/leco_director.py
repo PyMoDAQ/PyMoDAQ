@@ -115,7 +115,7 @@ class LECODirector:
             if data.get("content", -1) is None:
                 try:
                     deser = DeSerializer(message.payload[1])
-                    data["content"] = deser.object_deserialization(manual=True)
+                    data["content"] = deser.type_and_object_deserialization()
                 except IndexError:
                     pass
             self.emit_signal(**data)

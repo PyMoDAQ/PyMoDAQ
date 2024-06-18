@@ -86,15 +86,22 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         """
         actor_name = self.settings.child("actor_name").value()
         self.communicator.unsubscribe_all()
-        self.communicator.subscribe(actor_name if "." in actor_name else ".".join((self.communicator.namespace, actor_name)))
+        try:
+            actor_full_name = (
+                actor_name
+                if "." in actor_name
+                else ".".join((self.communicator.namespace, actor_name))
+            )
+        except TypeError:
+            actor_full_name = actor_name
+            # TODO change to proper logging
+            print("I'm not signed in, namespace for actor is unknown.")
+        else:
+            self.communicator.subscribe(topics=actor_full_name)
         self.controller = self.ini_stage_init(  # type: ignore
             old_controller=controller,
             new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
             )
-        try:
-            pass  # self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
-        except TimeoutError:
-            print("Timeout setting remote name.")  # TODO change to real logging
         # self.settings.child('infos').addChildren(self.params_client)
 
         self.settings.child('units').hide()
