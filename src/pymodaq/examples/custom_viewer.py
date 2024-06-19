@@ -96,7 +96,7 @@ if __name__ == '__main__':
     Ny = 200
     x = (np.linspace(0, Nx - 1, Nx) + 100) / 2
     y = (np.linspace(0, Ny - 1, Ny) - 10) * 2
-    from pymodaq.utils.daq_utils import gauss2D
+    from pymodaq.utils.math_utils import gauss2D
 
     data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
     data_red += np.random.random(data_red.shape)
