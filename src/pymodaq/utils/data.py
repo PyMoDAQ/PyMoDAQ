@@ -182,6 +182,7 @@ class Axis:
         self._units = None
         self._scaling = scaling
         self._offset = offset
+        self._timstamp = time()
 
         self.units = units
         self.label = label
@@ -246,6 +247,16 @@ class Axis:
         elif self.size is None:
             self._size = 0
         self._data = data
+
+    @property
+    def timestamp(self):
+        """Get/Set the timestamp of when the object has been created"""
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, timestamp: float):
+        """The timestamp of when the object has been created"""
+        self._timestamp = timestamp
 
     def get_data(self) -> np.ndarray:
         """Convenience method to obtain the axis data (usually None because scaling and offset are used)"""
