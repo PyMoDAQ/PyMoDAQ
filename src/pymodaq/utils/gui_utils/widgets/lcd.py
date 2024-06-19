@@ -11,7 +11,7 @@ import sys
 
 class LCD(QObject):
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent: QtWidgets.QWidget, **kwargs):
         super().__init__()
         self.Nvals = None
         self.labels = None
