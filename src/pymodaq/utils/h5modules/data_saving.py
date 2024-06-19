@@ -468,7 +468,8 @@ class DataSaverLoader(DataManagement):
                             errors=error_arrays,
                             path=data_node.path,
                             **extra_attributes)
-        data.timestamp = data_node.attrs['timestamp']
+        if 'axis' not in self.data_type.name:
+            data.timestamp = data_node.attrs['timestamp']
         return data
 
 
