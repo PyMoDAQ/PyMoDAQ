@@ -169,8 +169,26 @@ class PresetManager:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
-            ioxml.parameter_to_xml_file(
-                self.preset_params, os.path.join(path, self.preset_params.child('filename').value()))
+            filename_without_extension = self.preset_params.child('filename').value()
+
+            try:
+                ioxml.parameter_to_xml_file(self.preset_params,
+                                            os.path.join(path, filename_without_extension),
+                                            overwrite=False)
+            except FileExistsError as currenterror:
+                confirmation = QtWidgets.QMessageBox()
+                confirmation.setWindowTitle('Overwrite confirmation')
+                confirmation.setText("File exist do you want to overwrite it")
+                confirmation.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+                confirmation.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+                result = confirmation.exec()
+                if result == QtWidgets.QMessageBox.Yes:
+                    ioxml.parameter_to_xml_file(self.preset_params,
+                                                os.path.join(path, filename_without_extension))
+                else:
+                    logger.warning("File "+filename_without_extension+".xml wasn't saved at user request")
+                    # emit status signal to dashboard to write : did not saved ?
+                pass
 
             if not self.pid_type:
                 # check if overshoot configuration and layout configuration with same name exists => delete them if yes

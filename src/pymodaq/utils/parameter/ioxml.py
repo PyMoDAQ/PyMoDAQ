@@ -1,5 +1,6 @@
 from typing import Union
 from pathlib import Path
+import os.path
 
 import importlib
 import json
@@ -324,7 +325,7 @@ def parameter_to_xml_string(param):
     return ET.tostring(xml_elt)
 
 
-def parameter_to_xml_file(param, filename: Union[str, Path]):
+def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
     """
         Convert the given parameter to XML element and update the given XML file.
 
@@ -348,7 +349,10 @@ def parameter_to_xml_file(param, filename: Union[str, Path]):
     fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
     xml_elt = walk_parameters_to_xml(param=param)
     tree = ET.ElementTree(xml_elt)
+    if not overwrite and os.path.isfile(str(fname)):
+        raise FileExistsError
     tree.write(str(fname))
+
 
 
 def walk_xml_to_parameter(params=[], XML_elt=None):
