@@ -5,8 +5,11 @@ from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
 from pymodaq.utils.config import Config
+from pymodaq.utils.logger import set_logger, get_module_name
+
 
 config = Config()
+logger = set_logger(get_module_name(__file__))
 
 
 dashboard_submodules_params = [
@@ -151,3 +154,25 @@ def start_qapplication() -> QtWidgets.QApplication:
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
     return app
+
+
+class QApplicationUtils:
+
+    def __init__(self, app: QtWidgets.QApplication = None):
+        self.app: QtWidgets.QApplication = app
+
+    def start_qapplication(self):
+        self.app = start_qapplication()
+        return self.app
+
+    def __enter__(self):
+        return self.start_qapplication()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            return False
+        else:
+            return True
+
+    def stop_q_application(self):
+        sys.exit(self.app.exec())
