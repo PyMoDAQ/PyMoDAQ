@@ -176,6 +176,7 @@ class PresetManager:
                                             os.path.join(path, filename_without_extension),
                                             overwrite=False)
             except FileExistsError as currenterror:
+                logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
                 confirmation = QtWidgets.QMessageBox()
                 confirmation.setWindowTitle('Overwrite confirmation')
                 confirmation.setText("File exist do you want to overwrite it")
@@ -185,6 +186,7 @@ class PresetManager:
                 if result == QtWidgets.QMessageBox.Yes:
                     ioxml.parameter_to_xml_file(self.preset_params,
                                                 os.path.join(path, filename_without_extension))
+                    logger.warning("File " + filename_without_extension + ".xml overwriten at user request")
                 else:
                     logger.warning("File "+filename_without_extension+".xml wasn't saved at user request")
                     # emit status signal to dashboard to write : did not saved ?
