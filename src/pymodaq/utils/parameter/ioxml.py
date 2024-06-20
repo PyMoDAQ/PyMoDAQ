@@ -333,6 +333,7 @@ def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
         **Parameters**    **Type**                          **Description**
         *param*           instance of pyqtgraph parameter   the parameter to be added
         *filename*        string                            the filename of the XML file
+        *overwrite*       boolean                           raise Error is False and file exists
         =============== ================================= ================================
 
         See Also
