@@ -43,10 +43,13 @@ from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving, data_saving
 from pymodaq.utils.data import DataToExport, DataActuator
 
+
+
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
 config = Config()
+
 logger = set_logger(get_module_name(__file__))
 
 SHOW_POPUPS = config('scan', 'show_popups')
@@ -1249,13 +1252,10 @@ def main_test(init_qt=True):
     return dashboard, daq_scan, win
 
 
-def main(init_qt=True):
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config['style']['darkstyle']:
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet())
+def main():
+    from pymodaq.utils.gui_utils.utils import mkQApp
 
+    app = mkQApp('Scan')
     from pymodaq.dashboard import DashBoard
 
     win = QtWidgets.QMainWindow()
@@ -1277,9 +1277,8 @@ def main(init_qt=True):
                        f"Impossible to load the DAQScan Module")
         msgBox.setStandardButtons(msgBox.Ok)
         ret = msgBox.exec()
+    app.exec()
 
-    if init_qt:
-        sys.exit(app.exec_())
     return dashboard, daq_scan, win
 
 

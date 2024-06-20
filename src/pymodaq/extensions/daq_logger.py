@@ -511,12 +511,9 @@ def main():
     from pymodaq.dashboard import DashBoard
     from pathlib import Path
     from pymodaq.utils.gui_utils.dock import DockArea
+    from pymodaq.utils.gui_utils.utils import mkQApp
 
-    config = Config()
-    app = QtWidgets.QApplication(sys.argv)
-    if config('style', 'darkstyle'):
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+    app = mkQApp('Logger')
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
@@ -538,8 +535,7 @@ def main():
         msgBox.setStandardButtons(msgBox.Ok)
         ret = msgBox.exec()
 
-    sys.exit(app.exec_())
-
+    app.exec()
 
 if __name__ == '__main__':
     main()

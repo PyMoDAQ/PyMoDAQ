@@ -12,10 +12,10 @@ config = Config()
 
 
 def main(h5file_path: Path = None):
-    app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+    from pymodaq.utils.gui_utils.utils import mkQApp
+    import sys
+    app = mkQApp('Logger')
+
 
     h5file_path_tmp = None
     parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
@@ -33,8 +33,8 @@ def main(h5file_path: Path = None):
     prog = H5Browser(win, h5file_path=h5file_path_tmp)
     win.show()
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
 
+    app.exec()
 
 if __name__ == '__main__':
     main()

@@ -1414,9 +1414,9 @@ class DashBoard(QObject):
             pass
 
 
-def main(init_qt=True):
-    if init_qt:  # used for the test suite
-        app = start_qapplication()
+def main():
+    from pymodaq.utils.gui_utils.utils import mkQApp
+    app = mkQApp('Dashboard')
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
@@ -1426,8 +1426,7 @@ def main(init_qt=True):
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    if init_qt:
-        sys.exit(app.exec())
+    app.exec()
     return prog, win
 
 

@@ -53,22 +53,18 @@ class QtConsole(RichJupyterWidget):
         self.kernel_manager.kernel.shell.push(variable_dict)
 
 
-def main(init_qt=True):
-    import sys
+def main():
+    from pymodaq.utils.gui_utils.utils import mkQApp
 
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config('style', 'darkstyle'):
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+
+    app = mkQApp('Console')
 
     prog = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
                      syntax_style=config('style', 'syntax_highlighting'),
                      custom_banner=BANNER,
                      )
     prog.show()
-    if init_qt:
-        sys.exit(app.exec_())
+    app.exec()
     return prog
 
 

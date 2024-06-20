@@ -5,8 +5,11 @@ from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
 from pymodaq.utils.config import Config
+from pymodaq.utils.logger import set_logger, get_module_name
+from pyqtgraph import mkQApp as mkQApppg
 
 config = Config()
+logger = set_logger(get_module_name(__file__))
 
 
 dashboard_submodules_params = [
@@ -151,3 +154,19 @@ def start_qapplication() -> QtWidgets.QApplication:
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
     return app
+
+
+def mkQApp(name: str):
+    app = mkQApppg(name)
+    if config('style', 'darkstyle'):
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+    return app
+
+
+def exec():
+    app = mkQApp()
+    if config('style', 'darkstyle'):
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+    return app.exec() if hasattr(app, 'exec') else app.exec_()
