@@ -1,6 +1,5 @@
 from typing import Union
 from pathlib import Path
-import os.path
 
 import importlib
 import json
@@ -350,7 +349,7 @@ def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
     fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
     xml_elt = walk_parameters_to_xml(param=param)
     tree = ET.ElementTree(xml_elt)
-    if not overwrite and os.path.isfile(str(fname)):
+    if not overwrite and fname.exists() and fname.is_file():
         raise FileExistsError
     tree.write(str(fname))
 
