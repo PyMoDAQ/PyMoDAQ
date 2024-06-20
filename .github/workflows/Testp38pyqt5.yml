@@ -1,6 +1,6 @@
 name: '3.8 PyQt5'
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   call_workflow:
