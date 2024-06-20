@@ -324,9 +324,8 @@ class BaseConfig:
         try:
             ret = getitem_recursive(self._config, *args)
         except KeyError as e:
-            logging.warning(ConfigError(f'the path {args} does not exist in your configuration toml'
-                                        f' file, check your config folder'))
-            ret = None
+            raise ConfigError(f'the path {args} does not exist in your configuration toml'
+                              f' file, check your config folder')
         return ret
 
     def to_dict(self):
