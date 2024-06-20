@@ -43,10 +43,13 @@ from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving, data_saving
 from pymodaq.utils.data import DataToExport, DataActuator
 
+
+
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
 config = Config()
+
 logger = set_logger(get_module_name(__file__))
 
 SHOW_POPUPS = config('scan', 'show_popups')
@@ -1250,36 +1253,31 @@ def main_test(init_qt=True):
 
 
 def main(init_qt=True):
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config['style']['darkstyle']:
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet())
+    from pymodaq.utils.gui_utils.utils import QApplicationUtils
 
-    from pymodaq.dashboard import DashBoard
+    with QApplicationUtils(init_qt=init_qt) as qapp:
 
-    win = QtWidgets.QMainWindow()
-    area = gutils.dock.DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
+        from pymodaq.dashboard import DashBoard
 
-    dashboard = DashBoard(area)
-    daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
-    if file.exists():
-        dashboard.set_preset_mode(file)
-        daq_scan = dashboard.load_scan_module()
-    else:
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
-                       f"Impossible to load the DAQScan Module")
-        msgBox.setStandardButtons(msgBox.Ok)
-        ret = msgBox.exec()
+        win = QtWidgets.QMainWindow()
+        area = gutils.dock.DockArea()
+        win.setCentralWidget(area)
+        win.resize(1000, 500)
+        win.setWindowTitle('PyMoDAQ Dashboard')
 
-    if init_qt:
-        sys.exit(app.exec_())
+        dashboard = DashBoard(area)
+        daq_scan = None
+        file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
+        if file.exists():
+            dashboard.set_preset_mode(file)
+            daq_scan = dashboard.load_scan_module()
+        else:
+            msgBox = QtWidgets.QMessageBox()
+            msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                           f"{file}\n"
+                           f"Impossible to load the DAQScan Module")
+            msgBox.setStandardButtons(msgBox.Ok)
+            ret = msgBox.exec()
     return dashboard, daq_scan, win
 
 
