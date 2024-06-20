@@ -7,6 +7,7 @@ import sys
 import os
 from pymodaq.utils.parameter import ParameterTree, Parameter
 from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.messenger import dialog as dialogbox
 from pymodaq.utils import daq_utils as utils
 from pathlib import Path
 import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
@@ -177,19 +178,15 @@ class PresetManager:
                                             overwrite=False)
             except FileExistsError as currenterror:
                 logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
-                confirmation = QtWidgets.QMessageBox()
-                confirmation.setWindowTitle('Overwrite confirmation')
-                confirmation.setText("File exist do you want to overwrite it")
-                confirmation.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-                confirmation.setDefaultButton(QtWidgets.QMessageBox.Cancel)
-                result = confirmation.exec()
-                if result == QtWidgets.QMessageBox.Yes:
+                userchoice = dialogbox(title='Overwrite confirmation',
+                                       message="File exist do you want to overwrite it ?")
+                if userchoice == 1:
                     ioxml.parameter_to_xml_file(self.preset_params,
                                                 os.path.join(path, filename_without_extension))
                     logger.warning("File " + filename_without_extension + ".xml overwriten at user request")
                 else:
                     logger.warning("File "+filename_without_extension+".xml wasn't saved at user request")
-                    # emit status signal to dashboard to write : did not saved ?
+                    # emit status signal to dashboard to write : did not save ?
                 pass
 
             if not self.pid_type:
