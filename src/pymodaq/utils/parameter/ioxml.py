@@ -355,7 +355,6 @@ def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
     tree.write(str(fname))
 
 
-
 def walk_xml_to_parameter(params=[], XML_elt=None):
     """ To convert an XML element (and children) to list of dict enabling creation of parameter object.
 
