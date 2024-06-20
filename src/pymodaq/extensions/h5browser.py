@@ -14,8 +14,7 @@ config = Config()
 def main(h5file_path: Path = None):
     from pymodaq.utils.gui_utils.utils import mkQApp
     import sys
-    app = mkQApp('Logger')
-
+    app = mkQApp('H5Browser')
 
     h5file_path_tmp = None
     parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
@@ -35,6 +34,7 @@ def main(h5file_path: Path = None):
     QtWidgets.QApplication.processEvents()
 
     app.exec()
+
 
 if __name__ == '__main__':
     main()

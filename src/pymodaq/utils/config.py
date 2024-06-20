@@ -9,7 +9,7 @@ from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
 from typing import Iterable as IterableType
 
 import toml
-
+import logging
 if TYPE_CHECKING:
     from pymodaq.utils.parameter import Parameter
 
@@ -101,9 +101,10 @@ def get_set_path(a_base_path: Path, dir_name: str) -> Path:
         try:
             path_to_get.mkdir()
         except PermissionError as e:
-            print(f"Cannot create local config folder at this location: {path_to_get}"
-                  f", try using admin rights. "
-                  f"Changing the not permitted path to a user one: {Path.home().joinpath(dir_name)}.")
+            logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
+                            f", try using admin rights. "
+                            f"Changing the not permitted path to a user "
+                            f"one: {Path.home().joinpath(dir_name)}.")
             path_to_get = Path.home().joinpath(dir_name)
             if not path_to_get.is_dir():
                 path_to_get.mkdir()
@@ -323,8 +324,8 @@ class BaseConfig:
         try:
             ret = getitem_recursive(self._config, *args)
         except KeyError as e:
-            raise ConfigError(f'the path {args} does not exist in your configuration toml file, check '
-                              f'your pymodaq_local folder')
+            raise ConfigError(f'the path {args} does not exist in your configuration toml'
+                              f' file, check your config folder')
         return ret
 
     def to_dict(self):
