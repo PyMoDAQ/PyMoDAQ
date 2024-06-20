@@ -230,6 +230,7 @@ class DashBoard(QObject):
 
     def load_extension_from_name(self, name: str) -> dict:
         self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
+        return extensions[name]
 
     def load_extensions_module(self, ext: dict):
         """ Init and load an extension from a plugin package

@@ -1159,129 +1159,20 @@ class DAQScanAcquisition(QObject):
         self.status_sig.emit(["Timeout"])
 
 
-
-def main_test(init_qt=True):
-    from pymodaq.utils.data import DataToExport
-
-    LABEL = 'A Label'
-    UNITS = 'units'
-    OFFSET = -20.4
-    SCALING = 0.22
-    SIZE = 20
-    DATA = OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE)
-
-    DATA0D = np.array([2.7])
-    DATA1D = np.arange(0, 10)
-    DATA2D = np.arange(0, 5 * 6).reshape((5, 6))
-    DATAND = np.arange(0, 5 * 6 * 3).reshape((5, 6, 3))
-
-    def init_axis(data=None, index=0):
-        if data is None:
-            data = DATA
-        return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
-
-    def init_data(data=None, Ndata=1, axes=[], name='myData') -> data_mod.DataWithAxes:
-        if data is None:
-            data = DATA2D
-        return data_mod.DataWithAxes(name, data_mod.DataSource(0), data=[data for ind in range(Ndata)],
-                                     axes=axes)
-
-    class ActuatorMock(QtCore.QObject):
-        mod_name = 'act'
-        move_done_signal = Signal(str, float)
-        command_hardware = Signal(utils.ThreadCommand)
-
-        def __init__(self, ind):
-            super().__init__()
-            self.title = f'{self.mod_name}_{ind:02d}'
-            self.units = f'unit_{ind:02d}'
-            self.initialized_state = True
-            self.module_and_data_saver = module_saving.ActuatorSaver(self)
-            self.settings = Parameter.create(name='settings', type='str', value='mysettings')
-            self.ui = None
-            self.command_hardware.connect(self.move_done)
-
-
-        def move_done(self, command: utils.ThreadCommand):
-            self.move_done_signal.emit(self.title, command.attribute[0])
-
-    class DetectorMock(QtCore.QObject):
-        mod_name = 'det'
-        grab_done_signal = Signal(DataToExport)
-        command_hardware = Signal(utils.ThreadCommand)
-
-        def __init__(self, ind):
-            super().__init__()
-            self.title = f'{self.mod_name}_{ind:02d}'
-            self.initialized_state = True
-            self.module_and_data_saver = module_saving.DetectorSaver(self)
-            self.settings = Parameter.create(name='settings', type='str', value='mysettings')
-            self.ui = None
-            self.command_hardware.connect(self.grab_done)
-
-        def grab_done(self):
-            dat1 = init_data(data=DATA2D, Ndata=2, name=f'{self.title}/data2D')
-            dat2 = init_data(data=DATA1D, Ndata=3, name=f'{self.title}/data1D')
-            data = data_mod.DataToExport(name=f'{self.title}', data=[dat1, dat2])
-            self.grab_done_signal.emit(data)
-
-    class DashBoardTest:
-        def __init__(self):
-            self.title = 'DashBoardTest'
-            self.detector_modules = [DetectorMock(ind) for ind in range(2)]
-            self.actuators_modules = [ActuatorMock(ind) for ind in range(3)]
-
-    if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config['style']['darkstyle']:
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet())
-
-    win = QtWidgets.QMainWindow()
-    area = gutils.dock.DockArea()
-    win.setCentralWidget(area)
-    #win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
-
-    dashboard = DashBoardTest()
-    daq_scan = DAQScan(dockarea=area, dashboard=dashboard)
-    win.show()
-
-    if init_qt:
-        sys.exit(app.exec_())
-    return dashboard, daq_scan, win
-
-
 def main():
     from pymodaq.utils.gui_utils.utils import mkQApp
+    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-    app = mkQApp('Scan')
-    from pymodaq.dashboard import DashBoard
+    app = mkQApp('DAQScan')
+    preset_file_name = config('presets', f'default_preset_for_scan')
 
-    win = QtWidgets.QMainWindow()
-    area = gutils.dock.DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
+    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQScan')
 
-    dashboard = DashBoard(area)
-    daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
-    if file.exists():
-        dashboard.set_preset_mode(file)
-        daq_scan = dashboard.load_scan_module()
-    else:
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
-                       f"Impossible to load the DAQScan Module")
-        msgBox.setStandardButtons(msgBox.Ok)
-        ret = msgBox.exec()
     app.exec()
 
-    return dashboard, daq_scan, win
+    return dashboard, extension, win
 
 
 if __name__ == '__main__':
     main()
-    #main_test()
+
