@@ -229,7 +229,7 @@ class DashBoard(QObject):
         return self.bayesian_module
 
     def load_extension_from_name(self, name: str) -> dict:
-        self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
+        return self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
 
     def load_extensions_module(self, ext: dict):
         """ Init and load an extension from a plugin package
@@ -255,7 +255,7 @@ class DashBoard(QObject):
         self.extension_windows[-1].setWindowTitle(ext['name'])
         module = import_module(f"{ext['pkg']}.extensions.{ext['module']}")
         klass = getattr(module, ext['class_name'])
-        self.extensions[ext['class_name']] = klass(dockarea=area, dashboard=self)
+        self.extensions[ext['class_name']] = klass(area, dashboard=self)
         self.extension_windows[-1].show()
         return self.extensions[ext['class_name']]
 
