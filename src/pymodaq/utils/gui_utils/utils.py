@@ -158,21 +158,30 @@ def start_qapplication() -> QtWidgets.QApplication:
 
 class QApplicationUtils:
 
-    def __init__(self, app: QtWidgets.QApplication = None):
-        self.app: QtWidgets.QApplication = app
+    def __init__(self, app: QtWidgets.QApplication = None, init_qt=True):
+        self._app: QtWidgets.QApplication = app
+        self._init_qt = init_qt
+        if self._init_qt is False:
+            self._app = QtWidgets.QApplication.instance()
 
     def start_qapplication(self):
-        self.app = start_qapplication()
-        return self.app
+        if self._init_qt:
+            if QtWidgets.QApplication.instance() is None:
+                self._app = start_qapplication()
+            else:
+                self._app = QtWidgets.QApplication.instance()
+        return self._app
 
     def __enter__(self):
         return self.start_qapplication()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._init_qt:
+            self.stop_q_application()
         if exc_type is not None:
             return False
         else:
             return True
 
     def stop_q_application(self):
-        sys.exit(self.app.exec())
+        sys.exit(self._app.exec())

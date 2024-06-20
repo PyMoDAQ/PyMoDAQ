@@ -1,6 +1,6 @@
 import pytest
 from qtpy import QtWidgets
-from pymodaq.utils.gui_utils.utils import QApplicationUtils
+from pymodaq.utils.gui_utils.utils import QApplicationUtils, start_qapplication
 
 class TestQApplication:
 
@@ -16,8 +16,14 @@ class TestQApplication:
     def test_with_statement(self):
 
         with QApplicationUtils() as app:
-
             assert isinstance(app, QtWidgets.QApplication)
+
+    def test_with_statement_with_other_qapplication(self):
+        app = start_qapplication()
+
+        with QApplicationUtils() as qapp:
+            assert isinstance(qapp, QtWidgets.QApplication)
+            assert qapp is app
 
     def test_with_statement_error(self):
         with pytest.raises(IOError):
