@@ -159,12 +159,27 @@ def start_qapplication() -> QtWidgets.QApplication:
 class QApplicationUtils:
 
     def __init__(self, app: QtWidgets.QApplication = None, init_qt=True):
+        """ Manage QApplication creation/deletion
+
+        Allows to be used with a with statement
+
+        Parameters
+        ----------
+        app: QtWidgets.QApplication (optional)
+            a QApplication singleton instance already instanced
+        init_qt: bool
+            whether the loop should be instanced or not
+        """
         self._app: QtWidgets.QApplication = app
         self._init_qt = init_qt
         if self._init_qt is False:
             self._app = QtWidgets.QApplication.instance()
 
     def start_qapplication(self):
+        """ Start the event loop
+
+        check if init_qt is True and if a singleton instance already exists
+        """
         if self._init_qt:
             if QtWidgets.QApplication.instance() is None:
                 self._app = start_qapplication()
@@ -184,4 +199,5 @@ class QApplicationUtils:
             return True
 
     def stop_q_application(self):
+        """ stop the event loop"""
         sys.exit(self._app.exec())
