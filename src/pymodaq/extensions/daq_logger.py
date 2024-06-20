@@ -511,29 +511,31 @@ def main():
     from pymodaq.dashboard import DashBoard
     from pathlib import Path
     from pymodaq.utils.gui_utils.dock import DockArea
-    from pymodaq.utils.gui_utils.utils import QApplicationUtils
+    from pymodaq.utils.gui_utils.utils import mkQApp
 
-    with QApplicationUtils(init_qt=True) as qapp:
-        win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setCentralWidget(area)
-        win.resize(1000, 500)
-        win.setWindowTitle('PyMoDAQ Dashboard')
+    app = mkQApp('Logger')
 
-        # win.setVisible(False)
-        prog = DashBoard(area)
-        file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_logger')}.xml")
-        if file.exists():
-            prog.set_preset_mode(file)
-            prog.load_log_module()
-        else:
-            msgBox = QtWidgets.QMessageBox()
-            msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                           f"{file}\n"
-                           f"Impossible to load the Logger Module")
-            msgBox.setStandardButtons(msgBox.Ok)
-            ret = msgBox.exec()
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Dashboard')
 
+    # win.setVisible(False)
+    prog = DashBoard(area)
+    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_logger')}.xml")
+    if file.exists():
+        prog.set_preset_mode(file)
+        prog.load_log_module()
+    else:
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{file}\n"
+                       f"Impossible to load the Logger Module")
+        msgBox.setStandardButtons(msgBox.Ok)
+        ret = msgBox.exec()
+
+    app.exec()
 
 if __name__ == '__main__':
     main()

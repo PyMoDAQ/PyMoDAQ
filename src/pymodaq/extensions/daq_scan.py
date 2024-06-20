@@ -1252,32 +1252,33 @@ def main_test(init_qt=True):
     return dashboard, daq_scan, win
 
 
-def main(init_qt=True):
-    from pymodaq.utils.gui_utils.utils import QApplicationUtils
+def main():
+    from pymodaq.utils.gui_utils.utils import mkQApp
 
-    with QApplicationUtils(init_qt=init_qt) as qapp:
+    app = mkQApp('Scan')
+    from pymodaq.dashboard import DashBoard
 
-        from pymodaq.dashboard import DashBoard
+    win = QtWidgets.QMainWindow()
+    area = gutils.dock.DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Dashboard')
 
-        win = QtWidgets.QMainWindow()
-        area = gutils.dock.DockArea()
-        win.setCentralWidget(area)
-        win.resize(1000, 500)
-        win.setWindowTitle('PyMoDAQ Dashboard')
+    dashboard = DashBoard(area)
+    daq_scan = None
+    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
+    if file.exists():
+        dashboard.set_preset_mode(file)
+        daq_scan = dashboard.load_scan_module()
+    else:
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{file}\n"
+                       f"Impossible to load the DAQScan Module")
+        msgBox.setStandardButtons(msgBox.Ok)
+        ret = msgBox.exec()
+    app.exec()
 
-        dashboard = DashBoard(area)
-        daq_scan = None
-        file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
-        if file.exists():
-            dashboard.set_preset_mode(file)
-            daq_scan = dashboard.load_scan_module()
-        else:
-            msgBox = QtWidgets.QMessageBox()
-            msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                           f"{file}\n"
-                           f"Impossible to load the DAQScan Module")
-            msgBox.setStandardButtons(msgBox.Ok)
-            ret = msgBox.exec()
     return dashboard, daq_scan, win
 
 

@@ -1414,18 +1414,19 @@ class DashBoard(QObject):
             pass
 
 
-def main(init_qt=True):
-    from pymodaq.utils.gui_utils.utils import QApplicationUtils
+def main():
+    from pymodaq.utils.gui_utils.utils import mkQApp
+    app = mkQApp('Dashboard')
 
-    with QApplicationUtils(init_qt=init_qt) as app:
-        win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setCentralWidget(area)
-        win.resize(1000, 500)
-        win.setWindowTitle('PyMoDAQ Dashboard')
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Dashboard')
 
-        # win.setVisible(False)
-        prog = DashBoard(area)
+    # win.setVisible(False)
+    prog = DashBoard(area)
+    app.exec()
     return prog, win
 
 

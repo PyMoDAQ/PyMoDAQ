@@ -12,27 +12,29 @@ config = Config()
 
 
 def main(h5file_path: Path = None):
-    from pymodaq.utils.gui_utils.utils import QApplicationUtils
+    from pymodaq.utils.gui_utils.utils import mkQApp
+    import sys
+    app = mkQApp('Logger')
 
-    with QApplicationUtils() as qapp:
 
+    h5file_path_tmp = None
+    parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
+    parser.add_argument("-i", "--input", help="specify path to the file to be opened")
+    args = parser.parse_args()
 
-        h5file_path_tmp = None
-        parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
-        parser.add_argument("-i", "--input", help="specify path to the file to be opened")
-        args = parser.parse_args()
+    if args.input:
+        h5file_path_tmp = Path(args.input).resolve()  # Transform to absolute Path in case it is relative
 
-        if args.input:
-            h5file_path_tmp = Path(args.input).resolve()  # Transform to absolute Path in case it is relative
+        if not h5file_path_tmp.exists():
+            print(f'Error: {args.input} does not exist. Opening h5browser without input file.')
+            h5file_path_tmp = h5file_path
 
-            if not h5file_path_tmp.exists():
-                print(f'Error: {args.input} does not exist. Opening h5browser without input file.')
-                h5file_path_tmp = h5file_path
+    win = QtWidgets.QMainWindow()
+    prog = H5Browser(win, h5file_path=h5file_path_tmp)
+    win.show()
+    QtWidgets.QApplication.processEvents()
 
-        win = QtWidgets.QMainWindow()
-        prog = H5Browser(win, h5file_path=h5file_path_tmp)
-        win.show()
-        QtWidgets.QApplication.processEvents()
+    app.exec()
 
 if __name__ == '__main__':
     main()

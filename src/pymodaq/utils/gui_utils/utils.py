@@ -6,7 +6,7 @@ from qtpy import QtWidgets, QtCore, QtGui
 from pathlib import Path
 from pymodaq.utils.config import Config
 from pymodaq.utils.logger import set_logger, get_module_name
-
+from pyqtgraph import mkQApp as mkQApppg
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -156,48 +156,17 @@ def start_qapplication() -> QtWidgets.QApplication:
     return app
 
 
-class QApplicationUtils:
+def mkQApp(name: str):
+    app = mkQApppg(name)
+    if config('style', 'darkstyle'):
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+    return app
 
-    def __init__(self, app: QtWidgets.QApplication = None, init_qt=True):
-        """ Manage QApplication creation/deletion
 
-        Allows to be used with a with statement
-
-        Parameters
-        ----------
-        app: QtWidgets.QApplication (optional)
-            a QApplication singleton instance already instanced
-        init_qt: bool
-            whether the loop should be instanced or not
-        """
-        self._app: QtWidgets.QApplication = app
-        self._init_qt = init_qt
-        if self._init_qt is False:
-            self._app = QtWidgets.QApplication.instance()
-
-    def start_qapplication(self):
-        """ Start the event loop
-
-        check if init_qt is True and if a singleton instance already exists
-        """
-        if self._init_qt:
-            if QtWidgets.QApplication.instance() is None:
-                self._app = start_qapplication()
-            else:
-                self._app = QtWidgets.QApplication.instance()
-        return self._app
-
-    def __enter__(self):
-        return self.start_qapplication()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._init_qt:
-            self.stop_q_application()
-        if exc_type is not None:
-            return False
-        else:
-            return True
-
-    def stop_q_application(self):
-        """ stop the event loop"""
-        sys.exit(self._app.exec())
+def exec():
+    app = mkQApp()
+    if config('style', 'darkstyle'):
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+    return app.exec() if hasattr(app, 'exec') else app.exec_()
