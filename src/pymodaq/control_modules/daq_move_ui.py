@@ -9,7 +9,7 @@ from typing import List
 import sys
 
 from qtpy import QtWidgets
-from qtpy.QtCore import Signal
+from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QToolBar, QComboBox
 
 from pymodaq.utils.daq_utils import ThreadCommand
@@ -19,6 +19,10 @@ from pymodaq.control_modules.utils import ControlModuleUI
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq.utils.data import DataWithAxes, DataToExport, DataActuator
+
+from pymodaq.utils.config import Config
+
+config = Config()
 
 
 class DAQ_Move_UI(ControlModuleUI):
@@ -151,11 +155,13 @@ class DAQ_Move_UI(ControlModuleUI):
 
     def setup_docks(self):
         self.parent.setLayout(QVBoxLayout())
-        self.parent.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
+        #self.parent.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
         self.parent.layout().setContentsMargins(2, 2, 2, 2)
 
         widget = QWidget()
         widget.setLayout(QHBoxLayout())
+        splitter_hor = QtWidgets.QSplitter(Qt.Orientation.Horizontal)
+        widget.layout().addWidget(splitter_hor)
         self.parent.layout().addWidget(widget)
 
         self.main_ui = QWidget()
@@ -174,9 +180,9 @@ class DAQ_Move_UI(ControlModuleUI):
         left_widget.layout().addWidget(self.control_ui)
         left_widget.layout().setContentsMargins(0, 0, 0, 0)
         left_widget.layout().addStretch()
-        widget.layout().addWidget(left_widget)
-        widget.layout().addWidget(self.settings_ui)
-        widget.layout().addStretch()
+        splitter_hor.addWidget(left_widget)
+        splitter_hor.addWidget(self.settings_ui)
+        #widget.layout().addStretch()
 
         # populate the main ui
         self.move_toolbar = QToolBar()
@@ -205,7 +211,9 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui.layout().addWidget(LabelWithFont('Current value:'), 4, 0)
         self.move_done_led = QLED(readonly=True)
         self.main_ui.layout().addWidget(self.move_done_led, 4, 1)
-        self.current_value_sb = QSpinBox_ro(font_size=30, min_height=35)
+        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
+                                            siPrefix=config('actuator', 'siprefix'),
+                                            )
         self.main_ui.layout().addWidget(self.current_value_sb, 5, 0, 1, 2)
 
         # populate the control ui
@@ -241,6 +249,14 @@ class DAQ_Move_UI(ControlModuleUI):
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
         self.parent.layout().addWidget(self.statusbar)
+
+    def set_unit_as_suffix(self, unit: str):
+        """Will append the actuator units in the value display"""
+        self.current_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_bis.setOpts(suffix=unit)
+        self.abs_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_2.setOpts(suffix=unit)
+        self.rel_value_sb.setOpts(suffix=unit)
 
     def setup_actions(self):
         self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",

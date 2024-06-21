@@ -479,6 +479,9 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == 'stop':
             self.stop_motion()
 
+        elif status.command == 'units':
+            self.units = status.attribute
+
     def get_actuator_value(self):
         """Get the current actuator value via the "get_actuator_value" command send to the hardware
 
@@ -551,7 +554,14 @@ class DAQ_Move(ParameterControlModule):
 
     @property
     def units(self):
+        """Get/Set the units for the controller"""
         return self.settings['move_settings', 'units']
+
+    @units.setter
+    def units(self, unit: str):
+        self.settings.child('move_settings', 'units').setValue(unit)
+        if self.ui is not None and config('actuator', 'display_units'):
+            self.ui.set_unit_as_suffix(unit)
 
     def update_settings(self):
 

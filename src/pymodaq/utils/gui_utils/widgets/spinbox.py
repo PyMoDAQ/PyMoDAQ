@@ -19,6 +19,6 @@ class SpinBox(SpinBox):
 class QSpinBox_ro(SpinBox):
     def __init__(self, *args, readonly=True, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setMaximum(100000)
+        #self.setMaximum(100000)
         self.setReadOnly(readonly)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
