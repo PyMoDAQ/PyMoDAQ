@@ -212,6 +212,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.move_done_led = QLED(readonly=True)
         self.main_ui.layout().addWidget(self.move_done_led, 4, 1)
         self.current_value_sb = QSpinBox_ro(font_size=30, min_height=37,
+                                            siPrefix=config('actuator', 'siprefix'),
                                             )
         self.main_ui.layout().addWidget(self.current_value_sb, 5, 0, 1, 2)
 
