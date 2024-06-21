@@ -1210,7 +1210,6 @@ class DashBoard(QObject):
                 QtWidgets.QApplication.processEvents()
             self.settings.child('detectors', name).setValue(det.initialized_state)
 
-    Slot(bool)
     def stop_moves(self, overshoot):
         """
             Foreach module of the move module object list, stop motion.
