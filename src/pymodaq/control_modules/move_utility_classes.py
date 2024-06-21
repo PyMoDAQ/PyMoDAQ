@@ -380,6 +380,7 @@ class DAQ_Move_base(QObject):
         self._controller_units = units
         try:
             self.settings.child('units').setValue(units)
+            self.emit_status(ThreadCommand('units', units))
         except Exception:
             pass
 

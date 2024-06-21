@@ -75,6 +75,7 @@ default_preset_for_pid = "beam_steering_mock"
     refresh_timeout_ms = 500  # ms
     timeout = 10000  # default duration in ms to wait for data to be acquirred
     siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)
+    display_units = true # display units in the SpinBoxes
 
 [scan]
     scan_in_thread = true

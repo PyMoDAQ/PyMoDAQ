@@ -211,7 +211,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui.layout().addWidget(LabelWithFont('Current value:'), 4, 0)
         self.move_done_led = QLED(readonly=True)
         self.main_ui.layout().addWidget(self.move_done_led, 4, 1)
-        self.current_value_sb = QSpinBox_ro(font_size=30, min_height=37,
+        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
                                             siPrefix=config('actuator', 'siprefix'),
                                             )
         self.main_ui.layout().addWidget(self.current_value_sb, 5, 0, 1, 2)
@@ -249,6 +249,14 @@ class DAQ_Move_UI(ControlModuleUI):
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
         self.parent.layout().addWidget(self.statusbar)
+
+    def set_unit_as_suffix(self, unit: str):
+        """Will append the actuator units in the value display"""
+        self.current_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_bis.setOpts(suffix=unit)
+        self.abs_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_2.setOpts(suffix=unit)
+        self.rel_value_sb.setOpts(suffix=unit)
 
     def setup_actions(self):
         self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
