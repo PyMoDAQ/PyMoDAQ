@@ -232,7 +232,26 @@ Other settings
 
 .. _daq_move_grabing:
 
-Grabbing the actuator's value
-----------------------------
 
+Configuration file
+------------------
 
+A dedicated entry is present in the toml main :ref:`configuration file<section_configuration>` for the `DAQ_Move`
+to tailor the module's behaviour. The various field are written below together with their meaning
+
+.. code-block:: toml
+
+    [actuator]
+    epsilon_default = 1
+    polling_interval_ms = 100
+    polling_timeout_s = 20  # s
+    refresh_timeout_ms = 500  # ms
+    siprefix = true
+    display_units = true
+
+* epsilon_default: default value for the actuator precision
+* polling_interval_ms: interval in millisecond for refreshing the actuator's value
+* polling_timeout_s: Timeout in seconds during which the DAQ_Move tries to reach its target
+* refresh_timeout_ms: interval in millisecond for probing the actuator's value in continuous mode
+* siprefix: tell if printing of current value use a SI prefix or not (µ, m, k, M...)
+* display_units: display units in the SpinBoxes
