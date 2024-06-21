@@ -311,6 +311,7 @@ class DAQ_Move_UI(ControlModuleUI):
                                                      self.actuators_combo.currentText()]))
 
     def emit_move_abs(self, spinbox):
+        spinbox.editingFinished.emit()
         self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value())))
 
     def emit_move_rel(self, sign):
