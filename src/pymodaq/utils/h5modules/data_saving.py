@@ -437,6 +437,7 @@ class DataSaverLoader(DataManagement):
             ndarrays = [squeeze(data_node.read()) for data_node in data_nodes]
             axes = [Axis(label=data_node.attrs['label'], units=data_node.attrs['units'],
                          data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
+            error_arrays = None
         else:
             ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
@@ -467,7 +468,8 @@ class DataSaverLoader(DataManagement):
                             errors=error_arrays,
                             path=data_node.path,
                             **extra_attributes)
-        data.timestamp = data_node.attrs['timestamp']
+        if 'axis' not in self.data_type.name:
+            data.timestamp = data_node.attrs['timestamp']
         return data
 
 
