@@ -187,9 +187,9 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui.layout().addWidget(self.toolbar, 0, 0, 1, 2)
         self.main_ui.layout().addWidget(self.move_toolbar, 1, 0, 1, 2)
 
-        self.abs_value_sb = SpinBox()
+        self.abs_value_sb = SpinBox(step=0.1, dec=True)
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
-        self.abs_value_sb_2 = SpinBox()
+        self.abs_value_sb_2 = SpinBox(step=0.1, dec=True)
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
@@ -213,7 +213,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.control_ui.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
         self.find_home_pb = PushButtonIcon('home2', 'Find Home')
         self.control_ui.layout().addWidget(self.find_home_pb, 0, 1)
-        self.abs_value_sb_bis = SpinBox()
+        self.abs_value_sb_bis = SpinBox(step=0.1, dec=True)
         self.control_ui.layout().addWidget(self.abs_value_sb_bis, 1, 0)
         self.move_abs_pb = PushButtonIcon('Move', 'Set Abs.',
                                           tip='Set the value of the actuator to the set absolute value')
@@ -222,7 +222,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.move_rel_plus_pb = PushButtonIcon('MoveUp', 'Set Rel. (+)')
         self.control_ui.layout().addWidget(self.move_rel_plus_pb, 2, 1)
 
-        self.rel_value_sb = SpinBox()
+        self.rel_value_sb = SpinBox(step=0.1, dec=True)
         self.control_ui.layout().addWidget(self.rel_value_sb, 3, 0)
         self.move_rel_minus_pb = PushButtonIcon('MoveDown', 'Set Rel. (-)')
         self.control_ui.layout().addWidget(self.move_rel_minus_pb, 3, 1)
