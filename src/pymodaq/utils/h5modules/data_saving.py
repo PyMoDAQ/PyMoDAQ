@@ -427,11 +427,13 @@ class DataSaverLoader(DataManagement):
             if not isinstance(data_node, CARRAY):
                 return
             data_nodes = [data_node]
+            error_node = None
             try:
                 error_node_index = self.get_index_from_node_name(data_node)
-                error_node = self._error_saver.get_node_from_index(parent_node, error_node_index)
+                if error_node_index is not None:
+                    error_node = self._error_saver.get_node_from_index(parent_node, error_node_index)
             except NodeError as e:
-                error_node = None
+                pass
 
         if 'axis' in self.data_type.name:
             ndarrays = [squeeze(data_node.read()) for data_node in data_nodes]
