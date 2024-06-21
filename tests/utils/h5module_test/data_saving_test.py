@@ -182,7 +182,7 @@ class TestDataSaverLoader:
                             axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1)])
+                                       index=1)],)
 
         data_saver.add_data(h5saver.raw_group, data)
         assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
@@ -213,17 +213,18 @@ class TestDataSaverLoader:
         assert np.all(errors[0] == data_saver._error_saver.get_node_from_index('/RawData', 0).read())
         assert np.all(errors[1] == data_saver._error_saver.get_node_from_index('/RawData', 1).read())
 
-
     def test_load_data(self, get_h5saver):
         h5saver = get_h5saver
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
         errors = [np.random.random_sample(DATA1D.shape) for _ in range(Ndata)]
 
-        data = DataWithAxes(name='mydata', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+        data = DataWithAxes(name='mydata', data=[DATA1D for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
                             source='raw',
                             dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
+                            axes=[Axis(data=create_axis_array(DATA1D.shape[0]),
+                                       label='myaxis0', units='myunits0',
                                        index=0),
                                  ],
                             errors=errors)
@@ -276,6 +277,7 @@ class TestDataSaverLoader:
             assert np.allclose(dat, np.zeros(dat.shape))
 
         assert loaded_data == data-data
+
 
     def test_extra_attributes_and_timestamping(self, get_h5saver):
         h5saver = get_h5saver
@@ -588,3 +590,31 @@ class TestDataLoader:
             assert len(dwa) == 2
             for data_array in dwa:
                 assert np.allclose(data_array, np.zeros(data_array.shape))
+
+    def test_load_data_from_axis_node(self, get_h5saver):
+        """This is what happens in the h5browser to display axes in the viewers"""
+        h5saver = get_h5saver
+        data_loader = DataLoader(h5saver)
+
+        axis_saver = AxisSaverLoader(h5saver)
+        SIZE = 10
+        OFFSET = -5.
+        SCALING = 0.2
+        INDEX = 5
+        LABEL = 'myaxis'
+        UNITS = 'myunits'
+        axis = Axis(label=LABEL, units=UNITS,
+                    data=OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE), index=INDEX)
+
+        axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
+
+        dwa = data_loader.load_data(axis_node.path)
+
+        assert np.allclose(dwa[0], axis.get_data())
+        assert dwa.name == LABEL
+        #missing handling units?
+
+        assert dwa.axes[0].label == LABEL  # should not be that as the retrieved axis label of an
+        # axis node from this type of loading should be 'index'
+        assert dwa.axes[0].units == UNITS  # should not be that as the retrieved axis units of an
+        # axis node from this type of loading should be ''
