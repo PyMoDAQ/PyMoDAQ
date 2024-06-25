@@ -515,7 +515,7 @@ class DAQScan(QObject, ParameterManager):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend='tables')
+            self._h5saver = H5Saver(backend=config('general', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
             #self._h5saver.settings.child('current_h5_file').setValue(self._h5saver.filename)
