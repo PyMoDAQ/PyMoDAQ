@@ -513,6 +513,10 @@ class DAQScan(QObject, ParameterManager):
             self.ui.enable_start_stop()
         return res
 
+    # @property
+    # def h5saver(self):
+    #     if self.
+
     def update_file_settings(self):
         try:
             res = True
@@ -686,6 +690,12 @@ class DAQScan(QObject, ParameterManager):
         elif status[0] == "Timeout":
             self.ui.set_permanent_status('Timeout occurred')
 
+        elif status[0] == 'add_data':
+            self.module_and_data_saver.add_data(**status[1])
+
+        elif status[0] == 'add_nav_axes':
+            self.module_and_data_saver.add_nav_axes(status[1])
+
     ############
     #  PLOTTING
 
@@ -835,12 +845,17 @@ class DAQScan(QObject, ParameterManager):
                 remote_manager = getattr(self.dashboard, 'remote_manager')
                 remote_manager.activate_all(False)
 
+
             self.module_and_data_saver.h5saver = self.h5saver
             new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
             scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
             self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
+            for det in self.modules_manager.detectors:
+                det.module_and_data_saver = (
+                    module_saving.DetectorExtendedSaver(det, self.scanner.get_scan_shape()))
+            self.module_and_data_saver.h5saver = self.h5saver
 
             # mandatory to deal with multithreads
             if self.scan_thread is not None:
@@ -853,9 +868,9 @@ class DAQScan(QObject, ParameterManager):
 
             self.scan_thread = QThread()
 
-            scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.h5saver.settings,
-                                                  self.modules_manager,
-                                                  module_saver=self.module_and_data_saver)
+            scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,)
+                                                  # self.h5saver.settings,
+                                                  # module_saver=self.module_and_data_saver)
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
@@ -952,8 +967,9 @@ class DAQScanAcquisition(QObject):
     status_sig = Signal(list)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 h5saver_settings: Parameter = None, modules_manager: ModulesManager = None,
-                 module_saver: module_saving.ScanSaver = None):
+                 modules_manager: ModulesManager = None,):
+                 # h5saver_settings: Parameter = None,
+                 # module_saver: module_saving.ScanSaver = None):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -983,11 +999,11 @@ class DAQScanAcquisition(QObject):
 
         self.det_done_datas = data_mod.DataToExport('ScanData')
 
-        self.h5saver = H5Saver()
-        self.h5saver.settings.restoreState(h5saver_settings.saveState())
-        self.h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
+        # self.h5saver = H5Saver()
+        # self.h5saver.settings.restoreState(h5saver_settings.saveState())
+        # self.h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
 
-        self.module_and_data_saver: module_saving.ScanSaver = module_saver
+        # self.module_and_data_saver: module_saving.ScanSaver = module_saver
 
         # update the DAQ_Viewer's detector saver to DetectorExtendedSaver to take into account extended
         # arrays due to scan shape and eventual averaging
@@ -998,9 +1014,9 @@ class DAQScanAcquisition(QObject):
         else:
             self.scan_shape = scan_shape
 
-        for det in self.modules_manager.detectors:
-            det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
-        self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
+        # for det in self.modules_manager.detectors:
+        #     det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
+        # self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
     @Slot(utils.ThreadCommand)
     def queue_command(self, command):
@@ -1102,7 +1118,7 @@ class DAQScanAcquisition(QObject):
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
-            self.h5saver.flush()
+            #self.h5saver.flush()
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
@@ -1129,9 +1145,12 @@ class DAQScanAcquisition(QObject):
                         nav_axis.index += 1
                     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                                   index=0))
-                self.module_and_data_saver.add_nav_axes(nav_axes)
+                #self.module_and_data_saver.add_nav_axes(nav_axes)
+                self.status_sig.emit(["add_nav_axes", nav_axes])
 
-            self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)
+            # self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)
+            self.status_sig.emit(["add_data",
+                                  dict(indexes=indexes, distribution=self.scanner.distribution)])
 
             #todo related to adaptive (solution lies along the Enlargeable data saver)
             if self.isadaptive:
