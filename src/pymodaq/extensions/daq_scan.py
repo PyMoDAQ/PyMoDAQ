@@ -43,7 +43,6 @@ from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving, data_saving
 from pymodaq.utils.data import DataToExport, DataActuator
 
-import fcntl
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -506,7 +505,7 @@ class DAQScan(QObject, ParameterManager):
             self._metada_dataset_set = False
             self.module_and_data_saver.forget_h5()
             self.h5saver.close_file()
-            fcntl.fcntl(self.h5saver.h5_file, fcntl.F_UNLCK)
+
         self.h5saver.init_file(update_h5=new_file)
         self.module_and_data_saver.h5saver = self.h5saver
         res = self.update_file_settings()
