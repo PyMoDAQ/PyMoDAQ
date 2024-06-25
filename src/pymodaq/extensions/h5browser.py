@@ -1,11 +1,12 @@
 import argparse
 from pathlib import Path
 import sys
-
+import os
 from qtpy import QtWidgets
-
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 from pymodaq.utils.h5modules.browsing import H5Browser
 from pymodaq.utils.config import Config
+
 
 
 config = Config()
