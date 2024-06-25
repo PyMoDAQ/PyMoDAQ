@@ -139,6 +139,7 @@ class DAQScan(QObject, ParameterManager):
 
         self.scan_thread: QThread = None
         self._h5saver: H5Saver = None
+        self._module_and_data_saver: module_saving.ScanSaver = None
 
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
@@ -146,7 +147,6 @@ class DAQScan(QObject, ParameterManager):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
         self.module_and_data_saver = module_saving.ScanSaver(self)
-        self.module_and_data_saver.h5saver = self.h5saver
 
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
@@ -278,7 +278,7 @@ class DAQScan(QObject, ParameterManager):
                 except Exception as e:
                     logger.exception(str(e))
 
-            self.h5saver.close_file()
+            self.close_file()
             self.mainwindow.close()
 
         except Exception as e:
@@ -503,8 +503,7 @@ class DAQScan(QObject, ParameterManager):
         if new_file:
             self._metada_dataset_set = False
             #self.module_and_data_saver.forget_h5()
-            self.h5saver.close_file()
-            self.h5saver = None
+            self.close_file()
 
         #self.h5saver.init_file(update_h5=new_file)
         self.module_and_data_saver.h5saver = self.h5saver
@@ -519,13 +518,29 @@ class DAQScan(QObject, ParameterManager):
             self._h5saver = H5Saver(backend='tables')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
+            #self._h5saver.settings.child('current_h5_file').setValue(self._h5saver.filename)
         if not self._h5saver.isopen():
-            self._h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
+            self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
         return self._h5saver
 
     @h5saver.setter
     def h5saver(self, h5saver_temp: H5Saver):
         self._h5saver = h5saver_temp
+
+    def close_file(self):
+        self.h5saver.close_file()
+        # self.h5saver = None
+
+    @property
+    def module_and_data_saver(self):
+        if not self._module_and_data_saver.h5saver.isopen():
+            self._module_and_data_saver.h5saver = self.h5saver
+        return self._module_and_data_saver
+
+    @module_and_data_saver.setter
+    def module_and_data_saver(self, mod: module_saving.ScanSaver):
+        self._module_and_data_saver = mod
+        self._module_and_data_saver.h5saver = self.h5saver
 
     def update_file_settings(self):
         try:
@@ -568,6 +583,7 @@ class DAQScan(QObject, ParameterManager):
             scan_name = scan_node.name
         self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
         self.scan_attributes.child('scan_info', 'description').setValue('')
+        self.h5saver.settings.child('current_scan_name').setValue(scan_name)
 
         res = self.set_metadata_about_current_scan()
         return res
@@ -680,7 +696,7 @@ class DAQScan(QObject, ParameterManager):
             scan_node = self.module_and_data_saver.get_last_node()
             scan_node.attrs['scan_done'] = True
             self.module_and_data_saver.flush()
-            
+            self.close_file()
 
             if not self.batch_started:
                 if not self.dashboard.overshoot:
@@ -756,8 +772,8 @@ class DAQScan(QObject, ParameterManager):
         """
         try:
             # set the filename and path
-            if self.h5saver.h5_file is None:  # only the first time start scan is called
-                self.create_new_file(True)
+            # if self.h5saver.h5_file is None:  # only the first time start scan is called
+            #     self.create_new_file(True)
             res = self.update_scan_info()
             if not res:
                 return False
@@ -857,7 +873,7 @@ class DAQScan(QObject, ParameterManager):
                 remote_manager.activate_all(False)
 
 
-            self.module_and_data_saver.h5saver = self.h5saver
+            #self.module_and_data_saver.h5saver = self.h5saver
             new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
             scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
             self.save_metadata(scan_node, 'scan_info')
@@ -866,7 +882,7 @@ class DAQScan(QObject, ParameterManager):
             for det in self.modules_manager.detectors:
                 det.module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, self.scanner.get_scan_shape()))
-            self.module_and_data_saver.h5saver = self.h5saver
+            self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver ill also be set on each detectors
 
             # mandatory to deal with multithreads
             if self.scan_thread is not None:
