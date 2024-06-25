@@ -386,7 +386,6 @@ class DAQScan(QObject, ParameterManager):
 
     def show_file_content(self):
         try:
-            # self.h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
             self.h5saver.show_file_content()
         except Exception as e:
             logger.exception(str(e))
@@ -502,11 +501,9 @@ class DAQScan(QObject, ParameterManager):
     def create_new_file(self, new_file):
         if new_file:
             self._metada_dataset_set = False
-            #self.module_and_data_saver.forget_h5()
             self.close_file()
 
-        #self.h5saver.init_file(update_h5=new_file)
-        self.module_and_data_saver.h5saver = self.h5saver
+        self.module_and_data_saver.h5saver = self.h5saver  # force it for detectors to update their h5saver
         res = self.update_file_settings()
         if new_file:
             self.ui.enable_start_stop()
@@ -518,7 +515,6 @@ class DAQScan(QObject, ParameterManager):
             self._h5saver = H5Saver(backend=config('general', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
-            #self._h5saver.settings.child('current_h5_file').setValue(self._h5saver.filename)
         if not self._h5saver.isopen():
             self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
         return self._h5saver
@@ -529,7 +525,6 @@ class DAQScan(QObject, ParameterManager):
 
     def close_file(self):
         self.h5saver.close_file()
-        # self.h5saver = None
 
     @property
     def module_and_data_saver(self):
@@ -552,18 +547,6 @@ class DAQScan(QObject, ParameterManager):
             if self.navigator is not None:
                 self.navigator.update_h5file(self.h5saver.h5_file)
                 self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
-
-            # # set attributes to the current group, such as scan_type....
-            # self.scan_attributes.child('scan_info', 'scan_type').setValue(
-            #     self.scanner.settings.child('scan_type').value())
-            # self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
-            #     self.scanner.settings.child('scan_sub_type').value())
-            #
-            # scan_node = self.module_and_data_saver.get_set_node()
-            # self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_node.name)
-            # self.scan_attributes.child('scan_info', 'description').setValue('')
-            #
-            # res = self.set_metadata_about_current_scan()
 
             return res
 
@@ -771,9 +754,6 @@ class DAQScan(QObject, ParameterManager):
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
-            # set the filename and path
-            # if self.h5saver.h5_file is None:  # only the first time start scan is called
-            #     self.create_new_file(True)
             res = self.update_scan_info()
             if not res:
                 return False
@@ -872,8 +852,6 @@ class DAQScan(QObject, ParameterManager):
                 remote_manager = getattr(self.dashboard, 'remote_manager')
                 remote_manager.activate_all(False)
 
-
-            #self.module_and_data_saver.h5saver = self.h5saver
             new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
             scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
             self.save_metadata(scan_node, 'scan_info')
@@ -895,9 +873,9 @@ class DAQScan(QObject, ParameterManager):
 
             self.scan_thread = QThread()
 
-            scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,)
-                                                  # self.h5saver.settings,
-                                                  # module_saver=self.module_and_data_saver)
+            scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
+                                                  )
+
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
@@ -995,8 +973,6 @@ class DAQScanAcquisition(QObject):
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
                  modules_manager: ModulesManager = None,):
-                 # h5saver_settings: Parameter = None,
-                 # module_saver: module_saving.ScanSaver = None):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -1026,14 +1002,6 @@ class DAQScanAcquisition(QObject):
 
         self.det_done_datas = data_mod.DataToExport('ScanData')
 
-        # self.h5saver = H5Saver()
-        # self.h5saver.settings.restoreState(h5saver_settings.saveState())
-        # self.h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
-
-        # self.module_and_data_saver: module_saving.ScanSaver = module_saver
-
-        # update the DAQ_Viewer's detector saver to DetectorExtendedSaver to take into account extended
-        # arrays due to scan shape and eventual averaging
         scan_shape = self.scanner.get_scan_shape()
         if self.Naverage > 1:
             self.scan_shape = [self.Naverage]
@@ -1041,12 +1009,7 @@ class DAQScanAcquisition(QObject):
         else:
             self.scan_shape = scan_shape
 
-        # for det in self.modules_manager.detectors:
-        #     det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
-        # self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
-
-    @Slot(utils.ThreadCommand)
-    def queue_command(self, command):
+    def queue_command(self, command: utils.ThreadCommand):
         """Process the commands sent by the main ui
 
         Parameters
@@ -1145,7 +1108,6 @@ class DAQScanAcquisition(QObject):
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
-            #self.h5saver.flush()
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
@@ -1154,7 +1116,6 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
-            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def det_done(self, det_done_datas: data_mod.DataToExport, positions):
         """
@@ -1172,10 +1133,8 @@ class DAQScanAcquisition(QObject):
                         nav_axis.index += 1
                     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                                   index=0))
-                #self.module_and_data_saver.add_nav_axes(nav_axes)
                 self.status_sig.emit(["add_nav_axes", nav_axes])
 
-            # self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)
             self.status_sig.emit(["add_data",
                                   dict(indexes=indexes, distribution=self.scanner.distribution)])
 
@@ -1195,7 +1154,6 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
-            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def timeout(self):
         """
