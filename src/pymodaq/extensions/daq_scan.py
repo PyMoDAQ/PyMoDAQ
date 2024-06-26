@@ -617,16 +617,17 @@ class DAQScan(QObject, ParameterManager):
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
-    def update_status(self, txt, wait_time=0, log_type=None):
-        """
-            Show the txt message in the status bar with a delay of wait_time ms.
+    def update_status(self, txt: str, wait_time=0):
+        """ Show the txt message in the status bar with a delay of wait_time ms.
 
-            =============== =========== =======================
-            **Parameters**    **Type**    **Description**
-            *txt*             string      The message to show
-            *wait_time*       int         the delay of showing
-            *log_type*        string      the type of the log
-            =============== =========== =======================
+        add an info log in the logger
+
+        Parameters
+        ----------
+        txt: str
+            the message to log
+        wait_time: int
+            leave the message apparent in the status bar for this duration in ms
         """
         self.ui.display_status(txt, wait_time)
         self.status_signal.emit(txt)
@@ -917,7 +918,7 @@ class DAQScan(QObject, ParameterManager):
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
 
-        self.update_status(status, log_type='log')
+        self.update_status(status)
         self.ui.set_permanent_status('')
 
         self.ui.set_action_enabled('ini_positions', True)
@@ -1037,7 +1038,7 @@ class DAQScanAcquisition(QObject):
             scan_type = self.scanner.scan_type
             self.navigation_axes = self.scanner.get_nav_axes()
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                     attribute=["Acquisition has started", 'log']))
+                                                     attribute="Acquisition has started"))
 
             self.timeout_scan_flag = False
             for ind_average in range(self.Naverage):
@@ -1103,7 +1104,7 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.connect_detectors(False)
 
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                     attribute=["Acquisition has finished", 'log']))
+                                                     attribute="Acquisition has finished"))
             self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
         except Exception as e:
@@ -1152,7 +1153,7 @@ class DAQScanAcquisition(QObject):
         """
         self.timeout_scan_flag = True
         self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                 attribute=["Timeout during acquisition", 'log']))
+                                                 attribute="Timeout during acquisition"))
         self.status_sig.emit(utils.ThreadCommand("Timeout"))
 
 
