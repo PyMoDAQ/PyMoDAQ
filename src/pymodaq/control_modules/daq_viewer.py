@@ -43,8 +43,8 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
-
-from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands
+from pymodaq.utils.thread_commands import QueueTCPViewer, ProcessTCPViewer, ThreadStatusViewer
+from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -799,9 +799,9 @@ class DAQ_Viewer(ParameterControlModule):
         try:
             dte = dte.deepcopy()
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+                self._command_tcpip.emit(ThreadCommand(QueueTCPViewer.DATA_READY, dte))
             if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+                self._command_tcpip.emit(ThreadCommand(QueueTCPViewer.DATA_READY, dte))
             if self.ui is not None:
                 self.ui.data_ready = True
 
@@ -1037,7 +1037,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
         super().thread_status(status, 'detector')
 
-        if status.command == "ini_detector":
+        if status.command == ThreadStatusViewer.INI_DETECTOR:
             self.update_status("detector initialized: " + str(status.attribute[0]['initialized']))
             if self.ui is not None:
                 self.ui.detector_init = status.attribute[0]['initialized']
@@ -1049,13 +1049,13 @@ class DAQ_Viewer(ParameterControlModule):
 
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == "grab":
+        elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)
 
-        elif status.command == 'grab_stopped':
+        elif status.command == ThreadStatusViewer.GRAB_STOPPED:
             self.grab_status.emit(False)
 
-        elif status.command == 'init_lcd':
+        elif status.command == ThreadStatusViewer.INIT_LCD:
             if self._lcd is not None:
                 try:
                     self._lcd.parent.close()
@@ -1067,11 +1067,11 @@ class DAQ_Viewer(ParameterControlModule):
             lcd.setVisible(True)
             QtWidgets.QApplication.processEvents()
 
-        elif status.command == 'lcd':
+        elif status.command == ThreadStatusViewer.LCD:
             """status.attribute should be a list of numpy arrays of shape (1,)"""
             self._lcd.setvalues(status.attribute)
 
-        elif status.command == 'stop':
+        elif status.command == ThreadStatusViewer.STOP:
             self.stop_grab()
 
     def connect_tcp_ip(self):
@@ -1099,16 +1099,10 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if super().process_tcpip_cmds(status=status) is None:
             return
-        if 'Send Data' in status.command:
+        if ProcessTCPViewer.SEND_DATA in status.command:
             self.snapshot('', send_to_tcpip=True)
 
-        elif status.command == LECOClientCommands.LECO_CONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
-
-        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
-
-        elif status.command == 'set_info':
+        elif status.command == ProcessTCPViewer.SET_INFO:
             path_in_settings = status.attribute[0]
             param_as_xml = status.attribute[1]
             param_dict = ioxml.XML_string_to_parameter(param_as_xml)[0]
@@ -1116,7 +1110,7 @@ class DAQ_Viewer(ParameterControlModule):
             param = self.settings.child('detector_settings', *path_in_settings[1:])
             param.restoreState(param_tmp.saveState())
 
-        elif status.command == 'get_axis':
+        elif status.command == ProcessTCPViewer.GET_AXIS:
             raise DeprecationWarning('Do not use this, the axis are in the data objects')
             self.command_hardware.emit(
                 ThreadCommand('get_axis', ))  # tells the plugin to emit its axes so that the server will receive them

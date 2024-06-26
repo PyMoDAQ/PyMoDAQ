@@ -18,25 +18,7 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
 from pymodaq.utils.leco.utils import serialize_object
-
-
-class LECOClientCommands(StrEnum):
-    LECO_CONNECTED = "leco_connected"
-    LECO_DISCONNECTED = "leco_disconnected"
-
-
-class LECOCommands(StrEnum):
-    CONNECT = "ini_connection"
-    QUIT = "quit"
-
-
-class LECOMoveCommands(StrEnum):
-    POSITION = 'position_is'
-    MOVE_DONE = 'move_done'
-
-
-class LECOViewerCommands(StrEnum):
-    DATA_READY = 'data_ready'
+from pymodaq.utils.thread_commands import QueueTCPControl, QueueTCPMove, QueueTCPViewer, ProcessTCPControl, ProcessTCPMove, ProcessTCPViewer
 
 
 class ListenerSignals(QObject):
@@ -79,32 +61,33 @@ class ActorHandler(PymodaqPipeHandler):
 
     # generic commands
     def set_info(self, path: List[str], param_dict_str: str) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPControl.SET_INFO, attribute=[path, param_dict_str]))
 
     # detector commands
     def send_data(self, grabber_type: str = "") -> None:
-        self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPViewer.SEND_DATA))
 
     # actuator commands
     def move_abs(self, position: Union[float, str]) -> None:
         pos = self.extract_dwa_object(position) if isinstance(position, str) else position
-        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPMove.MOVE_ABS, attribute=[pos]))
 
     def move_rel(self, position: Union[float, str]) -> None:
         pos = self.extract_dwa_object(position) if isinstance(position, str) else position
-        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPMove.MOVE_REL, attribute=[pos]))
 
     def move_home(self) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("move_home"))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPMove.MOVE_HOME))
 
     def get_actuator_value(self) -> None:
         """Request that the actuator value is sent later on."""
         # according to DAQ_Move, this supersedes "check_position"
-        self.signals.cmd_signal.emit(ThreadCommand("get_actuator_value"))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPMove.GET_ACTUATOR_VALUE))
 
     def stop_motion(self,) -> None:
         # not implemented in DAQ_Move!
-        self.signals.cmd_signal.emit(ThreadCommand("stop_motion"))
+        # self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPMove.STOP))
+        pass
 
 
 # to be able to separate them later on
@@ -154,13 +137,13 @@ class PymodaqListener(Listener):
             del self.communicator
         except AttributeError:
             pass
-        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
+        self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPControl.LECO_DISCONNECTED))
 
     def indicate_sign_in_out(self, full_name: str):
         if "." in full_name:
-            self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_CONNECTED))
+            self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPControl.LECO_CONNECTED))
         else:
-            self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
+            self.signals.cmd_signal.emit(ThreadCommand(ProcessTCPControl.LECO_DISCONNECTED))
 
 
 class ActorListener(PymodaqListener):
@@ -191,7 +174,7 @@ class ActorListener(PymodaqListener):
         """Queue a command to send it via LECO to the server."""
 
         # generic commands
-        if command.command == LECOCommands.CONNECT:
+        if command.command == QueueTCPControl.CONNECT:
             try:
                 if self.thread.is_alive():
                     return  # already started
@@ -199,7 +182,7 @@ class ActorListener(PymodaqListener):
                 pass  # start later on, as there is no thread.
             self.start_listen()
 
-        elif command.command == LECOCommands.QUIT:
+        elif command.command == QueueTCPControl.QUIT:
             try:
                 self.stop_listen()
             except Exception:
@@ -207,12 +190,12 @@ class ActorListener(PymodaqListener):
             finally:
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
 
-        elif command.command == 'update_connection':
+        elif command.command == QueueTCPControl.UPDATE_CONNECTION:
             # self.ipaddress = command.attribute['ipaddress']
             # self.port = command.attribute['port']
             pass  # TODO change name?
 
-        elif command.command == LECOViewerCommands.DATA_READY:
+        elif command.command == QueueTCPViewer.DATA_READY:
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
@@ -223,7 +206,7 @@ class ActorListener(PymodaqListener):
                 data=serialize_object(value),
             )
 
-        elif command.command == 'send_info':
+        elif command.command == QueueTCPControl.SEND_INFO:
             path = command.attribute['path']  # type: ignore
             param = command.attribute['param']  # type: ignore
             self.communicator.ask_rpc(
@@ -232,21 +215,21 @@ class ActorListener(PymodaqListener):
                 path=path,
                 param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
-        elif command.command == LECOMoveCommands.POSITION:
+        elif command.command == QueueTCPMove.POSITION:
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
                                       position=serialize_object(value),
                                       )
 
-        elif command.command == LECOMoveCommands.MOVE_DONE:
+        elif command.command == QueueTCPMove.MOVE_DONE:
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
                                       position=serialize_object(value),
                                       )
 
-        elif command.command == 'x_axis':
+        elif command.command == QueueTCPMove.X_AXIS:
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
@@ -258,7 +241,7 @@ class ActorListener(PymodaqListener):
             else:
                 raise ValueError("Nothing to send!")
 
-        elif command.command == 'y_axis':
+        elif command.command == QueueTCPMove.X_AXIS:
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,

@@ -21,8 +21,9 @@ from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils import config as configmod
-from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
+from pymodaq.utils.leco.pymodaq_listener import ActorListener
 from pymodaq.utils.logger import get_base_logger
+from pymodaq.utils.thread_commands import QueueTCPControl, ProcessTCPControl, ThreadStatusControl
 
 
 class DAQTypesEnum(BaseEnum):
@@ -148,13 +149,13 @@ class ControlModule(QObject):
                 * show_config: display the plugin configuration
         """
 
-        if status.command == "Update_Status":
+        if status.command == ThreadStatusControl.UPDATE_STATUS:
             if len(status.attribute) > 1:
                 self.update_status(status.attribute[0], log=status.attribute[1])
             else:
                 self.update_status(status.attribute[0])
 
-        elif status.command == "close":
+        elif status.command == ThreadStatusControl.CLOSE:
             try:
                 self.update_status(status.attribute[0])
                 self._hardware_thread.quit()
@@ -172,7 +173,7 @@ class ControlModule(QObject):
             self._initialized_state = False
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == 'update_main_settings':
+        elif status.command == ThreadStatusControl.UPDATE_MAIN_SETTINGS:
             # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
             try:
                 if status.attribute[2] == 'value':
@@ -184,7 +185,7 @@ class ControlModule(QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-        elif status.command == 'update_settings':
+        elif status.command == ThreadStatusControl.UPDATE_SETTINGS:
             # using this the settings shown in the UI for the plugin reflects the real plugin settings
             try:
                 self.settings.sigTreeStateChanged.disconnect(
@@ -212,16 +213,16 @@ class ControlModule(QObject):
                 self.logger.exception(str(e))
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        elif status.command == 'raise_timeout':
+        elif status.command == ThreadStatusControl.RAISE_TIMEOUT:
             self.raise_timeout()
 
-        elif status.command == 'show_splash':
+        elif status.command == ThreadStatusControl.SHOW_SPLASH:
             self.settings_tree.setEnabled(False)
             self.splash_sc.show()
             self.splash_sc.raise_()
             self.splash_sc.showMessage(status.attribute, color=Qt.white)
 
-        elif status.command == 'close_splash':
+        elif status.command == ThreadStatusControl.CLOSE_SPLASH:
             self.splash_sc.close()
             self.settings_tree.setEnabled(True)
 
@@ -377,11 +378,11 @@ class ParameterControlModule(ParameterManager, ControlModule):
             if param.value():
                 self.connect_tcp_ip()
             else:
-                self._command_tcpip.emit(ThreadCommand('quit', ))
+                self._command_tcpip.emit(ThreadCommand(QueueTCPControl.QUIT))
 
         elif param.name() == 'ip_address' or param.name == 'port':
             self._command_tcpip.emit(
-                ThreadCommand('update_connection',
+                ThreadCommand(QueueTCPControl.UPDATE_CONNECTION,
                               dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
                                    port=self.settings['main_settings', 'tcpip', 'port'])))
 
@@ -406,9 +407,17 @@ class ParameterControlModule(ParameterManager, ControlModule):
             if 'main_settings' not in path:
                 self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                    self._command_tcpip.emit(
+                        ThreadCommand(
+                            QueueTCPControl.SEND_INFO, dict(path=path, param=param)
+                        )
+                    )
                 if self.settings.child('main_settings', 'leco', 'leco_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                    self._command_tcpip.emit(
+                        ThreadCommand(
+                            QueueTCPControl.SEND_INFO, dict(path=path, param=param)
+                        )
+                    )
 
     def connect_tcp_ip(self, params_state=None, client_type: str = "GRABBER") -> None:
         """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
@@ -458,7 +467,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._leco_client.start_listen()
             # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
         else:
-            self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
+            self._command_tcpip.emit(ThreadCommand(QueueTCPControl.QUIT, ))
             try:
                 self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
             except TypeError:
@@ -466,19 +475,19 @@ class ParameterControlModule(ParameterManager, ControlModule):
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> Optional[ThreadCommand]:
-        if status.command == 'connected':
+        if status.command == ProcessTCPControl.CONNECTED:
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
 
-        elif status.command == 'disconnected':
+        elif status.command == ProcessTCPControl.DISCONNECTED:
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
 
-        elif status.command == LECOClientCommands.LECO_CONNECTED:
+        elif status.command == ProcessTCPControl.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
 
-        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
+        elif status.command == ProcessTCPControl.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
-        elif status.command == 'Update_Status':
+        elif status.command == ProcessTCPControl.UPDATE_STATUS:
             self.thread_status(status)
 
         else:
