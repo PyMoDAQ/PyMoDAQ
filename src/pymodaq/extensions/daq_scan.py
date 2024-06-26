@@ -617,48 +617,43 @@ class DAQScan(QObject, ParameterManager):
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
-    def update_status(self, txt, wait_time=0, log_type=None):
-        """
-            Show the txt message in the status bar with a delay of wait_time ms.
+    def update_status(self, txt: str, wait_time=0):
+        """ Show the txt message in the status bar with a delay of wait_time ms.
 
-            =============== =========== =======================
-            **Parameters**    **Type**    **Description**
-            *txt*             string      The message to show
-            *wait_time*       int         the delay of showing
-            *log_type*        string      the type of the log
-            =============== =========== =======================
+        add an info log in the logger
+
+        Parameters
+        ----------
+        txt: str
+            the message to log
+        wait_time: int
+            leave the message apparent in the status bar for this duration in ms
         """
         self.ui.display_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
 
-    @Slot(list)
-    def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
+    def thread_status(self, status: utils.ThreadCommand):
+        """ General function to get datas/infos from child thread back to the main.
+
+        Possible commands are:
+
+        * "Update_Status"
+        * "Update_scan_index"
+        * "Scan_done"
+        * "Timeout"
         """
-            | General function to get datas/infos from all threads back to the main.
-            |
+        if status.command == "Update_Status":
+            self.update_status(status.attribute, wait_time=self.wait_time)
 
-            Switch the status with :
-                * *"Update status"* : Update the status bar with the status attribute txt message
-                * *"Update_scan_index"* : Set the value of the User Interface - indice_scan_sb attribute.
-                * *"Scan_done"* : Save the scan and init the positions
-                * *"Timeout"* : Set the "Timeout occured" in the User Interface-log message
-
-            See Also
-            --------
-            update_status, save_scan, set_ini_positions
-        """
-        if status[0] == "Update_Status":
-            self.update_status(status[1], wait_time=self.wait_time)
-
-        elif status[0] == "Update_scan_index":
+        elif status.command == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
-            self.ind_scan = status[1][0]
-            self.ui.set_scan_step(status[1][0] + 1)
-            self.ind_average = status[1][1]
-            self.ui.set_scan_step_average(status[1][1] + 1)
+            self.ind_scan = status.attribute[0]
+            self.ui.set_scan_step(status.attribute[0] + 1)
+            self.ind_average = status.attribute[1]
+            self.ui.set_scan_step_average(status.attribute[1] + 1)
 
-        elif status[0] == "Scan_done":
+        elif status.command == "Scan_done":
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
@@ -672,7 +667,7 @@ class DAQScan(QObject, ParameterManager):
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
 
-                # reactivate module controls usiong remote_control
+                # reactivate module controls using remote_control
                 if hasattr(self.dashboard, 'remote_manager'):
                     remote_manager = getattr(self.dashboard, 'remote_manager')
                     remote_manager.activate_all(True)
@@ -682,7 +677,7 @@ class DAQScan(QObject, ParameterManager):
                 self.ind_batch += 1
                 self.loop_scan_batch()
 
-        elif status[0] == "Timeout":
+        elif status.command == "Timeout":
             self.ui.set_permanent_status('Timeout occurred')
 
     ############
@@ -859,7 +854,7 @@ class DAQScan(QObject, ParameterManager):
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
-            scan_acquisition.status_sig[list].connect(self.thread_status)
+            scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
             self.scan_thread.scan_acquisition = scan_acquisition
             self.scan_thread.start()
@@ -923,7 +918,7 @@ class DAQScan(QObject, ParameterManager):
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
 
-        self.update_status(status, log_type='log')
+        self.update_status(status)
         self.ui.set_permanent_status('')
 
         self.ui.set_action_enabled('ini_positions', True)
@@ -948,7 +943,7 @@ class DAQScanAcquisition(QObject):
 
     """
     scan_data_tmp = Signal(ScanDataTemp)
-    status_sig = Signal(list)
+    status_sig = Signal(utils.ThreadCommand)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
                  h5saver_settings: Parameter = None, modules_manager: ModulesManager = None,
@@ -1042,7 +1037,8 @@ class DAQScanAcquisition(QObject):
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
             self.navigation_axes = self.scanner.get_nav_axes()
-            self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
+            self.status_sig.emit(utils.ThreadCommand("Update_Status",
+                                                     attribute="Acquisition has started"))
 
             self.timeout_scan_flag = False
             for ind_average in range(self.Naverage):
@@ -1071,7 +1067,9 @@ class DAQScanAcquisition(QObject):
                         #     position = (vec.vectorize() * frac_curvilinear).translate_to(vec.p1()).p2()
                         #     positions = [position.x(), position.y()]
 
-                    self.status_sig.emit(["Update_scan_index", [self.ind_scan, ind_average]])
+                    self.status_sig.emit(
+                        utils.ThreadCommand("Update_scan_index",
+                                            attribute=[self.ind_scan, ind_average]))
 
                     if self.stop_scan_flag or self.timeout_scan_flag:
                         break
@@ -1105,12 +1103,12 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
-            self.status_sig.emit(["Update_Status", "Acquisition has finished", 'log'])
-            self.status_sig.emit(["Scan_done"])
+            self.status_sig.emit(utils.ThreadCommand("Update_Status",
+                                                     attribute="Acquisition has finished"))
+            self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
         except Exception as e:
             logger.exception(str(e))
-            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def det_done(self, det_done_datas: data_mod.DataToExport, positions):
         """
@@ -1148,15 +1146,15 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
-            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def timeout(self):
         """
             Send the status signal *'Time out during acquisition'*.
         """
         self.timeout_scan_flag = True
-        self.status_sig.emit(["Update_Status", "Timeout during acquisition", 'log'])
-        self.status_sig.emit(["Timeout"])
+        self.status_sig.emit(utils.ThreadCommand("Update_Status",
+                                                 attribute="Timeout during acquisition"))
+        self.status_sig.emit(utils.ThreadCommand("Timeout"))
 
 
 def main():
