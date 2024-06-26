@@ -120,7 +120,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         pass
         return self.y_axis
 
-    def grab_data(self, Naverage=1, **kwargs):
+    def grab_data(self, Naverage=1, live=False, **kwargs):
         """
             Start new acquisition.
             Grabbed indice is used to keep track of the current image in the average.
@@ -138,17 +138,20 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         try:
             self.ind_grabbed = 0  # to keep track of the current image in the average
             self.Naverage = Naverage
-            self.controller.set_remote_name(self.communicator.full_name)
-            self.controller.send_data(grabber_type=self.grabber_type)
+            if live:
+                self.controller.start_grabbing()
+            else:
+                self.controller.snap_shot()
+                # self.controller.set_remote_name(self.communicator.full_name)
+                # self.controller.send_data(grabber_type=self.grabber_type)
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
 
     def stop(self):
+        """Stop grabbing.
         """
-            not implemented.
-        """
-        pass
+        self.controller.stop_grabbing()
         return ""
 
     # Methods for RPC calls

@@ -19,12 +19,21 @@ from qtpy.QtCore import QObject, Signal  # type: ignore
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
-from pymodaq.utils.leco.utils import serialize_object, create_leco_transfer_tuple, thread_command_to_leco_tuple
+from pymodaq.utils.leco.utils import (
+    serialize_object,
+    create_leco_transfer_tuple,
+    thread_command_to_leco_tuple,
+)
 
 
 class LECOClientCommands(StrEnum):
+    """Commands for the `ControlModule.process_tcpip_cmds`."""
     LECO_CONNECTED = "leco_connected"
     LECO_DISCONNECTED = "leco_disconnected"
+    # VIEWER
+    SNAP = "snap"
+    GRAB = "grab"
+    STOP = "stop"
 
 
 class LECOCommands(StrEnum):
@@ -64,12 +73,16 @@ class PymodaqPipeHandler(PipeHandler):
     def handle_subscription_message(self, message: DataMessage) -> None:
         self.signals.data_message_received.emit(message)
 
+
 class ActorHandler(PymodaqPipeHandler):
 
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
         self.register_rpc_method(self.set_info)
         self.register_rpc_method(self.send_data)
+        self.register_rpc_method(self.snap_shot)
+        self.register_rpc_method(self.start_grabbing)
+        self.register_rpc_method(self.stop_grabbing)
         self.register_rpc_method(self.move_abs)
         self.register_rpc_method(self.move_rel)
         self.register_rpc_method(self.move_home)
@@ -89,6 +102,15 @@ class ActorHandler(PymodaqPipeHandler):
     # detector commands
     def send_data(self, grabber_type: str = "") -> None:
         self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
+
+    def snap_shot(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.SNAP))
+
+    def start_grabbing(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.GRAB))
+
+    def stop_grabbing(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.STOP))
 
     # actuator commands
     def move_abs(self, position: Union[float, str]) -> None:
@@ -255,6 +277,8 @@ class ActorListener(PymodaqListener):
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
+            if not self.remote_name:
+                return
             value = command.attribute  # type: ignore
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
@@ -263,6 +287,8 @@ class ActorListener(PymodaqListener):
             )
 
         elif command.command == 'send_info':
+            if not self.remote_name:
+                return
             path = command.attribute['path']  # type: ignore
             param = command.attribute['param']  # type: ignore
             self.communicator.ask_rpc(
@@ -272,6 +298,8 @@ class ActorListener(PymodaqListener):
                 param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
         elif command.command == LECOMoveCommands.POSITION:
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
@@ -279,6 +307,8 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
@@ -286,6 +316,8 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == 'x_axis':
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
@@ -298,6 +330,8 @@ class ActorListener(PymodaqListener):
                 raise ValueError("Nothing to send!")
 
         elif command.command == 'y_axis':
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,

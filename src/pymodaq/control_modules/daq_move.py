@@ -651,6 +651,9 @@ class DAQ_Move(ParameterControlModule):
             self._send_to_tcpip = True
             self.command_hardware.emit(ThreadCommand('get_actuator_value', ))
 
+        elif status.command == "stop_motion":
+            self.command_hardware.emit(ThreadCommand("stop_motion"))
+
         elif status.command == 'set_info':
             path_in_settings = status.attribute[0]
             param_as_xml = status.attribute[1]
