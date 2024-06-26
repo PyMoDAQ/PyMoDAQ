@@ -555,7 +555,7 @@ class DAQ_Viewer(ParameterControlModule):
     def _raise_timeout(self):
         """  Print the "timeout occurred" error message in the status bar via the update_status method.
         """
-        self.update_status("Timeout occured", log_type="log")
+        self.update_status("Timeout occurred", log_type="log")
 
     @staticmethod
     def load_data():
@@ -843,10 +843,11 @@ class DAQ_Viewer(ParameterControlModule):
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
 
+            if self.settings['main_settings', 'leco', 'leco_connected']:
+                self._leco_client.publish_signal("dte_signal_temp", dte)
+
         except Exception as e:
             self.logger.exception(str(e))
-        if self.settings['main_settings', 'leco', 'leco_connected']:
-            self._leco_client.publish_signal("dte_signal_temp", dte)
 
     def _init_show_data(self, dte: DataToExport):
         """Processing before showing data
@@ -1037,10 +1038,6 @@ class DAQ_Viewer(ParameterControlModule):
                 * lcd: display on the LCD panel, the content of the attribute
                 * stop: stop the grab
         """
-        if self.settings['main_settings', 'leco', 'leco_connected']:
-            if status.command not in ("ini_detector",):
-                self._leco_client.publish_thread_command(status)
-
         super().thread_status(status, 'detector')
 
         if status.command == "ini_detector":
@@ -1079,6 +1076,10 @@ class DAQ_Viewer(ParameterControlModule):
 
         elif status.command == 'stop':
             self.stop_grab()
+
+        if self.settings['main_settings', 'leco', 'leco_connected']:
+            if status.command not in ("ini_detector", "update_settings"):
+                self._leco_client.publish_thread_command(status)
 
     def connect_tcp_ip(self):
         super().connect_tcp_ip(params_state=self.settings.child('detector_settings'),
@@ -1126,6 +1127,16 @@ class DAQ_Viewer(ParameterControlModule):
             raise DeprecationWarning('Do not use this, the axis are in the data objects')
             self.command_hardware.emit(
                 ThreadCommand('get_axis', ))  # tells the plugin to emit its axes so that the server will receive them
+
+        elif status.command == LECOClientCommands.SNAP:
+            self.snap()
+
+        elif status.command == LECOClientCommands.GRAB:
+            if not self._grabing:
+                self.grab()
+
+        elif status.command == LECOClientCommands.STOP:
+            self.stop_grab()
 
 
 class DAQ_Detector(QObject):
@@ -1230,13 +1241,13 @@ class DAQ_Detector(QObject):
 
         elif command.command == "stop_grab":
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            self.status_sig.emit(ThreadCommand("Update_Status", ['Stopping grab']))
 
         elif command.command == "stop_all":
             self.grab_state = False
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
-            self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            self.status_sig.emit(ThreadCommand("Update_Status", ['Stopping grab']))
 
         elif command.command == 'update_scanner':
             self.detector.update_scanner(command.attribute[0])
