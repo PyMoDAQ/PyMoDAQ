@@ -207,8 +207,9 @@ class ViewerDispatcher:
     def show_data(self, data: DataToExport, **kwargs):
         """ Convenience method. Display each dwa in a dedicated data viewer"""
         viewer_types = [ViewersEnum.get_viewers_enum_from_data(dwa) for dwa in data]
+        viewer_names = [dwa.name for dwa in data]
         if self.viewer_types != viewer_types:
-            self.update_viewers(viewer_types)
+            self.update_viewers(viewer_types, viewer_names)
         for viewer, dwa in zip(self.viewers, data):
             if len(dwa.axes) != len(dwa.shape):
                 dwa.create_missing_axes()

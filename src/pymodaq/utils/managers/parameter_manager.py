@@ -10,6 +10,7 @@ from pymodaq.utils.config import get_set_config_dir
 from pymodaq.utils.logger import set_logger, get_module_name
 logger = set_logger(get_module_name(__file__))
 
+
 class ParameterTreeWidget(ActionManager):
 
     def __init__(self, action_list: tuple = ('save', 'update', 'load')):
@@ -17,7 +18,6 @@ class ParameterTreeWidget(ActionManager):
 
         self.widget = QtWidgets.QWidget()
         self.widget.setLayout(QtWidgets.QVBoxLayout())
-
 
         toolbar = QtWidgets.QToolBar()
         self.set_toolbar(toolbar)
@@ -41,9 +41,6 @@ class ParameterTreeWidget(ActionManager):
         # Adding splitter to layout
         self.widget.layout().addWidget(self.splitter)
         self.widget.layout().setContentsMargins(0, 0, 0, 0)            
-
-        
-
 
     def setup_actions(self, action_list: tuple = ('save', 'update', 'load')):
         """
