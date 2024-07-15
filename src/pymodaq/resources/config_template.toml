@@ -35,6 +35,7 @@ message_status_persistence = 1000  # ms
 [user]
 name = "User name"  # default name used as author in the hdf5 saving files
 
+
 [viewer]
 daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
 viewer_in_thread = true
@@ -43,6 +44,7 @@ allow_settings_edition = false
 
 [plotting]
 backend = 'matplotlib'  # either 'matplotlib' or 'qt' or any other custom backend
+plot_colors = [[255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255], [14, 207, 189], [207, 14, 166], [207, 204, 14]]
 
 [network]
     [network.logging]
