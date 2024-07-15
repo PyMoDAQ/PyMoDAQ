@@ -42,8 +42,9 @@ else:
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
-plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 config = Config()
+
+plot_colors = config('plotting', 'plot_colors')
 
 
 def is_64bits():
