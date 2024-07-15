@@ -796,7 +796,7 @@ def main_nans():
     widget = QtWidgets.QWidget()
     prog = Viewer1D(widget)
 
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq.utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
     y = gauss1D(x, 75, 25)
