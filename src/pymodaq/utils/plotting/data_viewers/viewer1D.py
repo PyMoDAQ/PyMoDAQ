@@ -672,7 +672,8 @@ def main():
 
     # x = np.sin(np.linspace(0,6*np.pi,201))
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
-    data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1],
+    data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1, y1,
+                                   ydata_expodec, -ydata_expodec, -y1],
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
@@ -700,7 +701,7 @@ def main_unsorted():
     widget = QtWidgets.QWidget()
     prog = Viewer1D(widget)
 
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq.utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
     xaxis = np.concatenate((x, x[::-1]))
@@ -712,6 +713,7 @@ def main_unsorted():
     prog.show_data(data)
 
     sys.exit(app.exec_())
+
 
 def main_random():
     app = QtWidgets.QApplication(sys.argv)
@@ -732,6 +734,7 @@ def main_random():
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
+
 
 def main_extra_scatter():
     app = QtWidgets.QApplication(sys.argv)
@@ -761,6 +764,7 @@ def main_extra_scatter():
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
 
+
 def main_errors():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
@@ -782,6 +786,7 @@ def main_errors():
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
+
 
 def main_view1D():
     app = QtWidgets.QApplication(sys.argv)
@@ -812,9 +817,9 @@ def main_nans():
 
 
 if __name__ == '__main__':  # pragma: no cover
-    # main()
+    main()
     # main_random()
     #main_errors()
-    main_extra_scatter()
+    #main_extra_scatter()
     #main_view1D()
     #main_nans()
