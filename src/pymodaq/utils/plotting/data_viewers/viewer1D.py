@@ -672,8 +672,9 @@ def main():
 
     # x = np.sin(np.linspace(0,6*np.pi,201))
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
-    data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1, y1,
-                                   ydata_expodec, -ydata_expodec, -y1],
+    data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1,
+                                   y1, ydata_expodec, -ydata_expodec, -y1,
+                                   y1, ydata_expodec, -ydata_expodec, -y1,],
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
