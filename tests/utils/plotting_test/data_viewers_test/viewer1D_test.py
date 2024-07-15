@@ -14,7 +14,7 @@ from pymodaq.post_treatment.daq_measurement.daq_measurement_main import DAQ_Meas
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2
 from pymodaq.utils.conftests import qtbotskip
-
+from pymodaq.utils.math_utils import gauss1D
 
 #pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
@@ -90,7 +90,6 @@ class TestViewer1D:
     def test_extra_scatter(self, init_viewer1d):
         prog, data = init_viewer1d
 
-        from pymodaq.utils.math_utils import gauss1D
         xlow = np.linspace(0, 200, 21)
         ylow = gauss1D(xlow, 75, 25)
 
@@ -103,4 +102,51 @@ class TestViewer1D:
 
         prog.show_data(data, scatter_dwa=scatter_dwa)
 
+    def test_unsorted(self, init_viewer1d):
+        prog, data = init_viewer1d
 
+        x = np.linspace(0, 200, 201)
+        xaxis = np.concatenate((x, x[::-1]))
+        y = gauss1D(x, 75, 25)
+        yaxis = np.concatenate((y, -y))
+        data = data_mod.DataRaw('mydata', data=[yaxis],
+                                axes=[data_mod.Axis('myaxis', 'units', data=xaxis)])
+        prog.show_data(data)
+
+    def test_random(self, init_viewer1d):
+        prog, data = init_viewer1d
+        x = np.random.randint(201, size=201)
+        y1 = gauss1D(x, 75, 25)
+        y2 = gauss1D(x, 120, 50, 2)
+
+        QtWidgets.QApplication.processEvents()
+        data = data_mod.DataRaw(
+            'mydata', data=[y1, y2],
+            axes=[data_mod.Axis('myaxis', 'units', data=x, index=0, spread_order=0)],
+            nav_indexes=(0, ))
+        prog.show_data(data)
+
+    def test_errors(self, init_viewer1d):
+        prog, data = init_viewer1d
+        x = np.linspace(0, 200, 201)
+        y1 = gauss1D(x, 75, 25)
+        y2 = gauss1D(x, 120, 50, 2)
+
+        QtWidgets.QApplication.processEvents()
+        data = data_mod.DataRaw(
+            'mydata', data=[y1, y2],
+            axes=[data_mod.Axis('myaxis', 'units', data=x, index=0, spread_order=0)],
+            errors=(np.random.random_sample(x.shape),
+                    np.random.random_sample(x.shape)))
+        prog.show_data(data)
+
+    def test_nans(self, init_viewer1d):
+        prog, data = init_viewer1d
+
+        x = np.linspace(0, 200, 201)
+        y = gauss1D(x, 75, 25)
+
+        y[100:150] = np.nan
+        data = data_mod.DataRaw('mydata', data=[y],
+                                axes=[data_mod.Axis('myaxis', 'units', data=x)])
+        prog.show_data(data)

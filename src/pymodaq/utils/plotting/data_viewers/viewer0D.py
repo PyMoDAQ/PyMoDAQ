@@ -278,7 +278,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
     prog = Viewer0D(widget, show_toolbar=False)
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq.utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
     y1 = gauss1D(x, 75, 25) + 0.1*np.random.rand(len(x))

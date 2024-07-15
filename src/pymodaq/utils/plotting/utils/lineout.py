@@ -17,7 +17,7 @@ from pymodaq.utils.data import DataCalculated
 
 logger = set_logger(get_module_name(__file__))
 IMAGE_TYPES = ['red', 'green', 'blue']
-COLOR_LIST = utils.plot_colors
+COLOR_LIST = list(utils.plot_colors)
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 
 
