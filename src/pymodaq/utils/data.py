@@ -18,8 +18,9 @@ import logging
 import warnings
 from time import time
 import copy
-
+import pint
 from multipledispatch import dispatch
+import pymodaq
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
@@ -28,6 +29,8 @@ from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
+
+from pymodaq import Q_, ureg
 
 config = Config()
 plotter_factory = PlotterFactory()
@@ -77,6 +80,10 @@ class DataLengthError(Exception):
 
 
 class DataDimError(Exception):
+    pass
+
+
+class DataUnitError(Exception):
     pass
 
 
@@ -570,7 +577,8 @@ class DataBase(DataLowLevel):
     3
     """
 
-    def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
+    def __init__(self, name: str, units: str = '',
+                 source: DataSource = None, dim: DataDim = None,
                  distribution: DataDistribution = DataDistribution['uniform'],
                  data: List[np.ndarray] = None,
                  labels: List[str] = None, origin: str = '',
@@ -584,6 +592,7 @@ class DataBase(DataLowLevel):
         self._length = None
         self._labels = None
         self._dim = dim
+        self._units = self.check_units(units)
         self._errors = None
         self.origin = origin
 
@@ -598,6 +607,16 @@ class DataBase(DataLowLevel):
         self._check_labels(labels)
         self.extra_attributes = []
         self.add_extra_attribute(**kwargs)
+
+    @property
+    def units(self):
+        return self._units
+
+    def check_units(self, unit: str):
+        try:
+            q = Q_(1, unit)
+        except pint.errors.UndefinedUnitError:
+            raise DataUnitError(f'The unit "{unit}" is not defined in the pint registry')
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
@@ -657,7 +676,8 @@ class DataBase(DataLowLevel):
             for ind_array in range(len(new_data)):
                 if self[ind_array].shape != other[ind_array].shape:
                     raise ValueError('The shapes of arrays stored into the data are not consistent')
-                new_data[ind_array] = self[ind_array] + other[ind_array]
+                new_data[ind_array] = (Q_(self[ind_array], self.units) +
+                                       Q_(other[ind_array], other.units)).m_as(self.units)
             return new_data
         elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
             new_data = copy.deepcopy(self)
@@ -668,18 +688,20 @@ class DataBase(DataLowLevel):
                             f'of a different length')
 
     def __sub__(self, other: object):
-        if isinstance(other, DataBase) and len(other) == len(self):
-            new_data = copy.deepcopy(self)
-            for ind_array in range(len(new_data)):
-                new_data[ind_array] = self[ind_array] - other[ind_array]
-            return new_data
-        elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
-            new_data = copy.deepcopy(self)
-            new_data = new_data - DataActuator(data=other)
-            return new_data
-        else:
-            raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
-                            f'of a different length')
+        return self.__add__(other * -1)
+        #
+        # if isinstance(other, DataBase) and len(other) == len(self):
+        #     new_data = copy.deepcopy(self)
+        #     for ind_array in range(len(new_data)):
+        #         new_data[ind_array] = self[ind_array] - other[ind_array]
+        #     return new_data
+        # elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
+        #     new_data = copy.deepcopy(self)
+        #     new_data = new_data - DataActuator(data=other)
+        #     return new_data
+        # else:
+        #     raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
+        #                     f'of a different length')
 
     def __mul__(self, other):
         if isinstance(other, numbers.Number):
@@ -2859,7 +2881,9 @@ class DataToActuators(DataToExport):
 
 
 if __name__ == '__main__':
-
+    d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
+    d+d
+    d - d
 
     d1 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((24,))],
                      x_axis=Axis(data=np.zeros((24,)), units='myunits', label='mylabel1'))
@@ -2879,6 +2903,8 @@ if __name__ == '__main__':
     data = DataRaw('mydata', data=[dat], nav_indexes=(0,),
                    axes=[Axis('nav', data=np.linspace(0, Nnav-1, Nnav), index=0),
                          Axis('sig', data=x, index=1)])
+
+    data + data
 
     data2 = copy.copy(data)
 
