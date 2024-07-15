@@ -32,6 +32,8 @@ debug_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 check_version = true  # automatically check version at startup (or not if False)
 message_status_persistence = 1000  # ms
 
+hdf5_backend = 'tables'  # could be among ['tables', 'h5py', 'h5pyd'], mostly tested with tables
+
 [user]
 name = "User name"  # default name used as author in the hdf5 saving files
 

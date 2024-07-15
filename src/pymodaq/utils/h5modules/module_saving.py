@@ -304,6 +304,12 @@ class ScanSaver(ModuleSaver):
             if hasattr(module, 'module_and_data_saver'):
                 module.module_and_data_saver.h5saver = self.h5saver
 
+    def forget_h5(self):
+        for module in self._module.modules_manager.modules_all:
+            if hasattr(module, 'module_and_data_saver'):
+                module.module_and_data_saver.h5saver = None
+        self.h5saver.flush()
+
     def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
         """Get the last group scan node
 
