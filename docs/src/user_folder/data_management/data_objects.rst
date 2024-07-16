@@ -53,7 +53,7 @@ optional named arguments.
 
 >>> import numpy as np
 >>> from pymodaq.utils.data import DataBase, DataSource, DataDim, DataDistribution
->>> data = DataBase('mydata', source=DataSource['raw'],\
+>>> data = DataBase('mydata', units= 'ms', source=DataSource['raw'],\
 distribution=DataDistribution['uniform'], data=[np.array([1,2,3]), np.array([4,5,6])],\
 labels=['channel1', 'channel2'], origin="documentation's code")
 
@@ -63,6 +63,7 @@ When instantiated, some checks are performed:
 *  checking the homogeneity of the data
 *  the consistency of the dimensionality and the shape of the numpy arrays
 *  if no dimensionality is given, it is inferred from the data's shape
+*  check the units are known (from the pint module UnitRegistry)
 
 
 Useful properties can then be used to check and manipulate the data.
@@ -82,7 +83,8 @@ in the numpy arrays), the shape (shape of the numpy arrays).
 
 One can also make mathematical operations between data
 objects (sum, substraction, averaging) or appending numpy arrays (of same type and shape) to the data object and
-iterating over the numpy arrays with the standard `for` loop.
+iterating over the numpy arrays with the standard `for` loop. The summation/substraction of two data object involve to
+first convert them in the same units (will raise an error if not possible)
 
 >>> for subdata in data:
       print(subdata)
