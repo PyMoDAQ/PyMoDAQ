@@ -814,10 +814,12 @@ class DataBase(DataLowLevel):
         return new_data
 
     def append(self, data: DataWithAxes):
+        """Append data content if the underlying arrays have the same shape and compatible units"""
         for dat in data:
             if dat.shape != self.shape:
-                raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
-        self.data += data.data
+                raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape'
+                                     ' as self')
+        self.data += [Q_(data_array, data.units).m_as(self.units) for data_array in data.data]
         self.labels.extend(data.labels)
 
     def pop(self, index: int) -> DataBase:
@@ -2889,7 +2891,7 @@ class DataToActuators(DataToExport):
 
 if __name__ == '__main__':
     d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
-    d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
+    dm = DataRaw('hjk', units='mm', data=[np.array([0, 1, 2])])
     d + d
     d - d
 
