@@ -1,4 +1,4 @@
-PyMoDAL
+PyMoDAQ
 #######
 
 .. image:: https://img.shields.io/pypi/v/pymodaq.svg
