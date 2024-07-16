@@ -615,8 +615,11 @@ class DataBase(DataLowLevel):
     def check_units(self, unit: str):
         try:
             q = Q_(1, unit)
+            return unit
         except pint.errors.UndefinedUnitError:
-            raise DataUnitError(f'The unit "{unit}" is not defined in the pint registry')
+            logger.warning(f'The unit "{unit}" is not defined in the pint registry, switching to'
+                           f'dimensionless')
+        return ''
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
@@ -642,7 +645,9 @@ class DataBase(DataLowLevel):
         return f'{self.origin}/{self.name}'
 
     def __repr__(self):
-        return f'{self.__class__.__name__} <{self.name}> <{self.dim}> <{self.source}> <{self.shape}>'
+        return (f'{self.__class__.__name__} <{self.name}> '
+                f'<u: {self.units}> '
+                f'<{self.dim}> <{self.source}> <{self.shape}>')
 
     def __len__(self):
         return self.length
@@ -1698,7 +1703,9 @@ class DataWithAxes(DataBase):
         return is_equal
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
+        return (f'<{self.__class__.__name__}: {self.name} '
+                f'<u: {self.units}> '
+                f'<len:{self.length}> {self._am}>')
 
     def sort_data(self, axis_index: int = 0, spread_index=0, inplace=False) -> DataWithAxes:
         """ Sort data along a given axis, default is 0
@@ -2882,7 +2889,8 @@ class DataToActuators(DataToExport):
 
 if __name__ == '__main__':
     d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
-    d+d
+    d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
+    d + d
     d - d
 
     d1 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((24,))],
