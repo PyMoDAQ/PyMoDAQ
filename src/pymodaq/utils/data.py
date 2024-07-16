@@ -690,8 +690,12 @@ class DataBase(DataLowLevel):
             for ind_array in range(len(new_data)):
                 if self[ind_array].shape != other[ind_array].shape:
                     raise ValueError('The shapes of arrays stored into the data are not consistent')
-                new_data[ind_array] = (Q_(self[ind_array], self.units) +
-                                       Q_(other[ind_array], other.units)).m_as(self.units)
+                try:
+                    new_data[ind_array] = (Q_(self[ind_array], self.units) +
+                                           Q_(other[ind_array], other.units)).m_as(self.units)
+                except pint.errors.DimensionalityError as e:
+                    raise DataUnitError(
+                        f'Cannot sum Data objects not having the same dimension: {e}')
             return new_data
         elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
             new_data = copy.deepcopy(self)
@@ -1000,6 +1004,11 @@ class DataBase(DataLowLevel):
         for dat in data:
             if dat.shape != self.shape:
                 raise DataShapeError('The shape of the ndarrays in data is not the same')
+
+    @property
+    def quantities(self) -> list[Q_]:
+        """ Get the arrays as pint quantities (with units)"""
+        return [Q_(array, self.units) for array in self.data]
 
     @property
     def data(self) -> List[np.ndarray]:
