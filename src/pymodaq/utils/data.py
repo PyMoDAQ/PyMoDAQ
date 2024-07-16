@@ -515,18 +515,22 @@ class DataBase(DataLowLevel):
     dim: DataDim or str
         The identifier of the data type
     distribution: DataDistribution or str
-        The distribution type of the data: uniform if distributed on a regular grid or spread if on specific
-        unordered points
+        The distribution type of the data: uniform if distributed on a regular grid or spread if on
+        specific unordered points
     data: list of ndarray
         The data the object is storing
     labels: list of str
         The labels of the data nd-arrays
     origin: str
-        An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
-        DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
+        An identifier of the element where the data originated, for instance the DAQ_Viewer's name.
+        Used when appending DataToExport in DAQ_Scan to disintricate from which origin data comes
+        from when scanning multiple detectors.
+    units: str
+        A unit string identifier as specified in the UnitRegistry of the pint module
+
     kwargs: named parameters
-        All other parameters are stored dynamically using the name/value pair. The name of these extra parameters are
-        added into the extra_attributes attribute
+        All other parameters are stored dynamically using the name/value pair. The name of these
+        extra parameters are added into the extra_attributes attribute
 
     Attributes
     ----------
@@ -581,11 +585,12 @@ class DataBase(DataLowLevel):
 
     base_type = 'Data'
 
-    def __init__(self, name: str, units: str = '',
+    def __init__(self, name: str,
                  source: DataSource = None, dim: DataDim = None,
                  distribution: DataDistribution = DataDistribution['uniform'],
                  data: List[np.ndarray] = None,
                  labels: List[str] = None, origin: str = '',
+                 units: str = '',
                  **kwargs):
 
         super().__init__(name=name)
@@ -731,7 +736,7 @@ class DataBase(DataLowLevel):
 
     def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
-            if not(self.name == other.name and len(self) == len(other)):
+            if not (self.name == other.name and len(self) == len(other)):
                 return False
             if self.dim != other.dim:
                 return False
@@ -870,7 +875,8 @@ class DataBase(DataLowLevel):
         return self._dim
 
     def set_dim(self, dim: Union[DataDim, str]):
-        """Addhoc modification of dim independantly of the real data shape, should be used with extra care"""
+        """Addhoc modification of dim independantly of the real data shape,
+        should be used with extra care"""
         self._dim = enum_checker(DataDim, dim)
 
     @property
@@ -984,8 +990,9 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                warnings.warn(DataDimWarning('The specified dimensionality is not coherent with the data shape, '
-                                             'replacing it'))
+                warnings.warn(
+                    DataDimWarning('The specified dimensionality is not coherent with the data '
+                                   'shape, replacing it'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -1002,12 +1009,12 @@ class DataBase(DataLowLevel):
     @data.setter
     def data(self, data: List[np.ndarray]):
         data = self._check_data_type(data)
-        #data = [squeeze(data_array) for data_array in data]
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
         self._data = data
 
     def to_dict(self):
+        """ Get the data arrays into dictionary whose keys are the labels"""
         data_dict = OrderedDict([])
         for ind in range(len(self)):
             data_dict[self.labels[ind]] = self[ind]
@@ -2275,8 +2282,6 @@ class DataWithAxes(DataBase):
             pass
         finally:
             self._data = old_data
-
-
 
     @property
     def _am(self) -> AxesManagerBase:

@@ -8,7 +8,7 @@ Data in PyMoDAQ are objects with many characteristics:
 
 *  a type: float, int, ...
 *  a dimensionality: Data0D, Data1D, Data2D and we will discuss about :ref:`DataND <navigation_signal>`
-*  units
+*  units: (new in 4.3.0) dealt with the pint module
 *  axes
 *  actual data as numpy arrays
 *  uncertainty/error bars
