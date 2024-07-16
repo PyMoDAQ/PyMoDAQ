@@ -176,6 +176,8 @@ class Axis:
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
     """
 
+    base_type = 'Axis'
+
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0,
                  scaling=None, offset=None, size=None, spread_order: int = 0):
         super().__init__()
@@ -576,6 +578,8 @@ class DataBase(DataLowLevel):
     >>> data.size
     3
     """
+
+    base_type = 'Data'
 
     def __init__(self, name: str, units: str = '',
                  source: DataSource = None, dim: DataDim = None,

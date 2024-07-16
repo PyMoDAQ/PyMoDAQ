@@ -28,7 +28,7 @@ class SpecialSlicersData(SpecialSlicers):
         """
         slices = self.obj._compute_slices(slices, self.is_navigation)
 
-        if hasattr(self.obj, 'units'):
+        if hasattr(self.obj, 'base_type') and self.obj.base_type == 'Axis':
             if isinstance(data, np.ndarray):
                 data_to_replace = data
             else:
