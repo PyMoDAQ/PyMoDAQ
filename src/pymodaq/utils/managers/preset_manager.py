@@ -7,6 +7,7 @@ import sys
 import os
 from pymodaq.utils.parameter import ParameterTree, Parameter
 from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.messenger import dialog as dialogbox
 from pymodaq.utils import daq_utils as utils
 from pathlib import Path
 import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
@@ -169,8 +170,25 @@ class PresetManager:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
-            ioxml.parameter_to_xml_file(
-                self.preset_params, os.path.join(path, self.preset_params.child('filename').value()))
+            filename_without_extension = self.preset_params.child('filename').value()
+
+            try:
+                ioxml.parameter_to_xml_file(self.preset_params,
+                                            os.path.join(path, filename_without_extension),
+                                            overwrite=False)
+            except FileExistsError as currenterror:
+                # logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
+                logger.warning(f"{currenterror} File {filename_without_extension}.xml exists")
+                user_agreed = dialogbox(title='Overwrite confirmation',
+                                        message="File exist do you want to overwrite it ?")
+                if user_agreed:
+                    ioxml.parameter_to_xml_file(self.preset_params,
+                                                os.path.join(path, filename_without_extension))
+                    logger.warning(f"File {filename_without_extension}.xml overwriten at user request")
+                else:
+                    logger.warning(f"File {filename_without_extension}.xml wasn't saved at user request")
+                    # emit status signal to dashboard to write : did not save ?
+                pass
 
             if not self.pid_type:
                 # check if overshoot configuration and layout configuration with same name exists => delete them if yes

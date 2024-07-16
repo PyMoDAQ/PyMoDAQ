@@ -324,7 +324,7 @@ def parameter_to_xml_string(param):
     return ET.tostring(xml_elt)
 
 
-def parameter_to_xml_file(param, filename: Union[str, Path]):
+def parameter_to_xml_file(param, filename: Union[str, Path], overwrite=True):
     """
         Convert the given parameter to XML element and update the given XML file.
 
@@ -332,6 +332,7 @@ def parameter_to_xml_file(param, filename: Union[str, Path]):
         **Parameters**    **Type**                          **Description**
         *param*           instance of pyqtgraph parameter   the parameter to be added
         *filename*        string                            the filename of the XML file
+        *overwrite*       boolean                           raise Error is False and file exists
         =============== ================================= ================================
 
         See Also
@@ -348,6 +349,8 @@ def parameter_to_xml_file(param, filename: Union[str, Path]):
     fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
     xml_elt = walk_parameters_to_xml(param=param)
     tree = ET.ElementTree(xml_elt)
+    if not overwrite and fname.exists() and fname.is_file():
+        raise FileExistsError
     tree.write(str(fname))
 
 
