@@ -1305,3 +1305,15 @@ class TestDataToExport:
 
         assert dwa.labels == dat1.labels + dat2.labels + dat3.labels
 
+
+class TestUnits:
+
+    def test_unit_in_registry(self):
+
+        dwa = data_mod.DataRaw('data', units='unknown_unit', data=[np.array([0, 1, 2])])
+        assert dwa.units == ''  # transforms to dimensionless
+
+        dwa = data_mod.DataRaw('data', units='ms', data=[np.array([0, 1, 2])])
+        assert dwa.units == 'ms'
+
+
