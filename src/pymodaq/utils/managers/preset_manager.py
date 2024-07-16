@@ -177,15 +177,16 @@ class PresetManager:
                                             os.path.join(path, filename_without_extension),
                                             overwrite=False)
             except FileExistsError as currenterror:
-                logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
-                userchoice = dialogbox(title='Overwrite confirmation',
-                                       message="File exist do you want to overwrite it ?")
-                if userchoice == 1:
+                # logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
+                logger.warning(f"{currenterror} File {filename_without_extension}.xml exists")
+                user_agreed = dialogbox(title='Overwrite confirmation',
+                                        message="File exist do you want to overwrite it ?")
+                if user_agreed:
                     ioxml.parameter_to_xml_file(self.preset_params,
                                                 os.path.join(path, filename_without_extension))
-                    logger.warning("File " + filename_without_extension + ".xml overwriten at user request")
+                    logger.warning(f"File {filename_without_extension}.xml overwriten at user request")
                 else:
-                    logger.warning("File "+filename_without_extension+".xml wasn't saved at user request")
+                    logger.warning(f"File {filename_without_extension}.xml wasn't saved at user request")
                     # emit status signal to dashboard to write : did not save ?
                 pass
 
