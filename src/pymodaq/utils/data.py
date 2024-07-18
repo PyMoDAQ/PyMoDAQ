@@ -621,6 +621,10 @@ class DataBase(DataLowLevel):
     def units(self):
         return self._units
 
+    @units.setter
+    def units(self, units: str):
+        self.units_as(units, inplace=True)
+
     def check_units(self, unit: str):
         try:
             q = Q_(1, unit)
@@ -629,6 +633,38 @@ class DataBase(DataLowLevel):
             logger.warning(f'The unit "{unit}" is not defined in the pint registry, switching to'
                            f'dimensionless')
         return ''
+
+    def units_as(self, units: str, inplace=True) -> 'DataBase':
+        """ Set the object units to the new one (if possible)
+
+        Parameters
+        ----------
+        units: str
+            The new unit to convert the data to
+        inplace: bool
+            default True.
+            If True replace the data's arrays by array in the new units
+            If False, return a new data object
+        """
+        arrays = []
+        try:
+            for ind_array in range(len(self)):
+                arrays.append(self.quantities[ind_array].m_as(units))
+
+        except pint.errors.DimensionalityError as e:
+            raise DataUnitError(
+                f'Cannot change the Data units to {units} \n'
+                f'{e}')
+
+        if inplace:
+            self.data = arrays
+            self._units = units
+            return self
+        else:
+            new_data = copy.deepcopy(self)
+            new_data.data = arrays
+            new_data._units = units
+            return new_data
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""

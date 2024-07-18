@@ -1316,4 +1316,38 @@ class TestUnits:
         dwa = data_mod.DataRaw('data', units='ms', data=[np.array([0, 1, 2])])
         assert dwa.units == 'ms'
 
+    def test_add_with_units(self):
+        array_1 = np.array([0, 1, 2])
+        dwa_1 = data_mod.DataRaw('data', units='s', data=[array_1])
+        assert dwa_1.units == 's'
+
+        dwa_2 = data_mod.DataRaw('data', units='ms', data=[array_1])
+        assert dwa_2.units == 'ms'
+
+        dwa_sum_s = dwa_1 + dwa_2
+        assert np.allclose(dwa_sum_s[0], array_1 + array_1 / 1000)
+        assert dwa_sum_s.units == 's'
+
+        dwa_sum_ms = dwa_2 + dwa_1
+        assert np.allclose(dwa_sum_ms[0], array_1 + array_1 * 1000)
+        assert dwa_sum_ms.units == 'ms'
+
+    def test_units_as(self):
+        array = np.array([0, 1, 2])
+        dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+        assert dwa_s.units == 's'
+
+        dwa_ms = dwa_s.units_as('ms')
+        assert dwa_ms.units == 'ms'
+        assert np.allclose(dwa_ms[0], array * 1000)
+        assert dwa_ms is dwa_s
+
+        dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+        assert dwa_s.units == 's'
+        dwa_ms = dwa_s.units_as('ms', inplace=False)
+        assert dwa_ms.units == 'ms'
+        assert np.allclose(dwa_ms[0], array * 1000)
+        assert dwa_s.units == 's'
+        assert np.allclose(dwa_s[0], array)
+
 
