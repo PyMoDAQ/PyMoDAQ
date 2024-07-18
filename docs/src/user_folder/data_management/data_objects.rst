@@ -182,6 +182,36 @@ array([5, 6])
 array([[2, 3],
        [5, 6]])
 
+.. _units:
+
+Units management
+----------------
+
+.. note::
+
+  New in 4.3.0.
+
+Units are now fully included in the data objects. It means that operations (like a sum) between data
+objects will be done by converting both objects in the same units before doing the operation.
+
+.. code-block::
+
+>>> import numpy as np
+>>> from pymodaq.utils.data import DataRaw
+>>> array = np.array([0, 1, 2])
+>>> dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+>>> dwa_ms = data_mod.DataRaw('data', units='ms', data=[array])
+>>> (dwa_s + dwa_ms)[0]
+[0., 1.001, 2.002]
+
+The same applies when using the append method. Units can also easily be changed using:
+
+.. code-block::
+
+  >>> dwa_ms = dwa_s.units_as('ms')
+  # or in place
+  >>> dwa_s.units = 'ms'
+
 
 .. _errors:
 
