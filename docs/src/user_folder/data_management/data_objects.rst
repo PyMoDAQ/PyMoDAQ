@@ -8,7 +8,7 @@ Data in PyMoDAQ are objects with many characteristics:
 
 *  a type: float, int, ...
 *  a dimensionality: Data0D, Data1D, Data2D and we will discuss about :ref:`DataND <navigation_signal>`
-*  units
+*  units: (new in 4.3.0) dealt with the pint module
 *  axes
 *  actual data as numpy arrays
 *  uncertainty/error bars
@@ -53,7 +53,7 @@ optional named arguments.
 
 >>> import numpy as np
 >>> from pymodaq.utils.data import DataBase, DataSource, DataDim, DataDistribution
->>> data = DataBase('mydata', source=DataSource['raw'],\
+>>> data = DataBase('mydata', units= 'ms', source=DataSource['raw'],\
 distribution=DataDistribution['uniform'], data=[np.array([1,2,3]), np.array([4,5,6])],\
 labels=['channel1', 'channel2'], origin="documentation's code")
 
@@ -63,6 +63,7 @@ When instantiated, some checks are performed:
 *  checking the homogeneity of the data
 *  the consistency of the dimensionality and the shape of the numpy arrays
 *  if no dimensionality is given, it is inferred from the data's shape
+*  check the units are known (from the pint module UnitRegistry)
 
 
 Useful properties can then be used to check and manipulate the data.
@@ -82,7 +83,8 @@ in the numpy arrays), the shape (shape of the numpy arrays).
 
 One can also make mathematical operations between data
 objects (sum, substraction, averaging) or appending numpy arrays (of same type and shape) to the data object and
-iterating over the numpy arrays with the standard `for` loop.
+iterating over the numpy arrays with the standard `for` loop. The summation/substraction of two data object involve to
+first convert them in the same units (will raise an error if not possible)
 
 >>> for subdata in data:
       print(subdata)
@@ -179,6 +181,36 @@ array([5, 6])
 >>> sub_data.data[0]
 array([[2, 3],
        [5, 6]])
+
+.. _units:
+
+Units management
+----------------
+
+.. note::
+
+  New in 4.3.0.
+
+Units are now fully included in the data objects. It means that operations (like a sum) between data
+objects will be done by converting both objects in the same units before doing the operation.
+
+.. code-block::
+
+>>> import numpy as np
+>>> from pymodaq.utils.data import DataRaw
+>>> array = np.array([0, 1, 2])
+>>> dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+>>> dwa_ms = data_mod.DataRaw('data', units='ms', data=[array])
+>>> (dwa_s + dwa_ms)[0]
+[0., 1.001, 2.002]
+
+The same applies when using the append method. Units can also easily be changed using:
+
+.. code-block::
+
+  >>> dwa_ms = dwa_s.units_as('ms')
+  # or in place
+  >>> dwa_s.units = 'ms'
 
 
 .. _errors:

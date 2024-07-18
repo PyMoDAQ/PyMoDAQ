@@ -36,6 +36,22 @@ try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
+
+    logger.info('')
+    logger.info('')
+    logger.info('************************')
+    logger.info('Starting PyMoDAQ modules')
+    logger.info('************************')
+    logger.info('')
+    logger.info('')
+    logger.info('************************')
+    logger.info('Initializing the pint unit register')
+    logger.info('************************')
+    ureg = UnitRegistry()
+    Q_ = ureg.Quantity
+    logger.info('')
+    logger.info('')
+
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
     from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
     from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
@@ -58,13 +74,7 @@ try:
 
     config = Config()  # to ckeck for config file existence, otherwise create one
     copy_preset()
-    logger.info('')
-    logger.info('')
-    logger.info('************************')
-    logger.info('Starting PyMoDAQ modules')
-    logger.info('************************')
-    logger.info('')
-    logger.info('')
+
     logger.info('************************')
     logger.info(f"Setting Qt backend to: {config['qtbackend']['backend']} ...")
     set_qt_backend()
@@ -77,13 +87,7 @@ try:
     setLocale()
     logger.info('')
     logger.info('')
-    logger.info('************************')
-    logger.info('Initializing the pint unit register')
-    logger.info('************************')
-    ureg = UnitRegistry()
-    Q_ = ureg.Quantity
-    logger.info('')
-    logger.info('')
+
     logger.info('*************************************************************************')
     logger.info(f"Getting the list of instrument plugins...")
     logger.info('')

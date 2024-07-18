@@ -18,8 +18,9 @@ import logging
 import warnings
 from time import time
 import copy
-
+import pint
 from multipledispatch import dispatch
+import pymodaq
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
@@ -28,6 +29,8 @@ from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
+
+from pymodaq import Q_, ureg
 
 config = Config()
 plotter_factory = PlotterFactory()
@@ -77,6 +80,10 @@ class DataLengthError(Exception):
 
 
 class DataDimError(Exception):
+    pass
+
+
+class DataUnitError(Exception):
     pass
 
 
@@ -168,6 +175,8 @@ class Axis:
     --------
     >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
     """
+
+    base_type = 'Axis'
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0,
                  scaling=None, offset=None, size=None, spread_order: int = 0):
@@ -506,18 +515,22 @@ class DataBase(DataLowLevel):
     dim: DataDim or str
         The identifier of the data type
     distribution: DataDistribution or str
-        The distribution type of the data: uniform if distributed on a regular grid or spread if on specific
-        unordered points
+        The distribution type of the data: uniform if distributed on a regular grid or spread if on
+        specific unordered points
     data: list of ndarray
         The data the object is storing
     labels: list of str
         The labels of the data nd-arrays
     origin: str
-        An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
-        DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
+        An identifier of the element where the data originated, for instance the DAQ_Viewer's name.
+        Used when appending DataToExport in DAQ_Scan to disintricate from which origin data comes
+        from when scanning multiple detectors.
+    units: str
+        A unit string identifier as specified in the UnitRegistry of the pint module
+
     kwargs: named parameters
-        All other parameters are stored dynamically using the name/value pair. The name of these extra parameters are
-        added into the extra_attributes attribute
+        All other parameters are stored dynamically using the name/value pair. The name of these
+        extra parameters are added into the extra_attributes attribute
 
     Attributes
     ----------
@@ -570,10 +583,14 @@ class DataBase(DataLowLevel):
     3
     """
 
-    def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
+    base_type = 'Data'
+
+    def __init__(self, name: str,
+                 source: DataSource = None, dim: DataDim = None,
                  distribution: DataDistribution = DataDistribution['uniform'],
                  data: List[np.ndarray] = None,
                  labels: List[str] = None, origin: str = '',
+                 units: str = '',
                  **kwargs):
 
         super().__init__(name=name)
@@ -584,6 +601,7 @@ class DataBase(DataLowLevel):
         self._length = None
         self._labels = None
         self._dim = dim
+        self._units = self.check_units(units)
         self._errors = None
         self.origin = origin
 
@@ -598,6 +616,55 @@ class DataBase(DataLowLevel):
         self._check_labels(labels)
         self.extra_attributes = []
         self.add_extra_attribute(**kwargs)
+
+    @property
+    def units(self):
+        return self._units
+
+    @units.setter
+    def units(self, units: str):
+        self.units_as(units, inplace=True)
+
+    def check_units(self, unit: str):
+        try:
+            q = Q_(1, unit)
+            return unit
+        except pint.errors.UndefinedUnitError:
+            logger.warning(f'The unit "{unit}" is not defined in the pint registry, switching to'
+                           f'dimensionless')
+        return ''
+
+    def units_as(self, units: str, inplace=True) -> 'DataBase':
+        """ Set the object units to the new one (if possible)
+
+        Parameters
+        ----------
+        units: str
+            The new unit to convert the data to
+        inplace: bool
+            default True.
+            If True replace the data's arrays by array in the new units
+            If False, return a new data object
+        """
+        arrays = []
+        try:
+            for ind_array in range(len(self)):
+                arrays.append(self.quantities[ind_array].m_as(units))
+
+        except pint.errors.DimensionalityError as e:
+            raise DataUnitError(
+                f'Cannot change the Data units to {units} \n'
+                f'{e}')
+
+        if inplace:
+            self.data = arrays
+            self._units = units
+            return self
+        else:
+            new_data = copy.deepcopy(self)
+            new_data.data = arrays
+            new_data._units = units
+            return new_data
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
@@ -623,7 +690,9 @@ class DataBase(DataLowLevel):
         return f'{self.origin}/{self.name}'
 
     def __repr__(self):
-        return f'{self.__class__.__name__} <{self.name}> <{self.dim}> <{self.source}> <{self.shape}>'
+        return (f'{self.__class__.__name__} <{self.name}> '
+                f'<u: {self.units}> '
+                f'<{self.dim}> <{self.source}> <{self.shape}>')
 
     def __len__(self):
         return self.length
@@ -657,7 +726,12 @@ class DataBase(DataLowLevel):
             for ind_array in range(len(new_data)):
                 if self[ind_array].shape != other[ind_array].shape:
                     raise ValueError('The shapes of arrays stored into the data are not consistent')
-                new_data[ind_array] = self[ind_array] + other[ind_array]
+                try:
+                    new_data[ind_array] = (Q_(self[ind_array], self.units) +
+                                           Q_(other[ind_array], other.units)).m_as(self.units)
+                except pint.errors.DimensionalityError as e:
+                    raise DataUnitError(
+                        f'Cannot sum Data objects not having the same dimension: {e}')
             return new_data
         elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
             new_data = copy.deepcopy(self)
@@ -668,18 +742,20 @@ class DataBase(DataLowLevel):
                             f'of a different length')
 
     def __sub__(self, other: object):
-        if isinstance(other, DataBase) and len(other) == len(self):
-            new_data = copy.deepcopy(self)
-            for ind_array in range(len(new_data)):
-                new_data[ind_array] = self[ind_array] - other[ind_array]
-            return new_data
-        elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
-            new_data = copy.deepcopy(self)
-            new_data = new_data - DataActuator(data=other)
-            return new_data
-        else:
-            raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
-                            f'of a different length')
+        return self.__add__(other * -1)
+        #
+        # if isinstance(other, DataBase) and len(other) == len(self):
+        #     new_data = copy.deepcopy(self)
+        #     for ind_array in range(len(new_data)):
+        #         new_data[ind_array] = self[ind_array] - other[ind_array]
+        #     return new_data
+        # elif isinstance(other, numbers.Number) and self.length == 1 and self.size == 1:
+        #     new_data = copy.deepcopy(self)
+        #     new_data = new_data - DataActuator(data=other)
+        #     return new_data
+        # else:
+        #     raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
+        #                     f'of a different length')
 
     def __mul__(self, other):
         if isinstance(other, numbers.Number):
@@ -700,7 +776,7 @@ class DataBase(DataLowLevel):
 
     def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
-            if not(self.name == other.name and len(self) == len(other)):
+            if not (self.name == other.name and len(self) == len(other)):
                 return False
             if self.dim != other.dim:
                 return False
@@ -787,10 +863,12 @@ class DataBase(DataLowLevel):
         return new_data
 
     def append(self, data: DataWithAxes):
+        """Append data content if the underlying arrays have the same shape and compatible units"""
         for dat in data:
             if dat.shape != self.shape:
-                raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
-        self.data += data.data
+                raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape'
+                                     ' as self')
+        self.data += [Q_(data_array, data.units).m_as(self.units) for data_array in data.data]
         self.labels.extend(data.labels)
 
     def pop(self, index: int) -> DataBase:
@@ -837,7 +915,8 @@ class DataBase(DataLowLevel):
         return self._dim
 
     def set_dim(self, dim: Union[DataDim, str]):
-        """Addhoc modification of dim independantly of the real data shape, should be used with extra care"""
+        """Addhoc modification of dim independantly of the real data shape,
+        should be used with extra care"""
         self._dim = enum_checker(DataDim, dim)
 
     @property
@@ -951,8 +1030,9 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                warnings.warn(DataDimWarning('The specified dimensionality is not coherent with the data shape, '
-                                             'replacing it'))
+                warnings.warn(
+                    DataDimWarning('The specified dimensionality is not coherent with the data '
+                                   'shape, replacing it'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -962,6 +1042,11 @@ class DataBase(DataLowLevel):
                 raise DataShapeError('The shape of the ndarrays in data is not the same')
 
     @property
+    def quantities(self) -> list[Q_]:
+        """ Get the arrays as pint quantities (with units)"""
+        return [Q_(array, self.units) for array in self.data]
+
+    @property
     def data(self) -> List[np.ndarray]:
         """List[np.ndarray]: get/set (and check) the data the object is storing"""
         return self._data
@@ -969,12 +1054,12 @@ class DataBase(DataLowLevel):
     @data.setter
     def data(self, data: List[np.ndarray]):
         data = self._check_data_type(data)
-        #data = [squeeze(data_array) for data_array in data]
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
         self._data = data
 
     def to_dict(self):
+        """ Get the data arrays into dictionary whose keys are the labels"""
         data_dict = OrderedDict([])
         for ind in range(len(self)):
             data_dict[self.labels[ind]] = self[ind]
@@ -1676,7 +1761,9 @@ class DataWithAxes(DataBase):
         return is_equal
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {self.name} <len:{self.length}> {self._am}>'
+        return (f'<{self.__class__.__name__}: {self.name} '
+                f'<u: {self.units}> '
+                f'<len:{self.length}> {self._am}>')
 
     def sort_data(self, axis_index: int = 0, spread_index=0, inplace=False) -> DataWithAxes:
         """ Sort data along a given axis, default is 0
@@ -2240,8 +2327,6 @@ class DataWithAxes(DataBase):
             pass
         finally:
             self._data = old_data
-
-
 
     @property
     def _am(self) -> AxesManagerBase:
@@ -2859,7 +2944,10 @@ class DataToActuators(DataToExport):
 
 
 if __name__ == '__main__':
-
+    d = DataRaw('hjk', units='m', data=[np.array([0, 1, 2])])
+    dm = DataRaw('hjk', units='mm', data=[np.array([0, 1, 2])])
+    d + d
+    d - d
 
     d1 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((24,))],
                      x_axis=Axis(data=np.zeros((24,)), units='myunits', label='mylabel1'))
@@ -2879,6 +2967,8 @@ if __name__ == '__main__':
     data = DataRaw('mydata', data=[dat], nav_indexes=(0,),
                    axes=[Axis('nav', data=np.linspace(0, Nnav-1, Nnav), index=0),
                          Axis('sig', data=x, index=1)])
+
+    data + data
 
     data2 = copy.copy(data)
 

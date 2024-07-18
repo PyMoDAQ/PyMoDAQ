@@ -41,7 +41,7 @@ def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSo
               labels=None) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
+    return data_mod.DataWithAxes(name, source=source, data=[data for ind in range(Ndata)],
                                  axes=axes, labels=labels)
 
 
@@ -54,7 +54,8 @@ def init_dataND():
     axis0 = data_mod.Axis(label='myaxis0', data=np.linspace(0, N0 - 1, N0), index=0)
     axis1 = data_mod.Axis(label='myaxis1', data=np.linspace(0, N1 - 1, N1), index=1)
     axis2 = data_mod.Axis(label='myaxis2', data=np.linspace(0, N2 - 1, N2), index=2)
-    return data_mod.DataWithAxes('mydata', 'raw', data=[DATAND], axes=[axis0, axis1, axis2], nav_indexes=(0, 1)),\
+    return data_mod.DataWithAxes('mydata', source='raw', data=[DATAND], axes=[axis0, axis1, axis2],
+                                 nav_indexes=(0, 1)), \
            (N0, N1, N2)
 
 
@@ -69,6 +70,7 @@ def init_data_spread():
     data = data_mod.DataRaw('mydata', distribution='spread', data=[data_array], nav_indexes=(0,),
                             axes=[nav_axis_0, sig_axis, nav_axis_1])
     return data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread
+
 
 @pytest.fixture()
 def init_spread_data_arrays():
@@ -283,7 +285,7 @@ class TestDataLowLevel:
 class TestDataBase:
     def test_init(self):
         Ndata = 2
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
+        data = data_mod.DataBase('myData', source=data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
         assert data.length == Ndata
         assert data.dim == data_mod.DataDim['Data2D']
         assert data.shape == DATA2D.shape
@@ -294,27 +296,30 @@ class TestDataBase:
         Ndata = 3
         labels = ['label0', 'label1']
         labels_auto = labels + ['CH02']
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
+        data = data_mod.DataBase('myData', source=data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
         assert len(data.labels) == Ndata
         assert data.labels == [f'CH{ind:02d}' for ind in range(Ndata)]
 
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)],
+        data = data_mod.DataBase('myData',
+                                 source=data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)],
                                  labels=labels)
         assert len(data.labels) == Ndata
         assert data.labels == labels_auto
 
     def test_data_source(self):
-        data = data_mod.DataBase('myData', 'calculated',  data=[DATA2D])
+        data = data_mod.DataBase('myData', source='calculated',  data=[DATA2D])
         assert data.source == data_mod.DataSource['calculated']
 
     @mark.parametrize("data_array, datadim", [(DATA0D, 'Data0D'), (DATA0D, data_mod.DataDim['Data0D']),
                                               (DATA0D, 'Data2D')])
     def test_get_dim(self, data_array, datadim):
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[data_array], dim=datadim)
+        data = data_mod.DataBase('myData',
+                                 source=data_mod.DataSource(0), data=[data_array], dim=datadim)
         assert data.dim == data_mod.DataDim['Data0D']  # force dim to reflect datashape
 
     def test_force_dim(self):
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA1D], dim='Data0D')
+        data = data_mod.DataBase('myData',
+                                 source=data_mod.DataSource(0), data=[DATA1D], dim='Data0D')
         assert data.dim.name == 'Data1D'
 
     def test_errors(self):
@@ -323,19 +328,19 @@ class TestDataBase:
         with pytest.raises(ValueError):
             data_mod.DataBase('myData')
         with pytest.raises(TypeError):
-            data_mod.DataBase('myData', data_mod.DataSource(0))
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=DATA2D)  # only a ndarray
+            data_mod.DataBase('myData', source=data_mod.DataSource(0))
+        data = data_mod.DataBase('myData', source=data_mod.DataSource(0), data=DATA2D)  # only a ndarray
         assert len(data) == 1
         assert np.all(data.data[0] == approx(DATA2D))
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=12.4)  # only a numeric
+        data = data_mod.DataBase('myData', source=data_mod.DataSource(0), data=12.4)  # only a numeric
         assert len(data) == 1
         assert isinstance(data.data[0], np.ndarray)
         assert data.data[0][0] == approx(12.4)
 
         with pytest.raises(data_mod.DataShapeError):
-            data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA2D, DATA0D])  # list of different ndarray shape length
+            data_mod.DataBase('myData', source=data_mod.DataSource(0), data=[DATA2D, DATA0D])  # list of different ndarray shape length
         with pytest.raises(TypeError):
-            data_mod.DataBase('myData', data_mod.DataSource(0), data=['12', 5])  # list of non ndarray
+            data_mod.DataBase('myData', source=data_mod.DataSource(0), data=['12', 5])  # list of non ndarray
 
     def test_dunder(self):
         LENGTH = 24
@@ -442,7 +447,8 @@ class TestDataBase:
 class TestDataWithAxesUniform:
     def test_init(self):
         Ndata = 2
-        data = data_mod.DataWithAxes('myData', data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
+        data = data_mod.DataWithAxes('myData', source=data_mod.DataSource(0),
+                                     data=[DATA2D for ind in range(Ndata)])
         assert data.axes == []
 
     def test_axis(self):
@@ -1298,4 +1304,50 @@ class TestDataToExport:
 
 
         assert dwa.labels == dat1.labels + dat2.labels + dat3.labels
+
+
+class TestUnits:
+
+    def test_unit_in_registry(self):
+
+        dwa = data_mod.DataRaw('data', units='unknown_unit', data=[np.array([0, 1, 2])])
+        assert dwa.units == ''  # transforms to dimensionless
+
+        dwa = data_mod.DataRaw('data', units='ms', data=[np.array([0, 1, 2])])
+        assert dwa.units == 'ms'
+
+    def test_add_with_units(self):
+        array_1 = np.array([0, 1, 2])
+        dwa_1 = data_mod.DataRaw('data', units='s', data=[array_1])
+        assert dwa_1.units == 's'
+
+        dwa_2 = data_mod.DataRaw('data', units='ms', data=[array_1])
+        assert dwa_2.units == 'ms'
+
+        dwa_sum_s = dwa_1 + dwa_2
+        assert np.allclose(dwa_sum_s[0], array_1 + array_1 / 1000)
+        assert dwa_sum_s.units == 's'
+
+        dwa_sum_ms = dwa_2 + dwa_1
+        assert np.allclose(dwa_sum_ms[0], array_1 + array_1 * 1000)
+        assert dwa_sum_ms.units == 'ms'
+
+    def test_units_as(self):
+        array = np.array([0, 1, 2])
+        dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+        assert dwa_s.units == 's'
+
+        dwa_ms = dwa_s.units_as('ms')
+        assert dwa_ms.units == 'ms'
+        assert np.allclose(dwa_ms[0], array * 1000)
+        assert dwa_ms is dwa_s
+
+        dwa_s = data_mod.DataRaw('data', units='s', data=[array])
+        assert dwa_s.units == 's'
+        dwa_ms = dwa_s.units_as('ms', inplace=False)
+        assert dwa_ms.units == 'ms'
+        assert np.allclose(dwa_ms[0], array * 1000)
+        assert dwa_s.units == 's'
+        assert np.allclose(dwa_s[0], array)
+
 
