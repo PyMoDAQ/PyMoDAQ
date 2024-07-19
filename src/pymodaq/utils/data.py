@@ -1647,7 +1647,7 @@ class DataWithAxes(DataBase):
         should match the data ndarray
     """
 
-    def __init__(self, *args, axes: List[Axis] = [],
+    def __init__(self, *args, axes: List[Axis] = (),
                  nav_indexes: Tuple[int] = (),
                  errors: Iterable[np.ndarray] = None,
                  **kwargs):

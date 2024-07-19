@@ -781,12 +781,12 @@ class Viewer2D(ViewerBase):
         """convenience function"""
         self.view.histogrammer.set_gradient(image_key, gradient)
 
-    def _show_data(self, data: DataFromPlugins):
+    def _show_data(self, data: DataWithAxes, *args, **kwargs):
         """Data to be plotted and eventually filtered using ROI...
 
         Parameters
         ----------
-        data: DataFromPlugins
+        data: DataWithAxes
 
         """
 
