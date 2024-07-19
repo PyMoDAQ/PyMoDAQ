@@ -838,6 +838,12 @@ class DataBase(DataLowLevel):
         new_data.data = [np.abs(dat) for dat in new_data]
         return new_data
 
+    def angle(self):
+        """ Take the phase value of itself"""
+        new_data = copy.copy(self)
+        new_data.data = [np.angle(dat) for dat in new_data]
+        return new_data
+
     def real(self):
         """ Take the real part of itself"""
         new_data = copy.copy(self)
