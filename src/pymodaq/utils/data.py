@@ -776,7 +776,9 @@ class DataBase(DataLowLevel):
 
     def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
-            if not (self.name == other.name and len(self) == len(other)):
+            if not (self.name == other.name and
+                    len(self) == len(other) and
+                    Q_(1, self.units).is_compatible_with(other.units)):
                 return False
             if self.dim != other.dim:
                 return False
@@ -785,7 +787,7 @@ class DataBase(DataLowLevel):
                 if self[ind].shape != other[ind].shape:
                     eq = False
                     break
-                eq = eq and np.all(getattr(self[ind], operator)(other[ind]))
+                eq = eq and np.all(getattr(self.quantities[ind], operator)(other.quantities[ind]))
             # extra attributes are not relevant as they may contain module specific data...
             # eq = eq and (self.extra_attributes == other.extra_attributes)
             # for attribute in self.extra_attributes:

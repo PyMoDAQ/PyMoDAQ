@@ -359,6 +359,15 @@ class TestDataBase:
         with pytest.raises(IndexError):
             data[len(data) + 1]
 
+    def test_comparison_units(self):
+
+        dwa_mm = data_mod.DataRaw('dwa', units='mm', data=[np.array([0, 1, 2])])
+        dwa_um = data_mod.DataRaw('dwa', units='um', data=[np.array([0, 1, 2])])
+        dwa_um_equal = data_mod.DataRaw('dwa', units='um', data=[np.array([0, 1, 2]) * 1000])
+
+        assert dwa_mm != dwa_um
+        assert dwa_mm == dwa_um_equal
+
     @pytest.mark.parametrize('datatmp', (DATA0D, DATA1D, DATA2D))
     def test_comparison_data_actuator(self, datatmp):
         LENGTH = 3
