@@ -310,6 +310,7 @@ class DataSaverLoader(DataManagement):
             metadata = dict(timestamp=data.timestamp, label=data.labels[ind_data],
                             source=data.source.name, distribution=data.distribution.name,
                             origin=data.origin,
+                            units=data.units,
                             nav_indexes=tuple(data.nav_indexes)
                             if data.nav_indexes is not None else None,)
             for name in data.extra_attributes:
@@ -453,13 +454,14 @@ class DataSaverLoader(DataManagement):
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension',
                      'distribution', 'label', 'origin', 'nav_indexes', 'dtype', 'data_type',
-                     'subdtype', 'shape', 'size', 'EXTDIM', 'path', 'timestamp']:
+                     'subdtype', 'shape', 'size', 'EXTDIM', 'path', 'timestamp', 'units']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
                             source=data_node.attrs['source'] if 'source' in data_node.attrs
                             else 'raw',
                             dim=data_node.attrs['data_dimension'],
+                            units=data_node.attrs['units'] if 'units' in data_node.attrs else '',
                             distribution=data_node.attrs['distribution'],
                             data=ndarrays,
                             labels=[node.attrs['label'] for node in data_nodes],

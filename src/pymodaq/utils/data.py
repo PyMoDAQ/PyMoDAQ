@@ -30,11 +30,21 @@ from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
 
-from pymodaq import Q_, ureg
+from pymodaq import Q_, ureg, Unit
 
 config = Config()
 plotter_factory = PlotterFactory()
 logger = set_logger(get_module_name(__file__))
+
+
+def check_units(units: str):
+    try:
+        Unit(units)
+        return units
+    except pint.errors.UndefinedUnitError:
+        logger.warning(f'The unit "{units}" is not defined in the pint registry, switching to'
+                       f'dimensionless')
+    return ''
 
 
 def squeeze(data_array: np.ndarray, do_squeeze=True, squeeze_indexes: Tuple[int]=None) -> np.ndarray:
@@ -229,6 +239,7 @@ class Axis:
     def units(self, units: str):
         if not isinstance(units, str):
             raise TypeError('units for the Axis class should be a string')
+        units = check_units(units)
         self._units = units
 
     @property
@@ -408,13 +419,16 @@ class Axis:
     def __eq__(self, other: Axis):
         if isinstance(other, Axis):
             eq = self.label == other.label
-            eq = eq and (self.units == other.units)
+            eq = eq and (Unit(self.units).is_compatible_with(other.units))
             eq = eq and (self.index == other.index)
             if self.data is not None and other.data is not None:
-                eq = eq and (np.allclose(self.data, other.data))
+                eq = eq and (np.allclose(Q_(self.data, self.units),
+                                         Q_(other.data, other.units)))
             else:
-                eq = eq and self.offset == other.offset
-                eq = eq and self.scaling == other.scaling
+                eq = eq and (np.allclose(Q_(self.offset, self.units),
+                                         Q_(other.offset, other.units)))
+                eq = eq and (np.allclose(Q_(self.scaling, self.units),
+                                         Q_(other.scaling, other.units)))
 
             return eq
         else:
@@ -601,7 +615,7 @@ class DataBase(DataLowLevel):
         self._length = None
         self._labels = None
         self._dim = dim
-        self._units = self.check_units(units)
+        self._units = check_units(units)
         self._errors = None
         self.origin = origin
 
@@ -623,16 +637,8 @@ class DataBase(DataLowLevel):
 
     @units.setter
     def units(self, units: str):
+        units = check_units(units)
         self.units_as(units, inplace=True)
-
-    def check_units(self, unit: str):
-        try:
-            q = Q_(1, unit)
-            return unit
-        except pint.errors.UndefinedUnitError:
-            logger.warning(f'The unit "{unit}" is not defined in the pint registry, switching to'
-                           f'dimensionless')
-        return ''
 
     def units_as(self, units: str, inplace=True) -> 'DataBase':
         """ Set the object units to the new one (if possible)
@@ -776,7 +782,9 @@ class DataBase(DataLowLevel):
 
     def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
-            if not (self.name == other.name and len(self) == len(other)):
+            if not (self.name == other.name and
+                    len(self) == len(other) and
+                    Unit(self.units).is_compatible_with(other.units)):
                 return False
             if self.dim != other.dim:
                 return False
@@ -785,7 +793,7 @@ class DataBase(DataLowLevel):
                 if self[ind].shape != other[ind].shape:
                     eq = False
                     break
-                eq = eq and np.all(getattr(self[ind], operator)(other[ind]))
+                eq = eq and np.all(getattr(self.quantities[ind], operator)(other.quantities[ind]))
             # extra attributes are not relevant as they may contain module specific data...
             # eq = eq and (self.extra_attributes == other.extra_attributes)
             # for attribute in self.extra_attributes:
@@ -1749,6 +1757,8 @@ class DataWithAxes(DataBase):
 
     def __eq__(self, other):
         is_equal = super().__eq__(other)
+        if not is_equal:
+            return is_equal
         if isinstance(other, DataWithAxes):
             for ind in list(self.nav_indexes) + list(self.sig_indexes):
                 axes_self = self.get_axis_from_index(ind)
@@ -1904,7 +1914,7 @@ class DataWithAxes(DataBase):
         :py:meth:`~pymodaq.utils.math_utils.ft`, :py:meth:`~numpy.fft.fft`
         """
         dat_ft = []
-        axis_obj = self.get_axis_from_index(axis)[0]
+        axis_obj = self.get_axis_from_index(axis)[0].copy()
         omega_grid, time_grid = mutils.ftAxis_time(len(axis_obj),
                                                    np.abs(axis_obj.max() - axis_obj.min()))
         for dat in self.data:
@@ -1913,7 +1923,7 @@ class DataWithAxes(DataBase):
         axis_obj = new_data.get_axis_from_index(axis)[0]
         axis_obj.data = omega_grid
         axis_obj.label = f'ft({axis_obj.label})'
-        axis_obj.units = f'2pi/{axis_obj.units}'
+        axis_obj.units = f'rad/{axis_obj.units}'
         return new_data
 
     def ift(self, axis: int = 0) -> DataWithAxes:
@@ -1933,15 +1943,16 @@ class DataWithAxes(DataBase):
         :py:meth:`~pymodaq.utils.math_utils.ift`, :py:meth:`~numpy.fft.ifft`
         """
         dat_ift = []
-        axis_obj = self.get_axis_from_index(axis)[0]
+        axis_obj = self.get_axis_from_index(axis)[0].copy()
         omega_grid, time_grid = mutils.ftAxis_time(len(axis_obj),
                                                    np.abs(axis_obj.max() - axis_obj.min()))
         for dat in self.data:
             dat_ift.append(mutils.ift(dat, dim=axis))
         new_data = self.deepcopy_with_new_data(dat_ift)
+        axis_obj = new_data.get_axis_from_index(axis)[0]
         axis_obj.data = omega_grid
         axis_obj.label = f'ift({axis_obj.label})'
-        axis_obj.units = f'2pi/{axis_obj.units}'
+        axis_obj.units = str(Unit(f'rad/({axis_obj.units})'))
         return new_data
 
     def fit(self, function: Callable, initial_guess: IterableType, data_index: int = None,

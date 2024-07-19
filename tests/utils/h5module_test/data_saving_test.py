@@ -29,7 +29,7 @@ def get_h5saver(tmp_path):
 
 
 LABEL = 'A Label'
-UNITS = 'units'
+UNITS = 'um'
 OFFSET = -20.4
 SCALING = 0.22
 SIZE = 20
@@ -52,10 +52,10 @@ def init_axis(data=None, index=0):
     return Axis(label=LABEL, units=UNITS, data=data, index=index)
 
 
-def init_data(data=None, Ndata=1, axes=[], name='myData') -> DataWithAxes:
+def init_data(data=None, Ndata=1, axes=(), name='myData') -> DataWithAxes:
     if data is None:
         data = DATA2D
-    return DataWithAxes(name, DataSource(0), data=[data for ind in range(Ndata)],
+    return DataWithAxes(name, DataSource(0), units='mm', data=[data for ind in range(Ndata)],
                                  axes=axes)
 
 
@@ -63,28 +63,38 @@ def init_data(data=None, Ndata=1, axes=[], name='myData') -> DataWithAxes:
 def init_data_to_export():
     Ndata = 2
 
-    data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+    data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)],
+                          labels=['mylabel1', 'mylabel2'],
                           source='raw',
                           dim='Data2D', distribution='uniform',
-                          axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                          units='nm',
+                          axes=[Axis(data=create_axis_array(DATA2D.shape[0]),
+                                     label='myaxis0', units='myunits0',
                                      index=0),
-                                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                Axis(data=create_axis_array(DATA2D.shape[1]),
+                                     label='myaxis1', units='myunits1',
                                      index=1), ],
                           errors=[np.random.random_sample(DATA2D.shape) for _ in range(Ndata)])
 
-    data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+    data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)],
+                          labels=['mylabel1', 'mylabel2'],
                           source='raw',
+                          units='s',
                           dim='Data1D', distribution='uniform',
-                          axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
+                          axes=[Axis(data=create_axis_array(DATA1D.shape[0]),
+                                     label='myaxis0', units='myunits0',
                                      index=0)],
                           errors=None)
 
-    data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+    data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)],
+                          labels=['mylabel1', 'mylabel2'],
                           source='raw', dim='Data0D', distribution='uniform',
+                          units='um',
                           errors=[np.random.random_sample(DATA0D.shape) for _ in range(Ndata)])
 
     data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
                              labels=['mylabel1bis', 'mylabel2bis'], source='raw', dim='Data0D',
+                             units='um',
                              distribution='uniform')
 
     data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
@@ -106,8 +116,9 @@ class TestAxisSaverLoader:
         SCALING = 0.2
         INDEX = 5
         LABEL = 'myaxis'
-        UNITS = 'myunits'
-        axis = Axis(label=LABEL, units=UNITS, data=OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE), index=INDEX)
+        UNITS = 'ms'
+        axis = Axis(label=LABEL, units=UNITS,
+                    data=OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE), index=INDEX)
 
         axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
 
@@ -129,8 +140,9 @@ class TestAxisSaverLoader:
         SCALING = 0.2
         INDEX = 5
         LABEL = 'myaxis'
-        UNITS = 'myunits'
-        axis = Axis(label=LABEL, units=UNITS, data=OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE), index=INDEX)
+        UNITS = 'ms'
+        axis = Axis(label=LABEL, units=UNITS,
+                    data=OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE), index=INDEX)
 
         axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
 
@@ -196,12 +208,16 @@ class TestDataSaverLoader:
 
         errors = [np.random.random_sample(DATA2D.shape) for _ in range(Ndata)]
 
-        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
                             source='raw',
+                            units='mm',
                             dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]),
+                                       label='myaxis0', units='myunits0',
                                        index=0),
-                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                  Axis(data=create_axis_array(DATA2D.shape[1]),
+                                       label='myaxis1', units='myunits1',
                                        index=1)],
                             errors=errors)
 
@@ -222,9 +238,10 @@ class TestDataSaverLoader:
         data = DataWithAxes(name='mydata', data=[DATA1D for _ in range(Ndata)],
                             labels=['mylabel1', 'mylabel2'],
                             source='raw',
+                            units='mm',
                             dim='Data2D', distribution='uniform',
                             axes=[Axis(data=create_axis_array(DATA1D.shape[0]),
-                                       label='myaxis0', units='myunits0',
+                                       label='myaxis0', units='mm',
                                        index=0),
                                  ],
                             errors=errors)
@@ -257,9 +274,9 @@ class TestDataSaverLoader:
         data_saver = DataSaverLoader(h5saver)
         bkgSaver = BkgSaver(h5saver)
 
-        axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+        axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='mm',
                      index=0),
-                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='um',
                      index=1), ]
 
         Ndata = 2
@@ -284,12 +301,15 @@ class TestDataSaverLoader:
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
 
-        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
                             source='raw',
                             dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]),
+                                       label='myaxis0', units='s',
                                        index=0),
-                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                  Axis(data=create_axis_array(DATA2D.shape[1]),
+                                       label='myaxis1', units='ms',
                                        index=1)],
                             another_attribute='another_attribute',
                             another_other_attribute=123)
@@ -314,9 +334,9 @@ class TestBkgSaver:
         h5saver = get_h5saver
         bkgSaver = BkgSaver(h5saver)
 
-        axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+        axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='ms',
                      index=0),
-                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='s',
                      index=1), ]
 
         data_bkg = init_data(DATA2D, axes=axes, name='mykbg')
@@ -386,12 +406,15 @@ class TestDataExtendedSaver:
 
         Ndata = 2
 
-        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)],
+                            labels=['mylabel1', 'mylabel2'],
                             source='raw',
                             dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0',
+                                       units='ms',
                                        index=0),
-                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1',
+                                       units='s',
                                        index=1),])
         data_ext_shape = list(EXT_SHAPE)
         data_ext_shape.extend(data.shape)
@@ -602,7 +625,7 @@ class TestDataLoader:
         SCALING = 0.2
         INDEX = 5
         LABEL = 'myaxis'
-        UNITS = 'myunits'
+        UNITS = 'ms'
         axis = Axis(label=LABEL, units=UNITS,
                     data=OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE), index=INDEX)
 
