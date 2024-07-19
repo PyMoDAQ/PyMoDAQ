@@ -134,6 +134,14 @@ class TestDataDim:
 
 class TestAxis:
 
+    def test_units(self):
+        NOT_A_STRING = 45
+        with pytest.raises(TypeError):
+            axis = data_mod.Axis('axis', units=NOT_A_STRING, data=np.array([0, 1]))
+
+        axis = data_mod.Axis('axis', units='unknown units', data=np.array([0, 1]))
+        assert axis.units == ''
+
     def test_errors(self):
         with pytest.raises(TypeError):
             data_mod.Axis(label=24)
@@ -364,9 +372,11 @@ class TestDataBase:
         dwa_mm = data_mod.DataRaw('dwa', units='mm', data=[np.array([0, 1, 2])])
         dwa_um = data_mod.DataRaw('dwa', units='um', data=[np.array([0, 1, 2])])
         dwa_um_equal = data_mod.DataRaw('dwa', units='um', data=[np.array([0, 1, 2]) * 1000])
+        dwa_unrelated = data_mod.DataRaw('dwa', units='', data=[np.array([0, 1, 2])])
 
         assert dwa_mm != dwa_um
         assert dwa_mm == dwa_um_equal
+        assert dwa_mm != dwa_unrelated
 
     @pytest.mark.parametrize('datatmp', (DATA0D, DATA1D, DATA2D))
     def test_comparison_data_actuator(self, datatmp):
@@ -663,6 +673,8 @@ class TestDataWithAxesUniform:
 
         dwa_ift = dwa_fft.ift(0)
         assert np.allclose(dwa[0], dwa_ift.real())
+
+        assert data_mod.Unit(dwa_ift.axes[0].units) == data_mod.Unit(dwa.axes[0].units)
 
     def test_fit(self):
         OMEGA0 = 5
