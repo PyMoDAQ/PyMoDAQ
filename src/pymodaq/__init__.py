@@ -49,6 +49,7 @@ try:
     logger.info('************************')
     ureg = UnitRegistry()
     Q_ = ureg.Quantity
+    Unit = ureg.Unit
     logger.info('')
     logger.info('')
 
