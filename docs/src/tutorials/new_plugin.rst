@@ -1,12 +1,12 @@
 .. _new_plugin:
 
-How to create a new plugin/package for PyMoDAQ?
-===============================================
+How to create and release a new plugin/package for PyMoDAQ?
+===========================================================
 
 +------------------------------------+---------------------------------------+
 | Author email                       | sebastien.weber@cemes.fr              |
 +------------------------------------+---------------------------------------+
-| Last update                        | january 2024                          |
+| Last update                        | July 2024                             |
 +------------------------------------+---------------------------------------+
 | Difficulty                         | Intermediate                          |
 +------------------------------------+---------------------------------------+
@@ -14,7 +14,7 @@ How to create a new plugin/package for PyMoDAQ?
 
 
 In this tutorial, we will learn how to create a brand new :term:`plugin` either for adding instruments, models or
-extensions!
+extensions. We will then release it on PyPI so that every PyMoDAQ user can use it and contribute to its development!
 
 Prerequisite
 ------------
@@ -77,7 +77,7 @@ files and folders. :numref:`template_structure` highlight the package initial st
 * add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder,
 * remove the unused instrument example files of the template repository in the *daq_move_plugins* and
   *daq_viewer_plugins* subfolders.
-* Modify and configure the automatic publication of your package on the Pypi server (see :ref:`pypi_publish`)
+* Modify and configure the automatic publication of your package on the PyPI server (see :ref:`pypi_publish`)
 
 
 .. _template_structure:
@@ -89,15 +89,28 @@ files and folders. :numref:`template_structure` highlight the package initial st
 
 .. _pypi_publish:
 
-Publishing on Pypi
-------------------
+Releasing on PyPI
+-----------------
+
+What is PyPI?
++++++++++++++
 
 In the Python ecosystem, we often install packages using the `pip` application. But what happens when we execute
 `pip install mypackage`? Well `pip` is actually looking on a web server for the existence of such a package, then
 download it and install it. This server is the Pypi `Python Package Index <https://pypi.org/>`_
 
 Developers who wish to share their package with others can therefore upload their package there as it is so easy to
-install it using pip. To do that you will need to create an account on Pypi:
+install it using `pip`.
+
+In the following, we will publish our plugin on `TestPyPI`. The latter is exactly the same as PyPI, except that the
+Python packages that are stored there are not accessible with pip. It has been created so that we can safely test the
+release procedure without interacting with the actual PyPI. When we will be ready to actually release a plugin, we will
+just have to follow the procedure bellow, replacing TestPyPI by PyPI.
+
+Create an account on PyPI
++++++++++++++++++++++++++
+
+To do that you will need to create an account on Pypi:
 
 .. _pypi_account:
 
