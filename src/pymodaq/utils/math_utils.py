@@ -1,3 +1,5 @@
+import numbers
+
 import numpy
 import numpy as np
 from numbers import Number
@@ -34,6 +36,10 @@ def normalize(x):
     x = x - np.min(x)
     x = x / np.max(x)
     return x
+
+
+def normalize_to(array: np.ndarray, value: numbers.Number):
+    return normalize(array) * value
 
 
 def odd_even(x):
