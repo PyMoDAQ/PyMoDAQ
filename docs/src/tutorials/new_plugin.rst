@@ -165,7 +165,45 @@ Let's go to the proper menu.
 
 We call this token `GitHub account` and make a copy.
 
+.. figure:: /image/tutorial_template/pypi_copy_token.png
+
+   Copy the token.
+
 .. note::
     Be careful to save the token properly as it will appear only once!
 
-That's it for now with PyPI. Let's now configure GitHub properly!
+That's it for now with PyPI. Let's now configure our GitHub account properly!
+
+Release our plugin on PyPI with GitHub actions
+++++++++++++++++++++++++++++++++++++++++++++++
+
+We will start by creating a GitHub organization. The latter is useful if you have several developers working in a team.
+In the context of experimental physics, it is worth creating an organization for our lab group.
+
+Let's go in the tab `Your organization`, choose the free plan, and give it a name.
+
+.. figure:: /image/tutorial_template/create_organization.png
+
+   Create an organization.
+
+We will now save the PyPI token that we created just before in the settings of the organization, so that it will be
+authorized to access the PyPI account.
+
+Once it is created, go to the `Settings` tab.
+
+.. figure:: /image/tutorial_template/fk_organization_settings.png
+
+   Settings of the organization.
+
+Scroll down the left menu in `Security > Secrets and variables > Actions`
+
+There we create two organization secrets.
+
+The name of the first one is `PYPI_USERNAME` and its value is `__token__`.
+
+The second one is `PYPI_PASSWORD`, within which we will paste the token from PyPI that we created in the previous
+section.
+
+.. figure:: /image/tutorial_template/fk_organization_new_secret.png
+
+   Create new secrets to allow the connection to the PyPI account.
