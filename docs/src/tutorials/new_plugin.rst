@@ -207,3 +207,42 @@ section.
 .. figure:: /image/tutorial_template/fk_organization_new_secret.png
 
    Create new secrets to allow the connection to the PyPI account.
+
+Now the organization has the credentials to connect to our PyPI account.
+
+Let's now create a new repository in the organization by using the plugin template, as we did at the beginning of the
+tutorial.
+
+.. figure:: /image/tutorial_template/plugins_template_create_repository.png
+
+   Create a new repository in the organization from the template.
+
+Then clone it on our local machine.
+
+.. note::
+    Let's not forget to change the names of the folders and the files as described in the beginning of the tutorial!
+
+We will now have a look at the `.github/workflows` folder that is at the root of our repository. There are several
+files that correspond to `GitHub Actions`. Those are automated tasks that can be triggered by an action of the user on
+GitHub. For example, it can trigger some automated tests when someone is pushing some code in his repository. Here we
+will be particularly interested in the `python-publish.yml` file.
+
+.. figure:: /image/tutorial_template/plugin_template_configure_github_action.png
+
+   The `python-publish.yml` file.
+
+This file is part of the template, and we do not need to enter into the details of its writing. It basically defines
+that when we will trigger a release from our GitHub repository, it will release the current version of the repository
+to PyPI.
+
+We can notice that it makes use of the secrets `PYPI_USERNAME` and `PYPI_PASSWORD` that we configured earlier to
+authenticate to PyPI at the moment of the release.
+
+Since here we want to discover the release process by releasing to TestPyPI rather than PyPI, we need to change the
+last line of the file and replace it by
+
+``twine upload -r testpypi dist/*``
+
+
+
+Commit and push those changes towards the remote repository.
