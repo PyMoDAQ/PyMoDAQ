@@ -243,6 +243,23 @@ last line of the file and replace it by
 
 ``twine upload -r testpypi dist/*``
 
+.. note::
+    In the case of an actual release, we should skip this last step!
 
+Finally, we should modify the `resources/VERSION` file of our repository, so that it corresponds to the release tag
+that we will use for our first release. We can use `1.0.0`.
 
-Commit and push those changes towards the remote repository.
+Commit and push those changes towards the remote repository. We are now ready to try our first release!
+
+On the page of our repository, let's create a new release
+
+.. figure:: /image/tutorial_template/github_new_release.png
+
+   Create a new release.
+
+We will be prompted to a form to describe the release. In particular, we will have to define a tag for the release,
+which should correspond to the version of the package, we will use `1.0.0`.
+
+.. figure:: /image/tutorial_template/github_configure_release.png
+
+   The release form.
