@@ -400,6 +400,13 @@ class BaseConfig:
         """Save the current Config object into the user toml file"""
         self.config_path.write_text(toml.dumps(self.to_dict()))
 
+    def get_children(self, *path: IterableType[str]):
+        """ Get the list of config entries at a given path within the configulation toml file
+
+        new in 4.3.0
+        """
+        return list(getitem_recursive(self._config, *path).keys())
+
 
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
