@@ -14,20 +14,25 @@ from pymodaq.utils.config import Config, create_toml_from_dict
 
 
 class TreeFromToml(QObject):
-    def __init__(self, config: Config = None):
+    """ Create a ParameterTree from a configuration file"""
+
+    def __init__(self, config: Config = None, capitalize=True):
         super().__init__()
+
         if config is None:
             config = Config()
         self._config = config
-        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self._config.config_path),
+        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
+                   'value': str(self._config.config_path),
                    'readonly': True}]
-        params.extend(self.dict_to_param(config.to_dict()))
+        params.extend(self.dict_to_param(config.to_dict(), capitalize=capitalize))
 
-        self.settings = Parameter.create(title='settings', name='settings', type='group', children=params)
+        self.settings = Parameter.create(title='settings', name='settings', type='group',
+                                         children=params)
         self.settings_tree = ParameterTree()
         self.settings_tree.setParameters(self.settings, showTop=False)
 
-    def show_dialog(self):
+    def show_dialog(self) -> bool:
 
         self.dialog = QtWidgets.QDialog()
         self.dialog.setWindowTitle('Please enter new configuration values!')
@@ -49,6 +54,7 @@ class TreeFromToml(QObject):
                 config_dict = self.param_to_dict(self.settings)
                 config_dict.pop('config_path')
                 create_toml_from_dict(config_dict, self._config.config_path)
+        return res
 
     @classmethod
     def param_to_dict(cls, param: Parameter) -> dict:
@@ -72,15 +78,17 @@ class TreeFromToml(QObject):
         return config
 
     @classmethod
-    def dict_to_param(cls, config: dict) -> Parameter:
+    def dict_to_param(cls, config: dict, capitalize=True) -> Parameter:
         params = []
         for key in config:
             if isinstance(config[key], dict):
-                params.append({'title': f'{key.capitalize()}:', 'name': key, 'type': 'group',
-                               'children': cls.dict_to_param(config[key]),
+                params.append({'title': f'{key.capitalize() if capitalize else key}:',
+                               'name': key, 'type': 'group',
+                               'children': cls.dict_to_param(config[key], capitalize=capitalize),
                                'expanded': 'user' in key.lower() or 'general' in key.lower()})
             else:
-                param = {'title': f'{key.capitalize()}:', 'name': key, 'value': config[key]}
+                param = {'title': f'{key.capitalize() if capitalize else key}:',
+                         'name': key, 'value': config[key]}
                 if isinstance(config[key], float):
                     param['type'] = 'float'
                 elif isinstance(config[key], bool):  # placed before int because a bool is an instance of int

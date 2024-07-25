@@ -180,6 +180,13 @@ class TestConfig:
         config['style', 'darkstyle'] = 'bright'
         assert config('style', 'darkstyle') == 'bright'
 
+    def test_get_children(self):
+        config = config_mod.Config()
+
+        children = config.get_children('data_saving')
+        for child in ['h5file', 'hsds', 'data_type']:
+            assert child in children
+
 
 class Config(config_mod.BaseConfig):
     config_name = 'custom_config_tested'

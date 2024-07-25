@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="icons">
 	<file>Icon_Library/stop_all.png</file>
+	<file>Icon_Library/random.png</file>
 	<file>Icon_Library/input.png</file>
 	<file>Icon_Library/algo.png</file>
 	<file>Icon_Library/target.png</file>
