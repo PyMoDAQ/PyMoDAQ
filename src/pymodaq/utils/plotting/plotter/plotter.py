@@ -32,10 +32,10 @@ def register_plotter(parent_module_name: str = 'pymodaq.utils.plotting.plotter')
             if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
                 try:
                     plotters.append(import_module(f'.{file.stem}', plotter_module.__name__))
-                except ModuleNotFoundError:
-                    pass
-    except ModuleNotFoundError:
-        pass
+                except Exception as e:
+                    logger.warning(str(e))
+    except Exception as e:
+        logger.warning(str(e))
     finally:
         return plotters
 
