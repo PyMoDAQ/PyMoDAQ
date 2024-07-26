@@ -695,11 +695,11 @@ class DAQScan(QObject, ParameterManager):
         elif status.command == "Timeout":
             self.ui.set_permanent_status('Timeout occurred')
 
-        elif status[0] == 'add_data':
-            self.module_and_data_saver.add_data(**status[1])
+        elif status.command == 'add_data':
+            self.module_and_data_saver.add_data(**status.attribute)
 
-        elif status[0] == 'add_nav_axes':
-            self.module_and_data_saver.add_nav_axes(status[1])
+        elif status.command == 'add_nav_axes':
+            self.module_and_data_saver.add_nav_axes(status.attribute)
 
     ############
     #  PLOTTING
@@ -1132,10 +1132,11 @@ class DAQScanAcquisition(QObject):
                         nav_axis.index += 1
                     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                                   index=0))
-                self.status_sig.emit(["add_nav_axes", nav_axes])
+                self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
-            self.status_sig.emit(["add_data",
-                                  dict(indexes=indexes, distribution=self.scanner.distribution)])
+            self.status_sig.emit(
+                utils.ThreadCommand("add_data",
+                                    dict(indexes=indexes, distribution=self.scanner.distribution)))
 
             #todo related to adaptive (solution lies along the Enlargeable data saver)
             if self.isadaptive:
