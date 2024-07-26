@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import datetime
@@ -52,7 +53,13 @@ class PlotColors:
         self._internal_counter = -1
 
         self.check_colors(colors)
-        self._plot_colors = list(colors)
+        self._plot_colors = [tuple(color) for color in colors]
+
+    def copy(self):
+        return copy.copy(self)
+
+    def remove(self, item):
+        self._plot_colors.remove(item)
 
     def __getitem__(self, item: int):
         if not isinstance(item, int):
