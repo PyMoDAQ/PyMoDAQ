@@ -1,4 +1,5 @@
 import numbers
+from typing import Union
 
 import numpy
 import numpy as np
@@ -42,25 +43,28 @@ def normalize_to(array: np.ndarray, value: numbers.Number):
     return normalize(array) * value
 
 
-def odd_even(x):
+def odd_even(x: Union[int, np.ndarray]):
     """
-    odd_even tells if a number is odd (return True) or even (return False)
+    odd_even tells if a number (or an array) is odd (return True) or even (return False)
 
     Parameters
     ----------
-    x: the integer number to test
+    x: the integer number (or array) to test
 
     Returns
     -------
-    bool : boolean
+    bool : boolean or array of boolean
     """
-    if not isinstance(x, int):
-        raise TypeError(f'{x} should be an integer')
-    if int(x) % 2 == 0:
-        bool = False
+    if not (isinstance(x, int) or (isinstance(x, np.ndarray) and x.dtype == int)):
+        raise TypeError(f'{x} should be an integer or an array of integers')
+    if isinstance(x, int):
+        if x % 2 == 0:
+            isodd = False
+        else:
+            isodd = True
     else:
-        bool = True
-    return bool
+        isodd = x % 2 != 0
+    return isodd
 
 
 def greater2n(x):

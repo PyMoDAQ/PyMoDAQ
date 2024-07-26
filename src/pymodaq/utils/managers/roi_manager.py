@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import os
 import sys
-from typing import List, TYPE_CHECKING, Tuple
+from typing import List, TYPE_CHECKING, Tuple, Union
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -101,8 +101,13 @@ class ROI(pgROI):
     def color(self):
         return self.pen.color()
 
-    def center(self):
+    def center(self) -> QPointF:
+        """ Get the center position of the ROI """
         return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+
+    def set_center(self, center: Union[QPointF, Tuple[float, float]]):
+        size = self.size()
+        self.setPos(np.array(center) - np.array(size) / 2)
 
     def set_positions(self):
         mapper = ROIPositionMapper(self.pos(), self.size())
@@ -248,6 +253,13 @@ class EllipseROI(ROI):
         return self.path
 
 
+class CircularROI(EllipseROI):
+    def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
+        ROI.__init__(self, pos=pos, size=size, index=index, **kwargs)
+        self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5],
+                            lockAspect=True)
+
+
 class SimpleRectROI(ROI):
     r"""
     Rectangular ROI subclass with a single scale handle at the top-right corner.
@@ -274,7 +286,7 @@ class RectROI(ROI):
 
 
 ROI_NAME_PREFIX = 'ROI_'
-ROI2D_TYPES = ['RectROI', 'EllipseROI']
+ROI2D_TYPES = ['RectROI', 'EllipseROI', 'CircularROI']
 
 
 class ROIScalableGroup(GroupParameter):
@@ -449,9 +461,12 @@ class ROIManager(QObject):
                     if roi_type == 'RectROI':
                         newroi = RectROI(index=newindex, pos=pos,
                                          size=[width, height], name=par.name())
-                    else:
+                    elif roi_type == 'EllipseROI':
                         newroi = EllipseROI(index=newindex, pos=pos,
                                             size=[width, height], name=par.name())
+                    elif roi_type == 'CircularROI':
+                        newroi = CircularROI(index=newindex, pos=pos,
+                                             size=[width, height], name=par.name())
                     newroi.setPen(par['Color'])
 
                 newroi.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit())
@@ -598,26 +613,6 @@ class ROIManager(QObject):
                 self.set_roi(child.children(), new_child.children())
 
 
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    from pymodaq.utils.plotting.widgets import ImageWidget
-    from pyqtgraph import PlotWidget
-
-    im = ImageWidget()
-    im = PlotWidget()
-    prog = ROIManager(im, '2D')
-    widget = QtWidgets.QWidget()
-    layout = QtWidgets.QHBoxLayout()
-    widget.setLayout(layout)
-    layout.addWidget(im)
-    layout.addWidget(prog.roiwidget)
-    widget.show()
-    prog.add_roi_programmatically(ROI2D_TYPES[0])
-    prog.add_roi_programmatically(ROI2D_TYPES[1])
-    sys.exit(app.exec_())
-
-
 class ROISaver:
     def __init__(self, msgbox=False, det_modules=[]):
 
@@ -724,3 +719,22 @@ class ROISaver:
             ioxml.parameter_to_xml_file(
                 self.roi_presets, os.path.join(roi_path, self.roi_presets.child('filename').value()))
 
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    from pymodaq.utils.plotting.widgets import ImageWidget
+    from pyqtgraph import PlotWidget
+
+    im = ImageWidget()
+    im = PlotWidget()
+    prog = ROIManager(im, '2D')
+    widget = QtWidgets.QWidget()
+    layout = QtWidgets.QHBoxLayout()
+    widget.setLayout(layout)
+    layout.addWidget(im)
+    layout.addWidget(prog.roiwidget)
+    widget.show()
+    prog.add_roi_programmatically(ROI2D_TYPES[0])
+    prog.add_roi_programmatically(ROI2D_TYPES[1])
+    prog.add_roi_programmatically(ROI2D_TYPES[2])
+    sys.exit(app.exec_())
