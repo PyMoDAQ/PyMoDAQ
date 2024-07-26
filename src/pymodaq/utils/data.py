@@ -764,10 +764,21 @@ class DataBase(DataLowLevel):
         #                     f'of a different length')
 
     def __mul__(self, other):
-        if isinstance(other, numbers.Number):
+        if (isinstance(other, numbers.Number) or
+                (isinstance(other, np.ndarray) and other.shape == self._shape)):
             new_data = copy.deepcopy(self)
             for ind_array in range(len(new_data)):
                 new_data[ind_array] = self[ind_array] * other
+            return new_data
+        elif isinstance(other, DataBase) and other.shape == self._shape:
+            new_data = copy.deepcopy(self)
+            new_unit = str((Q_(self[0], self.units) *
+                           Q_(other[0], other.units)).to_base_units().units)
+            for ind_array in range(len(new_data)):
+                new_data[ind_array] = \
+                    ((Q_(self[ind_array], self.units) * Q_(other[ind_array], other.units))
+                     .to_base_units()).magnitude
+            new_data._units = new_unit
             return new_data
         else:
             raise TypeError(f'Could not multiply a {other.__class__.__name__} and a {self.__class__.__name__} '
@@ -1078,6 +1089,17 @@ class DataBase(DataLowLevel):
         for ind in range(len(self)):
             data_dict[self.labels[ind]] = self[ind]
         return data_dict
+
+    def to_dB(self) -> DataBase:
+        """ Get a new data object in decibels
+
+        new in 4.3.0
+        """
+        new_data = copy.deepcopy(self)
+        for ind_array in range(len(new_data)):
+            new_data[ind_array] = 10 * np.log10(self[ind_array] / self[ind_array].max())
+        new_data._units = 'dB'
+        return new_data
 
 
 class AxesManagerBase:
@@ -1647,7 +1669,7 @@ class DataWithAxes(DataBase):
         should match the data ndarray
     """
 
-    def __init__(self, *args, axes: List[Axis] = (),
+    def __init__(self, *args, axes: List[Axis] = [],
                  nav_indexes: Tuple[int] = (),
                  errors: Iterable[np.ndarray] = None,
                  **kwargs):

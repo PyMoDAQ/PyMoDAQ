@@ -38,12 +38,12 @@ def init_axis(data=None, index=0) -> data_mod.Axis:
 
 
 def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
-              labels=None) -> data_mod.DataWithAxes:
+              labels=None, units='') -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return data_mod.DataWithAxes(name, source=source, data=[data for ind in range(Ndata)],
+    return data_mod.DataWithAxes(name, units=units, source=source,
+                                 data=[data for ind in range(Ndata)],
                                  axes=axes, labels=labels)
-
 
 def init_dataND():
     N0 = 5
@@ -85,8 +85,10 @@ def init_data_uniform() -> data_mod.DataWithAxes:
 
     nav_axis_0 = data_mod.Axis(label='nav0', index=0, data=np.linspace(0, Nn0 - 1, Nn0))
     nav_axis_1 = data_mod.Axis(label='nav1', index=1, data=np.linspace(0, Nn1 - 1, Nn1))
-    sig_axis_0 = data_mod.Axis(label='signal0', index=2, data=np.linspace(0, DATA2D.shape[0] - 1, DATA2D.shape[0]))
-    sig_axis_1 = data_mod.Axis(label='signal1', index=3, data=np.linspace(0, DATA2D.shape[1] - 1, DATA2D.shape[1]))
+    sig_axis_0 = data_mod.Axis(label='signal0', index=2,
+                               data=np.linspace(0, DATA2D.shape[0] - 1, DATA2D.shape[0]))
+    sig_axis_1 = data_mod.Axis(label='signal1', index=3,
+                               data=np.linspace(0, DATA2D.shape[1] - 1, DATA2D.shape[1]))
 
     data_array = np.ones((Nn0, Nn1, DATA2D.shape[0], DATA2D.shape[1]))
     data = data_mod.DataRaw('mydata', data=[data_array], nav_indexes=(0, 1),
@@ -432,6 +434,31 @@ class TestDataBase:
         data_div = data / 0.85
         for ind_data in range(len(data)):
             assert np.all(data_div[ind_data] == pytest.approx(DATA2D/.85))
+
+    def test_multiply(self):
+        units = 'm'
+        data = init_data(data=DATA1D, Ndata=2, units=units)
+        units1 = 'ms'
+        data1 = init_data(data=DATA1D, Ndata=2, units=units1)
+        number = 24.5
+        array = DATA1D * 0.01
+
+        data_number = data * number
+        for ind in range(len(data_number)):
+            assert np.allclose(data_number[ind], data[ind] * number)
+        assert data_number.units == units
+
+        data_array = data * array
+        for ind in range(len(data_array)):
+            assert np.allclose(data_array[ind], data[ind] * array)
+        assert data_array.units == units
+
+        data_data = data * data1
+        for ind in range(len(data_data)):
+            assert np.allclose(data_mod.Q_(data_data[ind], data_data.units),
+                               data_mod.Q_(data[ind], data.units) *
+                               data_mod.Q_(data1[ind], data1.units))
+        assert data_data.units == 'm * s'
 
     def test_abs(self):
         data_p = init_data(data=DATA2D, Ndata=2)
