@@ -70,14 +70,14 @@ Configuring a new plugin repository
 For a correct configuration (for your plugin be installable and recognised by PyMoDAQ), you'll have to modify a few
 files and folders. :numref:`template_structure` highlight the package initial structure. You'll have to:
 
-* rename with the new package name the two directories in highlighted red
+* rename with the new package name the two directories in **highlighted red**.
 * fill in the appropriate information in plugin_info.toml and README.rst files, highlighted in green
 * rename the python instrument file, highlighted in purple with the dedicated instrument name (see
   :ref:`plugin_development` for details on instrument, python file and class name convention).
-* add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder,
+* add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder.
 * remove the unused instrument example files of the template repository in the *daq_move_plugins* and
   *daq_viewer_plugins* subfolders.
-* Modify and configure the automatic publication of your package on the PyPI server (see :ref:`pypi_publish`)
+* Modify and configure the automatic publication of your package on the PyPI server (see :ref:`pypi_publish`).
 
 
 .. _template_structure:
@@ -232,7 +232,7 @@ will be particularly interested in the `python-publish.yml` file.
    The `python-publish.yml` file.
 
 This file is part of the template, and we do not need to enter into the details of its writing. It basically defines
-that when we will trigger a release from our GitHub repository, it will release the current version of the repository
+that when we will trigger a release from our GitHub repository, it will upload the current version of the repository
 to PyPI.
 
 We can notice that it makes use of the secrets `PYPI_USERNAME` and `PYPI_PASSWORD` that we configured earlier to
@@ -258,8 +258,47 @@ On the page of our repository, let's create a new release
    Create a new release.
 
 We will be prompted to a form to describe the release. In particular, we will have to define a tag for the release,
-which should correspond to the version of the package, we will use `1.0.0`.
+which should correspond to the `resources/VERSION` file of the package, we will use `1.0.0`.
 
 .. figure:: /image/tutorial_template/github_configure_release.png
 
    The release form.
+
+By clicking the `Publish release` button, we automatically trigger the execution of the GitHub action that is defined
+in the `python-publish.yml` file. It will automatically take care of the upload of the package.
+
+To follow what is going on, we have to go to the `Actions` tab of our GitHub repository.
+
+.. figure:: /image/tutorial_template/github_action_tab_release_failed.png
+
+   The GitHub `Actions` tab is where we found if the release went according to plan. The red cross indicates that it
+   went wrong.
+
+If we click on the workflow that corresponds to the release, we see that something went wrong during the `deploy` step.
+
+.. figure:: /image/tutorial_template/github_see_action_log.png
+
+   The `deploy` step of the release action went wrong.
+
+Let’s click on it, it will open the log of the release workflow.
+
+.. figure:: /image/tutorial_template/github_action_log_error.png
+
+   Access the log of the workflow to get information about what went wrong. Here it indicates that we used a name for
+   the package that was already taken.
+
+.. note::
+    This last step has been done (quite ;) ) on purpose to show how to debug a workflow.
+
+After correcting the name of the package from `pymodaq_plugins_fk` to `pymodaq_plugins_fkk` the release process went
+well!
+
+.. figure:: /image/tutorial_template/github_release_green.png
+
+   The workflow went well, we are green!
+
+Let’s make a research of our package on PyPI, the upload should be quite instantaneous... Here it is! :)
+
+.. figure:: /image/tutorial_template/pypi_package_published.png
+
+   Our package has been uploaded to PyPI!! :)
