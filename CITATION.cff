@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Weber"
+  given-names: "Sébastien J."
+  orcid: "https://orcid.org/0000-0001-8531-5551"
+title: "PyMoDAQ: An open-source Python-based software for modular data acquisition"
+version: 4.2.4
+doi: 10.1063/5.0032116
+date-released: 2024-07-15
+url: "https://github.com/PyMoDAQ/PyMoDAQ"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Weber"
+    given-names: "Sébastien J."
+    orcid: "https://orcid.org/0000-0001-8531-5551"
+  doi: "10.1063/5.0032116"
+  journal: "Review of Scientific Instruments"
+  month: 4
+  start: 045104 # First page number
+  end: 11 # Last page number
+  title: "PyMoDAQ: An open-source Python-based software for modular data acquisition"
+  issue: 4
+  volume: 92
+  year: 2021
