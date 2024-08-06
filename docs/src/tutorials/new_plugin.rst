@@ -6,36 +6,36 @@ How to create and release a new plugin for PyMoDAQ?
 +------------------------------------+---------------------------------------+
 | Author email                       | sebastien.weber@cemes.fr              |
 +------------------------------------+---------------------------------------+
-| Last update                        | July 2024                             |
+| Last update                        | August 2024                           |
 +------------------------------------+---------------------------------------+
 | Difficulty                         | Intermediate                          |
 +------------------------------------+---------------------------------------+
 
 
 
-In this tutorial, we will learn how to create a brand new :term:`plugin` either for adding instruments, models or
-extensions. We will then release it on PyPI so that every PyMoDAQ user can use it and contribute to its development!
+In this tutorial, we will learn how to create a brand new :term:`plugin` for adding either instruments, models or
+extensions. We will then release it on PyPI so that every PyMoDAQ user can use it and contribute to its development.
 
-Prerequisite
-------------
+Prerequisites
+-------------
 
-We will suppose that you have followed these tutorials:
+We suppose that you have followed these tutorials:
 
 * :ref:`Basics of Git and GitHub <git_tutorial>`
 * :ref:`contribute_to_pymodaq_code`
 
 In the latter, we presented how to interact with existing repositories but what if:
 
-* you have an instrument from a manufacturer that doesn't have yet its package!
-* you want to build a brand new extension to the :ref:`Dashboard_module`!
+* you have an instrument from a manufacturer that doesn't have yet its package?
+* you want to build a brand new extension to the :ref:`Dashboard_module`?
 
 No worries, you don't have to start from scratch, but from a fairly complete template package!
 
 The PyMoDAQ's plugin template repository
 ----------------------------------------
 
-Among all the PyMoDAQ related github repository, there is one that is not a real one. This is the
-`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_ (see :numref:`template_repo`)
+Among all the PyMoDAQ related GitHub repositories, there is one that is a bit different. This is the
+`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_ (see :numref:`template_repo`).
 
 
 .. _template_repo:
@@ -46,7 +46,7 @@ Among all the PyMoDAQ related github repository, there is one that is not a real
 
 You see that on this repository home page, a new green button `Use this template` appeared (red box on figure).
 By clicking on it, you'll be prompted to *create a new repository*. In the next page, you'll be prompted to enter
-a owner and a name for the repo, see :numref:`create_repo`:
+a owner and a name for the repository (see :numref:`create_repo`).
 
 
 .. _create_repo:
@@ -55,24 +55,31 @@ a owner and a name for the repo, see :numref:`create_repo`:
 
    The creation page of the new plugin repository
 
-In there, you can choose as a owner either yourself or the PyMoDAQ organisation if you're already part of it. If not
-but you are willing, just send an email to the mailing list asking for it and you'll be added and set as the
-manager of your future new plugin package. The name of the plugin as to follow the rule:
-`pymodaq_plugins_<my_repo_name>` where you have to replace *<my_repo_name>* by the name of the manufacturer if you're
-planning to add instruments or a clear name for your application/extension... Make it *Public* because we want to share
+You can choose as a owner either yourself or an organisation that you are part of.
+
+.. note::
+   If you wish to be part of the PyMoDAQ organization, send an email to the mailing list *pymodaq@services.cnrs.fr*.
+   You can host there your future package and be set as the manager.
+
+The name of the plugin as to follow the naming convention `pymodaq_plugins_<my_repo_name>` where you have to replace
+*<my_repo_name>*
+by the name of the manufacturer if you're
+planning to add instruments or a clear name for your application/extension...
+
+Make the repository *Public* because we want to share
 our work within the PyMoDAQ community!
 
-That's it, your new github repo compatible with PyMoDAQ is created. You now have to properly configure it!
+That's it, our new GitHub repository compatible with PyMoDAQ is created. We now have to configure it properly.
 
 Configuring a new plugin repository
 -----------------------------------
 
-For a correct configuration (for your plugin be installable and recognised by PyMoDAQ), you'll have to modify a few
-files and folders. :numref:`template_structure` highlight the package initial structure. You'll have to:
+For a correct configuration (for your plugin to be installable and recognised by PyMoDAQ), you'll have to modify a few
+files and folders. :numref:`template_structure` highlights the package initial structure. You'll have to:
 
-* rename with the new package name the two directories in **highlighted red**.
-* fill in the appropriate information in plugin_info.toml and README.rst files, highlighted in green
-* rename the python instrument file, highlighted in purple with the dedicated instrument name (see
+* rename with the new package name the two directories **highlighted in red**.
+* fill in the appropriate information in plugin_info.toml and README.rst files, **highlighted in green**.
+* rename the python instrument file, **highlighted in purple** with the dedicated instrument name (see
   :ref:`plugin_development` for details on instrument, python file and class name convention).
 * add appropriate default settings in the config_template.toml file (do not rename it) in the resources folder.
 * remove the unused instrument example files of the template repository in the *daq_move_plugins* and
@@ -92,8 +99,8 @@ files and folders. :numref:`template_structure` highlight the package initial st
 Releasing on PyPI
 -----------------
 
-What is PyPI?
-+++++++++++++
+What is PyPI? What is TestPyPI?
++++++++++++++++++++++++++++++++
 
 In the Python ecosystem, we often install packages using the `pip` application. But what happens when we execute
 `pip install mypackage`? Well `pip` is actually looking on a web server for the existence of such a package, then
@@ -102,13 +109,13 @@ download and install it. This server is the PyPI `Python Package Index <https://
 Developers who wish to share their package with others can therefore upload their package there as it is so easy to
 install it using `pip`. In our case, we will upload there our plugin as a Python package.
 
-In the following, we will release our plugin on `TestPyPI`. The latter is exactly the same as PyPI, except that the
-Python packages that are stored there are not accessible with pip. It has been created so that we can safely test the
+In the following, we will release our plugin on `TestPyPI`. It is exactly the same as PyPI, except that the
+Python packages that are stored there are not accessible with *pip*. It has been created so that we can safely test the
 release procedure without interacting with the actual PyPI. When we will be ready to actually release a plugin, we will
 just have to follow the procedure bellow, replacing TestPyPI by PyPI.
 
-Create an account on PyPI
-+++++++++++++++++++++++++
+Create an account on TestPyPI
++++++++++++++++++++++++++++++
 
 Let's go to `test.pypi.org <https://test.pypi.org/>`_ to create an account.
 
@@ -116,9 +123,9 @@ Let's go to `test.pypi.org <https://test.pypi.org/>`_ to create an account.
 
 .. figure:: /image/tutorial_template/pypi_register.png
 
-   Creation of an account on PyPI.
+   Creation of an account on TestPyPI.
 
-After the registration, we will have to configure the two factor authentication (2FA). We first need to generate
+After the registration, we have to configure the two factor authentication (2FA). We first need to generate
 recovery codes.
 
 .. figure:: /image/tutorial_template/pypi_recovery_codes.png
@@ -132,7 +139,8 @@ It will generate 8 of them. Save the .txt file on a safe drive.
    Save the recovery codes.
 
 To configure 2FA, we will need to scan a QR code with an authentication application.
-We will install the Firefox extension `Authenticator`.
+If you don’t have one, you can use the Firefox extension called Authenticator. We will install this one in this
+tutorial, but if you already have another one (1Password for example) you can use it instead.
 
 .. figure:: /image/tutorial_template/firefox_authenticator.png
 
@@ -151,11 +159,11 @@ Use `Authenticator` to scan the QR code. It will give us a 6-digit code that we 
    Configure the 2FA application.
 
 .. note::
-    Be careful to autorize `Authenticator` in private windows if you use them. Otherwise it will not appear in the
-    extensions menu.
+   If you want to be able to use Authenticator in private browsing mode, think about authorizing the extension for
+   this specific mode, otherwise it will not appear in the extensions bar.
 
-We will finally create an API token. The latter will be useful in the following to authorize GitHub to connect to our
-PyPI account.
+We will finally create an API token. It will be useful in the following to authorize GitHub to connect to our
+TestPyPI account.
 
 Let's go to the proper menu.
 
@@ -163,21 +171,22 @@ Let's go to the proper menu.
 
    Create an API token.
 
-We call this token `GitHub account` and make a copy.
+We call this token `GitHub account` in this example (but you can call it as you want) and make a copy of it.
 
 .. figure:: /image/tutorial_template/pypi_copy_token.png
 
    Copy the token.
 
 .. note::
-    Be careful to save the token properly as it will appear only once!
+    Be careful to save the token properly as it will appear only once. If you lose it, you will have to generate
+    a new one.
 
-That's it for now with PyPI. Let's now configure our GitHub account properly!
+That's it for now with TestPyPI. Let's now configure our GitHub account properly!
 
-Release our plugin on PyPI with GitHub actions
-++++++++++++++++++++++++++++++++++++++++++++++
+Release our plugin on TestPyPI with GitHub Actions
+++++++++++++++++++++++++++++++++++++++++++++++++++
 
-We will start by creating a GitHub organization. The latter is useful if you have several developers working in a team.
+We will start by creating a GitHub organization. This is useful if you have several developers working in a team.
 In the context of experimental physics, it is worth creating an organization for our lab group.
 
 Let's go in the tab `Your organization`, choose the free plan, and give it a name.
@@ -186,8 +195,8 @@ Let's go in the tab `Your organization`, choose the free plan, and give it a nam
 
    Create an organization.
 
-We will now save the PyPI token that we created just before in the settings of the organization, so that it will be
-authorized to access the PyPI account.
+We will now save the TestPyPI token that we created just before in the settings of the organization, so that it will be
+authorized to access the TestPyPI account.
 
 Once it is created, go to the `Settings` tab.
 
@@ -201,14 +210,14 @@ There we create two organization secrets.
 
 The name of the first one is `PYPI_USERNAME` and its value is `__token__`.
 
-The second one is `PYPI_PASSWORD`, within which we will paste the token from PyPI that we created in the previous
+The second one is `PYPI_PASSWORD`, within which we will paste the token from TestPyPI that we created in the previous
 section.
 
 .. figure:: /image/tutorial_template/fk_organization_new_secret.png
 
-   Create new secrets to allow the connection to the PyPI account.
+   Create new secrets to allow the connection to the TestPyPI account.
 
-Now the organization has the credentials to connect to our PyPI account.
+Now the organization has the credentials to connect to our TestPyPI account.
 
 Let's now create a new repository in the organization by using the plugin template, as we did at the beginning of the
 tutorial.
@@ -223,7 +232,8 @@ Then clone it on our local machine.
     Let's not forget to change the names of the folders and the files as described in the beginning of the tutorial!
 
 We will now have a look at the `.github/workflows` folder that is at the root of our repository. There are several
-files that correspond to `GitHub Actions`. Those are automated tasks that can be triggered by an action of the user on
+files that correspond to `GitHub Actions <https://docs.github.com/en/actions>`_.
+Those are automated tasks that can be triggered by an action of the user on
 GitHub. For example, it can trigger some automated tests when someone is pushing some code in his repository. Here we
 will be particularly interested in the `python-publish.yml` file.
 
@@ -233,10 +243,10 @@ will be particularly interested in the `python-publish.yml` file.
 
 This file is part of the template, and we do not need to enter into the details of its writing. It basically defines
 that when we will trigger a release from our GitHub repository, it will upload the current version of the repository
-to PyPI.
+to TestPyPI.
 
 We can notice that it makes use of the secrets `PYPI_USERNAME` and `PYPI_PASSWORD` that we configured earlier to
-authenticate to PyPI at the moment of the release.
+authenticate to TestPyPI at the moment of the release.
 
 Since here we want to discover the release process by releasing to TestPyPI rather than PyPI, we need to change the
 last line of the file and replace it by
@@ -244,27 +254,27 @@ last line of the file and replace it by
 ``twine upload -r testpypi dist/*``
 
 .. note::
-    In the case of an actual release, we should skip this last step!
+    In the case of a release to the actual PyPI, we should skip this last step!
 
 Finally, we should modify the `resources/VERSION` file of our repository, so that it corresponds to the release tag
 that we will use for our first release. We can use `1.0.0`.
 
 Commit and push those changes towards the remote repository. We are now ready to try our first release!
 
-On the page of our repository, let's create a new release
+On the page of our repository, let's create a new release.
 
 .. figure:: /image/tutorial_template/github_new_release.png
 
    Create a new release.
 
-We will be prompted to a form to describe the release. In particular, we will have to define a tag for the release,
-which should correspond to the `resources/VERSION` file of the package, we will use `1.0.0`.
+We are prompted to a form to describe the release. In particular, we have to define a tag for the release,
+which should correspond to the `resources/VERSION` file of the package, we use `1.0.0` as the first tag.
 
 .. figure:: /image/tutorial_template/github_configure_release.png
 
    The release form.
 
-By clicking the `Publish release` button, we automatically trigger the execution of the GitHub action that is defined
+By clicking the `Publish release` button, we automatically trigger the execution of the GitHub Action that is defined
 in the `python-publish.yml` file. It will automatically take care of the upload of the package.
 
 To follow what is going on, we have to go to the `Actions` tab of our GitHub repository.
@@ -297,8 +307,8 @@ well!
 
    The workflow went well, we are green!
 
-Let’s make a research of our package on PyPI, the upload should be quite instantaneous... Here it is! :)
+Let’s make a research of our package on TestPyPI, the upload should be quite instantaneous... Here it is! :)
 
 .. figure:: /image/tutorial_template/pypi_package_published.png
 
-   Our package has been uploaded to PyPI!! :)
+   Our package has been uploaded to TestPyPI!! :)
