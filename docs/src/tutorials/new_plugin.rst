@@ -1,7 +1,7 @@
 .. _new_plugin:
 
-How to create and release a new plugin for PyMoDAQ?
-===================================================
+Write and release a new plugin
+==============================
 
 +------------------------------------+---------------------------------------+
 | Author email                       | sebastien.weber@cemes.fr              |
@@ -312,3 +312,30 @@ Let’s make a research of our package on TestPyPI, the upload should be quite i
 .. figure:: /image/tutorial_template/pypi_package_published.png
 
    Our package has been uploaded to TestPyPI!! :)
+
+What are the consequences of a release on PyPI?
++++++++++++++++++++++++++++++++++++++++++++++++
+
+There are several consequences if we release a plugin on the actual PyPI (and not TestPyPI).
+
+First, our newly released plugin will automatically be proposed by the :ref:`Plugin Manager <section_installation>`.
+How is that miracle possible?! Because we respected the naming convention of our plugin, the Plugin Manager just has to
+search for the Python packages stored on PyPI that start with *pymodaq_plugins_...*. It is as simple as that!
+
+Secondly, the `list of supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>`_
+will also be updated.
+
+Resources
+---------
+
+If you want to understand better the tools that are used in this tutorials, here are a few external links.
+
+In this GitHub documentation
+`Building and testing Python <https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries>`_
+is explained in details how to write your own GitHub Actions to test and release a Python package.
+
+Here is the
+`PyPI documentation <https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/>`_
+about using GitHub Actions.
+
+Here is the `Twine documentation <https://twine.readthedocs.io/en/stable/>`_.
