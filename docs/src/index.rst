@@ -127,6 +127,7 @@ Please see :doc:`the changelog </changelog>`.
    :maxdepth: 3
    :caption: Contents:
 
+   quick_start
    features
    whats_new
    user
