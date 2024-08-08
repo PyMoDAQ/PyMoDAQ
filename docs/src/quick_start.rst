@@ -1,4 +1,6 @@
-Quick start
+.. _quick_start:
+
+Quick Start
 ===========
 
 PyMoDAQ installation on Windows is done in a few steps. We just need an internet connexion.
@@ -29,7 +31,7 @@ Let’s execute the installer and keep the default choices.
 Set up a new Python environment
 -------------------------------
 
-From the Windows Start menu, execute the *Anaconda Prompt*.
+From the Windows *Start* menu, execute the *Anaconda Prompt*.
 
 .. figure:: /image/quick_start/miniconda_prompt.png
 
@@ -42,10 +44,10 @@ Let’s execute the following command to create an environment called *pymodaq* 
 ``conda create -n pymodaq python=3.11``
 
 .. note::
-   * You can call the environment as you which.
+   * We can call the environment as we wish.
    * As a rule of thumb, choose the second last version of Python to be sure that PyMoDAQ is compatible.
 
-And the following one to activate it.
+And let’s activate it.
 
 ``conda activate pymodaq``
 
