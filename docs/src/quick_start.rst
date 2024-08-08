@@ -22,11 +22,9 @@ Let’s execute the installer and keep the default choices.
 
    It will actually install in particular:
 
-   * a **Python interpreter** (a *python.exe* file)
-   * **conda**, which we will use exclusively as a *Python environment manager*
-   * **pip**, which is a *Python package manager*
-
-   We do not need to understand in details those notions for now.
+   * a Python interpreter (a *python.exe* file)
+   * :term:`conda`
+   * :term:`pip <pip & PyPI>`
 
 Set up a new Python environment
 -------------------------------
@@ -75,6 +73,7 @@ This will prompt the following user interface. In the *Actuator* drop-down list,
 We can play a bit around to discover this module, and have a look at :ref:`the documentation <DAQ_Move_module>`.
 
 .. figure:: /image/quick_start/mock_actuator.png
+   :width: 300
 
    The DAQ_Move module.
 
@@ -83,4 +82,90 @@ The basic installation is now complete! :)
 Control a real instrument
 -------------------------
 
+Things get more complicated when it comes to control a real instrument. In principle, PyMoDAQ can control any
+instrument. However, each specific instrument needs a piece of code to be compatible with it, which we call an
+:term:`instrument plugin <plugin>`.
 
+List of supported instruments
++++++++++++++++++++++++++++++
+
+Numerous plugins are already available for common scientific equipment suppliers, they are referenced in the
+`list of supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>`_.
+
+.. figure:: /image/quick_start/supported_instruments_list.png
+
+   List of supported instruments.
+
+We can access it from the *Supported instruments* link on the website’s home page.
+
+.. figure:: /image/quick_start/supported_instruments.png
+
+   Link to the list of supported instruments.
+
+Install the software of the supplier
+++++++++++++++++++++++++++++++++++++
+
+To illustrate concretely the procedure, we suppose that we want to control a *Thorlabs Zelux* camera.
+
+.. figure:: /image/quick_start/zelux_camera.png
+   :width: 200
+
+   A Thorlabs Zelux camera.
+
+This camera is controlled with the
+`ThorCam software <https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=ThorCam>`_ that is provided by
+Thorlabs. Let’s download and install it.
+
+.. figure:: /image/quick_start/thorcam.png
+
+   The webpage to download Thorcam.
+
+Once it is installed, connect the camera and check that it is working.
+
+.. warning::
+   **It is crucial to first check that your instrument can be controlled with the supplier’s software before trying with
+   PyMoDAQ!**
+
+The Plugin Manager
+++++++++++++++++++
+
+Once we have checked that our camera is working, we know that the supplier’s drivers, if any, are installed, and that
+the communication between our camera and our computer is working. It is now time to control it with PyMoDAQ.
+
+We have seen that the *Thorlabs* plugin manages this type of camera.
+
+.. figure:: /image/quick_start/supported_instruments_list_thorlabs.png
+
+   The Zelux camera is supported by the Thorlabs plugin.
+
+In this case, we just have to install the Thorlabs plugin in our environment. To do so, we will use the Plugin Manager
+by executing the following command in our terminal
+
+``plugin_manager``
+
+A window is displayed to easily install the plugin.
+
+.. figure:: /image/quick_start/plugin_manager.png
+   :width: 400
+
+   The Plugin Manager interface.
+
+After the plugin installation, we launch a :ref:`DAQ_Viewer_module` with the following command
+
+``daq_viewer``
+
+### A FIGURE IS NEEDED HERE #######
+
+What if our instrument is not already supported?
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+If the instrument we want to interface is not in the list, we should firstly ask for advices from the PyMoDAQ
+community. The most efficient way to do so is to :ref:`raise an issue on GitHub <create_github_account>`. Let’s
+describe our project, the instrument we want to interface... We will probably get some help there!
+
+Secondly, we can consider to develop a plugin by our own. It is not that difficult, and a lot of documentation is
+available to help us step by step:
+
+* :ref:`Create & release a new plugin <new_plugin>`
+* :ref:`Story of an instrument plugin development <plugin_development>`
+* :ref:`Developer’s documentation on instrument plugin <instrument_plugin_doc>`
