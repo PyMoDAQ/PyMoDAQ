@@ -127,14 +127,9 @@ In that way, you're also helping in its promotion and amelioration.
 
 __ https://doi.org/10.1063/5.0032116
 
-Changelog
-*********
-
-Please see :doc:`the changelog </changelog>`.
-
 .. toctree::
    :numbered:
-   :maxdepth: 3
+   :maxdepth: 1
    :caption: Contents:
 
    quick_start
@@ -146,15 +141,6 @@ Please see :doc:`the changelog </changelog>`.
    feedback
    glossary
    api/api_doc
-   Supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
+   SUPPORTED INSTRUMENTS <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
    PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>
-
-..   usage/classDiagram
-
-
-Indices and tables
-==================
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
