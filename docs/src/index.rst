@@ -1,8 +1,3 @@
-.. DAQ_Pro_Aquisition documentation master file, created by
-   sphinx-quickstart on Mon Apr 16 15:21:28 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 PyMoDAQ
 =======
 
@@ -47,93 +42,55 @@ Training sessions and gathering of the community are organized every year.
 Overview
 --------
 
-PyMoDAQ has two purposes:
+PyMoDAQ is an advanced user interface to control and synchronize detectors and actuators.
+Each of these have their independent interface called respectively :ref:`DAQ Viewer <DAQ_Viewer_module>` and
+:ref:`DAQ Move <DAQ_Move_module>` *control modules*.
 
-* First, to provide a complete interface to perform automated measurements or logging data without having to write
-  a user/interface for each new experiment.
-* Second, to provide various tools (User interfaces, classes dedicated to specific tasks...) to easily build a :ref:`custom_app`
+Detectors and actuators can be wrapped together in a :ref:`Dashboard_module` which implements a particular experimental
+setup.
+The Dashboard has functionalities to fully configure
+all its detectors and actuators and
+save their configurations in a :term:`preset` file that will, at startup, load and initialize all modules.
 
-It is divided in two main components as shown on figure :numref:`overview_submodules`
+As soon as the Dashboard has been configured, all the :ref:`Dashboard Extensions <extensions>` can be used to perform
+advanced and
+automated tasks on the detectors and actuators.
 
-* The :ref:`Dashboard_module` and its control modules: :ref:`DAQ_Move_module` and  :ref:`DAQ_Viewer_module`
-* Extensions such as the :ref:`DAQ_Scan_module` or the :ref:`DAQ_Logger_module`
+* the :ref:`DAQ Scan <DAQ_Scan_module>` is the most common one. It allows to scan one or several actuators while
+  acquiring and saving data from the detectors. A very large class or experiments can be performed with this extension.
+* the :ref:`DAQ Logger <DAQ_Logger_module>` allows to log all the parameters of an experiment.
+* the :ref:`PID extension <PID_module>` allows to lock a parameter of the experiment with a feedback loop on the
+  actuators.
 
+... to introduce a few of them!
 
-   .. _overview_submodules:
+.. _overview_submodules:
 
 .. figure:: /image/pymodaq_diagram.png
    :alt: overview
 
-   PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions, DAQ_Logger for data logging and many other.
+   PyMoDAQ's Dashboard and its extensions: DAQ Scan for automated acquisitions, DAQ Logger for data logging and many
+   other.
 
+PyMoDAQ is maintained by a growing community of experimental physicists, and already implemented on many experiments.
 
-The Control modules are interfacing real instruments using user written plugins. The complete list of available plugins
-is maintained on this GitHub `repository`__ and installabled using the :ref:`PluginManager`
+By contributing to its development, you will learn the cutting edge tools of professional developers and start
+experiencing how efficient it is
+to code in a collaborative way!
 
-__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md
+Let’s go for a :ref:`quick_start`!
 
+.. toctree::
+   :caption: Supported instruments
 
-Information
-***********
-
-GitHub repo: https://github.com/PyMoDAQ
-
-Documentation: http://pymodaq.cnrs.fr/
-
-Scientific `article`__ on Review of Scientific Instruments journal
-
-General public `article`__ on Scientia
-
-List of available `plugins`__
-
-Video tutorials `here`__
-
-Mailing List: https://listes.services.cnrs.fr/wws/info/pymodaq
-
-
-Credits
-*******
-
-Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
-
-PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
-
-__ https://doi.org/10.1063/5.0032116
-
-__ https://www.scientia.global/dr-sebastien-weber-pymodaq-navigating-the-future-of-data-acquisition/
-
-__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/
-
-__ https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds
-
-
-Contribution
-************
-
-If you want to contribute see this page: :ref:`contributors`
-
-
-They use it
-***********
-See :ref:`feedback`
-
-
-Citation
-********
-
-By using PyMoDAQ, you are being asked to cite the article published in Review of Scientific
-Instruments `RSI 92, 045104 (2021)`__ when publishing results obtained with the help of its interface.
-In that way, you're also helping in its promotion and amelioration.
-
-__ https://doi.org/10.1063/5.0032116
+   Supported instruments <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
 
 .. toctree::
    :numbered:
    :maxdepth: 1
-   :caption: Contents:
+   :caption: Documentation
 
    quick_start
-   features
    whats_new
    user
    developer
@@ -141,6 +98,10 @@ __ https://doi.org/10.1063/5.0032116
    feedback
    glossary
    api/api_doc
-   SUPPORTED INSTRUMENTS <https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/README.md>
+   about
+
+.. toctree::
+   :caption: Related projects
+
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
    PyMoDAQ Plugins DAQmx <https://pymodaq.github.io/pymodaq_plugins_daqmx/>

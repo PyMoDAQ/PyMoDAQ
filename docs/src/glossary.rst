@@ -22,8 +22,9 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     GUI for actuators and detectors, with subsequent classes: ``DAQ_Move`` and ``DAQ_Viewer``, see :ref:`control_modules`
 
   DashBoard
-    GUI allowing configuration and loading of a *preset* of actuators and detectors. You can also start
-    extensions from its GUI such as the :ref:`DAQ_Scan_module`, :ref:`DAQ_Logger_module`, ... See :ref:`Dashboard_module`
+    GUI allowing configuration and loading of a :term:`preset` file of actuators and detectors. You can also start
+    extensions from its GUI such as the :ref:`DAQ_Scan_module`, :ref:`DAQ_Logger_module`, ... See
+    :ref:`the Dashboard section <Dashboard_module>` of the documentation.
 
   DataDim
     Enum for the dimensionality representation of the data object, for instance scalars have a dimensionality *Data0D*,
@@ -95,7 +96,7 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
 
   Preset
     XML file containing the number and type of control modules to be used for a given experiment. You can
-    create, modify and load a preset from the Dashboard
+    create, modify and load a preset from the :term:`Dashboard` menu bar.
 
   Signal
     Signal and Navigation is a term taken from the hyperspy package vocabulary. It is useful when dealing with
