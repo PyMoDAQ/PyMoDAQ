@@ -3,13 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to PyMoDAQ's documentation!
-===================================
+PyMoDAQ
+=======
 
-PyMoDAQ is an open-source software, officially supported by the CNRS, to perform modular data acquisition with Python.
-It proposes a set of modules used to interface any kind of experiments. It simplifies the interaction with detector and
-actuator hardware to go straight to the data acquisition of interest.
+PyMoDAQ is a free and open-source software, officially supported by the CNRS, to perform modular data acquisition with
+Python.
+It simplifies the interaction with detector and
+actuator hardware to go straight to the data acquisition of interest. It provides:
 
+* a graphical interface
+* the synchronization of the connected instruments
+* data saving
+... and many more features!
 
 .. raw:: html
 
@@ -25,8 +30,10 @@ __ https://youtu.be/TrRy6HL3h3c
 
    .. _training:
 
-Training
-********
+Next training sessions
+----------------------
+
+Training sessions and gathering of the community are organized every year.
 
 .. figure:: /image/Flyer_PyMoDAQ.png
    :alt: Flyer_femto
@@ -36,6 +43,9 @@ Training
 .. note::
    * Third edition of the PyMoDAQ's Days: Lyon 20/22 October 2024. Register on https://pymodaq-days.sciencesconf.org
    * Training session in Toulouse, France 17/19 June 2024
+
+Overview
+--------
 
 PyMoDAQ has two purposes:
 
