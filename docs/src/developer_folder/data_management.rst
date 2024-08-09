@@ -10,7 +10,7 @@ transparently by all of PyMoDAQ's modules.
 
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 2
    :caption: Contents:
 
    data_management/data_objects

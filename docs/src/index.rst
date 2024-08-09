@@ -92,9 +92,8 @@ Let’s go for a :ref:`quick_start`!
 
    quick_start
    user
-   developer
    tutorials
-   feedback
+   developer
    glossary
    api/api_doc
    about
