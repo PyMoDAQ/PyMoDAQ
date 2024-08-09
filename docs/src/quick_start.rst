@@ -54,7 +54,7 @@ After this command, we should notice that the name in brackets in the terminal i
 Install PyMoDAQ
 ---------------
 
-After this preparation, the installation of PyMoDAQ is done with a single command line. It will take a few minutes to
+After this preparation, the installation of PyMoDAQ is done with a single command line. It takes a few minutes to
 download and install all the dependencies in our new environment.
 
 ``pip install pymodaq pyqt5``
@@ -68,9 +68,8 @@ command
 
 ``daq_move``
 
-This will prompt the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
+This prompts the following user interface. In the *Actuator* drop-down list, choose *Mock* and click
 *Initialization*. This will simulate numerically the behavior of a simple actuator, with the reading of its position.
-We can play a bit around to discover this module, and have a look at :ref:`the documentation <DAQ_Move_module>`.
 
 .. figure:: /image/quick_start/mock_actuator.png
    :width: 300
@@ -82,8 +81,8 @@ The basic installation is now complete! :)
 Control a real instrument
 -------------------------
 
-Things get more complicated when it comes to control a real instrument. In principle, PyMoDAQ can control any
-instrument. However, each specific instrument needs a piece of code to be compatible with it, which we call an
+In principle, PyMoDAQ can control any instrument.
+However, each specific hardware needs a supplementary package to be compatible with it, which we call an
 :term:`instrument plugin <plugin>`.
 
 List of supported instruments
@@ -169,3 +168,10 @@ available to help us step by step:
 * :ref:`Create & release a new plugin <new_plugin>`
 * :ref:`Story of an instrument plugin development <plugin_development>`
 * :ref:`Developer’s documentation on instrument plugin <instrument_plugin_doc>`
+
+We should also have a look at external Python driver libraries, the communication with our instrument may already be
+implemented there:
+
+* `PyMeasure <https://pymeasure.readthedocs.io/en/latest/index.html>`_
+* `PyLabLib <https://pylablib.readthedocs.io/en/latest/index.html>`_
+* `Instrumental <https://instrumental-lib.readthedocs.io/en/stable/index.html>`_
