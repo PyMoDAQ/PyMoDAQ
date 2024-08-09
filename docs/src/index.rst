@@ -91,7 +91,6 @@ Let’s go for a :ref:`quick_start`!
    :caption: Documentation
 
    quick_start
-   whats_new
    user
    developer
    tutorials
