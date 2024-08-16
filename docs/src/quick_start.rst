@@ -122,8 +122,8 @@ Thorlabs. Let’s download and install it.
 Once it is installed, connect the camera and check that it is working.
 
 .. warning::
-   **It is crucial to first check that your instrument can be controlled with the supplier’s software before trying with
-   PyMoDAQ!**
+   It is crucial to first check that your instrument can be controlled with the supplier’s software before trying with
+   PyMoDAQ!
 
 The Plugin Manager
 ++++++++++++++++++
@@ -165,9 +165,9 @@ describe our project, the instrument we want to interface... We will probably ge
 Secondly, we can consider to develop a plugin by our own. It is not that difficult, and a lot of documentation is
 available to help us step by step:
 
-* :ref:`Create & release a new plugin <new_plugin>`
+* :ref:`Developer’s documentation on instrument plugins <instrument_plugin_doc>`
 * :ref:`Story of an instrument plugin development <plugin_development>`
-* :ref:`Developer’s documentation on instrument plugin <instrument_plugin_doc>`
+* :ref:`Create & release a new plugin <new_plugin>`
 
 We should also have a look at external Python driver libraries, the communication with our instrument may already be
 implemented there:
@@ -175,3 +175,30 @@ implemented there:
 * `PyMeasure <https://pymeasure.readthedocs.io/en/latest/index.html>`_
 * `PyLabLib <https://pylablib.readthedocs.io/en/latest/index.html>`_
 * `Instrumental <https://instrumental-lib.readthedocs.io/en/stable/index.html>`_
+
+Synchronize our instruments
+---------------------------
+
+Once all the instruments of our experimental setup are controlled with a dedicated
+:term:`control module <control modules>`, the most
+difficult task is behind us.
+
+We can now group them in a :ref:`Dashboard <dashboard_module>`,
+and enjoy all the
+features available through the Dashboard Extensions. The
+:ref:`DAQ Scan <daq_scan_module>` extension is the first one to consider, as it meets the needs of any experiment that
+consists in scanning automatically
+one or several parameters and save the detector’s output.
+
+Organization of the documentation
+---------------------------------
+
+The basic use of PyMoDAQ, that do not need any coding, is documentated in the :ref:`User’s Guide <user_guide>`.
+
+The :ref:`Tutorials <tutorials>` address specific questions about PyMoDAQ, but also about the Python ecosystem and
+useful tools for open-source development. As PyMoDAQ is not a library for developers but for experimental physicists
+and teachers, we find relevant to introduce those tools from scratch. The tutorials are of various difficulties that
+are indicated
+at the beginning of the page.
+
+We wish you a good experience :)
