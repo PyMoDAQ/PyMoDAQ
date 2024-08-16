@@ -80,6 +80,23 @@ to code in a collaborative way!
 
 Let’s go for a :ref:`quick_start`!
 
+Contact
+-------
+
+You can find video tutorials on the
+`YouTube channel <https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds>`_.
+
+Do not hesitate to address your questions to the mailing list
+`pymodaq@services.cnrs.fr <mailto:pymodaq@services.cnrs.fr>`_ or
+`sebastien.weber@cemes.fr <mailto:sebastien.weber@cemes.fr>`_.
+
+For detailed information about the code and the features of PyMoDAQ, please visit the
+`GitHub repository <https://github.com/pymodaq/pymodaq>`_. Do not hesitate to
+`submit an issue <https://github.com/pymodaq/pymodaq/issues>`_.
+
+If you would like to get updated with the evolutions of the PyMoDAQ project, please subscribe to the
+`mailing list <https://listes.services.cnrs.fr/wws/info/pymodaq>`_.
+
 .. toctree::
    :caption: Supported instruments
 
