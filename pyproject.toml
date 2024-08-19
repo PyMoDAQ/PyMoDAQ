@@ -1,16 +1,16 @@
 [build-system]
-requires = ["hatchling>=1.9.0",]
+requires = ["hatchling>=1.9.0", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pymodaq"
+name = "pymodaq_gui"
 dynamic = [
     "version",
 ]
-description = "Modular Data Acquisition with Python"
+description = "User Interface components for PyMoDAQ"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -32,37 +31,23 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    #"docutils==0.17.1",
     "easydict",
     "importlib_metadata; python_version<\"3.8\"",
     "multipledispatch",
     "numpy < 2.0.0",
     "packaging",
     "pint",
-    "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins_mock",
     "pyqtgraph>=0.12",
     "python-dateutil",
     "qdarkstyle",
     "qtpy",
     "scipy",
     "setuptools>=60",
-    "simple_pid",
     "toml",
-    "qtconsole",
-    "tables<3.9",  # issue with some version of required package blosc2>=2.2.8
-    "pyleco; python_version>=\"3.8\"",
-    "bayesian-optimization"
+    "pymodaq_utils"
 ]
 
 [project.scripts]
-daq_logger = "pymodaq.extensions.daq_logger:main"
-daq_move = "pymodaq.control_modules.daq_move:main"
-daq_scan = "pymodaq.extensions.daq_scan:main"
-daq_viewer = "pymodaq.control_modules.daq_viewer:main"
-dashboard = "pymodaq.dashboard:main"
-h5browser = "pymodaq.extensions.h5browser:main"
-parameter_example = "pymodaq.examples.parameter_ex:main"
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
@@ -70,7 +55,7 @@ Source = "https://github.com/PyMoDAQ/PyMoDAQ"
 Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version]
-path = "src/pymodaq/resources/VERSION"
+source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = [
