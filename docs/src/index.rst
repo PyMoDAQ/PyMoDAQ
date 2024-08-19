@@ -1,14 +1,15 @@
 PyMoDAQ
 =======
 
-PyMoDAQ is a free and open-source software, officially supported by the CNRS, to perform modular data acquisition with
-Python.
+PyMoDAQ is a free and open-source software, officially supported by the CNRS, to efficiently setup the acquisition
+program of your experiment with Python.
 It simplifies the interaction with detector and
 actuator hardware to go straight to the data acquisition of interest. It provides:
 
 * a graphical interface
 * the synchronization of the connected instruments
 * data saving
+* a modular architecture to easily integrate new instruments in your setup
 ... and many more features!
 
 .. raw:: html
@@ -94,7 +95,7 @@ For detailed information about the code and the features of PyMoDAQ, please visi
 `GitHub repository <https://github.com/pymodaq/pymodaq>`_. Do not hesitate to
 `submit an issue <https://github.com/pymodaq/pymodaq/issues>`_.
 
-If you would like to get updated with the evolutions of the PyMoDAQ project, please subscribe to the
+If you would like to get updated with the evolutions of the project, please subscribe to the
 `mailing list <https://listes.services.cnrs.fr/wws/info/pymodaq>`_.
 
 .. toctree::

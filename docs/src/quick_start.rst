@@ -153,7 +153,17 @@ After the plugin installation, we launch a :ref:`DAQ_Viewer_module` with the fol
 
 ``daq_viewer``
 
-### A FIGURE IS NEEDED HERE #######
+.. warning::
+   Let’s not forget to disconnect the camera from ThorCam or any other program.
+
+We then have to select the correct *DAQ type* (here 2D because the detector outputs a matrix of pixels) (1), the
+corresponding plugin (2), the specific camera through its serial number (3), initialize the communication with the
+camera (4), and get a snapshot (5).
+
+.. figure:: /image/quick_start/quick_start_image_thorlabs.png
+   :width: 800
+
+   Snapshot from a Thorlabs camera equipped with an objective, in a DAQ Viewer.
 
 What if our instrument is not already supported?
 ++++++++++++++++++++++++++++++++++++++++++++++++
