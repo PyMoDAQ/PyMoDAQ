@@ -123,7 +123,7 @@ Once it is installed, connect the camera and check that it is working.
 
 .. warning::
    It is crucial to first check that your instrument can be controlled with the supplier’s software before trying with
-   PyMoDAQ!
+   PyMoDAQ.
 
 The Plugin Manager
 ++++++++++++++++++
@@ -154,7 +154,7 @@ After the plugin installation, we launch a :ref:`DAQ_Viewer_module` with the fol
 ``daq_viewer``
 
 .. warning::
-   Let’s not forget to disconnect the camera from ThorCam or any other program.
+   Let’s not forget to disconnect the camera from ThorCam or any other program before trying to communicate with it.
 
 We then have to select the correct *DAQ type* (here 2D because the detector outputs a matrix of pixels) (1), the
 corresponding plugin (2), the specific camera through its serial number (3), initialize the communication with the
