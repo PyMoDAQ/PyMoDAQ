@@ -14,8 +14,8 @@ from pyleco.core import COORDINATOR_PORT
 from pyleco.utils.listener import Listener, PipeHandler
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import ioxml
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_gui.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
 from pymodaq.utils.leco.utils import serialize_object
 

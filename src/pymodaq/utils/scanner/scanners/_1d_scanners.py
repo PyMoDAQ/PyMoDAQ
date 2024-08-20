@@ -7,11 +7,14 @@ Created the 05/12/2022
 from typing import List, Tuple, Any, TYPE_CHECKING
 import re
 import numpy as np
-from pymodaq.utils.data import Axis, DataDistribution
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import math_utils as mutils
-from pymodaq.utils import config as configmod
-from pymodaq.utils.plotting.scan_selector import Selector
+
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import math_utils as mutils
+from pymodaq_utils import config as configmod
+
+from pymodaq_data.data import Axis, DataDistribution
+
+from pymodaq.utils.scanner.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 

@@ -20,23 +20,26 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils import utils
+from pymodaq.utils.gui_utils import get_splash_sc
+from pymodaq_utils import config as config_mod
+from pymodaq.utils.exceptions import ActuatorError
+from pymodaq_utils.warnings import deprecation_msg
+from pymodaq.utils.data import DataToExport, DataActuator
+from pymodaq_data.h5modules.backends import Node
+
+from pymodaq_gui.parameter import ioxml, Parameter
+from pymodaq_gui.parameter import utils as putils
+
+from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
-from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
+from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI
 from pymodaq.control_modules.move_utility_classes import MoveCommand, DAQ_Move_base
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.gui_utils import get_splash_sc
-from pymodaq.utils import config as config_mod
-from pymodaq.utils.exceptions import ActuatorError
-from pymodaq.utils.messenger import deprecation_msg
-from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.data import DataRaw, DataToExport, DataFromPlugins, DataActuator
-from pymodaq.utils.h5modules.backends import Node
-from pymodaq.utils.parameter import ioxml, Parameter
-
 from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
+from pymodaq.utils.daq_utils import get_plugins
 
 
 local_path = config_mod.get_set_local_dir()
@@ -44,7 +47,7 @@ sys.path.append(str(local_path))
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
-DAQ_Move_Actuators = utils.get_plugins('daq_move')
+DAQ_Move_Actuators = get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
 if len(ACTUATOR_TYPES) == 0:
     raise ActuatorError('No installed Actuator')

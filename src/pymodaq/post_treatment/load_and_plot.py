@@ -10,14 +10,17 @@ from typing import List, Union, Callable, Iterable, Dict
 
 from qtpy import QtWidgets, QtCore
 
-from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker
-from pymodaq.utils.h5modules.data_saving import DataLoader
-from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewerDispatcher
-from pymodaq.utils.plotting.data_viewers import ViewersEnum, Viewer1D, Viewer2D, ViewerND
-from pymodaq.utils.gui_utils import Dock, DockArea
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq_utils.logger import set_logger, get_module_name
 
+from pymodaq_data.data import DataToExport, DataDim, enum_checker
+from pymodaq_data.h5modules.data_saving import DataLoader
+
+from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase, ViewerDispatcher
+from pymodaq_gui.plotting.data_viewers import ViewersEnum, Viewer1D, Viewer2D, ViewerND
+from pymodaq_gui.utils import Dock, DockArea
+
+from pymodaq.utils.data import DataFromPlugins
 
 logger = set_logger(get_module_name(__file__))
 

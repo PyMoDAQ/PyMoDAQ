@@ -6,7 +6,7 @@ Created the 19/11/2023
 """
 
 from pathlib import Path
-from pymodaq.utils.config import BaseConfig, getitem_recursive
+from pymodaq_utils.config import BaseConfig
 
 
 class ScanConfig(BaseConfig):

@@ -1,19 +1,21 @@
 import random
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import daq_utils as utils
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import utils
+
+from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
+
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
+from pymodaq.utils.daq_utils import get_plugins
 
-from pyqtgraph.parametertree.Parameter import registerParameterType
-from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 logger = set_logger(get_module_name(__file__))
 
-DAQ_Move_Stage_type = utils.get_plugins('daq_move')
-DAQ_0DViewer_Det_types = utils.get_plugins('daq_0Dviewer')
-DAQ_1DViewer_Det_types = utils.get_plugins('daq_1Dviewer')
-DAQ_2DViewer_Det_types = utils.get_plugins('daq_2Dviewer')
-DAQ_NDViewer_Det_types = utils.get_plugins('daq_NDviewer')
+DAQ_Move_Stage_type = get_plugins('daq_move')
+DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
+DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
+DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
+DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
 def iterative_show_pb(params):

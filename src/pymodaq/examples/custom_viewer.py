@@ -1,10 +1,10 @@
-from pymodaq.utils.gui_utils.widgets.table import SpinBoxDelegate
-from  pymodaq.utils.parameter.utils import get_widget_from_tree
-from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq_gui.utils.widgets.table import SpinBoxDelegate
+from  pymodaq_gui.parameter.utils import get_widget_from_tree
+from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils import gui_utils as gutils
-from pyqtgraph.dockarea import Dock
-from pymodaq.utils.parameter import ParameterTree, Parameter
-from pymodaq.utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
+from pymodaq_gui.utils import Dock
+from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.parameter.pymodaq_ptypes.tableview import TableViewCustom
 from pymodaq.utils.scanner.scanners.tabular import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot
 from qtpy import QtWidgets

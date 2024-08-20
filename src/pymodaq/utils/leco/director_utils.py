@@ -8,8 +8,8 @@ from typing import Optional, Union, List
 
 from pyleco.directors.director import Director
 
-import pymodaq.utils.parameter.utils as putils
-from pymodaq.utils.parameter import Parameter, ioxml
+import pymodaq_gui.parameter.utils as putils
+from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq.control_modules.move_utility_classes import DataActuator
 from pymodaq.utils.leco.utils import serialize_object
 

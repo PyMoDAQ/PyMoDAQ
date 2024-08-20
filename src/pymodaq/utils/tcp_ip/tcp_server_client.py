@@ -14,17 +14,19 @@ import numpy as np
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
+
+from pymodaq_utils.utils import getLineInfo, ThreadCommand
+from pymodaq_utils import math_utils as mutils
+from pymodaq_utils.config import Config
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter import Parameter
+from pymodaq_data.data import DataToExport
+
 from pymodaq.utils.data import DataFromPlugins, DataActuator
-from pymodaq.utils import math_utils as mutils
-from pymodaq.utils.config import Config
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.data import DataToExport
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
-from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 config = Config()
 

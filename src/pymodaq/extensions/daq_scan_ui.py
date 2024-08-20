@@ -10,15 +10,17 @@ from typing import List, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
-from pymodaq.utils.gui_utils import CustomApp
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import Config, get_set_preset_path
-from pymodaq.utils.gui_utils import DockArea, Dock
-from pymodaq.utils.gui_utils.widgets.spinbox import QSpinBox_ro
-from pymodaq.utils.parameter.pymodaq_ptypes.led import QLED
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
-from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import Config
+
+from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
+from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+
 
 if TYPE_CHECKING:
     from pymodaq.utils.parameter import ParameterTree

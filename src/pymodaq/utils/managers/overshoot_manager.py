@@ -2,11 +2,9 @@ from qtpy import QtWidgets
 import sys
 import os
 
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.parameter import ParameterTree, Parameter
-from pyqtgraph.parametertree.Parameter import registerParameterType
-from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
-from pymodaq.utils.gui_utils import select_file
+from pymodaq_gui.parameter import ioxml, Parameter, ParameterTree
+from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
+from pymodaq_gui.utils import select_file
 
 # check if overshoot_configurations directory exists on the drive
 from pymodaq.utils.config import get_set_overshoot_path

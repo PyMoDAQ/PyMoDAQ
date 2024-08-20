@@ -15,13 +15,13 @@ from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.utils import ControlModuleUI
 
-from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, QLED
-from pymodaq.utils.gui_utils import Dock
-from pymodaq.utils.config import Config
+from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
+from pymodaq_gui.utils import Dock
+from pymodaq_utils.config import Config
 from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
-from pymodaq.utils.enums import enum_checker
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_utils.enums import enum_checker
 
 
 viewer_factory = ViewerFactory()

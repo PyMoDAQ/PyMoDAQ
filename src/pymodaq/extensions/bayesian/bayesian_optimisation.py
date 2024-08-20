@@ -6,24 +6,27 @@ from qtpy import QtWidgets, QtCore
 import time
 import numpy as np
 
-
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
-from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq_utils import utils
+from pymodaq_utils import config as configmod
+from pymodaq_utils.logger import set_logger, get_module_name
+
+from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
+from pymodaq_gui.utils import QLED
+from pymodaq_gui import utils as gutils
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.h5modules.saving import H5Saver
+
+from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
+
+
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
                                                BayesianAlgorithm, UtilityKind,
                                                UtilityParameters, StopType, StoppingParameters)
-from pymodaq.utils.gui_utils import QLED
-from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.h5modules.data_saving import DataEnlargeableSaver
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.bayesian.utils import BayesianConfig
-from pymodaq.utils import config as configmod
-from pymodaq.utils.logger import set_logger, get_module_name
 
 
 EXTENSION_NAME = 'BayesianOptimisation'

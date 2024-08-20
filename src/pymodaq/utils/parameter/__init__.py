@@ -1,13 +1,6 @@
-from qtpy import QtWidgets
+from pymodaq_gui.parameter import Parameter, ParameterTree, utils, ioxml, pymodaq_ptypes
 
-from pyqtgraph.parametertree import parameterTypes, Parameter, ParameterTree
-from . import pymodaq_ptypes
+from pymodaq_utils.warnings import deprecation_msg
 
-
-class ParameterTree(ParameterTree):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.header().setVisible(True)
-        self.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Interactive)
-        self.header().setMinimumSectionSize(150)
+deprecation_msg('Importing Parameter stuff from pymodaq is deprecated in pymodaq>5.0.0,'
+                'please use the pymodaq_gui package')

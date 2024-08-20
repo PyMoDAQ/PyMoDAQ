@@ -12,8 +12,8 @@ from typing import Union
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
 
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import Parameter
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector

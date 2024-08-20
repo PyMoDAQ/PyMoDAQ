@@ -12,15 +12,15 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QToolBar, QComboBox
 
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.gui_utils.custom_app import CustomApp
-from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
-from pymodaq.control_modules.utils import ControlModuleUI
-from pymodaq.utils.gui_utils import DockArea
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq.utils.data import DataWithAxes, DataToExport, DataActuator
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.config import Config
+from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq_gui.utils import DockArea
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 
-from pymodaq.utils.config import Config
+from pymodaq.control_modules.utils import ControlModuleUI
+from pymodaq.utils.data import DataToExport, DataActuator
+
 
 config = Config()
 

@@ -11,18 +11,22 @@ from easydict import EasyDict as edict
 
 from qtpy import QtCore
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
-from pymodaq.utils.gui_utils import CustomApp
-from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
-from pymodaq.utils.config import Config
+
+from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
+from pymodaq_utils.config import Config
+from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.logger import get_base_logger
+
+from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.parameter import Parameter, ioxml
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
-from pymodaq.utils.parameter import Parameter, ioxml
-from pymodaq.utils.managers.parameter_manager import ParameterManager
-from pymodaq.utils.enums import BaseEnum, enum_checker
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
 from pymodaq.utils.exceptions import DetectorError
-from pymodaq.utils import config as configmod
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
-from pymodaq.utils.logger import get_base_logger
+
+from pymodaq.utils.daq_utils import get_plugins
 
 
 class DAQTypesEnum(BaseEnum):
@@ -123,7 +127,7 @@ class ControlModule(QObject):
         self._tcpclient_thread = None
         self._hardware_thread = None
         self.module_and_data_saver = None
-        self.plugin_config: Optional[configmod.Config] = None
+        self.plugin_config: Optional[Config] = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
@@ -300,7 +304,7 @@ class ControlModule(QObject):
     def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""
         if config is not None:
-            from pymodaq.utils.gui_utils.widgets.tree_toml import TreeFromToml
+            from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
             config_tree = TreeFromToml(config)
             config_tree.show_dialog()
 

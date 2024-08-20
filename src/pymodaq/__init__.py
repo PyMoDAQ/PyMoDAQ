@@ -29,8 +29,8 @@ try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
     #     __version__ = fvers.read().strip()
 
-    from pymodaq.utils.logger import set_logger
-    from pymodaq.utils.daq_utils import get_version
+    from pymodaq_utils.logger import set_logger
+    from pymodaq_utils.utils import get_version
     __version__ = get_version()
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
@@ -55,15 +55,16 @@ try:
     logger.info('')
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
-    from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
-    from pymodaq.utils.daq_utils import get_instrument_plugins
-    from pymodaq.utils.config import Config
-    from pymodaq.utils.scanner.utils import register_scanners
-    from pymodaq.utils.plotting.plotter.plotter import register_plotter, PlotterFactory
+    from pymodaq_gui.plotting import data_viewers  # imported here as to avoid circular imports later on
+    from pymodaq_gui.qt_utils import setLocale, set_qt_backend
+    from pymodaq.utils.daq_utils import copy_preset, get_instrument_plugins
 
-    # issue on windows when using .NET code within multithreads, this below allows it but requires the
-    # pywin32 (pythoncom) package
+    from pymodaq_utils.config import Config
+    from pymodaq.utils.scanner.utils import register_scanners
+    from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
+
+    # issue on windows when using .NET code within multithreads, this below allows it but requires
+    # the pywin32 (pythoncom) package
     if importlib.util.find_spec('clr') is not None:
         try:
             import pythoncom

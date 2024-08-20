@@ -1,25 +1,26 @@
 import os
 import sys
 
-import pymodaq.utils.config
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtGui, QtWidgets
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.gui_utils import select_file
-from pymodaq.utils.parameter import ParameterTree, Parameter
-from pyqtgraph.parametertree import registerParameterType
-from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
+
+from pymodaq.utils.config import get_set_remote_path
+
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.utils import select_file
+from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 
 logger = set_logger(get_module_name(__file__))
-remote_path = pymodaq.utils.config.get_set_remote_path()
+remote_path = get_set_remote_path()
 remote_types = ['ShortCut', 'Joystick']
 
 actuator_actions = ['move_Rel', 'move_Rel_p', 'move_Rel_m']
 detector_actions = ['snap', 'grab', 'stop']
 remote_types = ['Keyboard', 'Joystick']
+
 try:
     import pygame
     is_pygame = True
@@ -122,7 +123,8 @@ class ScalableGroupModules(GroupParameter):
         #         param['show_pb'] = True
 
         if self.opts['modtype'] == 'Actuator':
-            child = {'title': f'Actuator {typ}', 'name': f'{name_prefix}{newindex:03d}', 'type': 'group',
+            child = {'title': f'Actuator {typ}', 'name': f'{name_prefix}{newindex:03d}',
+                     'type': 'group',
                      'removable': True, 'children': params, 'removable': True, 'renamable': False}
         else:
             child = {'title': f'Detector {typ}', 'name': f'det_{newindex:03d}', 'type': 'group',

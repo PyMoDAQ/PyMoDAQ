@@ -9,9 +9,11 @@ from pathlib import Path
 import pkgutil
 import warnings
 
-from pymodaq.utils import logger as logger_module
-from pymodaq.utils.daq_utils import get_entrypoints
-from pymodaq.utils.data import DataToExport
+from pymodaq_utils.utils import get_entrypoints
+
+from pymodaq_utils import logger as logger_module
+
+
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 

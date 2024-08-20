@@ -2,25 +2,28 @@ import time
 from functools import partial  # needed for the button to sync setpoint with currpoint
 import numpy as np
 
-from pyqtgraph.widgets.SpinBox import SpinBox
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter import Parameter, ParameterTree
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_val
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
+
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
+from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.custom_app import CustomApp
+
+from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
+from pymodaq_utils.config import Config
+
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.extensions.pid.utils import get_models
-from pymodaq.utils.gui_utils.dock import DockArea, Dock
-from pymodaq.utils.gui_utils.custom_app import CustomApp
-from pymodaq.utils.gui_utils.widgets.label import LabelWithFont
-from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataRaw, DataToActuators
-from pymodaq.utils.config import Config
+from pymodaq.utils.data import DataActuator, DataToActuators
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))

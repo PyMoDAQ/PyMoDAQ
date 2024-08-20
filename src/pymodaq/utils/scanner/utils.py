@@ -8,11 +8,13 @@ from importlib import import_module
 from pathlib import Path
 
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import Config
-from pymodaq.utils.daq_utils import get_entrypoints
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import Config
+from pymodaq_utils.utils import get_entrypoints
+from pymodaq_utils.enums import BaseEnum
+
 from pymodaq.utils.scanner.scan_factory import ScannerFactory
-from pymodaq.utils.enums import BaseEnum
+
 
 logger = set_logger(get_module_name(__file__))
 config = Config()

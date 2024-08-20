@@ -1,11 +1,13 @@
-from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import Qt, QObject, QTimer
-from pyqtgraph.dockarea import Dock
-from pymodaq.utils.gui_utils import DockArea
 import time
 from datetime import timedelta
 import sys
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Qt, QObject, QTimer
+
+
+from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class PushButtonShortcut(QtWidgets.QPushButton):

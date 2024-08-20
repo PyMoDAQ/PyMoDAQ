@@ -18,30 +18,31 @@ import numpy as np
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import Config, get_set_preset_path
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
-from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.config import Config
+from pymodaq_utils import utils
 
-from pymodaq.utils import exceptions
-from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.utils.plotting.navigator import Navigator
-from pymodaq.utils.plotting.scan_selector import ScanSelector, SelectorItem
+from pymodaq_data import data as data_mod
+from pymodaq_data.h5modules import data_saving
+
+from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq_gui.plotting.navigator import Navigator
+
+from pymodaq_gui.messenger import messagebox
+from pymodaq_gui import utils as gutils
+from pymodaq_gui.h5modules.saving import H5Saver
+
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.utils.messenger import messagebox
 from pymodaq.extensions.daq_scan_ui import DAQScanUI
+from pymodaq.utils.h5modules import module_saving
 
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.h5modules import module_saving, data_saving
-from pymodaq.utils.data import DataToExport, DataActuator
+from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
+from pymodaq.utils.data import DataActuator
 
 
 if TYPE_CHECKING:
@@ -52,6 +53,11 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 SHOW_POPUPS = config('scan', 'show_popups')
+
+
+class DAQ_ScanException(Exception):
+    """Raised when an error occur within the DAQScan"""
+    pass
 
 
 class ScanDataTemp:
@@ -589,7 +595,7 @@ class DAQScan(QObject, ParameterManager):
         positions = [posx, posy]
         positions = positions[:self.scanner.n_axes]
         actuators = self.modules_manager.actuators
-        dte = DataToExport(name="move_at")
+        dte = data_mod.DataToExport(name="move_at")
         for ind, pos in enumerate(positions):
             dte.append(DataActuator(actuators[ind].title, data=float(pos)))
 
@@ -745,7 +751,8 @@ class DAQScan(QObject, ParameterManager):
 
     def set_scan(self, scan=None) -> bool:
         """
-        Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
+        Sets the current scan given the selected settings. Makes some checks,
+        increments the h5 file scans.
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
@@ -755,22 +762,25 @@ class DAQScan(QObject, ParameterManager):
 
             is_oversteps = self.scanner.set_scan()
             if is_oversteps:
-                messagebox(text=f"An error occurred when establishing the scan steps. Actual settings "
-                                f"gives approximately {int(self.scanner.n_steps)} steps."
-                                f" Please check the steps number "
-                                f"limit in the config file ({config['scan']['steps_limit']}) or modify"
-                                f" your scan settings.")
+                messagebox(
+                    text=f"An error occurred when establishing the scan steps. Actual settings "
+                         f"gives approximately {int(self.scanner.n_steps)} steps."
+                         f" Please check the steps number "
+                         f"limit in the config file ({config['scan']['steps_limit']}) or modify"
+                         f" your scan settings.")
 
             if self.modules_manager.Nactuators != self.scanner.n_axes:
-                messagebox(text="There are not enough or too much selected move modules for this scan")
+                messagebox(
+                    text="There are not enough or too much selected move modules for this scan")
                 return False
 
             if self.scanner.scan_sub_type == 'Adaptive':
                 #todo include this in scanners objects for the adaptive scanners
                 if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    messagebox(text="In adaptive mode, you have to pick a 0D signal from which the algorithm will"
-                                    " determine the next positions to scan, see 'probe_data' in the modules selector"
-                                    " panel")
+                    messagebox(
+                        text="In adaptive mode, you have to pick a 0D signal from which the "
+                             "algorithm will determine the next positions to scan, see 'probe_data'"
+                             " in the modules selector panel")
                     return False
 
             self.ui.n_scan_steps = self.scanner.n_steps
@@ -778,11 +788,11 @@ class DAQScan(QObject, ParameterManager):
             # check if the modules are initialized
             for module in self.modules_manager.actuators:
                 if not module.initialized_state:
-                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
+                    raise DAQ_ScanException('module ' + module.title + " is not initialized")
 
             for module in self.modules_manager.detectors:
                 if not module.initialized_state:
-                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
+                    raise DAQ_ScanException('module ' + module.title + " is not initialized")
 
             self.ui.enable_start_stop(True)
             return True
@@ -1166,7 +1176,7 @@ class DAQScanAcquisition(QObject):
 
 
 def main():
-    from pymodaq.utils.gui_utils.utils import mkQApp
+    from pymodaq_gui.utils.utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DAQScan')

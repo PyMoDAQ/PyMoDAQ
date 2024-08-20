@@ -8,12 +8,13 @@ from base64 import b64encode, b64decode
 import numbers
 from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
 
-
 import numpy as np
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.data import DataWithAxes, DataToExport, Axis, DwaType
-from pymodaq.utils.parameter import Parameter, utils as putils, ioxml
+from pymodaq_data import data as data_mod
+from pymodaq_data.data import DataWithAxes, DataToExport, Axis, DwaType
 
+from pymodaq_gui.parameter import Parameter, utils as putils, ioxml
+
+import pymodaq.utils.data as data_mod_pymodaq
 
 if TYPE_CHECKING:
     from pymodaq.utils.tcp_ip.mysocket import Socket
@@ -733,15 +734,19 @@ class DeSerializer:
         if class_name not in DwaType.names():
             raise TypeError(f'Attempting to deserialize a DataWithAxes flavor but got the bytes for a {class_name}')
         timestamp = self.scalar_deserialization()
-        dwa = getattr(data_mod, class_name)(self.string_deserialization(),
-                                            source=self.string_deserialization(),
-                                            dim=self.string_deserialization(),
-                                            distribution=self.string_deserialization(),
-                                            data=self.list_deserialization(),
-                                            labels=self.list_deserialization(),
-                                            origin=self.string_deserialization(),
-                                            nav_indexes=tuple(self.list_deserialization()),
-                                            axes=self.list_deserialization(),
+        try:
+            dwa_class = getattr(data_mod, class_name)
+        except AttributeError:  # in case it is a particular data object defined only in pymodaq
+            dwa_class = getattr(data_mod_pymodaq, class_name)
+        dwa = dwa_class(self.string_deserialization(),
+                        source=self.string_deserialization(),
+                        dim=self.string_deserialization(),
+                        distribution=self.string_deserialization(),
+                        data=self.list_deserialization(),
+                        labels=self.list_deserialization(),
+                        origin=self.string_deserialization(),
+                        nav_indexes=tuple(self.list_deserialization()),
+                        axes=self.list_deserialization(),
                                             )
         errors = self.list_deserialization()
         if len(errors) != 0:

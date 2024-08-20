@@ -9,11 +9,12 @@ from easydict import EasyDict as edict
 
 import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
-from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.utils.config import Config, get_set_local_dir
+from pymodaq_utils.utils import ThreadCommand, getLineInfo
+
+from pymodaq_utils.config import Config, get_set_local_dir
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
-from pymodaq.utils.data import DataToExport, DataRaw
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq_data.data import DataToExport, DataRaw
+from pymodaq_utils.warnings import deprecation_msg
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
 

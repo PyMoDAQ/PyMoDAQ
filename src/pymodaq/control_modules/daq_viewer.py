@@ -20,28 +20,36 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq.utils.data import DataFromPlugins, DataToExport, Axis, DataDistribution
-from pymodaq.utils.logger import set_logger, get_module_name
+
+from pymodaq_data.data import DataToExport, Axis, DataDistribution
+from pymodaq.utils.data import DataFromPlugins
+
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ParameterControlModule
-from pymodaq.utils.gui_utils.file_io import select_file
-from pymodaq.utils.gui_utils.widgets.lcd import LCD
-from pymodaq.utils.config import Config, get_set_local_dir
-from pymodaq.utils.h5modules.browsing import browse_data
-from pymodaq.utils.h5modules.saving import H5Saver
+
+from pymodaq_gui.utils.file_io import select_file
+from pymodaq_gui.utils.widgets.lcd import LCD
+
+from pymodaq_utils.config import Config, get_set_local_dir
+from pymodaq_gui.h5modules.browsing import browse_data
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.h5modules.backends import Node
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import ioxml, Parameter
-from pymodaq.utils.parameter import utils as putils
+from pymodaq_data.h5modules.backends import Node
+from pymodaq_utils.utils import ThreadCommand
+
+from pymodaq_gui.parameter import ioxml, Parameter
+from pymodaq_gui.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.messenger import deprecation_msg
-from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
+from pymodaq_utils import utils
+from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_gui.utils import DockArea, Dock
+
+from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
-from pymodaq.utils.enums import enum_checker
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
 from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands

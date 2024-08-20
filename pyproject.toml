@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.9.0",]
+requires = ["hatchling>=1.9.0", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,7 +10,7 @@ dynamic = [
 description = "Modular Data Acquisition with Python"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -32,7 +31,9 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    #"docutils==0.17.1",
+    "pymodaq_utils",
+    "pymodaq_gui",
+    "pymodaq_data",
     "easydict",
     "importlib_metadata; python_version<\"3.8\"",
     "multipledispatch",
@@ -70,7 +71,7 @@ Source = "https://github.com/PyMoDAQ/PyMoDAQ"
 Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version]
-path = "src/pymodaq/resources/VERSION"
+source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = [

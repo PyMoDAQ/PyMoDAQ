@@ -1,15 +1,18 @@
+import os
+import sys
+
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject
 
-import pymodaq.utils.parameter.ioxml
-from pymodaq.utils.parameter import ParameterTree, Parameter
+from pymodaq_utils.config import get_set_local_dir
 
-import sys
-from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq_gui.h5modules.browsing import browse_data
+
 from pymodaq.post_treatment.daq_measurement.daq_measurement_main import DAQ_Measurement
-from pymodaq.utils.h5modules.browsing import browse_data
-import os
-from pymodaq.utils.config import get_set_local_dir
+
 
 local_path = get_set_local_dir()
 calib_path = os.path.join(local_path, 'camera_calibrations')
@@ -135,8 +138,8 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
                        ]},
                    ]}, ]
         param_obj = Parameter.create(name='Axes_Settings', type='group', children=params)
-        pymodaq.utils.parameter.ioxml.parameter_to_xml_file(param_obj,
-                                                                os.path.join(calib_path, os.path.split(self.fname)[1]))
+        ioxml.parameter_to_xml_file(param_obj,
+                                    os.path.join(calib_path, os.path.split(self.fname)[1]))
         self.settings.child(('data_saved')).setValue(True)
         self.settings.child(('filepath')).setValue(os.path.join(calib_path, os.path.split(self.fname)[1]))
 

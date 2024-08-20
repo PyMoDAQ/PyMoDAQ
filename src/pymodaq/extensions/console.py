@@ -4,15 +4,17 @@ Created the 25/10/2022
 
 @author: Sebastien Weber
 """
-from qtpy import QtWidgets
+
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
-from pymodaq.utils import config as configmod
-from pymodaq.utils.daq_utils import get_version
+
+from pymodaq_utils import config as configmod
+from pymodaq_utils.utils import get_version
 
 
 config = configmod.Config()
-BANNER = f'PyMoDAQ v{get_version()}\n' \
+
+BANNER = f'PyMoDAQ v{get_version("pymodaq")}\n' \
          'Main objects available for interaction:\n'\
          '* dashboard: Main Dashboard Object\n'\
          '* mods: ModuleManager of the dashboard\'s Control Modules\n'\
@@ -54,8 +56,7 @@ class QtConsole(RichJupyterWidget):
 
 
 def main():
-    from pymodaq.utils.gui_utils.utils import mkQApp
-
+    from pymodaq_gui.utils.utils import mkQApp
 
     app = mkQApp('Console')
 

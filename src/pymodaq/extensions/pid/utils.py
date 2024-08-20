@@ -5,12 +5,17 @@ import warnings
 from pathlib import Path
 from typing import Union, List
 
-from pymodaq.utils.gui_utils.dock import DockArea
+from pymodaq_utils.logger import get_module_name, set_logger
+from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
+
+from pymodaq_gui.utils.dock import DockArea
+
+from pymodaq_data.data import DataToExport
+
 from pymodaq.utils.daq_utils import get_plugins
-from pymodaq.utils.logger import get_module_name, set_logger
-from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
-from pymodaq.utils.data import DataToExport, DataCalculated, DataActuator, DataToActuators
-from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.data import DataActuator, DataToActuators
+
 
 logger = set_logger(get_module_name(__file__))
 

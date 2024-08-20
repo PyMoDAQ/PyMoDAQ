@@ -3,10 +3,10 @@ import random
 
 from typing import Callable, Sequence, List
 
-import pymodaq.utils.parameter.utils as putils
+import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.utils.parameter import Parameter
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener

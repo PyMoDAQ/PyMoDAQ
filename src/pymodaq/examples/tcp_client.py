@@ -15,7 +15,7 @@ You should see the TCP server printing the sinus in its 0D data viewer
 import numpy as np
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClientTemplate
-from pymodaq.utils.data import DataToExport, DataRaw
+from pymodaq_data.data import DataToExport, DataRaw
 
 
 class TCPClient(TCPClientTemplate):

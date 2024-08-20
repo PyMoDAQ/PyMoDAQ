@@ -4,7 +4,7 @@ from typing import Any, Union, get_args
 
 # import also the DeSerializer for easier imports in dependents
 from pymodaq.utils.tcp_ip.serializer import SERIALIZABLE, Serializer, DeSerializer  # type: ignore  # noqa
-from pymodaq.utils.logger import set_logger
+from pymodaq_utils.logger import set_logger
 
 
 logger = set_logger('leco_utils')

@@ -13,19 +13,21 @@ from typing import Callable, Union, List, Tuple, TYPE_CHECKING
 import numpy as np
 from qtpy import QtWidgets
 
-from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
-from pymodaq.utils.parameter.utils import get_param_path, iter_children_params
-from pymodaq.utils.factory import ObjectFactory
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.data import Axis, DataDistribution
-from pymodaq.utils.abstract import abstract_attribute
-from pymodaq.utils import math_utils as mutils
-from pymodaq.utils import config as configmod
+from pymodaq_utils.factory import ObjectFactory
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.abstract import abstract_attribute
+from pymodaq_utils import math_utils as mutils
+from pymodaq_utils import config as configmod
+
+from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+
+from pymodaq_data.data import Axis, DataDistribution
+
 from pymodaq.utils.scanner.scan_config import ScanConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
-    from pymodaq.utils.plotting.scan_selector import Selector
+    from pymodaq.utils.scanner.scan_selector import Selector
 
 
 logger = set_logger(get_module_name(__file__))

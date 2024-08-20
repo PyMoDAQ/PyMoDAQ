@@ -1,29 +1,26 @@
+from collections import OrderedDict
+from pathlib import Path
+import sys
 from typing import List
 
-import pymodaq.utils.config
-import pymodaq.utils.gui_utils.dock
-import pymodaq.utils.gui_utils.file_io
-import pymodaq.utils.messenger
 from qtpy import QtWidgets, QtCore
-import sys
-import os
 
-from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import config as config_mod
+
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.utils import Dock, file_io, DockArea
+from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.messenger import messagebox
+
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.gui_utils import Dock
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import config as config_mod
-from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.scanner import Scanner
 from pymodaq.utils.scanner.scan_factory import ScannerBase
-from pymodaq.utils.scanner.utils import ScanType #, adaptive_losses
-from pathlib import Path
-from collections import OrderedDict
-from pymodaq.utils.messenger import messagebox
+from pymodaq.utils.config import get_set_batch_path
 
 logger = set_logger(get_module_name(__file__))
 
-batch_path = config_mod.get_set_batch_path()
+batch_path = get_set_batch_path()
 
 params = [
     {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
@@ -92,7 +89,7 @@ class BatchManager(ParameterManager):
 
         """
         if filename is None or filename is False:
-            filename = pymodaq.utils.gui_utils.file_io.select_file(start_path=self.batch_path, save=False, ext='xml')
+            filename = file_io.select_file(start_path=self.batch_path, save=False, ext='xml')
             if filename == '':
                 return
 
@@ -301,7 +298,7 @@ class BatchScanner(QtCore.QObject):
 
     def load_file(self, filepath=None):
         if filepath is None:
-            path = pymodaq.utils.gui_utils.file_io.select_file(start_path=batch_path, save=False, ext='xml')
+            path = file_io.select_file(start_path=batch_path, save=False, ext='xml')
             if path != '':
                 filepath = path
             else:
@@ -319,7 +316,7 @@ def main_batch_scanner():
     from pymodaq.control_modules.mocks import MockDAQMove, MockDAQViewer
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = pymodaq.utils.gui_utils.dock.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
 
     # prog = BatchManager(msgbox=False, actuators=['Xaxis', 'Yaxis'], detectors=['Det0D', 'Det1D'])

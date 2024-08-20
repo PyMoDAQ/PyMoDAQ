@@ -11,24 +11,24 @@ import importlib
 import pkgutil
 import inspect
 import numpy as np
-from qtpy import QtWidgets
-import tempfile
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
 
+from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.enums import BaseEnum
+from pymodaq_utils.config import BaseConfig
 
-from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.data import (DataToExport, DataActuator, DataToActuators, DataCalculated,
+from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
+
+from pymodaq_data.data import (DataToExport, DataCalculated,
                                 DataRaw, Axis)
+
+from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
-from pymodaq.utils.enums import BaseEnum
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.config import BaseConfig
 
 
 if TYPE_CHECKING:

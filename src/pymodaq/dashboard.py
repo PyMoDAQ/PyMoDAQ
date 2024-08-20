@@ -13,31 +13,33 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.gui_utils import DockArea, Dock, select_file
-import pymodaq.utils.gui_utils.layout as layout_mod
-from pymodaq.utils.gui_utils.utils import start_qapplication
-from pymodaq.utils.messenger import messagebox
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils import daq_utils as utils
+from pymodaq_plugin_manager.manager import PluginManager
+from pymodaq_plugin_manager.validate import get_pypi_pymodaq
+
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import utils
+from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
+from pymodaq_utils import config as configmod
+
+from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.utils import DockArea, Dock, select_file
+import pymodaq_gui.utils.layout as layout_mod
+from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.managers.roi_manager import ROISaver
+
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.daq_utils import get_version, find_dict_in_list_from_key_val
 from pymodaq.utils.managers.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
-from pymodaq.utils.managers.roi_manager import ROISaver
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError, MasterSlaveError
-from pymodaq.utils import config as configmod
-from pymodaq.utils.parameter import ParameterTree, Parameter
+from pymodaq.utils.daq_utils import get_instrument_plugins
 from pymodaq.utils.leco.utils import start_coordinator
+from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-
 from pymodaq import extensions as extmod
 
-from pymodaq_plugin_manager.manager import PluginManager
-from pymodaq_plugin_manager.validate import get_pypi_pymodaq
-from pymodaq.utils.daq_utils import get_instrument_plugins
 
 get_instrument_plugins()
 
@@ -47,12 +49,12 @@ config = configmod.Config()
 
 local_path = configmod.get_set_local_dir()
 now = datetime.datetime.now()
-preset_path = configmod.get_set_preset_path()
+preset_path = config_mod_pymodaq.get_set_preset_path()
 log_path = configmod.get_set_log_path()
-layout_path = configmod.get_set_layout_path()
-overshoot_path = configmod.get_set_overshoot_path()
-roi_path = configmod.get_set_roi_path()
-remote_path = configmod.get_set_remote_path()
+layout_path = config_mod_pymodaq.get_set_layout_path()
+overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
+roi_path = config_mod_pymodaq.get_set_roi_path()
+remote_path = config_mod_pymodaq.get_set_remote_path()
 
 extensions = extmod.get_extensions()
 
@@ -124,11 +126,13 @@ class DashBoard(QObject):
 
     def set_extra_preset_params(self, params, param_options=[]):
         self.extra_params = params
-        self.preset_manager = PresetManager(path=self.preset_path, extra_params=params, param_options=param_options)
+        self.preset_manager = PresetManager(path=self.preset_path, extra_params=params,
+                                            param_options=param_options)
 
     def add_status(self, txt):
         """
-            Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
+            Add the QListWisgetItem initialized with txt informations to the User Interface
+             logger_list and to the save_parameters.logger array.
 
             =============== =========== ======================
             **Parameters**    **Type**   **Description**
@@ -235,7 +239,8 @@ class DashBoard(QObject):
         """ Init and load an extension from a plugin package
 
         ext: dict
-            dictionary containing info on the extension plugin package and class to be loaded, it contains four
+            dictionary containing info on the extension plugin package and class to be loaded,
+             it contains four
             keys:
 
             * pkg: the name of the plugin package
@@ -317,12 +322,13 @@ class DashBoard(QObject):
         load_overshoot = self.overshoot_menu.addMenu('Load Overshoots')
 
         slots_over = dict([])
-        for ind_file, file in enumerate(configmod.get_set_overshoot_path().iterdir()):
+        for ind_file, file in enumerate(config_mod_pymodaq.get_set_overshoot_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots_over[filestem] = load_overshoot.addAction(filestem)
                 slots_over[filestem].triggered.connect(
-                    self.create_menu_slot_over(configmod.get_set_overshoot_path().joinpath(file)))
+                    self.create_menu_slot_over(
+                        config_mod_pymodaq.get_set_overshoot_path().joinpath(file)))
 
         self.roi_menu = menubar.addMenu('ROI Modes')
         action_new_roi = self.roi_menu.addAction('Save Current ROIs as a file')
@@ -333,12 +339,12 @@ class DashBoard(QObject):
         load_roi = self.roi_menu.addMenu('Load roi configs')
 
         slots = dict([])
-        for ind_file, file in enumerate(configmod.get_set_roi_path().iterdir()):
+        for ind_file, file in enumerate(config_mod_pymodaq.get_set_roi_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots[filestem] = load_roi.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot_roi(configmod.get_set_roi_path().joinpath(file)))
+                    self.create_menu_slot_roi(config_mod_pymodaq.get_set_roi_path().joinpath(file)))
 
         self.remote_menu = menubar.addMenu('Remote/Shortcuts Control')
         self.remote_menu.addAction('New remote config.', self.create_remote)
@@ -347,12 +353,13 @@ class DashBoard(QObject):
         load_remote = self.remote_menu.addMenu('Load remote config.')
 
         slots = dict([])
-        for ind_file, file in enumerate(configmod.get_set_remote_path().iterdir()):
+        for ind_file, file in enumerate(config_mod_pymodaq.get_set_remote_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots[filestem] = load_remote.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot_remote(configmod.get_set_remote_path().joinpath(file)))
+                    self.create_menu_slot_remote(
+                        config_mod_pymodaq.get_set_remote_path().joinpath(file)))
 
         # actions menu
         self.actions_menu = menubar.addMenu('Extensions')
@@ -449,7 +456,8 @@ class DashBoard(QObject):
 
     def modify_remote(self):
         try:
-            path = select_file(start_path=configmod.get_set_remote_path(), save=False, ext='xml')
+            path = select_file(start_path=config_mod_pymodaq.get_set_remote_path(), save=False,
+                               ext='xml')
             if path != '':
                 self.remote_manager.set_file_remote(path)
 
@@ -460,7 +468,8 @@ class DashBoard(QObject):
 
     def modify_overshoot(self):
         try:
-            path = select_file(start_path=configmod.get_set_overshoot_path(), save=False, ext='xml')
+            path = select_file(start_path=config_mod_pymodaq.get_set_overshoot_path(),
+                               save=False, ext='xml')
             if path != '':
                 self.overshoot_manager.set_file_overshoot(path)
 
@@ -471,7 +480,8 @@ class DashBoard(QObject):
 
     def modify_roi(self):
         try:
-            path = select_file(start_path=configmod.get_set_roi_path(), save=False, ext='xml')
+            path = select_file(start_path=config_mod_pymodaq.get_set_roi_path(),
+                               save=False, ext='xml')
             if path != '':
                 self.roi_saver.set_file_roi(path)
 
@@ -490,9 +500,10 @@ class DashBoard(QObject):
                     self.remove_preset_related_files(path.name)
                     if self.detector_modules:
                         mssg = QtWidgets.QMessageBox()
-                        mssg.setText('You have to restart the application to take the modifications into account!\n\n'
-                                     'The related files: ROI, Layout, Overshoot and Remote will be deleted'
-                                     ' if existing!\n\n'
+                        mssg.setText('You have to restart the application to take the modifications'
+                                     ' into account!\n\n'
+                                     'The related files: ROI, Layout, Overshoot and Remote will be'
+                                     ' deleted if existing!\n\n'
                                      'Quitting the application...')
                         mssg.exec()
                         self.restart_fun()
@@ -503,10 +514,10 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def remove_preset_related_files(self, name):
-        configmod.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
-        configmod.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
-        configmod.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
-        configmod.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
 
     def quit_fun(self):
         """
@@ -564,7 +575,8 @@ class DashBoard(QObject):
         ret = False
         mssg = QtWidgets.QMessageBox()
         if ask:
-            mssg.setText('You have to restart the application to take the modifications into account!')
+            mssg.setText('You have to restart the application to take the'
+                         ' modifications into account!')
             mssg.setInformativeText("Do you want to restart?")
             mssg.setStandardButtons(mssg.Ok | mssg.Cancel)
             ret = mssg.exec()
@@ -606,7 +618,8 @@ class DashBoard(QObject):
             path = layout_path.joinpath(self.preset_file.stem + '.dock')
             self.save_layout_state(path)
 
-    def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules):
+    def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms,
+                 actuators_modules):
 
         move_docks.append(Dock(plug_name, size=(150, 250)))
         if len(move_docks) == 1:
@@ -634,14 +647,16 @@ class DashBoard(QObject):
         move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
 
-    def add_det(self, plug_name, plug_settings, det_docks_settings, det_docks_viewer, detector_modules):
+    def add_det(self, plug_name, plug_settings, det_docks_settings, det_docks_viewer,
+                detector_modules):
 
         plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
         plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
         det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
         det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
         if len(detector_modules) == 0:
-            self.logger_dock.area.addDock(det_docks_settings[-1], 'bottom')  # dockarea of the logger dock
+            self.logger_dock.area.addDock(det_docks_settings[-1], 'bottom')
+            # dockarea of the logger dock
         else:
             self.dockarea.addDock(det_docks_settings[-1], 'right',
                                   detector_modules[-1].viewer_docks[-1])
@@ -705,12 +720,13 @@ class DashBoard(QObject):
             for plug in plugins:
                 plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()
                 if plug["type"] == 'det':
-                    plug['status'] = plug['value'].child('params', 'detector_settings', 'controller_status').value()
+                    plug['status'] = plug['value'].child(
+                        'params', 'detector_settings', 'controller_status').value()
                 else:
-                    if 'multiaxes' in [child.name() for child in plug['value'].child('params',
-                                                                                     'move_settings').children()]:
-                        plug['status'] = plug['value'].child('params', 'move_settings',
-                                                             'multiaxes', 'multi_status').value()
+                    if 'multiaxes' in [child.name() for child in plug['value'].child(
+                            'params', 'move_settings').children()]:
+                        plug['status'] = plug['value'].child(
+                            'params', 'move_settings', 'multiaxes', 'multi_status').value()
                     else:
                         plug['status'] = 'Master'
 
@@ -733,8 +749,9 @@ class DashBoard(QObject):
                     plug_name = plugin['value'].child('name').value()
                     plug_init = plugin['value'].child('init').value()
                     plug_settings = plugin['value'].child('params')
-                    self.splash_sc.showMessage('Loading {:s} module: {:s}'.format(plugin['type'], plug_name),
-                                               color=Qt.white)
+                    self.splash_sc.showMessage(
+                        'Loading {:s} module: {:s}'.format(plugin['type'], plug_name),
+                        color=Qt.white)
 
                     if plugin['type'] == 'move':
                         plug_type = plug_settings.child('main_settings', 'move_type').value()
@@ -752,10 +769,11 @@ class DashBoard(QObject):
                                 QtWidgets.QApplication.processEvents()
                                 master_controller = actuators_modules[-1].controller
                             elif plugin['status'] == "Master" and len(plug_IDs) > 1:
-                                raise MasterSlaveError(f'The instrument {plug_name} defined as Master has to be '
-                                                       f'initialized (init checked in the preset) in order to init '
-                                                       f'its associated slave instrument'
-                                                       )
+                                raise MasterSlaveError(
+                                    f'The instrument {plug_name} defined as Master has to be '
+                                    f'initialized (init checked in the preset) in order to init '
+                                    f'its associated slave instrument'
+                                )
                         else:
                             if plugin['status'] != "Slave":
                                 raise MasterSlaveError(f'The instrument {plug_name} should'
@@ -783,10 +801,11 @@ class DashBoard(QObject):
                                 QtWidgets.QApplication.processEvents()
                                 master_controller = detector_modules[-1].controller
                             elif plugin['status'] == "Master" and len(plug_IDs) > 1:
-                                raise MasterSlaveError(f'The instrument {plug_name} defined as Master has to be '
-                                                       f'initialized (init checked in the preset) in order to init '
-                                                       f'its associated slave instrument'
-                                                       )
+                                raise MasterSlaveError(
+                                    f'The instrument {plug_name} defined as Master has to be '
+                                    f'initialized (init checked in the preset) in order to init '
+                                    f'its associated slave instrument'
+                                )
                         else:
                             if plugin['status'] != "Slave":
                                 raise MasterSlaveError(f'The instrument {plug_name} should'
@@ -875,7 +894,8 @@ class DashBoard(QObject):
         if remote_action['action_type'] == 'shortcut':
             if remote_action['action_name'] not in self.shortcuts:
                 self.shortcuts[remote_action['action_name']] = \
-                    QtWidgets.QShortcut(QtGui.QKeySequence(remote_action['action_dict']['shortcut']), self.dockarea)
+                    QtWidgets.QShortcut(
+                        QtGui.QKeySequence(remote_action['action_dict']['shortcut']), self.dockarea)
             self.activate_shortcut(self.shortcuts[remote_action['action_name']],
                                    remote_action['action_dict'],
                                    activate=remote_action['action_dict']['activated'])
@@ -918,18 +938,20 @@ class DashBoard(QObject):
         contained in self.joysticks
         """
 
-        # # Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
         for action_dict in self.joysticks.values():
             if action_dict['activated'] and action_dict['actionner_type'].lower() == 'axis':
                 if action_dict['module_type'] == 'act':
-                    joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
+                    joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id',
+                                                               action_dict['joystickID'])
                     val = joy['obj'].get_axis(action_dict['actionnerID'])
                     if abs(val) > 1e-4:
-                        module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
-                                                                        mod=action_dict['module_type'])
+                        module = self.modules_manager.get_mod_from_name(
+                            action_dict['module_name'],
+                            mod=action_dict['module_type'])
                         action = getattr(module, action_dict['action'])
                         if module.move_done_bool:
-                            action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
+                            action(val * 1 * module.settings.child(
+                                'move_settings', 'epsilon').value())
 
         # # For other actions use the event loop
         for event in self.pygame.event.get():  # User did something.
@@ -945,18 +967,21 @@ class DashBoard(QObject):
             if len(selection) > 1:
                 for action_dict in self.joysticks.values():
                     if action_dict['activated']:
-                        module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
-                                                                        mod=action_dict['module_type'])
+                        module = self.modules_manager.get_mod_from_name(
+                            action_dict['module_name'],
+                            mod=action_dict['module_type'])
                         if action_dict['module_type'] == 'det':
                             action = getattr(module, action_dict['action'])
                         else:
                             action = getattr(module, action_dict['action'])
 
                         if action_dict['joystickID'] == selection['joy']:
-                            if action_dict['actionner_type'].lower() == 'button' and 'button' in selection:
+                            if (action_dict['actionner_type'].lower() == 'button' and
+                                    'button' in selection):
                                 if action_dict['actionnerID'] == selection['button']:
                                     action()
-                            elif action_dict['actionner_type'].lower() == 'hat' and 'hat' in selection:
+                            elif (action_dict['actionner_type'].lower() == 'hat' and
+                                  'hat' in selection):
                                 if action_dict['actionnerID'] == selection['hat']:
                                     action(selection['value'])
 
@@ -964,7 +989,8 @@ class DashBoard(QObject):
 
     def activate_shortcut(self, shortcut, action=None, activate=True):
         """
-        action = dict(shortcut=action.child(('shortcut')).value(), activated=True, name=f'action{ind:02d}',
+        action = dict(shortcut=action.child(('shortcut')).value(), activated=True,
+         name=f'action{ind:02d}',
                              action=action.child(('action')).value(), module_name=module)
         Parameters
         ----------
@@ -986,7 +1012,8 @@ class DashBoard(QObject):
                 pass
 
     def create_activated_shortcut(self, action):
-        module = self.modules_manager.get_mod_from_name(action['module_name'], mod=action['module_type'])
+        module = self.modules_manager.get_mod_from_name(action['module_name'],
+                                                        mod=action['module_type'])
         if action['module_type'] == 'det':
             return lambda: getattr(module, action['action'])()
         else:
@@ -1007,19 +1034,23 @@ class DashBoard(QObject):
                 det_titles = [det.title for det in self.detector_modules]
                 move_titles = [move.title for move in self.actuators_modules]
 
-                for det_param in self.overshoot_manager.overshoot_params.child(('Detectors')).children():
+                for det_param in self.overshoot_manager.overshoot_params.child(
+                        'Detectors').children():
                     if det_param.child(('trig_overshoot')).value():
                         det_index = det_titles.index(det_param.opts['title'])
                         det_module = self.detector_modules[det_index]
-                        det_module.settings.child('main_settings', 'overshoot', 'stop_overshoot').setValue(True)
-                        det_module.settings.child('main_settings', 'overshoot', 'overshoot_value').setValue(
-                            det_param.child(('overshoot_value')).value())
+                        det_module.settings.child(
+                            'main_settings', 'overshoot', 'stop_overshoot').setValue(True)
+                        det_module.settings.child(
+                            'main_settings', 'overshoot', 'overshoot_value').setValue(
+                            det_param['overshoot_value'])
                         for move_param in det_param.child(('params')).children():
-                            if move_param.child(('move_overshoot')).value():
+                            if move_param['move_overshoot']:
                                 move_index = move_titles.index(move_param.opts['title'])
                                 move_module = self.actuators_modules[move_index]
                                 det_module.overshoot_signal.connect(
-                                    self.create_overshoot_fun(move_module, move_param.child(('position')).value()))
+                                    self.create_overshoot_fun(
+                                        move_module, move_param['position']))
 
         except Exception as e:
             logger.exception(str(e))
@@ -1038,10 +1069,12 @@ class DashBoard(QObject):
         """
             | Set the managers mode from the given filename.
             |
-            | In case of "mock" or "canon" move, set the corresponding managers calling set_(*)_preset procedure.
+            | In case of "mock" or "canon" move, set the corresponding managers calling
+            set_(*)_preset procedure.
             |
             | Else set the managers file using set_file_preset function.
-            | Once done connect the move and detector modules to logger to recipe/transmit informations.
+            | Once done connect the move and detector modules to logger to recipe/transmit
+            informations.
 
             Finally update DAQ_scan_settings tree with :
                 * Detectors
@@ -1081,14 +1114,16 @@ class DashBoard(QObject):
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
                     area.window().setVisible(True)
-                messagebox(text=f'{str(error)}\nQuitting the application...', title='Incompatibility')
+                messagebox(text=f'{str(error)}\nQuitting the application...',
+                           title='Incompatibility')
                 logger.exception(str(error))
 
                 self.quit_fun()
                 return
 
             if not (not actuators_modules and not detector_modules):
-                self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
+                self.update_status('Preset mode ({}) has been loaded'.format(filename.name),
+                                   log_type='log')
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
                 self.actuators_modules = actuators_modules
                 self.detector_modules = detector_modules
@@ -1110,7 +1145,8 @@ class DashBoard(QObject):
                         for child in putils.iter_children_params(
                                 self.preset_manager.preset_params.child('model_settings'),
                                 []):
-                            preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
+                            preset_path = self.preset_manager.preset_params.child(
+                                'model_settings').childPath(child)
                             path = ['models', 'model_params']
                             path.extend(preset_path)
                             self.pid_module.settings.child(*path).setValue(child.value())
@@ -1119,9 +1155,10 @@ class DashBoard(QObject):
                             self.preset_manager.preset_params.child('pid_models').value())['class']
                         for setp in model_class.setpoints_names:
                             self.add_move(setp, None, 'PID', [], [], actuators_modules)
-                            actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
-                                                                    setpoint=self.pid_module.setpoints_signal,
-                                                                    emit_curr_points=self.pid_module.emit_curr_points_sig)
+                            actuators_modules[-1].controller = dict(
+                                curr_point=self.pid_module.curr_points_signal,
+                                setpoint=self.pid_module.setpoints_signal,
+                                emit_curr_points=self.pid_module.emit_curr_points_sig)
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(actuators_modules[-1])
@@ -1129,7 +1166,8 @@ class DashBoard(QObject):
 
                     # Update actuators modules and module manager
                     self.actuators_modules = actuators_modules
-                    self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
+                    self.modules_manager = ModulesManager(self.detector_modules,
+                                                          self.actuators_modules)
 
                 except Exception as e:
                     raise PIDError('Could not load the PID extension and create setpoints actuators'
@@ -1141,16 +1179,18 @@ class DashBoard(QObject):
                 # #
 
                 #####################################################
-                self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],
-                                                          actuators_modules=[move.title for move in actuators_modules])
+                self.overshoot_manager = OvershootManager(
+                    det_modules=[det.title for det in detector_modules],
+                    actuators_modules=[move.title for move in actuators_modules])
                 # load overshoot if present
                 file = filename.name
                 path = overshoot_path.joinpath(file)
                 if path.is_file():
                     self.set_overshoot_configuration(path)
 
-                self.remote_manager = RemoteManager(actuators=[move.title for move in actuators_modules],
-                                                    detectors=[det.title for det in detector_modules])
+                self.remote_manager = RemoteManager(
+                    actuators=[move.title for move in actuators_modules],
+                    detectors=[det.title for det in detector_modules])
                 # load remote file if present
                 file = filename.name
                 path = remote_path.joinpath(file)
@@ -1195,17 +1235,19 @@ class DashBoard(QObject):
     def update_init_tree(self):
         for act in self.actuators_modules:
             name = ''.join(act.title.split())  # remove empty spaces
-            if act.title not in [ac.title() for ac in putils.iter_children_params(self.settings.child(('actuators')), [])]:
+            if act.title not in [ac.title() for ac in putils.iter_children_params(
+                    self.settings.child('actuators'), [])]:
 
-                self.settings.child(('actuators')).addChild(
+                self.settings.child('actuators').addChild(
                     {'title': act.title, 'name': name, 'type': 'led', 'value': False})
                 QtWidgets.QApplication.processEvents()
             self.settings.child('actuators', name).setValue(act.initialized_state)
 
         for det in self.detector_modules:
             name = ''.join(det.title.split())  # remove empty spaces
-            if det.title not in [de.title() for de in putils.iter_children_params(self.settings.child(('detectors')), [])]:
-                self.settings.child(('detectors')).addChild(
+            if det.title not in [de.title() for de in putils.iter_children_params(
+                    self.settings.child('detectors'), [])]:
+                self.settings.child('detectors').addChild(
                     {'title': det.title, 'name': name, 'type': 'led', 'value': False})
                 QtWidgets.QApplication.processEvents()
             self.settings.child('detectors', name).setValue(det.initialized_state)
@@ -1230,7 +1272,7 @@ class DashBoard(QObject):
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
     def show_config(self):
-        from pymodaq.utils.gui_utils.widgets.tree_toml import TreeFromToml
+        from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
         config_tree = TreeFromToml()
         config_tree.show_dialog()
 
@@ -1248,15 +1290,21 @@ class DashBoard(QObject):
         self.logger_dock.addWidget(splitter)
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
-            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config('general', 'debug_level'),
+            {'title': 'Log level', 'name': 'log_level', 'type': 'list',
+             'value': config('general', 'debug_level'),
              'limits': config('general', 'debug_levels')},
 
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
-                {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'Remote file', 'name': 'remote_file', 'type': 'str', 'value': '', 'readonly': True},
+                {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '',
+                 'readonly': True},
+                {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '',
+                 'readonly': True},
+                {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '',
+                 'readonly': True},
+                {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '',
+                 'readonly': True},
+                {'title': 'Remote file', 'name': 'remote_file', 'type': 'str', 'value': '',
+                 'readonly': True},
             ]},
             {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
             {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
@@ -1296,11 +1344,6 @@ class DashBoard(QObject):
 
             Once done emit the update settings signal to link the commit.
 
-            =============== =================================== ================================================================
-            **Parameters**    **Type**                           **Description**
-            *param*           instance of ppyqtgraph parameter   the parameter to be checked
-            *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
-            =============== =================================== ================================================================
 
         """
 
@@ -1321,7 +1364,9 @@ class DashBoard(QObject):
     def show_about(self):
         self.splash_sc.setVisible(True)
         self.splash_sc.showMessage(
-            "PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()),
+            f"PyMoDAQ version {get_version('pymodaq')}\n"
+            f"Modular Acquisition with Python\n"
+            f"Written by Sébastien Weber",
             QtCore.Qt.AlignRight, QtCore.Qt.white)
 
     def check_version(self, show=True):
@@ -1338,13 +1383,15 @@ class DashBoard(QObject):
                 ret = msgBox.exec()
 
                 if ret == msgBox.Ok:
-                    command = [sys.executable, '-m', 'pip', 'install', f'pymodaq=={str(available_version)}']
+                    command = [sys.executable, '-m', 'pip', 'install',
+                               f'pymodaq=={str(available_version)}']
                     subprocess.Popen(command)
 
                     self.restart_fun()
             else:
                 if show:
-                    msgBox.setText(f"Your version of PyMoDAQ, {str(current_version)}, is up to date!")
+                    msgBox.setText(f"Your version of PyMoDAQ,"
+                                   f" {str(current_version)}, is up to date!")
                     ret = msgBox.exec()
         except Exception as e:
             logger.exception("Error while checking the available PyMoDAQ version")
@@ -1356,9 +1403,12 @@ class DashBoard(QObject):
             In case of :
                 * *scan* : Set parameters showing top false
                 * *dataset* : Set parameters showing top false
-                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
+                * *managers* : Set parameters showing top false.
+                Add the save/cancel buttons to the accept/reject dialog
+                (to save managers parameters in a xml file).
 
-            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
+            Finally, in case of accepted managers type info,
+            save the managers parameters in a xml file.
 
             =============== =========== ====================================
             **Parameters**    **Type**    **Description**
@@ -1414,7 +1464,7 @@ class DashBoard(QObject):
 
 
 def main():
-    from pymodaq.utils.gui_utils.utils import mkQApp
+    from pymodaq_gui.utils.utils import mkQApp
     app = mkQApp('Dashboard')
 
     win = QtWidgets.QMainWindow()

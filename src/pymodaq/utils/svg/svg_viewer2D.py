@@ -8,10 +8,9 @@ import sys
 
 import numpy as np
 
-from qtpy import QtWidgets, QtCore, QtSvg
-from pyqtgraph.widgets.GraphicsView import GraphicsView
-from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw
+from qtpy import QtWidgets
+from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.utils.data import Axis, DataFromRoi, DataFromPlugins
 
 
 def main():

@@ -1,2 +1,0 @@
-cd "C:\Users\Weber\Labo\Programmes Python\PyMoDAQ_Git\pymodaq\src\pymodaq\resources\QtDesigner_Ressources"
-C:\Miniconda3\envs\qt5tools\Scripts\pyrcc5 QtDesigner_ressources.qrc > QtDesigner_ressources_rc.py

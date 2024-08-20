@@ -7,18 +7,18 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
-import pymodaq.utils.daq_utils as utils
-import pymodaq.utils.parameter.utils as putils
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.parameter import ioxml
+from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
+from pymodaq_utils import config as configmod
+from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, find_keys_from_val
-from pymodaq.utils import config as configmod
+import pymodaq_gui.parameter.utils as putils
+from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter import ioxml
+
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
-from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
 

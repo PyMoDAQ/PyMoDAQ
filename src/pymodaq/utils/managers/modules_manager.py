@@ -5,12 +5,16 @@ from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.config import Config
-from pymodaq.utils.data import DataToExport, DataFromPlugins, DataActuator
-from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import utils
+from pymodaq_utils.config import Config
+
+from pymodaq_data.data import DataToExport
+
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.utils import Dock
+
+from pymodaq.utils.data import DataActuator
 
 
 if TYPE_CHECKING:
@@ -490,7 +494,6 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     from qtpy.QtCore import QThread
     from pymodaq.utils.gui_utils import DockArea
-    from pyqtgraph.dockarea import Dock
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 

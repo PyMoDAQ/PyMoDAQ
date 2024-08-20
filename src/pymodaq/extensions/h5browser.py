@@ -4,16 +4,15 @@ import sys
 import os
 from qtpy import QtWidgets
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-from pymodaq.utils.h5modules.browsing import H5Browser
+from pymodaq_gui.h5modules.browsing import H5Browser
 from pymodaq.utils.config import Config
-
 
 
 config = Config()
 
 
 def main(h5file_path: Path = None):
-    from pymodaq.utils.gui_utils.utils import mkQApp
+    from pymodaq_gui.utils.utils import mkQApp
     import sys
     app = mkQApp('H5Browser')
 
