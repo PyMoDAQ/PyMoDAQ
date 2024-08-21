@@ -1,13 +1,12 @@
 .. _extensions:
 
-Extensions
-==========
+Dashboard Extensions
+====================
 
 The DashBoard module can load extensions to perform dedicated tasks, such as automated data acquisition.
 
-
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    :caption: Contents:
 
    /extensions_folder/daq_scan/daq_scan
@@ -16,7 +15,3 @@ The DashBoard module can load extensions to perform dedicated tasks, such as aut
    /extensions_folder/bayesian
    /extensions_folder/h5browser
    /extensions_folder/console
-
-
-
-

@@ -10,23 +10,21 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
   Actuator
     Any instrument with a controllable varying parameter
 
-  Detector
-    Any instrument generating data to be recorded
+  conda
+    *conda* is part of the
+    `Miniconda <https://docs.anaconda.com/miniconda/>`_ distribution, that is recommended as part of
+    :ref:`PyMoDAQ installation <quick_start>`. In the PyMoDAQ project, *conda* is exclusively used as a *Python
+    environment manager*.
+    It is not used as a *package manager*, so the command
+    *conda install ...* will not be used. We will rather use :term:`pip <pip & PyPI>` as a *package manager*.
 
   Control Modules
     GUI for actuators and detectors, with subsequent classes: ``DAQ_Move`` and ``DAQ_Viewer``, see :ref:`control_modules`
 
   DashBoard
-    GUI allowing configuration and loading of a *preset* of actuators and detectors. You can also start
-    extensions from its GUI such as the :ref:`DAQ_Scan_module`, :ref:`DAQ_Logger_module`, ... See :ref:`Dashboard_module`
-
-  Preset
-    XML file containing the number and type of control modules to be used for a given experiment. You can
-    create, modify and load a preset from the Dashboard
-
-  DataSource
-    Enum informing about the source of the data object, for instance raw from a  detector or processed from
-    mathematical functions (from ROI, ...)
+    GUI allowing configuration and loading of a :term:`preset` file of actuators and detectors. You can also start
+    extensions from its GUI such as the :ref:`DAQ_Scan_module`, :ref:`DAQ_Logger_module`, ... See
+    :ref:`the Dashboard section <Dashboard_module>` of the documentation.
 
   DataDim
     Enum for the dimensionality representation of the data object, for instance scalars have a dimensionality *Data0D*,
@@ -39,22 +37,35 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     linear "positions", for instance data taken at random time intervals. Data can therefore have two distributions:
     **uniform** or **spread**.
 
-  Signal
-    Signal and Navigation is a term taken from the hyperspy package vocabulary. It is useful when dealing with
-    multidimensional data.
-    Imagine data you obtained from a camera (256x1024 pixels) during a linear 1D scan of one actuator (100 steps).
-    The final shape of the data would be (100, 256, 1024). The first dimension corresponds to a Navigation axis
-    (the scan), and the rest to Signal axes (the real detector's data).
-    The corresponding data has a dimensionality of DataND and a representation of (100|256,1024).
+  DataSource
+    Enum informing about the source of the data object, for instance raw from a  detector or processed from
+    mathematical functions (from ROI, ...)
 
-  Navigation
-    See above.
+  Detector
+    Any instrument generating data to be recorded
+
+  dte
+    Short name for ``DataToExport`` object
 
   dwa
     Short name for ``DataWithAxes`` object
 
-  dte
-    Short name for ``DataToExport`` object
+  Module
+     A module in the python sense is an importable object either a directory containing an *__init__.py* file or a
+     python file containing data, functions or classes.
+
+.. note::
+    If there is code that can be executed within your module but you don't want it to be executed when importing,
+    make sure to protect the execution using a : ``if __name__ == '__main__':`` clause.
+
+.. glossary::
+
+  Navigation
+    See :term:`signal`.
+
+  pip & PyPI
+    *pip* is the official Python package manager and the one that is used for the PyMoDAQ project. *pip* downloads
+    Python packages that are stored in the `PyPI <https://pypi.org/>`_ (Python Package Index) servers.
 
   Plugin
     A plugin is a python package whose name is of the type: *pymodaq_plugins_apluginname* containing functionalities
@@ -73,17 +84,24 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     * **Extensions** located in a `extensions` folder: scripts and classes allowing to build extensions on top of
       the :ref:`Dashboard_module`
 
-    Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins
-
+    Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extensions plugins.
 
 .. glossary::
 
-  Module
-     A module in the python sense is an importable object either a directory containing an *__init__.py* file or a
-     python file containing data, functions or classes.
+  Plugin Manager
+    The :ref:`Plugin Manager <section_installation>` is a module of PyMoDAQ that ease the installation
+    of plugins. It implements a simple graphical interface for the user to easily manage the plugins that are installed
+    in his environment. The Plugin Manager uses a parser on the PyPI forge to propose any Python packages whose
+    name starts by *pymodaq_plugins_...*.
 
-.. note::
-    If there is code that can be executed within your module but you don't want it to be executed when importing,
-    make sure to protect the execution using a : ``if __name__ == '__main__':`` clause.
+  Preset
+    XML file containing the number and type of control modules to be used for a given experiment. You can
+    create, modify and load a preset from the :term:`Dashboard` menu bar.
 
-
+  Signal
+    Signal and Navigation are terms taken from the hyperspy package vocabulary. They are useful when dealing with
+    multidimensional data.
+    Imagine data you obtained from a camera (256x1024 pixels) during a linear 1D scan of one actuator (100 steps).
+    The final shape of the data would be (100, 256, 1024). The first dimension corresponds to a Navigation axis
+    (the scan), and the rest to Signal axes (the real detector's data).
+    The corresponding data has a dimensionality of DataND and a representation of (100|256,1024).
