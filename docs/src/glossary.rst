@@ -61,7 +61,7 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
 .. glossary::
 
   Navigation
-    See above.
+    See :term:`signal`.
 
   pip & PyPI
     *pip* is the official Python package manager and the one that is used for the PyMoDAQ project. *pip* downloads
@@ -99,7 +99,7 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     create, modify and load a preset from the :term:`Dashboard` menu bar.
 
   Signal
-    Signal and Navigation is a term taken from the hyperspy package vocabulary. It is useful when dealing with
+    Signal and Navigation are terms taken from the hyperspy package vocabulary. They are useful when dealing with
     multidimensional data.
     Imagine data you obtained from a camera (256x1024 pixels) during a linear 1D scan of one actuator (100 steps).
     The final shape of the data would be (100, 256, 1024). The first dimension corresponds to a Navigation axis

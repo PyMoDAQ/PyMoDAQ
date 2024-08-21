@@ -95,11 +95,7 @@ Numerous plugins are already available for common scientific equipment suppliers
 
    List of supported instruments.
 
-We can access it from the *Supported instruments* link on the website’s home page.
-
-.. figure:: /image/quick_start/supported_instruments.png
-
-   Link to the list of supported instruments.
+We can access it from the *Supported instruments* link on the left menu of this website.
 
 Install the software of the supplier
 ++++++++++++++++++++++++++++++++++++
@@ -148,6 +144,10 @@ A window is displayed to easily install the plugin.
    :width: 400
 
    The Plugin Manager interface.
+
+.. note::
+   We can skip the use of the Plugin Manager interface by using directly in the terminal
+   *pip install pymodaq_plugins_thorlabs*.
 
 After the plugin installation, we launch a :ref:`DAQ_Viewer_module` with the following command
 
