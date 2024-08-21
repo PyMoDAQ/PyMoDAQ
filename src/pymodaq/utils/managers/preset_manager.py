@@ -11,7 +11,7 @@ from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.messenger import dialog as dialogbox
-
+from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.extensions import get_models
 
 import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
@@ -19,10 +19,10 @@ import pymodaq.utils.managers.preset_manager_utils  # to register move and det t
 logger = set_logger(get_module_name(__file__))
 
 # check if preset_mode directory exists on the drive
-pid_path = config_mod.get_set_pid_path()
-preset_path = config_mod.get_set_preset_path()
-overshoot_path = config_mod.get_set_overshoot_path()
-layout_path = config_mod.get_set_layout_path()
+pid_path = config_mod_pymodaq.get_set_pid_path()
+preset_path = config_mod_pymodaq.get_set_preset_path()
+overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
+layout_path = config_mod_pymodaq.get_set_layout_path()
 
 pid_models = [mod['name'] for mod in get_models()]
 
