@@ -14,6 +14,7 @@ requires-python = ">=3.8"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Other Environment",
