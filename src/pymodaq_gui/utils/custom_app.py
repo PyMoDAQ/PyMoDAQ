@@ -40,11 +40,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     log_signal = QtCore.Signal(str)
     params = []
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: 'DashBoard' = None):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard=None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self)
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
 
         if not isinstance(parent, DockArea):
             if not isinstance(parent, QtWidgets.QWidget):
@@ -119,7 +118,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         raise NotImplementedError
 
     @property
-    def modules_manager(self) -> 'ModulesManager':
+    def modules_manager(self):
         """useful tool to interact with DAQ_Moves and DAQ_Viewers
 
         Will be available if a DashBoard has been set
