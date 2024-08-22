@@ -7,11 +7,8 @@ Created the 28/10/2022
 import numpy as np
 import pytest
 from qtpy import QtWidgets
-from collections import OrderedDict
-from pymodaq.utils.parameter import Parameter, ParameterTree
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter import ioxml
-from unittest import mock
+from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import utils as putils
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
 params = [

@@ -4,7 +4,7 @@ from qtpy import QtWidgets, QtCore
 import numpy as np
 import pytest
 
-from pymodaq.utils.math_utils import gauss1D
+from pymodaq_utils.math_utils import gauss1D
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_data import data as data_mod
 

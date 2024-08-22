@@ -1,5 +1,5 @@
-from pymodaq.utils.parameter import Parameter, ParameterTree
-from pymodaq.utils.parameter import ioxml
+from pymodaq_gui.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import ioxml
 
 def test_empty_string():
 

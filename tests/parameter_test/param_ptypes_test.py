@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import sys
 from qtpy import QtWidgets, QtCore
-from pymodaq.utils.parameter import Parameter, ParameterTree
+from pymodaq_gui.parameter import Parameter, ParameterTree
 
 
 @pytest.fixture

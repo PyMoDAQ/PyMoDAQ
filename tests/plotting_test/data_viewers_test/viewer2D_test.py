@@ -30,7 +30,7 @@ def init_data(Ndata=1, uniform=True):
     data_random = np.random.normal(size=(Ny, Nx))
     x = np.linspace(0, Nx - 1, Nx)
     y = np.linspace(0, Ny - 1, Ny)
-    from pymodaq.utils.math_utils import gauss2D
+    from pymodaq_utils.math_utils import gauss2D
     if uniform:
         data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x / 5) ** 2
         data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
