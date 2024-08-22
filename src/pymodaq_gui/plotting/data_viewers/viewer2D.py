@@ -1012,16 +1012,12 @@ def main_spread():
     prog.data_to_export_signal.connect(print_data)
 
     data_spread = np.load('../../../resources/triangulation_data.npy')
-    # data_shuffled = data
-    # np.random.shuffle(data_shuffled)
-    # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',
-    #                                      data=[data, data_shuffled]))
 
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(DataFromPlugins(name='mydata', distribution='spread', data=[data_spread],
-                                   axes=[]))
+    prog.show_data(DataRaw(name='mydata', distribution='spread', data=[data_spread],
+                           axes=[]))
 
     sys.exit(app.exec_())
 
