@@ -21,7 +21,7 @@ import pymodaq.resources as rsc
 
 import os.path as ospath
 from unittest import TestCase
-from pymodaq.utils.parameter.ioxml import parameter_to_xml_file
+from pymodaq_gui.parameter.ioxml import parameter_to_xml_file
 
 
 @pytest.fixture

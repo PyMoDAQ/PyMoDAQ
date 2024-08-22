@@ -1,4 +1,4 @@
-import pymodaq.utils.gui_utils.dock
+from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq.utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
 from pymodaq.utils import daq_utils as utils
@@ -19,11 +19,10 @@ class TestGeneral:
         qtbot = init_qt
         from qtpy import QtWidgets
         from pymodaq.dashboard import DashBoard
-        from pymodaq.utils import gui_utils as gutils
 
         win = QtWidgets.QMainWindow()
         qtbot.addWidget(win)
-        area = pymodaq.utils.gui_utils.dock.DockArea()
+        area = DockArea()
         win.setCentralWidget(area)
         win.resize(1000, 500)
         win.setWindowTitle('PyMoDAQ Dashboard')

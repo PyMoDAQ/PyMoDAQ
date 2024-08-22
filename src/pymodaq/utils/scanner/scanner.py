@@ -3,6 +3,7 @@ from typing import Tuple, List, TYPE_CHECKING
 from collections import OrderedDict
 
 from qtpy.QtCore import QObject, Signal
+from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
@@ -45,7 +46,8 @@ class Scanner(QObject, ParameterManager):
     params = [
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
         {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
-        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': scanner_factory.scan_types()},
+        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list',
+         'limits': scanner_factory.scan_types()},
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
     ]

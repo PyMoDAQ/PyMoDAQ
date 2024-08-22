@@ -6,7 +6,7 @@ Created the 05/12/2022
 """
 import pytest
 from qtpy import QtWidgets, QtCore
-from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from pymodaq.utils.scanner.scan_factory import ScannerFactory
 from pymodaq.utils.parameter import utils as putils
 

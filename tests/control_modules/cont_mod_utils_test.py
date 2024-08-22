@@ -7,7 +7,7 @@ Created the 15/11/2022
 import pytest
 
 from pymodaq.control_modules import utils
-from pymodaq.utils.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
 
 
 class TestDAQType:

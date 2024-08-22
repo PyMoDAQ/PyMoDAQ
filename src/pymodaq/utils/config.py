@@ -1,5 +1,5 @@
 from pymodaq_utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir,
-                                  USER, CONFIG_BASE_PATH)
+                                  USER, CONFIG_BASE_PATH, get_set_local_dir)
 from pymodaq_gui.config import get_set_roi_path
 
 

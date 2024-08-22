@@ -8,16 +8,15 @@ Created the 23/11/2022
 import numpy as np
 import pytest
 
-from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver, ScanSaver
-from pymodaq.utils.h5modules.data_saving import DataManagement, AxisSaverLoader, DataSaverLoader, DataToExportSaver
-from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
+from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver
+
 from pymodaq.utils.parameter import Parameter
 from pymodaq.control_modules.mocks import MockScan, MockDAQMove, MockDAQViewer
 
 @pytest.fixture()
 def get_h5saver_module(tmp_path):
-    h5saver = saving.H5SaverLowLevel()
+    h5saver = H5SaverLowLevel()
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
     params = [{'title': 'mysaver', 'name': 'saver', 'type': 'str', 'value': 'myh5saver'}]

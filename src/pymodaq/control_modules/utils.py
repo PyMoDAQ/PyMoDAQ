@@ -64,12 +64,14 @@ class DAQTypesEnum(BaseEnum):
     def get_dim(self):
         return self.value.split('Viewer')[1].split('D')[0]
 
+
 DAQ_TYPES = DAQTypesEnum
 
 DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
              'DAQ1D': get_plugins('daq_1Dviewer'),
              'DAQ2D': get_plugins('daq_2Dviewer'),
-             'DAQND': get_plugins('daq_NDviewer'),}
+             'DAQND': get_plugins('daq_NDviewer'),
+             }
 
 if len(DET_TYPES['DAQ0D']) == 0:
     raise DetectorError('No installed Detector')

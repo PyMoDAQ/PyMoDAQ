@@ -370,7 +370,7 @@ class ScanSelector(ParameterManager, QObject):
 
     def update_selector_type(self):
         self.remove_selector()
-        mod = importlib.import_module('.scan_selector', 'pymodaq.utils.plotting')
+        mod = importlib.import_module('.scan_selector', 'pymodaq.utils.scanner')
         self.selector = selector_factory.create(self.settings['scan_options', 'selector_type'])
 
         if self.selector_source is not None and self.selector is not None:

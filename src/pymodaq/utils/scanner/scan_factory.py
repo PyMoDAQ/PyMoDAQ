@@ -24,6 +24,8 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq_data.data import Axis, DataDistribution
 
 from pymodaq.utils.scanner.scan_config import ScanConfig
+from pymodaq_gui.config import ConfigSaverLoader
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -86,9 +88,9 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         self.config = ScanConfig()
         base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
 
-        self.config_saver_loader = configmod.ConfigSaverLoader(self.settings,
-                                                               self.config,
-                                                               base_path)
+        self.config_saver_loader = ConfigSaverLoader(self.settings,
+                                                     self.config,
+                                                     base_path)
 
         self.actuators: List[DAQ_Move] = actuators
 

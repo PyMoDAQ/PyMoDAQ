@@ -5,7 +5,7 @@ Created the 16/03/2023
 @author: Sebastien Weber
 """
 from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.h5modules import saving
+from pymodaq_gui.h5modules import saving
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver, ScanSaver
 
 

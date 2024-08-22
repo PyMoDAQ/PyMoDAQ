@@ -10,8 +10,7 @@ from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.utils import ControlModule
 
-from pymodaq.utils.conftests import qtbotskip, main_modules_skip
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import Config
 
 from pymodaq.utils.data import DataActuator
 

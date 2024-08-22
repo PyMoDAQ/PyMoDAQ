@@ -9,15 +9,15 @@ from typing import List, Tuple, TYPE_CHECKING
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
-from pymodaq.utils.data import Axis, DataDistribution
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import math_utils as mutils
-from pymodaq.utils import config as configmod
-from pymodaq.utils import gui_utils as gutils
+from pymodaq_data.data import Axis, DataDistribution
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import math_utils as mutils
+from pymodaq_utils import config as configmod
+from pymodaq_gui import utils as gutils
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
-from pymodaq.utils.plotting.scan_selector import Selector
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
+from pymodaq.utils.scanner.scan_selector import Selector
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
