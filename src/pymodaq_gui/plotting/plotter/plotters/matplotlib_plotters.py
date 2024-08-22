@@ -5,11 +5,11 @@ import datetime
 import numpy as np
 from qtpy import QtWidgets
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import config as configmod
-from pymodaq.utils.data import DataDim, DataWithAxes, DataToExport
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.plotting.plotter.plotter import PlotterBase, PlotterFactory
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import config as configmod
+from pymodaq_data.data import DataDim, DataWithAxes, DataToExport
+from pymodaq_utils import utils
+from pymodaq_gui.plotting.plotter.plotter import PlotterBase, PlotterFactory
 
 from matplotlib import pyplot as plt
 

@@ -29,11 +29,14 @@ try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
     #     __version__ = fvers.read().strip()
 
-    from pymodaq.utils.logger import set_logger
-    from pymodaq.utils.daq_utils import get_version
-    __version__ = get_version()
+    from pymodaq_utils.logger import set_logger
+    from pymodaq_utils.utils import get_version, PackageNotFoundError
     try:
-        logger = set_logger('pymodaq', add_handler=True, base_logger=True)
+        __version__ = get_version()
+    except PackageNotFoundError:
+        __version__ = '0.0.0dev'
+    try:
+        logger = set_logger('pymodaq_gui', base_logger=False)
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
 
@@ -44,23 +47,14 @@ try:
     logger.info('************************')
     logger.info('')
     logger.info('')
-    logger.info('************************')
-    logger.info('Initializing the pint unit register')
-    logger.info('************************')
-    ureg = UnitRegistry()
-    ureg.default_format = '~'
-    Q_ = ureg.Quantity
-    Unit = ureg.Unit
-    logger.info('')
-    logger.info('')
+
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
-    from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
-    from pymodaq.utils.daq_utils import get_instrument_plugins
-    from pymodaq.utils.config import Config
-    from pymodaq.utils.scanner.utils import register_scanners
-    from pymodaq.utils.plotting.plotter.plotter import register_plotter, PlotterFactory
+    from pymodaq_gui.plotting import data_viewers  # imported here as to avoid circular imports later on
+    from pymodaq_gui.qt_utils import setLocale, set_qt_backend
+
+    from pymodaq_utils.config import Config
+    from pymodaq_gui.plotting.plotter.plotter import register_plotter, PlotterFactory
 
     # issue on windows when using .NET code within multithreads, this below allows it but requires the
     # pywin32 (pythoncom) package
@@ -75,7 +69,6 @@ try:
             logger.warning(infos)
 
     config = Config()  # to ckeck for config file existence, otherwise create one
-    copy_preset()
 
     logger.info('************************')
     logger.info(f"Setting Qt backend to: {config['qtbackend']['backend']} ...")
@@ -89,20 +82,6 @@ try:
     setLocale()
     logger.info('')
     logger.info('')
-
-    logger.info('*************************************************************************')
-    logger.info(f"Getting the list of instrument plugins...")
-    logger.info('')
-    get_instrument_plugins()
-    logger.info('*************************************************************************')
-
-    logger.info('')
-    logger.info('')
-    logger.info('************************')
-    logger.info(f"Registering Scanners...")
-    register_scanners()
-    logger.info(f"Done")
-    logger.info('************************')
 
     logger.info('')
     logger.info('')

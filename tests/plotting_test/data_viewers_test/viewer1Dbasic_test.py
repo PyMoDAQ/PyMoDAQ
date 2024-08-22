@@ -5,9 +5,8 @@ import numpy as np
 from pyqtgraph.graphicsItems.PlotItem.PlotItem import PlotItem
 from pyqtgraph.graphicsItems.InfiniteLine import InfiniteLine
 from pyqtgraph.graphicsItems.LinearRegionItem import LinearRegionItem
-from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
-from pymodaq.utils.conftests import qtbotskip
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+
+from pymodaq_gui.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 
 @pytest.fixture

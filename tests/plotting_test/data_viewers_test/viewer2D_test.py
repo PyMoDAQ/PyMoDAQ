@@ -1,27 +1,23 @@
 from typing import Tuple
 
-import pymodaq.utils.managers.action_manager
-import pymodaq.utils.plotting.utils.filter
-import pymodaq.utils.plotting.utils.plot_utils
+
 from qtpy import QtWidgets, QtCore
 
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.utils.plotting.data_viewers import viewer2D as v2d
-from pymodaq.utils.exceptions import ViewerError
-from pymodaq.utils.managers.roi_manager import ROIManager
-import pymodaq.utils.plotting.utils.plot_utils as plot_utils
+from pymodaq_data import data as data_mod
+from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq_gui.plotting.data_viewers import viewer2D as v2d
+
+from pymodaq_gui.managers.roi_manager import ROIManager
+import pymodaq_gui.plotting.utils.plot_utils as plot_utils
 from pathlib import Path
 import pytest
 from pytest import fixture, approx
 import numpy as np
 import pyqtgraph as pg
-from pymodaq.utils.plotting.utils.plot_utils import RoiInfo, Point
+from pymodaq_gui.plotting.utils.plot_utils import RoiInfo, Point
 
 from pyqtgraph import mkPen
-from pymodaq.utils.conftests import qtbotskip
 
-pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 
 @fixture
 def init_qt(qtbot):

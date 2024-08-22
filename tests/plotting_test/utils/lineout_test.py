@@ -7,7 +7,7 @@ Created the 03/11/2022
 import pyqtgraph as pg
 
 import pytest
-from pymodaq.utils.plotting.utils.lineout import curve_item_factory, COLOR_LIST, COLORS_DICT
+from pymodaq_gui.plotting.utils.lineout import curve_item_factory, COLOR_LIST, COLORS_DICT
 
 
 @pytest.fixture

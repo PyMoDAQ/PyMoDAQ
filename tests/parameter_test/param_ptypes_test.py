@@ -9,11 +9,7 @@ import numpy as np
 import pytest
 import sys
 from qtpy import QtWidgets, QtCore
-from pymodaq.utils.parameter import Parameter, pymodaq_ptypes, ParameterTree
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.examples.parameter_ex import ParameterEx
-from pymodaq.utils.managers.parameter_manager import ParameterManager
-from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
+from pymodaq.utils.parameter import Parameter, ParameterTree
 
 
 @pytest.fixture

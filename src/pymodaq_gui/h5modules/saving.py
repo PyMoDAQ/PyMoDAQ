@@ -31,12 +31,19 @@ from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils.file_io import select_file
+from pymodaq_gui.h5modules import browsing
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-dashboard_submodules_params = []
+dashboard_submodules_params = [
+    {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': True},
+    {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
+        'if True, will not save extracted ROIs used to do live plotting, only raw datas will be saved'},
+    {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},
+    {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
+]
 
 
 class H5SaverBase(H5SaverLowLevel, ParameterManager):
@@ -481,3 +488,17 @@ class H5Saver(H5SaverBase, QObject):
         """
         self.new_file_sig.emit(status)
 
+    def show_file_content(self):
+        win = QtWidgets.QMainWindow()
+        if not self.isopen():
+            if self.h5_file_path is not None:
+                if self.h5_file_path.exists():
+                    self.analysis_prog = browsing.H5Browser(win, h5file_path=self.h5_file_path)
+                else:
+                    logger.warning('The h5 file path has not been defined yet')
+            else:
+                logger.warning('The h5 file path has not been defined yet')
+        else:
+            self.flush()
+            self.analysis_prog = browsing.H5Browser(win, h5file=self.h5file)
+        win.show()

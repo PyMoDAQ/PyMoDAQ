@@ -2,12 +2,11 @@ import numpy as np
 import pytest
 
 from qtpy import QtWidgets
-from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
-from pymodaq.utils.conftests import qtbotskip
-from pymodaq.utils import data as data_mod
-from scipy.spatial import Delaunay as Triangulation
+from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
 
-# pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+from pymodaq_data import data as data_mod
+
+
 @pytest.fixture
 def init_viewernd(qtbot):
     widget = QtWidgets.QWidget()

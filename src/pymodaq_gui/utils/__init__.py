@@ -5,5 +5,6 @@ from .widgets.table import TableView, TableModel, SpinBoxDelegate, BooleanDelega
 from .widgets.push import PushButtonIcon, EditPush, EditPushRel, EditPushInfo
 from .widgets.qled import QLED
 from .widgets.spinbox import QSpinBox_ro
+from .custom_app import CustomApp
 
 

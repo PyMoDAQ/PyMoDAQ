@@ -1,18 +1,17 @@
 from qtpy import QtWidgets
-from pymodaq.utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
-from pymodaq.utils.plotting.utils.plot_utils import View_cust
-from pymodaq.utils.plotting.widgets import ImageWidget
+from pymodaq_gui.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
+from pymodaq_gui.plotting.utils.plot_utils import View_cust
+from pymodaq_gui.plotting.widgets import ImageWidget
 
 import pytest
 import numpy as np
-from pymodaq.utils.conftests import qtbotskip
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+
 
 @pytest.fixture
 def init_viewer2d_basic(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer2DBasic(form)
-    prog.setupUI()
+    prog.setup_ui()
     qtbot.addWidget(form)
     yield prog
     form.close()

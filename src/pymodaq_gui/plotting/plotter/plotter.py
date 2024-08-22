@@ -9,19 +9,19 @@ from typing import Callable, List, Union
 import numpy as np
 
 # project imports
-from pymodaq.utils.abstract import abstract_attribute
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq_utils.abstract import abstract_attribute
+from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq.utils.factory import ObjectFactory
+from pymodaq_utils.factory import ObjectFactory
 
 if typing.TYPE_CHECKING:
-    from pymodaq.utils.data import DataWithAxes, DataDim
-    from pymodaq.utils.plotting.data_viewers import Viewer0D, Viewer1D, Viewer2D, ViewerND
+    from pymodaq_data.data import DataWithAxes, DataDim
+    from pymodaq_gui.plotting.data_viewers import Viewer0D, Viewer1D, Viewer2D, ViewerND
 
 logger = set_logger(get_module_name(__file__))
 
 
-def register_plotter(parent_module_name: str = 'pymodaq.utils.plotting.plotter'):
+def register_plotter(parent_module_name: str = 'pymodaq_gui.plotting.plotter'):
     plotters = []
     try:
         plotter_module = import_module(f'{parent_module_name}.plotters')
@@ -44,6 +44,7 @@ class PlotterBase(metaclass=ABCMeta):
     """Base class for a plotter. """
 
     backend: str = abstract_attribute()
+
     def __init__(self):
         """Abstract Exporter Constructor"""
         pass

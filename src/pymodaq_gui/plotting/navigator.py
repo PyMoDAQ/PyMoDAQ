@@ -1,24 +1,25 @@
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
-from pymodaq.utils.gui_utils.file_io import select_file
+import sys
+import os
+
+import numpy as np
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, Signal
 
-import sys
-import os
-import numpy as np
-from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker, DataWithAxes
-from pymodaq.utils.h5modules.data_saving import DataLoader
-from pymodaq.utils.managers.parameter_manager import ParameterManager
-from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
-from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.h5modules.browsing import browse_data, H5BrowserUtil
-from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.parameter.pymodaq_ptypes.pixmap import PixmapCheckData
+from pymodaq_utils.config import get_set_local_dir, Config
+from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq.utils.config import get_set_local_dir, Config
+from pymodaq_data.data import DataToExport, DataWithAxes
+from pymodaq_data.h5modules.data_saving import DataLoader
+
+from pymodaq_gui.utils.file_io import select_file
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
+from pymodaq_gui.plotting.items.image import UniformImageItem, SpreadImageItem
+from pymodaq_gui.h5modules.browsing import browse_data
+from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.parameter.pymodaq_ptypes.pixmap import PixmapCheckData
+
 
 local_path = get_set_local_dir()
 navigator_path = os.path.join(local_path, 'navigator_temp_files')
@@ -339,15 +340,3 @@ class Navigator(ParameterManager, ActionManager, QObject):
             logger.exception(str(e))
 
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    widg = QtWidgets.QWidget()
-    prog = Navigator(widg)#, h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
-
-    widg.show()
-    prog.list_2D_scans()
-    sys.exit(app.exec_())
-
-
-if __name__ == '__main__':
-    main()

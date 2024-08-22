@@ -44,15 +44,16 @@ dependencies = [
     "scipy",
     "setuptools>=60",
     "toml",
-    "pymodaq_utils"
+    "pymodaq_utils",
+    "pymodaq_data",
 ]
 
 [project.scripts]
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
-Source = "https://github.com/PyMoDAQ/PyMoDAQ"
-Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
+Source = "https://github.com/PyMoDAQ/pymodaq_gui"
+Tracker = "https://github.com/PyMoDAQ/pymodaq_gui/issues"
 
 [tool.hatch.version]
 source = "vcs"

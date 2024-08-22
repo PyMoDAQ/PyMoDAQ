@@ -14,7 +14,7 @@ from pyqtgraph import ROI as pgROI
 from pymodaq_utils import utils
 from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw,
+from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataRaw,
                                DataDistribution, DataWithAxes)
 
 from pymodaq_gui.managers.roi_manager import ROIManager, SimpleRectROI
@@ -1049,7 +1049,7 @@ def main(data_distribution='uniform'):
 
     elif data_distribution == 'spread':
         data_spread = np.load('../../../resources/triangulation_data.npy')
-        data_to_plot = DataFromPlugins(name='mydata', distribution='spread', data=[data_spread[:,2]],
+        data_to_plot = DataRaw(name='mydata', distribution='spread', data=[data_spread[:,2]],
                                        nav_indexes=(0,),
                                        axes=[Axis('xaxis', units='xpxl', data=data_spread[:,0], index=0, spread_order=0),
                                              Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1),])
@@ -1072,7 +1072,7 @@ def main(data_distribution='uniform'):
     sys.exit(app.exec_())
 
 
-def generate_uniform_data() -> DataFromPlugins:
+def generate_uniform_data() -> DataRaw:
     from pymodaq_utils.math_utils import gauss2D
     Nx = 100
     Ny = 2 * Nx
@@ -1083,7 +1083,7 @@ def generate_uniform_data() -> DataFromPlugins:
     data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
     data_green[70:80, 7:12] = np.nan
 
-    data_to_plot = DataFromPlugins(name='mydata', distribution='uniform',
+    data_to_plot = DataRaw(name='mydata', distribution='uniform',
                                    data=[data_red, data_green, data_red-data_green],
                                    labels = ['myreddata', 'mygreendata'],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),

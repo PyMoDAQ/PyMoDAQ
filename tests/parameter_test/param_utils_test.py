@@ -12,7 +12,7 @@ from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter import ioxml
 from unittest import mock
-from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
+from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [

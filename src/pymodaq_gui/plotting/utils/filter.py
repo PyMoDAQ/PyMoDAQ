@@ -41,13 +41,13 @@ class Filter:
     def set_active(self, activate=True):
         self._is_active = activate
 
-    def filter_data(self, data: data_mod.DataFromPlugins):
+    def filter_data(self, data: data_mod.DataRaw):
         if self._is_active:
             filtered_data = self._filter_data(data)
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+    def _filter_data(self, data: data_mod.DataRaw) -> DataToExport:
         raise NotImplementedError
 
 
@@ -67,7 +67,7 @@ class Filter1DFromCrosshair(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+    def _filter_data(self, data: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('Crosshair')
         if data is not None:
             axis = data.get_axis_from_index(0, create=False)[0]
@@ -111,7 +111,7 @@ class Filter2DFromCrosshair(Filter):
         if activate:
             self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
 
-    def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
+    def _filter_data(self, dwa: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('Crosshair')
         if dwa is not None:
             self._x, self._y = self.crosshair.get_positions()
@@ -236,7 +236,7 @@ class Filter1DFromRois(Filter):
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
 
-    def _filter_data(self, data: data_mod.DataFromPlugins) -> DataToExport:
+    def _filter_data(self, data: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('roi1D')
         try:
             axis = data.get_axis_from_index(0, create=False)[0]
@@ -312,7 +312,7 @@ class Filter2DFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, dwa: data_mod.DataFromPlugins) -> DataToExport:
+    def _filter_data(self, dwa: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('ROI')
         if dwa is not None:
             try:

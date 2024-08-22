@@ -8,15 +8,12 @@ from pyqtgraph import ROI
 from unittest import mock
 from collections import OrderedDict
 
-from pymodaq.utils import data as data_mod
-from pymodaq.utils import math_utils as mutils
-from pymodaq.post_treatment.daq_measurement.daq_measurement_main import DAQ_Measurement
-from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2
-from pymodaq.utils.conftests import qtbotskip
-from pymodaq.utils.math_utils import gauss1D
+from pymodaq_data import data as data_mod
+from pymodaq_utils import math_utils as mutils
 
-#pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
+
+from pymodaq_utils.math_utils import gauss1D
 
 
 @pytest.fixture

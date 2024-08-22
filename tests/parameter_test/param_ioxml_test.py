@@ -4,10 +4,8 @@ Created the 29/08/2023
 
 @author: Sebastien Weber
 """
-import unittest
-
-import numpy as np
 import pytest
+
 
 from qtpy import QtWidgets
 
@@ -16,10 +14,8 @@ from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import ioxml
-from pymodaq_utils.config import get_set_preset_path
 from pathlib import Path
 
-from unittest import mock
 
 
 axes_names = {'Axis 1': 0, 'Axis 2': 1, 'Axis 3': 2}
@@ -95,7 +91,7 @@ class TestListParameter:
         assert param_back.opts['removable'] == self.settings.child('dict_param').opts['removable']
 
 
-class TestXMLbackForth(unittest.TestCase):
+class TestXMLbackForth():
 
     params = ParameterEx.params
     settings = Parameter.create(name='settings', type='group', children=params)
@@ -114,7 +110,7 @@ class TestXMLbackForth(unittest.TestCase):
                 assert child_back.opts['limits'] == child.opts['limits']
             assert child_back.opts['removable'] == child.opts['removable']
 
-    def test_load_save_overwrite_xml_file(self):
+    def test_load_save_overwrite_xml_file(self, tmp_path):
         """
         Testing to load default preset saving it under a name,
         raising an exception when trying to overwrite then forcing overwrite
@@ -124,14 +120,16 @@ class TestXMLbackForth(unittest.TestCase):
                                             children=ioxml.XML_file_to_parameter(
                                                 Path(__file__).resolve().parent.parent.joinpath(
                                                     'data/preset_default.xml')))
-        saveto = get_set_preset_path() / Path('impossiblenamedonotuse')
+        saveto = tmp_path.joinpath('impossiblenamedonotuse')
         ioxml.parameter_to_xml_file(defaultparameter,
                                     saveto)
         assert saveto.with_suffix(".xml").is_file()
         origin_modification_time = saveto.with_suffix(".xml").stat().st_mtime_ns
-        self.assertRaises(FileExistsError, ioxml.parameter_to_xml_file,
-                          defaultparameter, saveto, overwrite=False)
+        with pytest.raises(FileExistsError):
+            ioxml.parameter_to_xml_file(defaultparameter, saveto, overwrite=False)
+
         assert saveto.with_suffix(".xml").stat().st_mtime_ns == origin_modification_time
+
         ioxml.parameter_to_xml_file(defaultparameter,
                                     saveto,
                                     overwrite=True)

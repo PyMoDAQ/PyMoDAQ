@@ -11,11 +11,11 @@ import tempfile
 from pathlib import Path
 from itertools import permutations
 
-from pymodaq.utils import math_utils as mutils
-from pymodaq.utils import data as datamod
-from pymodaq.utils.h5modules.saving import H5SaverLowLevel
-from pymodaq.utils.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
-from pymodaq.utils.plotting.data_viewers import Viewer1D, ViewerND, Viewer2D
+from pymodaq_utils import math_utils as mutils
+from pymodaq_data import data as datamod
+from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_data.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
+from pymodaq_gui.plotting.data_viewers import Viewer1D, ViewerND, Viewer2D
 
 
 @pytest.fixture(scope="module")
@@ -80,6 +80,7 @@ def get_h5saver(tmp_path):
 
     yield h5saver
     h5saver.close_file()
+
 
 class Test1DPlot:
     def test_plot_0D_1D_uniform(self, qtbot):

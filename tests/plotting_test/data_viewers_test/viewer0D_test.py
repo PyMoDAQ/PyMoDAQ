@@ -5,11 +5,9 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.math_utils import gauss1D
-from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.conftests import qtbotskip
+from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq_data import data as data_mod
 
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture
 def init_viewer0d(qtbot):

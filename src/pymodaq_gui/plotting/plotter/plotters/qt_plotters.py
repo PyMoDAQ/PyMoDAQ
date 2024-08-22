@@ -3,15 +3,17 @@ import sys
 
 from qtpy import QtWidgets
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import config as configmod
-from pymodaq.utils.gui_utils.utils import start_qapplication
-from pymodaq.utils.plotting.plotter.plotter import PlotterBase, PlotterFactory
-from pymodaq.utils.data import DataWithAxes, DataToExport
-from pymodaq.utils.plotting.data_viewers import (Viewer1D, Viewer2D, ViewerND, ViewerDispatcher,
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils import config as configmod
+from pymodaq_gui.utils.utils import start_qapplication
+
+
+from pymodaq_gui.plotting.plotter.plotter import PlotterBase, PlotterFactory
+from pymodaq_data.data import DataWithAxes, DataToExport
+from pymodaq_gui.plotting.data_viewers import (Viewer1D, Viewer2D, ViewerND, ViewerDispatcher,
                                                  Viewer0D, ViewersEnum)
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, viewer_factory
-from pymodaq.utils.gui_utils.dock import DockArea
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase, viewer_factory
+from pymodaq_gui.utils.dock import DockArea
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()

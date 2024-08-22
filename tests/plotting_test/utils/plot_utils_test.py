@@ -8,9 +8,9 @@ import pytest
 import numpy as np
 
 from pyqtgraph.functions import mkColor
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.plotting.utils.plot_utils import Point, Vector, get_sub_segmented_positions, RoiInfo, RectROI, \
-    LinearROI
+
+from pymodaq_gui.plotting.utils.plot_utils import (Point, Vector, get_sub_segmented_positions,
+                                                   RoiInfo, RectROI, LinearROI)
 from pymodaq.utils.math_utils import linspace_step
 
 

@@ -6,10 +6,17 @@ from typing import List, TYPE_CHECKING
 from typing import Iterable as IterableType
 
 
-from pymodaq_utils.config import BaseConfig, recursive_iterable_flattening, ConfigError
+from pymodaq_utils.config import (BaseConfig, recursive_iterable_flattening, ConfigError,
+                                  get_set_config_dir)
 
 if TYPE_CHECKING:
     from pyqtgraph.parametertree import Parameter
+
+
+def get_set_roi_path():
+    """ creates and return the config folder path for managers files
+    """
+    return get_set_config_dir('roi_configs')
 
 
 class ConfigSaverLoader:
