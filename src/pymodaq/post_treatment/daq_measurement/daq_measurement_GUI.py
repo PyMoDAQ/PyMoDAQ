@@ -7,7 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 from qtpy import QtCore, QtGui, QtWidgets
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq_gui.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class Ui_Form(object):

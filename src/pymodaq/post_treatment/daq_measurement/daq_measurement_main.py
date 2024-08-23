@@ -4,10 +4,10 @@ from qtpy.QtCore import Qt, QObject, Slot, Signal
 import sys
 from pymodaq.post_treatment.daq_measurement.daq_measurement_GUI import Ui_Form
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.plotting.utils.filter import FourierFilterer
+from pymodaq_gui.plotting.utils.filter import FourierFilterer
 from scipy.optimize import curve_fit
 import numpy as np
-from pymodaq.utils.enums import BaseEnum
+from pymodaq_utils.enums import BaseEnum
 
 
 class Measurement_type(BaseEnum):
