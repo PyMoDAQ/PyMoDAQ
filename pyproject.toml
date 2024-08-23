@@ -41,7 +41,7 @@ dependencies = [
     "packaging",
     "pint",
     "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins_mock",
+    "pymodaq_plugins_mock==5.0.4",
     "pyqtgraph>=0.12",
     "python-dateutil",
     "qdarkstyle",
