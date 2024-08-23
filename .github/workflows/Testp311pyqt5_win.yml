@@ -1,4 +1,4 @@
-name: '3.8 PyQt5 Windows'
+name: '3.11 PyQt5 Windows'
 
 on: [push]
 
@@ -6,5 +6,5 @@ jobs:
   call_workflow:
     uses: ./.github/workflows/Testbase.yml
     with:
-      python: '3.8'
+      python: '3.11'
       qt5: 'pyqt5'
