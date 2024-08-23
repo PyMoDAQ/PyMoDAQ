@@ -34,8 +34,9 @@ class DataActuator(DataRaw):
             new_data = copy.deepcopy(self)
             new_data = new_data + DataActuator(data=other)
             return new_data
+
         else:
-            super().__add__(other)
+            return super().__add__(other)
 
     def value(self) -> float:
         """Returns the underlying float value (of the first elt in the data list) if this data
