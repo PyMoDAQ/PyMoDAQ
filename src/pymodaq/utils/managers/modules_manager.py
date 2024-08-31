@@ -117,7 +117,7 @@ class ModulesManager(QObject, ParameterManager):
             modules = [modules]
         return [mod.title for mod in modules]
 
-    def get_mods_from_names(self, names, mod='det'):
+    def get_mods_from_names(self, names, mod='det') -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
         """Getter of a list of given modules from their name (title)
 
         Parameters
