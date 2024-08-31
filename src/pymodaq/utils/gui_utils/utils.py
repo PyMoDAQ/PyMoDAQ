@@ -7,6 +7,8 @@ from pathlib import Path
 from pymodaq_utils.config import Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
+from pymodaq_gui.utils.utils import mkQApp
+
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
