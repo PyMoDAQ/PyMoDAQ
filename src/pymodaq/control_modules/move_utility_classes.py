@@ -78,7 +78,11 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], axis_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters_fun(is_multiaxes = False,
+                         axes_names = [],
+                         axis_names: Union[List, Dict] = [],
+                         master = True,
+                         epsilon = config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -212,6 +216,7 @@ class DAQ_Move_base(QObject):
         self.move_is_done = False
         self.parent = parent
         self.stage = None
+        self.controller = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
 
         self._ispolling = True
@@ -225,10 +230,7 @@ class DAQ_Move_base(QObject):
                 self.settings.restoreState(params_state.saveState())
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        # self.settings.child('multiaxes',
-        #                     'axis').sigLimitsChanged.connect(lambda param,
-        #                                                             limits: self.send_param_status(
-        #    param, [(param, 'limits', None)]))
+
         if parent is not None:
             self._title = parent.title
         else:
