@@ -20,7 +20,7 @@ except:
     USER = 'unknown_user'
 
 CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
-    Path('Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
+    Path('/Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
 
 
 KeyType = TypeVar('KeyType')
