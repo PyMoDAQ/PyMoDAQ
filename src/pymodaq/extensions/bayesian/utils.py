@@ -116,10 +116,13 @@ class BayesianAlgorithm:
 
     @property
     def best_individual(self) -> Union[np.ndarray, None]:
-        max_param = self._algo.max.get('params', None)
-        if max_param is None:
+        if self._algo.max is None:
             return None
-        return self._algo.space.params_to_array(max_param)
+        else:
+            max_param = self._algo.max.get('params', None)
+            if max_param is None:
+                return None
+            return self._algo.space.params_to_array(max_param)
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:

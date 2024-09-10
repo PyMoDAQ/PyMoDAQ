@@ -47,11 +47,13 @@ def get_extensions():
                 for mod in modules:
                     mod_in = importlib.import_module(f'{pkg.value}.extensions.{mod}')
                     if hasattr(mod_in, 'EXTENSION_NAME'):
-                        extension_import.append({'pkg': pkg.value, 'module': mod, 'name': mod_in.EXTENSION_NAME,
+                        extension_import.append({'pkg': pkg.value, 'module': mod,
+                                                 'name': mod_in.EXTENSION_NAME,
                                                  'class_name': mod_in.CLASS_NAME})
 
             except Exception as e:  # pragma: no cover
-                logger.warning(f'Impossible to import the {pkg.value}.extensions.{mod} extension: {str(e)}')
+                logger.warning(f'Impossible to import the {pkg.value}.extensions.{mod} extension: '
+                               f'{str(e)}')
 
     return extension_import
 
