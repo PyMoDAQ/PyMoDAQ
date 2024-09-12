@@ -1,3 +1,6 @@
+.. _data_analysis_tutorial:
+
+
 Tutorial On Data Manipulation and analysis
 ==========================================
 

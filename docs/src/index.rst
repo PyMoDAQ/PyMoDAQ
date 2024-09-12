@@ -111,6 +111,7 @@ If you would like to get updated with the evolutions of the project, please subs
    quick_start
    user
    tutorials
+   data_management
    developer
    glossary
    api/api_doc
