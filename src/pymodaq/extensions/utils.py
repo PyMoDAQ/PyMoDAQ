@@ -67,7 +67,7 @@ def get_extensions():
 
 class CustomExt(CustomApp):
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: DashBoard):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: 'DashBoard'):
         super().__init__(parent)
 
         self.dashboard = dashboard
