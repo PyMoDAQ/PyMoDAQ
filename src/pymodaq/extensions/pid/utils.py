@@ -182,8 +182,8 @@ def get_models(model_name=None):
     """
     from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
-    discovered_models = get_entrypoints(group='pymodaq.pid_models')
-    discovered_models = get_entrypoints(group='pymodaq.models')
+    discovered_models = list(get_entrypoints(group='pymodaq.pid_models'))
+    discovered_models.extend(list(get_entrypoints(group='pymodaq.models')))
     if len(discovered_models) > 0:
         for pkg in discovered_models:
             try:
