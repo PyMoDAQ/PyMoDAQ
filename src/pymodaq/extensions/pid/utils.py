@@ -27,6 +27,7 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
+
 class DataToActuatorPID(DataToActuators):
 
     def __init__(self, *args, **kwargs):
