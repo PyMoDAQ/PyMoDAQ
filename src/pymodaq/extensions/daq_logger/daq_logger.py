@@ -12,7 +12,6 @@ import datetime
 from typing import TYPE_CHECKING, Union
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.config import Config
 from pymodaq_gui.parameter import ioxml
@@ -26,7 +25,7 @@ from pymodaq_gui.utils.widgets import QLED
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
-
+from pymodaq.extensions.utils import CustomExt
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -51,7 +50,7 @@ if is_sql:
     LOG_TYPES.append('SQL DataBase')
 
 
-class DAQ_Logger(CustomApp):
+class DAQ_Logger(CustomExt):
     """
     Main class initializing a DAQ_Logger module
     """

@@ -8,14 +8,19 @@ import importlib
 from pathlib import Path
 import pkgutil
 import warnings
+from typing import Union, TYPE_CHECKING
 
+from qtpy import QtCore, QtWidgets
+
+from pymodaq_gui.utils.dock import DockArea
 from pymodaq_utils.utils import get_entrypoints
-
 from pymodaq_utils import logger as logger_module
-
+from pymodaq_gui.utils.custom_app import CustomApp
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
 
 def get_ext_modules(path: Path):
     modules = []
@@ -59,3 +64,23 @@ def get_extensions():
 
     return extension_import
 
+
+class CustomExt(CustomApp):
+
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: DashBoard):
+        super().__init__(parent)
+
+        self.dashboard = dashboard
+
+    @property
+    def modules_manager(self):
+        """useful tool to interact with DAQ_Moves and DAQ_Viewers
+
+        Will be available if a DashBoard has been set
+
+        Returns
+        -------
+        ModulesManager
+        """
+        if self.dashboard is not None:
+            return self.dashboard.modules_manager

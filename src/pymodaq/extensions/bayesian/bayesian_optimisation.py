@@ -27,7 +27,7 @@ from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianMode
                                                UtilityParameters, StopType, StoppingParameters)
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.bayesian.utils import BayesianConfig
-
+from pymodaq.extensions.utils import CustomExt
 
 EXTENSION_NAME = 'BayesianOptimisation'
 CLASS_NAME = 'BayesianOptimisation'
@@ -35,7 +35,7 @@ CLASS_NAME = 'BayesianOptimisation'
 logger = set_logger(get_module_name(__file__))
 
 
-class BayesianOptimisation(gutils.CustomApp):
+class BayesianOptimisation(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
