@@ -1,32 +1,30 @@
-from easydict import EasyDict as edict
-
 from pymodaq_utils.utils import ThreadCommand
 
-from pymodaq.control_modules.move_utility_classes import DAQ_Move_base, comon_parameters_fun
+from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun,
+                                                          DataActuatorType, DataActuator)
+
+from pymodaq.extensions.pid.actuator_controller import PIDController
 
 
 class DAQ_Move_PID(DAQ_Move_base):
     """
     """
-    _controller_units = 'whatever'
+    _controller_units = ''
+    data_actuator_type = DataActuatorType.DataActuator
     is_multiaxes = True
     stage_names = []
 
     params = comon_parameters_fun(is_multiaxes, stage_names, master=False)
 
-    def __init__(self, parent=None, params_state=None):
-        super().__init__(parent, params_state)
+    def ini_attributes(self):
+        self.controller: PIDController = None
 
-
-    def update_position(self, dict_val):
+    def update_position(self, dict_val: dict):
         self.current_value = dict_val[self.parent.title]
 
     def get_actuator_value(self):
-        self.controller['emit_curr_points'].emit()
+        self.controller.emit_curr_points.emit()
         pos = self.current_value
-        #
-        # pos = self.get_position_with_scaling(pos)
-        # self.current_value = pos
         return pos
 
     def close(self):
@@ -38,51 +36,32 @@ class DAQ_Move_PID(DAQ_Move_base):
     def ini_stage(self, controller=None):
         """
         """
-        try:
-            self.status.update(edict(info="", controller=None, initialized=False))
-            if self.settings.child('multiaxes', 'ismultiaxes').value() and self.settings.child('multiaxes',
-                                                                         'multi_status').value() == "Slave":
-                if controller is None:
-                    raise Exception('no controller has been defined externally while this axe is a slave one')
-                else:
-                    self.controller = controller
-            else:  # Master stage
-                self.controller = None  # any object that will control the stages
+        self.ini_stage_init(controller, None)
 
-            self.controller['curr_point'].connect(self.update_position)
+        self.controller.curr_point.connect(self.update_position)
 
-            info = "PID stage"
-            self.status.info = info
-            self.status.controller = self.controller
-            self.status.initialized = True
-            return self.status.info, self.status.initialized
+        info = "PID stage"
+        initialized = True
+        return info, initialized
 
-        except Exception as e:
-            self.status.info = str(e)
-            self.status.initialized = False
-            return self.status
-
-    def move_Abs(self, position):
+    def move_abs(self, position: DataActuator):
         """
         """
         position = self.check_bound(position)
-        # position=self.set_position_with_scaling(position)
-        # print(position)
         self.target_position = position
 
-        self.controller['setpoint'].emit({self.parent.title: self.target_position})
-        self.poll_moving()
+        self.controller.setpoint.emit({self.parent.title: self.target_position})
 
-    def move_Rel(self, position):
+    def move_rel(self, position: DataActuator):
         """
         """
         position = self.check_bound(self.current_value + position) - self.current_value
         self.target_position = position + self.current_value
 
-        self.controller['setpoint'].emit({self.parent.title: self.target_position})
+        self.controller.setpoint.emit({self.parent.title: self.target_position})
         self.poll_moving()
 
-    def move_Home(self):
+    def move_home(self):
         """
         """
         self.emit_status(ThreadCommand('Update_Status', ['Move Home not implemented']))

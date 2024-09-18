@@ -3,7 +3,6 @@ from pathlib import Path
 
 from pymodaq_utils.logger import set_logger, get_module_name
 
-
 logger = set_logger('move_plugins', add_to_console=False)
 
 

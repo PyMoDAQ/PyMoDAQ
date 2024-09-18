@@ -8,6 +8,9 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
+from typing import Tuple, List
+
+
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
@@ -38,6 +41,7 @@ from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq import extensions as extmod
 
 
@@ -681,7 +685,7 @@ class DashBoard(QObject):
 
         detector_modules.append(det_mod_tmp)
 
-    def set_file_preset(self, filename):
+    def set_file_preset(self, filename) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
         """
             Set a file managers from the converted xml file given by the filename parameter.
 
@@ -1156,10 +1160,8 @@ class DashBoard(QObject):
                             self.preset_manager.preset_params.child('pid_models').value())['class']
                         for setp in model_class.setpoints_names:
                             self.add_move(setp, None, 'PID', [], [], actuators_modules)
-                            actuators_modules[-1].controller = dict(
-                                curr_point=self.pid_module.curr_points_signal,
-                                setpoint=self.pid_module.setpoints_signal,
-                                emit_curr_points=self.pid_module.emit_curr_points_sig)
+                            actuators_modules[-1].controller = PIDController(self.pid_module)
+                            actuators_modules[-1].master = False
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(actuators_modules[-1])
