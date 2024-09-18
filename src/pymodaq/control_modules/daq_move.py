@@ -172,6 +172,20 @@ class DAQ_Move(ParameterControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
+    @property
+    def master(self) -> bool:
+        """ Get/Set programmaticaly the Master/Slave status of an actuator"""
+        if self.initialized_state:
+            return self.settings['move_settings', 'multiaxes', 'multi_status'] == 'Master'
+        else:
+            return True
+
+    @master.setter
+    def master(self, is_master: bool):
+        if self.initialized_state:
+            self.settings.child('move_settings', 'multiaxes', 'multi_status').setValue(
+                'Master' if is_master else 'Slave')
+
     def append_data(self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
@@ -359,8 +373,9 @@ class DAQ_Move(ParameterControlModule):
                 self._hardware_thread.hardware = hardware
                 self._hardware_thread.start()
                 self.command_hardware.emit(
-                    ThreadCommand(command="ini_stage", attribute=[self.settings.child('move_settings').saveState(),
-                                                                  self.controller]))
+                    ThreadCommand(command="ini_stage", attribute=[
+                        self.settings.child('move_settings').saveState(),
+                        self.controller]))
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -545,6 +560,11 @@ class DAQ_Move(ParameterControlModule):
                 self.update_settings()
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
+
+    @property
+    def actuators(self) -> List[str]:
+        """ Get the list of possible actuators"""
+        return ACTUATOR_TYPES
 
     def update_plugin_config(self):
         parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self.actuator)

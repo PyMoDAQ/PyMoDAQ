@@ -1,5 +1,7 @@
 import time
 from functools import partial  # needed for the button to sync setpoint with currpoint
+from typing import Dict
+
 import numpy as np
 
 from pyqtgraph.widgets.SpinBox import SpinBox
@@ -365,10 +367,10 @@ class DAQ_PID(CustomApp):
         for ind, sp in enumerate(self.setpoints_sb):
             sp.setValue(values[ind])
 
-    def setpoints_external(self, values_dict):
+    def setpoints_external(self, values_dict: Dict[str, DataActuator]):
         for key in values_dict:
             index = self.model_class.setpoints_names.index(key)
-            self.setpoints_sb[index].setValue(values_dict[key])
+            self.setpoints_sb[index].setValue(values_dict[key].value())
 
     @property
     def curr_points(self):
