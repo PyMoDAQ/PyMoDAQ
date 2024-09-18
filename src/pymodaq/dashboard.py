@@ -35,13 +35,12 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.managers.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError, MasterSlaveError
+from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.utils.daq_utils import get_instrument_plugins
 from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq import extensions as extmod
 
 
@@ -685,6 +684,13 @@ class DashBoard(QObject):
 
         detector_modules.append(det_mod_tmp)
 
+    def update_module_manager(self):
+        if self.modules_manager is None:
+            self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
+        else:
+            self.modules_manager.actuators_all = self.actuators_modules
+            self.modules_manager.detectors_all = self.detector_modules
+
     def set_file_preset(self, filename) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
         """
             Set a file managers from the converted xml file given by the filename parameter.
@@ -1114,7 +1120,7 @@ class DashBoard(QObject):
 
             try:
                 actuators_modules, detector_modules = self.set_file_preset(filename)
-            except (ActuatorError, DetectorError, PIDError, MasterSlaveError) as error:
+            except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.splash_sc.close()
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
@@ -1133,53 +1139,7 @@ class DashBoard(QObject):
                 self.actuators_modules = actuators_modules
                 self.detector_modules = detector_modules
 
-                self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
-
-                # Now that we have the module manager, load PID if it is checked in managers
-                try:
-                    if self.preset_manager.preset_params.child('use_pid').value():
-                        self.load_pid_module()
-
-                        self.pid_module.settings.child('models', 'model_class').setValue(
-                            self.preset_manager.preset_params.child('pid_models').value())
-                        QtWidgets.QApplication.processEvents()
-                        self.pid_module.set_model()
-
-                        QtWidgets.QApplication.processEvents()
-
-                        for child in putils.iter_children_params(
-                                self.preset_manager.preset_params.child('model_settings'),
-                                []):
-                            preset_path = self.preset_manager.preset_params.child(
-                                'model_settings').childPath(child)
-                            path = ['models', 'model_params']
-                            path.extend(preset_path)
-                            self.pid_module.settings.child(*path).setValue(child.value())
-
-                        model_class = extmod.get_models(
-                            self.preset_manager.preset_params.child('pid_models').value())['class']
-                        for setp in model_class.setpoints_names:
-                            self.add_move(setp, None, 'PID', [], [], actuators_modules)
-                            actuators_modules[-1].controller = PIDController(self.pid_module)
-                            actuators_modules[-1].master = False
-                            actuators_modules[-1].init_hardware_ui()
-                            QtWidgets.QApplication.processEvents()
-                            self.poll_init(actuators_modules[-1])
-                            QtWidgets.QApplication.processEvents()
-
-                    # Update actuators modules and module manager
-                    self.actuators_modules = actuators_modules
-                    self.modules_manager = ModulesManager(self.detector_modules,
-                                                          self.actuators_modules)
-
-                except Exception as e:
-                    raise PIDError('Could not load the PID extension and create setpoints actuators'
-                                   f'{str(e)}')
-
-                #
-                if self.pid_module is not None:
-                    self.pid_module.get_action('ini_model').trigger()
-                # #
+                self.update_module_manager()
 
                 #####################################################
                 self.overshoot_manager = OvershootManager(

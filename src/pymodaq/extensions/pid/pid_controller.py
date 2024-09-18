@@ -11,13 +11,14 @@ from simple_pid import PID
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
+from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
 
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.utils.widgets import QLED, LabelWithFont, SpinBox
 from pymodaq_gui.utils.dock import DockArea, Dock
-from pymodaq_gui.utils.custom_app import CustomApp
+
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
 from pymodaq_utils.config import Config
@@ -25,6 +26,8 @@ from pymodaq_utils.config import Config
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.extensions.pid.utils import get_models
 from pymodaq.utils.data import DataActuator, DataToActuators
+from pymodaq.extensions.pid.actuator_controller import PIDController
+from pymodaq.extensions.utils import CustomExt
 
 
 config = Config()
@@ -40,7 +43,7 @@ def convert_output_limits(lim_min=-10., min_status=False, lim_max=10., max_statu
     return output
 
 
-class DAQ_PID(CustomApp):
+class DAQ_PID(CustomExt):
     """
     """
     command_pid = Signal(ThreadCommand)
@@ -243,6 +246,7 @@ class DAQ_PID(CustomApp):
         logger.debug('connecting actions and other')
         self.connect_action('quit', self.quit_fun, )
         self.connect_action('ini_model', self.ini_model)
+        self.connect_action('create_setp_actuators', self.create_setp_actuators)
         self.connect_action('ini_pid', self.ini_PID)
         self.connect_action('run', self.run_PID)
         self.connect_action('pause', self.pause_PID)
@@ -254,6 +258,11 @@ class DAQ_PID(CustomApp):
         self.add_widget('model_label', QtWidgets.QLabel, 'Init Model:')
         self.add_action('ini_model', 'Init Model', 'ini', tip='Initialize the selected model: algo/data conversion')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
+
+        self.add_action('create_setp_actuators', 'Create SetPoint Actuators', 'Create',
+                        tip='Create a DAQ_Move Control Module for each SetPoint allowing to'
+                            'control them from the DashBoard, therefore within other extensions')
+
         self.add_widget('model_label', QtWidgets.QLabel, 'Init PID Runner:')
         self.add_action('ini_pid', 'Init the PID loop', 'ini', tip='Init the PID thread', checkable=True)
         self.add_widget('pid_led', QLED, toolbar=self.toolbar)
@@ -298,6 +307,27 @@ class DAQ_PID(CustomApp):
             self.get_set_model_params(self.models[0]['name'])
 
         self.dock_pid.addWidget(widget)
+
+    def create_setp_actuators(self):
+        # Now that we have the module manager, load PID if it is checked in managers
+        try:
+            actuators_modules = []
+            for setp in self.model_class.setpoints_names:
+                self.dashboard.add_move(setp, None, 'PID', [], [], actuators_modules)
+                actuators_modules[-1].controller = PIDController(self)
+                actuators_modules[-1].master = False
+                actuators_modules[-1].init_hardware_ui()
+                QtWidgets.QApplication.processEvents()
+                self.dashboard.poll_init(actuators_modules[-1])
+                QtWidgets.QApplication.processEvents()
+
+            # Update actuators modules and module manager
+            self.dashboard.actuators_modules.extend(actuators_modules)
+            self.dashboard.update_module_manager()
+
+        except Exception as e:
+            raise PIDError('Could not load the PID extension and create setpoints actuators'
+                           f'{str(e)}')
 
     def get_set_model_params(self, model_name):
         self.settings.child('models', 'model_params').clearChildren()
@@ -645,38 +675,16 @@ class PIDRunner(QObject):
 
 
 if __name__ == '__main__':
-    import sys
-    from pathlib import Path
-    from pymodaq.utils.daq_utils import get_set_preset_path
+    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-    app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+    app = mkQApp('DAQ_PID')
+    preset_file_name = config('presets', f'default_preset_for_pid')
 
-    from pymodaq.dashboard import DashBoard
+    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQ_PID')
 
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
+    app.exec()
 
-    dashboard = DashBoard(area)
-    pid = None
-    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_pid')}.xml")
-    if file.exists():
-        dashboard.set_preset_mode(file)
-        pid = dashboard.load_pid_module()
-    else:
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
-                       f"Impossible to load the DAQ_PID Module")
-        msgBox.setStandardButtons(msgBox.Ok)
-        ret = msgBox.exec()
-
-    sys.exit(app.exec_())
 
 
 
