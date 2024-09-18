@@ -1,4 +1,4 @@
-from pymodaq.extensions.pid.actuator_controller import PIDController
+
 from pymodaq.extensions.pid.pid_controller import DAQ_PID
 
 
