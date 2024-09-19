@@ -29,12 +29,15 @@ jobs:
           python -m pip install --upgrade pip
           export QT_DEBUG_PLUGINS=1
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }} hatch hatching
+      - name: Get history and tags for SCM versioning to work
+        run: |
           git branch
-          git pull --unshallow
+          git fetch --prune --unshallow
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
           hatch version
+      - name: Build pymodaq and install
+        run: |
           pip install .
-          
-          # if using pip install . the version id is splited and I'm not having pymodaq-5.0.1.dev5... but pymodaq-0.1.dev1 ??
       - name: create local pymodaq folder and setting permissions
         run: |
           sudo mkdir /etc/.pymodaq
