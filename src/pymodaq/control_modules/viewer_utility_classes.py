@@ -92,7 +92,7 @@ params = [
 ]
 
 
-def main(plugin_file=None, init=True):
+def main(plugin_file=None, init=True, title='Testing'):
     """
     this method start a DAQ_Viewer object with this defined plugin as detector
     Returns
@@ -120,7 +120,7 @@ def main(plugin_file=None, init=True):
     else:
         detector = Path(plugin_file).stem[13:]
         det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
-    prog = DAQ_Viewer(area, title="Testing")
+    prog = DAQ_Viewer(area, title=title)
     win.show()
     prog.daq_type = det_type
     prog.detector = detector
