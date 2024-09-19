@@ -259,16 +259,20 @@ class DAQ_PID(CustomExt):
         self.add_action('ini_model', 'Init Model', 'ini', tip='Initialize the selected model: algo/data conversion')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
 
-        self.add_action('create_setp_actuators', 'Create SetPoint Actuators', 'Create',
+        self.add_action('create_setp_actuators', 'Create SetPoint Actuators', 'Add_Step',
                         tip='Create a DAQ_Move Control Module for each SetPoint allowing to'
                             'control them from the DashBoard, therefore within other extensions')
 
         self.add_widget('model_label', QtWidgets.QLabel, 'Init PID Runner:')
-        self.add_action('ini_pid', 'Init the PID loop', 'ini', tip='Init the PID thread', checkable=True)
+        self.add_action('ini_pid', 'Init the PID loop', 'ini', tip='Init the PID thread',
+                        checkable=True)
         self.add_widget('pid_led', QLED, toolbar=self.toolbar)
-        self.add_action('run', 'Run The PID loop', 'run2', tip='run or stop the pid loop', checkable=True)
-        self.add_action('pause', 'Pause the PID loop', 'pause', tip='Pause the PID loop', checkable=True)
+        self.add_action('run', 'Run The PID loop', 'run2', tip='run or stop the pid loop',
+                        checkable=True)
+        self.add_action('pause', 'Pause the PID loop', 'pause', tip='Pause the PID loop',
+                        checkable=True)
         self.set_action_checked('pause', True)
+        self.set_action_enabled('create_setp_actuators', False)
         logger.debug('actions set')
 
     def setup_docks(self):
@@ -324,6 +328,8 @@ class DAQ_PID(CustomExt):
             # Update actuators modules and module manager
             self.dashboard.actuators_modules.extend(actuators_modules)
             self.dashboard.update_module_manager()
+
+            self.set_action_enabled('create_setp_actuators', False)
 
         except Exception as e:
             raise PIDError('Could not load the PID extension and create setpoints actuators'
@@ -387,6 +393,7 @@ class DAQ_PID(CustomExt):
             self.enable_controls_pid(True)
             self.get_action('model_led').set_as_true()
             self.set_action_enabled('ini_model', False)
+            self.set_action_enabled('create_setp_actuators', True)
 
         except Exception as e:
             logger.exception(str(e))
