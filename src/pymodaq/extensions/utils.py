@@ -22,6 +22,7 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
+
 def get_ext_modules(path: Path):
     modules = []
     for mod in pkgutil.iter_modules([path]):
