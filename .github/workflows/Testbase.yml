@@ -28,10 +28,16 @@ jobs:
           sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils
           python -m pip install --upgrade pip
           export QT_DEBUG_PLUGINS=1
-          pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
+          pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }} hatch hatching
+      - name: Get history and tags for SCM versioning to work
+        run: |
           git branch
-          pip install git+https://github.com/PyMoDAQ/PyMoDAQ.git@5.0.x_dev 
-          # if using pip install . the version id is splited and I'm not having pymodaq-5.0.1.dev5... but pymodaq-0.1.dev1 ??
+          git fetch --prune --unshallow
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          hatch version
+      - name: Build pymodaq and install
+        run: |
+          pip install .
       - name: create local pymodaq folder and setting permissions
         run: |
           sudo mkdir /etc/.pymodaq

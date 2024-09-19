@@ -22,6 +22,7 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
+
 def get_ext_modules(path: Path):
     modules = []
     for mod in pkgutil.iter_modules([path]):
@@ -67,7 +68,7 @@ def get_extensions():
 
 class CustomExt(CustomApp):
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: DashBoard):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: 'DashBoard'):
         super().__init__(parent)
 
         self.dashboard = dashboard

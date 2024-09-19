@@ -172,8 +172,13 @@ class ModulesManager(QObject, ParameterManager):
 
     @property
     def detectors_all(self):
-        """Get the list of all detectors"""
+        """Get/Set the list of all detectors"""
         return self._detectors
+
+    @detectors_all.setter
+    def detectors_all(self, detectors: List['DAQ_Viewer']):
+        self._detectors = detectors
+
 
     @property
     def actuators(self) -> List['DAQ_Move']:
@@ -184,6 +189,10 @@ class ModulesManager(QObject, ParameterManager):
     def actuators_all(self):
         """Get the list of all actuators"""
         return self._actuators
+
+    @actuators_all.setter
+    def actuators_all(self, actuators: List['DAQ_Move']):
+        self._actuators = actuators
 
     @property
     def modules(self):
