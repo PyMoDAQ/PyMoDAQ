@@ -31,7 +31,11 @@ jobs:
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }} hatch hatching
           git branch
           hatch build
-          pip install ./dist
+          
+          VAR = "$(grep .whl ./dist)"
+          printf "%s\n" "./dist/"$VAR""
+          pip install ./dist/"$VAR"
+          
           # if using pip install . the version id is splited and I'm not having pymodaq-5.0.1.dev5... but pymodaq-0.1.dev1 ??
       - name: create local pymodaq folder and setting permissions
         run: |
