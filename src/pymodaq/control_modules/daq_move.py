@@ -567,7 +567,7 @@ class DAQ_Move(ParameterControlModule):
             self.update_plugin_config()
             if self.ui is not None:
                 self.ui.actuator = act_type
-                self.update_settings()
+            self.update_settings()
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
 
