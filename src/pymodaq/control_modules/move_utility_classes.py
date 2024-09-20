@@ -17,10 +17,11 @@ from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo, find_keys_from_v
 from pymodaq.utils import config as configmod
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
-from pymodaq.utils.data import DataActuator
+from pymodaq.utils.data import DataActuator, DataUnitError
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
+from pymodaq import Unit
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -207,7 +208,7 @@ class DAQ_Move_base(QObject):
     params = []
     _controller_units = ''
     _epsilon = 1
-    data_actuator_type = DataActuatorType['float']
+    data_actuator_type = DataActuatorType.float
     data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['DAQ_Move_Hardware'] = None,
@@ -235,8 +236,12 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
-        self._current_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
-        self._target_value = DataActuator(self._title, data=[np.zeros(self.data_shape, dtype=float)])
+        self._current_value = DataActuator(self._title,
+                                           data=[np.zeros(self.data_shape, dtype=float)],
+                                           units=self.controller_units)
+        self._target_value = DataActuator(self._title,
+                                          data=[np.zeros(self.data_shape, dtype=float)],
+                                          units=self.controller_units)
         self.controller_units = self._controller_units
 
         self.poll_timer = QTimer()
@@ -328,8 +333,13 @@ class DAQ_Move_base(QObject):
     @current_value.setter
     def current_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
-            self._current_value = DataActuator(self._title, data=value)
+            self._current_value = DataActuator(self._title, data=value,
+                                               units=self.controller_units)
         else:
+            if (not Unit(self.controller_units).is_compatible_with(
+                    Unit(value.units)) and
+                    value.units == ''):
+                value.force_units(self.controller_units)
             self._current_value = value
 
     @property
@@ -342,8 +352,13 @@ class DAQ_Move_base(QObject):
     @target_value.setter
     def target_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
-            self._target_value = DataActuator(self._title, data=value)
+            self._target_value = DataActuator(self._title, data=value,
+                                              units=self.controller_units)
         else:
+            if (not Unit(self.controller_units).is_compatible_with(
+                    Unit(value.units)) and
+                    value.units == ''):
+                value.force_units(self.controller_units)
             self._target_value = value
 
     @property
@@ -402,10 +417,15 @@ class DAQ_Move_base(QObject):
         """
         if self.settings.child('bounds', 'is_bounds').value():
             if position > self.settings.child('bounds', 'max_bound').value():
-                position = DataActuator(self._title, data=self.settings.child('bounds', 'max_bound').value())
+                position = DataActuator(self._title,
+                                        data=self.settings.child('bounds', 'max_bound').value(),
+                                        units = self.controller_units)
                 self.emit_status(ThreadCommand('outofbounds', []))
             elif position < self.settings.child('bounds', 'min_bound').value():
-                position = DataActuator(self._title, data=self.settings.child('bounds', 'min_bound').value())
+                position = DataActuator(self._title,
+                                        data=self.settings.child('bounds', 'min_bound').value(),
+                                        units=self.controller_units
+                                        )
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
@@ -472,12 +492,14 @@ class DAQ_Move_base(QObject):
         """
         if position is None:
             if self.data_actuator_type.name == 'float':
-                position = DataActuator(self._title, data=self.get_actuator_value())
+                position = DataActuator(self._title, data=self.get_actuator_value(),
+                                        units = self.controller_units)
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
-            position = DataActuator(self._title, data=position.value())
+            position = DataActuator(self._title, data=position.value(),
+                                    units = self.controller_units)
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
@@ -493,31 +515,40 @@ class DAQ_Move_base(QObject):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                if self.data_actuator_type.name == 'float':
-                    self._current_value = DataActuator(data=self.get_actuator_value())
+                if self.data_actuator_type == DataActuatorType.float:
+                    self._current_value = DataActuator(data=self.get_actuator_value(),
+                                                       units=self.controller_units)
                 else:
                     self._current_value = self.get_actuator_value()
+                    if (not Unit(self.controller_units).is_compatible_with(
+                            Unit(self._current_value.units)) and
+                            self._current_value.units == ''):
+                        # this happens if the units have not been specified in
+                        # the plugin
+                        self._current_value.force_units(self.controller_units)
+
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
 
     def check_target_reached(self):
-        # if not isinstance(self._current_value, DataActuator):
-        #     self._current_value = DataActuator(data=self._current_value)
-        # if not isinstance(self._target_value, DataActuator):
-        #     self._target_value = DataActuator(data=self._target_value)
-
         logger.debug(f"epsilon value is {self.settings['epsilon']}")
         logger.debug(f"current_value value is {self._current_value}")
         logger.debug(f"target_value value is {self._target_value}")
 
-        if not (self._current_value - self._target_value).abs() < self.settings['epsilon']:
+        try:
+            epsilon_calculated = (self._current_value - self._target_value).abs()
+        except DataUnitError as e:
+            epsilon_calculated = abs(self._current_value.value() - self._target_value.value())
+            logger.warning(f'Unit issue when calculating epsilon, units are not the same between'
+                           f'target and current values')
+
+        if not epsilon_calculated < self.settings['epsilon']:
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped', ))
                 logger.info('Move has been stopped')
             self.current_value = self.get_actuator_value()
-
             self.emit_value(self._current_value)
             logger.debug(f'Current value: {self._current_value}')
 
@@ -624,7 +655,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     """
     params_client = []  # parameters of a client grabber
     command_server = Signal(list)
-    data_actuator_type = DataActuatorType['DataActuator']
+    data_actuator_type = DataActuatorType.DataActuator
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']

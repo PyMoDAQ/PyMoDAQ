@@ -633,12 +633,20 @@ class DataBase(DataLowLevel):
 
     @property
     def units(self):
+        """ Get/Set the object units
+
+        Setting to other units should retain the unit compatibility
+        """
         return self._units
 
     @units.setter
     def units(self, units: str):
         units = check_units(units)
         self.units_as(units, inplace=True)
+
+    def force_units(self, units: str):
+        """ Change immediately the units to whatever else. Use this with care!"""
+        self._units = units
 
     def units_as(self, units: str, inplace=True) -> 'DataBase':
         """ Set the object units to the new one (if possible)
@@ -2401,9 +2409,9 @@ class DataActuator(DataRaw):
 
     def __repr__(self):
         if self.dim.name == 'Data0D':
-            return f'<{self.__class__.__name__} ({self.data[0][0]})>'
+            return f'<{self.__class__.__name__} ({self.data[0][0]} {self.units})>'
         else:
-            return f'<{self.__class__.__name__} ({self.shape})>'
+            return f'<{self.__class__.__name__} ({self.shape} {self.units})>'
 
     def value(self) -> float:
         """Returns the underlying float value (of the first elt in the data list) if this data
