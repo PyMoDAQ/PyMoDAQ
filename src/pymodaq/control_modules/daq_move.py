@@ -35,11 +35,16 @@ from pymodaq_gui.parameter import utils as putils
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
-from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI
-from pymodaq.control_modules.move_utility_classes import MoveCommand, DAQ_Move_base
+from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
+from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
+                                                          DataActuatorType)
+
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
+
 from pymodaq.utils.daq_utils import get_plugins
+from pymodaq import Q_, Unit
+
 
 
 local_path = config_mod.get_set_local_dir()
@@ -122,9 +127,9 @@ class DAQ_Move(ParameterControlModule):
 
         self._move_done_bool = True
 
-        self._current_value = DataActuator(title)
-        self._target_value: DataActuator(title)
-        self._relative_value: DataActuator(title)
+        self._current_value = DataActuator(title, units=self.units)
+        self._target_value = DataActuator(title, units=self.units)
+        self._relative_value = DataActuator(title, units=self.units)
 
         self._refresh_timer = QTimer()
         self._refresh_timer.timeout.connect(self.get_actuator_value)
@@ -162,9 +167,13 @@ class DAQ_Move(ParameterControlModule):
         elif cmd.command == 'stop':
             self.stop_motion()
         elif cmd.command == 'move_abs':
-            self.move_abs(cmd.attribute)
+            data_act: DataActuator = cmd.attribute
+            data_act.force_units(self.units)
+            self.move_abs(data_act)
         elif cmd.command == 'move_rel':
-            self.move_rel(cmd.attribute)
+            data_act: DataActuator = cmd.attribute
+            data_act.force_units(self.units)
+            self.move_rel(data_act)
         elif cmd.command == 'show_log':
             self.show_log()
         elif cmd.command == 'show_config':
@@ -177,7 +186,7 @@ class DAQ_Move(ParameterControlModule):
 
     @property
     def master(self) -> bool:
-        """ Get/Set programmaticaly the Master/Slave status of an actuator"""
+        """ Get/Set programmatically the Master/Slave status of an actuator"""
         if self.initialized_state:
             return self.settings['move_settings', 'multiaxes', 'multi_status'] == 'Master'
         else:
@@ -272,7 +281,7 @@ class DAQ_Move(ParameterControlModule):
         """
         try:
             if isinstance(value, Number):
-                value = DataActuator(self.title, data=[np.array([value])])
+                value = DataActuator(self.title, data=[np.array([value])], units=self.units)
             self._send_to_tcpip = send_to_tcpip
             if value != self._current_value:
                 if self.ui is not None:
@@ -321,7 +330,7 @@ class DAQ_Move(ParameterControlModule):
 
         try:
             if isinstance(rel_value, Number):
-                rel_value = DataActuator(self.title, data=[np.array([rel_value])])
+                rel_value = DataActuator(self.title, data=[np.array([rel_value])], units=self.units)
             self._send_to_tcpip = send_to_tcpip
             if self.ui is not None:
                 self.ui.move_done = False
@@ -461,6 +470,11 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == "get_actuator_value" or status.command == 'check_position':
             data_act: DataActuator = status.attribute[0]
             data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
+            if (not Unit(self.units).is_compatible_with(Unit(data_act.units)) and
+                    data_act.units == ''):  #this happens if the units have not been specified in
+                # the plugin
+                data_act.force_units(self.units)
+
             if self.ui is not None:
                 self.ui.display_value(data_act)
                 if self.ui.is_action_checked('show_graph'):
@@ -560,7 +574,7 @@ class DAQ_Move(ParameterControlModule):
             self.update_plugin_config()
             if self.ui is not None:
                 self.ui.actuator = act_type
-                self.update_settings()
+            self.update_settings()
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
 
@@ -684,8 +698,8 @@ class DAQ_Move_Hardware(QObject):
         """Get the current position checking the hardware value.
         """
         pos = self.hardware.get_actuator_value()
-        if self.hardware.data_actuator_type.name == 'float':
-            return DataActuator(self._title, data=pos)
+        if self.hardware.data_actuator_type == DataActuatorType.float:
+            return DataActuator(self._title, data=pos, units=self.units)
         else:
             return pos
 
