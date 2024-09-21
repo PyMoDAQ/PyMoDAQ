@@ -261,12 +261,17 @@ class DAQ_Move_base(QObject):
     @property
     def axis_unit(self) -> str:
         """ Get the unit of the currently chosen axis
+
+        New in 4.4.0
         """
         return self.axis_units[self.axis_names.index(self.axis_name)]
 
     @property
     def axis_units(self) -> List[str]:
-        """ Get/Set the units for each axis of the controller"""
+        """ Get/Set the units for each axis of the controller
+
+        New in 4.4.0
+        """
         return self._axis_units
 
     @axis_units.setter
@@ -278,6 +283,8 @@ class DAQ_Move_base(QObject):
     @property
     def epsilon(self) -> float:
         """ Get/Set the epsilon of the currently chosen axis
+
+        New in 4.4.0
         """
         return self.epsilons[self.axis_names.index(self.axis_name)]
 
@@ -287,7 +294,10 @@ class DAQ_Move_base(QObject):
 
     @property
     def epsilons(self) -> List[float]:
-        """ Get/Set the epsilon for each axis of the controller"""
+        """ Get/Set the epsilon for each axis of the controller
+
+        New in 4.4.0
+        """
         return self._epsilons
 
     @epsilons.setter
@@ -300,7 +310,7 @@ class DAQ_Move_base(QObject):
     def controller_units(self):
         """ Get/Set the units of the currently chosen axis of the controller
 
-        Deprecated with pymodaq > 4.0.5
+        Deprecated with pymodaq >= 4.4.0
 
         The property controller_units is deprecated please use the axis_unit property
         """
