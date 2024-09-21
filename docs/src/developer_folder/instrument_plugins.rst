@@ -96,6 +96,35 @@ __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 .. _hardware_settings:
 
+
+Value Reached?
+--------------
+
+Every time, you trigger an absolute or relative value change in your DAQ_Move, PyMoDAQ will wait before
+sending a `move_done` signal. The value change is considered as done if the current value reached the
+target value at a certain tolerance. This tolerance is a float number called epsilon within the code and in the UI.
+
+Here is a snippet of this calculation:
+
+.. code-block::
+
+  if not abs(self._current_value - self._target_value) < self.epsilon:
+      # keep trying to reach the value
+
+.. note::
+
+  From PyMoDAQ >= 4.4.0, this condition include working units, the code snippet looks like:
+
+  .. code-block::
+
+    if not (self._current_value - self._target_value).abs().value(self.axis_unit) < self.epsilon:
+        # keep trying to reach the value
+
+
+  where all quantities holds an information about their units, for instance `epsilon` could be expressed
+  in *µm* (micron) (controller units) while _current_value (related to what is printed on the UI) could be expressed
+  in *mm*. This feature is available naturally by using the PyMoDAQ DataManagement ecosystem with units compatibility.
+
 Hardware Settings
 -----------------
 
@@ -450,6 +479,16 @@ class should defines two class attributes:
 
 * `is_multiaxis` should be set to True. This will trigger the display of the multiaxis section on the UI
 * `axes_names` should be a list or dict describing the different actuator such a controller can drive
+
+.. note::
+    New in 4.4.0
+    Moreover two other attributes can then be transformed as list, namely:
+
+    * `_controller_units`: can be a list of string specifying the units to be used by each axis
+      In case, all axes have the same working *units*, could be left as a str. PyMoDAQ handles the rest
+    * `_epsilon`: can be a list of float specifying the epsilon to be used by each axis
+      In case, all axes have the same *epsilon*, could be left as a float. PyMoDAQ handles the rest
+
 
 .. code-block::
 

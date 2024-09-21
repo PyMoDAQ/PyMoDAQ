@@ -161,11 +161,13 @@ class DAQ_Move(ParameterControlModule):
             self.stop_motion()
         elif cmd.command == 'move_abs':
             data_act: DataActuator = cmd.attribute
-            data_act.force_units(self.units)
+            if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
+                data_act.force_units(self.units)
             self.move_abs(data_act)
         elif cmd.command == 'move_rel':
             data_act: DataActuator = cmd.attribute
-            data_act.force_units(self.units)
+            if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
+                data_act.force_units(self.units)
             self.move_rel(data_act)
         elif cmd.command == 'show_log':
             self.show_log()
@@ -591,7 +593,14 @@ class DAQ_Move(ParameterControlModule):
     def units(self, unit: str):
         self.settings.child('move_settings', 'units').setValue(unit)
         if self.ui is not None and config('actuator', 'display_units'):
-            self.ui.set_unit_as_suffix(unit)
+            if unit == '°':
+                # special cas as pint base unit for angles are radians
+                self.ui.set_unit_as_suffix(unit)
+            else:
+                # if the controller units are in mm the displayed unit will be m
+                # because m is the base unit
+                # then the user could ask for mm, km, µm...
+                self.ui.set_unit_as_suffix(str(Q_(1, unit).to_base_units().units))
 
     def update_settings(self):
 
@@ -668,8 +677,6 @@ class DAQ_Move_Hardware(QObject):
         self._title = title
         self.hardware: Optional[DAQ_Move_base] = None
         self.actuator_type = actuator_type
-        self.current_position: DataActuator = position
-        self._target_value: Optional[DataActuator] = None
         self.hardware_adress = None
         self.axis_address = None
         self.motion_stoped = False
@@ -692,9 +699,8 @@ class DAQ_Move_Hardware(QObject):
         """
         pos = self.hardware.get_actuator_value()
         if self.hardware.data_actuator_type == DataActuatorType.float:
-            return DataActuator(self._title, data=pos, units=self.units)
-        else:
-            return pos
+            pos = DataActuator(self._title, data=pos, units=self.units)
+        return pos
 
     def check_position(self):
         """Get the current position checking the hardware position (deprecated)
@@ -743,6 +749,8 @@ class DAQ_Move_Hardware(QObject):
                 status.initialized = infos[1]
             status.controller = self.hardware.controller
             self.hardware.move_done_signal.connect(self.move_done)
+            if status.initialized:
+                self.status_sig.emit(ThreadCommand('get_actuator_value', [self.get_actuator_value()]))
 
             return status
         except Exception as e:
@@ -753,15 +761,12 @@ class DAQ_Move_Hardware(QObject):
         """
 
         """
-        # if isinstance(position, Number):
-        #     position = float(position)  # because it may be a numpy float and could cause issues
-        #     # see https://github.com/pythonnet/pythonnet/issues/1833
-        self._target_value = position
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type.name == 'float':
             self.hardware.move_abs(position.value())
         else:
+            position.units = self.hardware.controller_units  # convert to plugin controller units
             self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
@@ -771,12 +776,12 @@ class DAQ_Move_Hardware(QObject):
         """
 
         self.hardware.move_is_done = False
-        self._target_value = self.current_position + rel_position
         self.hardware.ispolling = polling
 
         if self.hardware.data_actuator_type.name == 'float':
             self.hardware.move_rel(rel_position.value())
         else:
+            rel_position.units = self.hardware.controller_units  # convert to plugin controller units
             self.hardware.move_rel(rel_position)
 
         self.hardware.poll_moving()
@@ -798,7 +803,6 @@ class DAQ_Move_Hardware(QObject):
 
         """
         self.hardware.move_is_done = False
-        self._target_value = 0
         self.hardware.move_home()
 
     @Slot(DataActuator)

@@ -1081,6 +1081,35 @@ class TestDataActuator:
         assert d.name == 'actuator'
         assert d.data[0] == np.array([data_number])
 
+    @pytest.mark.parametrize("data_number", [np.array([23]), np.array([0.25, -0.7])])
+    def test_value(self, data_number):
+        NUMBER = np.mean(data_number)
+        old_units = 'm'
+        d = data_mod.DataActuator(data=data_number, units=old_units)
+
+        assert d.value() == pytest.approx(NUMBER)
+        assert d.value('mm') == pytest.approx(NUMBER * 1e3)
+        assert d.value('km') == pytest.approx(NUMBER / 1e3)
+
+        assert d.values() == [pytest.approx(NUMBER)]
+        assert d.values('mm') == [pytest.approx(NUMBER * 1e3)]
+        assert d.values('km') == [pytest.approx(NUMBER / 1e3)]
+
+    @pytest.mark.parametrize("data_list", [[np.array([23, 45])],
+                                           [np.array([-23, 45]), np.array([23, -45])]])
+    def test_values(self, data_list):
+        NUMBERS = [np.mean(data) for data in data_list]
+        old_units = 'm'
+        d = data_mod.DataActuator(data=data_list, units=old_units)
+
+        assert d.value() == pytest.approx(NUMBERS[0])
+        assert d.value('mm') == pytest.approx(NUMBERS[0] * 1e3)
+        assert d.value('km') == pytest.approx(NUMBERS[0] / 1e3)
+
+        assert d.values() == pytest.approx(NUMBERS)
+        assert d.values('mm') == pytest.approx(list(np.array(NUMBERS) * 1e3))
+        assert d.values('km') == pytest.approx(list(np.array(NUMBERS) / 1e3))
+
 
 class TestDataToExport:
     def test_init(self, ini_data_to_export):

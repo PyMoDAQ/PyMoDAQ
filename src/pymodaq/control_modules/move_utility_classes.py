@@ -1,6 +1,7 @@
 from time import perf_counter
 from typing import Union, List, Dict, TYPE_CHECKING, Optional
 from numbers import Number
+from collections.abc import Iterable
 
 from easydict import EasyDict as edict
 import numpy as np
@@ -82,8 +83,8 @@ class MoveCommand:
 def comon_parameters_fun(is_multiaxes = False,
                          axes_names = [],
                          axis_names: Union[List, Dict] = [],
-                         master = True,
-                         epsilon = config('actuator', 'epsilon_default')):
+                         master=True,
+                         epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -206,8 +207,8 @@ class DAQ_Move_base(QObject):
     is_multiaxes = False
     stage_names = []
     params = []
-    _controller_units = ''
-    _epsilon = 1
+    _controller_units: Union[str, List[str]] = ''
+    _epsilon = 1.0
     data_actuator_type = DataActuatorType.float
     data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
@@ -236,13 +237,19 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
+
+        self._axis_units: List[str] = []
+        self.axis_units = self._controller_units
+        self._epsilons: List[float] = []
+        self.epsilons = self._epsilon
+        self.axis_name = self.axis_name  # to trigger some actions on units and epsilons
+
         self._current_value = DataActuator(self._title,
                                            data=[np.zeros(self.data_shape, dtype=float)],
-                                           units=self.controller_units)
+                                           units=self.axis_unit)
         self._target_value = DataActuator(self._title,
                                           data=[np.zeros(self.data_shape, dtype=float)],
-                                          units=self.controller_units)
-        self.controller_units = self._controller_units
+                                          units=self.axis_unit)
 
         self.poll_timer = QTimer()
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
@@ -250,6 +257,72 @@ class DAQ_Move_base(QObject):
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
+
+    @property
+    def axis_unit(self) -> str:
+        """ Get the unit of the currently chosen axis
+
+        New in 4.4.0
+        """
+        return self.axis_units[self.axis_names.index(self.axis_name)]
+
+    @property
+    def axis_units(self) -> List[str]:
+        """ Get/Set the units for each axis of the controller
+
+        New in 4.4.0
+        """
+        return self._axis_units
+
+    @axis_units.setter
+    def axis_units(self, units: Union[str, List[str]]):
+        if not isinstance(units, Iterable) and isinstance(units, str):
+            units = [units for _ in range(len(self.axis_names))]
+        self._axis_units = units
+
+    @property
+    def epsilon(self) -> float:
+        """ Get/Set the epsilon of the currently chosen axis
+
+        New in 4.4.0
+        """
+        return self.epsilons[self.axis_names.index(self.axis_name)]
+
+    @epsilon.setter
+    def epsilon(self, eps: float):
+        self.epsilons[self.axis_names.index(self.axis_name)] = eps
+
+    @property
+    def epsilons(self) -> List[float]:
+        """ Get/Set the epsilon for each axis of the controller
+
+        New in 4.4.0
+        """
+        return self._epsilons
+
+    @epsilons.setter
+    def epsilons(self, epsilons: Union[float, List[float]]):
+        if not isinstance(epsilons, Iterable) and isinstance(epsilons, float):
+            epsilons = [epsilons for _ in range(len(self.axis_names))]
+        self._epsilons = epsilons
+
+    @property
+    def controller_units(self):
+        """ Get/Set the units of the currently chosen axis of the controller
+
+        Deprecated with pymodaq >= 4.4.0
+
+        The property controller_units is deprecated please use the axis_unit property
+        """
+        deprecation_msg('The property controller_units is deprecated please use the'
+                        'axis_unit property.')
+        return self.axis_unit
+
+    @controller_units.setter
+    def controller_units(self, units: str = ''):
+        deprecation_msg('The property controller_units is deprecated please use the'
+                        'axis_unit property.')
+        self._axis_units[self.axis_names.index(self.axis_name)] = units
 
     @property
     def axis_name(self) -> Union[str, object]:
@@ -269,6 +342,9 @@ class DAQ_Move_base(QObject):
             elif isinstance(limits, dict):
                 self.settings.child('multiaxes', 'axis').setValue(limits[name])
             QtWidgets.QApplication.processEvents()
+            self.settings.child('units').setValue(self.axis_unit)
+            self.emit_status(ThreadCommand('units', self.axis_unit))
+            self.settings.child('epsilon').setValue(self.epsilon)
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -334,12 +410,12 @@ class DAQ_Move_base(QObject):
     def current_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
             self._current_value = DataActuator(self._title, data=value,
-                                               units=self.controller_units)
+                                               units=self.axis_unit)
         else:
-            if (not Unit(self.controller_units).is_compatible_with(
+            if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
-                value.force_units(self.controller_units)
+                value.force_units(self.axis_unit)
             self._current_value = value
 
     @property
@@ -353,12 +429,12 @@ class DAQ_Move_base(QObject):
     def target_value(self, value: Union[float, DataActuator]):
         if not isinstance(value, DataActuator):
             self._target_value = DataActuator(self._title, data=value,
-                                              units=self.controller_units)
+                                              units=self.axis_unit)
         else:
-            if (not Unit(self.controller_units).is_compatible_with(
+            if (not Unit(self.axis_unit).is_compatible_with(
                     Unit(value.units)) and
                     value.units == ''):
-                value.force_units(self.controller_units)
+                value.force_units(self.axis_unit)
             self._target_value = value
 
     @property
@@ -387,19 +463,6 @@ class DAQ_Move_base(QObject):
         """
         return self.settings['multiaxes', 'multi_status'] == 'Master'
 
-    @property
-    def controller_units(self):
-        """ Get/Set the units of this plugin"""
-        return self._controller_units
-
-    @controller_units.setter
-    def controller_units(self, units: str = ''):
-        self._controller_units = units
-        try:
-            self.settings.child('units').setValue(units)
-            self.emit_status(ThreadCommand('units', units))
-        except Exception:
-            pass
 
     @property
     def ispolling(self):
@@ -419,12 +482,12 @@ class DAQ_Move_base(QObject):
             if position > self.settings.child('bounds', 'max_bound').value():
                 position = DataActuator(self._title,
                                         data=self.settings.child('bounds', 'max_bound').value(),
-                                        units = self.controller_units)
+                                        units=self.axis_unit)
                 self.emit_status(ThreadCommand('outofbounds', []))
             elif position < self.settings.child('bounds', 'min_bound').value():
                 position = DataActuator(self._title,
                                         data=self.settings.child('bounds', 'min_bound').value(),
-                                        units=self.controller_units
+                                        units=self.axis_unit
                                         )
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
@@ -493,13 +556,13 @@ class DAQ_Move_base(QObject):
         if position is None:
             if self.data_actuator_type.name == 'float':
                 position = DataActuator(self._title, data=self.get_actuator_value(),
-                                        units = self.controller_units)
+                                        units=self.axis_unit)
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
             position = DataActuator(self._title, data=position.value(),
-                                    units = self.controller_units)
+                                    units=self.axis_unit)
         self.move_done_signal.emit(position)
         self.move_is_done = True
 
@@ -517,32 +580,33 @@ class DAQ_Move_base(QObject):
             else:
                 if self.data_actuator_type == DataActuatorType.float:
                     self._current_value = DataActuator(data=self.get_actuator_value(),
-                                                       units=self.controller_units)
+                                                       units=self.axis_unit)
                 else:
                     self._current_value = self.get_actuator_value()
-                    if (not Unit(self.controller_units).is_compatible_with(
+                    if (not Unit(self.axis_unit).is_compatible_with(
                             Unit(self._current_value.units)) and
                             self._current_value.units == ''):
                         # this happens if the units have not been specified in
                         # the plugin
-                        self._current_value.force_units(self.controller_units)
+                        self._current_value.force_units(self.axis_unit)
 
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
 
     def check_target_reached(self):
-        logger.debug(f"epsilon value is {self.settings['epsilon']}")
+        logger.debug(f"epsilon value is {self.epsilon}")
         logger.debug(f"current_value value is {self._current_value}")
         logger.debug(f"target_value value is {self._target_value}")
 
         try:
-            epsilon_calculated = (self._current_value - self._target_value).abs()
+            epsilon_calculated = (
+                    self._current_value - self._target_value).abs().value(self.axis_unit)
         except DataUnitError as e:
             epsilon_calculated = abs(self._current_value.value() - self._target_value.value())
-            logger.warning(f'Unit issue when calculating epsilon, units are not the same between'
+            logger.warning(f'Unit issue when calculating epsilon, units are not compatible between'
                            f'target and current values')
 
-        if not epsilon_calculated < self.settings['epsilon']:
+        if not epsilon_calculated < self.epsilon:
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
@@ -637,6 +701,11 @@ class DAQ_Move_base(QObject):
         if apply_settings:
             self.commit_common_settings(param)
             self.commit_settings(param)
+
+            if param.name() == 'axis':
+                self.axis_name = param.value()
+            elif param.name() == 'epsilon':
+                self.epsilon = param.value()
 
 
 class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):

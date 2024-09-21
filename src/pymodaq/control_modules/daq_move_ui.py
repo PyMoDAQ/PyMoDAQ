@@ -7,6 +7,7 @@ Created the 28/07/2022
 
 from typing import List
 import sys
+from pint.errors import DimensionalityError
 
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal, Qt
@@ -65,12 +66,17 @@ class DAQ_Move_UI(ControlModuleUI):
 
         super().__init__(parent)
         self.title = title
+        self._unit = ''
         self.setup_ui()
 
         self.enable_move_buttons(False)
 
     def display_value(self, value: DataActuator):
-        self.current_value_sb.setValue(value.value())
+        try:
+            self.current_value_sb.setValue(value.value(self._unit))
+        except DimensionalityError as e:
+            value.force_units(self._unit)
+            self.current_value_sb.setValue(value.value())
 
     @property
     def actuator_init(self):
@@ -193,9 +199,9 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui.layout().addWidget(self.toolbar, 0, 0, 1, 2)
         self.main_ui.layout().addWidget(self.move_toolbar, 1, 0, 1, 2)
 
-        self.abs_value_sb = SpinBox(step=0.1, dec=True)
+        self.abs_value_sb = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
-        self.abs_value_sb_2 = SpinBox(step=0.1, dec=True)
+        self.abs_value_sb_2 = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
@@ -221,7 +227,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.control_ui.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
         self.find_home_pb = PushButtonIcon('home2', 'Find Home')
         self.control_ui.layout().addWidget(self.find_home_pb, 0, 1)
-        self.abs_value_sb_bis = SpinBox(step=0.1, dec=True)
+        self.abs_value_sb_bis = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.control_ui.layout().addWidget(self.abs_value_sb_bis, 1, 0)
         self.move_abs_pb = PushButtonIcon('Move', 'Set Abs.',
                                           tip='Set the value of the actuator to the set absolute value')
@@ -230,7 +236,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.move_rel_plus_pb = PushButtonIcon('MoveUp', 'Set Rel. (+)')
         self.control_ui.layout().addWidget(self.move_rel_plus_pb, 2, 1)
 
-        self.rel_value_sb = SpinBox(step=0.1, dec=True)
+        self.rel_value_sb = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.control_ui.layout().addWidget(self.rel_value_sb, 3, 0)
         self.move_rel_minus_pb = PushButtonIcon('MoveDown', 'Set Rel. (-)')
         self.control_ui.layout().addWidget(self.move_rel_minus_pb, 3, 1)
@@ -252,6 +258,7 @@ class DAQ_Move_UI(ControlModuleUI):
 
     def set_unit_as_suffix(self, unit: str):
         """Will append the actuator units in the value display"""
+        self._unit = unit
         self.current_value_sb.setOpts(suffix=unit)
         self.abs_value_sb_bis.setOpts(suffix=unit)
         self.abs_value_sb.setOpts(suffix=unit)
@@ -328,12 +335,14 @@ class DAQ_Move_UI(ControlModuleUI):
 
     def emit_move_abs(self, spinbox):
         spinbox.editingFinished.emit()
-        self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value())))
+        self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value(),
+                                                                     units=self._unit)))
 
     def emit_move_rel(self, sign):
-        self.command_sig.emit(ThreadCommand('move_rel',
-                                            DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+'
-                                                                                           else -1))))
+        self.command_sig.emit(ThreadCommand(
+            'move_rel',
+            DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
+                         units=self._unit)))
 
     def close(self):
         self.graph_ui.close()
