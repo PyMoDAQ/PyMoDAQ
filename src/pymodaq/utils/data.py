@@ -9,6 +9,7 @@ from pymodaq_utils.warnings import deprecation_msg, user_warning
 
 from pymodaq_data.data import (DataRaw, DataWithAxes, DataToExport, DataCalculated, DataDim,
                                DataSource, DataBase, Axis, NavAxis)
+from pymodaq_data import Q_, Unit
 
 class DataActuator(DataRaw):
     """Specialized DataWithAxes set with source as 'raw'.
@@ -37,21 +38,48 @@ class DataActuator(DataRaw):
         else:
             return super().__add__(other)
 
-    def value(self) -> float:
+    def value(self, units: str = None) -> float:
         """Returns the underlying float value (of the first elt in the data list) if this data
-        holds only a float otherwise returns a mean of the underlying data"""
-        if self.length == 1 and self.size == 1:
-            return float(self.data[0][0])
-        else:
-            return float(np.mean(self.data))
+        holds only a float otherwise returns a mean of the underlying data
 
-    def values(self) -> List[float]:
+        Parameters
+        ----------
+
+        units: str
+            if unit is compatible with self.units, convert the data to these new units before
+            getting the value
+
+
+        """
+        if self.length == 1 and self.size == 1:
+            if units is not None:
+                data = Q_(float(self.data[0][0]), self.units)
+                return data.m_as(units)
+            else:
+                return float(self.data[0][0])
+        else:
+            if units is not None:
+                data = Q_(float(np.mean(self.data[0])), self.units)
+                return data.m_as(units)
+            else:
+                return float(np.mean(self.data[0]))
+
+    def values(self, units: str = None) -> List[float]:
         """Returns the underlying float value (for each data array in the data list) if this data
         holds only a float otherwise returns a mean of the underlying data"""
         if self.length == 1 and self.size == 1:
-            return [float(data_array[0]) for data_array in self.data]
+            if units is not None:
+                return [float(Q_(data_array[0], self.units).m_as(units))
+                        for data_array in self.data]
+            else:
+                return [float(data_array[0])
+                        for data_array in self.data]
         else:
-            return [float(np.mean(data_array)) for data_array in self.data]
+            if units is not None:
+                return [float(Q_(np.mean(data_array), self.units).m_as(units))
+                        for data_array in self.data]
+            else:
+                return [float(np.mean(data_array)) for data_array in self.data]
 
 
 class DataFromPlugins(DataRaw):

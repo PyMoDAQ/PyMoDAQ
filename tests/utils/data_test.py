@@ -41,16 +41,14 @@ def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSo
                                  data=[data for ind in range(Ndata)],
                                  axes=axes, labels=labels)
 
+class TestDataFromPlugins:
 
-class TestDataSource:
     def test_data_from_plugins(self):
         Ndata = 2
         data = data_mod.DataFromPlugins('myData', data=[DATA2D for ind in range(Ndata)])
         assert isinstance(data, data_mod.DataWithAxes)
         assert data.source == data_mod.DataSource['raw']
 
-
-class TestDataFromPlugins:
     def test_attributes(self):
         dwa = data_mod.DataFromPlugins(name='blabla', data=[DATA1D])
 
