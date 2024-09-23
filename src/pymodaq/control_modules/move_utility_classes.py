@@ -20,9 +20,11 @@ from pymodaq_gui.parameter import ioxml
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 
+from pymodaq_data.data import DataUnitError
+
 from pymodaq.utils.messenger import deprecation_msg
-from pymodaq.utils.data import DataActuator, DataUnitError
-from pymodaq.utils.enums import BaseEnum, enum_checker
+from pymodaq.utils.data import DataActuator
+from pymodaq_utils.enums import BaseEnum, enum_checker
 
 from pymodaq.utils.tcp_ip.mysocket import Socket
 from pymodaq.utils.tcp_ip.serializer import DeSerializer, Serializer
@@ -280,7 +282,7 @@ class DAQ_Move_base(QObject):
 
     @axis_units.setter
     def axis_units(self, units: Union[str, List[str]]):
-        if not isinstance(units, Iterable) and isinstance(units, str):
+        if isinstance(units, str):
             units = [units for _ in range(len(self.axis_names))]
         self._axis_units = units
 

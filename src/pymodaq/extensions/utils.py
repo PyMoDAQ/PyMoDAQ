@@ -17,6 +17,8 @@ from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils import logger as logger_module
 from pymodaq_gui.utils.custom_app import CustomApp
 
+from pymodaq.utils.managers.modules_manager import ModulesManager
+
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 if TYPE_CHECKING:
@@ -78,7 +80,7 @@ class CustomExt(CustomApp):
         self.dashboard = dashboard
 
     @property
-    def modules_manager(self):
+    def modules_manager(self) -> ModulesManager:
         """useful tool to interact with DAQ_Moves and DAQ_Viewers
 
         Will be available if a DashBoard has been set

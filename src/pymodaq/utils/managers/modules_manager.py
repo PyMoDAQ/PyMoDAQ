@@ -39,6 +39,7 @@ class ModulesManager(QObject, ParameterManager):
     selected_actuators: list of DAQ_Move
         sublist of actuators
     """
+    settings_name = 'ModulesManagerSettings'
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
@@ -253,7 +254,7 @@ class ModulesManager(QObject, ParameterManager):
         elif param.name() == 'actuators':
             self.actuators_changed.emit(param.value()['selected'])
 
-    def get_det_data_list(self):
+    def get_det_data_list(self) -> DataToExport:
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
         self.connect_detectors()
@@ -274,6 +275,7 @@ class ModulesManager(QObject, ParameterManager):
             dict(all_items=data_listND, selected=[]))
 
         self.connect_detectors(False)
+        return datas
 
     def get_selected_probed_data(self, dim='0D'):
         """Get the name of selected data names of a given dimensionality
