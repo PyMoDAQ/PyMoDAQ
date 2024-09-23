@@ -368,7 +368,7 @@ class DAQ_Move_base(QObject):
         QtWidgets.QApplication.processEvents()
 
     @property
-    def axis_value(self) -> object:
+    def axis_value(self) -> Union[int, object]:
         """Get the current value selected from the current axis"""
         return self.settings['multiaxes', 'axis']
 
