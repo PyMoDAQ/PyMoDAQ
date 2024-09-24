@@ -31,6 +31,30 @@ logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
 
+def check_units(dwa: DataActuator, units: str):
+    """ Check if dwa units is compatible with the units argument
+
+    If it is incompatible and has dimensionless units,  brute force change the dwa units to units,
+    otherwise raise a DataUnitError
+
+    Parameters
+    ----------
+    dwa: DataActuator
+    units: str
+
+    Returns
+    -------
+    DataActuator
+    """
+    if Unit(dwa.units).is_compatible_with(units):
+        return dwa
+    elif Unit(dwa.units).dimensionless:  # dimensionless
+        dwa.force_units(units)
+        return dwa
+    else:
+        raise DataUnitError(f'Units incompatibility between {dwa} and "{units}" units')
+
+
 class DataActuatorType(BaseEnum):
     """Enum for new or old style holding the value of the actuator"""
     float = 0
@@ -38,6 +62,8 @@ class DataActuatorType(BaseEnum):
 
 
 def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
+    if isinstance(epsilon, list):
+        epsilon=epsilon[0]
     return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
              'value': epsilon,
@@ -81,7 +107,7 @@ class MoveCommand:
 
 
 def comon_parameters_fun(is_multiaxes = False,
-                         axes_names = [],
+                         axes_names: Union[List[str], Dict[str, int]] = [],
                          axis_names: Union[List, Dict] = [],
                          master=True,
                          epsilon=config('actuator', 'epsilon_default')):
@@ -240,7 +266,8 @@ class DAQ_Move_base(QObject):
 
         self._axis_units: List[str] = []
         self.axis_units = self._controller_units
-        self._epsilons: List[float] = []
+        self._epsilons: List[float] = []  # self._epsilon if isinstance(self._epsilon, list) else\
+        #    [self._epsilon for _ in range(len(self.axis_name))]
         self.epsilons = self._epsilon
         self.axis_name = self.axis_name  # to trigger some actions on units and epsilons
 
@@ -260,11 +287,19 @@ class DAQ_Move_base(QObject):
 
     @property
     def axis_unit(self) -> str:
-        """ Get the unit of the currently chosen axis
+        """ Get/set the unit of the currently chosen axis
+
+        Will update the printed controller unit in the UI
 
         New in 4.4.0
         """
-        return self.axis_units[self.axis_names.index(self.axis_name)]
+        return self.axis_units[self.axis_value]
+
+    @axis_unit.setter
+    def axis_unit(self, unit: str):
+        self.axis_units[self.axis_value] = unit
+        self.settings.child('units').setValue(unit)
+        self.emit_status(ThreadCommand('units', unit))
 
     @property
     def axis_units(self) -> List[str]:
@@ -286,11 +321,11 @@ class DAQ_Move_base(QObject):
 
         New in 4.4.0
         """
-        return self.epsilons[self.axis_names.index(self.axis_name)]
+        return self.epsilons[self.axis_value]
 
     @epsilon.setter
     def epsilon(self, eps: float):
-        self.epsilons[self.axis_names.index(self.axis_name)] = eps
+        self.epsilons[self.axis_value] = eps
 
     @property
     def epsilons(self) -> List[float]:
@@ -322,10 +357,10 @@ class DAQ_Move_base(QObject):
     def controller_units(self, units: str = ''):
         deprecation_msg('The property controller_units is deprecated please use the'
                         'axis_unit property.')
-        self._axis_units[self.axis_names.index(self.axis_name)] = units
+        self._axis_units[self.axis_value] = units
 
     @property
-    def axis_name(self) -> Union[str, object]:
+    def axis_name(self) -> Union[str]:
         """Get/Set the current axis using its string identifier"""
         limits = self.settings.child('multiaxes', 'axis').opts['limits']
         if isinstance(limits, list):
@@ -342,9 +377,9 @@ class DAQ_Move_base(QObject):
             elif isinstance(limits, dict):
                 self.settings.child('multiaxes', 'axis').setValue(limits[name])
             QtWidgets.QApplication.processEvents()
-            self.settings.child('units').setValue(self.axis_unit)
-            self.emit_status(ThreadCommand('units', self.axis_unit))
+            self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
+
 
     @property
     def axis_names(self) -> Union[List, Dict]:
@@ -362,9 +397,12 @@ class DAQ_Move_base(QObject):
         QtWidgets.QApplication.processEvents()
 
     @property
-    def axis_value(self) -> Union[int, object]:
+    def axis_value(self) -> int:
         """Get the current value selected from the current axis"""
-        return self.settings['multiaxes', 'axis']
+        if isinstance(self.axis_names, list):
+            return self.axis_names.index(self.axis_name)
+        else:
+            return self.axis_names[self.axis_name]
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
