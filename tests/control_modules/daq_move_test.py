@@ -82,3 +82,8 @@ class TestDAQMove:
 
         daq_move.quit_fun()
         QtWidgets.QApplication.processEvents() #make sure to properly terminate all the threads!
+
+    def test_axis_management(self, ini_daq_move_ui):
+        daq_move, qtbot, widget = ini_daq_move_ui
+        daq_move.actuator = 'Mock'
+        pass

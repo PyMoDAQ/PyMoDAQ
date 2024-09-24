@@ -37,7 +37,9 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
-                                                          DataActuatorType)
+                                                          DataActuatorType, check_units,
+                                                          DataUnitError)
+
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
@@ -706,7 +708,7 @@ class DAQ_Move_Hardware(QObject):
         """
         pos = self.hardware.get_actuator_value()
         if self.hardware.data_actuator_type == DataActuatorType.float:
-            pos = DataActuator(self._title, data=pos, units=self.units)
+            pos = DataActuator(self._title, data=pos, units=self.hardware.axis_unit)
         return pos
 
     def check_position(self):
@@ -768,12 +770,13 @@ class DAQ_Move_Hardware(QObject):
         """
 
         """
+        position = check_units(position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type.name == 'float':
             self.hardware.move_abs(position.value())
         else:
-            position.units = self.hardware.controller_units  # convert to plugin controller units
+            position.units = self.hardware.axis_unit  # convert to plugin controller current axis units
             self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
@@ -781,14 +784,14 @@ class DAQ_Move_Hardware(QObject):
         """
 
         """
-
+        rel_position = check_units(rel_position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
 
         if self.hardware.data_actuator_type.name == 'float':
             self.hardware.move_rel(rel_position.value())
         else:
-            rel_position.units = self.hardware.controller_units  # convert to plugin controller units
+            rel_position.units = self.hardware.axis_unit  # convert to plugin current axis units
             self.hardware.move_rel(rel_position)
 
         self.hardware.poll_moving()
