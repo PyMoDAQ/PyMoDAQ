@@ -637,11 +637,18 @@ class DAQ_Move_base(QObject):
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
 
-    def check_target_reached(self):
-        logger.debug(f"epsilon value is {self.epsilon}")
-        logger.debug(f"current_value value is {self._current_value}")
-        logger.debug(f"target_value value is {self._target_value}")
+    def _condition_to_reach_target(self) -> bool:
+        """ Implement the condition for exiting the polling mechanism and specifying that the
+        target value has been reached
 
+        Returns
+        -------
+        bool: if True, PyMoDAQ considers the target value has been reached at epsilon
+
+        See Also
+        --------
+        user_condition_to_reach_target
+        """
         try:
             epsilon_calculated = (
                     self._current_value - self._target_value).abs().value(self.axis_unit)
@@ -650,7 +657,26 @@ class DAQ_Move_base(QObject):
             logger.warning(f'Unit issue when calculating epsilon, units are not compatible between'
                            f'target and current values')
 
-        if not epsilon_calculated < self.epsilon:
+        return (epsilon_calculated < self.epsilon) and self.user_condition_to_reach_target()
+
+    def user_condition_to_reach_target(self) -> bool:
+        """ Implement a user defined condition for exiting the polling mechanism and specifying
+        that the target value has been reached (on top of the existing epsilon mechanism)
+
+        Should be reimplemented in plugins to implement other conditions
+
+        Returns
+        -------
+        bool: if True, PyMoDAQ considers the target value has been reached
+        """
+        return True
+
+    def check_target_reached(self):
+        logger.debug(f"epsilon value is {self.epsilon}")
+        logger.debug(f"current_value value is {self._current_value}")
+        logger.debug(f"target_value value is {self._target_value}")
+
+        if not self._condition_to_reach_target():
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
