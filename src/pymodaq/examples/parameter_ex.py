@@ -22,6 +22,8 @@ class ParameterEx(ParameterManager):
         {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
             {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
              'tip': 'displays this text as a tooltip'},
+            {'title': 'Standard float with Si prefix', 'name': 'afloatprefix', 'type': 'float', 'value': 20.,
+             'tip': 'displays this text as a tooltip', 'siPrefix': True, 'suffix': 'V'},
             {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 0,
              'max': 123, 'subtype': 'linear'},
