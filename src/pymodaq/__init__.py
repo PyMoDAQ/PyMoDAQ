@@ -51,6 +51,7 @@ try:
     ureg.default_format = '~'
     Q_ = ureg.Quantity
     Unit = ureg.Unit
+    ureg.define('whatever = 1  = wr')  # defining whatever as a dimensionless quantity
     logger.info('')
     logger.info('')
 
