@@ -36,7 +36,8 @@ def init_axis(data=None, index=0):
     return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
 
 
-def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
+def init_data(data=None, Ndata=1, axes=[], name='myData', units='',
+              source=data_mod.DataSource.raw,
               labels=None, klass=data_mod.DataWithAxes, errors=True) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
@@ -44,17 +45,19 @@ def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSo
         errors = [np.random.random_sample(data.shape) for _ in range(Ndata)]
     else:
         errors = None
-    return klass(name, source=source, data=[data for _ in range(Ndata)],
+    return klass(name, units=units, source=source, data=[data for _ in range(Ndata)],
                  axes=axes, labels=labels, errors=errors,
                  extra1=True, extra2=[1, 2, 3])
 
 
 @pytest.fixture()
 def get_data():
-    dat0D = init_data(DATA0D, 2, name='my0DData', source='raw', errors=True)
-    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated',
+    dat0D = init_data(DATA0D, 2, name='my0DData', units='s', source=data_mod.DataSource.raw,
+                      errors=True)
+    dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', units='m',
                                  klass=data_mod.DataCalculated, errors=True)
-    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', klass=data_mod.DataFromPlugins,
+    dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', units='ms',
+                          klass=data_mod.DataFromPlugins,
                           errors=False)
     dat_act = data_mod.DataActuator(data=45)
     dte = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw, dat_act])
@@ -203,6 +206,10 @@ def test_dwa_serialization_deserialization(get_data):
         assert dwa_back.__class__.__name__ in DwaType.names()
         assert dwa_back.__class__.__name__ == dwa.__class__.__name__
         assert dwa == dwa_back
+        assert dwa.units == dwa_back.units
+        if dwa.errors is not None:
+            for error_array, error_array_back in zip(dwa.errors, dwa_back.errors):
+                assert np.allclose(error_array, error_array_back)
         assert dwa.extra_attributes == dwa_back.extra_attributes
         for attr in dwa.extra_attributes:
             assert getattr(dwa, attr) == getattr(dwa_back, attr)
