@@ -420,6 +420,7 @@ class Serializer:
         * serialize the string type: 'DataWithAxes'
         * serialize the timestamp: float
         * serialize the name
+        * serialize the units
         * serialize the source enum as a string
         * serialize the dim enum as a string
         * serialize the distribution enum as a string
@@ -439,6 +440,7 @@ class Serializer:
         bytes_string += self.object_type_serialization(dwa)
         bytes_string += self.scalar_serialization(dwa.timestamp)
         bytes_string += self.string_serialization(dwa.name)
+        bytes_string += self.string_serialization(dwa.units)
         bytes_string += self.string_serialization(dwa.source.name)
         bytes_string += self.string_serialization(dwa.dim.name)
         bytes_string += self.string_serialization(dwa.distribution.name)
@@ -731,9 +733,11 @@ class DeSerializer:
         """
         class_name = self.string_deserialization()
         if class_name not in DwaType.names():
-            raise TypeError(f'Attempting to deserialize a DataWithAxes flavor but got the bytes for a {class_name}')
+            raise TypeError(f'Attempting to deserialize a DataWithAxes '
+                            f'flavor but got the bytes for a {class_name}')
         timestamp = self.scalar_deserialization()
         dwa = getattr(data_mod, class_name)(self.string_deserialization(),
+                                            units=self.string_deserialization(),
                                             source=self.string_deserialization(),
                                             dim=self.string_deserialization(),
                                             distribution=self.string_deserialization(),
