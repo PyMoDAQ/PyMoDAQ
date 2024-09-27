@@ -12,7 +12,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str):
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
+    win.setWindowTitle('extension_name')
     win.show()
 
     # win.setVisible(False)
