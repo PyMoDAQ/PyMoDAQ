@@ -228,7 +228,7 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def ini_detector_init(self, old_controller=None, new_controller=None):
+    def ini_detector_init(self, old_controller=None, new_controller=None, slave_controller=None):
         """Manage the Master/Slave controller issue
 
         First initialize the status dictionary
@@ -246,6 +246,8 @@ class DAQ_Viewer_base(QObject):
             The particular object that allow the communication with the hardware, in general a python wrapper around the
             hardware library. In case of Master it is the new instance of your plugin controller
         """
+        if old_controller is None and slave_controller is not None:
+            old_controller = slave_controller
         self.status.update(edict(info="", controller=None, initialized=False))
         if self.settings['controller_status'] == "Slave":
             if old_controller is None:
