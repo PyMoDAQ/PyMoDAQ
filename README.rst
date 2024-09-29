@@ -9,8 +9,9 @@ PyMoDAQ
    :target: https://pymodaq.readthedocs.io/en/stable/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
-    :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
+.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/graph/badge.svg?token=IQNJRCQDM2
+ :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
+
 
 ====== ========== ======= ======
 Python Qt Backend OS      Passed
