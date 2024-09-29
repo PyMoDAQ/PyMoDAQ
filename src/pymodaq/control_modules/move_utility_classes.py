@@ -236,6 +236,12 @@ class DAQ_Move_base(QObject):
             self._title = parent.title
         else:
             self._title = "myactuator"
+
+        if isinstance(self._controller_units, list):
+            # for backcompatibility
+            # in case an actuator has multiple units properly handled in future version of pymodaq
+            self._controller_units = self._controller_units[self.axis_names.index(self.axis_name)]
+
         self._current_value = DataActuator(self._title,
                                            data=[np.zeros(self.data_shape, dtype=float)],
                                            units=self.controller_units)
