@@ -294,7 +294,7 @@ class DAQ_Move_base(QObject):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
         self.controller = None
 
-    def ini_stage_init(self, old_controller=None, new_controller=None):
+    def ini_stage_init(self, old_controller=None, new_controller=None, slave_controller=None):
         """Manage the Master/Slave controller issue
 
         First initialize the status dictionary
@@ -312,8 +312,11 @@ class DAQ_Move_base(QObject):
             The particular object that allow the communication with the hardware, in general a python wrapper around the
             hardware library. In case of Master it is the new instance of your plugin controller
         """
+        if old_controller is None and slave_controller is not None:
+            old_controller = slave_controller
+
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['multiaxes', 'ismultiaxes'] and self.settings['multiaxes', 'multi_status'] == "Slave":
+        if self.settings['multiaxes', 'ismultiaxes'] and not self.is_master:
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
