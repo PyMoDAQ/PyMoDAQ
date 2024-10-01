@@ -1,3 +1,5 @@
+import numbers
+
 from time import perf_counter
 from typing import Union, List, Dict, TYPE_CHECKING, Optional
 from numbers import Number
@@ -448,14 +450,14 @@ class DAQ_Move_base(QObject):
 
     @property
     def current_value(self):
-        if self.data_actuator_type.name == 'float':
+        if self.data_actuator_type == self.data_actuator_type.float:
             return self._current_value.value()
         else:
             return self._current_value
 
     @current_value.setter
     def current_value(self, value: Union[float, DataActuator]):
-        if not isinstance(value, DataActuator):
+        if isinstance(value, numbers.Number):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
         else:
@@ -467,14 +469,14 @@ class DAQ_Move_base(QObject):
 
     @property
     def target_value(self):
-        if self.data_actuator_type.name == 'float':
+        if self.data_actuator_type.name == self.data_actuator_type.float:
             return self._target_value.value()
         else:
             return self._target_value
 
     @target_value.setter
-    def target_value(self, value: Union[float, DataActuator]):
-        if not isinstance(value, DataActuator):
+    def target_value(self, value: Union[numbers.Number, DataActuator]):
+        if isinstance(value, numbers.Number):
             self._target_value = DataActuator(self._title, data=value,
                                               units=self.axis_unit)
         else:
