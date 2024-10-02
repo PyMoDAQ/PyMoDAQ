@@ -228,7 +228,8 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def ini_detector_init(self, old_controller=None, new_controller=None, slave_controller=None):
+    def ini_detector_init(self, old_controller=None, new_controller=None,
+                          slave_controller=None):
         """Manage the Master/Slave controller issue
 
         First initialize the status dictionary
@@ -239,7 +240,10 @@ class DAQ_Viewer_base(QObject):
 
         Parameters
         ----------
-        old_controller: object
+        old_controller: object (deprecated)
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Slave this one comes from a previously initialized plugin
+        slave_controller: object
             The particular object that allow the communication with the hardware, in general a python wrapper around the
             hardware library. In case of Slave this one comes from a previously initialized plugin
         new_controller: object

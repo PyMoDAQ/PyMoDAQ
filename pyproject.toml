@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.9.0", "hatch-vcs"]
+requires = ["hatchling>=1.9.0", "hatch-vcs", "toml"]
 build-backend = "hatchling.build"
 
 [project]
@@ -77,3 +77,6 @@ fallback-version = '5.0.1'
 include = [
     "/src",
 ]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"

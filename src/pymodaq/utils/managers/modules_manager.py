@@ -258,7 +258,7 @@ class ModulesManager(QObject, ParameterManager):
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
         self.connect_detectors()
-        datas: DataToExport = self.grab_datas()
+        datas: DataToExport = self.grab_data()
 
         data_list0D = datas.get_full_names('data0D')
         data_list1D = datas.get_full_names('data1D')
@@ -287,7 +287,7 @@ class ModulesManager(QObject, ParameterManager):
         """
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
-    def grab_datas(self, **kwargs):
+    def grab_data(self, **kwargs):
         """Do a single grab of connected and selected detectors"""
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
@@ -310,6 +310,10 @@ class ModulesManager(QObject, ParameterManager):
 
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
+
+    def grab_datas(self, **kwargs):
+        """ For back compatibility but use self.grab_data"""
+        return self.grab_data(**kwargs)
 
     def connect_actuators(self, connect=True, slot=None, signal='move_done'):
         """Connect the selected actuators signal to a given or default slot

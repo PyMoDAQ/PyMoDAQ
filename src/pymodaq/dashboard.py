@@ -652,10 +652,11 @@ class DashBoard(QObject):
         actuators_modules.append(mov_mod_tmp)
 
     def add_det(self, plug_name, plug_settings, det_docks_settings, det_docks_viewer,
-                detector_modules):
-
-        plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
-        plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
+                detector_modules, plug_type: str = None, plug_subtype: str = None):
+        if plug_type is None:
+            plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
+        if plug_subtype is None:
+            plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
         det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
         det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
         if len(detector_modules) == 0:

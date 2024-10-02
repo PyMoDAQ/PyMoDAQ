@@ -269,6 +269,20 @@ class DAQ_Viewer(ParameterControlModule):
         deprecation_msg('viewers_docks is a deprecated property use viewer_docks instead')
         return self.viewer_docks
 
+    @property
+    def master(self) -> bool:
+        """ Get/Set programmatically the Master/Slave status of a detector"""
+        if self.initialized_state:
+            return self.settings['detector_settings', 'controller_status'] == 'Master'
+        else:
+            return True
+
+    @master.setter
+    def master(self, is_master: bool):
+        if self.initialized_state:
+            self.settings.child('detector_settings', 'controller_status').setValue(
+                'Master' if is_master else 'Slave')
+
     def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
         """ Apply changes from the selection of a different DAQTypesEnum in the UI
 

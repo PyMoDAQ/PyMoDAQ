@@ -1,6 +1,6 @@
 import time
 from functools import partial  # needed for the button to sync setpoint with currpoint
-from typing import Dict
+from typing import Dict, List, TYPE_CHECKING
 
 import numpy as np
 
@@ -28,6 +28,9 @@ from pymodaq.extensions.pid.utils import get_models
 from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.utils import CustomExt
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 config = Config()
@@ -315,7 +318,7 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
-            actuators_modules = []
+            actuators_modules: List['DAQ_Move'] = []
             for setp in self.model_class.setpoints_names:
                 self.dashboard.add_move(setp, None, 'PID', [], [], actuators_modules)
                 actuators_modules[-1].controller = PIDController(self)

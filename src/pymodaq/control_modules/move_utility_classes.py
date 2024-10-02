@@ -512,7 +512,6 @@ class DAQ_Move_base(QObject):
         """
         return self.settings['multiaxes', 'multi_status'] == 'Master'
 
-
     @property
     def ispolling(self):
         """ Get/Set the polling status"""
