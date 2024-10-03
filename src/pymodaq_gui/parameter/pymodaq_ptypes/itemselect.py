@@ -127,6 +127,7 @@ class ItemSelect(QtWidgets.QListWidget):
                 item = self.takeItem(self.row(item))
             else:
                 allitems_text.append(item.text())  # Add items to list
+            self.updateGeometry()
         # Create items if needed
         for value in values['all_items']:  # Loop through all values
             if value not in allitems_text:  # Test if object already exists
@@ -145,6 +146,9 @@ class ItemSelect(QtWidgets.QListWidget):
             item = allitems[[item.text() for item in allitems].index(value)]
             self.select_item(item, doSelect=True)
         QtWidgets.QApplication.processEvents()
+
+    def sizeHint(self):
+        return QtCore.QSize(super().sizeHint().width(), 25 * self.count())
 
 
 class ItemSelectParameterItem(WidgetParameterItem):
@@ -171,15 +175,11 @@ class ItemSelectParameterItem(WidgetParameterItem):
             w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
 
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        # if 'minheight' in opts:
-        #     w.itemselect.setMinimumHeight(opts['min_height'])
-        # if 'height' in opts:
-        #     w.itemselect.setMaximumHeight(opts['height'])
-        # else:
-        #     w.itemselect.setMaximumHeight(70)
-        # w.setReadOnly(self.param.opts.get('readonly', False))
-        w.itemselect.setMinimumHeight(opts.get('min_height', 0))
-        w.itemselect.setMaximumHeight(opts.get('height', 70))
+
+        # w.itemselect.setMinimumHeight(opts.get('min_height', 0))
+        # w.itemselect.setMaximumHeight(opts.get('height', 70))
+
+        w.itemselect.setResizeMode(QtWidgets.QListView.Adjust)
         w.add_pb.setVisible(opts.get('show_pb', False))
         w.remove_pb.setVisible(opts.get('show_mb', False))
 
@@ -240,6 +240,12 @@ class ItemSelectParameterItem(WidgetParameterItem):
         
         self.widget.add_pb.setVisible(opts.get('show_pb', False))
         self.widget.remove_pb.setVisible(opts.get('show_mb', False))
+        if 'height' in opts:
+            self.widget.itemselect.setMaximumHeight(opts['height'])
+
+    def valueChanged(self, param, val, force=False):
+        super().valueChanged(param, val, force)
+        self.widget.itemselect.updateGeometries()
 
 class ItemSelectParameter(Parameter):
     """

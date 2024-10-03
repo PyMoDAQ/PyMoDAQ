@@ -29,7 +29,7 @@ class ParameterTreeWidget(ActionManager):
         self.widget.listAllItems = self.tree.listAllItems  # for back-compatibility
 
         self.tree.setMinimumWidth(150)
-        self.tree.setMinimumHeight(300)
+        #self.tree.setMinimumHeight(300)
         
         # Making the buttons
         self.setup_actions(action_list) 
@@ -42,7 +42,7 @@ class ParameterTreeWidget(ActionManager):
         self.splitter.setSizes([0, 300])
         # Adding splitter to layout
         self.widget.layout().addWidget(self.splitter)
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)            
+        self.widget.layout().setContentsMargins(0, 0, 0, 0)
 
     def setup_actions(self, action_list: tuple = ('save', 'update', 'load')):
         """
@@ -97,7 +97,8 @@ class ParameterManager:
         self._settings_tree.get_action(f'update_settings').connect_to(self.update_settings_slot)
         self._settings_tree.get_action(f'load_settings').connect_to(self.load_settings_slot)
                                                                         
-        self.settings = Parameter.create(name=settings_name, type='group', children=self.params)  # create a Parameter
+        self.settings = Parameter.create(name=settings_name, type='group', children=self.params,
+                                         showTop=False)  # create a Parameter
         # object containing the settings defined in the preamble
 
     @property
@@ -123,13 +124,16 @@ class ParameterManager:
     def create_parameter(settings: Union[Parameter, List[Dict[str, str]], Path]) -> Parameter:
 
         if isinstance(settings, List):
-            _settings = Parameter.create(title='Settings', name='settings', type='group', children=settings)
+            _settings = Parameter.create(title='Settings', name='settings', type='group',
+                                         children=settings, showTop=False)
         elif isinstance(settings, Path) or isinstance(settings, str):
             settings = Path(settings)
             _settings = Parameter.create(title='Settings', name='settings',
-                                        type='group', children=ioxml.XML_file_to_parameter(str(settings)))
+                                         type='group', showTop=False,
+                                         children=ioxml.XML_file_to_parameter(str(settings)))
         elif isinstance(settings, Parameter):
-            _settings = Parameter.create(title='Settings', name=settings.name(), type='group')
+            _settings = Parameter.create(title='Settings', name=settings.name(),
+                                         type='group', showTop=False)
             _settings.restoreState(settings.saveState())
         else:
             raise TypeError(f'Cannot create Parameter object from {settings}')
