@@ -318,20 +318,8 @@ class DAQ_PID(CustomExt):
     def create_setp_actuators(self):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
-            actuators_modules: List['DAQ_Move'] = []
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move(setp, None, 'PID', [], [], actuators_modules)
-                actuators_modules[-1].controller = PIDController(self)
-                actuators_modules[-1].master = False
-                actuators_modules[-1].init_hardware_ui()
-                QtWidgets.QApplication.processEvents()
-                self.dashboard.poll_init(actuators_modules[-1])
-                QtWidgets.QApplication.processEvents()
-
-            # Update actuators modules and module manager
-            self.dashboard.actuators_modules.extend(actuators_modules)
-            self.dashboard.update_module_manager()
-
+                self.dashboard.add_move_from_extension(setp, 'PID', PIDController(self))
             self.set_action_enabled('create_setp_actuators', False)
 
         except Exception as e:
