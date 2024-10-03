@@ -11,8 +11,8 @@ class DAQ_Move_PID(DAQ_Move_base):
     """
     _controller_units = ''
     data_actuator_type = DataActuatorType.DataActuator
-    is_multiaxes = True
-    stage_names = []
+    is_multiaxes = False
+    stage_names = ['',]
 
     params = comon_parameters_fun(is_multiaxes, stage_names, master=False)
 
@@ -36,7 +36,7 @@ class DAQ_Move_PID(DAQ_Move_base):
     def ini_stage(self, controller=None):
         """
         """
-        self.ini_stage_init(controller, None)
+        self.controller = controller
 
         self.controller.curr_point.connect(self.update_position)
 
