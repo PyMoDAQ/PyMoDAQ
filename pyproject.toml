@@ -77,6 +77,3 @@ fallback-version = '5.0.1'
 include = [
     "/src",
 ]
-
-[tool.hatch.build.hooks.vcs]
-version-file = "_version.py"

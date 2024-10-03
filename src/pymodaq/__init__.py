@@ -31,7 +31,7 @@ try:
 
     from pymodaq_utils.logger import set_logger
     from pymodaq_utils.utils import get_version
-    __version__ = get_version()
+    __version__ = get_version('pymodaq')
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
     except Exception:
