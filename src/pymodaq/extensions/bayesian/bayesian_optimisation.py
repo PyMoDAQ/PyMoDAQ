@@ -10,6 +10,7 @@ from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, Da
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
 from pymodaq_utils import config as configmod
+from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
@@ -112,7 +113,7 @@ class BayesianOptimisation(CustomExt):
         self.setup_ui()
 
         self.bayesian_config = BayesianConfig()
-        self.mainsettings_saver_loader = configmod.ConfigSaverLoader(
+        self.mainsettings_saver_loader = ConfigSaverLoader(
             self.settings.child('main_settings'), self.bayesian_config)
 
         self.h5temp: H5Saver = None
@@ -582,7 +583,7 @@ class OptimisationRunner(QtCore.QObject):
                                                     polling=sync_acts)
 
                 # Do the evaluation (measurements)
-                self.det_done_datas = self.modules_manager.grab_datas()
+                self.det_done_datas = self.modules_manager.grab_data()
                 self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
 
                 # Run the algo internal mechanic
