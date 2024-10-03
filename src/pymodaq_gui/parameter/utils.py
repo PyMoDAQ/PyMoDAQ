@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
+from dataclasses import Field, fields
 import numpy as np
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -230,28 +231,6 @@ def get_param_dict_from_name(parent_list, name, pop=False):
                 return ch
 
 
-if __name__ == '__main__':              # pragma: no cover
-    parent = [
-        {'title': 'Spectro Settings:', 'name': 'spectro_settings', 'type': 'group', 'expanded': True,
-            'children': [
-                {'title': 'Home Wavelength (nm):', 'name': 'spectro_wl_home', 'type': 'float', 'value': 600, 'min': 0,
-                 'readonly': False},
-                {'title': 'Grating Settings:', 'name': 'grating_settings', 'type': 'group', 'expanded': True,
-                    'children': [
-                        {'title': 'Grating:', 'name': 'grating', 'type': 'list'},
-                        {'title': 'Lines (/mm):', 'name': 'lines', 'type': 'int', 'readonly': True},
-                        {'title': 'Blaze WL (nm):', 'name': 'blaze', 'type': 'str', 'readonly': True},
-                    ]},
-            ]
-         },
-    ]
-
-    d = get_param_dict_from_name(parent, 'lines')
-
-    d['readonly'] = False
-    print(parent[0]['children'][1]['children'])
-
-
 def set_param_from_param(param_old, param_new):
     """
         Walk through parameters children and set values using new parameter values.
@@ -328,3 +307,27 @@ def scroll_linear(scroll_val, min_val, max_val):
     assert scroll_val <= 100
     value = scroll_val * (max_val - min_val) / 100 + min_val
     return value
+
+
+
+
+if __name__ == '__main__':              # pragma: no cover
+    parent = [
+        {'title': 'Spectro Settings:', 'name': 'spectro_settings', 'type': 'group', 'expanded': True,
+            'children': [
+                {'title': 'Home Wavelength (nm):', 'name': 'spectro_wl_home', 'type': 'float', 'value': 600, 'min': 0,
+                 'readonly': False},
+                {'title': 'Grating Settings:', 'name': 'grating_settings', 'type': 'group', 'expanded': True,
+                    'children': [
+                        {'title': 'Grating:', 'name': 'grating', 'type': 'list'},
+                        {'title': 'Lines (/mm):', 'name': 'lines', 'type': 'int', 'readonly': True},
+                        {'title': 'Blaze WL (nm):', 'name': 'blaze', 'type': 'str', 'readonly': True},
+                    ]},
+            ]
+         },
+    ]
+
+    d = get_param_dict_from_name(parent, 'lines')
+
+    d['readonly'] = False
+    print(parent[0]['children'][1]['children'])
