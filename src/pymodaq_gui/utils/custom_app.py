@@ -1,11 +1,11 @@
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Dict
 
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
 from pyqtgraph.dockarea import DockArea
 
-from pymodaq_gui.utils.dock import DockArea
+from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 
@@ -27,20 +27,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     Parameters
     ----------
     parent: DockArea or QtWidget
-    dashboard: DashBoard, optional
 
     See Also
     --------
     :class:`pymodaq.utils.managers.action_manager.ActionManager`,
     :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`,
     :class:`pymodaq.utils.managers.modules_manager.ModulesManager`,
-    :class:`pymodaq.dashboard.DashBoard`
     """
 
     log_signal = QtCore.Signal(str)
     params = []
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard=None):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget]):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self)
@@ -56,9 +54,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         else:
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
-        self.dashboard = dashboard
 
-        self.docks = dict([])
+        self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
         self._toolbar = QtWidgets.QToolBar()
 
@@ -117,15 +114,3 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """Connect actions and/or other widgets signal to methods"""
         raise NotImplementedError
 
-    @property
-    def modules_manager(self):
-        """useful tool to interact with DAQ_Moves and DAQ_Viewers
-
-        Will be available if a DashBoard has been set
-
-        Returns
-        -------
-        ModulesManager
-        """
-        if self.dashboard is not None:
-            return self.dashboard.modules_manager
