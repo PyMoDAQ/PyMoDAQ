@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List
+from typing import Tuple, List, Any
 
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -623,7 +623,7 @@ class DashBoard(QObject):
             self.save_layout_state(path)
 
     def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms,
-                 actuators_modules):
+                 actuators_modules) -> DAQ_Move:
 
         move_docks.append(Dock(plug_name, size=(150, 250)))
         if len(move_docks) == 1:
@@ -650,9 +650,41 @@ class DashBoard(QObject):
         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
         move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
+        return mov_mod_tmp
+
+    def add_move_from_extension(self, name: str, instrument_name: str,
+                                instrument_controller: Any):
+        """ Specific method to add a DAQ_Move within the Dashboard. This Particular actuator
+        should be defined in the plugin of the extension and is used to mimic an actuator while
+        move_abs is actually triggering an action on the extension which loaded it
+
+        For an exemple, see the PyMoDAQ builtin PID extension
+
+        Parameters
+        ----------
+        name: str
+            The name to print on the UI title
+        instrument_name: str
+            The name of the instrument class, for instance PID for the daq_move_PID
+            module and the DAQ_Move_PID instrument class
+        instrument_controller: object
+            whatever object is used to communicate between the instrument module and the extension
+            which created it
+        """
+        actuator = self.add_move(name, None, instrument_name, [], [], [])
+        actuator.controller = instrument_controller
+        actuator.master = False
+        actuator.init_hardware_ui()
+        QtWidgets.QApplication.processEvents()
+        self.poll_init(actuator)
+        QtWidgets.QApplication.processEvents()
+
+        # Update actuators modules and module manager
+        self.actuators_modules.append(actuator)
+        self.update_module_manager()
 
     def add_det(self, plug_name, plug_settings, det_docks_settings, det_docks_viewer,
-                detector_modules, plug_type: str = None, plug_subtype: str = None):
+                detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
         if plug_subtype is None:
@@ -684,6 +716,42 @@ class DashBoard(QObject):
                 self.splash_sc.showMessage(mssg, color=Qt.white)
 
         detector_modules.append(det_mod_tmp)
+        return det_mod_tmp
+
+    def add_det_from_extension(self, name: str, daq_type: str, instrument_name: str,
+                               instrument_controller: Any):
+        """ Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
+        should be defined in the plugin of the extension and is used to mimic a grab while data
+        are actually coming from the extension which loaded it
+
+        For an exemple, see the pymodaq_plugins_datamixer plugin and its DataMixer extension
+
+        Parameters
+        ----------
+        name: str
+            The name to print on the UI title
+        daq_type: str
+            either DAQ0D, DAQ1D, DAQ2D or DAQND depending the type of the instrument
+        instrument_name: str
+            The name of the instrument class, for instance DataMixer for the daq_0Dviewer_DataMixer
+            module and the DAQ_0DViewer_DataMixer instrument class
+        instrument_controller: object
+            whatever object is used to communicate between the instrument module and the extension
+            which created it
+        """
+        detector = self.add_det(name, None, [], [], [],
+                                plug_type=daq_type,
+                                plug_subtype=instrument_name)
+        detector.controller = instrument_controller
+        detector.master = False
+        detector.init_hardware_ui()
+        QtWidgets.QApplication.processEvents()
+        self.poll_init(detector)
+        QtWidgets.QApplication.processEvents()
+
+        # Update actuators modules and module manager
+        self.detector_modules.append(detector)
+        self.update_module_manager()
 
     def update_module_manager(self):
         if self.modules_manager is None:
