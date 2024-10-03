@@ -75,7 +75,8 @@ class ParameterEx(ParameterManager):
         ]},
         {'title': 'Selectable items:', 'name': 'itemss', 'type': 'group', 'children': [
             {'title': 'Selectable items', 'name': 'items', 'type': 'itemselect',
-             'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
+             'value': dict(all_items=['item1', 'item2', 'item3', 'item4', 'item5'],
+                           selected=['item2']),
              'tip': 'Press Ctrl+click  to select items in any order'},
             {'title': 'Selectable items', 'name': 'itemsbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
