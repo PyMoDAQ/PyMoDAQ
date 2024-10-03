@@ -26,13 +26,10 @@ check_qt_presence()
 
 
 try:
-    # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
-    #     __version__ = fvers.read().strip()
-
     from pymodaq_utils.logger import set_logger
     from pymodaq_utils.utils import get_version, PackageNotFoundError
     try:
-        __version__ = get_version()
+        __version__ = get_version(__package__)
     except PackageNotFoundError:
         __version__ = '0.0.0dev'
     try:
