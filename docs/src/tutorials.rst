@@ -14,3 +14,4 @@ Tutorials
    tutorials/write_documentation
    tutorials/plugin_update_to_v4
    tutorials/data_analysis_tutorial
+   tutorials/jupyter_lab
