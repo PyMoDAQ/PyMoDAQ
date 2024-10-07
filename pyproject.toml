@@ -46,7 +46,7 @@ dependencies = [
     "setuptools>=60",
     "toml",
     "pymodaq_utils",
-    "pymodaq_data",
+    "pymodaq_data>=5.0.3",
 ]
 
 [project.scripts]

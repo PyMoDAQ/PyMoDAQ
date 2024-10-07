@@ -56,6 +56,8 @@ class BaseDataDisplayer(QObject):
         self._nav_limits: tuple = (0, 10, None, None)
         self._signal_at: tuple = (0, 0)
 
+        self.triangulation = False
+
         self._filter_type: str = None
         self._processor = None
 
@@ -160,7 +162,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
         super().__init__(*args, **kwargs)
 
     def init(self, data: DataRaw):
-        if len(data.nav_indexes) > 2:
+        if len(data.nav_indexes) > 2 or not data.check_axes_linear():
             self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
         processor: DataProcessorFactory = data_processors
         self.update_processor(processor)
@@ -231,7 +233,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
                         else:
                             data.append(self._data.mean(axis=nav_axis.index))
 
-                elif len(self._data.nav_indexes) == 2:
+                elif len(self._data.nav_indexes) == 2 and self._data.check_axes_linear():
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
                     nav_y = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_x.min() or posx > nav_x.max():
@@ -277,7 +279,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
                 nav_data.nav_indexes = ()  # transform nav axes in sig axes for plotting
                 if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2:
+                elif len(nav_data.shape) == 2 and self._data.check_axes_linear():
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
@@ -553,7 +555,8 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
             dict(all_items=[str(ax.index) for ax in data.axes],
                  selected=[str(ax.index) for ax in data.get_nav_axes()]))
 
-        if self._data is None or self._data.dim != data.dim or self._data.nav_indexes != data.nav_indexes:
+        if (self._data is None or self._data.dim != data.dim or
+                self._data.nav_indexes != data.nav_indexes):
             force_update = True
         if 'force_update' in kwargs:
             force_update = kwargs['force_update']
@@ -674,15 +677,18 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self._dock_navigation.setVisible(len(nav_indexes) != 0)
         #nav_axes = data.get_nav_axes()
 
-        if data.distribution.name == 'uniform':
+        if data.distribution.name == DataDistribution.uniform:
             self.navigator1D.setVisible(len(nav_indexes) == 1)
-            self.navigator2D.setVisible(len(nav_indexes) == 2)
-            self.axes_viewer.setVisible(len(nav_indexes) > 2)
-        else:
+            self.navigator2D.setVisible(len(nav_indexes) == 2 and data.check_axes_linear())
+            self.axes_viewer.setVisible(len(nav_indexes) > 2 or (
+                    len(nav_indexes) == 2 and not data.check_axes_linear()))
+        elif data.distribution.name == DataDistribution.spread:
             self.navigator2D.setVisible(len(nav_indexes) == 2 and self.data_displayer.triangulation)
             self.navigator1D.setVisible(len(nav_indexes) == 1 or len(nav_indexes) > 2 or
                                         len(nav_indexes) == 2 and
                                         not self.data_displayer.triangulation)
+        else:
+            raise ValueError(f'Unknown distribution: {data.distribution.name}')
 
     def update_filters(self, processor: DataProcessorFactory):
         self.get_action('filters').clear()
