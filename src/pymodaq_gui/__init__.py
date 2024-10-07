@@ -51,7 +51,7 @@ try:
     from pymodaq_gui.qt_utils import setLocale, set_qt_backend
 
     from pymodaq_utils.config import Config
-    from pymodaq_gui.plotting.plotter.plotter import register_plotter, PlotterFactory
+    from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
 
     # issue on windows when using .NET code within multithreads, this below allows it but requires the
     # pywin32 (pythoncom) package
@@ -83,8 +83,8 @@ try:
     logger.info('')
     logger.info('')
     logger.info('************************')
-    logger.info(f"Registering plotters...")
-    register_plotter()
+    logger.info(f"Registering PyMoDAQ qt plotters...")
+    register_plotter(parent_module_name='pymodaq_gui.plotting.plotter')
     logger.info(f"Done")
     logger.info('************************')
 

@@ -8,7 +8,7 @@ from pymodaq_utils import config as configmod
 from pymodaq_gui.utils.utils import start_qapplication
 
 
-from pymodaq_gui.plotting.plotter.plotter import PlotterBase, PlotterFactory
+from pymodaq_data.plotting.plotter.plotter import PlotterBase, PlotterFactory
 from pymodaq_data.data import DataWithAxes, DataToExport
 from pymodaq_gui.plotting.data_viewers import (Viewer1D, Viewer2D, ViewerND, ViewerDispatcher,
                                                  Viewer0D, ViewersEnum)
@@ -27,6 +27,18 @@ class Plotter(PlotterBase):
         super().__init__()
 
     def plot(self, data: Union[DataWithAxes, DataToExport], viewer=None, **kwargs) -> ViewerBase:
+        """
+
+        Parameters
+        ----------
+        data
+        viewer
+        kwargs
+
+        Returns
+        -------
+
+        """
         do_exit = False
         qapp = QtWidgets.QApplication.instance()
         if qapp is None:

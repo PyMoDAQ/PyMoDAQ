@@ -103,7 +103,7 @@ class ViewersEnum(BaseEnum):
             viewer = 'Viewer2D'
         else:
             if dwa.distribution.name == 'uniform':
-                if len(dwa.shape) < 3:
+                if len(dwa.shape) < 3 and dwa.check_axes_linear():
                     dwa.nav_indexes = ()
                     if len(dwa.shape) == 1 and dwa.size == 1:
                         viewer = 'Viewer0D'
@@ -113,6 +113,9 @@ class ViewersEnum(BaseEnum):
                         viewer = 'Viewer2D'
                     else:
                         viewer = 'ViewerND'
+                elif len(dwa.shape) == 1 and not dwa.check_axes_linear():
+                    viewer = 'Viewer1D'
+                    dwa.nav_indexes = ()
                 else:
                     viewer = 'ViewerND'
             else:

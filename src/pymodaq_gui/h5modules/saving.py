@@ -163,7 +163,8 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([])):
+    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None,
+                  metadata=dict([])):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
