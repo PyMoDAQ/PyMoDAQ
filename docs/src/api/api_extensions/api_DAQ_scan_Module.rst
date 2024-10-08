@@ -1,4 +1,4 @@
-.. currentmodule:: pymodaq.daq_scan
+.. currentmodule:: pymodaq.extensions.daq_scan
 
 .. autosummary::
 

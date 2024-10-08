@@ -7,7 +7,7 @@ Plotting utility classes
    :members:
 
 
-.. currentmodule:: pymodaq.utils.gui_utils.widgets.lcd
+.. currentmodule:: pymodaq_gui.utils.widgets.lcd
 
 .. autoclass:: LCD
    :members:

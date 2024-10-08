@@ -1,7 +1,7 @@
 The CustomApp base class
 ========================
 
-.. currentmodule:: pymodaq.utils.gui_utils
+.. currentmodule:: pymodaq_gui.utils.custom_app
 
 .. autosummary::
    CustomApp

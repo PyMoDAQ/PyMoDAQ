@@ -3,7 +3,7 @@
 Data Management
 ***************
 
-.. py:currentmodule:: pymodaq.utils.data
+.. py:currentmodule:: pymodaq_data.data
 
 .. autosummary::
 
@@ -23,7 +23,7 @@ Data Management
 Axes
 ----
 
-.. automodule:: pymodaq.utils.data
+.. automodule:: pymodaq_data.data
    :members: AxisBase, Axis
 
 .. _data_objects_api:
@@ -31,14 +31,17 @@ Axes
 DataObjects
 -----------
 
-.. automodule:: pymodaq.utils.data
-   :members: DataBase, DataWithAxis, DataRaw, DataCalculated, DataFromPlugins, DataFromRoi
+.. automodule:: pymodaq_data.data
+   :members: DataBase, DataWithAxis, DataRaw, DataCalculated, DataFromRoi
 
+
+.. automodule:: pymodaq.utils.data
+   :members: DataFromPlugins, DataActuator
 
 Data Characteristics
 --------------------
 
-.. automodule:: pymodaq.utils.data
+.. automodule:: pymodaq_data.data
    :members: DataDim, DataSource, DataDistribution
 
 
@@ -49,5 +52,5 @@ Union of Data
 
 When exporting multiple set of Data objects, one should use a DataToExport
 
-.. automodule:: pymodaq.utils.data
+.. automodule:: pymodaq_data.data
    :members: DataToExport

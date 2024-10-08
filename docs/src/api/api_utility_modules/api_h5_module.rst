@@ -1,7 +1,7 @@
 Hdf5 module and classes
 =======================
 
-.. currentmodule:: pymodaq.utils.h5modules.backends
+.. currentmodule:: pymodaq_data.h5modules.backends
 
 .. _H5BackendClassDescr:
 
@@ -28,9 +28,9 @@ needed for saving, while ``H5Saver``, inheriting `H5SaverBase`, add Qt functiona
 these are not specific of PyMoDAQ's data types. To save and load data, one should use higher level objects, see
 :ref:`data_saving_loading`.
 
-.. currentmodule:: pymodaq.utils.h5modules.saving
+.. currentmodule:: pymodaq_data.h5modules.saving
 
-.. automodule:: pymodaq.utils.h5modules.saving
+.. automodule:: pymodaq_data.h5modules.saving
    :members: H5SaverBase, H5Saver
 
 
@@ -53,9 +53,9 @@ is defined.
 Base data class saver/loader
 ****************************
 
-.. currentmodule:: pymodaq.utils.h5modules.data_saving
+.. currentmodule:: pymodaq_data.h5modules.data_saving
 
-.. automodule:: pymodaq.utils.h5modules.data_saving
+.. automodule:: pymodaq_data.h5modules.data_saving
    :members: DataManagement, AxisSaverLoader, DataSaverLoader, DataToExportSaver
 
 
@@ -69,9 +69,9 @@ Some more dedicated objects are derived from the objects above. They allow to ad
 is not known at the moment of creation, for instance when logging or continuously saving)
 
 
-.. currentmodule:: pymodaq.utils.h5modules.data_saving
+.. currentmodule:: pymodaq_data.h5modules.data_saving
 
-.. automodule:: pymodaq.utils.h5modules.data_saving
+.. automodule:: pymodaq_data.h5modules.data_saving
    :members: BkgSaver, DataExtendedSaver, DataEnlargeableSaver, DataToExportEnlargeableSaver, DataToExportTimedSaver, DataToExportExtendedSaver
 
 
@@ -94,9 +94,9 @@ see :ref:`H5Browser_module`. Two objects can be used to browse data: `H5BrowserU
 gives you methods to quickly (in a script) get info and data from your file while the `H5Browser` adds a UI to interact with the hdf5
 file.
 
-.. currentmodule:: pymodaq.utils.h5modules.browsing
+.. currentmodule:: pymodaq_gui.h5modules.browsing
 
-.. automodule:: pymodaq.utils.h5modules.browsing
+.. automodule:: pymodaq_gui.h5modules.browsing
    :members: H5BrowserUtil, H5Browser
 
 

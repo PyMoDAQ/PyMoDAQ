@@ -1,5 +1,5 @@
 File management
 ***************
 
-.. automodule:: pymodaq.utils.gui_utils
+.. automodule:: pymodaq_gui.utils.file_io
    :members: select_file

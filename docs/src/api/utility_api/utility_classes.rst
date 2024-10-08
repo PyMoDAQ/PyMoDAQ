@@ -1,5 +1,5 @@
 Utility Classes
 ***************
 
-.. automodule:: pymodaq.utils.daq_utils
+.. automodule:: pymodaq_utils.utils
    :members: ThreadCommand
