@@ -7,6 +7,7 @@ User's Guide
    :maxdepth: 2
    :caption: Contents:
 
+   user_folder/installation_tips
    user_folder/dashboard_control_modules
    user_folder/extensions
    user_folder/configuration
