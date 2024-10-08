@@ -10,7 +10,7 @@ actuator hardware to go straight to the data acquisition of interest. It provide
 * the synchronization of the connected instruments
 * data saving
 * a modular architecture to easily integrate new instruments in your setup
-... and many more features!
+* ... and many more features!
 
 .. raw:: html
 

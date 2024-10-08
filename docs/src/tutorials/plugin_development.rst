@@ -131,15 +131,24 @@ By convention, an instrument plugin can be used to control several devices, **bu
 
 *pymodaq-plugins-<manufacturer name>*
 
-.. note::
-	Notice the "s" at the end of "plugins".
 
 .. note::
-	Any kind of plugin should follow the naming convention *pymodaq-plugins-<something more specific>*, but an instrument plugin is a specific kind of :term:`plugin`. For (an advanced) example, imagine that we create a beam pointing stabilization plugin, and that this system uses devices from different companies. We could have an actuator class that controls a SmarAct optical mount, a detector class that control a Thorlabs camera, and a :ref:`PID model <PID_module>` specifically designed for our needs. In that case we could use the name *pymodaq-plugins-beam-stabilization*.
+    Notice the "s" at the end of "plugins".
 
-All the plugins that are listed there can directly be installed with the :ref:`plugin manager <PluginManager>`.
 
-Some of those - let say the *official* ones - are hosted by the `PyMoDAQ organization on GitHub`__, but they can also be hosted by other organizations. For example, the repository `pymodaq-plugins-greateyes`__ is hosted by the ATTOLab organization, but you can directly install it with the plugin manager.
+.. note::
+    Any kind of plugin should follow the naming convention *pymodaq-plugins-<something more specific>*, but an
+    instrument plugin is a specific kind of :term:`plugin`. For (an advanced) example, imagine that we create a
+    beam pointing stabilization plugin, and that this system uses devices from different companies. We could have
+    an actuator class that controls a SmarAct optical mount, a detector class that control a Thorlabs camera, and
+    a :ref:`PID model <PID_module>` specifically designed for our needs. In that case we could use the name
+    *pymodaq-plugins-beam-stabilization*.
+
+All the plugins that are listed there can directly be installed with the :ref:`PluginManager<plugin_manager>`.
+
+Some of those - let say the *official* ones - are hosted by the `PyMoDAQ organization on GitHub`__, but they can
+also be hosted by other organizations. For example, the repository `pymodaq-plugins-greateyes`__ is hosted by the
+ATTOLab organization, but you can directly install it with the plugin manager.
 
 __ https://github.com/PyMoDAQ
 

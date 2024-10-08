@@ -53,8 +53,8 @@ the physics, it's not an issue as this notebook is here to show you how to load,
 
 .. note::
 
-To execute this tutorial properly, you’ll need PyMoDAQ >= 4.0.2 (if not
-released yet, you can get it from github)
+    To execute this tutorial properly, you’ll need PyMoDAQ >= 4.0.2 (if not
+    released yet, you can get it from github)
 
 .. code:: ipython3
 
