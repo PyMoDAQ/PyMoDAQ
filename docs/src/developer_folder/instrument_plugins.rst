@@ -236,6 +236,7 @@ where ``dte`` stands for DataToExport, see :ref:`datatoexport`.
 
   * ``data_grabed_signal_temp`` (old style, will be deprecated)
   * ``data_grabed_signal`` (old style, will be deprecated)
+
   It will be deprecated in versions > 4.1, as the object to use and emit are now DataToExport objects
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
