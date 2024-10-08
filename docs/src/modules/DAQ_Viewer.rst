@@ -205,6 +205,7 @@ There are other functionalities that can be triggered in specific conditions. Am
 * The ROI_select button and ROI on a Viewer2D
 
 
+
 Saving data
 -----------
 
@@ -225,6 +226,9 @@ DAQ_Viewer.
     for det in self.modules_manager.detectors:
         det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
     self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
+
+
+.. _daq_viewer_saving_single:
 
 
 Snapshots

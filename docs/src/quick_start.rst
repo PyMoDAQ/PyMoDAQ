@@ -26,6 +26,9 @@ Let’s execute the installer and keep the default choices.
    * :term:`conda`
    * :term:`pip <pip & PyPI>`
 
+
+.. _section_installation:
+
 Set up a new Python environment
 -------------------------------
 
@@ -59,6 +62,10 @@ download and install all the dependencies in our new environment.
 
 ``pip install pymodaq pyqt5``
 
+.. note::
+
+ For more details about the installation, see :ref:`installation_tips`
+
 Check the installation
 ----------------------
 
@@ -77,6 +84,10 @@ This prompts the following user interface. In the *Actuator* drop-down list, cho
    The DAQ_Move module.
 
 The basic installation is now complete! :)
+
+.. note::
+
+ For more details about the loading PyMoDAQ modules, see :ref:`load_installed_tips`
 
 Control a real instrument
 -------------------------

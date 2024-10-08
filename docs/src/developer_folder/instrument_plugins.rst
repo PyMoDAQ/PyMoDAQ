@@ -28,7 +28,7 @@ Installation
 ------------
 
 The main and official list of plugins is located in the `pymodaq_plugin_manager`__ repository on github. This constitutes a
-list of (contributed) python package that can be installed using the :ref:`PluginManager` (or directly using pip).
+list of (contributed) python package that can be installed using the :ref:`PluginManager<plugin_manager>` (or directly using pip).
 Other unofficial plugins may also be installed if they follow PyMoDAQ's plugin specifications but you are invited
 to let know other users of the plugins you develop in order to contribute to PyMoDAQ's development.
 
@@ -236,6 +236,7 @@ where ``dte`` stands for DataToExport, see :ref:`datatoexport`.
 
   * ``data_grabed_signal_temp`` (old style, will be deprecated)
   * ``data_grabed_signal`` (old style, will be deprecated)
+
   It will be deprecated in versions > 4.1, as the object to use and emit are now DataToExport objects
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
