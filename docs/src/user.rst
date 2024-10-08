@@ -14,4 +14,4 @@ User's Guide
    user_folder/useful_modules
    user_folder/tcpip
    user_folder/leco
-   user_folder/miscellaneous
+   user_folder/plugin_manager

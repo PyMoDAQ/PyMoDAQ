@@ -1,36 +1,35 @@
 Scanner module and classes
 ==========================
 
-.. currentmodule:: pymodaq.utils.scanner
+.. currentmodule:: pymodaq.utils.scanner.utils
 
 Summary of the classes in the scanner module
 
 
 .. autosummary::
+    ScanType
     ScanInfo
-    ScanParameters
+
+
+.. currentmodule:: pymodaq.utils.scanner.scanner
+
+.. autosummary::
     Scanner
 
 
-The scanner module contains all functionalities to defines a particular scan see :ref:`scanner_paragrah`.
+The scanner module contains all functionalities to defines a particular scan see :ref:`scanner_paragraph`.
 
 
-.. currentmodule:: pymodaq.utils.scanner
+.. currentmodule:: pymodaq.utils.scanner.utils
 
 
-.. autodata:: SCAN_TYPES
-
-
-.. autodata:: SCAN_SUBTYPES
-
+.. autodata:: ScanType
 
 .. autoclass:: ScanInfo
    :members:
 
 
-.. autoclass:: ScanParameters
-   :members:
-
+.. currentmodule:: pymodaq.utils.scanner.scanner
 
 .. autoclass:: Scanner
    :members:

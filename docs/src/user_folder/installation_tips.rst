@@ -30,7 +30,7 @@ version.
 .. _qt5backend:
 
 Qt5 backend
-+++++++++++
+-----------
 
 PyMoDAQ source code uses a python package called `qtpy`__ that add an abstraction layer between PyMoDAQ's code
 and the actual Qt5 python implementation (either PyQt5 or PySide2, and soon PyQt6 and PySide6). Qtpy will look on what
@@ -48,8 +48,11 @@ __ https://pypi.org/project/QtPy/
 
 .. _load_installed_tips:
 
+Loading modules
+---------------
+
 Load installed scripts
-----------------------
+++++++++++++++++++++++
 
 During its installation, a few scripts have been installed within you environment directory, this means you can start
 PyMoDAQ's main functionalities directly writing in your console either:
@@ -63,12 +66,32 @@ PyMoDAQ's main functionalities directly writing in your console either:
 *  ``plugin_manager``
 
 
+.. _run_module:
+
+Execute a given python file
++++++++++++++++++++++++++++
+
+If you knwow where, within PyMoDAQ directories, is the python file you want to run you can enter for instance:
+
+*  ``python -m pymodaq.dashboard``
+*  ``python -m pymodaq.extensions.daq_scan``
+*  ``python -m pymodaq.extensions.daq_logger``
+*  ``python -m pymodaq.control_modules.daq_viewer``
+*  ``python -m pymodaq.control_modules.daq_move``
+*  ``python -m pymodaq.extensions.h5browser``
+*  ``python -m pymodaq_plugin_manager.manager``
+
+for PyMoDAQ's main modules. The *-m* option tells python to look within its *site-packages* folder (where you've just
+installed pymodaq) In fact if one of PyMoDAQ's file (*xxx.py*) as an entry point (a ``if __name__='__main__:'``
+statement at the end of the file), you can run it by calling python over it...
+
+
   .. _shortcut_section:
 
 Creating shortcuts on **Windows**
 ---------------------------------
 
-Python packages can easily be started from the command line (see :ref:`section_how_to_start`). However, Windows users
+Python packages can easily be started from the command line (see :ref:`load_installed_tips`). However, Windows users
 will probably prefer using shortcuts on the desktop. Here is how to do it (Thanks to Christophe Halgand for the
 procedure):
 
@@ -85,7 +108,7 @@ procedure):
   then finally execute and start **Python**, opening the correct pymodaq file (here *dashboard.py*,
   starting the Dashboard module, *python -m pymodaq.dashboard* bit)
 * You're done!
-* Do it again for each PyMoDAQ's module you want (to get the correct python file and it's path, see :ref:`run_module`).
+* Do it again for each PyMoDAQ's module you want (to get the correct python file and it's path, see :ref:`load_installed_tips`).
 
 .. _shortcut_create:
 

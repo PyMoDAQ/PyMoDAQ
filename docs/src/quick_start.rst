@@ -26,6 +26,9 @@ Let’s execute the installer and keep the default choices.
    * :term:`conda`
    * :term:`pip <pip & PyPI>`
 
+
+.. _section_installation:
+
 Set up a new Python environment
 -------------------------------
 

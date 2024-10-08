@@ -93,7 +93,7 @@ is also used for the ``DAQ_Logger`` extension.
 Selecting the type of scan
 ++++++++++++++++++++++++++
 
-All specifics of the upcoming scan are configured using the :ref:`scanner_paragrah` module interface as seen on
+All specifics of the upcoming scan are configured using the :ref:`scanner_paragraph` module interface as seen on
 :numref:`scan2D_fig2` in the case of a spiral Scan2D scan configuration.
 
   .. _scan2D_fig2:
