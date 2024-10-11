@@ -69,9 +69,15 @@ class DataActuatorType(BaseEnum):
     DataActuator = 1
 
 
-def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
+def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
+                     epsilons=None):
+    if epsilons is not None:
+        epsilon=epsilons
     if isinstance(epsilon, list):
         epsilon=epsilon[0]
+    elif isinstance(epsilon, dict):
+        epsilon=epsilon[list[epsilon.keys()][0]]
+
     return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
              'value': epsilon,
@@ -114,32 +120,45 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes = False,
-                         axes_names: Union[List[str], Dict[str, int]] = [],
+def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
                          master=True,
-                         epsilon=config('actuator', 'epsilon_default')):
+                         epsilon: float = config('actuator', 'epsilon_default')):
+
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
     ----------
-    is_multiaxes: bool
+    is_multiaxes: bool  # deprecated not need anymore
         If True, display the particular settings to define which axis the controller is driving
-    axis_names: list of str
+    axes_names: deprecated, use axis_names
+    axis_names: list of str or dictionnary of string as key and integer as value
         The string identifier of every axis the controller can drive
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
+    epsilon: float
+        deprecated (< 5.0.0) no more used here
+
     """
-    if axis_names == [] and len(axes_names) != 0:
+    if axes_names is not None and len(axis_names) == 0:
+        if len(axes_names) == 0:
+            axes_names = ['']
         axis_names = axes_names
 
+    is_multiaxes = len(axis_names) > 1
+    if isinstance(axis_names, list):
+        axis_name = axis_names[0]
+    elif isinstance(axis_names, dict):
+        axis_name = axis_names[list(axis_names.keys())[0]]
     params = [
-                 {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
-                     {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
-                      'default': False},
+                 {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group',
+                  'visible': is_multiaxes, 'children': [
+                     {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool',
+                      'value': is_multiaxes,  'default': False},
                      {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
                       'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
-                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names},
+                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names,
+                      'value': axis_name},
                  ]},
              ] + comon_parameters(epsilon)
     return params
@@ -239,10 +258,16 @@ class DAQ_Move_base(QObject):
 
     move_done_signal = Signal(DataActuator)
     is_multiaxes = False
-    stage_names = []
+    stage_names = []  # deprecated
+
+    _axis_names: Union[list, Dict[str, int]] = None
+    _controller_units: Union[str, List[str], Dict[str, int]] = ''
+    _epsilons: Union[float, List[float], Dict[str, float]] = None
+    _epsilon = 1.0  # deprecated
+
+
     params = []
-    _controller_units: Union[str, List[str]] = ''
-    _epsilon = 1.0
+
     data_actuator_type = DataActuatorType.float
     data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
@@ -272,11 +297,11 @@ class DAQ_Move_base(QObject):
         else:
             self._title = "myactuator"
 
-        self._axis_units: List[str] = []
+        self._axis_units: Union[Dict[str, str], List[str]] = None
         self.axis_units = self._controller_units
-        self._epsilons: List[float] = []  # self._epsilon if isinstance(self._epsilon, list) else\
-        #    [self._epsilon for _ in range(len(self.axis_name))]
-        self.epsilons = self._epsilon
+        if self._epsilons is None:
+            self._epsilons = self._epsilon
+        self.epsilons = self._epsilons
         self.axis_name = self.axis_name  # to trigger some actions on units and epsilons
 
         self._current_value = DataActuator(self._title,
@@ -301,16 +326,16 @@ class DAQ_Move_base(QObject):
 
         New in 4.4.0
         """
-        return self.axis_units[self.axis_value]
+        return self.axis_units[self.axis_index_key]
 
     @axis_unit.setter
     def axis_unit(self, unit: str):
-        self.axis_units[self.axis_value] = unit
+        self.axis_units[self.axis_index_key] = unit
         self.settings.child('units').setValue(unit)
         self.emit_status(ThreadCommand('units', unit))
 
     @property
-    def axis_units(self) -> List[str]:
+    def axis_units(self) -> Union[List[str], Dict[str, str]]:
         """ Get/Set the units for each axis of the controller
 
         New in 4.4.0
@@ -318,10 +343,23 @@ class DAQ_Move_base(QObject):
         return self._axis_units
 
     @axis_units.setter
-    def axis_units(self, units: Union[str, List[str]]):
+    def axis_units(self, units: Union[str, List[str], Dict[str, str]]):
         if isinstance(units, str):
-            units = [units for _ in range(len(self.axis_names))]
-        self._axis_units = units
+            if isinstance(self.axis_names, list):
+                units_tmp = [units for _ in range(len(self.axis_names))]
+            else:
+                units_tmp = {}
+                for key in self.axis_names:
+                    units_tmp[key] = units
+        else:
+            if not isinstance(units, type(self.axis_names)):
+                raise TypeError('units should be defined just like axis_names: a str, list of string or'
+                                'dict of string')
+            if len(units) != len(self.axis_names):
+                raise ValueError('Units should be defined either as a single str or a list/dict with'
+                                 'a str defined for each axis')
+            units_tmp = units
+        self._axis_units = units_tmp
 
     @property
     def epsilon(self) -> float:
@@ -329,14 +367,14 @@ class DAQ_Move_base(QObject):
 
         New in 4.4.0
         """
-        return self.epsilons[self.axis_value]
+        return self.epsilons[self.axis_index_key]
 
     @epsilon.setter
     def epsilon(self, eps: float):
-        self.epsilons[self.axis_value] = eps
+        self.epsilons[self.axis_index_key] = eps
 
     @property
-    def epsilons(self) -> List[float]:
+    def epsilons(self) -> Union[List[float], Dict[str, float]]:
         """ Get/Set the epsilon for each axis of the controller
 
         New in 4.4.0
@@ -344,10 +382,24 @@ class DAQ_Move_base(QObject):
         return self._epsilons
 
     @epsilons.setter
-    def epsilons(self, epsilons: Union[float, List[float]]):
-        if not isinstance(epsilons, Iterable) and isinstance(epsilons, float):
-            epsilons = [epsilons for _ in range(len(self.axis_names))]
-        self._epsilons = epsilons
+    def epsilons(self, epsilons: Union[float, List[float], Dict[str, float]]):
+        if isinstance(epsilons, numbers.Number):
+            if isinstance(self.axis_names, list):
+                epsilons_tmp = [epsilons for _ in range(len(self.axis_names))]
+            else:
+                epsilons_tmp = {}
+                for key in self.axis_names:
+                    epsilons_tmp[key] = epsilons
+        else:
+            if not isinstance(epsilons, type(self.axis_names)):
+                raise TypeError('units should be defined just like axis_names: a float, list of '
+                                'float or dict of float')
+            if len(epsilons) != len(self.axis_names):
+                raise ValueError('epsilons should be defined either as a single float or a '
+                                 'list/dict with'
+                                 'a float defined for each axis')
+            epsilons_tmp = epsilons
+        self._epsilons = epsilons_tmp
 
     @property
     def controller_units(self):
@@ -365,7 +417,7 @@ class DAQ_Move_base(QObject):
     def controller_units(self, units: str = ''):
         deprecation_msg('The property controller_units is deprecated please use the'
                         'axis_unit property.')
-        self._axis_units[self.axis_value] = units
+        self._axis_units[self.axis_index_key] = units
 
     @property
     def axis_name(self) -> Union[str]:
@@ -406,11 +458,28 @@ class DAQ_Move_base(QObject):
 
     @property
     def axis_value(self) -> int:
-        """Get the current value selected from the current axis"""
+        """Get the current value selected from the current axis
+
+        In case axis_names is a list, return the element of the list: self.axis_name
+        In case axis_names is a dict, return the value of the dict self.axis_names[self.axis_name]
+        """
+        if isinstance(self.axis_names, list):
+            return self.axis_name
+        else:
+            return self.axis_names[self.axis_name]
+
+    @property
+    def axis_index_key(self) -> Union[int, str]:
+        """ Get the current index or key correspondingto the current axis
+
+        In case axis_names is a list, return the index wihtin the list
+        In case axis_names is a dict, return the key of the dict self.axis_name
+
+        """
         if isinstance(self.axis_names, list):
             return self.axis_names.index(self.axis_name)
         else:
-            return self.axis_names[self.axis_name]
+            return self.axis_name
 
     def ini_attributes(self):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
