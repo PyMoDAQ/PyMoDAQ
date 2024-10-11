@@ -9,7 +9,6 @@ import pytest
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, check_units,
                                                           DataActuator)
-from pymodaq_utils.utils import ThreadCommand
 
 
 def test_check_units():
