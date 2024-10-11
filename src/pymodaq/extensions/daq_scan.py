@@ -29,18 +29,16 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from pymodaq_gui.plotting.navigator import Navigator
-
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.h5modules.saving import H5Saver
 
-from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
+from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
-
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 
