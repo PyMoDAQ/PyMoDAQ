@@ -920,7 +920,8 @@ class DAQ_Move_Hardware(QObject):
                 setattr(self, path[-1], param.value())
 
         elif path[0] == 'move_settings':
-            self.hardware.update_settings(settings_parameter_dict)
+            if self.hardware is not None:
+                self.hardware.update_settings(settings_parameter_dict)
 
 
 def main(init_qt=True):
