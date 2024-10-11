@@ -19,17 +19,19 @@ def test_check_units():
     assert check_units(dwa, 'm') == dwa
 
 
-def test_axis_list_legacy(qtbot):
+@pytest.mark.parametrize("ISMULTI, AXIS_NAMES, EPSILON, UNITS",
+                         [(True, ['a', 'b', 'c'], 0.1, 'mm'),
+                          (False, ['a', 'c'], 0.1, 'mm'),
+                          (False, [], 0.001, 'mm'),
+                          ])
+def test_axis_list_legacy(qtbot, ISMULTI, AXIS_NAMES, EPSILON, UNITS):
 
-    AXIS_NAMES = ['U', 'V']
-    EPSILON = 0.001
-    UNITS = 'µm'
 
     class HardwareWithList(DAQ_Move_base):
         _controller_units = UNITS
         # find available COM ports
 
-        is_multiaxes = True
+        is_multiaxes = ISMULTI
         axes_names = AXIS_NAMES.copy()
         _epsilon = EPSILON
 

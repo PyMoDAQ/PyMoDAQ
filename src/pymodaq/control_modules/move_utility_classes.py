@@ -114,9 +114,8 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False,
+def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
-                         axes_names = None,
                          master=True,
                          epsilon: float = config('actuator', 'epsilon_default')):
 
@@ -126,6 +125,7 @@ def comon_parameters_fun(is_multiaxes=False,
     ----------
     is_multiaxes: bool  # deprecated not need anymore
         If True, display the particular settings to define which axis the controller is driving
+    axes_names: deprecated, use axis_names
     axis_names: list of str or dictionnary of string as key and integer as value
         The string identifier of every axis the controller can drive
     master: bool
