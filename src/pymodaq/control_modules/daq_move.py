@@ -699,17 +699,19 @@ class DAQ_Move_Hardware(QObject):
             Uninitialize the stage closing the hardware.
 
         """
-        self.hardware.close()
+        if self.hardware is not None:
+            self.hardware.close()
 
         return "Stage uninitialized"
 
     def get_actuator_value(self):
         """Get the current position checking the hardware value.
         """
-        pos = self.hardware.get_actuator_value()
-        if self.hardware.data_actuator_type == DataActuatorType.float:
-            pos = DataActuator(self._title, data=pos, units=self.hardware.axis_unit)
-        return pos
+        if self.hardware is not None:
+            pos = self.hardware.get_actuator_value()
+            if self.hardware.data_actuator_type == DataActuatorType.float:
+                pos = DataActuator(self._title, data=pos, units=self.hardware.axis_unit)
+            return pos
 
     def check_position(self):
         """Get the current position checking the hardware position (deprecated)
