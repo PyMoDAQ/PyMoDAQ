@@ -116,6 +116,7 @@ class MoveCommand:
 
 def comon_parameters_fun(is_multiaxes=False,
                          axis_names: Union[List, Dict] = [],
+                         axes_names = None,
                          master=True,
                          epsilon: float = config('actuator', 'epsilon_default')):
 
@@ -133,6 +134,11 @@ def comon_parameters_fun(is_multiaxes=False,
         deprecated (< 5.0.0) no more used here
 
     """
+    if axes_names is not None and len(axis_names) == 0:
+        if len(axes_names) == 0:
+            axes_names = ['']
+        axis_names = axes_names
+
     is_multiaxes = len(axis_names) > 1
     if isinstance(axis_names, list):
         axis_name = axis_names[0]
