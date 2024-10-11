@@ -478,23 +478,27 @@ See also: :ref:`multiaxes_controller`
 When an actuator's controller can drive multiple axis (like a XY translation stage for instance), the plugin instrument
 class should defines two class attributes:
 
-* `is_multiaxis` should be set to True. This will trigger the display of the multiaxis section on the UI
-* `axes_names` should be a list or dict describing the different actuator such a controller can drive
+* `is_multiaxis` should be set to True. This will trigger the display of the multiaxis section on the UI\n
+  Deprecated in 4.4.1 not needed anymore as one read that info from the length of the axis_names variable
+* `axes_names` should be a list or dict describing the different actuator (axis) such a controller can drive
 
 .. note::
-    New in 4.4.0
-    Moreover two other attributes can then be transformed as list, namely:
+    New in 4.4.1
+    Moreover two other attributes should then be transformed as list or dict (depending the definition
+    of the `_axis_names` variable, namely:
 
-    * `_controller_units`: can be a list of string specifying the units to be used by each axis
-      In case, all axes have the same working *units*, could be left as a str. PyMoDAQ handles the rest
-    * `_epsilon`: can be a list of float specifying the epsilon to be used by each axis
-      In case, all axes have the same *epsilon*, could be left as a float. PyMoDAQ handles the rest
+    * `_controller_units`: can be a list or a dict of strings specifying the units to be
+      used by each axis. In case of a list or dict, the type and length should be the same as `axis_names`
+      In case all axes have the same working *units*, could be left as a str. PyMoDAQ handles the rest
+    * `_epsilon`: deprecated, please use `_epsilons`
+    * `_epsilons`: can be a list or dict of float specifying the epsilon to be used by each axis.
+      In case of a list or dict, the type and length should be the same as `axis_names`
+      In case all axes have the same *epsilon*, could be left as a float. PyMoDAQ handles the rest
 
 
 .. code-block::
 
     class DAQ_Move_MockNamedAxes(DAQ_Move_base):
-        is_multiaxes = True
         _axis_names = ['Xaxis', 'Yaxis', 'Zaxis']
         # or:
         _axis_names = {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
@@ -536,10 +540,17 @@ Case of a dictionary of strings/integers:
 
     >>> self.axis_name
     'Yaxis'
-    >>> self.axei_names
+    >>> self.axis_names
     {'Xaxis': 0, 'Yaxis': 1, 'Zaxis': 2}
     >>> self.axis_value
     1
+
+Other properties will then reflect the current axis units and epsilon value:
+
+* `self.epsilon`
+* `self.axis_unit`
+
+
 
 Modifying the UI from the instrument plugin class
 -------------------------------------------------
