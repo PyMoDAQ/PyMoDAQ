@@ -22,7 +22,7 @@ from pymodaq_gui.parameter import ioxml
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 
-from pymodaq_data.data import DataUnitError
+from pymodaq_data.data import DataUnitError, Q_
 
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
