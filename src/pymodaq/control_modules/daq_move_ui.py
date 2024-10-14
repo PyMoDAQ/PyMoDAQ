@@ -15,6 +15,9 @@ from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QTool
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import Config
+
+from pymodaq_data import Q_
+
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
 from pymodaq_gui.utils import DockArea
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
@@ -255,6 +258,12 @@ class DAQ_Move_UI(ControlModuleUI):
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
         self.parent.layout().addWidget(self.statusbar)
+
+    def set_abs_value_red(self, value: Q_):
+        self.abs_value_sb_2.setValue(value.m_as(self._unit))
+
+    def set_abs_value_green(self, value: Q_):
+        self.abs_value_sb.setValue(value.m_as(self._unit))
 
     def set_unit_as_suffix(self, unit: str):
         """Will append the actuator units in the value display"""

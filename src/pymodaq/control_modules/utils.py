@@ -218,6 +218,12 @@ class ControlModule(QObject):
                 self.logger.exception(str(e))
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
+        elif status.command == 'update_ui':
+            if self.ui is not None:
+                if hasattr(self.ui, status.attribute[0]):
+                    getattr(self.ui, status.attribute[0])(*status.attribute[1],
+                                                          **status.attribute[2])
+
         elif status.command == 'raise_timeout':
             self.raise_timeout()
 
