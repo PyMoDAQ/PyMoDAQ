@@ -141,7 +141,11 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
     is_multiaxes = len(axis_names) > 1
     if isinstance(axis_names, list):
-        axis_name = axis_names[0]
+        if len(axis_names) > 0:
+            axis_name = axis_names[0]
+        else:
+            axis_names = ['']
+            axis_name = ''
     elif isinstance(axis_names, dict):
         axis_name = axis_names[list(axis_names.keys())[0]]
     params = [
