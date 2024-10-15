@@ -489,9 +489,9 @@ class DAQ_Move(ParameterControlModule):
             self._current_value = data_act
             self.current_value_signal.emit(self._current_value)
             if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
+                self._command_tcpip.emit(ThreadCommand('position_is', data_act))
             if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, status.attribute))
+                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, data_act))
 
         elif status.command == "move_done":
             if isinstance(status.attribute, DataActuator):
@@ -506,9 +506,9 @@ class DAQ_Move(ParameterControlModule):
             self._move_done_bool = True
             self.move_done_signal.emit(data_act)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
+                self._command_tcpip.emit(ThreadCommand('move_done', data_act))
             if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, status.attribute))
+                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
 
         elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)
