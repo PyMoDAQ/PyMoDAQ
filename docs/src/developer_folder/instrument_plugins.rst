@@ -584,17 +584,37 @@ Such a method takes one argument, a ``ThreadCommand`` and will send this object 
   that can be any type. This :py:class:`ThreadCommand<pymodaq.utils.daq_utils.ThreadCommand>` is used everywhere
   in PyMoDAQ to communicate between threads.
 
+  New in 5.0.1: two extra arguments (args and kwargs) can be used to store arguments that should be passed to
+  an eventual method triggered from the ThreadCommand emission (see the command *update_ui* for an example).
+
 
 Control modules share some commands,
 see :py:meth:`thread_status<pymodaq.control_modules.utils.ControlModule.thread_status>`
 
-* **Update_status**: call the update_status method with status attribute as a string
+* **update_status**: call the update_status method with status attribute as a ``str``. To print info on the status bar
 * **close**: close the current thread and delete corresponding attribute on cascade.
-* **update_main_settings**: update the main settings in the UI settings tree
-* **update_settings**: update the actuator's settings in the UI settings tree
+* **update_main_settings**: update the *main settings* in the UI settings tree. See below for an exemple.
+  The attribute argument is a list containing:
+  * the setting path as a tuple of strings (with the 'main_setting' parent setting)
+  * the new value, limit or option of the setting
+  * the type of change of the setting as a string, either:
+    * 'value': to change the setting value
+    * 'limits': to change the limits of the setting
+    * 'options': any option of the setting
+* **update_settings**: update the *actuator's settings* in the UI settings tree. The attribute argument is a list
+  containing:
+  * the setting path as a tuple of strings (with the 'main_setting' parent setting)
+  * the new value, limit or option of the setting
+  * the type of change of the setting as a string, either:
+    * *value*: to change the setting value
+    * *limits*: to change the limits of the setting
+    * *options*: any option of the setting
 * **raise_timeout**: call the raise_timeout method
-* **show_splash**: show the splash screen displaying info from the argument attributes of the command
+* **show_splash**: show the splash screen displaying info. The attribute argument is a string that will
+  be displayed on the splash screen
 * **close_splash**: close the splash screen
+* **update_ui**: call a method of the control module current UI. The attribute argument is a string beeing the
+  name of the method to call. The args and kwargs arguments are passed to this method
 
 Splash Screen and info
 **********************
@@ -611,36 +631,42 @@ You can therefore show info about initialization in a splash screen using (taken
   QtCore.QThread.msleep(500)
   self.set_Mock_data()
   self.emit_status(ThreadCommand('update_main_settings', [['wait_time'],
-                                                        self.settings.child('wait_time').value(), 'value']))
+                                 self.settings['wait_time'], 'value']))
   self.emit_status(ThreadCommand('show_splash', 'Displaying initial data'))
   QtCore.QThread.msleep(500)
   # initialize viewers with the future type of data
-  self.dte_signal_temp.emit(DataToExport('Mock0D', data=[DataFromPlugins(name='Mock1', data=[np.array([0])],
-                                                                       dim='Data0D',
-                                                                       labels=['Mock1', 'label2'])]))
+  self.dte_signal_temp.emit(DataToExport('Mock0D', data=[
+      DataFromPlugins(name='Mock1', data=[np.array([0])],
+                      dim='Data0D', labels=['Mock1', 'label2'])]))
   self.emit_status(ThreadCommand('close_splash'))
 
 Modifying the UI settings
 *************************
 
-if you want to modify the settings tree of the UI (the *Main Settings* part as the other one, you can do so within the
-plugin directly), you can do so using:
+if you want to modify the settings tree of the UI (the *Main Settings* part or the hardware part, you can do so within the
+plugin directly) using:
 
 .. code-block::
 
   self.emit_status(ThreadCommand('update_main_settings', [['wait_time'], 10, 'value']))
 
+or
+
+.. code-block::
+
+  self.emit_status(ThreadCommand('update_settings', [['wait_time'], 10, 'value']))
+
 The attribute of the ThreadCommand is a bit complex here ``[['wait_time'], 10, 'value']``. It is a list of three
 variables:
 
 * a list of string defining a path in the main_settings tree hierarchy
-* an object (here an integer)
+* the new value, limit or option of the setting (here an integer)
 * a string specifying the type of modification, either:
 
-  * value: the object should therefore be the new value of the modified parameter
-  * limits: the object should be a sequence listing the limits of the parameter (depends on the type of parameter)
-  * options: the object is a dictionary defining the options to modify
-  * childAdded: the object is a dictionary generated using SaveState of a given Parameter
+  * *value*: the object should therefore be the new value of the modified parameter
+  * *limits*: the object should be a sequence listing the limits of the parameter (depends on the type of parameter)
+  * *options*: the object is a dictionary defining the options to modify
+  * *childAdded*: the object is a dictionary generated using SaveState of a given Parameter
 
 
 DAQ_Move specific commands
@@ -649,17 +675,22 @@ DAQ_Move specific commands
 Specifics commands for the :py:class:`DAQ_Move<pymodaq.control_modules.daq_move.DAQ_Move>` are listed in:
 :py:meth:`thread_status<pymodaq.control_modules.daq_move.DAQ_Move.thread_status>` and explained a bit below
 
-* **ini_stage**: obtains info from the initialization
-* **get_actuator_value**: update the UI current value
+* **ini_stage**: obtains info from the initialization. The attribute argument should be a dict containing a *initialized* key and
+  associated boolean value and an *info* key and associated string value
+* **get_actuator_value**: update the UI current displayed value. The attribute argument is a DataActuator whose
+  value and unit will be displayed on the UI.
 * **move_done**: update the UI current value and emits the move_done signal
 * **outofbounds**: emits the bounds_signal signal with a True argument
 * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values, see
   :py:meth:`set_abs_spinbox_properties<pymodaq.control_modules.daq_move_ui.DAQ_Move_UI.set_abs_spinbox_properties>`
-* stop: stop the motion
+* *stop*: stop the motion
+* *units*: update the UI units. The attribute argument should be a string specifying the new unit.
 
 
-You can directly modify the printed current actuator's value using the ``emit_value(12.4)`` method which is a shortcut
-of ``emit_status(ThreadCommand('get_actuator_value', 12.4))``. In that case the printed value would show ``12.4``.
+You can directly modify the printed current actuator's value using the
+``emit_value(DataActuator(data=12.4, units='m'))`` method which is a shortcut
+of ``emit_status(ThreadCommand('get_actuator_value', DataActuator(data=12.4, units='m')))``.
+In that case the printed value would show ``12.4 m``.
 
 You can also modify some SpinBox of the UI (the ones used to specify the absolute values) using the *set_allowed_values*
 command. In that case the attribute argument of the ThreadCommand should be a dictionary, see
@@ -676,8 +707,9 @@ Specifics commands for the :py:class:`DAQ_Viewer<pymodaq.control_modules.daq_vie
 * ini_detector: update the status with "detector initialized" value and init state if attribute not null.
 * grab : emit grab_status(True)
 * grab_stopped: emit grab_status(False)
-* init_lcd: display a LCD panel
-* lcd: display on the LCD panel, the content of the attribute
+* init_lcd: display a LCD panel. the attribute argument should be a dictionnary  directly passed as named arguments
+  to the LCD object
+* lcd: display on the LCD panel. the attribute argument should be a list of numpy arrays of shape (1,)
 * stop: stop the grab
 
 The interesting bit is the possibility to display a

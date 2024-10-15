@@ -15,7 +15,7 @@ from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq_utils.config import Config
 from pymodaq_utils.enums import BaseEnum, enum_checker
-from pymodaq_utils.logger import get_base_logger
+from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.parameter import Parameter, ioxml
@@ -76,7 +76,9 @@ DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
 if len(DET_TYPES['DAQ0D']) == 0:
     raise DetectorError('No installed Detector')
 
+
 config = Config()
+logger = set_logger(get_module_name(__file__))
 
 
 class ViewerError(Exception):
@@ -144,7 +146,8 @@ class ControlModule(QObject):
         ----------
         status: ThreadCommand
             The info returned from the hardware, the command (str) can be either:
-                * Update_Status: display messages and log info
+                * Update_Status: display messages and log info (deprecated)
+                * update_status: display info on the UI status bar
                 * close: close the current thread and delete corresponding attribute on cascade.
                 * update_settings: Update the "detector setting" node in the settings tree.
                 * update_main_settings: update the "main setting" node in the settings tree
@@ -160,6 +163,9 @@ class ControlModule(QObject):
             else:
                 self.update_status(status.attribute[0])
 
+        elif status.command == 'update_status':
+            self.update_status(status.attribute)
+
         elif status.command == "close":
             try:
                 self.update_status(status.attribute[0])
@@ -173,7 +179,7 @@ class ControlModule(QObject):
                     self._hardware_thread.terminate()
                     self.update_status('thread is locked?!', 'log')
             except Exception as e:
-                self.logger.exception(str(e))
+                logger.exception(f'Wrong call to the "close" command: \n{str(e)}')
 
             self._initialized_state = False
             self.init_signal.emit(self._initialized_state)
@@ -188,7 +194,7 @@ class ControlModule(QObject):
                 elif status.attribute[2] == 'options':
                     self.settings.child('main_settings', *status.attribute[0]).setOpts(**status.attribute[1])
             except Exception as e:
-                self.logger.exception(str(e))
+                logger.exception(f'Wrong call to the "update_main_settings" command: \n{str(e)}')
 
         elif status.command == 'update_settings':
             # using this the settings shown in the UI for the plugin reflects the real plugin settings
@@ -196,7 +202,7 @@ class ControlModule(QObject):
                 self.settings.sigTreeStateChanged.disconnect(
                     self.parameter_tree_changed)  # any changes on the detcetor settings will update accordingly the gui
             except Exception as e:
-                self.logger.exception(str(e))
+                logger.exception(str(e))
             try:
                 if status.attribute[2] == 'value':
                     self.settings.child(f'{control_module_type}_settings',
@@ -215,14 +221,17 @@ class ControlModule(QObject):
                                         *status.attribute[0]).addChild(status.attribute[1][0])
 
             except Exception as e:
-                self.logger.exception(str(e))
+                logger.exception(f'Wrong call to the "update_settings" command: \n{str(e)}')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         elif status.command == 'update_ui':
-            if self.ui is not None:
-                if hasattr(self.ui, status.attribute):
-                    getattr(self.ui, status.attribute)(*status.args,
-                                                       **status.kwargs)
+            try:
+                if self.ui is not None:
+                    if hasattr(self.ui, status.attribute):
+                        getattr(self.ui, status.attribute)(*status.args,
+                                                           **status.kwargs)
+            except Exception as e:
+                logger.info(f'Wrong call to the "update_ui" command: \n{str(e)}')
 
         elif status.command == 'raise_timeout':
             self.raise_timeout()
@@ -307,7 +316,7 @@ class ControlModule(QObject):
     def show_log(self):
         """Open the log file in the default text editor"""
         import webbrowser
-        webbrowser.open(get_base_logger(self.logger).handlers[0].baseFilename)
+        webbrowser.open(get_base_logger(logger).handlers[0].baseFilename)
 
     def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""
@@ -332,7 +341,7 @@ class ControlModule(QObject):
             self.ui.display_status(txt)
         self.status_sig.emit(txt)
         if log:
-            self.logger.info(txt)
+            logger.info(txt)
 
     def manage_ui_actions(self, action_name: str, attribute: str, value):
         """Method to manage actions for the UI (if any).
