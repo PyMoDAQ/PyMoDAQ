@@ -122,6 +122,7 @@ def get_instrument_plugins():  # pragma: no cover
     except Exception as e:
         logger.debug(f'Impossible to import PID utility plugin: {str(e)}')
 
+    plugins_import.sort(key=lambda mod: mod['name'])
     return plugins_import
 
 
