@@ -457,11 +457,10 @@ class DAQ_Move(ParameterControlModule):
         super().thread_status(status, 'move')
 
         if status.command == "ini_stage":
-            # status.attribute[0]=edict(initialized=bool,info="", controller=)
-            self.update_status("Stage initialized: {:} info: {:}".format(status.attribute[0]['initialized'],
-                                                                         status.attribute[0]['info']))
-            if status.attribute[0]['initialized']:
-                self.controller = status.attribute[0]['controller']
+            self.update_status(f"Stage initialized: {status.attribute['initialized']} "
+                               f"info: {status.attribute['info']}")
+            if status.attribute['initialized']:
+                self.controller = status.attribute['controller']
                 if self.ui is not None:
                     self.ui.actuator_init = True
                 self._initialized_state = True
@@ -472,7 +471,10 @@ class DAQ_Move(ParameterControlModule):
             self.init_signal.emit(self._initialized_state)
 
         elif status.command == "get_actuator_value" or status.command == 'check_position':
-            data_act: DataActuator = status.attribute[0]
+            if isinstance(status.attribute, DataActuator):
+                data_act: DataActuator = status.attribute
+            else:
+                data_act: DataActuator = status.attribute[0]  # backcompatibility
             data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
             if (not Unit(self.units).is_compatible_with(Unit(data_act.units)) and
                     data_act.units == ''):  #this happens if the units have not been specified in
@@ -492,7 +494,10 @@ class DAQ_Move(ParameterControlModule):
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, status.attribute))
 
         elif status.command == "move_done":
-            data_act: DataActuator = status.attribute[0]
+            if isinstance(status.attribute, DataActuator):
+                data_act: DataActuator = status.attribute
+            else:
+                data_act: DataActuator = status.attribute[0]  # deprecated
             data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
             if self.ui is not None:
                 self.ui.display_value(data_act)
@@ -807,7 +812,7 @@ class DAQ_Move_Hardware(QObject):
             --------
             DAQ_utils.ThreadCommand
         """
-        self.status_sig.emit(ThreadCommand("move_done", [pos]))
+        self.status_sig.emit(ThreadCommand("move_done", pos))
 
     def move_home(self):
         """
@@ -822,7 +827,7 @@ class DAQ_Move_Hardware(QObject):
         """Send the move_done signal back to the main class
         """
         self._current_value = pos
-        self.status_sig.emit(ThreadCommand(command="move_done", attribute=[pos]))
+        self.status_sig.emit(ThreadCommand(command="move_done", attribute=pos))
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
@@ -851,9 +856,8 @@ class DAQ_Move_Hardware(QObject):
         """
         try:
             if command.command == "ini_stage":
-                status = self.ini_stage(
-                    *command.attribute)  # return edict(initialized=bool,info="", controller=, stage=)
-                self.status_sig.emit(ThreadCommand(command=command.command, attribute=[status, 'log']))
+                status: edict = self.ini_stage(*command.attribute)
+                self.status_sig.emit(ThreadCommand(command=command.command, attribute=status))
 
             elif command.command == "close":
                 status = self.close()

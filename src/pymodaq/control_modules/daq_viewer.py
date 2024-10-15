@@ -1060,11 +1060,11 @@ class DAQ_Viewer(ParameterControlModule):
         super().thread_status(status, 'detector')
 
         if status.command == "ini_detector":
-            self.update_status("detector initialized: " + str(status.attribute[0]['initialized']))
+            self.update_status("detector initialized: " + str(status.attribute['initialized']))
             if self.ui is not None:
-                self.ui.detector_init = status.attribute[0]['initialized']
-            if status.attribute[0]['initialized']:
-                self.controller = status.attribute[0]['controller']
+                self.ui.detector_init = status.attribute['initialized']
+            if status.attribute['initialized']:
+                self.controller = status.attribute['controller']
                 self._initialized_state = True
             else:
                 self._initialized_state = False
@@ -1228,7 +1228,7 @@ class DAQ_Detector(QObject):
         """
         if command.command == "ini_detector":
             status = self.ini_detector(*command.attribute)
-            self.status_sig.emit(ThreadCommand(command.command, [status, 'log']))
+            self.status_sig.emit(ThreadCommand(command.command, status))
 
         elif command.command == "close":
             status = self.close()
