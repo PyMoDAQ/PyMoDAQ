@@ -29,8 +29,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                                                 "Status", "Done", "Server Closed",
                                                 "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
-    params = [
-    ] + comon_parameters + leco_parameters
+    params = comon_parameters + leco_parameters
 
     def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
         super().__init__(parent=parent, params_state=params_state, **kwargs)
