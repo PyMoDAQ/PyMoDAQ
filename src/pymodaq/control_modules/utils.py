@@ -220,9 +220,9 @@ class ControlModule(QObject):
 
         elif status.command == 'update_ui':
             if self.ui is not None:
-                if hasattr(self.ui, status.attribute[0]):
-                    getattr(self.ui, status.attribute[0])(*status.attribute[1],
-                                                          **status.attribute[2])
+                if hasattr(self.ui, status.attribute):
+                    getattr(self.ui, status.attribute)(*status.args,
+                                                       **status.kwargs)
 
         elif status.command == 'raise_timeout':
             self.raise_timeout()
