@@ -38,8 +38,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     settings: Parameter
     controller: ActuatorDirector
 
-    is_multiaxes = False
-    axes_names = []
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType['float']  # DataActuatorType['DataActuator']
 
@@ -47,8 +45,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
                                                 'get_actuator_value', 'stop_motion', 'position_is',
                                                 'move_done']
     socket_types = ["ACTUATOR"]
-    params = [
-    ] + comon_parameters_fun(is_multiaxes=is_multiaxes, axes_names=axes_names) + leco_parameters
+    params = comon_parameters_fun() + leco_parameters
 
     def __init__(self, parent=None, params_state=None, **kwargs) -> None:
         super().__init__(parent=parent,
@@ -155,11 +152,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def set_position(self, position: Union[str, float]) -> None:
         pos = self._set_position_value(position=position)
-        self.emit_status(ThreadCommand('get_actuator_value', [pos]))
+        self.emit_status(ThreadCommand('get_actuator_value', pos))
 
     def set_move_done(self, position: Union[str, float]) -> None:
         pos = self._set_position_value(position=position)
-        self.emit_status(ThreadCommand('move_done', [pos]))
+        self.emit_status(ThreadCommand('move_done', pos))
 
     def set_x_axis(self, data, label: str = "", units: str = "") -> None:
         raise NotImplementedError("where is it handled?")

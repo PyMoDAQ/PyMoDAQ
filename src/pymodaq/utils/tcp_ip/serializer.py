@@ -9,7 +9,7 @@ import numbers
 from typing import Tuple, List, Union, TYPE_CHECKING, Iterable
 
 import numpy as np
-from pymodaq_data import data as data_mod
+from pymodaq.utils import data as data_mod
 from pymodaq_data.data import DataWithAxes, DataToExport, Axis, DwaType
 
 from pymodaq_gui.parameter import Parameter, utils as putils, ioxml
@@ -444,6 +444,7 @@ class Serializer:
         bytes_string += self.string_serialization(dwa.dim.name)
         bytes_string += self.string_serialization(dwa.distribution.name)
         bytes_string += self.list_serialization(dwa.data)
+        bytes_string += self.string_serialization(dwa.units)
         bytes_string += self.list_serialization(dwa.labels)
         bytes_string += self.string_serialization(dwa.origin)
         bytes_string += self.list_serialization(list(dwa.nav_indexes))
@@ -743,11 +744,12 @@ class DeSerializer:
                         dim=self.string_deserialization(),
                         distribution=self.string_deserialization(),
                         data=self.list_deserialization(),
+                        units=self.string_deserialization(),
                         labels=self.list_deserialization(),
                         origin=self.string_deserialization(),
                         nav_indexes=tuple(self.list_deserialization()),
                         axes=self.list_deserialization(),
-                                            )
+                        )
         errors = self.list_deserialization()
         if len(errors) != 0:
             dwa.errors = errors

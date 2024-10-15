@@ -245,12 +245,12 @@ class TCPClient(TCPClientTemplate, QObject):
         elif command.command == 'position_is':
             if self.socket is not None:
                 self.socket.check_sended_with_serializer('position_is')
-                self.socket.check_sended_with_serializer(command.attribute[0])
+                self.socket.check_sended_with_serializer(command.attribute)
 
         elif command.command == 'move_done':
             if self.socket is not None:
                 self.socket.check_sended_with_serializer('move_done')
-                self.socket.check_sended_with_serializer(command.attribute[0])
+                self.socket.check_sended_with_serializer(command.attribute)
 
         elif command.command == 'x_axis':
             raise DeprecationWarning('Getting axis though TCPIP is deprecated use the data objects directly')
