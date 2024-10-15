@@ -903,13 +903,13 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
-                self.emit_status(ThreadCommand('get_actuator_value', [pos]))
+                self.emit_status(ThreadCommand('get_actuator_value', pos))
 
             elif command == 'move_done':
                 pos = DeSerializer(sock).dwa_deserialization()
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
-                self.emit_status(ThreadCommand('move_done', [pos]))
+                self.emit_status(ThreadCommand('move_done', pos))
             else:
                 self.send_command(sock, command)
 
