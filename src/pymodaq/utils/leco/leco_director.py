@@ -1,7 +1,8 @@
 
 import random
+from typing import Any, Callable, Optional, Sequence, List
 
-from typing import Callable, Sequence, List
+from pyleco.core.data_message import DataMessage
 
 import pymodaq.utils.parameter.utils as putils
 # object used to send info back to the main thread:
@@ -10,6 +11,8 @@ from pymodaq.utils.parameter import Parameter
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
+from pymodaq.utils.leco.utils import leco_tuple_to_thread_command
+from pymodaq.utils.tcp_ip.serializer import DeSerializer
 
 
 leco_parameters = [
@@ -54,6 +57,7 @@ class LECODirector:
         self.register_rpc_methods((
             self.set_info,
         ))
+        self.listener.signals.data_message_received.connect(self.handle_data_message)
 
     def register_rpc_methods(self, methods: Sequence[Callable]) -> None:
         for method in methods:
@@ -82,6 +86,39 @@ class LECODirector:
         """ Emit the status_sig signal with the given status ThreadCommand back to the main GUI.
         """
         super().emit_status(status=status)  # type: ignore
+
+    def emit_signal(self, name: str, content: Optional[Any] = None):
+        """Emit a signal."""
+        if content:
+            getattr(self, name).emit(content)
+        else:
+            getattr(self, name).emit()
+
+    def handle_data_message(self, message: DataMessage) -> None:
+        try:
+            data: dict[str, Any] = message.data  # type: ignore
+            typ = data.pop("type")
+        except TypeError as exc:
+            print("Error decoding the message", exc)
+            return
+        if typ == "ThreadCommand":
+            try:
+                thread_command = leco_tuple_to_thread_command(
+                    command_dict=message.data,  # type: ignore
+                    additional=message.payload[1:],
+                )
+            except:
+                pass
+            else:
+                self.emit_status(status=thread_command)
+        elif typ == "Signal":
+            if data.get("content", -1) is None:
+                try:
+                    deser = DeSerializer(message.payload[1])
+                    data["content"] = deser.type_and_object_deserialization()
+                except IndexError:
+                    pass
+            self.emit_signal(**data)
 
     # Methods accessible via remote calls
     def set_info(self, path: List[str], param_dict_str: str) -> None:

@@ -34,6 +34,15 @@ class DetectorDirector(GenericDirector):
     def send_data(self, grabber_type: str = "") -> None:
         self.ask_rpc("send_data", grabber_type=grabber_type)
 
+    def snap_shot(self) -> None:
+        self.ask_rpc("snap_shot")
+
+    def start_grabbing(self) -> None:
+        self.ask_rpc("start_grabbing")
+
+    def stop_grabbing(self) -> None:
+        self.ask_rpc("stop_grabbing")
+
 
 class ActuatorDirector(GenericDirector):
     def move_abs(self, position: Union[float, DataActuator]) -> None:
@@ -54,5 +63,4 @@ class ActuatorDirector(GenericDirector):
         self.ask_rpc("get_actuator_value")
 
     def stop_motion(self,) -> None:
-        # not implemented in DAQ_Move!
         self.ask_rpc("stop_motion")

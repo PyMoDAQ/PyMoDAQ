@@ -62,11 +62,23 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
                                  controller=None))
         actor_name = self.settings.child("actor_name").value()
+        self.communicator.unsubscribe_all()
+        try:
+            actor_full_name = (
+                actor_name
+                if "." in actor_name
+                else ".".join((self.communicator.namespace, actor_name))
+            )
+        except TypeError:
+            actor_full_name = actor_name
+            # TODO change to proper logging
+            print("I'm not signed in, namespace for actor is unknown.")
+        else:
+            self.communicator.subscribe(topics=actor_full_name)
         self.controller = self.ini_detector_init(  # type: ignore
             old_controller=controller,
             new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
             )
-        self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         try:
             # self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
@@ -108,7 +120,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         pass
         return self.y_axis
 
-    def grab_data(self, Naverage=1, **kwargs):
+    def grab_data(self, Naverage=1, live=False, **kwargs):
         """
             Start new acquisition.
             Grabbed indice is used to keep track of the current image in the average.
@@ -126,17 +138,20 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         try:
             self.ind_grabbed = 0  # to keep track of the current image in the average
             self.Naverage = Naverage
-            self.controller.set_remote_name(self.communicator.full_name)
-            self.controller.send_data(grabber_type=self.grabber_type)
+            if live:
+                self.controller.start_grabbing()
+            else:
+                self.controller.snap_shot()
+                # self.controller.set_remote_name(self.communicator.full_name)
+                # self.controller.send_data(grabber_type=self.grabber_type)
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
 
     def stop(self):
+        """Stop grabbing.
         """
-            not implemented.
-        """
-        pass
+        self.controller.stop_grabbing()
         return ""
 
     # Methods for RPC calls

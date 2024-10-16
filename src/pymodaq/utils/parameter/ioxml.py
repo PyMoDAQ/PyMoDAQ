@@ -210,7 +210,7 @@ def dict_from_param(param):
 
 
 def elt_to_dict(el):
-    """Convert xml element attributes to a dictionnary
+    """Convert xml element attributes to a dictionary
 
     Parameters
     ----------
@@ -360,13 +360,13 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
         =============== ================== =======================================
         **Parameters**   **Type**            **Description**
 
-        *params*         dictionnary list    the list to create parameter object
+        *params*         dictionary list    the list to create parameter object
         *XML_elt*        XML object          the XML object to be converted
         =============== ================== =======================================
 
         Returns
         -------
-        params : dictionnary list
+        params : dictionary list
             list of dict to create parameter object
 
         Examples
@@ -426,7 +426,7 @@ def set_txt_from_elt(el, param_dict):
     Parameters
     ----------
     el: xml element
-    param_dict: dictionnary from which the parameter will be constructed
+    param_dict: dictionary from which the parameter will be constructed
 
     """
     val_text = el.text
