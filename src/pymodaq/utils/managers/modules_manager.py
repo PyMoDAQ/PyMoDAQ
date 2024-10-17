@@ -497,11 +497,6 @@ class ModulesManager(QObject, ParameterManager):
                 self.det_done_flag = True
                 self.settings.child('det_done').setValue(self.det_done_flag)
 
-        # if data.name not in list(self.det_done_datas.keys()):
-        #     self.det_done_datas[data['name']] = data
-        # if len(self.det_done_datas.items()) == len(self.detectors):
-        #     self.det_done_flag = True
-
 
 if __name__ == '__main__':
     import sys
