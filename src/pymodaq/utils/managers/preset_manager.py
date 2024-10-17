@@ -148,8 +148,8 @@ class PresetManager:
         dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()
         tree = ParameterTree()
-        tree.setMinimumWidth(400)
-        tree.setMinimumHeight(500)
+        # tree.setMinimumWidth(400)
+        # tree.setMinimumHeight(500)
         tree.setParameters(self.preset_params, showTop=False)
 
         vlayout.addWidget(tree)
