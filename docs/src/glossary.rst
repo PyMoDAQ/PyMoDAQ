@@ -10,13 +10,16 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
   Actuator
     Any instrument with a controllable varying parameter
 
+  CLI
+    Command Line Interface: program to be used within a shell/command prompt
+
   conda
-    *conda* is part of the
-    `Miniconda <https://docs.anaconda.com/miniconda/>`_ distribution, that is recommended as part of
-    :ref:`PyMoDAQ installation <quick_start>`. In the PyMoDAQ project, *conda* is exclusively used as a *Python
-    environment manager*.
-    It is not used as a *package manager*, so the command
-    *conda install ...* will not be used. We will rather use :term:`pip <pip & PyPI>` as a *package manager*.
+    *conda* is an environment manager part of the
+    `Miniconda <https://docs.anaconda.com/miniconda/>`_ distribution (or Anaconda).
+
+    .. note::
+      *conda* as a :term:`CLI` is part of Anaconda or Miniconda that have restrictions in terms of licencing.
+      *conda* should therefore not be used anymore. Please use :term:`mamba` as a replacement.
 
   Control Modules
     GUI for actuators and detectors, with subsequent classes: ``DAQ_Move`` and ``DAQ_Viewer``, see :ref:`control_modules`
@@ -49,6 +52,22 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
 
   dwa
     Short name for ``DataWithAxes`` object
+
+  environment
+    A Python virtual **environment** consists of two essential components: the Python interpreter that the virtual
+    environment runs on and a folder containing third-party libraries installed in the virtual environment.
+    These virtual environments are isolated from the other virtual environments, which means any changes on
+    dependencies installed in a virtual environment don’t affect the dependencies of the other virtual environments
+    or the system-wide libraries. Thus, we can create multiple virtual environments with different Python versions,
+    plus different libraries or the same libraries in different versions.
+
+  mamba
+    *mamba* is a command line tool part of the
+    `Miniforge <https://github.com/conda-forge/miniforge/>`_ distribution, that is recommended as part of
+    :ref:`PyMoDAQ installation <quick_start>`. In the PyMoDAQ project, *mamba* is exclusively used as a *Python
+    environment manager*.
+    It is not used as a *package manager*, so the command
+    *mamba install ...* will not be used. We will rather use :term:`pip <pip & PyPI>` as a *package manager*.
 
   Module
      A module in the python sense is an importable object either a directory containing an *__init__.py* file or a
