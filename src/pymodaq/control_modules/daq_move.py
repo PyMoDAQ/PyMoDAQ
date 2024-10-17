@@ -602,7 +602,7 @@ class DAQ_Move(ParameterControlModule):
                 # if the controller units are in mm the displayed unit will be m
                 # because m is the base unit
                 # then the user could ask for mm, km, µm...
-                self.ui.set_unit_as_suffix(str(Q_(1, unit).to_base_units().units))
+                self.ui.set_unit_as_suffix(str(Q_(1, unit).to_reduced_units().units))
 
     def update_settings(self):
 
