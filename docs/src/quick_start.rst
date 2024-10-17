@@ -8,13 +8,12 @@ PyMoDAQ installation on Windows is done in a few steps. We just need an internet
 Python installation
 -------------------
 
-We first need to download the `Miniconda <https://docs.anaconda.com/miniconda/>`_ installer by clicking on the link
-highlighted in red
-in the following figure.
+We first need to download the `Miniforge <https://github.com/conda-forge/miniforge/>`_ installer by
+clicking (on the miniforge webpage) on one of the links highlighted in red in the following figure.
 
-.. figure:: /image/quick_start/miniconda_installer_link.png
+.. figure:: /image/quick_start/mini_forge_installer_link.png
 
-   Click on this link to start the download of *Miniconda*’s installer.
+   Click on one of these links to start the download of *Miniforge*’s installer.
 
 Let’s execute the installer and keep the default choices.
 
@@ -22,8 +21,9 @@ Let’s execute the installer and keep the default choices.
 
    It will actually install in particular:
 
-   * a Python interpreter (a *python.exe* file)
-   * :term:`conda`
+   * an :term:`environment` manager: :term:`mamba`. Mamba is a :term:`CLI` to manage environments just like
+     :term:`conda`. However conda has restrictions in terms of licencing hence the use of mamba as of now)
+   * a Python interpreter (a *python.exe* file) in a *base* environment
    * :term:`pip <pip & PyPI>`
 
 
@@ -32,25 +32,28 @@ Let’s execute the installer and keep the default choices.
 Set up a new Python environment
 -------------------------------
 
-From the Windows *Start* menu, execute the *Anaconda Prompt*.
+From the Windows *Start* menu, execute the *Miniforge Prompt*.
 
-.. figure:: /image/quick_start/miniconda_prompt.png
+.. figure:: /image/quick_start/miniforge_prompt.png
 
-   The Anaconda Prompt. The name in brackets at the beginning of the line indicates the *Python environment* that is
-   currently activated. (base) indicates that we are in the default environment of *conda*.
+   The Miniforge Prompt. The name in brackets at the beginning of the line indicates the *Python environment* that is
+   currently activated. (base) indicates that we are in the default environment of *mamba*.
 
 In order to have a clean installation of PyMoDAQ on our machine, we isolate it in a dedicated Python environment.
 Let’s execute the following command to create an environment called *pymodaq* with a 3.11 version of Python.
 
-``conda create -n pymodaq python=3.11``
+``mamba create -n pymodaq_env python=3.11.*``
 
 .. note::
-   * We can call the environment as we wish.
-   * As a rule of thumb, choose the second last version of Python to be sure that PyMoDAQ is compatible.
+   * We can call the environment as we wish, here *pymodaq_env* (the environment is not to be mixed up with the pymodaq
+     software that will be installed below)
+   * As a rule of thumb, choose the second last minor version of Python to be sure that PyMoDAQ is compatible. Here 3.11
+     as python 3.13 is on the market!
+   * here `python=3.11.*` means the last patched version of python 3.11.x will be installed
 
 And let’s activate it.
 
-``conda activate pymodaq``
+``mamba activate pymodaq_env``
 
 After this command, we should notice that the name in brackets in the terminal is now *pymodaq*.
 
