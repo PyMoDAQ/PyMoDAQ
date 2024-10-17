@@ -1,5 +1,5 @@
-
-from typing import Union
+from __future__ import annotations
+from typing import Optional, Union
 
 from easydict import EasyDict as edict
 
@@ -37,8 +37,11 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.register_rpc_methods((
             self.set_x_axis,
             self.set_y_axis,
-            self.set_data,
         ))
+        for method in (
+            self.set_data,
+        ):
+            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
         self.client_type = "GRABBER"
         self.x_axis = None
@@ -150,7 +153,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.y_axis = dict(data=data, label=label, units=units)
         self.emit_y_axis()
 
-    def set_data(self, data: Union[list, str]) -> None:
+    def set_data(self, data: Union[list, str, None], additional_payload: Optional[list[bytes]]=None) -> None:
         """
         Set the grabbed data signal.
 
@@ -160,10 +163,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         """
         if isinstance(data, str):
             deserializer = DeSerializer.from_b64_string(data)
-            dte = deserializer.dte_deserialization()
-            self.dte_signal.emit(dte)
+        elif additional_payload is not None:
+            deserializer = DeSerializer(additional_payload[0])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")
+        dte = deserializer.dte_deserialization()
+        self.dte_signal.emit(dte)
 
 
 if __name__ == '__main__':
