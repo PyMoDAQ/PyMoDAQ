@@ -12,7 +12,7 @@ import pytest
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import Axis, DataToExport, DataWithAxes, DwaType
 from pymodaq.utils.tcp_ip.serializer import Serializer, DeSerializer
-from pymodaq.utils.parameter import Parameter, utils as putils, ioxml
+from pymodaq.utils.parameter import Parameter, utils as putils
 
 
 LABEL = 'A Label'
@@ -245,8 +245,10 @@ def test_base_64_de_serialization(get_data: DataToExport):
 class TestObjectSerializationDeSerialization:
 
     @pytest.mark.parametrize("obj, serialized", (
-        (True, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'),
+        (True, b'\x00\x00\x00\x04bool\x00\x00\x00\x03|b1\x00\x00\x00\x01\x01'),
+        # (123, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<i4\x00\x00\x00\x04{\x00\x00\x00'),  # it varies on different test machines
         (10.45, b'\x00\x00\x00\x06scalar\x00\x00\x00\x03<f8\x00\x00\x00\x08fffff\xe6$@'),
+        (1 + 2j, b'\x00\x00\x00\x06scalar\x00\x00\x00\x04<c16\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@'),
         ('hello world', b'\x00\x00\x00\x06string\x00\x00\x00\x0bhello world'),
         (b'hello binary world', b'\x00\x00\x00\x05bytes\x00\x00\x00\x12hello binary world'),
     ))

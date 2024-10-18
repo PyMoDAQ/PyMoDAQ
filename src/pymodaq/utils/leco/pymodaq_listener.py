@@ -8,21 +8,32 @@ except ImportError:
         pass
 import logging
 from threading import Event
-from typing import Optional, Union, List, Type
+from typing import Any, Optional, Union, List, Type
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.utils.listener import Listener, PipeHandler
+from pyleco.core.data_message import DataMessage
+from pyleco.utils.data_publisher import DataPublisher
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.tcp_ip.serializer import DataWithAxes, SERIALIZABLE, DeSerializer
-from pymodaq.utils.leco.utils import serialize_object
+from pymodaq.utils.leco.utils import (
+    serialize_object,
+    create_leco_transfer_tuple,
+    thread_command_to_leco_tuple,
+)
 
 
 class LECOClientCommands(StrEnum):
+    """Commands for the `ControlModule.process_tcpip_cmds`."""
     LECO_CONNECTED = "leco_connected"
     LECO_DISCONNECTED = "leco_disconnected"
+    # VIEWER
+    SNAP = "snap"
+    GRAB = "grab"
+    STOP = "stop"
 
 
 class LECOCommands(StrEnum):
@@ -50,6 +61,7 @@ class ListenerSignals(QObject):
         For an actuator: move_abs, move_home, move_rel, check_position, stop_motion
     """
     # message = Signal(Message)
+    data_message_received = Signal(DataMessage)
 
 
 class PymodaqPipeHandler(PipeHandler):
@@ -58,6 +70,9 @@ class PymodaqPipeHandler(PipeHandler):
         super().__init__(name, **kwargs)
         self.signals = signals
 
+    def handle_subscription_message(self, message: DataMessage) -> None:
+        self.signals.data_message_received.emit(message)
+
 
 class ActorHandler(PymodaqPipeHandler):
 
@@ -65,6 +80,9 @@ class ActorHandler(PymodaqPipeHandler):
         super().register_rpc_methods()
         self.register_rpc_method(self.set_info)
         self.register_rpc_method(self.send_data)
+        self.register_rpc_method(self.snap_shot)
+        self.register_rpc_method(self.start_grabbing)
+        self.register_rpc_method(self.stop_grabbing)
         self.register_rpc_method(self.move_abs)
         self.register_rpc_method(self.move_rel)
         self.register_rpc_method(self.move_home)
@@ -84,6 +102,15 @@ class ActorHandler(PymodaqPipeHandler):
     # detector commands
     def send_data(self, grabber_type: str = "") -> None:
         self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
+
+    def snap_shot(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.SNAP))
+
+    def start_grabbing(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.GRAB))
+
+    def stop_grabbing(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.STOP))
 
     # actuator commands
     def move_abs(self, position: Union[float, str]) -> None:
@@ -137,6 +164,7 @@ class PymodaqListener(Listener):
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
         self._handler_class = handler_class
+        self.publisher = DataPublisher("", context=kwargs.get("context"))
 
     def _listen(self, name: str, stop_event: Event, coordinator_host: str, coordinator_port: int,
                 data_host: str, data_port: int) -> None:
@@ -146,6 +174,7 @@ class PymodaqListener(Listener):
                                                    signals=self.signals,
                                                    )
         self.message_handler.register_on_name_change_method(self.indicate_sign_in_out)
+        self.message_handler.register_on_name_change_method(self.publisher.set_full_name)
         self.message_handler.listen(stop_event=stop_event)
 
     def stop_listen(self) -> None:
@@ -161,6 +190,38 @@ class PymodaqListener(Listener):
             self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_CONNECTED))
         else:
             self.signals.cmd_signal.emit(ThreadCommand(LECOClientCommands.LECO_DISCONNECTED))
+
+    # pymodaq messages
+    def create_thread_command_message(self, thread_command: ThreadCommand) -> DataMessage:
+        try:
+            v, b = thread_command_to_leco_tuple(thread_command)
+        except:
+            raise
+        message = DataMessage(topic=self.communicator.full_name, data=v)
+        message.payload.extend(b)
+        return message
+
+    def publish_thread_command(self, thread_command: ThreadCommand) -> None:
+        """Publish a ThreadCommand via the data protocol."""
+        self.publisher.send_message(self.create_thread_command_message(thread_command))
+
+    def create_signal_message(self, signal_name: str, signal_payload: Optional[Any]) -> DataMessage:
+        d = {"type": "Signal", "name": signal_name}
+        additional_payload = []
+        if signal_payload is not None:
+            d["content"], additional_payload = create_leco_transfer_tuple(
+                signal_payload
+            )
+        message = DataMessage(topic=self.communicator.full_name, data=d)
+        message.payload.extend(additional_payload)
+        return message
+
+    def publish_signal(self, signal_name: str, signal_payload: Optional[Any]) -> None:
+        self.publisher.send_message(
+            self.create_signal_message(
+                signal_name=signal_name, signal_payload=signal_payload
+            )
+        )
 
 
 class ActorListener(PymodaqListener):
@@ -216,6 +277,8 @@ class ActorListener(PymodaqListener):
             # code from the original:
             # self.data_ready(data=command.attribute)
             # def data_ready(data): self.send_data(datas[0]['data'])
+            if not self.remote_name:
+                return
             value = command.attribute  # type: ignore
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
@@ -224,6 +287,8 @@ class ActorListener(PymodaqListener):
             )
 
         elif command.command == 'send_info':
+            if not self.remote_name:
+                return
             path = command.attribute['path']  # type: ignore
             param = command.attribute['param']  # type: ignore
             self.communicator.ask_rpc(
@@ -233,6 +298,8 @@ class ActorListener(PymodaqListener):
                 param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
         elif command.command == LECOMoveCommands.POSITION:
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_position",
@@ -240,6 +307,8 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
@@ -247,6 +316,8 @@ class ActorListener(PymodaqListener):
                                       )
 
         elif command.command == 'x_axis':
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,
@@ -259,6 +330,8 @@ class ActorListener(PymodaqListener):
                 raise ValueError("Nothing to send!")
 
         elif command.command == 'y_axis':
+            if not self.remote_name:
+                return
             value = command.attribute[0]  # type: ignore
             if isinstance(value, SERIALIZABLE):
                 self.communicator.ask_rpc(receiver=self.remote_name,

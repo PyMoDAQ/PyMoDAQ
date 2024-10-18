@@ -15,7 +15,7 @@ from pathlib import Path
 import pkgutil
 import traceback
 import platform
-from typing import Union, List
+from typing import Any, Union, List
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 
@@ -286,6 +286,14 @@ class ThreadCommand:
             self.attribute = attributes
             self.attributes = attributes
         self.attribute = attribute
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, ThreadCommand):
+            return NotImplemented
+        return (
+            self.command == other.command
+            and self.attribute == other.attribute
+        )
 
     def __repr__(self):
         return f'Threadcommand: {self.command} with attribute {self.attribute}'
