@@ -20,6 +20,8 @@ Video tutorials `here`__
 
 Mailing List: https://listes.services.cnrs.fr/wws/info/pymodaq
 
+Discord Server: https://discord.gg/mSrEwARwgm
+
 
 Credits
 *******
@@ -62,14 +64,19 @@ Who use it?
    :width: 100
    :alt: attolab
 
+.. |cethil| image:: /image/logos/cethil_logo.png
+   :width: 100
+   :alt: cethil
+
 * PyMoDAQ is used as the core acquisition program of several experiments at CEMES/CNRS and the main
   interface of its HC-IUMI Ultrafast Electron Microscope
 * The attolab platform at CEA Saclay started using it in 2019
+* The CETHIL is using PyMoDAQ for all its new experiments with Keithley instruments since 2024
 
 Institutions using PyMoDAQ
 **************************
 
-|cemes| |attolab|
+|cemes| |attolab| |cethil|
 
 
 What they think of PyMoDAQ?
