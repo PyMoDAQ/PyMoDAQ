@@ -20,6 +20,8 @@ Video tutorials `here`__
 
 Mailing List: https://listes.services.cnrs.fr/wws/info/pymodaq
 
+Discord Server: https://discord.gg/mSrEwARwgm
+
 
 Credits
 *******
