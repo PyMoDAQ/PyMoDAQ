@@ -4,6 +4,9 @@ Example how to create an actuator or detector module, which does not require Qt,
 You can connect to this qtless module with a PyMoDAQ LECODirector module (the detector or actuator version, both are preinstalled),
 as if it were any pymodaq module.
 
+This example works best with an Actuator Director Module as it has fake movements, but does not return any detector value.
+In this example, the name is "qt_less" (defined in the final if clause), which you have to give as the "actor" argument to the Director module.
+
 Add any code in the methods defined below, for example instrument access and execute the file.
 For remote control, you need to start a Coordinator, as described for remote control via LECO.
 """
@@ -75,8 +78,8 @@ class QtLessModule:
         self._fake_position = float(position)
 
     def move_rel(self, position: Union[float, str]) -> None:
-        self._fake_position += float(position)
         print("move_rel", position)
+        self._fake_position += float(position)
 
     def move_home(self) -> None:
         self._fake_position = 0
@@ -115,11 +118,11 @@ if __name__ == "__main__":
     print("listening endlessly as 'qt_less'")
     log = logging.getLogger()
     log.addHandler(logging.StreamHandler())
-    log.setLevel(logging.DEBUG)
+    # log.setLevel(logging.DEBUG)
     m = QtLessModule("qt_less")
     try:
         while True:
-            sleep(1)
+            sleep(0.1)
             m.send_stored()
     except KeyboardInterrupt:
         m.stop_listen()
