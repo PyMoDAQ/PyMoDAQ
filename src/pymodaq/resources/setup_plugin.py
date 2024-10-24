@@ -23,6 +23,7 @@ def setup(path: Path):
         name=PLUGIN_NAME,
         description=config['plugin-info']['description'],
         long_description=long_description,
+        long_description_content_type='text/x-rst',
         license=config['plugin-info']['license'],
         url=config['plugin-info']['package-url'],
         author=config['plugin-info']['author'],
