@@ -8,7 +8,7 @@ from collections import OrderedDict
 import pytest
 from qtpy import QtWidgets
 
-# from pymodaq.examples.parameter_ex import ParameterEx, Parameter
+# from pymodaq.example.parameter_ex import ParameterEx, Parameter
 # from pymodaq.utils.parameter.utils import (iter_children_params, compareParameters,
 #                                            compareStructureParameter,
 #                                            compareValuesParameter)

@@ -118,6 +118,11 @@ If you would like to get updated with the evolutions of the project, please subs
    about
 
 .. toctree::
+   :caption: Examples
+
+   example/arduino_ubuntu
+
+.. toctree::
    :caption: Related projects
 
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
