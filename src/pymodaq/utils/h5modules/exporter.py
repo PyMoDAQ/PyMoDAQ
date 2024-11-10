@@ -57,7 +57,7 @@ class ExporterFactory:
         """Class decorator method to register exporter class to the internal registry. Must be used as
         decorator above the definition of an H5Exporter class. H5Exporter must implement specific class
         attributes and methods, see definition: h5node_exporter.H5Exporter
-        See h5node_exporter.H5txtExporter and h5node_exporter.H5txtExporter for usage example.
+        See h5node_exporter.H5txtExporter and h5node_exporter.H5txtExporter for usage examples.
         returns:
             the exporter class
         """

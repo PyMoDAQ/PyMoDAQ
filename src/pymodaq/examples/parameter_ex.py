@@ -106,10 +106,10 @@ class ParameterEx(ParameterManager):
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
              'delegate': pymodaq.utils.gui_utils.widgets.table.SpinBoxDelegate, 'menu': True,
              'value': pymodaq.utils.gui_utils.widgets.table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
-             'tip': 'The advantage of the Table model lies in its modularity.\n For concrete example see the'
+             'tip': 'The advantage of the Table model lies in its modularity.\n For concrete examples see the'
                     'TableModelTabular and the TableModelSequential custom models in the'
                     ' pymodaq.utils.scanner module'},
-        ]},  # The advantage of the Table model lies in its modularity for concrete example see the
+        ]},  # The advantage of the Table model lies in its modularity for concrete examples see the
         # TableModelTabular and the TableModelSequential custom models in the pymodaq.utils.scanner module
     ]
 
