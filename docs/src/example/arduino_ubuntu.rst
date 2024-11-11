@@ -102,11 +102,11 @@ authorized to write into it. For that we can enter in a terminal the following c
 ``sudo chmod a+rw /dev/ttyACM0``
 
 .. note::
-   It seems like the */dev/ttyACM0* file is deleted each time we unplug the port, or shut down the computer. In this
-   case the command should be run again.
+   It seems like the */dev/ttyACM0* file is deleted each time we unplug the port, or shut down the computer. In those
+   cases the command should be run again.
 
-Communicate to the board with Python
-------------------------------------
+Speak to the board with Python
+------------------------------
 
 As we already noticed, the Arduino sketches are not natively written in Python. We will first have to make the
 translation thanks to a
@@ -123,8 +123,65 @@ Install the *Firmata standard* server
 We just need to upload a sketch that is already available through the Arduino IDE. So let's start it, and go to
 *File > Examples > Firmata > StandardFirmata*. It will open a sketch that we have to upload to the board. That's it!
 
+.. note::
+   It happens while writing this tutorial that the board was giving a good temperature with the Arduino IDE, but output
+   crazy values while using a Python script. In that case, it may be useful to upload again the Firmata server to the
+   board.
+
 Install the *pyfirmata2* Python package
 +++++++++++++++++++++++++++++++++++++++
 
-We suppose that we already installed Python and created an environment called *arduino_ubuntu* by following
+We suppose that we already installed Python, created and activated an environment called *arduino_ubuntu* by following
 :ref:`the installation instructions <quick_start>`.
+
+We install *pyfirmata2* with *pip* in a terminal:
+
+``pip install pyfirmata2``
+
+Read the temperature with a Python script
++++++++++++++++++++++++++++++++++++++++++
+
+We are now ready to read the temperature with a Python script! We will not start from scratch but rather use the
+example script called
+`print_analog_data.py <https://github.com/berndporr/pyFirmata2/blob/master/examples/print_analog_data.py>`_ available
+in the examples of the library.
+
+Let's download and run it in our *arduino_ubuntu* Python environment:
+
+.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_script.png
+
+   Output of the *print_analog_data.py* script. We just changed the line 22 of the script to *self.samplingRate = 1*
+   in order to get one reading per second, rather than 10 per second.
+
+The number in the left column is the acquisition time, and the number in the right one is a float number proportional
+to the voltage, itself proportional to the temperature.
+
+We can check that if we unplug the pin A0, the output will be 0, and if we put the 5V from the Arduino directly on A0,
+it outputs 1. To get the corresponding voltage, we thus use the following formula: *voltage = 5 x output*. To get the
+reading in Celsius degree, we follow the procedure detailed in the Arduino projects book. In the end, we rewrite a bit
+the *myPrintCallback* method as follow to get the temperature
+
+.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_callback.png
+
+   Modification of the *myPrintCallback* method to get the output in Celsius degree.
+
+We now get the output in Celsius degree!
+
+.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_script_celsius.png
+
+   Output of the modified script. The raise in temperature happened when we put a finger on the TMP chip.
+
+Speak to the board with PyMoDAQ
+-------------------------------
+
+.. note::
+   The most straightforward way to read the board with PyMoDAQ should have been to install the
+   `pymodaq_plugins_arduino <https://github.com/PyMoDAQ/pymodaq_plugins_arduino>`_ which already implements a 0D viewer
+   to
+   read the analogue outputs. However, at the time of writing the compatibility with Ubuntu is not guaranteed. This is
+   thus
+   left for further work.
+
+We start from the
+`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_ and fork it on our remote repository,
+following the procedure described in :ref:`Write and release a new plugin <new_plugin>`.
