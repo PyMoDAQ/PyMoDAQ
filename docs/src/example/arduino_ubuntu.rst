@@ -13,7 +13,7 @@
 Read an Arduino on Ubuntu
 =========================
 
-In this example of use, we will present how to read the temperature from an analogue output of an Arduino board with
+In this example of use, we will present how to read an analogue output of an Arduino board with
 PyMoDAQ installed on Ubuntu.
 
 This example may be among the cheapest ways to test PyMoDAQ with an actual detector, as the only expenses are an
@@ -63,7 +63,7 @@ Go to *Tools > Port* and select the one that is proposed. It should be something
 
 .. note::
    COM ports do not exist on a Linux system. Instead, once a USB port is connected, a file is created inside the */dev*
-folder, and the port name starts with */dev/tty...*.
+   folder, and the port name starts with */dev/tty...*.
 
 Make our circuit
 ----------------
@@ -92,8 +92,8 @@ Let's try to upload the following sketch to the board by pressing the play butto
    Reading of the TMP temperature with the Arduino IDE.
 
 Once the upload is done, we can go to *Tools > Serial monitor*. It will display a new tab at the bottom of the window,
-where we can read the temperature. We can check that it is not fake by pressing a finger on the TMP chip: the
-temperature should rise.
+where we can read the temperature. We can check that it is not fake by pressing a finger on the TMP chip to
+raise the temperature.
 
 It is probable that at the first try of uploading the sketch, we get an error saying that permission is denied on the
 */dev/ttyACM0* file. To get rid of this error, we need to give the proper rights so that the Arduino IDE will be
@@ -105,8 +105,8 @@ authorized to write into it. For that we can enter in a terminal the following c
    It seems like the */dev/ttyACM0* file is deleted each time we unplug the port, or shut down the computer. In those
    cases the command should be run again.
 
-Speak to the board with Python
-------------------------------
+Read the board with Python
+--------------------------
 
 As we already noticed, the Arduino sketches are not natively written in Python. We will first have to make the
 translation thanks to a
@@ -171,8 +171,13 @@ We now get the output in Celsius degree!
 
    Output of the modified script. The raise in temperature happened when we put a finger on the TMP chip.
 
-Speak to the board with PyMoDAQ
--------------------------------
+Read the board with PyMoDAQ
+---------------------------
+
+Everything is already in our hands, we already know how to initiate the communication with the board, how to read its
+outputs,
+and how to close the communication with Python commands. This is all in the example provided by the pyFirmata2 project.
+What we have to do now is to put those commands in the proper methods of a PyMoDAQ instrument :term:`plugin`.
 
 .. note::
    The most straightforward way to read the board with PyMoDAQ should have been to install the
@@ -182,6 +187,31 @@ Speak to the board with PyMoDAQ
    thus
    left for further work.
 
+Let's start by installing PyMoDAQ in our environment
+
+``(arduino_ubuntu) $ pip install pymodaq pyqt5``
+
 We start from the
-`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_ and fork it on our remote repository,
-following the procedure described in :ref:`Write and release a new plugin <new_plugin>`.
+`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_, fork it on our remote repository,
+clone it locally for example with PyCharm (*File > Project from version control...* and enter the URL of our remote
+repository), and then install it in our environment in *edition mode* with the following command executed at the root
+of the plugin directory
+
+``(arduino_ubuntu) ~/PycharmProjects/pymodaq_plugins_arduino_ubuntu $ pip install -e .``
+
+Following the procedure described in :ref:`Write and release a new plugin <new_plugin>`, we named our plugin
+*pymodaq_plugins_arduino_ubuntu*.
+
+What we want to read at each acquisition, the temperature, is a scalar. Its dimensionality is 0. To be compared with a
+camera for example, which would output a matrix of pixels at each acquisition, so a dimensionality of 2. We must
+therefore consider a OD viewer.
+
+.. figure:: /image/example/arduino_ubuntu/arduino_plugin_arborescence.png
+
+   Arborescence of our plugin. We have to be careful about the naming conventions of the files, folders, and class that
+   are in red rectangles, even the case is sensitive.
+
+If those naming conventions have been respected, then PyMoDAQ will detect our plugin. This can be easily tested by
+running a DAQ_Viewer module (see :term:`Control modules`) with the following command in our activated environment.
+
+``(arduino_ubuntu) $ daq_viewer``
