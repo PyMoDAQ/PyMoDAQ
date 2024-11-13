@@ -212,6 +212,38 @@ therefore consider a OD viewer.
    are in red rectangles, even the case is sensitive.
 
 If those naming conventions have been respected, then PyMoDAQ will detect our plugin. This can be easily tested by
-running a DAQ_Viewer module (see :term:`Control modules`) with the following command in our activated environment.
+running a :ref:`DAQ_Viewer module <DAQ_Viewer_module>` with the following command in our activated environment:
 
 ``(arduino_ubuntu) $ daq_viewer``
+
+.. figure:: /image/example/arduino_ubuntu/arduino_daq_viewer.png
+
+   By running a DAQ_Viewer, we check that our plugin is recognized by PyMoDAQ.
+
+Initialization
+++++++++++++++
+
+We now have to implement the initialization of the communication, which will be triggered when we click the
+*Init. Detector* of the interface.
+
+First, we should get the name of the communication port opened with the board. This is done with the instruction
+*PORT = Arduino.AUTODETECT*.
+
+.. note::
+   It seems important to put this instruction outside of the class.
+
+We then modify the method *ini_detector* of our plugin class to put into *self.controller* the object that allows the
+communication with the board, which is here *Arduino(PORT)*.
+
+.. figure:: /image/example/arduino_ubuntu/arduino_ini_detector_method.png
+
+   Minimal definition (without comments) of our *ini_detector* method, that will be triggered when the user click
+   the *Init. detector* button.
+
+Running again a DAQ_Viewer and clicking the *Init. detector* button, if the LED turns green, we can proceed further!
+
+Acquisition
++++++++++++
+
+Let's now consider the acquisition. When the user will hit the *Play* button of the DAQ_Viewer interface, it will
+trigger the *grab_data* method. Here again, we have to find inspiration from the pyFirmata2 example.
