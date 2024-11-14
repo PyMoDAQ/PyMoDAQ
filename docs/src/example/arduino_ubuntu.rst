@@ -21,6 +21,19 @@ Arduino Uno
 R3 board (30€) and a TMP36 sensor (1€). It will also be the opportunity to present some particularities related to the
 use of an operating system based on Linux.
 
+Prerequisite
+------------
+
+* :ref:`Story of an instrument plugin development <plugin_development>`
+* :ref:`Write and release a new plugin <new_plugin>`
+
+What we will learn
+------------------
+
+* Communicate with an Arduino board with Python
+* Managing USB devices with Ubuntu
+* Using a callback method for acquisition
+
 Install the Arduino IDE 2
 -------------------------
 
@@ -174,13 +187,32 @@ We now get the output in Celsius degree!
 Read the board with PyMoDAQ
 ---------------------------
 
-Everything is already in our hands, we already know how to initiate the communication with the board, how to read its
+Everything is now in our hands, we already know how to initiate the communication with the board, how to read its
 outputs,
-and how to close the communication with Python commands. This is all in the example provided by the pyFirmata2 project.
-What we have to do now is to put those commands in the proper methods of a PyMoDAQ instrument :term:`plugin`.
+and how to close the communication with Python commands. This is all in the
+`print_analog_data.py <https://github.com/berndporr/pyFirmata2/blob/master/examples/print_analog_data.py>`_ script.
+We will now put those commands in the proper methods of a PyMoDAQ instrument :term:`plugin`, the following table gives
+an overview of the analogies between the two files.
+
++------------------------------------+---------------------------------------+
+| print_analog_data.py               | daq_ODviewer_ArduinoUbuntu.py         |
++------------------------------------+---------------------------------------+
+| PORT                               | PORT                                  |
++------------------------------------+---------------------------------------+
+| self.board                         | self.controller                       |
++------------------------------------+---------------------------------------+
+| __init__                           | ini_detector                          |
++------------------------------------+---------------------------------------+
+| start                              | grab_data                             |
++------------------------------------+---------------------------------------+
+| myPrintCallback                    | callback                              |
++------------------------------------+---------------------------------------+
+
+Install PyMoDAQ and create a new instrument plugin
+++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. note::
-   The most straightforward way to read the board with PyMoDAQ should have been to install the
+   The most straightforward way to read the board with PyMoDAQ could have been to install the
    `pymodaq_plugins_arduino <https://github.com/PyMoDAQ/pymodaq_plugins_arduino>`_ which already implements a 0D viewer
    to
    read the analogue outputs. However, at the time of writing the compatibility with Ubuntu is not guaranteed. This is
@@ -208,7 +240,7 @@ therefore consider a OD viewer.
 
 .. figure:: /image/example/arduino_ubuntu/arduino_plugin_arborescence.png
 
-   Arborescence of our plugin. We have to be careful about the naming conventions of the files, folders, and class that
+   Tree structure of our plugin. We have to be careful about the naming conventions of the files, folders, and class that
    are in red rectangles, even the case is sensitive.
 
 If those naming conventions have been respected, then PyMoDAQ will detect our plugin. This can be easily tested by
@@ -223,8 +255,9 @@ running a :ref:`DAQ_Viewer module <DAQ_Viewer_module>` with the following comman
 Initialization
 ++++++++++++++
 
-We now have to implement the initialization of the communication, which will be triggered when we click the
-*Init. Detector* of the interface.
+We now have to implement the initialization of the communication, the method *ini_detector*
+will be triggered when we click the
+*Init. Detector* of the interface. The corresponding method in the pyFirmata2 script is *__init__*.
 
 First, we should get the name of the communication port opened with the board. This is done with the instruction
 *PORT = Arduino.AUTODETECT*.
@@ -247,3 +280,16 @@ Acquisition
 
 Let's now consider the acquisition. When the user will hit the *Play* button of the DAQ_Viewer interface, it will
 trigger the *grab_data* method. Here again, we have to find inspiration from the pyFirmata2 example.
+
+In this specific example, the acquisition is done with two methods: a main one, and a *callback*. Here the board is
+an independent device. It could be that our board reads the TPM sensor a 1000 times a second
+but our Python code will just read the board every second, and dedicate the rest of the time in doing something else
+(in our case it will just sleep!). So the fact that our Python code needs to read the board at regular intervals will
+not force it to keep exclusively focused on this task. This is called asynchronous programing. The callback method will
+be triggered when the main function (here *grab_data*) decides.
+
+.. note::
+   It is not our Python script that will synchronize the acquisition, this is done by the board
+   itself, and by its own clock.
+   This way, the elapsed time between two acquisitions can be much better controlled than if it would have been done
+   with a Python program.
