@@ -281,15 +281,38 @@ Acquisition
 Let's now consider the acquisition. When the user will hit the *Play* button of the DAQ_Viewer interface, it will
 trigger the *grab_data* method. Here again, we have to find inspiration from the pyFirmata2 example.
 
-In this specific example, the acquisition is done with two methods: a main one, and a *callback*. Here the board is
-an independent device. It could be that our board reads the TPM sensor a 1000 times a second
-but our Python code will just read the board every second, and dedicate the rest of the time in doing something else
-(in our case it will just sleep!). So the fact that our Python code needs to read the board at regular intervals will
-not force it to keep exclusively focused on this task. This is called asynchronous programing. The callback method will
-be triggered when the main function (here *grab_data*) decides.
+In this specific example, the acquisition is done with two methods: a main one (*start*), and a *callback* one
+(*myPrintCallback*). This is specific
+to pyFirmata2, which implements *asynchronous* methods to communicate with the board. In another context, this could be
+useful if we would like our code to do something else in the dead times in between two calls of the board. We will not
+enter into explaining what is asynchronicity here. The point is that it is easy to implement with PyMoDAQ: in the
+*grab_data* method, we must choose the asynchronous way, and define a *callback* method, as we are invited to do in the
+plugin template.
 
-.. note::
-   It is not our Python script that will synchronize the acquisition, this is done by the board
-   itself, and by its own clock.
-   This way, the elapsed time between two acquisitions can be much better controlled than if it would have been done
-   with a Python program.
+.. figure:: /image/example/arduino_ubuntu/arduino_pymodaq_template.png
+
+   The *grab_data* and *callback* methods from the *pymodaq_plugins_template*.
+
+We end up with this implementation:
+
+.. figure:: /image/example/arduino_ubuntu/arduino_implement_grab.png
+
+   The implementation of the acquisition in our plugin.
+
+Let's run a DAQ_Viewer again!
+
+.. figure:: /image/example/arduino_ubuntu/arduino_it_works.png
+
+   Reading of the temperature from the board with PyMoDAQ.
+
+It works! :D
+
+Conclusion
+----------
+
+This plugin is not well polished as it is. It particular, one should implement the *close* method of the plugin to
+close the communication properly.
+
+Here you can find the
+`final implementation <https://github.com/quantumm/pymodaq_plugins_arduino_ubuntu/blob/main/src/pymodaq_plugins_arduino_ubuntu/daq_viewer_plugins/plugins_0D/daq_0Dviewer_ArduinoUbuntu.py>`_.
+
