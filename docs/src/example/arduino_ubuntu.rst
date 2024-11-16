@@ -5,6 +5,8 @@
 +------------------------------------+---------------------------------------+
 | PyMoDAQ version                    | 4.4                                   |
 +------------------------------------+---------------------------------------+
+| Operating system                   | Xubuntu 22.04                         |
++------------------------------------+---------------------------------------+
 | Last update                        | november 2024                         |
 +------------------------------------+---------------------------------------+
 | Difficulty                         | Intermediate                          |
@@ -18,13 +20,15 @@ PyMoDAQ installed on Ubuntu.
 
 This example may be among the cheapest ways to test PyMoDAQ with an actual detector, as the only expenses are an
 Arduino Uno
-R3 board (30€) and a TMP36 sensor (1€). It will also be the opportunity to present some particularities related to the
+R3 board (30€) and a TMP36 sensor (1€), software included!
+It will also be the opportunity to present some particularities related to the
 use of an operating system based on Linux.
 
 Prerequisite
 ------------
 
 * :ref:`Story of an instrument plugin development <plugin_development>`
+* :ref:`How to modify existing PyMoDAQ's code? <contribute_to_pymodaq_code>`
 * :ref:`Write and release a new plugin <new_plugin>`
 
 What we will learn
@@ -42,7 +46,7 @@ follow
 the instructions from
 `this page <https://docs.arduino.cc/software/ide-v2/tutorials/getting-started/ide-v2-downloading-and-installing/>`_.
 
-Let's download the .AppImage file, which is equivalent to an .exe file on Windows.
+Let's download the .AppImage file, which is equivalent to a .exe file on Windows.
 
 .. figure:: /image/example/arduino_ubuntu/app_image.png
 
@@ -55,11 +59,12 @@ Connect our Arduino to the computer
 -----------------------------------
 
 Let's connect our board on a USB port of the computer. Open a terminal and run the *lsusb* command, which will display
-the devices that are connected on USB ports.
+the devices that are connected on USB ports. This is the Linux equivalent to the *Devices settings* on Windows.
 
 .. note::
    The name of this command can be decomposed as "ls"+"usb". The *ls* Bash command being used to see inside a folder.
-Here it means "let me see the USB ports". It is equivalent as going into the *Devices & Printers* menu on Windows.
+   Here it means "let me see the USB ports". `This article <https://itsfoss.com/list-usb-devices-linux/>`_ details
+   different ways to list the USB devices connected to a Linux system.
 
 .. figure:: /image/example/arduino_ubuntu/arduino_lsusb_command.png
 
@@ -85,7 +90,7 @@ We mainly follow the *LOVE-O-METER* project of the
 `Arduino projects book <https://www.uio.no/studier/emner/matnat/ifi/IN1060/v21/arduino/arduino-projects-book.pdf>`_.
 
 We build the following circuit, without the LEDs part that is inside the red rectangle. We just want to read the
-temperature of the TMP sensor, so we just bring him a 5V power, and connect its output (its central pin) to the A0
+temperature of the TMP sensor, so we just bring him a 5V voltage, and connect its output (its central pin) to the A0
 analog input of the
 board. All the details should be found into the Arduino projects book.
 
@@ -118,6 +123,13 @@ authorized to write into it. For that we can enter in a terminal the following c
    It seems like the */dev/ttyACM0* file is deleted each time we unplug the port, or shut down the computer. In those
    cases the command should be run again.
 
+.. note::
+   On Linux systems, the `sudo <https://en.wikipedia.org/wiki/Sudo>`_ command means "I want administrator rights for
+   the following command". It will therefore
+   ask
+   for our password.
+   The `chmod <https://en.wikipedia.org/wiki/Chmod>`_ command is used to change the rights on files and folders.
+
 Read the board with Python
 --------------------------
 
@@ -126,7 +138,7 @@ translation thanks to a
 library called `pyFirmata2 <https://github.com/berndporr/pyFirmata2>`_, so that we can talk to the board with Python.
 
 The communication is done in a client-server architecture: the server is the Arduino board, the client is our computer.
-The installation of *Pyfirmata2* then goes into two steps: the upload of the *Standard Firmata* server to the board,
+The installation of pyFirmata2 then goes into two steps: the upload of the *Standard Firmata* server to the board,
 which is done like any other sketch. And secondly, the installation of the Python package *pyfirmata2* in our
 environment.
 
@@ -141,15 +153,15 @@ We just need to upload a sketch that is already available through the Arduino ID
    crazy values while using a Python script. In that case, it may be useful to upload again the Firmata server to the
    board.
 
-Install the *pyfirmata2* Python package
-+++++++++++++++++++++++++++++++++++++++
+Install the pyfirmata2 Python package
++++++++++++++++++++++++++++++++++++++
 
 We suppose that we already installed Python, created and activated an environment called *arduino_ubuntu* by following
 :ref:`the installation instructions <quick_start>`.
 
 We install *pyfirmata2* with *pip* in a terminal:
 
-``pip install pyfirmata2``
+``(arduino_ubuntu) pip install pyfirmata2``
 
 Read the temperature with a Python script
 +++++++++++++++++++++++++++++++++++++++++
@@ -159,7 +171,7 @@ example script called
 `print_analog_data.py <https://github.com/berndporr/pyFirmata2/blob/master/examples/print_analog_data.py>`_ available
 in the examples of the library.
 
-Let's download and run it in our *arduino_ubuntu* Python environment:
+Let's download and run it in our *arduino_ubuntu* environment:
 
 .. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_script.png
 
@@ -190,14 +202,20 @@ Read the board with PyMoDAQ
 Everything is now in our hands, we already know how to initiate the communication with the board, how to read its
 outputs,
 and how to close the communication with Python commands. This is all in the
-`print_analog_data.py <https://github.com/berndporr/pyFirmata2/blob/master/examples/print_analog_data.py>`_ script.
+pyFirmata2 example.
 We will now put those commands in the proper methods of a PyMoDAQ instrument :term:`plugin`, the following table gives
-an overview of the analogies between the two files.
+an overview of the analogies between the
+`print_analog_data.py <https://github.com/berndporr/pyFirmata2/blob/master/examples/print_analog_data.py>`_ file and
+the
+`daq_0Dviewer_ArduinoUbuntu.py <https://github.com/quantumm/pymodaq_plugins_arduino_ubuntu/blob/main/src/pymodaq_plugins_arduino_ubuntu/daq_viewer_plugins/plugins_0D/daq_0Dviewer_ArduinoUbuntu.py>`_
+file. We'll explain how we arrived at this result below.
 
 +------------------------------------+---------------------------------------+
-| print_analog_data.py               | daq_ODviewer_ArduinoUbuntu.py         |
+| **print_analog_data.py**           | **daq_0Dviewer_ArduinoUbuntu.py**     |
 +------------------------------------+---------------------------------------+
 | PORT                               | PORT                                  |
++------------------------------------+---------------------------------------+
+| AnalogPrinter                      | DAQ_0DViewer_ArduinoUbuntu            |
 +------------------------------------+---------------------------------------+
 | self.board                         | self.controller                       |
 +------------------------------------+---------------------------------------+
@@ -223,20 +241,31 @@ Let's start by installing PyMoDAQ in our environment
 
 ``(arduino_ubuntu) $ pip install pymodaq pyqt5``
 
-We start from the
-`pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_, fork it on our remote repository,
-clone it locally for example with PyCharm (*File > Project from version control...* and enter the URL of our remote
-repository), and then install it in our environment in *edition mode* with the following command executed at the root
-of the plugin directory
+.. note::
+   Version 4.4 at the time of writing.
 
-``(arduino_ubuntu) ~/PycharmProjects/pymodaq_plugins_arduino_ubuntu $ pip install -e .``
+* We start from the
+  `pymodaq_plugins_template <https://github.com/PyMoDAQ/pymodaq_plugins_template>`_.
+* We fork it on our remote repository with the name *pymodaq_plugins_arduino_ubuntu*.
+* We clone it locally, for example with PyCharm (*File > Project from version control...* and enter the URL of our remote
+  repository, see :ref:`How to modify existing PyMoDAQ's code? <contribute_to_pymodaq_code>`).
+* We make an `editable install <https://setuptools.pypa.io/en/latest/userguide/development_mode.html>`_ in our
+  environment with the following command:
 
-Following the procedure described in :ref:`Write and release a new plugin <new_plugin>`, we named our plugin
-*pymodaq_plugins_arduino_ubuntu*.
+``(arduino_ubuntu) $ pip install -e ~/PycharmProjects/pymodaq_plugins_arduino_ubuntu``
 
-What we want to read at each acquisition, the temperature, is a scalar. Its dimensionality is 0. To be compared with a
-camera for example, which would output a matrix of pixels at each acquisition, so a dimensionality of 2. We must
+.. note::
+   PyCharm will clone the repository in the ~/PycharmProjects directory.
+
+Details about this procedure can be found in the tutorial :ref:`Write and release a new plugin <new_plugin>`.
+
+What we want to read at each acquisition, the temperature, is a scalar, its dimensionality is 0. We must
 therefore consider a OD viewer.
+
+.. note::
+   A camera for example, which would output a matrix of pixels at each acquisition, would be a 2D viewer.
+
+We then have a series of renaming to do, as indicated in the following figure.
 
 .. figure:: /image/example/arduino_ubuntu/arduino_plugin_arborescence.png
 
@@ -252,18 +281,27 @@ running a :ref:`DAQ_Viewer module <DAQ_Viewer_module>` with the following comman
 
    By running a DAQ_Viewer, we check that our plugin is recognized by PyMoDAQ.
 
+Let's close this window after this check.
+
 Initialization
 ++++++++++++++
 
-We now have to implement the initialization of the communication, the method *ini_detector*
-will be triggered when we click the
-*Init. Detector* of the interface. The corresponding method in the pyFirmata2 script is *__init__*.
+We now have to implement the initialization of the communication.
 
-First, we should get the name of the communication port opened with the board. This is done with the instruction
+The method *ini_detector* will be triggered when we click the
+*Init. Detector* button. The corresponding method in the pyFirmata2 example is *__init__*.
+
+First, we should import the *Arduino* object which establishes the bridge between our code and the acquisition card.
+
+Secondly, we should get the name of the communication port opened with the board. This is done with the instruction
 *PORT = Arduino.AUTODETECT*.
 
 .. note::
    It seems important to put this instruction outside of the class.
+
+.. figure:: /image/example/arduino_ubuntu/arduino_initialize_plugin.png
+
+   Imports statements of the plugin.
 
 We then modify the method *ini_detector* of our plugin class to put into *self.controller* the object that allows the
 communication with the board, which is here *Arduino(PORT)*.
@@ -273,7 +311,12 @@ communication with the board, which is here *Arduino(PORT)*.
    Minimal definition (without comments) of our *ini_detector* method, that will be triggered when the user click
    the *Init. detector* button.
 
-Running again a DAQ_Viewer and clicking the *Init. detector* button, if the LED turns green, we can proceed further!
+A few attributes are also set in the *ini_attributes* method.
+
+Running again a DAQ_Viewer and clicking the *Init. detector* button makes the LED turns green, we can proceed further!
+
+.. note::
+   Think about closing the window again.
 
 Acquisition
 +++++++++++
@@ -283,7 +326,9 @@ trigger the *grab_data* method. Here again, we have to find inspiration from the
 
 In this specific example, the acquisition is done with two methods: a main one (*start*), and a *callback* one
 (*myPrintCallback*). This is specific
-to pyFirmata2, which implements *asynchronous* methods to communicate with the board. In another context, this could be
+to pyFirmata2, which implements
+`asynchronous <https://www.geeksforgeeks.org/synchronous-and-asynchronous-programming/>`_
+methods to communicate with the board. In another context, this could be
 useful if we would like our code to do something else in the dead times in between two calls of the board. We will not
 enter into explaining what is asynchronicity here. The point is that it is easy to implement with PyMoDAQ: in the
 *grab_data* method, we must choose the asynchronous way, and define a *callback* method, as we are invited to do in the
@@ -310,9 +355,15 @@ It works! :D
 Conclusion
 ----------
 
-This plugin is not well polished as it is. It particular, one should implement the *close* method of the plugin to
+This plugin is not well polished as it is. In particular, one should implement the *close* method of the plugin to
 close the communication properly.
 
-Here you can find the
-`final implementation <https://github.com/quantumm/pymodaq_plugins_arduino_ubuntu/blob/main/src/pymodaq_plugins_arduino_ubuntu/daq_viewer_plugins/plugins_0D/daq_0Dviewer_ArduinoUbuntu.py>`_.
+We can directly install this example from source with the command
 
+``(arduino_ubuntu) $ pip install git+https://github.com/quantumm/pymodaq_plugins_arduino_ubuntu.git``
+
+Hope you enjoyed it ;)
+
+.. figure:: /image/example/arduino_ubuntu/arduino_the_laughing_cow.jpg
+
+   The Laughing Cow!
