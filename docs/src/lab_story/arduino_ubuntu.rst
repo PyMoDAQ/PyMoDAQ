@@ -48,7 +48,7 @@ the instructions from
 
 Let's download the .AppImage file, which is equivalent to a .exe file on Windows.
 
-.. figure:: /image/example/arduino_ubuntu/app_image.png
+.. figure:: /image/lab_story/arduino_ubuntu/app_image.png
 
    Download the .AppImage file.
 
@@ -66,7 +66,7 @@ the devices that are connected on USB ports. This is the Linux equivalent to the
    Here it means "let me see the USB ports". `This article <https://itsfoss.com/list-usb-devices-linux/>`_ details
    different ways to list the USB devices connected to a Linux system.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_lsusb_command.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_lsusb_command.png
 
    Output of the *lsusb* command.
 
@@ -94,7 +94,7 @@ temperature of the TMP sensor, so we just bring him a 5V voltage, and connect it
 analog input of the
 board. All the details should be found into the Arduino projects book.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_circuit.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_circuit.png
 
    Circuit of the Arduino board. The circuit inside the red rectangle is not used here.
 
@@ -105,7 +105,7 @@ A *sketch* is a script in the Arduino language to execute some commands on the b
 
 Let's try to upload the following sketch to the board by pressing the play button.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_sketch.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_sketch.png
 
    Reading of the TMP temperature with the Arduino IDE.
 
@@ -173,7 +173,7 @@ in the examples of the library.
 
 Let's download and run it in our *arduino_ubuntu* environment:
 
-.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_script.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_pyfirmata_script.png
 
    Output of the *print_analog_data.py* script. We just changed the line 22 of the script to *self.samplingRate = 1*
    in order to get one reading per second, rather than 10 per second.
@@ -186,13 +186,13 @@ it outputs 1. To get the corresponding voltage, we thus use the following formul
 reading in Celsius degree, we follow the procedure detailed in the Arduino projects book. In the end, we rewrite a bit
 the *myPrintCallback* method as follow to get the temperature
 
-.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_callback.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_pyfirmata_callback.png
 
    Modification of the *myPrintCallback* method to get the output in Celsius degree.
 
 We now get the output in Celsius degree!
 
-.. figure:: /image/example/arduino_ubuntu/arduino_pyfirmata_script_celsius.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_pyfirmata_script_celsius.png
 
    Output of the modified script. The raise in temperature happened when we put a finger on the TMP chip.
 
@@ -267,7 +267,7 @@ therefore consider a OD viewer.
 
 We then have a series of renaming to do, as indicated in the following figure.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_plugin_arborescence.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_plugin_arborescence.png
 
    Tree structure of our plugin. We have to be careful about the naming conventions of the files, folders, and class that
    are in red rectangles, even the case is sensitive.
@@ -277,7 +277,7 @@ running a :ref:`DAQ_Viewer module <DAQ_Viewer_module>` with the following comman
 
 ``(arduino_ubuntu) $ daq_viewer``
 
-.. figure:: /image/example/arduino_ubuntu/arduino_daq_viewer.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_daq_viewer.png
 
    By running a DAQ_Viewer, we check that our plugin is recognized by PyMoDAQ.
 
@@ -299,14 +299,14 @@ Secondly, we should get the name of the communication port opened with the board
 .. note::
    It seems important to put this instruction outside of the class.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_initialize_plugin.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_initialize_plugin.png
 
    Imports statements of the plugin.
 
 We then modify the method *ini_detector* of our plugin class to put into *self.controller* the object that allows the
 communication with the board, which is here *Arduino(PORT)*.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_ini_detector_method.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_ini_detector_method.png
 
    Minimal definition (without comments) of our *ini_detector* method, that will be triggered when the user click
    the *Init. detector* button.
@@ -334,19 +334,19 @@ enter into explaining what is asynchronicity here. The point is that it is easy 
 *grab_data* method, we must choose the asynchronous way, and define a *callback* method, as we are invited to do in the
 plugin template.
 
-.. figure:: /image/example/arduino_ubuntu/arduino_pymodaq_template.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_pymodaq_template.png
 
    The *grab_data* and *callback* methods from the *pymodaq_plugins_template*.
 
 We end up with this implementation:
 
-.. figure:: /image/example/arduino_ubuntu/arduino_implement_grab.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_implement_grab.png
 
    The implementation of the acquisition in our plugin.
 
 Let's run a DAQ_Viewer again!
 
-.. figure:: /image/example/arduino_ubuntu/arduino_it_works.png
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_it_works.png
 
    Reading of the temperature from the board with PyMoDAQ.
 
@@ -364,6 +364,6 @@ We can directly install this example from source with the command
 
 Hope you enjoyed it ;)
 
-.. figure:: /image/example/arduino_ubuntu/arduino_the_laughing_cow.jpg
+.. figure:: /image/lab_story/arduino_ubuntu/arduino_the_laughing_cow.jpg
 
    The Laughing Cow!
