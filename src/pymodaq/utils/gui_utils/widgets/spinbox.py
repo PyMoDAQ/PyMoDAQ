@@ -17,7 +17,8 @@ class SpinBox(SpinBox):
 
 class QSpinBoxWithShortcut(SpinBox):
     """
-    In case I want to add pyqtgraph spinbox functionalities
+    QSpinBox but which accepts key sequences and store them as attribute
+    For now, it does not apply to regular input such as text or numerics.
     """
     def __init__(self, *args, key_sequences=("Ctrl+Enter",), **kwargs):
         super().__init__(*args, **kwargs)
