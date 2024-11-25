@@ -15,7 +15,7 @@ from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QTool
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.gui_utils.custom_app import CustomApp
-from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED, QSpinBoxWithShortcut
 from pymodaq.control_modules.utils import ControlModuleUI
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher
@@ -199,9 +199,9 @@ class DAQ_Move_UI(ControlModuleUI):
         self.main_ui.layout().addWidget(self.toolbar, 0, 0, 1, 2)
         self.main_ui.layout().addWidget(self.move_toolbar, 1, 0, 1, 2)
 
-        self.abs_value_sb = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
-        self.abs_value_sb_2 = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
@@ -227,7 +227,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.control_ui.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
         self.find_home_pb = PushButtonIcon('home2', 'Find Home')
         self.control_ui.layout().addWidget(self.find_home_pb, 0, 1)
-        self.abs_value_sb_bis = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
         self.control_ui.layout().addWidget(self.abs_value_sb_bis, 1, 0)
         self.move_abs_pb = PushButtonIcon('Move', 'Set Abs.',
                                           tip='Set the value of the actuator to the set absolute value')
@@ -236,7 +236,7 @@ class DAQ_Move_UI(ControlModuleUI):
         self.move_rel_plus_pb = PushButtonIcon('MoveUp', 'Set Rel. (+)')
         self.control_ui.layout().addWidget(self.move_rel_plus_pb, 2, 1)
 
-        self.rel_value_sb = SpinBox(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'), key_sequences=("Ctrl+Enter","Ctrl+Shift+Enter"),)
         self.control_ui.layout().addWidget(self.rel_value_sb, 3, 0)
         self.move_rel_minus_pb = PushButtonIcon('MoveDown', 'Set Rel. (-)')
         self.control_ui.layout().addWidget(self.move_rel_minus_pb, 3, 1)
@@ -302,9 +302,16 @@ class DAQ_Move_UI(ControlModuleUI):
         self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
+        self.abs_value_sb.shortcut["Ctrl+Enter"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
+        self.abs_value_sb_2.shortcut["Ctrl+Enter"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_2))
+        self.abs_value_sb_bis.shortcut["Ctrl+Enter"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 
         self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(
             ThreadCommand('rel_value', self.rel_value_sb.value())))
+        
+        self.rel_value_sb.shortcut["Ctrl+Enter"].activated.connect(lambda: self.emit_move_rel('+'))
+        self.rel_value_sb.shortcut["Ctrl+Shift+Enter"].activated.connect(lambda: self.emit_move_rel('-'))
+
         self.move_rel_plus_pb.clicked.connect(lambda: self.emit_move_rel('+'))
         self.move_rel_minus_pb.clicked.connect(lambda: self.emit_move_rel('-'))
 
