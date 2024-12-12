@@ -20,7 +20,6 @@ from time import time
 import copy
 import pint
 from multipledispatch import dispatch
-import pymodaq
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val

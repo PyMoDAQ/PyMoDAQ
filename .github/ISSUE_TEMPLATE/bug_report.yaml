@@ -1,0 +1,69 @@
+name: Bug report
+description: Create a report to help us improve
+title: "[BUG] <title>"
+labels: ["Bug", "Needs Triage"]
+body:
+- type: textarea
+  attributes:
+    label: Describe the bug
+    description: A clear and concise description of what the bug/error/issue is.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Expected Behavior
+    description: A clear and concise description of what you expected to happen.
+                 What kind of solution would you want/suggest ?
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Steps To Reproduce
+    description: Steps to reproduce the behavior.
+    placeholder: |
+      1. Go to '...' or run '...'
+      2. Click on '....' or select '...'
+      3. Scroll down to '....' or apply '...'
+      4. See error
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Reference(s)
+    description: |
+      File or path needed to locate/visualize the issue.
+      If applicable, add screenshots to help explain your problem.
+      If applicable, give the python path of the incriminated function/class.
+    value: |
+       pymodaq.utils.config.deep_update
+    render: markdown
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Environment
+    description: |
+      examples:
+        - **OS**: Ubuntu 20.04
+        - **Pymodaq**: 5.0.1
+        - **python env**: python3.11, pyqt6,
+        - **requirements.txt**: join `pip freeze` output
+    value: |
+        - OS:
+        - Pymodaq:
+        - python env:
+    render: markdown
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Additional context
+    description: |
+      Links? References? Anything that will give us more context about the issue you are encountering!
+      Try to describe at best what has been done on this particular experiment/implementation/development.
+      If it is specific to a plugin/hardware setup, try to be as thorough as possible.
+      What did you try to evaluate or bypass the error ? 
+      
+      Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
+  validations:
+    required: false

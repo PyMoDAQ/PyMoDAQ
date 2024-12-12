@@ -67,11 +67,11 @@ class DataActuatorType(BaseEnum):
 def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
                      epsilons=None):
     if epsilons is not None:
-        epsilon=epsilons
+        epsilon = epsilons
     if isinstance(epsilon, list):
-        epsilon=epsilon[0]
+        epsilon = epsilon[0]
     elif isinstance(epsilon, dict):
-        epsilon=epsilon[list[epsilon.keys()][0]]
+        epsilon = epsilon[list[epsilon.keys()][0]]
 
     return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
@@ -124,7 +124,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
     Parameters
     ----------
-    is_multiaxes: bool  # deprecated not need anymore
+    is_multiaxes: bool
         If True, display the particular settings to define which axis the controller is driving
     axes_names: deprecated, use axis_names
     axis_names: list of str or dictionnary of string as key and integer as value
@@ -140,7 +140,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
             axes_names = ['']
         axis_names = axes_names
 
-    is_multiaxes = len(axis_names) > 1
+    is_multiaxes = len(axis_names) > 1 or is_multiaxes
     if isinstance(axis_names, list):
         if len(axis_names) > 0:
             axis_name = axis_names[0]

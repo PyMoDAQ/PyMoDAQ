@@ -50,7 +50,8 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "tables<3.9",  # issue with some version of required package blosc2>=2.2.8
+    "tables>=3.10; python_version>=\"3.10\"",  # issue with some version of required package blosc2>=2.2.8
+    "tables<3.9; python_version<\"3.10\"",  # issue with some version of required package blosc2>=2.2.8
     "pyleco>0.3; python_version>=\"3.8\"",
     "bayesian-optimization<2.0.0",
 ]

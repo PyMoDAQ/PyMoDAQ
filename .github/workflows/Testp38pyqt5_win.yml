@@ -1,6 +1,7 @@
 name: '3.8 PyQt5 Windows'
 
-on: [push]
+
+on: [push, workflow_dispatch]
 
 jobs:
   call_workflow:

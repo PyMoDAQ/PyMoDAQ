@@ -1,6 +1,6 @@
 name: '3.9 PyQt6'
 
-on: [push]
+on: [push, workflow_dispatch]
 
 jobs:
   call_workflow:
