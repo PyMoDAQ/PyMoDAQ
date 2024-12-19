@@ -12,6 +12,7 @@ from pymodaq_utils import utils
 from pymodaq_utils import config as configmod
 from pymodaq_utils.enums import BaseEnum
 
+
 from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -26,8 +27,10 @@ from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
 
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
-                                               BayesianAlgorithm, UtilityKind,
-                                               UtilityParameters, StopType, StoppingParameters)
+                                               BayesianAlgorithm, StopType, StoppingParameters)
+
+from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
+
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.bayesian.utils import BayesianConfig
 from pymodaq.extensions.utils import CustomExt
@@ -43,8 +46,7 @@ class DataNames(BaseEnum):
     Individual = 1
     ProbedData = 2
     Actuators = 3
-    Kappa = 4
-
+    Tradeoff = 4
 
 class BayesianOptimisation(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
@@ -56,30 +58,20 @@ class BayesianOptimisation(CustomExt):
     explored_viewer_name = 'algo/ProbedData'
     optimisation_done_signal = QtCore.Signal(DataToExport)
 
-    params = [
-        {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
-         'children': [
+    acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
+   
+
+    def __init__(self, dockarea, dashboard):
+        self.params = [
+            {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
+            'children': [
              {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
               'children': [
-                  {'title': 'Kind', 'name': 'kind', 'type': 'list',
-                   'limits': UtilityKind.to_dict_value()},
-                  {'title': 'Kappa:', 'name': 'kappa', 'type': 'slide', 'value': 2.576,
-                   'min': 0.001, 'max': 100, 'subtype': 'log',
-                   'tip': 'Parameter to indicate how closed are the next parameters sampled.'
-                          'Higher value = favors spaces that are least explored.'
-                          'Lower value = favors spaces where the regression function is the '
-                          'highest.'},
-                  {'title': 'Kappa actual:', 'name': 'kappa_actual', 'type': 'float', 'value': 2.576,
-                   'tip': 'Current value of the kappa parameter', 'readonly': True},
-                  {'title': 'xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
-                   'tip': 'Governs the exploration/exploitation tradeoff.'
-                          'Lower prefers exploitation, higher prefers exploration.'},
-                  {'title': 'Kappa decay:', 'name': 'kappa_decay', 'type': 'float', 'value': 0.9,
-                   'tip': 'kappa is multiplied by this factor every iteration.'},
-                  {'title': 'Kappa decay delay:', 'name': 'kappa_decay_delay', 'type': 'int',
-                   'value': 20, 'tip': 'Number of iterations that must have passed before applying '
-                                      'the decay to kappa.'},
-              ]},
+                    { 'title': 'Kind', 'name': 'kind', 'type': 'list', 'value': self.acquisition_functions_names[0],
+                      'limits': self.acquisition_functions_names
+                    }] + GenericAcquisitionFunctionFactory.get(self.acquisition_functions_names[0]).params
+
+              },
              {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
               'children': [
                   {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
@@ -96,7 +88,7 @@ class BayesianOptimisation(CustomExt):
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
          'children': [
             {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-             'limits': [d['name'] for d in models]},
+             'limits': [d['name'] for d in self.models]},
             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
             {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
             {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
@@ -105,10 +97,9 @@ class BayesianOptimisation(CustomExt):
          'visible': False, 'children': [
              {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
 
-    ]
-
-    def __init__(self, dockarea, dashboard):
+        ]
         super().__init__(dockarea, dashboard)
+
 
         self.algorithm: Optional[BayesianAlgorithm] = None
         self.viewer_fitness: Optional[Viewer0D] = None
@@ -123,6 +114,9 @@ class BayesianOptimisation(CustomExt):
         self.setup_ui()
 
         self.bayesian_config = BayesianConfig()
+
+        # With current implementation, it can not work as param tree is updated
+        #
         self.mainsettings_saver_loader = ConfigSaverLoader(
             self.settings.child('main_settings'), self.bayesian_config)
 
@@ -216,14 +210,23 @@ class BayesianOptimisation(CustomExt):
         ----------
         param: (Parameter) the parameter whose value just changed
         '''
-        if param.name() == 'model_class':
+
+        if param.name() == 'kind':
+            utility_settings = self.settings.child('main_settings', 'utility')
+            old_children = utility_settings.children()[1:]
+            for child in old_children:
+                utility_settings.removeChild(child)
+            utility_settings.addChildren(GenericAcquisitionFunctionFactory.get(param.value()).params)
+            # self.mainsettings_saver_loader = ConfigSaverLoader(
+            #     self.settings.child('main_settings'), self.bayesian_config)
+        elif param.name() == 'model_class':
             self.get_set_model_params(param.value())
         elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
             if self.model_class is not None:
                 self.model_class.update_settings(param)
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'utility'), []):
-            if param.name() != 'kappa_actual':
+            if param.name() != 'tradeoff_actual':
                 self.update_utility_function()
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'bounds'), []):
@@ -232,14 +235,12 @@ class BayesianOptimisation(CustomExt):
             self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
         if self._save_main_settings and param.name() in putils.iter_children(
-                self.settings.child('main_settings'), []):
+               self.settings.child('main_settings'), []):
             self.mainsettings_saver_loader.save_config()
 
     def update_utility_function(self):
         utility_settings = self.settings.child('main_settings', 'utility')
-        uparams = UtilityParameters(utility_settings['kind'], utility_settings['kappa'],
-                                    utility_settings['xi'], utility_settings['kappa_decay'],
-                                    utility_settings['kappa_decay_delay'])
+        uparams = {child.name() : child.value() for child in utility_settings.children()}
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
 
     def get_stopping_parameters(self) -> StoppingParameters:
@@ -275,7 +276,7 @@ class BayesianOptimisation(CustomExt):
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action('quit', self.quit, )
+        self.connect_action('quit', self.quit)
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimisation_runner)
         self.connect_action('run', self.run_optimisation)
@@ -381,8 +382,9 @@ class BayesianOptimisation(CustomExt):
 
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(
+            # acquisition=self.settings['main_settings', 'utility', 'kind'],
             ini_random=self.settings['main_settings', 'ini_random'],
-            bounds=self.format_bounds(),)
+            bounds=self.format_bounds())
 
     def ini_model(self):
         try:
@@ -461,9 +463,9 @@ class BayesianOptimisation(CustomExt):
     def process_output(self, dte: DataToExport):
 
         self.enl_index += 1
-        dwa_kappa = dte.remove(dte.get_data_from_name(DataNames.Kappa.name))
-        self.settings.child('main_settings', 'utility', 'kappa_actual').setValue(
-            float(dwa_kappa[0][0])
+        dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff.name))
+        self.settings.child('main_settings', 'utility', 'tradeoff_actual').setValue(
+            float(dwa_tradeoff[0][0])
         )
 
         dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData.name))
@@ -542,13 +544,10 @@ class OptimisationRunner(QtCore.QObject):
             self.running = False
 
         elif command.command == 'utility':
-            utility_params: UtilityParameters = command.attribute
-            self.optimisation_algorithm.set_utility_function(
-                utility_params.kind,
-                kappa=utility_params.kappa,
-                xi=utility_params.xi,
-                kappa_decay=utility_params.kappa_decay,
-                kappa_decay_delay=utility_params.kappa_decay_delay)
+            utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
+            self.optimisation_algorithm.set_acquisition_function(
+                command.attribute['kind'],
+                **utility_params)
 
         elif command.command == 'stopping':
             self.stopping_params: StoppingParameters = command.attribute
@@ -612,13 +611,13 @@ class OptimisationRunner(QtCore.QObject):
                                        self.output_to_actuators.merge_as_dwa(
                                            'Data0D', DataNames.Actuators.name),
                                        DataCalculated(
-                                           DataNames.Kappa.name,
+                                           DataNames.Tradeoff.name,
                                            data=[
-                                               np.array([self.optimisation_algorithm.kappa])])
+                                               np.array([self.optimisation_algorithm.tradeoff])])
                                          ])
                 self.algo_output_signal.emit(dte)
 
-                self.optimisation_algorithm.update_utility_function()
+                self.optimisation_algorithm.update_acquisition_function()
 
                 if self.optimisation_algorithm.stopping(self._ind_iter, self.stopping_params):
                     converged = True
@@ -664,7 +663,7 @@ def main(init_qt=True):
 
     dashboard = DashBoard(area)
     daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{'beam_steering_mock'}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{'preset_default'}.xml")
 
     if file.exists():
         dashboard.set_preset_mode(file)
