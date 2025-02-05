@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python ${{ inputs.python }}
         uses: actions/checkout@v4.2.2
       - name: Install dependencies
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: ${{ inputs.python }}
       - name: Install package
@@ -38,7 +38,7 @@ jobs:
         run: |
           pytest --cov=pymodaq --cov-report=xml -n 1
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v5.1.2
+        uses: codecov/codecov-action@v5.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
