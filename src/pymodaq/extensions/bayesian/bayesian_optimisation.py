@@ -234,7 +234,7 @@ class BayesianOptimisation(CustomExt):
         elif param.name() in putils.iter_children(
             self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
-        if self._save_main_settings and param.name() in putils.iter_children(
+        if self._save_main_settings and self.model_class is not None and param.name() in putils.iter_children(
                self.settings.child('main_settings'), []):
             self.mainsettings_saver_loader.save_config()
 
