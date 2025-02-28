@@ -1,4 +1,4 @@
-from typing import List, Union, Optional
+from typing import List,  Optional
 import tempfile
 from pathlib import Path
 
@@ -9,7 +9,6 @@ import numpy as np
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
-from pymodaq_utils import config as configmod
 from pymodaq_utils.enums import BaseEnum
 
 
@@ -17,7 +16,7 @@ from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils import QLED
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
@@ -445,7 +444,7 @@ class BayesianOptimisation(CustomExt):
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
-            self.runner_thread.terminate()
+            self.runner_thread.quit()
             self.get_action('runner_led').set_as_false()
 
     def clean_h5_temp(self):

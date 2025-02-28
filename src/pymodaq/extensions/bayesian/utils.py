@@ -4,7 +4,7 @@ Created the 31/08/2023
 
 @author: Sebastien Weber
 """
-from abc import ABC, abstractproperty, abstractmethod
+from abc import ABC
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
 from pathlib import Path
 import importlib
@@ -14,7 +14,6 @@ import numpy as np
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
-from bayes_opt import acquisition
 
 from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -22,8 +21,7 @@ from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.config import BaseConfig
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
-from pymodaq_utils.factory import ObjectFactory
+from pymodaq_gui.managers.parameter_manager import Parameter
 
 
 from pymodaq_data.data import (DataToExport, DataCalculated,
