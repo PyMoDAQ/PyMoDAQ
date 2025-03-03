@@ -13,7 +13,7 @@ class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
     _function : AcquisitionFunction
     _usual_name : str
 
-    def base_acq(mean, std):
+    def base_acq(self, mean, std):
         return self._function.base_acq(mean, std)
 
     def decay_exploration(self):
