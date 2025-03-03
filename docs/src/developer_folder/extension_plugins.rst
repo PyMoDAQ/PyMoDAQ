@@ -32,7 +32,7 @@ extension.
    The correct configuration of your package.
 
 The class itself defining the extension derives from the ``CustomApp`` base class. As such, it's ``__init__`` method
-takes two attributes, a ``DoackArea`` instance and a ``DashBoard`` instance (the one from which the extension will be
+takes two attributes, a ``DockArea`` instance and a ``DashBoard`` instance (the one from which the extension will be
 loaded and that contains all the actuators/detectors needed for your extension). The ``DashBoard`` will smoothly
 initialize your class when launching it from the menu. Below you'll find a sample of an extension module with an
 extension class called ``MyExtension`` (from the *pymodaq_plugins_template* package)

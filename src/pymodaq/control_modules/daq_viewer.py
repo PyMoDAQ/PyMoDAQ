@@ -43,6 +43,7 @@ from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_
 from pymodaq_utils import utils
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
@@ -390,7 +391,7 @@ class DAQ_Viewer(ParameterControlModule):
             return self._viewers
 
     @viewers.setter
-    def viewers(self, viewers):
+    def viewers(self, viewers: List[ViewerBase]):
         for viewer in self._viewers:
             try:
                 viewer.data_to_export_signal.disconnect()
@@ -406,6 +407,11 @@ class DAQ_Viewer(ParameterControlModule):
                 lambda roi_info: self.command_hardware.emit(
                     ThreadCommand('roi_select',
                                   dict(roi_info=roi_info, ind_viewer=ind_viewer))))
+            viewer.crosshair_dragged.connect(
+                lambda crosshair_info: self.command_hardware.emit(
+                    ThreadCommand('crosshair',
+                                  dict(crosshair_info=crosshair_info, ind_viewer=ind_viewer))))
+
 
         self._viewers = viewers
 
@@ -1431,7 +1437,7 @@ class DAQ_Detector(QObject):
     def close(self):
         """ Call the close method of the instrument plugin class
         """
-        if self.detector is not None:
+        if self.detector is not None and self.detector.controller is not None:
             status = self.detector.close()
             return status
 
@@ -1459,16 +1465,12 @@ def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
 
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config('style', 'darkstyle'):
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+        app = mkQApp("PyMoDAQ Viewer")
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Viewer')
     win.show()
 
     title = "Testing"

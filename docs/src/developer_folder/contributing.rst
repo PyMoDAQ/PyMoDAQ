@@ -22,15 +22,21 @@ you should fork and clone the up-to-date GitHub repo: https://github.com/PyMoDAQ
 using git command line or GitHub Desktop. Then create a dedicated branch name from the change you want to work on
 (using git).
 
-Finally I advise to create a dedicated conda environment for this and install PyMoDAQ's package as a developer:
+Finally it is advised to create a dedicated virtual environment for this and install PyMoDAQ's package as a developer. For example, using mamba as an environment manager:
 
-* ``conda create -n dev_env``
-* ``conda activate dev_env``
-* ``cd`` to the location of the folder where you downloaded or cloned the repository.
-* install the package as a developer using the command ``pip install -e .``.
+- ``mamba create -n dev_env``
+- ``mamba activate dev_env``
+- ``cd`` to the location of the folder where you downloaded or cloned the repository.
+- install the package as a developer with test tools using the command ``pip install -e ".[dev]"``.
+    - the `-e` option tells pip to install the package in editable mode, meaning that any change done to the source will be reported to the installed package.
+    - the `".[dev]"` argument indicate to install the current folder as a package alongside its optional dependancies, declared as `dev` in the `pyproject.toml` file.
+    - the quotes around `[dev]` just allow to escape the sequence in order to not be interpreted by the shell.
+
 
 Then any change on the code will be *seen* by python interpreter so that you can see and test your modifications. Think about
 writing tests that will make sure your code is sound and that modification elsewhere doesn't change the expected behavior.
+
+It also requires the installation of a QT backend and some system packages on Linux, like explained in :ref:`the installation tips page <installation_tips>` of the documentation.
 
 When ready, you can create a pull request from your code into the proper branch, as discussed in the next section.
 

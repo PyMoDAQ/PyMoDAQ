@@ -15,3 +15,4 @@ User's Guide
    user_folder/tcpip
    user_folder/leco
    user_folder/plugin_manager
+   user_folder/backup_environments

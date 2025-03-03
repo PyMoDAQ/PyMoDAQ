@@ -318,7 +318,7 @@ That's great news! The PI developpers did a great job, and this will save us a l
 External open-source libraries
 ------------------------------
 
-In our example, our supplier is serious. Probably the wrapper it developped will do a good job. But let us imagine that it is not the case, and take a bit of time to present a few *external libraries*.
+In our example, our supplier is serious. Probably the wrapper it developed will do a good job. But let us imagine that it is not the case, and take a bit of time to present a few *external libraries*.
 
 PyMoDAQ is of course not the only project of its kind. You can find on the internet a lot of non-official resources to help you communicate with your equipment. Some of them are so great and cover so much instruments that you should automatically check if your device is supported. Even if your supplier proposes a solution, it can be inspiring to have a look at them. Let's present the most important ones.
 

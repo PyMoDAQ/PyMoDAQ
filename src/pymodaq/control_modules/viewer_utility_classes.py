@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Iterable
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
@@ -17,6 +17,9 @@ from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
+
+from pymodaq_gui.utils.utils import mkQApp
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -104,10 +107,7 @@ def main(plugin_file=None, init=True, title='Testing'):
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pathlib import Path
 
-    app = QtWidgets.QApplication(sys.argv)
-    if config('style', 'darkstyle'):
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+    app = mkQApp("PyMoDAQ Viewer")
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
@@ -294,6 +294,33 @@ class DAQ_Viewer_base(QObject):
     def commit_settings(self, param):
         """
         To be reimplemented in subclass
+        """
+        pass
+
+    def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
+        """ Every time a ROISelect is updated on a 2D Viewer,
+        this method receive the corresponding info
+
+        To be subclassed in a plugin to use the info
+
+        Parameters
+        ----------
+        roi_info: RoiInfo
+        ind_viewer: int
+            The index of the viewer (if multiple) in which the roi is declared
+        """
+        pass
+
+    def crosshair(self, crosshair_info: Iterable[float], ind_viewer: int = 0):
+        """ Every time a crosshair is updated, this method receive the corresponding info
+
+        To be subclassed in a plugin to use the info
+
+        Parameters
+        ----------
+        crosshair_info: list of float
+        ind_viewer: int
+            The index of the viewer (if multiple) in which the crosshair is declared
         """
         pass
 

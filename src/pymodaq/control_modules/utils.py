@@ -136,6 +136,9 @@ class ControlModule(QObject):
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
 
+    def custom_command(self, command: str, **kwargs):
+        self.command_hardware.emit(ThreadCommand(command, kwargs))
+
     def thread_status(self, status: ThreadCommand, control_module_type='detector'):
         """Get back info (using the ThreadCommand object) from the hardware
 
@@ -377,7 +380,6 @@ class ParameterControlModule(ParameterManager, ControlModule):
     listener_class: Type[ActorListener] = ActorListener
 
     def __init__(self, **kwargs):
-        #QObject.__init__(self)
         ParameterManager.__init__(self, action_list=('save', 'update'))
         ControlModule.__init__(self)
 

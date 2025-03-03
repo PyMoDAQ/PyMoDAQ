@@ -161,7 +161,7 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
 
 .. _parameter_tree:
 
-The list of available types of parameters (defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
+The list of available types of parameters (defined in ``pymodaq_gui.parameter.pymodaq_ptypes``) is:
 
 * ``group`` : "camera settings" on :numref:`figure_settings` is of type group
 * ``int`` : settable integer (SpinBox_Custom object)

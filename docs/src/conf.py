@@ -70,6 +70,8 @@ extensions = [
     'releases',
     'crate.sphinx.csv',
     'numpydoc',
+    "sphinxcontrib.jquery",
+    "sphinx_datatables",
 ]
 
 qt_documentation = "PySide6"
@@ -127,11 +129,13 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 #
 # html_theme_options = {}
-
+html_css_files = [
+    'css/overflow.css'
+]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+html_static_path = ["_static"]
 html_logo = 'splash.png'
 
 # Custom sidebar templates, must be a dictionary that maps document names
@@ -199,3 +203,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/', None)}
+
+# DATATABLES.NET option
+datatables_options = {
+
+}

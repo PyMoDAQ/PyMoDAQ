@@ -225,4 +225,7 @@ and teachers, we find relevant to introduce those tools from scratch. The tutori
 are indicated
 at the beginning of the page.
 
+The :ref:`Lab stories <lab_story>` section is dedicated to concrete examples of use in the lab or for educational
+purposes.
+
 We wish you a good experience :)

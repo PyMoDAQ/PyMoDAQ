@@ -82,6 +82,12 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
   Navigation
     See :term:`signal`.
 
+  Package
+     *(as Python package)*
+     A Python package is a collection of Python modules grouped together.
+     A package is essentially a directory containing Python files (modules) and possibly other resources, such as data files or executables.
+     It's what you install when you prepare an :term:`environment<environment>`. (ie: pip install numpy)
+
   pip & PyPI
     *pip* is the official Python package manager and the one that is used for the PyMoDAQ project. *pip* downloads
     Python packages that are stored in the `PyPI <https://pypi.org/>`_ (Python Package Index) servers.

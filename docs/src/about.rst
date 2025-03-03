@@ -100,6 +100,12 @@ What they think of PyMoDAQ?
   functionalities to share them with all the users. We fully support this great project!
   A. Finco, P. Valvin - L2C/S2QT
 
+* I just wanted to add that the code and the documentation are very well structured: I just
+  started on Monday and I now have a functioning TANGO plugin that runs in the dashboard and
+  integrates so far bug-free with all the rest. I'm delighted! Thanks for all the work you
+  all put in maintaining the code, and I hope I can contribute at some point!
+  A. Vernier - Github Discussion - LOA - ENSTA Paris
+
 .. note::
 
   If you are using PyMoDAQ and would like to help to promote the project, please send your feedback to

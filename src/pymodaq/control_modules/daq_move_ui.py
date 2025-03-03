@@ -265,6 +265,12 @@ class DAQ_Move_UI(ControlModuleUI):
     def set_abs_value_green(self, value: Q_):
         self.abs_value_sb.setValue(value.m_as(self._unit))
 
+    def set_abs_value(self, value: Q_):
+        self.abs_value_sb_bis.setValue(value.m_as(self._unit))
+
+    def set_rel_value(self, value: Q_):
+        self.rel_value_sb.setValue(value.m_as(self._unit))
+
     def set_unit_as_suffix(self, unit: str):
         """Will append the actuator units in the value display"""
         self._unit = unit

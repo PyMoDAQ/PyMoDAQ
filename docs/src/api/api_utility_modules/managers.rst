@@ -1,7 +1,7 @@
 Managers
 ********
 
-API of the various managers, special classes to deals with QAction, Paramaters, ControlModules...
+API of the various managers, special classes to deals with QAction, Parameters, ControlModules...
 
 .. currentmodule:: pymodaq_gui.managers.action_manager
 .. autosummary::

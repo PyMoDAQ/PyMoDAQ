@@ -19,6 +19,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 
@@ -211,13 +212,13 @@ def main(plugin_file, init=True, title='test'):
     from qtpy import QtWidgets
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pathlib import Path
-    app = QtWidgets.QApplication(sys.argv)
-    if config('style', 'darkstyle'):
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+
+    act = Path(plugin_file).stem.split('daq_move_')[1]
+
+    app = mkQApp("PyMoDAQ Viewer")
 
     widget = QtWidgets.QWidget()
-    prog = DAQ_Move(widget, title=title,)
+    prog = DAQ_Move(widget, title=title, actuator=act)
     widget.show()
     prog.actuator = Path(plugin_file).stem[9:]
     if init:
@@ -601,18 +602,11 @@ class DAQ_Move_base(QObject):
 
         Return the new position eventually coerced within the bounds
         """
-        if self.settings.child('bounds', 'is_bounds').value():
-            if position > self.settings.child('bounds', 'max_bound').value():
-                position = DataActuator(self._title,
-                                        data=self.settings.child('bounds', 'max_bound').value(),
-                                        units=self.axis_unit)
-                self.emit_status(ThreadCommand('outofbounds', []))
-            elif position < self.settings.child('bounds', 'min_bound').value():
-                position = DataActuator(self._title,
-                                        data=self.settings.child('bounds', 'min_bound').value(),
-                                        units=self.axis_unit
-                                        )
-                self.emit_status(ThreadCommand('outofbounds', []))
+        if self.settings['bounds', 'is_bounds']:
+            for data_array in position:
+                data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
+                data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
+            self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
     def get_actuator_value(self):
@@ -621,6 +615,10 @@ class DAQ_Move_base(QObject):
             return self.check_position()
         else:
             raise NotImplementedError
+
+
+    def close(self):
+        raise NotImplementedError
 
     def move_abs(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Abs'):
@@ -778,6 +776,7 @@ class DAQ_Move_base(QObject):
                 logger.info('Timeout activated')
         else:
             self.poll_timer.stop()
+            self.current_value = self.get_actuator_value()
             logger.debug(f'Current value: {self._current_value}')
             self.move_done(self._current_value)
 

@@ -6,8 +6,7 @@ from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import Qt, QObject, QTimer
 
 
-from pymodaq_gui.utils import DockArea, Dock
-from pymodaq_gui.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq_gui.utils.dock import DockArea, Dock
 
 
 class PushButtonShortcut(QtWidgets.QPushButton):
@@ -64,7 +63,7 @@ class ChronoTimer(QObject):
 
         self.dock_chrono_timer.setAutoFillBackground(True)
         palette = self.dock_chrono_timer.palette()
-        palette.setColor(palette.Background, QtGui.QColor(0, 0, 0))
+        palette.setColor(palette.Window, QtGui.QColor(0, 0, 0))
         self.dock_chrono_timer.setPalette(palette)
 
         self.time_lcd = QtWidgets.QLCDNumber(8)
@@ -92,7 +91,7 @@ class ChronoTimer(QObject):
         self.controls_layout.addWidget(hor_widget)
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal,
+        icon.addPixmap(QtGui.QPixmap("icons:run2.png"), QtGui.QIcon.Normal,
                        QtGui.QIcon.Off)
         self.start_pb = PushButtonShortcut(icon, 'Start',
                                            shortcut='Home', shortcut_widget=self.area)
@@ -102,7 +101,7 @@ class ChronoTimer(QObject):
         hor_layout.addWidget(self.start_pb)
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/pause.png"), QtGui.QIcon.Normal,
+        icon.addPixmap(QtGui.QPixmap("icons:pause.png"), QtGui.QIcon.Normal,
                        QtGui.QIcon.Off)
         self.pause_pb = PushButtonShortcut(icon, 'Pause',
                                            shortcut='Ctrl+p', shortcut_widget=self.area)
@@ -112,7 +111,7 @@ class ChronoTimer(QObject):
         hor_layout.addWidget(self.pause_pb)
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Refresh2.png"), QtGui.QIcon.Normal,
+        icon.addPixmap(QtGui.QPixmap("icons:Refresh2.png"), QtGui.QIcon.Normal,
                        QtGui.QIcon.Off)
         self.reset_pb = PushButtonShortcut(icon, 'Reset',
                                            shortcut='F5', shortcut_widget=self.area)
@@ -184,7 +183,7 @@ class ChronoTimer(QObject):
         # lcd.setPalette(QtGui.QPalette(Qt.red))
         if hasattr(Qt, color):
             palette.setBrush(palette.WindowText, getattr(Qt, color))
-            palette.setColor(palette.Background, QtGui.QColor(0, 0, 0))
+            palette.setColor(palette.Window, QtGui.QColor(0, 0, 0))
         lcd.setPalette(palette)
 
 

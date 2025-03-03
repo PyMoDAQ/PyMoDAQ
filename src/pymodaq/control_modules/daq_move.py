@@ -32,6 +32,7 @@ from pymodaq_data.h5modules.backends import Node
 
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
@@ -123,7 +124,7 @@ class DAQ_Move(ParameterControlModule):
         self.splash_sc = get_splash_sc()
         self._title = title
         if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
-            self.actuator = ACTUATOR_TYPES[0]
+            self.actuator = kwargs.get('actuator', ACTUATOR_TYPES[0])
 
         self.module_and_data_saver = module_saving.ActuatorSaver(self)
 
@@ -725,7 +726,7 @@ class DAQ_Move_Hardware(QObject):
             Uninitialize the stage closing the hardware.
 
         """
-        if self.hardware is not None:
+        if self.hardware is not None and self.hardware.controller is not None:
             self.hardware.close()
 
         return "Stage uninitialized"
@@ -876,6 +877,7 @@ class DAQ_Move_Hardware(QObject):
             * **reset_stop_motion** command, set the motion_stopped attribute to false
         """
         try:
+            logger.debug(f'Threadcommand {command.command} sent to {self.title}')
             if command.command == "ini_stage":
                 status: edict = self.ini_stage(*command.attribute)
                 self.status_sig.emit(ThreadCommand(command=command.command, attribute=status))
@@ -906,10 +908,12 @@ class DAQ_Move_Hardware(QObject):
             else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
                 if hasattr(self.hardware, command.command):
                     cmd = getattr(self.hardware, command.command)
-                    cmd(*command.attribute)
+                    if isinstance(command.attribute, list):
+                        cmd(*command.attribute)
+                    elif isinstance(command.attribute, dict):
+                        cmd(**command.attribute)
         except Exception as e:
             self.logger.exception(str(e))
-
 
     def stop_motion(self):
         """
@@ -921,7 +925,8 @@ class DAQ_Move_Hardware(QObject):
         """
         self.status_sig.emit(ThreadCommand(command="Update_Status", attribute=["Motion stoping", 'log']))
         self.motion_stoped = True
-        self.hardware.stop_motion()
+        if self.hardware is not None and self.hardware.controller is not None:
+            self.hardware.stop_motion()
         self.hardware.poll_timer.stop()
 
     @Slot(edict)
@@ -953,10 +958,7 @@ class DAQ_Move_Hardware(QObject):
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-        if config('style', 'darkstyle'):
-            import qdarkstyle
-            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+        app = mkQApp("PyMoDAQ Move")
 
     widget = QtWidgets.QWidget()
     prog = DAQ_Move(widget, title="test")

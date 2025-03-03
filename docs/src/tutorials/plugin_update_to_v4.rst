@@ -6,7 +6,7 @@ Updating your instrument plugin for PyMoDAQ 4
 What's new in PyMoDAQ 4
 ***********************
 The main modification in PyMoDAQ 4 concerning the instrument :term:`plugins<plugin>` is related to the hierarchy
-of the :term:`modules<module>` in the source code, see :ref:`whats_new`.
+of the :term:`modules<module>` in the source code, see :ref:`whats_new4`.
 
 What should be modified
 ***********************

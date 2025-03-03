@@ -9,6 +9,8 @@ import numpy as np
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
+
+from pymodaq_utils import config as config_mod
 from pymodaq_utils.enums import BaseEnum
 
 from pymodaq_gui.config import ConfigSaverLoader
@@ -17,6 +19,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils import QLED
+from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
@@ -36,6 +39,7 @@ EXTENSION_NAME = 'BayesianOptimisation'
 CLASS_NAME = 'BayesianOptimisation'
 
 logger = set_logger(get_module_name(__file__))
+config = config_mod.Config()
 
 
 class DataNames(BaseEnum):
@@ -649,10 +653,7 @@ def main(init_qt=True):
     from pymodaq.utils.daq_utils import get_set_preset_path
 
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
-
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
+        app = mkQApp("PyMoDAQ Dashboard")
 
     from pymodaq.dashboard import DashBoard
 
@@ -660,7 +661,6 @@ def main(init_qt=True):
     area = gutils.dock.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
 
     dashboard = DashBoard(area)
     daq_scan = None
