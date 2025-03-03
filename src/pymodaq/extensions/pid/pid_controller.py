@@ -153,11 +153,11 @@ class DAQ_PID(CustomExt):
 
         else:
             if hasattr(self, 'PIDThread'):
-                if self.PIDThread.isRunning():
-                    try:
-                        self.PIDThread.quit()
-                    except Exception:
-                        pass
+                self.PIDThread.quit()
+                terminated = self.PIDThread.wait(10000)
+                if not terminated:
+                    self.PIDThread.terminate()
+                    self.PIDThread.wait()
             self.get_action('pid_led').set_as_false()
             self.enable_controls_pid_run(False)
 

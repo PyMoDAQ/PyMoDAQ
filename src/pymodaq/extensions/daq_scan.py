@@ -375,6 +375,7 @@ class DAQScan(QObject, ParameterManager):
 
             vlayout.addWidget(tree)
             dialog.setLayout(vlayout)
+            
             buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
             buttonBox.addButton('Cancel', buttonBox.RejectRole)
             buttonBox.addButton('Apply', buttonBox.AcceptRole)
@@ -868,11 +869,11 @@ class DAQScan(QObject, ParameterManager):
             # mandatory to deal with multithreads
             if self.scan_thread is not None:
                 self.command_daq_signal.disconnect()
-                if self.scan_thread.isRunning():
+                self.scan_thread.quit()
+                terminated = self.scan_thread.wait(10000)
+                if not terminated:
                     self.scan_thread.terminate()
-                    while not self.scan_thread.isFinished():
-                        QThread.msleep(100)
-                    self.scan_thread = None
+                    self.scan_thread.wait()
 
             self.scan_thread = QThread()
 

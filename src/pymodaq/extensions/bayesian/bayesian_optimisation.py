@@ -1,4 +1,4 @@
-from typing import List,  Optional
+from typing import List, Optional
 import tempfile
 from pathlib import Path
 
@@ -11,7 +11,6 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
 from pymodaq_utils.enums import BaseEnum
 
-
 from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -23,7 +22,6 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
-
 
 from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
                                                BayesianAlgorithm, StopType, StoppingParameters)
@@ -47,6 +45,7 @@ class DataNames(BaseEnum):
     Actuators = 3
     Tradeoff = 4
 
+
 class BayesianOptimisation(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
@@ -58,47 +57,47 @@ class BayesianOptimisation(CustomExt):
     optimisation_done_signal = QtCore.Signal(DataToExport)
 
     acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
-   
 
     def __init__(self, dockarea, dashboard):
         self.params = [
             {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
-            'children': [
-             {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
-              'children': [
-                    { 'title': 'Kind', 'name': 'kind', 'type': 'list', 'value': self.acquisition_functions_names[0],
-                      'limits': self.acquisition_functions_names
-                    }] + GenericAcquisitionFunctionFactory.get(self.acquisition_functions_names[0]).params
+             'children': [
+                 {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
+                  'children': [
+                                  {'title': 'Kind', 'name': 'kind', 'type': 'list',
+                                   'value': self.acquisition_functions_names[0],
+                                   'limits': self.acquisition_functions_names
+                                   }] + GenericAcquisitionFunctionFactory.get(
+                      self.acquisition_functions_names[0]).params
 
-              },
-             {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
-              'children': [
-                  {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
-                  {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
-                   'limits': StopType.names()},
-                  {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
-                   'min': 1e-8, 'max': 1, 'subtype': 'log',},
-                  {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
-              ]},
-             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
-             {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
-         ]},
+                  },
+                 {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
+                  'children': [
+                      {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
+                      {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
+                       'limits': StopType.names()},
+                      {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
+                       'min': 1e-8, 'max': 1, 'subtype': 'log', },
+                      {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
+                  ]},
+                 {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
+                 {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
+             ]},
 
-        {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
-         'children': [
-            {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-             'limits': [d['name'] for d in self.models]},
-            {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
-            {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
-            {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
-        ]},
-        {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
-         'visible': False, 'children': [
-             {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
+            {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
+             'children': [
+                 {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
+                  'limits': [d['name'] for d in self.models]},
+                 {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
+                 {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
+                 {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
+             ]},
+            {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
+             'visible': False, 'children': [
+                {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
 
         ]
         super().__init__(dockarea, dashboard)
-
 
         self.algorithm: Optional[BayesianAlgorithm] = None
         self.viewer_fitness: Optional[Viewer0D] = None
@@ -231,15 +230,15 @@ class BayesianOptimisation(CustomExt):
                 self.settings.child('main_settings', 'bounds'), []):
             self.update_bounds()
         elif param.name() in putils.iter_children(
-            self.settings.child('main_settings', 'stopping'), []):
+                self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
         if self._save_main_settings and self.model_class is not None and param.name() in putils.iter_children(
-               self.settings.child('main_settings'), []):
+                self.settings.child('main_settings'), []):
             self.mainsettings_saver_loader.save_config()
 
     def update_utility_function(self):
         utility_settings = self.settings.child('main_settings', 'utility')
-        uparams = {child.name() : child.value() for child in utility_settings.children()}
+        uparams = {child.name(): child.value() for child in utility_settings.children()}
         self.command_runner.emit(utils.ThreadCommand('utility', uparams))
 
     def get_stopping_parameters(self) -> StoppingParameters:
@@ -311,8 +310,8 @@ class BayesianOptimisation(CustomExt):
         self.temp_path = tempfile.TemporaryDirectory(prefix='pymo')
         addhoc_file_path = Path(self.temp_path.name).joinpath('bayesian_temp_data.h5')
         self.h5temp.init_file(custom_naming=True, addhoc_file_path=addhoc_file_path)
-        act_names = [child.name() for child in self.settings.child( 'main_settings',
-                                                                    'bounds').children()]
+        act_names = [child.name() for child in self.settings.child('main_settings',
+                                                                   'bounds').children()]
         act_units = [self.modules_manager.get_mod_from_name(act_name, 'act').units for act_name
                      in act_names]
         self.enlargeable_saver = DataEnlargeableSaver(
@@ -341,7 +340,7 @@ class BayesianOptimisation(CustomExt):
                     viewer.view.collapse_lineout_widgets()
             if viewer.has_action('sort'):
                 if not viewer.is_action_checked('sort'):
-                   viewer.get_action('sort').trigger()
+                    viewer.get_action('sort').trigger()
             if viewer.has_action('scatter'):
                 if not viewer.is_action_checked('scatter'):
                     viewer.get_action('scatter').trigger()
@@ -369,7 +368,7 @@ class BayesianOptimisation(CustomExt):
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
         self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
-            self.modules_manager.selected_actuators_name
+                                                   self.modules_manager.selected_actuators_name
         self.mainsettings_saver_loader.load_config()
         self._save_main_settings = True
 
@@ -404,7 +403,7 @@ class BayesianOptimisation(CustomExt):
             self.set_action_enabled('ini_runner', True)
 
             self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
-                self.modules_manager.selected_actuators_name
+                                                       self.modules_manager.selected_actuators_name
             self.mainsettings_saver_loader.load_config()
 
             try:  # this is correct for Default Model and probably for all models...
@@ -445,6 +444,10 @@ class BayesianOptimisation(CustomExt):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
             self.runner_thread.quit()
+            terminated = self.runner_thread.wait(10000)
+            if not terminated:
+                self.runner_thread.terminate()
+                self.runner_thread.wait()
             self.get_action('runner_led').set_as_false()
 
     def clean_h5_temp(self):
@@ -477,7 +480,6 @@ class BayesianOptimisation(CustomExt):
 
         best_individual = dte.get_data_from_name(DataNames.Individual.name)
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
-
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=dwa_actuators.values())
@@ -580,7 +582,7 @@ class OptimisationRunner(QtCore.QObject):
                 next_target = self.optimisation_algorithm.ask()
 
                 self.outputs = next_target
-                self.output_to_actuators: DataToActuators =\
+                self.output_to_actuators: DataToActuators = \
                     self.model_class.convert_output(
                         self.outputs,
                         best_individual=self.optimisation_algorithm.best_individual
@@ -613,7 +615,7 @@ class OptimisationRunner(QtCore.QObject):
                                            DataNames.Tradeoff.name,
                                            data=[
                                                np.array([self.optimisation_algorithm.tradeoff])])
-                                         ])
+                                   ])
                 self.algo_output_signal.emit(dte)
 
                 self.optimisation_algorithm.update_acquisition_function()
@@ -682,4 +684,3 @@ def main(init_qt=True):
 
 if __name__ == '__main__':
     main()
-
