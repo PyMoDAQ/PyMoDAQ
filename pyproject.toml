@@ -32,7 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "pymodaq_utils",
-    "pymodaq_gui>=5.0.16",
+    "pymodaq_gui>=5.0.17",
     "pymodaq_data>=5.0.18",
     "easydict",
     "multipledispatch",
@@ -78,8 +78,7 @@ daq_move = "pymodaq.control_modules.daq_move:main"
 daq_scan = "pymodaq.extensions.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
-h5browser = "pymodaq.extensions.h5browser:main"
-parameter_example = "pymodaq.examples.parameter_ex:main"
+
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
