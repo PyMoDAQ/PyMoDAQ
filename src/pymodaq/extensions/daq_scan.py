@@ -439,7 +439,7 @@ class DAQScan(QObject, ParameterManager):
         if not os.path.isdir(self.h5saver.settings['base_path']):
             os.mkdir(self.h5saver.settings['base_path'])
         filename = gutils.file_io.select_file(self.h5saver.settings['base_path'], save=True, ext='h5')
-        self.h5saver.h5_file.copy_file(str(filename))
+        self.h5saver.h5_file.copy_file(str(filename), overwrite=True)
 
     def save_metadata(self, node, type_info='dataset_info'):
         """
