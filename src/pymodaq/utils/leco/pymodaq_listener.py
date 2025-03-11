@@ -19,6 +19,7 @@ from pymodaq_data.data import DataWithAxes
 from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
 
@@ -34,6 +35,7 @@ class LECOCommands(StrEnum):
     GET_SETTINGS = 'get_settings'
     SET_SETTINGS = 'set_settings'
     SET_INFO = 'set_info'
+    SEND_INFO = 'send_info'
 
 
 class LECOMoveCommands(StrEnum):
@@ -277,14 +279,14 @@ class ActorListener(PymodaqListener):
                 **binary_serialization_to_kwargs(value),
             )
 
-        elif command.command == 'send_info':
+        elif command.command == LECOCommands.SEND_INFO:
             path = command.attribute['path']  # type: ignore
             param = command.attribute['param']  # type: ignore
+            pwp = ParameterWithPath(param, path)
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_info",
-                path=path,
-                param_dict_str=ioxml.parameter_to_xml_string(param).decode())
+                **binary_serialization_to_kwargs(pwp, data_key='parameter'))
 
         elif command.command == LECOMoveCommands.POSITION:
             value = command.attribute

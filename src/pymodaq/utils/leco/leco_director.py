@@ -7,6 +7,7 @@ import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter import ioxml
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
@@ -86,4 +87,6 @@ class LECODirector:
 
     # Methods accessible via remote calls
     def set_info(self, path: List[str], param_dict_str: str) -> None:
-        self.emit_status(ThreadCommand("set_info", attribute=[path, param_dict_str]))
+        param = Parameter.create(**ioxml.XML_string_to_parameter(param_dict_str)[0])
+        self.settings.child(*path[1:]).setValue(param.value())
+
