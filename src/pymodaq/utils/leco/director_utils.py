@@ -27,7 +27,7 @@ class GenericDirector(Director):
                           param_dict_str=ioxml.parameter_to_xml_string(param).decode())
 
     def set_info_str(self, path: List[str], param_dict_str: str) -> None:
-        self.ask_rpc(method="sef_info", path=path, param_dict_str=param_dict_str)
+        self.ask_rpc(method="set_info", path=path, param_dict_str=param_dict_str)
 
     def get_settings(self,) -> None:
         self.ask_rpc('get_settings')

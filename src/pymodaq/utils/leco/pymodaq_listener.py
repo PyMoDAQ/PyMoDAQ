@@ -33,7 +33,7 @@ class LECOCommands(StrEnum):
     QUIT = "quit"
     GET_SETTINGS = 'get_settings'
     SET_SETTINGS = 'set_settings'
-    SET_SETTING = 'set_info'
+    SET_INFO = 'set_info'
 
 
 class LECOMoveCommands(StrEnum):
