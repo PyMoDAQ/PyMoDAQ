@@ -16,9 +16,15 @@ from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_p
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter import ioxml
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
+
+from pymodaq_utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -38,25 +44,31 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """
     settings: Parameter
     controller: ActuatorDirector
+    _axis_names = ['']
+    _controller_units = ['']
+    _epsilon = 1
 
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
 
     message_list = LECODirector.message_list + ["move_abs", 'move_home', 'move_rel',
                                                 'get_actuator_value', 'stop_motion', 'position_is',
-                                                'move_done']
+                                                'move_done', 'get_settings']
     socket_types = ["ACTUATOR"]
-    params = comon_parameters_fun() + leco_parameters
+    params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
     def __init__(self, parent=None, params_state=None, **kwargs) -> None:
         super().__init__(parent=parent,
                          params_state=params_state, **kwargs)
         self.register_rpc_methods((
             self.set_info,
+            self.set_units,
+            self.set_settings,
         ))
         for method in (
             self.set_position,
             self.set_move_done,
+
         ):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
@@ -84,18 +96,21 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             False if initialization failed otherwise True
         """
         actor_name = self.settings.child("actor_name").value()
-        self.controller = self.ini_stage_init(  # type: ignore
-            old_controller=controller,
-            new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
-            )
+
+        if self.is_master:
+            self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
+        else:
+            self.controller = controller
         try:
             self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         except TimeoutError:
-            print("Timeout setting remote name.")  # TODO change to real logging
-        # self.settings.child('infos').addChildren(self.params_client)
+            logger.warning("Timeout setting remote name.")
 
-        self.settings.child('units').hide()
-        self.settings.child('epsilon').hide()
+
+        self.controller.get_settings()
+
+        #self.settings.child('units').hide()
+        #self.settings.child('epsilon').hide()
 
         self.status.info = "LECODirector"
         self.status.controller = self.controller
@@ -167,7 +182,19 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('move_done', [pos]))
 
+    def set_units(self, units: str, additional_payload=None) -> None:
+        if units not in self.axis_units:
+            self.axis_units.append(units)
+        self.axis_unit = units
+
+    def set_settings(self, settings: bytes):
+        params = ioxml.XML_string_to_parameter(settings)
+        param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
+        self.settings.child('settings_client').restoreState(param_state)
+
+        self.axis_unit = self.settings['settings_client', 'units']
+
 
 
 if __name__ == '__main__':
-    main(__file__)
+    main(__file__, init=False)

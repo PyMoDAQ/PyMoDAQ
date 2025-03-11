@@ -29,6 +29,10 @@ class GenericDirector(Director):
     def set_info_str(self, path: List[str], param_dict_str: str) -> None:
         self.ask_rpc(method="sef_info", path=path, param_dict_str=param_dict_str)
 
+    def get_settings(self,) -> None:
+        self.ask_rpc('get_settings')
+
+
 
 class DetectorDirector(GenericDirector):
     def send_data(self, grabber_type: str = "") -> None:
@@ -60,3 +64,4 @@ class ActuatorDirector(GenericDirector):
     def stop_motion(self,) -> None:
         # not implemented in DAQ_Move!
         self.ask_rpc("stop_motion")
+

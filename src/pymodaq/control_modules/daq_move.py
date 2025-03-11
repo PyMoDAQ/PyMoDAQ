@@ -43,7 +43,7 @@ from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands
+from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveCommands, LECOCommands
 
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq import Q_, Unit
@@ -510,6 +510,8 @@ class DAQ_Move(ParameterControlModule):
 
         elif status.command == 'units':
             self.units = status.attribute
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
+                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.UNITS_CHANGED, self.units))
 
     def _check_data_type(self, data_act: Union[list[np.ndarray], float, DataActuator]) -> DataActuator:
         """ Make sure the data is a DataActuator
@@ -663,6 +665,9 @@ class DAQ_Move(ParameterControlModule):
         super().connect_tcp_ip(params_state=self.settings.child('move_settings'),
                                client_type="ACTUATOR")
 
+    def connect_leco(self, connect: bool) -> None:
+        super().connect_leco(connect)
+
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> None:
         if super().process_tcpip_cmds(status=status) is None:
@@ -679,11 +684,12 @@ class DAQ_Move(ParameterControlModule):
         elif 'check_position' in status.command:
             deprecation_msg('check_position is deprecated, you should use get_actuator_value')
             self._send_to_tcpip = True
-            self.command_hardware.emit(ThreadCommand('get_actuator_value', ))
+            self.get_actuator_value()
+
 
         elif 'get_actuator_value' in status.command:
             self._send_to_tcpip = True
-            self.command_hardware.emit(ThreadCommand('get_actuator_value', ))
+            self.get_actuator_value()
 
         elif status.command == 'set_info':
             path_in_settings = status.attribute[0]
@@ -693,6 +699,10 @@ class DAQ_Move(ParameterControlModule):
             param = self.settings.child('move_settings', *path_in_settings[1:])
             param.restoreState(param_tmp.saveState())
 
+        elif status.command == LECOCommands.GET_SETTINGS:
+            """ The Director requested the content of the actuator settings"""
+            self._command_tcpip.emit(ThreadCommand(LECOCommands.SET_SETTINGS,
+                                                   self.settings.child('move_settings')))
 
 class DAQ_Move_Hardware(QObject):
     """

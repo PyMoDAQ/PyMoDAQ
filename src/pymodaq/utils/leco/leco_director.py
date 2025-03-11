@@ -15,6 +15,7 @@ from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
+    {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
 ]
 
 

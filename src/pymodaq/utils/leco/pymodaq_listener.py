@@ -31,11 +31,15 @@ class LECOClientCommands(StrEnum):
 class LECOCommands(StrEnum):
     CONNECT = "ini_connection"
     QUIT = "quit"
+    GET_SETTINGS = 'get_settings'
+    SET_SETTINGS = 'set_settings'
+    SET_SETTING = 'set_info'
 
 
 class LECOMoveCommands(StrEnum):
     POSITION = 'position_is'
     MOVE_DONE = 'move_done'
+    UNITS_CHANGED = 'units_changed'
 
 
 class LECOViewerCommands(StrEnum):
@@ -91,6 +95,7 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.move_home)
         self.register_rpc_method(self.get_actuator_value)
         self.register_rpc_method(self.stop_motion)
+        self.register_rpc_method(self.get_settings)
 
     @staticmethod
     def extract_pymodaq_object(
@@ -108,6 +113,9 @@ class ActorHandler(PymodaqPipeHandler):
     # generic commands
     def set_info(self, path: List[str], param_dict_str: str) -> None:
         self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
+
+    def get_settings(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
     # detector commands
     def send_data(self, grabber_type: str = "") -> None:
@@ -295,6 +303,18 @@ class ActorListener(PymodaqListener):
                                       method="set_move_done",
                                       **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
+
+        elif command.command == LECOMoveCommands.UNITS_CHANGED:
+            units: str = command.attribute
+            self.communicator.ask_rpc(receiver=self.remote_name,
+                                      method="set_units",
+                                      units=units.encode(),
+                                      )
+
+        elif command.command == LECOCommands.SET_SETTINGS:
+            self.communicator.ask_rpc(receiver=self.remote_name,
+                                      method='set_settings',
+                                      settings=ioxml.parameter_to_xml_string(command.attribute).decode())
 
         else:
             raise IOError('Unknown TCP client command')
