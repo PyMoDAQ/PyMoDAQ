@@ -75,7 +75,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         # copied, I think it is good:
         self.settings.child('bounds').hide()
         self.settings.child('scaling').hide()
-        self.settings.child('epsilon').setValue(1)
+        self.settings.child('units').hide()
+        self.settings.child('epsilon').hide()
+        self.settings.child('multiaxes').hide()
 
     def commit_settings(self, param) -> None:
         self.commit_leco_settings(param=param)
@@ -106,16 +108,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         except TimeoutError:
             logger.warning("Timeout setting remote name.")
 
-
         self.controller.get_settings()
 
-        #self.settings.child('units').hide()
-        #self.settings.child('epsilon').hide()
-
-        self.status.info = "LECODirector"
-        self.status.controller = self.controller
-        self.status.initialized = True
-        return self.status
+        info = "LECODirector"
+        initialized = True
+        return info, initialized
 
     def move_abs(self, position: DataActuator) -> None:
         position = self.check_bound(position)
