@@ -57,8 +57,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         for method in (
             self.set_position,
             self.set_move_done,
-            self.set_x_axis,
-            self.set_y_axis,
         ):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
@@ -169,11 +167,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('move_done', [pos]))
 
-    def set_x_axis(self, data, label: str = "", units: str = "") -> None:
-        raise NotImplementedError("where is it handled?")
-
-    def set_y_axis(self, data, label: str = "", units: str = "") -> None:
-        raise NotImplementedError("where is it handled?")
 
 
 if __name__ == '__main__':
