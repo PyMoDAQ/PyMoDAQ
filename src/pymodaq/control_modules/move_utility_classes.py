@@ -698,7 +698,8 @@ class DAQ_Move_base(QObject):
         --------
         DAQ_utils.ThreadCommand, move_done
         """
-        if 'TCPServer' not in self.__class__.__name__:
+        if not ('TCPServer' in self.__class__.__name__ or
+                'LECODirector' in self.__class__.__name__):
             self.start_time = perf_counter()
             if self.ispolling:
                 self.poll_timer.start()
