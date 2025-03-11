@@ -1,14 +1,17 @@
 from __future__ import annotations
+from base64 import b64decode
 from typing import Optional, Union
 
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 
+from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
+
+from pymodaq.utils import data  # for serialization factory registration
 from pymodaq_gui.parameter import Parameter
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
@@ -50,6 +53,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.grabber_type = grabber_type
         self.ind_data = 0
         self.data_mock = None
+
 
     def ini_detector(self, controller=None):
         """
@@ -163,12 +167,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         :param data: If None, look for the additional object
         """
         if isinstance(data, str):
-            deserializer = DeSerializer.from_b64_string(data)
+            decoded = b64decode(data)
+            dte = SerializableFactory().get_apply_deserializer(decoded)
         elif additional_payload is not None:
-            deserializer = DeSerializer(additional_payload[0])
+            dte = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")
-        dte = deserializer.dte_deserialization()
         self.dte_signal.emit(dte)
 
 
