@@ -510,8 +510,6 @@ class DAQ_Move(ParameterControlModule):
 
         elif status.command == 'units':
             self.units = status.attribute
-            if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.UNITS_CHANGED, self.units))
 
     def _check_data_type(self, data_act: Union[list[np.ndarray], float, DataActuator]) -> DataActuator:
         """ Make sure the data is a DataActuator
