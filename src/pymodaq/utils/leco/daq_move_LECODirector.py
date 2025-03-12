@@ -19,6 +19,7 @@ from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import ioxml
+from enum import StrEnum
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
@@ -26,6 +27,8 @@ from pymodaq.utils.leco.director_utils import ActuatorDirector
 from pymodaq_utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
+
+
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -73,7 +76,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         ))
 
         self.register_binary_rpc_methods((
-            self.set_position,  # to display the actor position
+            self.send_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
         ))
 
@@ -167,7 +170,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self._current_value = pos
         return pos
 
-    def set_position(self, position: Union[str, float, None], additional_payload=None) -> None:
+    def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 

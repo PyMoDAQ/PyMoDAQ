@@ -294,7 +294,7 @@ class ActorListener(PymodaqListener):
             if isinstance(value, (list, tuple)):
                 value = value[0]  # for backward compatibility with attributes list
             self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_position",
+                                      method="send_position",
                                       **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
                                       )
 

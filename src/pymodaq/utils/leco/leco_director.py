@@ -1,6 +1,6 @@
 
 import random
-
+from enum import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
@@ -13,6 +13,15 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq_utils.serialize.factory import SerializableFactory
+
+
+class DirectorImplementedMethods(StrEnum):
+    SET_SETTINGS = 'set_settings'
+    SET_INFO = 'set_info'
+
+    SEND_POSITION = 'send_position'  # to display the actor position
+    SET_MOVE_DONE = 'set_move_done'
+    SET_UNITS = 'set_units'  # to set units accordingly to the one of the actor
 
 
 leco_parameters = [
@@ -98,5 +107,16 @@ class LECODirector:
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
+        """ Write the value of a param upfated from the actor to here in the
+        Parameter with path: ('move_settings', 'settings_client')
+        """
         param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
-        self.settings.child(*param.path).setValue(param.value())
+
+        try:
+            path = ['settings_client']
+            path.extend(param.path[1:])
+
+            self.settings.child(*path).setValue(param.value())
+        except Exception as e:
+            print(f'could not set the param {param} in the director:\n'
+                  f'{str(e)}')
