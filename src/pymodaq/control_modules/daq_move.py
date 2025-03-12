@@ -695,20 +695,14 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == 'set_info':
             """ The Director sent a parameter to be updated"""
             path_in_settings = status.attribute.path
-            try:
+            if 'move_settings' in path_in_settings:
+                param = self.settings.child(*path_in_settings)
+            elif 'settings_client' in path_in_settings:
                 param = self.settings.child('move_settings', *path_in_settings[1:])
-                logger.debug(f'Param {path_in_settings[1:]} has been updated with'
-                             f' value {status.attribute.parameter.value()}')
-            except KeyError:
-                logger.debug(f'Param {path_in_settings[1:]} could not be updated')
-                try:
-                    param = self.settings.child('move_settings', *path_in_settings)
-                    logger.debug(f'Param {path_in_settings} has been updated with'
-                                 f' value {status.attribute.parameter.value()}')
-                except KeyError:
-                    param = None
-            if param is not None:
-                param.setValue(status.attribute.parameter.value())
+            else:
+                param = self.settings.child('move_settings', *path_in_settings)
+
+            param.setValue(status.attribute.parameter.value())
 
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""

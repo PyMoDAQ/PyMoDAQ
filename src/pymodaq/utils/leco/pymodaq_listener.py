@@ -284,13 +284,10 @@ class ActorListener(PymodaqListener):
             )
 
         elif command.command == LECOCommands.SEND_INFO:
-            path = command.attribute['path']  # type: ignore
-            param = command.attribute['param']  # type: ignore
-            pwp = ParameterWithPath(param, path)
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_info",
-                **binary_serialization_to_kwargs(pwp, data_key='parameter'))
+                **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
 
         elif command.command == LECOMoveCommands.POSITION:
             value = command.attribute
