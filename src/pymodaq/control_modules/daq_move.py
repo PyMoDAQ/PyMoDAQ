@@ -505,9 +505,6 @@ class DAQ_Move(ParameterControlModule):
             if self.ui is not None:
                 self.ui.set_abs_spinbox_properties(**status.attribute)
 
-        elif status.command == 'stop':
-            self.stop_motion()
-
         elif status.command == 'units':
             self.units = status.attribute
 
@@ -689,6 +686,9 @@ class DAQ_Move(ParameterControlModule):
             self._send_to_tcpip = True
             self.get_actuator_value()
 
+        elif status.command == 'stop_motion':
+            self.stop_motion()
+
         elif status.command == 'set_info':
             """ The Director sent a parameter to be updated"""
             path_in_settings = status.attribute.path
@@ -710,7 +710,7 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""
             self._command_tcpip.emit(ThreadCommand(LECOCommands.SET_SETTINGS,
-                                                   self.settings.child('move_settings')))
+                                                   ioxml.parameter_to_xml_string(self.settings.child('move_settings'))))
 
 class DAQ_Move_Hardware(QObject):
     """

@@ -320,7 +320,7 @@ class ActorListener(PymodaqListener):
         elif command.command == LECOCommands.SET_SETTINGS:
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method='set_settings',
-                                      settings=ioxml.parameter_to_xml_string(command.attribute).decode())
+                                      settings=command.attribute.decode())
 
         else:
             raise IOError('Unknown TCP client command')
