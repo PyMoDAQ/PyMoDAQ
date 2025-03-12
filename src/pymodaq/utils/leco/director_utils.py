@@ -28,7 +28,7 @@ class GenericDirector(Director):
         # It removes the first two parts (main_settings and detector_settings?)
         pwp = ParameterWithPath(param, putils.get_param_path(param)[2:])
         self.ask_rpc(method="set_info",
-                     **binary_serialization_to_kwargs(pwp, 'parameter'))
+                     **binary_serialization_to_kwargs(pwp, data_key='parameter'))
 
     def get_settings(self,) -> None:
         self.ask_rpc('get_settings')

@@ -671,10 +671,10 @@ class DAQ_Move(ParameterControlModule):
         if super().process_tcpip_cmds(status=status) is None:
             return
         if 'move_abs' in status.command:
-            self.move_abs(status.attribute[0], send_to_tcpip=True)
+            self.move_abs(status.attribute, send_to_tcpip=True)
 
         elif 'move_rel' in status.command:
-            self.move_rel(status.attribute[0], send_to_tcpip=True)
+            self.move_rel(status.attribute, send_to_tcpip=True)
 
         elif 'move_home' in status.command:
             self.move_home(send_to_tcpip=True)
@@ -690,12 +690,22 @@ class DAQ_Move(ParameterControlModule):
             self.get_actuator_value()
 
         elif status.command == 'set_info':
-            path_in_settings = status.attribute[0]
-            param_as_xml = status.attribute[1]
-            param_dict = ioxml.XML_string_to_parameter(param_as_xml)[0]
-            param_tmp = Parameter.create(**param_dict)
-            param = self.settings.child('move_settings', *path_in_settings[1:])
-            param.restoreState(param_tmp.saveState())
+            """ The Director sent a parameter to be updated"""
+            path_in_settings = status.attribute.path
+            try:
+                param = self.settings.child('move_settings', *path_in_settings[1:])
+                logger.debug(f'Param {path_in_settings[1:]} has been updated with'
+                             f' value {status.attribute.parameter.value()}')
+            except KeyError:
+                logger.debug(f'Param {path_in_settings[1:]} could not be updated')
+                try:
+                    param = self.settings.child('move_settings', *path_in_settings)
+                    logger.debug(f'Param {path_in_settings} has been updated with'
+                                 f' value {status.attribute.parameter.value()}')
+                except KeyError:
+                    param = None
+            if param is not None:
+                param.restoreState(status.attribute.parameter.saveState())
 
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""

@@ -1,16 +1,18 @@
 
 import random
 
-from typing import Callable, Sequence, List
+from typing import Callable, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
+from pymodaq_utils.serialize.factory import SerializableFactory
 
 
 leco_parameters = [
@@ -54,8 +56,14 @@ class LECODirector:
         self.listener.start_listen()
         self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((
+        ))
+        self.register_binary_rpc_methods((
             self.set_info,
         ))
+
+    def register_binary_rpc_methods(self, methods: Sequence[Callable]) -> None:
+        for method in methods:
+            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
     def register_rpc_methods(self, methods: Sequence[Callable]) -> None:
         for method in methods:
@@ -86,7 +94,9 @@ class LECODirector:
         super().emit_status(status=status)  # type: ignore
 
     # Methods accessible via remote calls
-    def set_info(self, path: List[str], param_dict_str: str) -> None:
-        param = Parameter.create(**ioxml.XML_string_to_parameter(param_dict_str)[0])
-        self.settings.child(*path[1:]).setValue(param.value())
-
+    def set_info(self,
+                 parameter: Optional[Union[float, str]],
+                 additional_payload: Optional[List[bytes]] = None,
+                 ) -> None:
+        param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        self.settings.child(*param.path).setValue(param.value())

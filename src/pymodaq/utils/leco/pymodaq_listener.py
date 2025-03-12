@@ -90,7 +90,7 @@ class ActorHandler(PymodaqPipeHandler):
 
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
-        self.register_rpc_method(self.set_info)
+        self.register_binary_rpc_method(self.set_info, accept_binary_input=True)
         self.register_rpc_method(self.send_data)
         self.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
         self.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
@@ -113,8 +113,12 @@ class ActorHandler(PymodaqPipeHandler):
         return res
 
     # generic commands
-    def set_info(self, path: List[str], param_dict_str: str) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
+    def set_info(self,
+                 parameter: Optional[Union[float, str]],
+                 additional_payload: Optional[List[bytes]] = None,
+                 ) -> None:
+        param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=param))
 
     def get_settings(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
@@ -135,7 +139,7 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=pos))
 
     def move_rel(
         self,
@@ -148,7 +152,7 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=pos))
 
     def move_home(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand("move_home"))

@@ -14,6 +14,7 @@ from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_p
                                                           DataActuatorType, DataActuator)
 
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
@@ -57,18 +58,22 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     socket_types = ["ACTUATOR"]
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
+    for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
+        param_dict = find_dict_in_list_from_key_val(params, 'name', param_name)
+        if param_dict is not None:
+            param_dict['visible'] = False
+
+
     def __init__(self, parent=None, params_state=None, **kwargs) -> None:
         super().__init__(parent=parent,
                          params_state=params_state, **kwargs)
         self.register_rpc_methods((
-            self.set_info,
-            self.set_units,
-            self.set_settings,
+            self.set_units,  # to set units accordingly to the one of the actor
+            self.set_settings, # to show actor settings
         ))
         for method in (
-            self.set_position,
-            self.set_move_done,
-
+            self.set_position,  # to display the actor position
+            self.set_move_done,  # to set the move as done
         ):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
@@ -117,10 +122,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     def move_abs(self, position: DataActuator) -> None:
         position = self.check_bound(position)
         position = self.set_position_with_scaling(position)
-
-        self.controller.move_abs(position=position)
-
         self.target_value = position
+        self.controller.move_abs(position=position)
 
     def move_rel(self, position: DataActuator) -> None:
         position = self.check_bound(self.current_value + position) - self.current_value  # type: ignore  # noqa
@@ -191,6 +194,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
         self.axis_unit = self.settings['settings_client', 'units']
 
+    def close(self) -> None:
+        self.settings.child('settings_client').clearChildren()
 
 
 if __name__ == '__main__':
