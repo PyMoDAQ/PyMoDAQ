@@ -708,7 +708,7 @@ class DAQ_Move(ParameterControlModule):
                 except KeyError:
                     param = None
             if param is not None:
-                param.restoreState(status.attribute.parameter.saveState())
+                param.setValue(status.attribute.parameter.value())
 
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""
