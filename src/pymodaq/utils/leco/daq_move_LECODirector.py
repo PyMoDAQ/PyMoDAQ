@@ -183,7 +183,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     def set_settings(self, settings: bytes):
         params = ioxml.XML_string_to_parameter(settings)
         self.settings.child('settings_client').addChildren(params)
-
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:
