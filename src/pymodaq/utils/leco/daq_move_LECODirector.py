@@ -71,18 +71,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.set_units,  # to set units accordingly to the one of the actor
             self.set_settings, # to show actor settings
         ))
-        for method in (
+
+        self.register_binary_rpc_methods((
             self.set_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
-        ):
-            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
-
-        # copied, I think it is good:
-        self.settings.child('bounds').hide()
-        self.settings.child('scaling').hide()
-        self.settings.child('units').hide()
-        self.settings.child('epsilon').hide()
-        self.settings.child('multiaxes').hide()
+        ))
 
     def commit_settings(self, param) -> None:
         self.commit_leco_settings(param=param)
@@ -189,8 +182,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def set_settings(self, settings: bytes):
         params = ioxml.XML_string_to_parameter(settings)
-        param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
-        self.settings.child('settings_client').restoreState(param_state)
+        self.settings.child('settings_client').addChildren(params)
 
         self.axis_unit = self.settings['settings_client', 'units']
 

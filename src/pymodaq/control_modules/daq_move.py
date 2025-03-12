@@ -715,6 +715,7 @@ class DAQ_Move(ParameterControlModule):
             self._command_tcpip.emit(ThreadCommand(LECOCommands.SET_SETTINGS,
                                                    ioxml.parameter_to_xml_string(self.settings.child('move_settings'))))
 
+
 class DAQ_Move_Hardware(QObject):
     """
         ================== ========================
