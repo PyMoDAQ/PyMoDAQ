@@ -505,6 +505,9 @@ class DAQ_Move(ParameterControlModule):
             if self.ui is not None:
                 self.ui.set_abs_spinbox_properties(**status.attribute)
 
+        elif status.command == 'stop':
+            self.stop_motion()
+
         elif status.command == 'units':
             self.units = status.attribute
 
