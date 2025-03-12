@@ -14,11 +14,21 @@ from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_p
                                                           DataActuatorType, DataActuator)
 
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter import ioxml
+from enum import StrEnum
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
+
+from pymodaq_utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
+
+
 
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
@@ -38,34 +48,37 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """
     settings: Parameter
     controller: ActuatorDirector
+    _axis_names = ['']
+    _controller_units = ['']
+    _epsilon = 1
 
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
 
     message_list = LECODirector.message_list + ["move_abs", 'move_home', 'move_rel',
                                                 'get_actuator_value', 'stop_motion', 'position_is',
-                                                'move_done']
+                                                'move_done', 'get_settings']
     socket_types = ["ACTUATOR"]
-    params = comon_parameters_fun() + leco_parameters
+    params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
+
+    for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
+        param_dict = find_dict_in_list_from_key_val(params, 'name', param_name)
+        if param_dict is not None:
+            param_dict['visible'] = False
+
 
     def __init__(self, parent=None, params_state=None, **kwargs) -> None:
         super().__init__(parent=parent,
                          params_state=params_state, **kwargs)
         self.register_rpc_methods((
-            self.set_info,
+            self.set_units,  # to set units accordingly to the one of the actor
+            self.set_settings, # to show actor settings
         ))
-        for method in (
-            self.set_position,
-            self.set_move_done,
-            self.set_x_axis,
-            self.set_y_axis,
-        ):
-            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
-        # copied, I think it is good:
-        self.settings.child('bounds').hide()
-        self.settings.child('scaling').hide()
-        self.settings.child('epsilon').setValue(1)
+        self.register_binary_rpc_methods((
+            self.send_position,  # to display the actor position
+            self.set_move_done,  # to set the move as done
+        ))
 
     def commit_settings(self, param) -> None:
         self.commit_leco_settings(param=param)
@@ -86,31 +99,27 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             False if initialization failed otherwise True
         """
         actor_name = self.settings.child("actor_name").value()
-        self.controller = self.ini_stage_init(  # type: ignore
-            old_controller=controller,
-            new_controller=ActuatorDirector(actor=actor_name, communicator=self.communicator),
-            )
+
+        if self.is_master:
+            self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
+        else:
+            self.controller = controller
         try:
             self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         except TimeoutError:
-            print("Timeout setting remote name.")  # TODO change to real logging
-        # self.settings.child('infos').addChildren(self.params_client)
+            logger.warning("Timeout setting remote name.")
 
-        self.settings.child('units').hide()
-        self.settings.child('epsilon').hide()
+        self.controller.get_settings()
 
-        self.status.info = "LECODirector"
-        self.status.controller = self.controller
-        self.status.initialized = True
-        return self.status
+        info = "LECODirector"
+        initialized = True
+        return info, initialized
 
     def move_abs(self, position: DataActuator) -> None:
         position = self.check_bound(position)
         position = self.set_position_with_scaling(position)
-
-        self.controller.move_abs(position=position)
-
         self.target_value = position
+        self.controller.move_abs(position=position)
 
     def move_rel(self, position: DataActuator) -> None:
         position = self.check_bound(self.current_value + position) - self.current_value  # type: ignore  # noqa
@@ -161,7 +170,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self._current_value = pos
         return pos
 
-    def set_position(self, position: Union[str, float, None], additional_payload=None) -> None:
+    def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
@@ -169,12 +178,19 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
         self.emit_status(ThreadCommand('move_done', [pos]))
 
-    def set_x_axis(self, data, label: str = "", units: str = "") -> None:
-        raise NotImplementedError("where is it handled?")
+    def set_units(self, units: str, additional_payload=None) -> None:
+        if units not in self.axis_units:
+            self.axis_units.append(units)
+        self.axis_unit = units
 
-    def set_y_axis(self, data, label: str = "", units: str = "") -> None:
-        raise NotImplementedError("where is it handled?")
+    def set_settings(self, settings: bytes):
+        params = ioxml.XML_string_to_parameter(settings)
+        self.settings.child('settings_client').addChildren(params)
+        self.axis_unit = self.settings['settings_client', 'units']
+
+    def close(self) -> None:
+        self.settings.child('settings_client').clearChildren()
 
 
 if __name__ == '__main__':
-    main(__file__)
+    main(__file__, init=False)

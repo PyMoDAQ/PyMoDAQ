@@ -11,7 +11,10 @@ from pyleco.directors.director import Director
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq.control_modules.move_utility_classes import DataActuator
-from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
+from pymodaq.utils.leco.utils import binary_serialization_to_kwargs, SerializableFactory
+
+from pymodaq_gui.parameter.utils import ParameterWithPath
+
 
 
 class GenericDirector(Director):
@@ -23,11 +26,12 @@ class GenericDirector(Director):
 
     def set_info(self, param: Parameter):
         # It removes the first two parts (main_settings and detector_settings?)
-        self.set_info_str(path=putils.get_param_path(param)[2:],
-                          param_dict_str=ioxml.parameter_to_xml_string(param).decode())
+        pwp = ParameterWithPath(param, putils.get_param_path(param)[2:])
+        self.ask_rpc(method="set_info",
+                     **binary_serialization_to_kwargs(pwp, data_key='parameter'))
 
-    def set_info_str(self, path: List[str], param_dict_str: str) -> None:
-        self.ask_rpc(method="sef_info", path=path, param_dict_str=param_dict_str)
+    def get_settings(self,) -> None:
+        self.ask_rpc('get_settings')
 
 
 class DetectorDirector(GenericDirector):
@@ -60,3 +64,4 @@ class ActuatorDirector(GenericDirector):
     def stop_motion(self,) -> None:
         # not implemented in DAQ_Move!
         self.ask_rpc("stop_motion")
+

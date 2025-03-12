@@ -19,6 +19,7 @@ from pymodaq_data.data import DataWithAxes
 from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
 
@@ -31,11 +32,16 @@ class LECOClientCommands(StrEnum):
 class LECOCommands(StrEnum):
     CONNECT = "ini_connection"
     QUIT = "quit"
+    GET_SETTINGS = 'get_settings'
+    SET_SETTINGS = 'set_settings'
+    SET_INFO = 'set_info'
+    SEND_INFO = 'send_info'
 
 
 class LECOMoveCommands(StrEnum):
     POSITION = 'position_is'
     MOVE_DONE = 'move_done'
+    UNITS_CHANGED = 'units_changed'
 
 
 class LECOViewerCommands(StrEnum):
@@ -84,13 +90,14 @@ class ActorHandler(PymodaqPipeHandler):
 
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
-        self.register_rpc_method(self.set_info)
+        self.register_binary_rpc_method(self.set_info, accept_binary_input=True)
         self.register_rpc_method(self.send_data)
         self.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
         self.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
         self.register_rpc_method(self.move_home)
         self.register_rpc_method(self.get_actuator_value)
         self.register_rpc_method(self.stop_motion)
+        self.register_rpc_method(self.get_settings)
 
     @staticmethod
     def extract_pymodaq_object(
@@ -106,8 +113,15 @@ class ActorHandler(PymodaqPipeHandler):
         return res
 
     # generic commands
-    def set_info(self, path: List[str], param_dict_str: str) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=[path, param_dict_str]))
+    def set_info(self,
+                 parameter: Optional[Union[float, str]],
+                 additional_payload: Optional[List[bytes]] = None,
+                 ) -> None:
+        param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=param))
+
+    def get_settings(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
     # detector commands
     def send_data(self, grabber_type: str = "") -> None:
@@ -125,7 +139,7 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=pos))
 
     def move_rel(
         self,
@@ -138,7 +152,7 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[pos]))
+        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=pos))
 
     def move_home(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand("move_home"))
@@ -269,21 +283,18 @@ class ActorListener(PymodaqListener):
                 **binary_serialization_to_kwargs(value),
             )
 
-        elif command.command == 'send_info':
-            path = command.attribute['path']  # type: ignore
-            param = command.attribute['param']  # type: ignore
+        elif command.command == LECOCommands.SEND_INFO:
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
                 method="set_info",
-                path=path,
-                param_dict_str=ioxml.parameter_to_xml_string(param).decode())
+                **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
 
         elif command.command == LECOMoveCommands.POSITION:
             value = command.attribute
             if isinstance(value, (list, tuple)):
                 value = value[0]  # for backward compatibility with attributes list
             self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_position",
+                                      method="send_position",
                                       **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
                                       )
 
@@ -295,6 +306,18 @@ class ActorListener(PymodaqListener):
                                       method="set_move_done",
                                       **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
+
+        elif command.command == LECOMoveCommands.UNITS_CHANGED:
+            units: str = command.attribute
+            self.communicator.ask_rpc(receiver=self.remote_name,
+                                      method="set_units",
+                                      units=units.encode(),
+                                      )
+
+        elif command.command == LECOCommands.SET_SETTINGS:
+            self.communicator.ask_rpc(receiver=self.remote_name,
+                                      method='set_settings',
+                                      settings=command.attribute.decode())
 
         else:
             raise IOError('Unknown TCP client command')

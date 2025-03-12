@@ -698,7 +698,8 @@ class DAQ_Move_base(QObject):
         --------
         DAQ_utils.ThreadCommand, move_done
         """
-        if 'TCPServer' not in self.__class__.__name__:
+        if not ('TCPServer' in self.__class__.__name__ or
+                'LECODirector' in self.__class__.__name__):
             self.start_time = perf_counter()
             if self.ispolling:
                 self.poll_timer.start()
@@ -850,12 +851,14 @@ class DAQ_Move_base(QObject):
             except ValueError:
                 apply_settings = False
         elif change == 'parent':
-            children = putils.get_param_from_name(self.settings, param.name())
+            try:
+                children = putils.get_param_from_name(self.settings, param.name())
 
-            if children is not None:
-                path = putils.get_param_path(children)
-                self.settings.child(*path[1:-1]).removeChild(children)
-
+                if children is not None:
+                    path = putils.get_param_path(children)
+                    self.settings.child(*path[1:-1]).removeChild(children)
+            except IndexError:
+                logger.debug(f'Could not remove children from {param.name()}')
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         if apply_settings:
             self.commit_common_settings(param)

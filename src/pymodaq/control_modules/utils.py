@@ -19,6 +19,7 @@ from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.parameter import Parameter, ioxml
+from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 
@@ -431,7 +432,9 @@ class ParameterControlModule(ParameterManager, ControlModule):
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
                 if self.settings.child('main_settings', 'leco', 'leco_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                    self._command_tcpip.emit(
+                        ThreadCommand(LECOCommands.SEND_INFO,
+                                      ParameterWithPath(param, path)))
 
     def connect_tcp_ip(self, params_state=None, client_type: str = "GRABBER") -> None:
         """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
@@ -503,6 +506,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
 
         elif status.command == 'Update_Status':
             self.thread_status(status)
+
 
         else:
             # not handled
