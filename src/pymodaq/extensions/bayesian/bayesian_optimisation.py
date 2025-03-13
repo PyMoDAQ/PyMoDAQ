@@ -89,9 +89,9 @@ class BayesianOptimisation(CustomExt):
                    'limits': StopType.names()},
                   {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
                    'min': 1e-8, 'max': 1, 'subtype': 'log',},
-                  {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
+                  {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 10, 'min': 1},
               ]},
-             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
+             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 10},
              {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
          ]},
 
