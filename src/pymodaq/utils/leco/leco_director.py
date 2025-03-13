@@ -6,6 +6,7 @@ from typing import Callable, Sequence, List, Optional, Union
 import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq.utils.config import Config
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -14,6 +15,8 @@ from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq_utils.serialize.factory import SerializableFactory
 
+
+config = Config()
 
 class DirectorImplementedMethods(StrEnum):
     SET_SETTINGS = 'set_settings'
@@ -27,6 +30,8 @@ class DirectorImplementedMethods(StrEnum):
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
+    {'title': 'Coordinator Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host")},
+
     {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
 ]
 
@@ -56,12 +61,12 @@ class LECODirector:
     controller: GenericDirector
     settings: Parameter
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, host: str = 'localhost',
+                 **kwargs) -> None:
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
         # TODO use the same Listener instance as the LECOActorModule
-        self.listener = PymodaqListener(name=name)
+        self.listener = PymodaqListener(name=name, host=host)
         self.listener.start_listen()
         self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((

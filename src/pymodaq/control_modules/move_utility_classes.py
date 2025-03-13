@@ -281,7 +281,8 @@ class DAQ_Move_base(QObject):
     data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['DAQ_Move_Hardware'] = None,
-                 params_state: Optional[dict] = None):
+                 params_state: Optional[dict] = None,
+                 **kwargs):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
