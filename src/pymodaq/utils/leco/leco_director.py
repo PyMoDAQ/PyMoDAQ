@@ -70,6 +70,7 @@ class LECODirector:
         self.listener.start_listen()
         self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((
+            self.set_settings,
         ))
         self.register_binary_rpc_methods((
             self.set_info,
@@ -83,8 +84,8 @@ class LECODirector:
         for method in methods:
             self.communicator.register_rpc_method(method=method)
 
-    def commit_settings(self, param: Parameter) -> None:
-        raise NotImplementedError
+    def commit_settings(self, param) -> None:
+        self.commit_leco_settings(param=param)
 
     def commit_leco_settings(self, param: Parameter) -> None:
         if param.name() == "actor_name":
@@ -125,3 +126,9 @@ class LECODirector:
         except Exception as e:
             print(f'could not set the param {param} in the director:\n'
                   f'{str(e)}')
+
+    def set_settings(self, settings: bytes):
+        """ Get the content of the actor settings to pe populated in this plugin
+        'settings_client' parameter"""
+        params = ioxml.XML_string_to_parameter(settings)
+        self.settings.child('settings_client').addChildren(params)

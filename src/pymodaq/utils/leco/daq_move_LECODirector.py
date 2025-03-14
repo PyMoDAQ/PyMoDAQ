@@ -74,7 +74,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
         self.register_rpc_methods((
             self.set_units,  # to set units accordingly to the one of the actor
-            self.set_settings, # to show actor settings
         ))
 
         self.register_binary_rpc_methods((
@@ -82,8 +81,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.set_move_done,  # to set the move as done
         ))
 
-    def commit_settings(self, param) -> None:
-        self.commit_leco_settings(param=param)
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
@@ -104,12 +101,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
         if self.is_master:
             self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
-        else:
-            self.controller = controller
         try:
             self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
         except TimeoutError:
             logger.warning("Timeout setting remote name.")
+        else:
+            self.controller = controller
+
 
         self.controller.get_settings()
 
@@ -186,8 +184,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.axis_unit = units
 
     def set_settings(self, settings: bytes):
-        params = ioxml.XML_string_to_parameter(settings)
-        self.settings.child('settings_client').addChildren(params)
+        """ Get the content of the actor settings to pe populated in this plugin
+        'settings_client' parameter
+
+        Then set the plugin units from this information"""
+        super().set_settings(settings)
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:

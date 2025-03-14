@@ -689,25 +689,9 @@ class DAQ_Move(ParameterControlModule):
             self._send_to_tcpip = True
             self.get_actuator_value()
 
-        elif status.command == 'stop_motion':
+        elif status.command == LECOMoveCommands.STOP:
             self.stop_motion()
 
-        elif status.command == 'set_info':
-            """ The Director sent a parameter to be updated"""
-            path_in_settings = status.attribute.path
-            if 'move_settings' in path_in_settings:
-                param = self.settings.child(*path_in_settings)
-            elif 'settings_client' in path_in_settings:
-                param = self.settings.child('move_settings', *path_in_settings[1:])
-            else:
-                param = self.settings.child('move_settings', *path_in_settings)
-
-            param.setValue(status.attribute.parameter.value())
-
-        elif status.command == LECOCommands.GET_SETTINGS:
-            """ The Director requested the content of the actuator settings"""
-            self._command_tcpip.emit(ThreadCommand(LECOCommands.SET_SETTINGS,
-                                                   ioxml.parameter_to_xml_string(self.settings.child('move_settings'))))
 
 
 class DAQ_Move_Hardware(QObject):
