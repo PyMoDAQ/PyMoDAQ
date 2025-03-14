@@ -30,10 +30,6 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
     params_GRABBER = []
 
-    message_list = LECODirector.message_list + ["Quit", "Send Data 0D", "Send Data 1D",
-                                                "Send Data 2D", "Send Data ND",
-                                                "Status", "Done", "Server Closed",
-                                                "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
     params = comon_parameters + leco_parameters
     live_mode_available = True

@@ -54,9 +54,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
 
-    message_list = LECODirector.message_list + ["move_abs", 'move_home', 'move_rel',
-                                                'get_actuator_value', 'stop_motion', 'position_is',
-                                                'move_done', 'get_settings']
     socket_types = ["ACTUATOR"]
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 

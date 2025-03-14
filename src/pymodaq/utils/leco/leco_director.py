@@ -52,10 +52,6 @@ class LECODirector:
         --------
         utility_classes.DAQ_TCP_server
     """
-    message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml",
-                    "move_abs", 'move_home', 'move_rel', 'get_actuator_value', 'stop_motion',
-                    'position_is', 'move_done',
-                    ]
     socket_types: List[str]
 
     controller: GenericDirector
