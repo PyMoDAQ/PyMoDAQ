@@ -6,15 +6,15 @@ Created the 03/10/2022
 """
 from random import randint
 from typing import Optional, Type
-from enum import StrEnum
 from easydict import EasyDict as edict
 
 from qtpy import QtCore
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
+from pymodaq.control_modules.thread_commands import ThreadStatus
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq_utils.config import Config
-from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 
 from pymodaq_gui.utils.custom_app import CustomApp
@@ -28,60 +28,6 @@ from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 
 from pymodaq.utils.daq_utils import get_plugins
-
-
-class ThreadStatus(StrEnum):
-    """ Allowed Generic commands sent from a plugin using the method: emit_status
-
-    Valid both for DAQ_Move and DAQ_Viewer control modules
-
-    See Also
-    --------
-    ControlModule.thread_status
-    """
-    UPDATE_STATUS = 'update_status'
-    CLOSE = 'close'
-    UPDATE_SETTINGS = 'update_settings'
-    UPDATE_MAIN_SETTINGS = 'update_main_settings'
-    UPDATE_UI = 'update_ui'
-    RAISE_TIMEOUT = 'raise_timeout'
-    SHOW_SPLASH = 'show_splash'
-    CLOSE_SPLASH = 'close_splash'
-
-
-class ThreadStatusMove(StrEnum):
-    """ Allowed Generic commands sent from a plugin using the method: emit_status
-
-    Valid only for DAQ_Move control module
-
-    See Also
-    --------
-    DAQ_Move.thread_status
-    """
-    INI_STAGE = 'ini_stage'
-    GET_ACTUATOR_VALUE = 'get_actuator_value'
-    MOVE_DONE = 'move_done'
-    OUT_OF_BOUNDS = 'outofbounds'
-    SET_ALLOWED_VALUES = 'set_allowed_values'
-    STOP = 'stop'
-    UNITS = 'units'
-
-
-class ThreadStatusViewer(StrEnum):
-    """ Allowed Generic commands sent from a plugin using the method: emit_status
-
-    Valid only for DAQ_Viewer control module
-
-    See Also
-    --------
-    DAQ_Viewer.thread_status
-    """
-    INI_DETECTOR = 'ini_detector'
-    GRAB = 'grab'
-    GRAB_STOPPED = 'grab_stopped'
-    INI_LCD = 'init_lcd'
-    LCD = 'lcd'
-    STOP = 'stop'
 
 
 class DAQTypesEnum(BaseEnum):

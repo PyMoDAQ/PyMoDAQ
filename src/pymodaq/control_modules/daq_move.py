@@ -35,7 +35,8 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.control_modules.utils import ParameterControlModule, ThreadStatusMove
+from pymodaq.control_modules.utils import ParameterControlModule
+from pymodaq.control_modules.thread_commands import ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
                                                           DataActuatorType, check_units,
@@ -472,7 +473,7 @@ class DAQ_Move(ParameterControlModule):
                 self.get_actuator_value()
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == ThreadStatusMove or status.command == 'check_position':
+        elif status.command == ThreadStatusMove.GET_ACTUATOR_VALUE or status.command == 'check_position':
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)

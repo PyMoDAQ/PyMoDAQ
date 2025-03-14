@@ -10,7 +10,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
-from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusMove
+
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
 from pymodaq_utils.warnings import deprecation_msg
@@ -34,6 +34,8 @@ from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq import Unit
 from pint.errors import OffsetUnitCalculusError
+
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware

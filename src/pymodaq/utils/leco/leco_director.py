@@ -14,7 +14,7 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq_utils.serialize.factory import SerializableFactory
-from pymodaq.control_modules.utils import ThreadStatusMove
+from pymodaq.control_modules.thread_commands import ThreadStatusMove
 
 config = Config()
 
@@ -47,14 +47,13 @@ class LECODirector:
 
     """
 
-
     controller: GenericDirector
     settings: Parameter
-    title: str
+    _title: str
 
     def __init__(self, host: str = 'localhost', **kwargs) -> None:
 
-        name = f'{self.title}_{random.randrange(0, 10000)}_director'
+        name = f'{self._title}_{random.randrange(0, 10000)}_director'
 
         self.listener = PymodaqListener(name=name, host=host)
         self.listener.start_listen()

@@ -49,7 +49,8 @@ from pymodaq_gui.utils.utils import mkQApp
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import (DET_TYPES, get_viewer_plugins, DAQTypesEnum,
-                                           DetectorError, ThreadStatusViewer)
+                                           DetectorError)
+from pymodaq.control_modules.thread_commands import ThreadStatusViewer
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker

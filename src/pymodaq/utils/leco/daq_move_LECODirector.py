@@ -12,7 +12,7 @@ from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
-from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusMove
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
@@ -93,7 +93,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         initialized: bool
             False if initialization failed otherwise True
         """
-        actor_name = self.settings.child("actor_name").value()
+        actor_name = self.settings["actor_name"]
 
         if self.is_master:
             self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
@@ -107,7 +107,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         # send a command to the Actor whose name is actor_name to send its settings
         self.controller.get_settings()
 
-        info = f"LECODirector: {self.title} is initialized"
+        info = f"LECODirector: {self._title} is initialized"
         initialized = True
         return info, initialized
 

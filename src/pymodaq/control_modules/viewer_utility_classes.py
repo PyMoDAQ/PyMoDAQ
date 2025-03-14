@@ -10,7 +10,7 @@ from easydict import EasyDict as edict
 import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
-from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusViewer
+
 from pymodaq_utils.config import Config, get_set_local_dir
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq_data.data import DataToExport, DataRaw
@@ -18,7 +18,7 @@ from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
-
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq_gui.utils.utils import mkQApp
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
