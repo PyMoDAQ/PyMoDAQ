@@ -12,6 +12,7 @@ from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
+from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusMove
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
@@ -157,11 +158,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
-        self.emit_status(ThreadCommand(DirectorReceivedCommands.GET_ACTUATOR_VALUE, pos))
+        self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
     def set_move_done(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
-        self.emit_status(ThreadCommand(DirectorReceivedCommands.MOVE_DONE, pos))
+        self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
 
     def set_units(self, units: str, additional_payload=None) -> None:
         if units not in self.axis_units:
