@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, Union
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
-
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
@@ -93,17 +93,14 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             --------
             utility_classes.DAQ_TCP_server.process_cmds
         """
-        try:
-            self.ind_grabbed = 0  # to keep track of the current image in the average
-            self.Naverage = Naverage
-            self.controller.set_remote_name(self.communicator.full_name)
-            if kwargs.get('live', False):
-                self.controller.send_data_grab()
-            else:
-                self.controller.send_data_snap()
 
-        except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
+        self.ind_grabbed = 0  # to keep track of the current image in the average
+        self.Naverage = Naverage
+        self.controller.set_remote_name(self.communicator.full_name)
+        if kwargs.get('live', False):
+            self.controller.send_data_grab()
+        else:
+            self.controller.send_data_snap()
 
     def stop(self):
         """

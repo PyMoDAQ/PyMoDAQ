@@ -14,11 +14,11 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq_utils.serialize.factory import SerializableFactory
-
+from pymodaq.control_modules.thread_commands import ThreadStatusMove
 
 config = Config()
 
-class DirectorImplementedMethods(StrEnum):
+class DirectorCommands(StrEnum):
     SET_SETTINGS = 'set_settings'
     SET_INFO = 'set_info'
 
@@ -27,11 +27,15 @@ class DirectorImplementedMethods(StrEnum):
     SET_UNITS = 'set_units'  # to set units accordingly to the one of the actor
 
 
+class DirectorReceivedCommands(StrEnum):
+    MOVE_DONE = ThreadStatusMove.MOVE_DONE
+    GET_ACTUATOR_VALUE = ThreadStatusMove.GET_ACTUATOR_VALUE
+
+
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
     {'title': 'Coordinator Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host")},
-
     {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
 ]
 
@@ -40,31 +44,23 @@ class LECODirector:
     """
     This is a mixin for a Control module to direct another, remote module (analogous to TCP Server).
 
-        ================= ==============================
-        **Attributes**      **Type**
-        *command_server*    instance of Signal
-        *x_axis*            1D numpy array
-        *y_axis*            1D numpy array
-        *data*              double precision float array
-        ================= ==============================
 
-        See Also
-        --------
-        utility_classes.DAQ_TCP_server
     """
-    socket_types: List[str]
 
     controller: GenericDirector
     settings: Parameter
+    _title: str
 
-    def __init__(self, host: str = 'localhost',
-                 **kwargs) -> None:
+    def __init__(self, host: str = 'localhost', **kwargs) -> None:
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
-        # TODO use the same Listener instance as the LECOActorModule
+
         self.listener = PymodaqListener(name=name, host=host)
         self.listener.start_listen()
+
         self.communicator = self.listener.get_communicator()
+
+        #registering rpc methods common to all Directors
         self.register_rpc_methods((
             self.set_settings,
         ))
@@ -90,6 +86,8 @@ class LECODirector:
             self.controller.set_info(param=param)
 
     def close(self) -> None:
+        """ Clear the content of the settings_clients setting"""
+        self.settings.child('settings_client').clearChildren()
         self.listener.stop_listen()
 
     def stop(self):

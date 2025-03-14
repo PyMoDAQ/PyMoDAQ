@@ -11,13 +11,15 @@ from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 
-from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
+from pymodaq.utils.leco.leco_director import (LECODirector, leco_parameters, DirectorCommands,
+                                              DirectorReceivedCommands)
 from pymodaq.utils.leco.director_utils import ActuatorDirector
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -51,14 +53,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
 
-    socket_types = ["ACTUATOR"]
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
     for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
         param_dict = find_dict_in_list_from_key_val(params, 'name', param_name)
         if param_dict is not None:
             param_dict['visible'] = False
-
 
     def __init__(self, parent=None, params_state=None) -> None:
         DAQ_Move_base.__init__(self, parent=parent,
@@ -73,7 +73,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.send_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
         ))
-
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
@@ -90,21 +89,21 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         initialized: bool
             False if initialization failed otherwise True
         """
-        actor_name = self.settings.child("actor_name").value()
+        actor_name = self.settings["actor_name"]
 
         if self.is_master:
             self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
-        try:
-            self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
-        except TimeoutError:
-            logger.warning("Timeout setting remote name.")
+            try:
+                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+            except TimeoutError:
+                logger.warning("Timeout setting remote name.")
         else:
             self.controller = controller
 
-
+        # send a command to the Actor whose name is actor_name to send its settings
         self.controller.get_settings()
 
-        info = "LECODirector"
+        info = f"LECODirector: {self._title} is initialized"
         initialized = True
         return info, initialized
 
@@ -125,23 +124,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.controller.move_home()
 
     def get_actuator_value(self) -> DataActuator:
-        """
-        Get the current hardware position with scaling conversion given by
-        `get_position_with_scaling`.
-
-        See Also
-        --------
-            daq_move_base.get_position_with_scaling, daq_utils.ThreadCommand
-        """
+        """ Get the current hardware value """
         self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 
     def stop_motion(self) -> None:
         """
-            See Also
-            --------
-            daq_move_base.move_done
         """
         self.controller.stop_motion()
 
@@ -161,11 +150,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
-        self.emit_status(ThreadCommand('get_actuator_value', [pos]))
+        self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
     def set_move_done(self, position: Union[str, float, None], additional_payload=None) -> None:
         pos = self._set_position_value(position=position, additional_payload=additional_payload)
-        self.emit_status(ThreadCommand('move_done', [pos]))
+        self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
 
     def set_units(self, units: str, additional_payload=None) -> None:
         if units not in self.axis_units:
@@ -181,7 +170,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:
-        self.settings.child('settings_client').clearChildren()
+        """ Clear the content of the settings_clients setting"""
+        super().close()
 
 
 if __name__ == '__main__':
