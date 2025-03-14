@@ -1,8 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Union
 
-from easydict import EasyDict as edict
-
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 
 from pymodaq_utils.serialize.factory import SerializableFactory

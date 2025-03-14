@@ -16,9 +16,6 @@ from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import ioxml
-from enum import StrEnum
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import ActuatorDirector
