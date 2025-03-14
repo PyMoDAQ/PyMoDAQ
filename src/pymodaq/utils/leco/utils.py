@@ -21,7 +21,15 @@ SERIALIZABLE = Union[ser_factory.get_serializables()]
 def binary_serialization(
     pymodaq_object: Union[SERIALIZABLE, Any],
 ) -> tuple[Optional[Any], Optional[list[bytes]]]:
-    """Serialize (binary) a pymodaq object, if it is not JSON compatible."""
+    """Serialize (binary) a pymodaq object, if it is not JSON compatible.
+
+    If an object is JSON serializable, we can send it as a value to the JSON
+    encoder and do not need a binary value.
+    Otherwise, the JSON value is None and the serialized object is returned.
+
+    :param pymodaq_object: the object which shall be sent via LECO protocol.
+    :return: tuple of the JSON value and a list of additional payload frames.
+    """
     if isinstance(pymodaq_object, get_args(JSON_TYPES)):
         return pymodaq_object, None
     return None, [SerializableFactory().get_apply_serializer(pymodaq_object)]
@@ -31,7 +39,15 @@ def binary_serialization(
 def binary_serialization_to_kwargs(
     pymodaq_object: Union[SERIALIZABLE, Any], data_key: str = "data"
 ) -> dict[str, Any]:
-    """Create a dictionary of data parameters and of additional payload to send."""
+    """Create a dictionary of data parameters and of additional payload to send.
+
+    This method prepares arguments for PyLECO's :meth:`Communicator.ask_rpc` method.
+    In order to send a binary value as an argument `data_key` for a method, the
+    argument has to be None, which is JSON describable.
+    The binary data has to be sent via the `additional_payload` parameter.
+    If the data can be sent as JSON, it is sent directly (`data_key`) and no
+    additional frames are sent.
+    """
     d, b = binary_serialization(pymodaq_object=pymodaq_object)
     return {data_key: d, "additional_payload": b}
 

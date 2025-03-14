@@ -9,7 +9,7 @@ from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
 
-from pymodaq.utils import data  # for serialization factory registration
+from pymodaq.utils import data  # for serialization factory registration  # noqa: F401
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
