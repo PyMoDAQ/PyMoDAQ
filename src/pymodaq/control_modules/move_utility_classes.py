@@ -10,6 +10,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
+from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusMove
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
 from pymodaq_utils.warnings import deprecation_msg
@@ -342,7 +343,7 @@ class DAQ_Move_base(QObject):
     def axis_unit(self, unit: str):
         self.axis_units[self.axis_index_key] = unit
         self.settings.child('units').setValue(unit)
-        self.emit_status(ThreadCommand('units', unit))
+        self.emit_status(ThreadCommand(ThreadStatusMove.UNITS, unit))
 
     @property
     def axis_units(self) -> Union[List[str], Dict[str, str]]:
@@ -611,7 +612,7 @@ class DAQ_Move_base(QObject):
             for data_array in position:
                 data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
                 data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
-            self.emit_status(ThreadCommand('outofbounds', []))
+            self.emit_status(ThreadCommand(ThreadStatusMove.OUT_OF_BOUNDS, []))
         return position
 
     def get_actuator_value(self):
@@ -658,7 +659,7 @@ class DAQ_Move_base(QObject):
     def emit_value(self, pos: DataActuator):
         """Convenience method to emit the current actuator value back to the UI"""
 
-        self.emit_status(ThreadCommand('get_actuator_value', [pos]))
+        self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
     def commit_settings(self, param: Parameter):
         """
@@ -770,7 +771,7 @@ class DAQ_Move_base(QObject):
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
-                self.emit_status(ThreadCommand('Move has been stopped', ))
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped', ))
                 logger.info('Move has been stopped')
             self.current_value = self.get_actuator_value()
             self.emit_value(self._current_value)
@@ -778,7 +779,7 @@ class DAQ_Move_base(QObject):
 
             if perf_counter() - self.start_time >= self.settings['timeout']:
                 self.poll_timer.stop()
-                self.emit_status(ThreadCommand('raise_timeout', ))
+                self.emit_status(ThreadCommand(ThreadStatus.RAISE_TIMEOUT, ))
                 logger.info('Timeout activated')
         else:
             self.poll_timer.stop()
@@ -795,17 +796,19 @@ class DAQ_Move_base(QObject):
         for param, change, data in changes:
             path = self.settings.childPath(param)
             if change == 'childAdded':
-                self.emit_status(ThreadCommand('update_settings',
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
                                                [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
                                                 change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
             elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
-                                                                   change]))  # send parameters values/limits back to the GUI
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data,
+                                                change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
             elif change == 'limits':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
-                                                                   change]))
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data,
+                                                change]))
 
     def get_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Get the current position from the hardware with scaling conversion.
@@ -919,13 +922,13 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
-                self.emit_status(ThreadCommand('get_actuator_value', pos))
+                self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
             elif command == 'move_done':
                 pos = DeSerializer(sock).dwa_deserialization()
                 pos = self.get_position_with_scaling(pos)
                 self._current_value = pos
-                self.emit_status(ThreadCommand('move_done', pos))
+                self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
             else:
                 self.send_command(sock, command)
 

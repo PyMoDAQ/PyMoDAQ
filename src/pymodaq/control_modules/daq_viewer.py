@@ -6,6 +6,7 @@ Created on Wed Jan 10 16:54:14 2018
 """
 from __future__ import annotations
 from importlib import import_module
+from enum import StrEnum
 from collections import OrderedDict
 import copy
 import os
@@ -47,7 +48,8 @@ from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
-from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
+from pymodaq.control_modules.utils import (DET_TYPES, get_viewer_plugins, DAQTypesEnum,
+                                           DetectorError, ThreadStatusViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
@@ -1045,6 +1047,7 @@ class DAQ_Viewer(ParameterControlModule):
                             scaling=self.settings['main_settings', 'axes', 'yaxis', 'yscaling'])
         return scaled_xaxis, scaled_yaxis
 
+
     def thread_status(self, status: ThreadCommand):
         """Get back info (using the ThreadCommand object) from the hardware
 
@@ -1066,7 +1069,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
         super().thread_status(status, 'detector')
 
-        if status.command == "ini_detector":
+        if status.command == ThreadStatusViewer.INI_DETECTOR:
             self.update_status("detector initialized: " + str(status.attribute['initialized']))
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
@@ -1078,13 +1081,13 @@ class DAQ_Viewer(ParameterControlModule):
 
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == "grab":
+        elif status.command == ThreadStatusViewer.GRAB:
             self.grab_status.emit(True)
 
-        elif status.command == 'grab_stopped':
+        elif status.command == ThreadStatusViewer.GRAB_STOPPED:
             self.grab_status.emit(False)
 
-        elif status.command == 'init_lcd':
+        elif status.command == ThreadStatusViewer.INI_LCD:
             if self._lcd is not None:
                 try:
                     self._lcd.parent.close()
@@ -1096,11 +1099,11 @@ class DAQ_Viewer(ParameterControlModule):
             lcd.setVisible(True)
             QtWidgets.QApplication.processEvents()
 
-        elif status.command == 'lcd':
+        elif status.command == ThreadStatusViewer.LCD:
             """status.attribute should be a list of numpy arrays of shape (1,)"""
             self._lcd.setvalues(status.attribute)
 
-        elif status.command == 'stop':
+        elif status.command == ThreadStatusViewer.STOP:
             self.stop_grab()
 
     def connect_tcp_ip(self):

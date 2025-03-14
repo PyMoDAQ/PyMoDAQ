@@ -6,7 +6,7 @@ Created the 29/07/2022
 """
 
 from __future__ import annotations
-
+from enum import StrEnum
 import numbers
 from importlib import import_module
 from numbers import Number
@@ -35,7 +35,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.control_modules.utils import ParameterControlModule
+from pymodaq.control_modules.utils import ParameterControlModule, ThreadStatusMove
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
                                                           DataActuatorType, check_units,
@@ -432,6 +432,7 @@ class DAQ_Move(ParameterControlModule):
         self.update_status("Timeout occurred")
         self.wait_position_flag = False
 
+
     @Slot(ThreadCommand)
     def thread_status(self, status: ThreadCommand):  # general function to get datas/infos from all threads back to the main
         """Get back info (using the ThreadCommand object) from the hardware
@@ -457,7 +458,7 @@ class DAQ_Move(ParameterControlModule):
 
         super().thread_status(status, 'move')
 
-        if status.command == "ini_stage":
+        if status.command == ThreadStatusMove.INI_STAGE:
             self.update_status(f"Stage initialized: {status.attribute['initialized']} "
                                f"info: {status.attribute['info']}")
             if status.attribute['initialized']:
@@ -471,7 +472,7 @@ class DAQ_Move(ParameterControlModule):
                 self.get_actuator_value()
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == "get_actuator_value" or status.command == 'check_position':
+        elif status.command == ThreadStatusMove or status.command == 'check_position':
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
@@ -485,7 +486,7 @@ class DAQ_Move(ParameterControlModule):
             if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, data_act))
 
-        elif status.command == "move_done":
+        elif status.command == ThreadStatusMove.MOVE_DONE:
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
@@ -498,17 +499,17 @@ class DAQ_Move(ParameterControlModule):
             if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
 
-        elif status.command == 'outofbounds':
+        elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
             self.bounds_signal.emit(True)
 
-        elif status.command == 'set_allowed_values':
+        elif status.command == ThreadStatusMove.SET_ALLOWED_VALUES:
             if self.ui is not None:
                 self.ui.set_abs_spinbox_properties(**status.attribute)
 
-        elif status.command == 'stop':
+        elif status.command == ThreadStatusMove.STOP:
             self.stop_motion()
 
-        elif status.command == 'units':
+        elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
 
     def _check_data_type(self, data_act: Union[list[np.ndarray], float, DataActuator]) -> DataActuator:
@@ -666,17 +667,19 @@ class DAQ_Move(ParameterControlModule):
     def connect_leco(self, connect: bool) -> None:
         super().connect_leco(connect)
 
+
+
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> None:
         if super().process_tcpip_cmds(status=status) is None:
             return
-        if 'move_abs' in status.command:
+        if LECOMoveCommands.MOVE_ABS == status.command:
             self.move_abs(status.attribute, send_to_tcpip=True)
 
-        elif 'move_rel' in status.command:
+        elif LECOMoveCommands.MOVE_REL == status.command:
             self.move_rel(status.attribute, send_to_tcpip=True)
 
-        elif 'move_home' in status.command:
+        elif LECOMoveCommands.MOVE_HOME == status.command:
             self.move_home(send_to_tcpip=True)
 
         elif 'check_position' in status.command:
@@ -684,8 +687,7 @@ class DAQ_Move(ParameterControlModule):
             self._send_to_tcpip = True
             self.get_actuator_value()
 
-
-        elif 'get_actuator_value' in status.command:
+        elif LECOMoveCommands.GET_ACTUATOR_VALUE in status.command:
             self._send_to_tcpip = True
             self.get_actuator_value()
 

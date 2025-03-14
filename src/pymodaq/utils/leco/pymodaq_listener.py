@@ -43,6 +43,10 @@ class LECOMoveCommands(StrEnum):
     MOVE_DONE = 'move_done'
     UNITS_CHANGED = 'units_changed'
     STOP = 'stop_motion'
+    MOVE_ABS = 'move_abs'
+    MOVE_REL = 'move_rel'
+    MOVE_HOME = 'move_home'
+    GET_ACTUATOR_VALUE = 'get_actuator_value'
 
 
 class LECOViewerCommands(StrEnum):

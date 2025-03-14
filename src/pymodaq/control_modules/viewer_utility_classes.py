@@ -10,7 +10,7 @@ from easydict import EasyDict as edict
 import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
-
+from pymodaq.control_modules.utils import ThreadStatus, ThreadStatusViewer
 from pymodaq_utils.config import Config, get_set_local_dir
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq_data.data import DataToExport, DataRaw
@@ -328,15 +328,6 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def get_axis(self):
-        """deprecated"""
-        raise DeprecationWarning('get_axis is deprecated add the axes within the DataWithAxes, '
-                                 'DataFromPlugins')
-        if self.plugin_type == '1D' or self.plugin_type == '2D':
-            self.emit_x_axis()
-
-        if self.plugin_type == '2D':
-            self.emit_y_axis()
 
     def emit_status(self, status: ThreadCommand):
         """
@@ -400,8 +391,7 @@ class DAQ_Viewer_base(QObject):
 
             self.commit_settings(param)
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
-
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
 
     def send_param_status(self, param, changes):
@@ -423,13 +413,14 @@ class DAQ_Viewer_base(QObject):
             path = self.settings.childPath(param)
             if change == 'childAdded':
                 # first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
-                self.emit_status(ThreadCommand('update_settings',
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
                                                [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
                                                 change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
 
             elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
-                                                                   change]))  # send parameters values/limits back to the GUI
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data,
+                                                change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 
@@ -544,7 +535,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                 self.send_data(command_sock, data)  # to be send to a client
 
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
     def commit_settings(self, param):
 
@@ -640,7 +631,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             # self.command_server.emit(["process_cmds","Send Data 2D"])
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
     def stop(self):
         """

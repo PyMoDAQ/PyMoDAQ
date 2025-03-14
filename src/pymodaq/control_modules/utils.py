@@ -6,7 +6,7 @@ Created the 03/10/2022
 """
 from random import randint
 from typing import Optional, Type
-
+from enum import StrEnum
 from easydict import EasyDict as edict
 
 from qtpy import QtCore
@@ -28,6 +28,60 @@ from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 
 from pymodaq.utils.daq_utils import get_plugins
+
+
+class ThreadStatus(StrEnum):
+    """ Allowed Generic commands sent from a plugin using the method: emit_status
+
+    Valid both for DAQ_Move and DAQ_Viewer control modules
+
+    See Also
+    --------
+    ControlModule.thread_status
+    """
+    UPDATE_STATUS = 'update_status'
+    CLOSE = 'close'
+    UPDATE_SETTINGS = 'update_settings'
+    UPDATE_MAIN_SETTINGS = 'update_main_settings'
+    UPDATE_UI = 'update_ui'
+    RAISE_TIMEOUT = 'raise_timeout'
+    SHOW_SPLASH = 'show_splash'
+    CLOSE_SPLASH = 'close_splash'
+
+
+class ThreadStatusMove(StrEnum):
+    """ Allowed Generic commands sent from a plugin using the method: emit_status
+
+    Valid only for DAQ_Move control module
+
+    See Also
+    --------
+    DAQ_Move.thread_status
+    """
+    INI_STAGE = 'ini_stage'
+    GET_ACTUATOR_VALUE = 'get_actuator_value'
+    MOVE_DONE = 'move_done'
+    OUT_OF_BOUNDS = 'outofbounds'
+    SET_ALLOWED_VALUES = 'set_allowed_values'
+    STOP = 'stop'
+    UNITS = 'units'
+
+
+class ThreadStatusViewer(StrEnum):
+    """ Allowed Generic commands sent from a plugin using the method: emit_status
+
+    Valid only for DAQ_Viewer control module
+
+    See Also
+    --------
+    DAQ_Viewer.thread_status
+    """
+    INI_DETECTOR = 'ini_detector'
+    GRAB = 'grab'
+    GRAB_STOPPED = 'grab_stopped'
+    INI_LCD = 'init_lcd'
+    LCD = 'lcd'
+    STOP = 'stop'
 
 
 class DAQTypesEnum(BaseEnum):
@@ -167,10 +221,10 @@ class ControlModule(QObject):
             else:
                 self.update_status(status.attribute[0])
 
-        elif status.command == 'update_status':
+        elif status.command == ThreadStatus.UPDATE_STATUS:
             self.update_status(status.attribute)
 
-        elif status.command == "close":
+        elif status.command == ThreadStatus.CLOSE:
             try:
                 self.update_status(status.attribute[0])
                 self._hardware_thread.quit()
@@ -188,7 +242,7 @@ class ControlModule(QObject):
             self._initialized_state = False
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == 'update_main_settings':
+        elif status.command == ThreadStatus.UPDATE_MAIN_SETTINGS:
             # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
             try:
                 if status.attribute[2] == 'value':
@@ -200,7 +254,7 @@ class ControlModule(QObject):
             except Exception as e:
                 logger.exception(f'Wrong call to the "update_main_settings" command: \n{str(e)}')
 
-        elif status.command == 'update_settings':
+        elif status.command == ThreadStatus.UPDATE_SETTINGS:
             # using this the settings shown in the UI for the plugin reflects the real plugin settings
             try:
                 self.settings.sigTreeStateChanged.disconnect(
@@ -228,7 +282,7 @@ class ControlModule(QObject):
                 logger.exception(f'Wrong call to the "update_settings" command: \n{str(e)}')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        elif status.command == 'update_ui':
+        elif status.command == ThreadStatus.UPDATE_UI:
             try:
                 if self.ui is not None:
                     if hasattr(self.ui, status.attribute):
@@ -237,16 +291,16 @@ class ControlModule(QObject):
             except Exception as e:
                 logger.info(f'Wrong call to the "update_ui" command: \n{str(e)}')
 
-        elif status.command == 'raise_timeout':
+        elif status.command == ThreadStatus.RAISE_TIMEOUT:
             self.raise_timeout()
 
-        elif status.command == 'show_splash':
+        elif status.command == ThreadStatus.SHOW_SPLASH:
             self.settings_tree.setEnabled(False)
             self.splash_sc.show()
             self.splash_sc.raise_()
             self.splash_sc.showMessage(status.attribute, color=Qt.white)
 
-        elif status.command == 'close_splash':
+        elif status.command == ThreadStatus.CLOSE_SPLASH:
             self.splash_sc.close()
             self.settings_tree.setEnabled(True)
 
@@ -331,7 +385,7 @@ class ControlModule(QObject):
 
             return Config()
 
-    def update_status(self, txt, log=True):
+    def update_status(self, txt: str, log=True):
         """Display a message in the ui status bar and eventually log the message
 
         Parameters
