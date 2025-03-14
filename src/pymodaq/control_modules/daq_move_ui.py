@@ -24,7 +24,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 
 from pymodaq.control_modules.utils import ControlModuleUI
 from pymodaq.utils.data import DataToExport, DataActuator
-
+from pymodaq.control_modules.thread_commands import UiToMainMove
 
 config = Config()
 
@@ -308,14 +308,15 @@ class DAQ_Move_UI(ControlModuleUI):
         self.connect_action('show_settings', lambda show: self.settings_ui.setVisible(show))
         self.connect_action('show_graph', lambda show: self.graph_ui.setVisible(show))
 
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
+        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, )))
         self.connect_action('refresh_value',
-                            lambda do_refresh: self.command_sig.emit(ThreadCommand('loop_get_value', do_refresh)))
+                            lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
+                                                                                   do_refresh)))
         self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
-        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
+        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
+        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
@@ -324,20 +325,20 @@ class DAQ_Move_UI(ControlModuleUI):
 
 
         self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(
-            ThreadCommand('rel_value', self.rel_value_sb.value())))
+            ThreadCommand(UiToMainMove.REL_VALUE, self.rel_value_sb.value())))
         self.move_rel_plus_pb.clicked.connect(lambda: self.emit_move_rel('+'))
         self.move_rel_minus_pb.clicked.connect(lambda: self.emit_move_rel('-'))
         self.rel_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_rel('+'))
         self.rel_value_sb.shortcut["Ctrl+Shift+E"].activated.connect(lambda: self.emit_move_rel('-'))
 
-        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('find_home', )))
-        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('stop', )))
-        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('get_value', )))
+        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.FIND_HOME, )))
+        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
 
         self.ini_actuator_pb.clicked.connect(self.send_init)
 
         self.actuators_combo.currentTextChanged.connect(
-            lambda act: self.command_sig.emit(ThreadCommand('actuator_changed', act)))
+            lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
@@ -352,17 +353,17 @@ class DAQ_Move_UI(ControlModuleUI):
 
     def send_init(self, checked):
         self.actuators_combo.setEnabled(not checked)
-        self.command_sig.emit(ThreadCommand('init', [self.ini_actuator_pb.isChecked(),
+        self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [self.ini_actuator_pb.isChecked(),
                                                      self.actuators_combo.currentText()]))
 
     def emit_move_abs(self, spinbox):
         spinbox.editingFinished.emit()
-        self.command_sig.emit(ThreadCommand('move_abs', DataActuator(data=spinbox.value(),
+        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=spinbox.value(),
                                                                      units=self._unit)))
 
     def emit_move_rel(self, sign):
         self.command_sig.emit(ThreadCommand(
-            'move_rel',
+            UiToMainMove.MOVE_REL,
             DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
                          units=self._unit)))
 
@@ -384,7 +385,7 @@ def main(init_qt=True):
     
     def print_command_sig(cmd_sig):
         print(cmd_sig)
-        if cmd_sig.command == 'init':
+        if cmd_sig.command == UiToMainMove.INIT:
             prog.enable_move_buttons(True)
         
     prog.command_sig.connect(print_command_sig)

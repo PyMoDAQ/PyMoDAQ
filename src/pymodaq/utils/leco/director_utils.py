@@ -10,7 +10,7 @@ from pyleco.directors.director import Director
 
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter, ioxml
-from pymodaq.control_modules.move_utility_classes import DataActuator
+from pymodaq.utils.data import DataActuator
 from pymodaq.utils.leco.utils import binary_serialization_to_kwargs, SerializableFactory
 
 from pymodaq_gui.parameter.utils import ParameterWithPath

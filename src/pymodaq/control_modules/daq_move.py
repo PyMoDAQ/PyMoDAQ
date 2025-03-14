@@ -6,7 +6,7 @@ Created the 29/07/2022
 """
 
 from __future__ import annotations
-
+from enum import StrEnum
 import numbers
 from importlib import import_module
 from numbers import Number
@@ -36,6 +36,8 @@ from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
+from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
+                                                     UiToMainMove)
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
                                                           DataActuatorType, check_units,
@@ -157,36 +159,36 @@ class DAQ_Move(ParameterControlModule):
             * rel_value
             * show_config
         """
-        if cmd.command == 'init':
+        if cmd.command == UiToMainMove.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == 'quit':
+        elif cmd.command == UiToMainMove.QUIT:
             self.quit_fun()
-        elif cmd.command == 'get_value':
+        elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
-        elif cmd.command == 'loop_get_value':
+        elif cmd.command == UiToMainMove.LOOP_GET_VALUE:
             self.get_continuous_actuator_value(cmd.attribute)
-        elif cmd.command == 'find_home':
+        elif cmd.command == UiToMainMove.FIND_HOME:
             self.move_home()
-        elif cmd.command == 'stop':
+        elif cmd.command == UiToMainMove.STOP:
             self.stop_motion()
-        elif cmd.command == 'move_abs':
+        elif cmd.command == UiToMainMove.STOP:
             data_act: DataActuator = cmd.attribute
             if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
                 data_act.force_units(self.units)
             self.move_abs(data_act)
-        elif cmd.command == 'move_rel':
+        elif cmd.command == UiToMainMove.MOVE_REL:
             data_act: DataActuator = cmd.attribute
             if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
                 data_act.force_units(self.units)
             self.move_rel(data_act)
-        elif cmd.command == 'show_log':
+        elif cmd.command == UiToMainMove.SHOW_LOG:
             self.show_log()
-        elif cmd.command == 'show_config':
+        elif cmd.command == UiToMainMove.SHOW_CONFIG:
             self.config = self.show_config(self.config)
             self.ui.config = self.config
-        elif cmd.command == 'actuator_changed':
+        elif cmd.command == UiToMainMove.ACTUATOR_CHANGED:
             self.actuator = cmd.attribute
-        elif cmd.command == 'rel_value':
+        elif cmd.command == UiToMainMove.REL_VALUE:
             self._relative_value = cmd.attribute
 
     @property
@@ -245,7 +247,7 @@ class DAQ_Move(ParameterControlModule):
         """Stop any motion
         """
         try:
-            self.command_hardware.emit(ThreadCommand(command="stop_motion"))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.STOP_MOTION))
         except Exception as e:
             self.logger.exception(str(e))
 
@@ -294,8 +296,9 @@ class DAQ_Move(ParameterControlModule):
                 self._move_done_bool = False
                 self._target_value = value
                 self.update_status("Moving")
-                self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
-                self.command_hardware.emit(ThreadCommand(command="move_abs", attribute=[value]))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.MOVE_ABS,
+                                                         attribute=[value]))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -314,8 +317,8 @@ class DAQ_Move(ParameterControlModule):
                 self.ui.move_done = False
             self._move_done_bool = False
             self.update_status("Moving")
-            self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
-            self.command_hardware.emit(ThreadCommand(command="move_home"))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.MOVE_HOME))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -342,8 +345,9 @@ class DAQ_Move(ParameterControlModule):
             self._move_done_bool = False
             self._target_value = self._current_value + rel_value
             self.update_status("Moving")
-            self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
-            self.command_hardware.emit(ThreadCommand(command="move_rel", attribute=[rel_value]))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.MOVE_REL,
+                                                     attribute=[rel_value]))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -372,7 +376,7 @@ class DAQ_Move(ParameterControlModule):
         """ Init or desinit the selected instrument plugin class """
         if not do_init:
             try:
-                self.command_hardware.emit(ThreadCommand(command="close"))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.CLOSE))
                 if self.ui is not None:
                     self.ui.actuator_init = False
             except Exception as e:
@@ -390,9 +394,10 @@ class DAQ_Move(ParameterControlModule):
                 self._hardware_thread.hardware = hardware
                 self._hardware_thread.start()
                 self.command_hardware.emit(
-                    ThreadCommand(command="ini_stage", attribute=[
-                        self.settings.child('move_settings').saveState(),
-                        self.controller]))
+                    ThreadCommand(ControlToHardwareMove.INI_STAGE,
+                                  attribute=[
+                                      self.settings.child('move_settings').saveState(),
+                                      self.controller]))
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -432,6 +437,7 @@ class DAQ_Move(ParameterControlModule):
         self.update_status("Timeout occurred")
         self.wait_position_flag = False
 
+
     @Slot(ThreadCommand)
     def thread_status(self, status: ThreadCommand):  # general function to get datas/infos from all threads back to the main
         """Get back info (using the ThreadCommand object) from the hardware
@@ -457,7 +463,7 @@ class DAQ_Move(ParameterControlModule):
 
         super().thread_status(status, 'move')
 
-        if status.command == "ini_stage":
+        if status.command == ThreadStatusMove.INI_STAGE:
             self.update_status(f"Stage initialized: {status.attribute['initialized']} "
                                f"info: {status.attribute['info']}")
             if status.attribute['initialized']:
@@ -471,7 +477,7 @@ class DAQ_Move(ParameterControlModule):
                 self.get_actuator_value()
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == "get_actuator_value" or status.command == 'check_position':
+        elif status.command == ThreadStatusMove.GET_ACTUATOR_VALUE or status.command == 'check_position':
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
@@ -485,7 +491,7 @@ class DAQ_Move(ParameterControlModule):
             if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.POSITION, data_act))
 
-        elif status.command == "move_done":
+        elif status.command == ThreadStatusMove.MOVE_DONE:
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
@@ -498,17 +504,17 @@ class DAQ_Move(ParameterControlModule):
             if self.settings.child('main_settings', 'leco', 'leco_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
 
-        elif status.command == 'outofbounds':
+        elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
             self.bounds_signal.emit(True)
 
-        elif status.command == 'set_allowed_values':
+        elif status.command == ThreadStatusMove.SET_ALLOWED_VALUES:
             if self.ui is not None:
                 self.ui.set_abs_spinbox_properties(**status.attribute)
 
-        elif status.command == 'stop':
+        elif status.command == ThreadStatusMove.STOP:
             self.stop_motion()
 
-        elif status.command == 'units':
+        elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
 
     def _check_data_type(self, data_act: Union[list[np.ndarray], float, DataActuator]) -> DataActuator:
@@ -533,7 +539,7 @@ class DAQ_Move(ParameterControlModule):
         Returns nothing but the  `move_done_signal` will be send once the action is done
         """
         try:
-            self.command_hardware.emit(ThreadCommand(command="get_actuator_value"))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -666,17 +672,19 @@ class DAQ_Move(ParameterControlModule):
     def connect_leco(self, connect: bool) -> None:
         super().connect_leco(connect)
 
+
+
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status: ThreadCommand) -> None:
         if super().process_tcpip_cmds(status=status) is None:
             return
-        if 'move_abs' in status.command:
+        if LECOMoveCommands.MOVE_ABS == status.command:
             self.move_abs(status.attribute, send_to_tcpip=True)
 
-        elif 'move_rel' in status.command:
+        elif LECOMoveCommands.MOVE_REL == status.command:
             self.move_rel(status.attribute, send_to_tcpip=True)
 
-        elif 'move_home' in status.command:
+        elif LECOMoveCommands.MOVE_HOME == status.command:
             self.move_home(send_to_tcpip=True)
 
         elif 'check_position' in status.command:
@@ -684,8 +692,7 @@ class DAQ_Move(ParameterControlModule):
             self._send_to_tcpip = True
             self.get_actuator_value()
 
-
-        elif 'get_actuator_value' in status.command:
+        elif LECOMoveCommands.GET_ACTUATOR_VALUE in status.command:
             self._send_to_tcpip = True
             self.get_actuator_value()
 
@@ -791,7 +798,8 @@ class DAQ_Move_Hardware(QObject):
             status.controller = self.hardware.controller
             self.hardware.move_done_signal.connect(self.move_done)
             if status.initialized:
-                self.status_sig.emit(ThreadCommand('get_actuator_value', [self.get_actuator_value()]))
+                self.status_sig.emit(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE,
+                                                   self.get_actuator_value()))
 
             return status
         except Exception as e:
@@ -837,7 +845,7 @@ class DAQ_Move_Hardware(QObject):
             --------
             DAQ_utils.ThreadCommand
         """
-        self.status_sig.emit(ThreadCommand("move_done", pos))
+        self.status_sig.emit(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
 
     def move_home(self):
         """
@@ -852,7 +860,8 @@ class DAQ_Move_Hardware(QObject):
         """Send the move_done signal back to the main class
         """
         self._current_value = pos
-        self.status_sig.emit(ThreadCommand(command="move_done", attribute=pos))
+        self.status_sig.emit(ThreadCommand(command=ThreadStatusMove.MOVE_DONE,
+                                           attribute=pos))
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
@@ -881,31 +890,34 @@ class DAQ_Move_Hardware(QObject):
         """
         try:
             logger.debug(f'Threadcommand {command.command} sent to {self.title}')
-            if command.command == "ini_stage":
+            if command.command == ControlToHardwareMove.INI_STAGE:
                 status: edict = self.ini_stage(*command.attribute)
-                self.status_sig.emit(ThreadCommand(command=command.command, attribute=status))
+                self.status_sig.emit(ThreadCommand(command=ThreadStatusMove.INI_STAGE,
+                                                   attribute=status))
 
-            elif command.command == "close":
+            elif command.command == ControlToHardwareMove.CLOSE:
                 status = self.close()
-                self.status_sig.emit(ThreadCommand(command=command.command, attribute=[status]))
+                self.status_sig.emit(ThreadCommand(command=ThreadStatus.CLOSE,
+                                                   attribute=[status]))
 
-            elif command.command == "move_abs":
+            elif command.command == ControlToHardwareMove.MOVE_ABS:
                 self.move_abs(*command.attribute)
 
-            elif command.command == "move_rel":
+            elif command.command == ControlToHardwareMove.MOVE_REL:
                 self.move_rel(*command.attribute)
 
-            elif command.command == "move_home":
+            elif command.command == ControlToHardwareMove.MOVE_HOME:
                 self.move_home()
 
-            elif command.command == "get_actuator_value":
+            elif command.command == ControlToHardwareMove.GET_ACTUATOR_VALUE:
                 pos = self.get_actuator_value()
-                self.status_sig.emit(ThreadCommand('get_actuator_value', [pos]))
+                self.status_sig.emit(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE,
+                                                   pos))
 
-            elif command.command == "stop_motion":
+            elif command.command == ControlToHardwareMove.STOP_MOTION:
                 self.stop_motion()
 
-            elif command.command == "reset_stop_motion":
+            elif command.command == ControlToHardwareMove.RESET_STOP_MOTION:
                 self.motion_stoped = False
 
             else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)

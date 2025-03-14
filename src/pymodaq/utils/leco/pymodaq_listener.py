@@ -43,6 +43,10 @@ class LECOMoveCommands(StrEnum):
     MOVE_DONE = 'move_done'
     UNITS_CHANGED = 'units_changed'
     STOP = 'stop_motion'
+    MOVE_ABS = 'move_abs'
+    MOVE_REL = 'move_rel'
+    MOVE_HOME = 'move_home'
+    GET_ACTUATOR_VALUE = 'get_actuator_value'
 
 
 class LECOViewerCommands(StrEnum):
@@ -149,7 +153,7 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=pos))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_ABS, pos))
 
     def move_rel(
         self,
@@ -162,15 +166,15 @@ class ActorHandler(PymodaqPipeHandler):
         :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
         """
         pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=pos))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_REL, pos))
 
     def move_home(self) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand("move_home"))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_HOME))
 
     def get_actuator_value(self) -> None:
         """Request that the actuator value is sent later on."""
         # according to DAQ_Move, this supersedes "check_position"
-        self.signals.cmd_signal.emit(ThreadCommand("get_actuator_value"))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.GET_ACTUATOR_VALUE))
 
     def stop_motion(self,) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.STOP))
@@ -258,7 +262,6 @@ class ActorListener(PymodaqListener):
         """Define what the name of the remote for answers is."""
         self.remote_name = name
 
-    # @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
 
@@ -279,15 +282,7 @@ class ActorListener(PymodaqListener):
             finally:
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
 
-        elif command.command == 'update_connection':
-            # self.ipaddress = command.attribute['ipaddress']
-            # self.port = command.attribute['port']
-            pass  # TODO change name?
-
         elif command.command == LECOViewerCommands.DATA_READY:
-            # code from the original:
-            # self.data_ready(data=command.attribute)
-            # def data_ready(data): self.send_data(datas[0]['data'])
             value = command.attribute  # type: ignore
             self.communicator.ask_rpc(
                 receiver=self.remote_name,
