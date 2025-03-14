@@ -507,6 +507,32 @@ class ParameterControlModule(ParameterManager, ControlModule):
         elif status.command == 'Update_Status':
             self.thread_status(status)
 
+        elif status.command == 'set_info':
+            """ The Director sent a parameter to be updated"""
+            path_in_settings = status.attribute.path
+            if 'move' in self.__class__.__name__.lower():
+                common_param = 'move_settings'
+            else:
+                common_param = 'detector_settings'
+            if common_param in path_in_settings:
+                param = self.settings.child(*path_in_settings)
+            elif 'settings_client' in path_in_settings:
+                param = self.settings.child(common_param, *path_in_settings[1:])
+            else:
+                param = self.settings.child(common_param, *path_in_settings)
+
+            param.setValue(status.attribute.parameter.value())
+
+        elif status.command == LECOCommands.GET_SETTINGS:
+            """ The Director requested the content of the actuator settings"""
+            if 'move' in self.__class__.__name__.lower():
+                common_param = 'move_settings'
+            else:
+                common_param = 'detector_settings'
+            self._command_tcpip.emit(
+                ThreadCommand(LECOCommands.SET_SETTINGS,
+                              ioxml.parameter_to_xml_string(
+                                  self.settings.child(common_param))))
 
         else:
             # not handled

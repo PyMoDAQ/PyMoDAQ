@@ -53,7 +53,7 @@ from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
-from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands
+from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands, LECOViewerCommands
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -488,15 +488,15 @@ class DAQ_Viewer(ParameterControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def snap(self):
+    def snap(self, send_to_tcpip=False):
         """ Launch a single grab """
-        self.grab_data(False, snap_state=True)
+        self.grab_data(False, snap_state=True, send_to_tcpip=send_to_tcpip)
 
-    def grab(self):
+    def grab(self, send_to_tcpip=False):
         """ Launch a continuous grab """
         if self.ui is not None:
             self.manage_ui_actions('grab', 'setChecked', not self._grabing)
-            self.grab_data(not self._grabing, snap_state=False)
+            self.grab_data(not self._grabing, snap_state=False, send_to_tcpip=send_to_tcpip)
 
     def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
         """Do one single grab (snap) and eventually save the data.
@@ -1130,6 +1130,13 @@ class DAQ_Viewer(ParameterControlModule):
             return
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
+        elif status.command == LECOViewerCommands.GRAB:
+            self.grab(send_to_tcpip=True)
+        elif status.command ==LECOViewerCommands.SNAP:
+            self.snap( send_to_tcpip=True)
+
+        elif status.command == LECOViewerCommands.STOP:
+            self.stop()
 
         elif status.command == LECOClientCommands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
@@ -1137,18 +1144,6 @@ class DAQ_Viewer(ParameterControlModule):
         elif status.command == LECOClientCommands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
 
-        elif status.command == 'set_info':
-            path_in_settings = status.attribute[0]
-            param_as_xml = status.attribute[1]
-            param_dict = ioxml.XML_string_to_parameter(param_as_xml)[0]
-            param_tmp = Parameter.create(**param_dict)
-            param = self.settings.child('detector_settings', *path_in_settings[1:])
-            param.restoreState(param_tmp.saveState())
-
-        elif status.command == 'get_axis':
-            raise DeprecationWarning('Do not use this, the axis are in the data objects')
-            self.command_hardware.emit(
-                ThreadCommand('get_axis', ))  # tells the plugin to emit its axes so that the server will receive them
 
 
 class DAQ_Detector(QObject):

@@ -42,10 +42,14 @@ class LECOMoveCommands(StrEnum):
     POSITION = 'position_is'
     MOVE_DONE = 'move_done'
     UNITS_CHANGED = 'units_changed'
+    STOP = 'stop_motion'
 
 
 class LECOViewerCommands(StrEnum):
     DATA_READY = 'data_ready'
+    GRAB = 'grab'
+    SNAP = 'snap'
+    STOP = 'stop_grab'
 
 
 class ListenerSignals(QObject):
@@ -91,12 +95,14 @@ class ActorHandler(PymodaqPipeHandler):
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
         self.register_binary_rpc_method(self.set_info, accept_binary_input=True)
-        self.register_rpc_method(self.send_data)
+        self.register_rpc_method(self.send_data_grab)
+        self.register_rpc_method(self.send_data_snap)
         self.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
         self.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
         self.register_rpc_method(self.move_home)
         self.register_rpc_method(self.get_actuator_value)
         self.register_rpc_method(self.stop_motion)
+        self.register_rpc_method(self.stop_grab)
         self.register_rpc_method(self.get_settings)
 
     @staticmethod
@@ -118,14 +124,18 @@ class ActorHandler(PymodaqPipeHandler):
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
         param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
-        self.signals.cmd_signal.emit(ThreadCommand("set_info", attribute=param))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=param))
 
     def get_settings(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
     # detector commands
-    def send_data(self, grabber_type: str = "") -> None:
-        self.signals.cmd_signal.emit(ThreadCommand(f"Send Data {grabber_type}"))
+    def send_data_grab(self,) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
+
+    # detector commands
+    def send_data_snap(self,) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
     # actuator commands
     def move_abs(
@@ -163,8 +173,10 @@ class ActorHandler(PymodaqPipeHandler):
         self.signals.cmd_signal.emit(ThreadCommand("get_actuator_value"))
 
     def stop_motion(self,) -> None:
-        # not implemented in DAQ_Move!
-        self.signals.cmd_signal.emit(ThreadCommand("stop_motion"))
+        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.STOP))
+
+    def stop_grab(self,) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.STOP))
 
 
 # to be able to separate them later on

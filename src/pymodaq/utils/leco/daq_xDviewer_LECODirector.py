@@ -15,6 +15,9 @@ from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
+from pymodaq_utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
 
 
 class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
@@ -34,13 +37,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                                                 "Info", "Infos", "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
     params = comon_parameters + leco_parameters
+    live_mode_available = True
 
     def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
-        super().__init__(parent=parent, params_state=params_state, **kwargs)
-        self.register_rpc_methods((
-            self.set_x_axis,
-            self.set_y_axis,
-        ))
+        DAQ_Viewer_base.__init__(self, parent=parent,
+                                 params_state=params_state)
+        LECODirector.__init__(self, host=self.settings['host'])
         for method in (
             self.set_data,
         ):
@@ -54,7 +56,6 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.ind_data = 0
         self.data_mock = None
 
-
     def ini_detector(self, controller=None):
         """
             | Initialisation procedure of the detector updating the status dictionary.
@@ -66,54 +67,23 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None,
-                                 controller=None))
-        actor_name = self.settings.child("actor_name").value()
-        self.controller = self.ini_detector_init(  # type: ignore
-            old_controller=controller,
-            new_controller=DetectorDirector(actor=actor_name, communicator=self.communicator),
-            )
-        self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
-        try:
-            # self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
-            # init axes from image , here returns only None values (to tricky to di it with the
-            # server and not really necessary for images anyway)
-            self.x_axis = self.get_xaxis()
-            self.y_axis = self.get_yaxis()
-            self.status.x_axis = self.x_axis
-            self.status.y_axis = self.y_axis
-            self.status.initialized = True
-            return self.status
+        actor_name = self.settings["actor_name"]
+        if self.is_master:
+            self.controller = DetectorDirector(actor=actor_name,
+                                               communicator=self.communicator)
+            try:
+                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+            except TimeoutError:
+                logger.warning("Timeout setting remote name.")
+        else:
+            self.controller = controller
 
-        except Exception as e:
-            self.status.info = getLineInfo() + str(e)
-            self.status.initialized = False
-            return self.status
+        self.controller.get_settings()
 
-    def get_xaxis(self):
-        """
-            Obtain the horizontal axis of the image.
-
-            Returns
-            -------
-            1D numpy array
-                Contains a vector of integer corresponding to the horizontal camera pixels.
-        """
-        pass
-        return self.x_axis
-
-    def get_yaxis(self):
-        """
-            Obtain the vertical axis of the image.
-
-            Returns
-            -------
-            1D numpy array
-                Contains a vector of integer corresponding to the vertical camera pixels.
-        """
-        pass
-        return self.y_axis
+        initialized = True
+        info = 'Viewer Director ready'
+        return info, initialized
 
     def grab_data(self, Naverage=1, **kwargs):
         """
@@ -134,7 +104,10 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             self.ind_grabbed = 0  # to keep track of the current image in the average
             self.Naverage = Naverage
             self.controller.set_remote_name(self.communicator.full_name)
-            self.controller.send_data(grabber_type=self.grabber_type)
+            if kwargs.get('live', False):
+                self.controller.send_data_grab()
+            else:
+                self.controller.send_data_snap()
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
@@ -143,19 +116,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         """
             not implemented.
         """
-        pass
-        return ""
-
-    # Methods for RPC calls
-    def set_x_axis(self, data, label: str = "", units: str = ""):
-        # TODO make to work
-        self.x_axis = dict(data=data, label=label, units=units)
-        self.emit_x_axis()
-
-    def set_y_axis(self, data, label: str = "", units: str = ""):
-        # TODO make to work
-        self.y_axis = dict(data=data, label=label, units=units)
-        self.emit_y_axis()
+        self.controller.stop_grab()
 
     def set_data(self, data: Union[list, str, None],
                  additional_payload: Optional[list[bytes]]=None) -> None:
@@ -177,4 +138,4 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
 
 if __name__ == '__main__':
-    main(__file__)
+    main(__file__, init=False)
