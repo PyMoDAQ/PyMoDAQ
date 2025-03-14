@@ -50,7 +50,8 @@ from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import (DET_TYPES, get_viewer_plugins, DAQTypesEnum,
                                            DetectorError)
-from pymodaq.control_modules.thread_commands import ThreadStatusViewer
+from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardwareViewer,
+                                                     UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
@@ -201,6 +202,8 @@ class DAQ_Viewer(ParameterControlModule):
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
 
+        See pymodaq.control_modules.thread_commands.UiToMainViewer
+
         Parameters
         ----------
         cmd: ThreadCommand
@@ -221,38 +224,38 @@ class DAQ_Viewer(ParameterControlModule):
                 * show_config
         """
 
-        if cmd.command == 'init':
+        if cmd.command == UiToMainViewer.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == 'quit':
+        elif cmd.command == UiToMainViewer.QUIT:
             self.quit_fun()
-        elif cmd.command == 'stop':
+        elif cmd.command == UiToMainViewer.STOP:
             self.stop()
-        elif cmd.command == 'show_log':
+        elif cmd.command == UiToMainViewer.SHOW_LOG:
             self.show_log()
-        elif cmd.command == 'grab':
+        elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
-        elif cmd.command == 'snap':
+        elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
-        elif cmd.command == 'save_new':
+        elif cmd.command == UiToMainViewer.SAVE_NEW:
             self.save_new()
-        elif cmd.command == 'save_current':
+        elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
-        elif cmd.command == 'open':
+        elif cmd.command == UiToMainViewer.OPEN:
             self.load_data()
-        elif cmd.command == 'detector_changed':
+        elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
             if cmd.attribute != '':
                 self.detector_changed_from_ui(cmd.attribute)
-        elif cmd.command == 'daq_type_changed':
+        elif cmd.command == UiToMainViewer.DAQ_TYPE_CHANGED:
             if cmd.attribute != '':
                 self.daq_type_changed_from_ui(cmd.attribute)
-        elif cmd.command == 'take_bkg':
+        elif cmd.command == UiToMainViewer.TAKE_BKG:
             self.take_bkg()
-        elif cmd.command == 'do_bkg':
+        elif cmd.command == UiToMainViewer.DO_BKG:
             self.do_bkg = cmd.attribute
-        elif cmd.command == 'viewers_changed':
+        elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-        elif cmd.command == 'show_config':
+        elif cmd.command == UiToMainViewer.SHOW_CONFIG:
             self.config = self.show_config(self.config)
             self.ui.config = self.config
 
@@ -402,18 +405,17 @@ class DAQ_Viewer(ParameterControlModule):
                 pass
         for ind_viewer, viewer in enumerate(viewers):
             viewer.data_to_export_signal.connect(self._get_data_from_viewer)
-            #deprecated:
-            viewer.ROI_select_signal.connect(
-                lambda roi_info: self.command_hardware.emit(ThreadCommand('ROISelect', roi_info)))
-            #use that now
+
             viewer.roi_select_signal.connect(
                 lambda roi_info: self.command_hardware.emit(
-                    ThreadCommand('roi_select',
-                                  dict(roi_info=roi_info, ind_viewer=ind_viewer))))
+                    ThreadCommand(ControlToHardwareViewer.ROI_SELECT,
+                                  dict(roi_info=roi_info,
+                                       ind_viewer=ind_viewer))))
             viewer.crosshair_dragged.connect(
                 lambda crosshair_info: self.command_hardware.emit(
-                    ThreadCommand('crosshair',
-                                  dict(crosshair_info=crosshair_info, ind_viewer=ind_viewer))))
+                    ThreadCommand(ControlToHardwareViewer.CROSSHAIR,
+                                  dict(crosshair_info=crosshair_info,
+                                       ind_viewer=ind_viewer))))
 
 
         self._viewers = viewers
@@ -458,7 +460,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if not do_init:
             try:
-                self.command_hardware.emit(ThreadCommand(command="close"))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.CLOSE))
                 QtWidgets.QApplication.processEvents()
                 if self.ui is not None:
                     self.ui.detector_init = False
@@ -482,8 +484,10 @@ class DAQ_Viewer(ParameterControlModule):
                 self._hardware_thread.hardware = hardware
                 if self.config('viewer', 'viewer_in_thread'):
                     self._hardware_thread.start()
-                self.command_hardware.emit(ThreadCommand("ini_detector", attribute=[
-                    self.settings.child('detector_settings').saveState(), self.controller]))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.INI_DETECTOR,
+                                                         attribute=[
+                                                             self.settings.child('detector_settings').saveState(),
+                                                             self.controller]))
                 if self.ui is not None:
                     for dock in self.ui.viewer_docks:
                         dock.setEnabled(True)
@@ -546,16 +550,18 @@ class DAQ_Viewer(ParameterControlModule):
         if snap_state:
             self.update_status(f'{self._title}: Snap')
             self.command_hardware.emit(
-                ThreadCommand("single", dict(Naverage=self.settings['main_settings', 'Naverage'])))
+                ThreadCommand(ControlToHardwareViewer.SINGLE,
+                              dict(Naverage=self.settings['main_settings', 'Naverage'])))
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand("stop_grab", ))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
             else:
-                self.thread_status(ThreadCommand("update_channels", ))
+                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS, ))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
-                    ThreadCommand("grab", dict(Naverage=self.settings['main_settings', 'Naverage'])))
+                    ThreadCommand(ControlToHardwareViewer.GRAB,
+                                  dict(Naverage=self.settings['main_settings', 'Naverage'])))
 
     def take_bkg(self):
         """ Do a snap and store data to be used as background into an attribute: `self._bkg`
@@ -579,7 +585,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand("stop_all", ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_ALL, ))
         self._grabing = False
 
     @Slot()
@@ -971,7 +977,8 @@ class DAQ_Viewer(ParameterControlModule):
             self._h5saver_continuous.show_settings(param.value())
 
         elif param.name() == 'wait_time':
-            self.command_hardware.emit(ThreadCommand('update_wait_time', [param.value()]))
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
+                                                     [param.value()]))
 
         self._update_settings(param=param)
 
@@ -1232,45 +1239,39 @@ class DAQ_Detector(QObject):
             * get_axis
             * any string that the hardware is able to understand
         """
-        if command.command == "ini_detector":
+        if command.command == ControlToHardwareViewer.INI_DETECTOR:
             status = self.ini_detector(*command.attribute)
-            self.status_sig.emit(ThreadCommand(command.command, status))
+            self.status_sig.emit(ThreadCommand(ThreadStatusViewer.INI_DETECTOR, status))
 
-        elif command.command == "close":
+        elif command.command == ControlToHardwareViewer.CLOSE:
             status = self.close()
-            self.status_sig.emit(ThreadCommand(command.command, [status, 'log']))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.CLOSE, [status, 'log']))
 
-        elif command.command == "grab":
+        elif command.command == ControlToHardwareViewer.GRAB:
             self.single_grab = False
             self.grab_state = True
             self.grab_data(**command.attribute)
 
-        elif command.command == "single":
+        elif command.command == ControlToHardwareViewer.SINGLE:
             self.single_grab = True
             self.grab_state = True
             self.single(**command.attribute)
 
-        elif command.command == "stop_grab":
+        elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
-        elif command.command == "stop_all":
+        elif command.command == ControlToHardwareViewer.STOP_ALL:
             self.grab_state = False
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
-            self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
-        elif command.command == 'update_scanner':
+        elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
             self.detector.update_scanner(command.attribute[0])
 
-        elif command.command == 'move_at_navigator':
-            self.detector.move_at_navigator(*command.attribute)
-
-        elif command.command == 'update_wait_time':
+        elif command.command == ControlToHardwareViewer.UPDATE_WAIT_TIME:
             self.wait_time = command.attribute[0]
-
-        elif command.command == 'get_axis':
-            self.detector.get_axis()
 
         else:  # custom commands for particular plugins
             if hasattr(self.detector, command.command):
