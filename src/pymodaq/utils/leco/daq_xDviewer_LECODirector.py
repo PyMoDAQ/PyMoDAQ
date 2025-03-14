@@ -1,5 +1,4 @@
 from __future__ import annotations
-from base64 import b64decode
 from typing import Optional, Union
 
 from easydict import EasyDict as edict
@@ -127,10 +126,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         :param data: If None, look for the additional object
         """
-        if isinstance(data, str):
-            decoded = b64decode(data)
-            dte = SerializableFactory().get_apply_deserializer(decoded)
-        elif additional_payload is not None:
+        if additional_payload is not None:
             dte = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")

@@ -7,7 +7,6 @@ running: `python -m pyleco.coordinators.coordinator`
 
 """
 
-from base64 import b64decode
 from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
@@ -157,11 +156,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self, position: Union[str, float, None], additional_payload=None
     ) -> DataActuator:
         if position:
-            if isinstance(position, str):
-                decoded = b64decode(position)
-                pos = SerializableFactory().get_apply_deserializer(decoded)
-            else:
-                pos = DataActuator(data=position)
+            pos = DataActuator(data=position)
         elif additional_payload is not None:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:

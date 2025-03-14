@@ -3,33 +3,7 @@ import pytest
 
 from pymodaq.control_modules.daq_move import DataActuator
 
-from pymodaq.utils.leco.utils import serialize_object, binary_serialization, binary_serialization_to_kwargs
-
-
-@pytest.mark.parametrize("value", (
-        5,
-        6.7,
-        "some value",
-))
-def test_native_json_object(value):
-    assert serialize_object(value) == value
-
-
-class TestSerializeDataActuator:
-    @pytest.fixture
-    def serialized(self):
-        value = DataActuator(data=10.5)
-        return serialize_object(value)
-
-    def test_is_string(self, serialized):
-        assert isinstance(serialized, str)
-
-    def test_is_equal_to_expectation(self, serialized):
-        # with Serializer Factory
-        expected = "AAAADERhdGFBY3R1YXRvcgAAAAVmbG9hdAAAAAM8ZjgAAAAIYGa0OSDU2UEAAAADc3RyAAAACGFjdHVhdG9yAAAAA3N0cgAAAANyYXcAAAADc3RyAAAABkRhdGEwRAAAAANzdHIAAAAHdW5pZm9ybQAAAARsaXN0AAAAAQAAAAduZGFycmF5AAAAAzxmOAAAAAgAAAABAAAAAQAAAAAAACVAAAAAA3N0cgAAAAAAAAAEbGlzdAAAAAEAAAADc3RyAAAABENIMDAAAAADc3RyAAAAAAAAAARsaXN0AAAAAAAAAARsaXN0AAAAAAAAAARsaXN0AAAAAAAAAARsaXN0AAAAAA=="
-        # test before and after timestamp
-        assert serialized[:30] == expected[:30]
-        assert serialized[64:] == expected[64:]
+from pymodaq.utils.leco.utils import binary_serialization, binary_serialization_to_kwargs
 
 
 @pytest.mark.parametrize("value", (

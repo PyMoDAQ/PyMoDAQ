@@ -1,10 +1,8 @@
 from __future__ import annotations
-from base64 import b64encode
 import subprocess
 import sys
 from typing import Any, Optional, Union, get_args
 
-from typing import Any, Optional, Union, get_args, TypeVar
 
 from pymodaq.utils import data
 from pymodaq_utils.serialize.factory import SerializableFactory
@@ -18,14 +16,6 @@ JSON_TYPES = Union[str, int, float]
 ser_factory = SerializableFactory()
 
 SERIALIZABLE = Union[ser_factory.get_serializables()]
-
-
-def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any]:
-    """Serialize a pymodaq object, if it is not JSON compatible."""
-    if isinstance(pymodaq_object, get_args(JSON_TYPES)):
-        return pymodaq_object
-    binary = SerializableFactory().get_apply_serializer(pymodaq_object)
-    return b64encode(binary).decode()
 
 
 def binary_serialization(

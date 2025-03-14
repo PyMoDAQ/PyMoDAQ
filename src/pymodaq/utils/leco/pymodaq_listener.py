@@ -1,5 +1,4 @@
 
-from base64 import b64decode
 try:
     from enum import StrEnum  # type: ignore
 except ImportError:
@@ -110,13 +109,9 @@ class ActorHandler(PymodaqPipeHandler):
         value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
     ):
         if value is None and additional_payload:
-            res = cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
-        elif isinstance(value, str):
-            decoded = b64decode(value)
-            res = cast(DataWithAxes, SerializableFactory().get_apply_deserializer(decoded))
+            return cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
         else:
-            res = value
-        return res
+            return value
 
     # generic commands
     def set_info(self,
