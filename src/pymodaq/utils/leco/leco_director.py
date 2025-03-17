@@ -1,6 +1,6 @@
 
 import random
-from enum import StrEnum
+from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
