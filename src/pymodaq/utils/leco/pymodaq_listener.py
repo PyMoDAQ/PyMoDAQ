@@ -1,11 +1,6 @@
 
-try:
-    from enum import StrEnum  # type: ignore
-except ImportError:
-    from enum import Enum
+from pymodaq_utils.enums import StrEnum
 
-    class StrEnum(str, Enum):
-        pass
 import logging
 from threading import Event
 from typing import cast, Optional, Union, List, Sequence, Type

@@ -1,4 +1,4 @@
-from enum import StrEnum
+from pymodaq_utils.enums import StrEnum
 
 
 class ThreadStatus(StrEnum):

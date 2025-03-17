@@ -6,11 +6,11 @@ Created the 29/07/2022
 """
 
 from __future__ import annotations
-from enum import StrEnum
+
 import numbers
 from importlib import import_module
 from numbers import Number
-from random import randint
+
 import sys
 from typing import List, Tuple, Union, Optional, Type
 import numpy as np
@@ -171,7 +171,7 @@ class DAQ_Move(ParameterControlModule):
             self.move_home()
         elif cmd.command == UiToMainMove.STOP:
             self.stop_motion()
-        elif cmd.command == UiToMainMove.STOP:
+        elif cmd.command == UiToMainMove.MOVE_ABS:
             data_act: DataActuator = cmd.attribute
             if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
                 data_act.force_units(self.units)

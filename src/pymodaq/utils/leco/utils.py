@@ -1,7 +1,7 @@
 from __future__ import annotations
 import subprocess
 import sys
-from typing import Any, Optional, Union, get_args
+from typing import Any, Optional, Union, get_args, TypeVar
 
 
 from pymodaq.utils import data
@@ -15,7 +15,12 @@ JSON_TYPES = Union[str, int, float]
 
 ser_factory = SerializableFactory()
 
-SERIALIZABLE = Union[ser_factory.get_serializables()]
+
+## this form below is to be compatible with python <= 3.10
+## for py>= 3.11 this could be written SERIALIZABLE = Union[ser_factory.get_serializables()]
+SERIALIZABLE = Union[ser_factory.get_serializables()[0]]
+for klass in ser_factory.get_serializables()[1:]:
+    SERIALIZABLE = Union[SERIALIZABLE, klass]
 
 
 def binary_serialization(

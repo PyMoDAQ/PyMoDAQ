@@ -53,5 +53,5 @@ try:
         getattr(detector_director, m)(*args)
         # asserts that no error is raised in the "ask_rpc" method
 
-except ImportError:
+except ImportError as e:
     pass

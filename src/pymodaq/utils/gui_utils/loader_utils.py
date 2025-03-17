@@ -39,6 +39,8 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     # win.setVisible(False)
     dashboard = DashBoard(area)
 
+    preset_name = Path(preset_name).stem
+
     file = Path(get_set_preset_path()).joinpath(f"{preset_name}.xml")
 
     if file is not None and file.exists():

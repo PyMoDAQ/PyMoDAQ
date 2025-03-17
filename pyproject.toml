@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils",
+    "pymodaq_utils>=0.0.14",
     "pymodaq_gui>=5.0.17",
     "pymodaq_data>=5.0.18",
     "easydict",
