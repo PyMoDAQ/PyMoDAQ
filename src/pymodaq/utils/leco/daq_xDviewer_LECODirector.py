@@ -1,8 +1,5 @@
 from __future__ import annotations
-from base64 import b64decode
 from typing import Optional, Union
-
-from easydict import EasyDict as edict
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
@@ -10,7 +7,7 @@ from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
 
-from pymodaq.utils import data  # for serialization factory registration
+from pymodaq.utils import data  # for serialization factory registration  # noqa: F401
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
@@ -120,10 +117,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         :param data: If None, look for the additional object
         """
-        if isinstance(data, str):
-            decoded = b64decode(data)
-            dte = SerializableFactory().get_apply_deserializer(decoded)
-        elif additional_payload is not None:
+        if additional_payload is not None:
             dte = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")
