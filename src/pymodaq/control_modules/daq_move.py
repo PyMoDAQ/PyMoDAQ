@@ -171,7 +171,7 @@ class DAQ_Move(ParameterControlModule):
             self.move_home()
         elif cmd.command == UiToMainMove.STOP:
             self.stop_motion()
-        elif cmd.command == UiToMainMove.STOP:
+        elif cmd.command == UiToMainMove.MOVE_ABS:
             data_act: DataActuator = cmd.attribute
             if not Unit(data_act.units).is_compatible_with(self.units) and data_act.units != '':
                 data_act.force_units(self.units)
