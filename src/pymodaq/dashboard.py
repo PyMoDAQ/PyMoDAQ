@@ -613,13 +613,15 @@ class DashBoard(CustomApp):
         help_menu.addAction(self.get_action('check_update'))
         help_menu.addAction(self.get_action('plugin_manager'))
 
-        self.overshoot_menu.setEnabled(False)
-        self.roi_menu.setEnabled(False)
-        self.remote_menu.setEnabled(False)
-        self.extensions_menu.setEnabled(False)
-        self.file_menu.setEnabled(True)
-        self.settings_menu.setEnabled(True)
-        self.preset_menu.setEnabled(True)
+        status = self.preset_file is None
+
+        self.overshoot_menu.setEnabled(not status)
+        self.roi_menu.setEnabled(not status)
+        self.remote_menu.setEnabled(not status)
+        self.extensions_menu.setEnabled(not status)
+        self.file_menu.setEnabled(status)
+        self.settings_menu.setEnabled(status)
+        self.preset_menu.setEnabled(status)
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()
