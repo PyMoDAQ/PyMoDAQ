@@ -45,7 +45,7 @@ from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.utils.gui_utils import get_splash_sc
+from pymodaq_gui.utils.splash import get_splash_sc
 
 from pymodaq import extensions as extmod
 
