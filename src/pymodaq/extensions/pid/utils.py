@@ -137,38 +137,14 @@ class PIDModelGeneric:
 
 
 def main(xmlfile):
-    from pymodaq.dashboard import DashBoard
-    from pymodaq.utils.config import get_set_preset_path
+    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
     from pathlib import Path
     from qtpy import QtWidgets
+    from pymodaq_gui.utils.utils import mkQApp
 
     import sys
-    app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
-
-    dashboard = DashBoard(area)
-    file = Path(get_set_preset_path()).joinpath(xmlfile)
-    if file.exists():
-        dashboard.set_preset_mode(file)
-        # prog.load_scan_module()
-        pid_area = DockArea()
-        pid_window = QtWidgets.QMainWindow()
-        pid_window.setCentralWidget(pid_area)
-
-        prog = dashboard.load_pid_module(pid_window)
-
-    else:
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
-                       f"Impossible to load the DAQ_PID Module")
-        msgBox.setStandardButtons(msgBox.Ok)
-        ret = msgBox.exec()
-
+    app = mkQApp('BeamSteering')
+    dashboard, extension, win = load_dashboard_with_preset(xmlfile, 'DAQ_PID')
     sys.exit(app.exec_())
 
 
@@ -180,7 +156,6 @@ def get_models(model_name=None):
     -------
     list: list of disct containting the name and python module of the found models
     """
-    from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
     discovered_models = list(get_entrypoints(group='pymodaq.pid_models'))
     discovered_models.extend(list(get_entrypoints(group='pymodaq.models')))
