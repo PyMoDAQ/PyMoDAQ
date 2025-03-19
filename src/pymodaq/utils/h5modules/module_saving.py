@@ -12,19 +12,24 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
-from pymodaq.utils.daq_utils import capitalize
-from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
-from .saving import H5SaverLowLevel
-from .backends import GROUP, CARRAY, Node, GroupType
-from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportTimedSaver, DataToExportExtendedSaver
-from pymodaq.utils.parameter import ioxml
+from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
+from pymodaq_utils.utils import capitalize
+from pymodaq_data.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
+from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_data.h5modules.backends import GROUP, CARRAY, Node, GroupType
+from pymodaq_data.h5modules.data_saving import (DataToExportSaver, AxisSaverLoader,
+                                                DataToExportTimedSaver, DataToExportExtendedSaver)
+from pymodaq_gui.parameter import ioxml
 
 if TYPE_CHECKING:
     from pymodaq.extensions.daq_scan import DAQScan
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pymodaq.utils.h5modules.h5logging import H5Logger
+
+
+logger = set_logger(get_module_name(__file__))
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -373,7 +378,7 @@ class ScanSaver(ModuleSaver):
             try:
                 detector.insert_data(indexes, where=self._module_group, distribution=distribution)
             except Exception as e:
-                pass
+                logger.exception(f'Cannot insert data: {str(e)}')
 
 
 class LoggerSaver(ScanSaver):
