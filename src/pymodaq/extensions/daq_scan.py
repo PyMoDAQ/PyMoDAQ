@@ -86,7 +86,12 @@ class DAQScan(QObject, ParameterManager):
             {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
-            {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
+            {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int',
+             'value': config('scan', 'Naverage'), 'min': 1},
+            {'title': 'Plot on top:', 'name': 'average_on_top', 'type': 'bool',
+             'value': config('scan', 'average_on_top'),
+             'tip': 'At the second iteration will plot the averaged scan on top (True) of the current one'
+                    'or in a second panel (False)'},
         ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
@@ -633,6 +638,10 @@ class DAQScan(QObject, ParameterManager):
             viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
                                  for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
+        if not self.settings['scan_options', 'average_on_top']:
+
+            viewers_enum = viewers_enum + viewers_enum
+            data_names = data_names + [f'{data_name}_averaged' for data_name in data_names]
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
     def update_status(self, txt: str, wait_time=0):
@@ -737,6 +746,7 @@ class DAQScan(QObject, ParameterManager):
             self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
                                              average_axis=average_axis,
                                              average_index=self.ind_average,
+                                             separate_average= not self.settings['scan_options', 'average_on_top'],
                                              target_at=self.scanner.positions[self.ind_scan],
                                              last_step=(self.ind_scan ==
                                                         self.scanner.positions.size - 1 and
@@ -1167,7 +1177,8 @@ class DAQScanAcquisition(QObject):
             full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
             full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
             data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
-            data_temp = data_temp.get_data_with_naxes_lower_than(2-len(indexes))  # maximum Data2D included nav indexes
+            n_nav_axis_selection = 2-len(indexes) + 1 if self.Naverage > 1 else 2-len(indexes)
+            data_temp = data_temp.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
 
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
