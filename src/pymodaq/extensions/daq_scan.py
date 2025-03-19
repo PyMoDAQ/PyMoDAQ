@@ -1123,6 +1123,7 @@ class DAQScanAcquisition(QObject):
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
+            self.modules_manager.timeout_signal.disconnect()
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
 
