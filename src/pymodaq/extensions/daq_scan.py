@@ -1051,7 +1051,7 @@ class DAQScanAcquisition(QObject):
 
     def start_acquisition(self):
         try:
-            #todo hoaw to apply newlayout to adaptive mode?
+            #todo hoaw to apply newlayout to adaptive mode? => cannot has to be a new extension
 
             self.modules_manager.connect_actuators()
             self.modules_manager.connect_detectors()
