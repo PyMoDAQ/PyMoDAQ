@@ -672,6 +672,7 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_step_average(status.attribute[1] + 1)
 
         elif status.command == "Scan_done":
+
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
@@ -772,6 +773,8 @@ class DAQScan(QObject, ParameterManager):
                     text="There are not enough or too much selected move modules for this scan")
                 return False
 
+            ## TODO the stuff about adaptive scans have to be moved into a dedicated extension. M
+            ## Most similat to the Bayesian one!
             if self.scanner.scan_sub_type == 'Adaptive':
                 #todo include this in scanners objects for the adaptive scanners
                 if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
@@ -860,9 +863,15 @@ class DAQScan(QObject, ParameterManager):
             self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
+            Naverage = self.settings['scan_options', 'scan_average']
+            if Naverage > 1:
+                scan_shape = [Naverage]
+                scan_shape.extend(self.scanner.get_scan_shape())
+            else:
+                scan_shape = self.scanner.get_scan_shape()
             for det in self.modules_manager.detectors:
                 det.module_and_data_saver = (
-                    module_saving.DetectorExtendedSaver(det, self.scanner.get_scan_shape()))
+                    module_saving.DetectorExtendedSaver(det, scan_shape))
             self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver ill also be set on each detectors
 
             # mandatory to deal with multithreads
@@ -1120,6 +1129,7 @@ class DAQScanAcquisition(QObject):
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
                                                      attribute="Acquisition has finished"))
             self.status_sig.emit(utils.ThreadCommand("Scan_done"))
+
 
         except Exception as e:
             logger.exception(str(e))
