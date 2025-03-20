@@ -156,6 +156,24 @@ class DataDistribution(BaseEnum):
     spread = 1
 
 
+def _compute_slices_from_axis(axis: Axis, _slice, *ignored, is_index=True, **ignored_also):
+    if not is_index:
+        if isinstance(_slice, numbers.Number):
+            if not is_index:
+                _slice = axis.find_index(_slice)
+        elif _slice is Ellipsis:
+            return _slice
+        elif isinstance(_slice, slice):
+            if not (_slice.start is None and
+                    _slice.stop is None and _slice.step is None):
+                start = axis.find_index(
+                    _slice.start if _slice.start is not None else axis.get_data()[0])
+                stop = axis.find_index(
+                    _slice.stop if _slice.stop is not None else axis.get_data()[-1])
+                _slice = slice(start, stop)
+    return _slice
+
+
 class Axis:
     """Object holding info and data about physical axis of some data
 
@@ -366,8 +384,9 @@ class Axis:
     def __len__(self):
         return self.size
 
-    def _compute_slices(self, slices, *ignored, **ignored_also):
-        return slices
+    def _compute_slices(self, _slice, *ignored, is_index=True, **ignored_also):
+        _slice = _compute_slices_from_axis(self, _slice, is_index=is_index)
+        return _slice, _slice
 
     def _slicer(self, _slice, *ignored, **ignored_also):
         ax: Axis = copy.deepcopy(self)
@@ -2187,11 +2206,22 @@ class DataWithAxes(DataBase):
                         axes.append(ax)
         self.axes = axes
 
-    def _compute_slices(self, slices, is_navigation=True):
+    def _compute_slices(self, slices, is_navigation=True, is_index=True):
         """Compute the total slice to apply to the data
 
         Filling in Ellipsis when no slicing should be done
+        Parameters
+        ----------
+        slices: List of slice
+        is_navigation: bool
+        is_index: bool
+            if False, the slice are on the values of the underlying axes
+        Returns
+        -------
+        list(slice): the computed slices as index (eventually for all axes)
+        list(slice): a version as index of the input argument
         """
+        _slices_as_index = []
         if isinstance(slices, numbers.Number) or isinstance(slices, slice):
             slices = [slices]
         if is_navigation:
@@ -2202,13 +2232,29 @@ class DataWithAxes(DataBase):
         slices = list(slices)
         for ind in range(len(self.shape)):
             if ind in indexes:
-                total_slices.append(slices.pop(0))
+                _slice = slices.pop(0)
+                if not is_index:
+                    axis = self.get_axis_from_index(ind)[0]
+                    _slice = _compute_slices_from_axis(axis, _slice, is_index=is_index)
+                _slices_as_index.append(_slice)
+                total_slices.append(_slice)
             elif len(total_slices) == 0:
                 total_slices.append(Ellipsis)
             elif not (Ellipsis in total_slices and total_slices[-1] is Ellipsis):
                 total_slices.append(slice(None))
+            if len(slices) == 0 and self.distribution == DataDistribution.uniform and is_navigation:
+                if total_slices[-1] is Ellipsis:
+                    for ind in range(len(total_slices), len(indexes)):
+                        _slices_as_index.append(slice(None))
+                else:
+                    for ind in range(len(total_slices), len(indexes)):
+                        _slices_as_index.insert(0, Ellipsis)
+                    for ind in range(len(indexes), len(self.shape)):
+                        total_slices.append(slice(None))
+
+                break
         total_slices = tuple(total_slices)
-        return total_slices
+        return total_slices, _slices_as_index
 
     def check_squeeze(self, total_slices: List[slice], is_navigation: bool):
 
@@ -2220,7 +2266,7 @@ class DataWithAxes(DataBase):
                 do_squeeze = False
         return do_squeeze
 
-    def _slicer(self, slices, is_navigation=True):
+    def _slicer(self, slices, is_navigation=True, is_index=True):
         """Apply a given slice to the data either navigation or signal dimension
 
         Parameters
@@ -2229,6 +2275,8 @@ class DataWithAxes(DataBase):
             the slices to apply to the data
         is_navigation: bool
             if True apply the slices to the navigation dimension else to the signal ones
+        is_index: bool
+            if True the slices are indexes otherwise the slices are axes values to be indexed first
 
         Returns
         -------
@@ -2236,10 +2284,10 @@ class DataWithAxes(DataBase):
             Object of the same type as the initial data, derived from DataWithAxes. But with lower
             data size due to the slicing and with eventually less axes.
         """
-
         if isinstance(slices, numbers.Number) or isinstance(slices, slice):
             slices = [slices]
-        total_slices = self._compute_slices(slices, is_navigation)
+
+        total_slices, slices = self._compute_slices(slices, is_navigation, is_index=is_index)
 
         do_squeeze = self.check_squeeze(total_slices, is_navigation)
         new_arrays_data = [squeeze(dat[total_slices], do_squeeze) for dat in self.data]
@@ -2289,11 +2337,11 @@ class DataWithAxes(DataBase):
         if len(nav_indexes) != 0:
             distribution = self.distribution
         else:
-            distribution = DataDistribution['uniform']
+            distribution = DataDistribution.uniform
 
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes),
                             axes=axes,
-                            source='calculated', origin=self.origin,
+                            source=DataSource.calculated, origin=self.origin,
                             labels=self.labels[:],
                             distribution=distribution)
         return data

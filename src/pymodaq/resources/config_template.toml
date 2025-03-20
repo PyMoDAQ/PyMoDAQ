@@ -86,6 +86,7 @@ scan_in_thread = true
 show_popups = true
 default = "Scan2D"
 Naverage = 1  # minimum is 1
+average_on_top = true
 steps_limit = 1000  # the limit of the number of steps you can set in a given scan
 sort1D = true
 
