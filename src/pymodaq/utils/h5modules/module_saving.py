@@ -12,15 +12,15 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
-from pymodaq_utils.utils import capitalize
-from pymodaq_data.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
-from pymodaq_data.h5modules.saving import H5SaverLowLevel
-from pymodaq_data.h5modules.backends import GROUP, CARRAY, Node, GroupType
-from pymodaq_data.h5modules.data_saving import (DataToExportSaver, AxisSaverLoader,
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
+from pymodaq.utils.daq_utils import capitalize
+from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
+from pymodaq.utils.h5modules.saving import H5SaverLowLevel
+from pymodaq.utils.h5modules.backends import GROUP, CARRAY, Node, GroupType
+from pymodaq.utils.h5modules.data_saving import (DataToExportSaver, AxisSaverLoader,
                                                 DataToExportTimedSaver, DataToExportExtendedSaver)
-from pymodaq_gui.parameter import ioxml
+from pymodaq.utils.parameter import ioxml
 
 if TYPE_CHECKING:
     from pymodaq.extensions.daq_scan import DAQScan
