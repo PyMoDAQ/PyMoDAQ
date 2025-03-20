@@ -602,7 +602,7 @@ class DAQScan(QObject, ParameterManager):
         for ind, pos in enumerate(positions):
             dte.append(DataActuator(actuators[ind].title, data=float(pos)))
 
-        self.modules_manager.move_actuators(dte)
+        self.modules_manager.move_actuators(dte, polling=False)
 
     def value_changed(self, param):
         """
@@ -1048,13 +1048,13 @@ class DAQScanAcquisition(QObject):
             self.set_ini_positions()
 
         elif command.command == "move_stages":
-            self.modules_manager.move_actuators(command.attribute)
+            self.modules_manager.move_actuators(command.attribute, polling=False)
 
     def set_ini_positions(self):
         """ Set the actuators's positions totheir initial value as defined in the scanner  """
         try:
             if self.scanner.scan_sub_type != 'Adaptive':
-                self.modules_manager.move_actuators(self.scanner.positions_at(0))
+                self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
 
         except Exception as e:
             logger.exception(str(e))
