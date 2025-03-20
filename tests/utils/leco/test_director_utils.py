@@ -42,7 +42,9 @@ try:
 
 
     @pytest.mark.parametrize("method", (  # "set_info param",
-                                        "send_data",
+                                        "send_data_snap",
+                                        "send_data_grab",
+                                        "stop_grab"
                                         ))
     def test_method_call_existing_remote_methods_det(detector_director: FakeDetectorDirector, method):
         """Test that the remote method exists."""
@@ -51,5 +53,5 @@ try:
         getattr(detector_director, m)(*args)
         # asserts that no error is raised in the "ask_rpc" method
 
-except ImportError:
+except ImportError as e:
     pass

@@ -60,7 +60,9 @@ class BayesianOptimisation(CustomExt):
     explored_viewer_name = 'algo/ProbedData'
     optimisation_done_signal = QtCore.Signal(DataToExport)
 
+
     acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
+
 
     def __init__(self, dockarea, dashboard):
         self.params = [
@@ -558,7 +560,7 @@ class OptimisationRunner(QtCore.QObject):
             self.stopping_params: StoppingParameters = command.attribute
 
         elif command.command == 'bounds':
-            self.optimisation_algorithm.set_bounds(command.attribute)
+            self.optimisation_algorithm.bounds = command.attribute
 
     def run_opti(self, sync_detectors=True, sync_acts=True):
         """Start the optimisation loop

@@ -70,7 +70,7 @@ class LoaderPlotter:
     def load_data(self, filter_dims: List[Union[DataDim, str]] = None,
                   filter_full_names: List[str] = None, remove_navigation: bool = True,
                   group_0D=False, average_axis: int=None, average_index: int = 0,
-                  last_step=False):
+                  last_step=False, separate_average=False):
         """Load Data from the h5 node of the dataloader and apply some filtering/manipulation before
         plotting
 
@@ -92,6 +92,8 @@ class LoaderPlotter:
             which step in the averaging process are we in.
         last_step: bool
             tells if this is the very last step of the (averaged) scan
+        separate_average: bool
+            Tells if the averaged data are to be plotted on the same data viewer panel or another one
 
         Returns
         -------
@@ -102,7 +104,8 @@ class LoaderPlotter:
         self.dataloader.load_all('/', self._data)
 
         if average_axis is not None:
-            self.average_axis(average_axis, average_index, last_step=last_step)
+            self.average_axis(average_axis, average_index, last_step=last_step,
+                              separate_average=separate_average)
 
         if filter_dims is not None:
             filter_dims[:] = [enum_checker(DataDim, dim) for dim in filter_dims]
@@ -113,14 +116,15 @@ class LoaderPlotter:
                                   filter_full_names]
 
         if group_0D:  # 0D initial data
-            self.group_0D_data()
+            self.group_0D_data(separate_average=separate_average)
 
         if remove_navigation:
             self.remove_navigation_axes()
 
         return self._data
 
-    def average_axis(self, average_axis, average_index, last_step=False) -> None:
+    def average_axis(self, average_axis, average_index, last_step=False,
+                     separate_average=False) -> None:
         """ Average the data along their average axis
 
         Parameters
@@ -132,7 +136,12 @@ class LoaderPlotter:
             which step in the averaging process are we in.
         last_step: bool
             tells if this is the very last step of the (averaged) scan
+        separate_average: bool
+            Tells if the averaged data are to be plotted on the same data viewer panel or another one
+
         """
+        if separate_average and average_index > 0:
+            averaged_data = DataToExport('Averaged')
         for ind, data in enumerate(self._data):
             current_data = data.inav[average_index, ...]
             if average_index > 0:
@@ -143,10 +152,16 @@ class LoaderPlotter:
                         data_to_append = data.inav[0, ...]
                     else:
                         data_to_append = data.inav[0:average_index, ...].mean(axis=average_axis)
-
+                data_to_append.name = f'{data_to_append.name}_averaged'
                 data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
-                current_data.append(data_to_append)
+                if not (separate_average and average_index > 0):
+                    current_data.append(data_to_append)
+                else:
+                    averaged_data.append(data_to_append)
             self._data[ind] = current_data
+        if separate_average and average_index > 0:
+            self._data.append(averaged_data.data)
+
 
     def remove_navigation_axes(self):
         """Make the navigation axes as signal axes
@@ -159,18 +174,27 @@ class LoaderPlotter:
             data.transpose()  # because usual ND data should be plotted here as 2D with the nav axes as the minor
             # (horizontal)
 
-    def group_0D_data(self):
+    def group_0D_data(self, separate_average=False):
         """Group in a single DataFromPlugins all data that are initialy Data0D
 
         """
         data = self._data.get_data_from_sig_axes(0)
         if len(data) > 0:
             data0D_arrays = []
+            data0D_arrays_averaged = []
             labels = []
+            labels_averaged = []
             for dwa in data:
-                data0D_arrays.extend(dwa.data)
-                labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
-                self._data.remove(dwa)
+                if 'averaged' in dwa.name and separate_average:
+                    data0D_arrays_averaged.extend(dwa.data)
+                    labels_averaged.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                    self._data.remove(dwa)
+
+
+                else:
+                    data0D_arrays.extend(dwa.data)
+                    labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                    self._data.remove(dwa)
 
             data0D = DataFromPlugins(self.grouped_data0D_fullname.split('/')[1],
                                      data=data0D_arrays, labels=labels,
@@ -179,6 +203,15 @@ class LoaderPlotter:
                                      axes=dwa.axes, nav_indexes=dwa.nav_indexes,
                                      )
             self._data.append(data0D)
+            if 'averaged' in dwa.name and separate_average:
+                data0D_averaged = DataFromPlugins(
+                    f"{self.grouped_data0D_fullname.split('/')[1]}_averaged",
+                    data=data0D_arrays_averaged, labels=labels_averaged,
+                    dim='DataND',
+                    origin=self.grouped_data0D_fullname.split('/')[0],
+                    axes=dwa.axes, nav_indexes=dwa.nav_indexes,
+                )
+                self._data.append(data0D_averaged)
 
     def load_plot_data(self, **kwargs):
         """Load and plot all data from the current H5Saver

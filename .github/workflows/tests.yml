@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v4.2.2
  
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: ${{ matrix.python-version }}
           
@@ -79,7 +79,7 @@ jobs:
           pytest -vv --cov=pymodaq -n 1
           mv .coverage coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.1
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}_${{ matrix.qt-backend }}
           path: coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
@@ -93,7 +93,7 @@ jobs:
 
       - name: generate badge (success)
         if: ${{ success() }}
-        uses: emibcn/badge-action@v2.0.2
+        uses: emibcn/badge-action@v2.0.3
         with:
           label: ''
           status: 'passing'
@@ -101,7 +101,7 @@ jobs:
           path: '${{ steps.extract_branch.outputs.branch }}/tests_${{runner.os}}_${{matrix.python-version}}_${{matrix.qt-backend}}.svg'
       - name: generate badge (fail)
         if: ${{ failure() }}
-        uses: emibcn/badge-action@v2.0.2
+        uses: emibcn/badge-action@v2.0.3
         with:
           label: ''
           status: 'failing'
@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload badge artifact
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.1
         with:
           name:  tests_${{runner.os}}_${{matrix.python-version}}_${{matrix.qt-backend}}
           path: '${{ steps.extract_branch.outputs.branch }}/tests_${{runner.os}}_${{matrix.python-version}}_${{matrix.qt-backend}}.svg'
@@ -125,12 +125,12 @@ jobs:
     needs: tests # Ensure this job runs after all matrix jobs complete
     steps:
        # switch to badges branches to commit
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
         with:
           ref: badges
      
       - name: Download badges
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.9
 
       - name: Reorganize badges
         run: |
@@ -149,7 +149,7 @@ jobs:
           git commit  --allow-empty -m "Add/Update badge"
 
       - name: Push badges
-        uses: ad-m/github-push-action@master
+        uses: ad-m/github-push-action@v0.8.0
         if: ${{ success() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -163,7 +163,7 @@ jobs:
         uses: actions/checkout@v4.2.2
 
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.9
         with:
           path: ./coverage-reports
 
@@ -184,7 +184,7 @@ jobs:
           coverage xml -i
 
       - name: Upload combined coverage report to Codecov
-        uses: codecov/codecov-action@v5.0.7
+        uses: codecov/codecov-action@v5.4.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml

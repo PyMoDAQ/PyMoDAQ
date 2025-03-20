@@ -22,6 +22,7 @@ from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
+from pymodaq.control_modules.thread_commands import UiToMainViewer
 
 
 viewer_factory = ViewerFactory()
@@ -107,12 +108,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     @detectors.setter
     def detectors(self, detectors: List[str]):
-        #self._detectors_combo.currentTextChanged.disconnect()
         self._detectors_combo.clear()
         self._detectors_combo.addItems(detectors)
-        #self._detectors_combo.currentTextChanged.connect(
-        #    lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
-        #self.detector = detectors[0]
 
     @property
     def daq_type(self):
@@ -220,36 +217,37 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', lambda show: self._settings_widget.setVisible(show))
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
-        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand('show_config', )))
+        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, )))
+        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
 
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
+        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_LOG, )))
+        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.STOP, )))
         self.connect_action('stop', lambda: self.get_action('grab').setChecked(False))
         self.connect_action('stop', lambda: self._enable_ini_buttons(True))
         self.connect_action('stop', lambda: self._settings_widget.setEnabled(True))
 
         self.connect_action('grab', self._grab)
-        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand('snap', )))
+        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
-        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand('save_current', )))
-        self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand('save_new', )))
-        self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand('open', )))
+        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
+        self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_NEW, )))
+        self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.OPEN, )))
 
         self._ini_det_pb.clicked.connect(self.send_init)
 
         self._detectors_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
+            lambda mod: self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, mod)))
         self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
 
-        self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand('do_bkg', checked)))
-        self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('take_bkg')))
+        self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
+        self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
 
     def update_viewers(self, viewers_type: List[ViewersEnum]):
         super().update_viewers(viewers_type)
-        self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
-                                                                              viewers=self.viewers)))
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
+                                            attribute=dict(viewer_types=self.viewer_types,
+                                                           viewers=self.viewers)))
 
     @property
     def data_ready(self):
@@ -263,7 +261,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         try:
             daq_type = enum_checker(DAQTypesEnum, daq_type)
 
-            self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
+            self.command_sig.emit(ThreadCommand(UiToMainViewer.DAQ_TYPE_CHANGED, daq_type))
             if self.viewer_types != [daq_type.to_viewer_type()]:
                 self.update_viewers([daq_type.to_viewer_type()])
         except ValueError as e:
@@ -281,7 +279,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def _grab(self):
         """Slot from the *grab* action"""
-        self.command_sig.emit(ThreadCommand('grab', attribute=self.is_action_checked('grab')))
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self._enable_ini_buttons(not self.is_action_checked('grab'))
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
@@ -324,9 +322,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def send_init(self, checked: bool):
         self._enable_detchoices(not checked)
-        self.command_sig.emit(ThreadCommand('init', [checked,
-                                                     self._daq_types_combo.currentText(),
-                                                     self._detectors_combo.currentText()]))
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
+                                            [checked,
+                                             self._daq_types_combo.currentText(),
+                                             self._detectors_combo.currentText()]))
 
     def _enable_detchoices(self, enable=True):
         self._detectors_combo.setEnabled(enable)
@@ -377,7 +376,7 @@ def main(init_qt=True):
     def print_command_sig(cmd_sig):
         print(cmd_sig)
         prog.display_status(str(cmd_sig))
-        if cmd_sig.command == 'init':
+        if cmd_sig.command == UiToMainViewer.INIT:
             prog._enable_grab_buttons(cmd_sig.attribute[0])
             prog.detector_init = cmd_sig.attribute[0]
 

@@ -166,7 +166,7 @@ class DAQ_PID(CustomExt):
     def process_output(self, data: DataToExport):
         inputs: DataRaw = data.get_data_from_name('inputs')
         outputs: DataRaw = data.get_data_from_name('outputs')
-        self.curr_points = [float(d) for d in inputs]
+        self.curr_points = [float(array[0]) for array in inputs]
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
 

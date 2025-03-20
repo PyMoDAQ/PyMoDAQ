@@ -18,11 +18,15 @@ from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
-
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq_gui.utils.utils import mkQApp
 
-comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
-                     'limits': ['Master', 'Slave']}, ]
+comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
+                     'value': 'Master',
+                     'limits': ['Master', 'Slave']},
+                    {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0,
+                     'default': 0, 'readonly': False},
+                    ]
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -42,7 +46,7 @@ params = [
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
-        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': False},
+
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
@@ -324,15 +328,6 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def get_axis(self):
-        """deprecated"""
-        raise DeprecationWarning('get_axis is deprecated add the axes within the DataWithAxes, '
-                                 'DataFromPlugins')
-        if self.plugin_type == '1D' or self.plugin_type == '2D':
-            self.emit_x_axis()
-
-        if self.plugin_type == '2D':
-            self.emit_y_axis()
 
     def emit_status(self, status: ThreadCommand):
         """
@@ -396,8 +391,7 @@ class DAQ_Viewer_base(QObject):
 
             self.commit_settings(param)
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
-
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
 
     def send_param_status(self, param, changes):
@@ -419,13 +413,14 @@ class DAQ_Viewer_base(QObject):
             path = self.settings.childPath(param)
             if change == 'childAdded':
                 # first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
-                self.emit_status(ThreadCommand('update_settings',
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
                                                [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
                                                 change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
 
             elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
-                                                                   change]))  # send parameters values/limits back to the GUI
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data,
+                                                change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 
@@ -540,7 +535,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                 self.send_data(command_sock, data)  # to be send to a client
 
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
     def commit_settings(self, param):
 
@@ -636,7 +631,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             # self.command_server.emit(["process_cmds","Send Data 2D"])
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
 
     def stop(self):
         """

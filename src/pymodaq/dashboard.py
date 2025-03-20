@@ -12,7 +12,8 @@ from typing import Tuple, List, Any, TYPE_CHECKING
 
 
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QSize
+from qtpy.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox, QWidget, QLabel, QDialogButtonBox, QDialog
 from time import perf_counter
 import numpy as np
 
@@ -44,7 +45,7 @@ from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.utils.gui_utils import get_splash_sc
+from pymodaq_gui.utils.splash import get_splash_sc
 
 from pymodaq import extensions as extmod
 
@@ -71,6 +72,66 @@ class ManagerEnums(BaseEnum):
     overshoot = 2
     roi = 3
 
+class PymodaqUpdateTableWidget(QTableWidget):
+    '''
+        A class to represent PyMoDAQ and its subpackages'
+        available updates as a table.
+    '''
+    def __init__(self):
+        super().__init__()
+
+        self._checkboxes = []
+        self._package_versions = []
+
+    def setHorizontalHeaderLabels(self, labels):
+        super().setHorizontalHeaderLabels(labels)
+        self.setColumnCount(len(labels))
+        
+    def append_row(self, checkbox, package, current_version, available_version):  
+        row = len(self._checkboxes)
+
+        self._checkboxes.append(checkbox)
+        self._package_versions.append(f'{package}=={available_version}')
+
+        checkbox_widget = QWidget()
+                        
+        checkbox.setChecked(True)
+        checkbox.setToolTip("Check to install update")
+
+        checkbox_layout = QtWidgets.QHBoxLayout()                
+        checkbox_layout.addWidget(checkbox)
+        checkbox_layout.setAlignment(Qt.AlignCenter)
+        checkbox_layout.setContentsMargins(0, 0, 0, 0)
+
+        checkbox_widget.setLayout(checkbox_layout)
+
+        # Add the checkbox widget to the table
+        self.setCellWidget(row, 0, checkbox_widget)
+
+        # Add labels in the other columns
+        self.setItem(row, 1, QTableWidgetItem(str(package)))
+        self.setItem(row, 2, QTableWidgetItem(str(current_version)))
+        self.setItem(row, 3, QTableWidgetItem(str(available_version)))
+
+
+    def get_checked_data(self):
+    	checked = list(map(lambda c : c.isChecked(), self._checkboxes))
+    	return list(np.array(self._package_versions)[checked])
+
+    def sizeHint(self):
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+                
+        # Compute the size to adapt the window (header + borders + sum of all the elements)
+        width  = self.verticalHeader().width()  \
+        	   + self.frameWidth() * 2 \
+        	   + sum([self.columnWidth(i) for i in range(self.columnCount())])
+        
+        height = self.horizontalHeader().height() \
+        	   + self.frameWidth() * 2 \
+        	   + sum([self.rowHeight(i) for i in range(self.rowCount())])
+
+        return QSize(width, height)
 
 class DashBoard(CustomApp):
     """
@@ -154,7 +215,8 @@ class DashBoard(CustomApp):
         logger.info('Dashboard Initialized')
 
         if config('general', 'check_version'):
-            self.check_version(show=False)
+            if self.check_update(show=False):
+                sys.exit(0)
 
     @classmethod
     @property
@@ -223,6 +285,7 @@ class DashBoard(CustomApp):
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
         self.extensions['DAQScan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
+        #win.setWindowTitle("DAQScan")
         win.show()
         return self.scan_module
 
@@ -333,20 +396,12 @@ class DashBoard(CustomApp):
                         'Modify an existing experimental setup configuration file: a "preset"',
                         auto_toolbar=False)
 
-        presets = []
-        for ind_file, file in enumerate(self.preset_path.iterdir()):
-            if file.suffix == '.xml':
-                filestem = file.stem
-                self.add_action(self.get_action_from_file(file, ManagerEnums.preset),
-                                filestem, '', f'Load the {filestem}.xml preset',
-                                auto_toolbar=False)
-                presets.append(filestem)
-
         self.add_widget('preset_list', QtWidgets.QComboBox, toolbar=self.toolbar,
                         signal_str='currentTextChanged', slot=self.update_preset_action)
         self.add_action('load_preset', 'LOAD', 'Open',
                         tip='Load the selected Preset: ')
-        self.get_action('preset_list').addItems(presets)
+        self.update_preset_action_list()
+
         self.add_action('new_overshoot', 'New Overshoot', '',
                         'Create a new experimental setup overshoot configuration file',
                         auto_toolbar=False)
@@ -389,9 +444,23 @@ class DashBoard(CustomApp):
         self.add_action('about', 'About', 'information2')
         self.add_action('help', 'Help', 'help1')
         self.get_action('help').setShortcut(QtGui.QKeySequence('F1'))
-        self.add_action('check_version', 'Check Version', '', auto_toolbar=False)
+        self.add_action('check_update', 'Check Updates', '', auto_toolbar=False)
         self.toolbar.addSeparator()
         self.add_action('plugin_manager', 'Plugin Manager', '')
+
+    def update_preset_action_list(self):
+        presets = []
+        self.get_action('preset_list').clear()
+        for ind_file, file in enumerate(self.preset_path.iterdir()):
+            if file.suffix == '.xml':
+                filestem = file.stem
+                if not self.has_action(self.get_action_from_file(file, ManagerEnums.preset)):
+                    self.add_action(self.get_action_from_file(file, ManagerEnums.preset),
+                                    filestem, '', f'Load the {filestem}.xml preset',
+                                    auto_toolbar=False)
+                presets.append(filestem)
+
+        self.get_action('preset_list').addItems(presets)
 
     def update_preset_action(self, preset_name: str):
         self.get_action('load_preset').setToolTip(f'Load the {preset_name}.xml preset file!')
@@ -451,7 +520,7 @@ class DashBoard(CustomApp):
 
         self.connect_action('about', self.show_about)
         self.connect_action('help', self.show_help)
-        self.connect_action('check_version', lambda: self.check_version(True))
+        self.connect_action('check_update', lambda: self.check_update(True))
         self.connect_action('plugin_manager', self.start_plugin_manager)
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
@@ -541,16 +610,18 @@ class DashBoard(CustomApp):
         help_menu.addAction(self.get_action('about'))
         help_menu.addAction(self.get_action('help'))
         help_menu.addSeparator()
-        help_menu.addAction(self.get_action('check_version'))
+        help_menu.addAction(self.get_action('check_update'))
         help_menu.addAction(self.get_action('plugin_manager'))
 
-        self.overshoot_menu.setEnabled(False)
-        self.roi_menu.setEnabled(False)
-        self.remote_menu.setEnabled(False)
-        self.extensions_menu.setEnabled(False)
-        self.file_menu.setEnabled(True)
-        self.settings_menu.setEnabled(True)
-        self.preset_menu.setEnabled(True)
+        status = self.preset_file is None
+
+        self.overshoot_menu.setEnabled(not status)
+        self.roi_menu.setEnabled(not status)
+        self.remote_menu.setEnabled(not status)
+        self.extensions_menu.setEnabled(not status)
+        self.file_menu.setEnabled(status)
+        self.settings_menu.setEnabled(status)
+        self.preset_menu.setEnabled(status)
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()
@@ -614,12 +685,11 @@ class DashBoard(CustomApp):
 
     def create_preset(self):
         try:
-            self.preset_manager.set_new_preset()
-            self.add_action(self.get_action_from_file(self.preset_file,
-                                                      ManagerEnums.preset),
-                            self.preset_file.stem, '')
-            self.setup_menu(self.menubar)
-            self.new_preset_created.emit()
+            status = self.preset_manager.set_new_preset()
+            if status:
+                self.update_preset_action_list()
+                self.setup_menu(self.menubar)
+                self.new_preset_created.emit()
         except Exception as e:
             logger.exception(str(e))
 
@@ -967,17 +1037,16 @@ class DashBoard(CustomApp):
                         self.preset_manager.preset_params.child('Detectors').children()]
 
             for plug in plugins:
-                plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()
                 if plug["type"] == 'det':
-                    plug['status'] = plug['value'].child(
-                        'params', 'detector_settings', 'controller_status').value()
+                    plug['ID'] = plug['value']['params', 'detector_settings', 'controller_ID']
+                    plug['status'] = plug['value']['params', 'detector_settings',
+                        'controller_status']
                 else:
-                    if 'multiaxes' in [child.name() for child in plug['value'].child(
-                            'params', 'move_settings').children()]:
-                        plug['status'] = plug['value'].child(
-                            'params', 'move_settings', 'multiaxes', 'multi_status').value()
-                    else:
-                        plug['status'] = 'Master'
+                    plug['ID'] = plug['value']['params', 'move_settings',
+                        'multiaxes', 'controller_ID']
+                    plug['status'] = plug['value'][
+                            'params', 'move_settings', 'multiaxes', 'multi_status']
+
 
             IDs = list(set([plug['ID'] for plug in plugins]))
             # %%
@@ -1528,32 +1597,73 @@ class DashBoard(CustomApp):
             f"Modular Acquisition with Python\n"
             f"Written by Sébastien Weber")
 
-    def check_version(self, show=True):
+    def check_update(self, show=True):
+
         try:
-            current_version = version_mod.parse(get_version())
-            available_version = version_mod.parse(get_pypi_pymodaq('pymodaq')['version'])
-            msgBox = QtWidgets.QMessageBox()
-            if available_version > current_version:
-                msgBox.setText(f"A new version of PyMoDAQ is available, {str(available_version)}!")
-                msgBox.setInformativeText("Do you want to install it?")
-                msgBox.setStandardButtons(msgBox.Ok | msgBox.Cancel)
-                msgBox.setDefaultButton(msgBox.Ok)
+            packages = ['pymodaq_utils', 'pymodaq_data', 'pymodaq_gui', 'pymodaq']
+            current_versions = [version_mod.parse(get_version(p)) for p in packages]
+            available_versions = [version_mod.parse(get_pypi_pymodaq(p)['version']) for p in packages]
+            new_versions = np.greater(available_versions, current_versions)
+            # Combine package and version information and select only the ones with a newer version available
+            
+            
+            packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
 
-                ret = msgBox.exec()
+            #TODO: Remove `or True`
+            if len(packages_data) > 0:
+                #Create a QDialog window and different graphical components
+                dialog = QtWidgets.QDialog()
+                dialog.setWindowTitle("Update check")
+                
+                vlayout = QtWidgets.QVBoxLayout()
 
-                if ret == msgBox.Ok:
-                    command = [sys.executable, '-m', 'pip', 'install',
-                               f'pymodaq=={str(available_version)}']
-                    subprocess.Popen(command)
+                message_label = QLabel("New versions of PyMoDAQ packages available!\nPlease select the ones you want to install:")
+                message_label.setAlignment(Qt.AlignCenter)
+                
 
-                    self.restart_fun()
+                table = PymodaqUpdateTableWidget()
+                table.setRowCount(len(packages_data)) 
+                table.setColumnCount(4) 
+                table.setHorizontalHeaderLabels(["Select", "Package", "Current version", "New version"])
+                     
+                for p in packages_data:
+                    table.append_row(QCheckBox(), p[0], p[1], p[2])
+
+                button = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+                button.accepted.connect(dialog.accept)
+                button.rejected.connect(dialog.reject) 
+
+                # The vlayout contains the message, the table and the buttons                
+                # and is connected to the dialog window
+                vlayout.addWidget(message_label)
+                vlayout.addWidget(table)
+                vlayout.addWidget(button)
+                dialog.setLayout(vlayout)
+
+                ret = dialog.exec()
+
+                if ret == QDialog.Accepted:
+                    # If the update is accepted, the checked packages are extracted from the table
+                    # and send to the updater
+                    packages_to_update = table.get_checked_data()
+                    if len(packages_to_update) > 0:
+                        packages_to_update_str = ', '.join(packages_to_update)
+                        logger.info("Trying to update:")
+                        logger.info(f"\t {packages_to_update_str}")
+                        subprocess.Popen(['pymodaq_updater', '--wait', '--file', __file__] + packages_to_update, stdin=subprocess.PIPE)
+                        self.quit_fun()
+                        return True
+                    logger.info("Update found but no packages checked for update.")
             else:
                 if show:
-                    msgBox.setText(f"Your version of PyMoDAQ,"
-                                   f" {str(current_version)}, is up to date!")
+                    msgBox = QtWidgets.QMessageBox()
+                    msgBox.setWindowTitle("Update check")
+                    msgBox.setText("Everything is up to date!")
                     ret = msgBox.exec()
         except Exception as e:
             logger.exception("Error while checking the available PyMoDAQ version")
+
+        return False
 
     def show_file_attributes(self, type_info='dataset'):
         """

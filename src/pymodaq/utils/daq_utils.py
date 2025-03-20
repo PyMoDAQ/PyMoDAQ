@@ -5,9 +5,11 @@ import pkgutil
 import platform
 from pathlib import Path
 
-from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import Config
-from pymodaq_utils.utils import get_entrypoints, ThreadCommand, getLineInfo
+from pymodaq_utils.utils import get_entrypoints, ThreadCommand, getLineInfo, find_keys_from_val, is_64bits, timer  # for backcompat
+from pymodaq_utils.logger import set_logger, get_module_name  # for backcompat
+
+from pymodaq.utils.data import DataFromPlugins   # for backcompat
 
 from pymodaq.utils.config import get_set_preset_path
 
@@ -18,7 +20,7 @@ else:
     from functools import lru_cache as cache
 
 
-logger = logger_module.set_logger(logger_module.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 config = Config()
 

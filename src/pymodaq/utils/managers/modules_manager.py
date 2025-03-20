@@ -374,12 +374,12 @@ class ModulesManager(QObject, ParameterManager):
                 sig.connect(slot)
         else:
 
-            for sig in [mod.grab_done_signal for mod in self.detectors_all]:
+            for sig in [mod.grab_done_signal for mod in self.detectors]:
                 try:
                     sig.disconnect(slot)
                 except TypeError as e:
                     # means the slot was not previously connected
-                    logger.info(str(e))
+                    logger.info(f'Could not disconnect grab signal from the {slot} slot', stacklevel=2)
 
         self.detectors_connected = connect
 

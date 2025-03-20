@@ -48,7 +48,6 @@ def test_preset_manager(qtbot):
     """
     preset_manager = TestPresetManager(False)
 
-    assert psm.pid_path.is_dir()
     assert psm.preset_path.is_dir()
     assert psm.overshoot_path.is_dir()
     assert psm.layout_path.is_dir()

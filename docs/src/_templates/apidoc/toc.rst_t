@@ -1,0 +1,10 @@
+{{ header | heading }}
+
+{%- macro toctree(docnames) -%}
+
+.. toctree::
+   :maxdepth: {{ maxdepth }}
+{% for docname in docnames %}
+   {{ docname }}
+{%- endfor %}
+{%- endmacro %}

@@ -4,6 +4,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
+from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
@@ -76,20 +77,23 @@ class PresetScalableGroupMove(GroupParameter):
         for main_child in params:
             if main_child['name'] == 'move_settings':
                 main_child['children'] = params_hardware
-            elif main_child['name'] == 'main_settings':
-                for child in main_child['children']:
-                    if child['name'] == 'move_type':
-                        child['value'] = typ
-                    if child['name'] == 'controller_ID':
-                        child['value'] = random.randint(0, 9999)
+                controller_dict = get_param_dict_from_name(params_hardware, 'controller_ID')
+                controller_dict['value'] = random.randint(0, 9999)
 
-        child = {'title': 'Actuator {:02.0f}'.format(newindex), 'name': f'{name_prefix}{newindex:02.0f}',
+            elif main_child['name'] == 'main_settings':
+                typ_dict = get_param_dict_from_name(main_child['children'], 'move_type')
+                typ_dict['value'] = typ
+
+        child = {'title': 'Actuator {:02.0f}'.format(newindex),
+                 'name': f'{name_prefix}{newindex:02.0f}',
                  'type': 'group',
-                 'removable': True, 'children': [
-                {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Move {:02.0f}'.format(newindex)},
-                {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
-                 }], 'removable': True, 'renamable': False}
+                 'removable': True, 'renamable': False,
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str',
+                      'value': 'Move {:02.0f}'.format(newindex)},
+                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+                     {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
+                 ]}
 
         self.addChild(child)
 
@@ -155,8 +159,6 @@ class PresetScalableGroupDet(GroupParameter):
                             child['value'] = typ[6:]
                         if child['name'] == 'controller_status':
                             child['visible'] = True
-                        if child['name'] == 'controller_ID':
-                            child['value'] = random.randint(0, 9999)
 
             if '0D' in typ:
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', typ[6:])
@@ -186,6 +188,8 @@ class PresetScalableGroupDet(GroupParameter):
                             main_child['children'].remove(child)
 
                     main_child['children'].extend(params_hardware)
+            controller_dict = get_param_dict_from_name(main_child['children'], 'controller_ID')
+            controller_dict['value'] = random.randint(0, 9999)
 
             child = {'title': 'Det {:02.0f}'.format(newindex), 'name': f'{name_prefix}{newindex:02.0f}',
                      'type': 'group', 'children': [

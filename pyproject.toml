@@ -31,9 +31,9 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils",
-    "pymodaq_gui>=5.0.15",
-    "pymodaq_data>=5.0.15",
+    "pymodaq_utils>=0.0.14",
+    "pymodaq_gui>=5.0.17",
+    "pymodaq_data>=5.0.18",
     "easydict",
     "multipledispatch",
     "numpy < 2.0.0",
@@ -72,13 +72,13 @@ dev = [
 
 
 [project.scripts]
+pymodaq_updater = "pymodaq.updater:main"
 daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"
 daq_scan = "pymodaq.extensions.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
-h5browser = "pymodaq.extensions.h5browser:main"
-parameter_example = "pymodaq.examples.parameter_ex:main"
+
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
