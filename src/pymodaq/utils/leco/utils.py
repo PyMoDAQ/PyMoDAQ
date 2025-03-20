@@ -39,7 +39,7 @@ def binary_serialization(
     """Serialize (binary) a pymodaq object, if it is not JSON compatible."""
     if isinstance(pymodaq_object, get_args(JSON_TYPES)):
         return pymodaq_object, None
-    elif isinstance(pymodaq_object, get_args(Union[*ser_factory.get_serializables()])):
+    elif isinstance(pymodaq_object, get_args(SERIALIZABLE)):
         return None, [Serializer(pymodaq_object).to_bytes()]
     else:
         raise ValueError(
