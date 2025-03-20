@@ -621,27 +621,52 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
         self.settings.child('plot_options', 'plot_1d').setValue(dict(all_items=[], selected=[]))
 
-    def prepare_viewers(self):
+    def check_number_type_viewers(self) -> Tuple[
+        List[ViewersEnum],
+        List[str],
+        bool]:
+        """ Assert from selected options the number and type of needed viewers for live plotting
 
-        viewers_enum = [ViewersEnum('Data0D').increase_dim(self.scanner.n_axes)
+        Return
+        ------
+        List[ViewersEnum]: the list of needed viewers
+         List[str]: the list of data names to be plotted in the corresponding viewer
+        """
+        viewer2D_overload = False
+        viewers_enum = [ViewersEnum.Viewer0D.increase_dim(self.scanner.n_axes)
                         for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
         data_names = self.settings['plot_options', 'plot_0d']['selected'][:]
 
-        if self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
-            viewers_enum = [ViewersEnum('Data1D')]
+        if self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum.Viewer1D in viewers_enum:
+            viewers_enum = [ViewersEnum.Viewer1D]
             data_names = [self.live_plotter.grouped_data0D_fullname]
-        elif self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data2D') in viewers_enum:
-            viewers_enum = [ViewersEnum('Data2D')]
+        elif (self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and
+              ViewersEnum.Viewer2D in viewers_enum):
+            viewers_enum = [ViewersEnum.Viewer2D]
+            n2Dplots = len(data_names)
+            if (self.settings['scan_options', 'scan_average'] > 1 and
+                self.settings['scan_options', 'average_on_top']):
+                n2Dplots *= 2
+            if n2Dplots > 3:
+                viewer2D_overload = True
             data_names = [self.live_plotter.grouped_data0D_fullname]
 
         if self.scanner.n_axes <= 1:
-            viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
+            viewers_enum.extend([ViewersEnum.Viewer1D.increase_dim(self.scanner.n_axes)
                                  for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
         if not self.settings['scan_options', 'average_on_top']:
 
             viewers_enum = viewers_enum + viewers_enum
             data_names = data_names + [f'{data_name}_averaged' for data_name in data_names]
+
+        return viewers_enum, data_names, viewer2D_overload
+
+    def prepare_viewers(self):
+        """ Assert from selected options the number and type of needed viewers for live plotting
+        and prepare them on the live plot panel
+        """
+        viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
     def update_status(self, txt: str, wait_time=0):
@@ -777,6 +802,15 @@ class DAQScan(QObject, ParameterManager):
                          f" Please check the steps number "
                          f"limit in the config file ({config['scan']['steps_limit']}) or modify"
                          f" your scan settings.")
+
+            _, _, viewer2D_overload = self.check_number_type_viewers()
+            if viewer2D_overload:
+                messagebox(text=
+                           'The number of live data chosen and the selected options '
+                           'will not be able to render fully on the 2D live viewers. Consider changing '
+                           'the options, such as "plot on top" for the averaging or "Group 0D data" '
+                           'or the number of selected data')
+                return False
 
             if self.modules_manager.Nactuators != self.scanner.n_axes:
                 messagebox(
