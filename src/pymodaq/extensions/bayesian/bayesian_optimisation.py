@@ -62,47 +62,47 @@ class BayesianOptimisation(CustomExt):
 
 
     acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
+    params = [
+        {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
+         'children': [
+             {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
+              'children': [
+                              {'title': 'Kind', 'name': 'kind', 'type': 'list',
+                               'value': acquisition_functions_names[0],
+                               'limits': acquisition_functions_names
+                               }] + GenericAcquisitionFunctionFactory.get(
+                  acquisition_functions_names[0]).params
 
+              },
+             {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
+              'children': [
+                  {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
+                  {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
+                   'limits': StopType.names()},
+                  {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
+                   'min': 1e-8, 'max': 1, 'subtype': 'log', },
+                  {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
+              ]},
+             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
+             {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
+         ]},
+
+        {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
+         'children': [
+             {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
+              'limits': [d['name'] for d in models]},
+             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
+             {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
+             {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
+         ]},
+        {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
+         'visible': False, 'children': [
+            {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
+
+    ]
 
     def __init__(self, dockarea, dashboard):
-        self.params = [
-            {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
-             'children': [
-                 {'title': 'Utility Function:', 'name': 'utility', 'expanded': False, 'type': 'group',
-                  'children': [
-                                  {'title': 'Kind', 'name': 'kind', 'type': 'list',
-                                   'value': self.acquisition_functions_names[0],
-                                   'limits': self.acquisition_functions_names
-                                   }] + GenericAcquisitionFunctionFactory.get(
-                      self.acquisition_functions_names[0]).params
 
-                  },
-                 {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
-                  'children': [
-                      {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
-                      {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
-                       'limits': StopType.names()},
-                      {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
-                       'min': 1e-8, 'max': 1, 'subtype': 'log', },
-                      {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
-                  ]},
-                 {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
-                 {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
-             ]},
-
-            {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
-             'children': [
-                 {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-                  'limits': [d['name'] for d in self.models]},
-                 {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
-                 {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
-                 {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
-             ]},
-            {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
-             'visible': False, 'children': [
-                {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
-
-        ]
         super().__init__(dockarea, dashboard)
 
         self.algorithm: Optional[BayesianAlgorithm] = None
@@ -650,39 +650,17 @@ class OptimisationRunner(QtCore.QObject):
 
 
 def main(init_qt=True):
-    import sys
-    from pathlib import Path
-    from pymodaq.utils.daq_utils import get_set_preset_path
+    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-    if init_qt:  # used for the test suite
-        app = mkQApp("PyMoDAQ Dashboard")
+    app = mkQApp('Bayesian Optimiser')
+    preset_file_name = config('presets', f'default_preset_for_scan')
 
-    from pymodaq.dashboard import DashBoard
+    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'Bayesian')
 
-    win = QtWidgets.QMainWindow()
-    area = gutils.dock.DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
+    app.exec()
 
-    dashboard = DashBoard(area)
-    daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{'preset_default'}.xml")
-
-    if file.exists():
-        dashboard.set_preset_mode(file)
-        daq_scan = dashboard.load_bayesian()
-    else:
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
-                       f"Impossible to load the DAQScan Module")
-        msgBox.setStandardButtons(msgBox.Ok)
-        ret = msgBox.exec()
-
-    if init_qt:
-        sys.exit(app.exec_())
-    return dashboard, daq_scan, win
-
+    return dashboard, extension, win
 
 if __name__ == '__main__':
     main()
