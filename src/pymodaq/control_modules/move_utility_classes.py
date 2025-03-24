@@ -78,7 +78,7 @@ def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
     if isinstance(epsilon, list):
         epsilon = epsilon[0]
     elif isinstance(epsilon, dict):
-        epsilon = epsilon[list[epsilon.keys()][0]]
+        epsilon = epsilon[list(epsilon.keys())[0]]
 
     return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
