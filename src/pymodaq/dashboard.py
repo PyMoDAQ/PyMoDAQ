@@ -66,6 +66,12 @@ roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
 
 
+def error_dialog(message) -> int:
+    msgBox = QtWidgets.QMessageBox()
+    msgBox.setWindowTitle("Error message")
+    msgBox.setText(message)
+    return msgBox.exec()
+
 class ManagerEnums(BaseEnum):
     preset = 0
     remote = 1
@@ -336,7 +342,15 @@ class DashBoard(CustomApp):
         self.bayesian_window.setWindowTitle('Bayesian Optimiser')
         self.bayesian_module = extmod.BayesianOptimisation(dockarea=dockarea, dashboard=self)
         self.extensions['bayesian'] = self.bayesian_module
-        self.bayesian_window.show()
+
+        if self.bayesian_module.validate_config():
+            self.bayesian_window.show()
+        else:
+            error_dialog(f"""
+                <p>Saved Bayesian Optimisation config is not compatible anymore.</p>
+                <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
+            """)
+            self.bayesian_module.quit()
         return self.bayesian_module
 
     def load_extension_from_name(self, name: str) -> dict:
@@ -1609,7 +1623,6 @@ class DashBoard(CustomApp):
             
             packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
 
-            #TODO: Remove `or True`
             if len(packages_data) > 0:
                 #Create a QDialog window and different graphical components
                 dialog = QtWidgets.QDialog()

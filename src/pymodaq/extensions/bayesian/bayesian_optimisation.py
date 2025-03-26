@@ -43,6 +43,17 @@ CLASS_NAME = 'BayesianOptimisation'
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
+def find_key_in_nested_dict(dic, key):
+    stack = [dic]
+    while stack:
+        d = stack.pop()
+        if key in d:
+            return d[key]
+        for v in d.values():
+            if isinstance(v, dict):
+                stack.append(v)
+            if isinstance(v, list):
+                stack += v
 
 class DataNames(BaseEnum):
     Fitness = 0
@@ -139,6 +150,20 @@ class BayesianOptimisation(CustomExt):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+
+    def validate_config(self) -> bool:
+        kind = find_key_in_nested_dict(self.bayesian_config.to_dict(), 'kind')
+        if kind:
+            try:
+                GenericAcquisitionFunctionFactory.get(kind)
+            except ValueError:
+                return False
+
+        return True
+
+    @property
+    def config_path(self) -> Path:
+        return self.bayesian_config.config_path
 
     @property
     def modules_manager(self) -> ModulesManager:
