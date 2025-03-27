@@ -70,7 +70,7 @@ class BayesianOptimisation(CustomExt):
     command_runner = QtCore.Signal(utils.ThreadCommand)
     models = get_bayesian_models()
     explored_viewer_name = 'algo/ProbedData'
-    optimisation_done_signal = QtCore.Signal(DataToExport)
+    optimization_done_signal = QtCore.Signal(DataToExport)
 
 
     acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
@@ -309,8 +309,8 @@ class BayesianOptimisation(CustomExt):
         logger.debug('connecting things')
         self.connect_action('quit', self.quit)
         self.connect_action('ini_model', self.ini_model)
-        self.connect_action('ini_runner', self.ini_optimisation_runner)
-        self.connect_action('run', self.run_optimisation)
+        self.connect_action('ini_runner', self.ini_optimization_runner)
+        self.connect_action('run', self.run_optimization)
         self.connect_action('gotobest', self.go_to_best)
 
     def go_to_best(self):
@@ -447,7 +447,7 @@ class BayesianOptimisation(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
-    def ini_optimisation_runner(self):
+    def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
 
@@ -462,7 +462,7 @@ class BayesianOptimisation(CustomExt):
                                         self.get_stopping_parameters())
             self.runner_thread.runner = runner
             runner.algo_output_signal.connect(self.process_output)
-            runner.algo_finished.connect(self.optimisation_done)
+            runner.algo_finished.connect(self.optimization_done)
             self.command_runner.connect(runner.queue_command)
 
             runner.moveToThread(self.runner_thread)
@@ -487,9 +487,9 @@ class BayesianOptimisation(CustomExt):
             except Exception as e:
                 logger.exception(str(e))
 
-    def optimisation_done(self, dte: DataToExport):
+    def optimization_done(self, dte: DataToExport):
         self.go_to_best()
-        self.optimisation_done_signal.emit(dte)
+        self.optimization_done_signal.emit(dte)
 
     def process_output(self, dte: DataToExport):
 
@@ -526,7 +526,7 @@ class BayesianOptimisation(CustomExt):
     def enable_controls_opti(self, enable: bool):
         pass
 
-    def run_optimisation(self):
+    def run_optimization(self):
         if self.is_action_checked('run'):
             self.get_action('run').set_icon('pause')
             self.command_runner.emit(utils.ThreadCommand('start', {}))
@@ -560,7 +560,7 @@ class OptimisationRunner(QtCore.QObject):
 
         self.running = True
 
-        self.optimisation_algorithm: BayesianAlgorithm = algorithm
+        self.optimization_algorithm: BayesianAlgorithm = algorithm
 
         self._ind_iter: int = 0
 
@@ -576,7 +576,7 @@ class OptimisationRunner(QtCore.QObject):
 
         elif command.command == 'utility':
             utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
-            self.optimisation_algorithm.set_acquisition_function(
+            self.optimization_algorithm.set_acquisition_function(
                 command.attribute['kind'],
                 **utility_params)
 
@@ -584,10 +584,10 @@ class OptimisationRunner(QtCore.QObject):
             self.stopping_params: StoppingParameters = command.attribute
 
         elif command.command == 'bounds':
-            self.optimisation_algorithm.bounds = command.attribute
+            self.optimization_algorithm.bounds = command.attribute
 
     def run_opti(self, sync_detectors=True, sync_acts=True):
-        """Start the optimisation loop
+        """Start the optimization loop
 
         Parameters
         ----------
@@ -609,13 +609,13 @@ class OptimisationRunner(QtCore.QObject):
             while self.running:
                 self._ind_iter += 1
 
-                next_target = self.optimisation_algorithm.ask()
+                next_target = self.optimization_algorithm.ask()
 
                 self.outputs = next_target
                 self.output_to_actuators: DataToActuators =\
                     self.model_class.convert_output(
                         self.outputs,
-                        best_individual=self.optimisation_algorithm.best_individual
+                        best_individual=self.optimization_algorithm.best_individual
                     )
 
                 self.modules_manager.move_actuators(self.output_to_actuators,
@@ -627,14 +627,14 @@ class OptimisationRunner(QtCore.QObject):
                 self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
 
                 # Run the algo internal mechanic
-                self.optimisation_algorithm.tell(float(self.input_from_dets))
+                self.optimization_algorithm.tell(float(self.input_from_dets))
 
                 dte = DataToExport('algo',
                                    data=[self.individual_as_data(
-                                       np.array([self.optimisation_algorithm.best_fitness]),
+                                       np.array([self.optimization_algorithm.best_fitness]),
                                        DataNames.Fitness.name),
                                        self.individual_as_data(
-                                           self.optimisation_algorithm.best_individual,
+                                           self.optimization_algorithm.best_individual,
                                            DataNames.Individual.name),
                                        DataCalculated(DataNames.ProbedData.name,
                                                       data=[np.array([self.input_from_dets])],
@@ -644,13 +644,13 @@ class OptimisationRunner(QtCore.QObject):
                                        DataCalculated(
                                            DataNames.Tradeoff.name,
                                            data=[
-                                               np.array([self.optimisation_algorithm.tradeoff])])
+                                               np.array([self.optimization_algorithm.tradeoff])])
                                          ])
                 self.algo_output_signal.emit(dte)
 
-                self.optimisation_algorithm.update_acquisition_function()
+                self.optimization_algorithm.update_acquisition_function()
 
-                if self.optimisation_algorithm.stopping(self._ind_iter, self.stopping_params):
+                if self.optimization_algorithm.stopping(self._ind_iter, self.stopping_params):
                     converged = True
                     break
 

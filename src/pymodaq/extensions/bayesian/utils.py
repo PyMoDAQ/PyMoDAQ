@@ -34,7 +34,7 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.bayesian.bayesian_optimisation import BayesianOptimisation
+    from pymodaq.extensions.bayesian.bayesian_optimization import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
 
@@ -182,7 +182,7 @@ class BayesianAlgorithm:
 
 class BayesianModelGeneric(ABC):
 
-    optimisation_algorithm: BayesianAlgorithm = BayesianAlgorithm
+    optimization_algorithm: BayesianAlgorithm = BayesianAlgorithm
 
     actuators_name: List[str] = []
     detectors_name: List[str] = []
@@ -191,11 +191,11 @@ class BayesianModelGeneric(ABC):
 
     params = []  # to be subclassed
 
-    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
-        self.optimisation_controller = optimisation_controller  # instance of the pid_controller using this model
-        self.modules_manager: ModulesManager = optimisation_controller.modules_manager
+    def __init__(self, optimization_controller: 'BayesianOptimisation'):
+        self.optimization_controller = optimization_controller  # instance of the pid_controller using this model
+        self.modules_manager: ModulesManager = optimization_controller.modules_manager
 
-        self.settings = self.optimisation_controller.settings.child('models', 'model_params')  # set of parameters
+        self.settings = self.optimization_controller.settings.child('models', 'model_params')  # set of parameters
         self.check_modules(self.modules_manager)
 
     def check_modules(self, modules_manager):
@@ -210,7 +210,7 @@ class BayesianModelGeneric(ABC):
                                f' not present in the Dashboard')
 
     def update_detector_names(self):
-        names = self.optimisation_controller.settings.child(
+        names = self.optimization_controller.settings.child(
             'main_settings', 'detector_modules').value()['selected']
         self.data_names = []
         for name in names:
@@ -294,10 +294,10 @@ class BayesianModelDefault(BayesianModelGeneric):
                      'checkbox': True},
         ]},]
 
-    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
-        self.actuators_name = optimisation_controller.modules_manager.actuators_name
-        self.detectors_name = optimisation_controller.modules_manager.detectors_name
-        super().__init__(optimisation_controller)
+    def __init__(self, optimization_controller: 'BayesianOptimisation'):
+        self.actuators_name = optimization_controller.modules_manager.actuators_name
+        self.detectors_name = optimization_controller.modules_manager.detectors_name
+        super().__init__(optimization_controller)
 
         self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
             self.optimize_from)
