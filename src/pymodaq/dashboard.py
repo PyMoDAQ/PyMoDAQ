@@ -66,9 +66,9 @@ roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
 
 
-def error_dialog(message) -> int:
+def error_dialog(title, message) -> int:
     msgBox = QtWidgets.QMessageBox()
-    msgBox.setWindowTitle("Error message")
+    msgBox.setWindowTitle(title)
     msgBox.setText(message)
     return msgBox.exec()
 
@@ -346,8 +346,9 @@ class DashBoard(CustomApp):
         if self.bayesian_module.validate_config():
             self.bayesian_window.show()
         else:
-            error_dialog(f"""
-                <p>Saved Bayesian Optimisation config is not compatible anymore.</p>
+            error_dialog("Bayesian Optimisation error",
+            f"""
+                <p>Saved Bayesian Optimisation configuration file is not compatible anymore.</p>
                 <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
             """)
             self.bayesian_module.quit()
