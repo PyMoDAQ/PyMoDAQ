@@ -152,10 +152,12 @@ class BayesianOptimisation(CustomExt):
             self.get_action('ini_runner').trigger)
 
     def validate_config(self) -> bool:
-        kind = find_key_in_nested_dict(self.bayesian_config.to_dict(), 'kind')
-        if kind:
+        utility = find_key_in_nested_dict(self.bayesian_config.to_dict(), 'utility')
+        if utility:
             try:
-                GenericAcquisitionFunctionFactory.get(kind)
+                utility_params = { k : v for k, v in utility.items() \
+                                   if k != "kind" and k != "tradeoff_actual" }
+                GenericAcquisitionFunctionFactory.create(utility['kind'], **utility_params)
             except ValueError:
                 return False
 

@@ -46,7 +46,6 @@ from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq_gui.utils.splash import get_splash_sc
-
 from pymodaq import extensions as extmod
 
 logger = set_logger(get_module_name(__file__))
@@ -66,11 +65,7 @@ roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
 
 
-def error_dialog(title, message) -> int:
-    msgBox = QtWidgets.QMessageBox()
-    msgBox.setWindowTitle(title)
-    msgBox.setText(message)
-    return msgBox.exec()
+
 
 class ManagerEnums(BaseEnum):
     preset = 0
@@ -346,8 +341,8 @@ class DashBoard(CustomApp):
         if self.bayesian_module.validate_config():
             self.bayesian_window.show()
         else:
-            error_dialog("Bayesian Optimisation error",
-            f"""
+            messagebox(severity='critical', title="Bayesian Optimisation error",
+            text=f"""
                 <p>Saved Bayesian Optimisation configuration file is not compatible anymore.</p>
                 <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
             """)
