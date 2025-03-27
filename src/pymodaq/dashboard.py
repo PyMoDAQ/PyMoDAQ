@@ -46,7 +46,6 @@ from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq_gui.utils.splash import get_splash_sc
-
 from pymodaq import extensions as extmod
 
 logger = set_logger(get_module_name(__file__))
@@ -64,6 +63,8 @@ layout_path = config_mod_pymodaq.get_set_layout_path()
 overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
 roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
+
+
 
 
 class ManagerEnums(BaseEnum):
@@ -336,7 +337,16 @@ class DashBoard(CustomApp):
         self.bayesian_window.setWindowTitle('Bayesian Optimiser')
         self.bayesian_module = extmod.BayesianOptimisation(dockarea=dockarea, dashboard=self)
         self.extensions['bayesian'] = self.bayesian_module
-        self.bayesian_window.show()
+
+        if self.bayesian_module.validate_config():
+            self.bayesian_window.show()
+        else:
+            messagebox(severity='critical', title="Bayesian Optimisation error",
+            text=f"""
+                <p>Saved Bayesian Optimisation configuration file is not compatible anymore.</p>
+                <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
+            """)
+            self.bayesian_module.quit()
         return self.bayesian_module
 
     def load_extension_from_name(self, name: str) -> dict:
@@ -1609,7 +1619,6 @@ class DashBoard(CustomApp):
             
             packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
 
-            #TODO: Remove `or True`
             if len(packages_data) > 0:
                 #Create a QDialog window and different graphical components
                 dialog = QtWidgets.QDialog()

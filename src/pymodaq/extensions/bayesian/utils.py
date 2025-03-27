@@ -4,7 +4,7 @@ Created the 31/08/2023
 
 @author: Sebastien Weber
 """
-from abc import ABC, abstractproperty, abstractmethod
+from abc import ABC
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
 from pathlib import Path
 import importlib
@@ -14,15 +14,15 @@ import numpy as np
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
-from bayes_opt import UtilityFunction
 
 from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.config import BaseConfig
 
-from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq_gui.managers.parameter_manager import Parameter
+
 
 from pymodaq_data.data import (DataToExport, DataCalculated,
                                 DataRaw, Axis)
@@ -31,8 +31,10 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.utils.managers.modules_manager import ModulesManager
 
 
+from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
+
 if TYPE_CHECKING:
-    from pymodaq.extensions.bayesian.bayesian_optimisation import BayesianOptimisation
+    from pymodaq.extensions.bayesian.bayesian_optimization import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
 
@@ -41,18 +43,11 @@ class StopType(BaseEnum):
     Predict = 0
 
 
-class UtilityKind(BaseEnum):
-    ucb = 'Upper Confidence Bound'
-    ei = 'Expected Improvement'
-    poi = 'Probability of Improvement'
-
-
-UtilityParameters = namedtuple('UtilityParameters',
-                               ['kind', 'kappa', 'xi', 'kappa_decay', 'kappa_decay_delay'])
 
 
 StoppingParameters = namedtuple('StoppingParameters',
                                 ['niter', 'stop_type', 'tolerance', 'npoints'])
+
 
 
 class BayesianAlgorithm:
@@ -66,29 +61,31 @@ class BayesianAlgorithm:
         self._next_point: np.ndarray = None
         self._suggested_coordinates: List[np.ndarray] = []
         self.ini_random_points = ini_random
-        self.kappa = 2.5
 
-        self._utility = UtilityFunction(kind="ucb", kappa=self.kappa, xi=0.0)
 
-    def set_utility_function(self, kind: str, **kwargs):
-        if kind in UtilityKind.names():
-            self._utility = UtilityFunction(kind, **kwargs)
+    def set_acquisition_function(self, kind: str, **kwargs):
+        self._acquisition = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
 
-    def update_utility_function(self):
-        """ Update the parameters of the Utility function (kappa decay for instance)"""
-        self._utility.update_params()
-        self.kappa = self._utility.kappa
+
+    def update_acquisition_function(self):
+        """ Update the parameters of the acquisition function (kappa decay for instance)"""
+        self._acquisition.decay_exploration()
+
+
+    @property
+    def tradeoff(self):
+        return self._acquisition.tradeoff
 
     @property
     def bounds(self) -> List[np.ndarray]:
-        return [bound for bound in self._algo._space.bounds]
+        return [bound for bound in self._algo.space.bounds]
 
     @bounds.setter
     def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
         if isinstance(bounds, dict):
             self._algo.set_bounds(bounds)
         else:
-            self._algo.set_bounds(self._algo._space.array_to_params(np.array(bounds)))
+            self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
 
     def get_random_point(self) -> np.ndarray:
         """ Get a random point coordinates in the defined bounds"""
@@ -103,13 +100,15 @@ class BayesianAlgorithm:
             self.ini_random_points -= 1
             self._next_point = self.get_random_point()
         else:
-            self._next_point = self._algo.space.params_to_array(self._algo.suggest(self._utility))
+           # Either algo suggests or acquisition function
+           # self._next_point = self._algo.space.params_to_array(self._algo.suggest())
+            self._next_point = self._acquisition.suggest(self._algo._gp, self._algo.space)
         self._suggested_coordinates.append(self._next_point)
         return self._next_point
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
-
+        
     @property
     def best_fitness(self) -> float:
         return self._algo.max['target']
@@ -183,7 +182,7 @@ class BayesianAlgorithm:
 
 class BayesianModelGeneric(ABC):
 
-    optimisation_algorithm: BayesianAlgorithm = BayesianAlgorithm
+    optimization_algorithm: BayesianAlgorithm = BayesianAlgorithm
 
     actuators_name: List[str] = []
     detectors_name: List[str] = []
@@ -192,11 +191,11 @@ class BayesianModelGeneric(ABC):
 
     params = []  # to be subclassed
 
-    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
-        self.optimisation_controller = optimisation_controller  # instance of the pid_controller using this model
-        self.modules_manager: ModulesManager = optimisation_controller.modules_manager
+    def __init__(self, optimization_controller: 'BayesianOptimisation'):
+        self.optimization_controller = optimization_controller  # instance of the pid_controller using this model
+        self.modules_manager: ModulesManager = optimization_controller.modules_manager
 
-        self.settings = self.optimisation_controller.settings.child('models', 'model_params')  # set of parameters
+        self.settings = self.optimization_controller.settings.child('models', 'model_params')  # set of parameters
         self.check_modules(self.modules_manager)
 
     def check_modules(self, modules_manager):
@@ -211,7 +210,7 @@ class BayesianModelGeneric(ABC):
                                f' not present in the Dashboard')
 
     def update_detector_names(self):
-        names = self.optimisation_controller.settings.child(
+        names = self.optimization_controller.settings.child(
             'main_settings', 'detector_modules').value()['selected']
         self.data_names = []
         for name in names:
@@ -295,10 +294,10 @@ class BayesianModelDefault(BayesianModelGeneric):
                      'checkbox': True},
         ]},]
 
-    def __init__(self, optimisation_controller: 'BayesianOptimisation'):
-        self.actuators_name = optimisation_controller.modules_manager.actuators_name
-        self.detectors_name = optimisation_controller.modules_manager.detectors_name
-        super().__init__(optimisation_controller)
+    def __init__(self, optimization_controller: 'BayesianOptimisation'):
+        self.actuators_name = optimization_controller.modules_manager.actuators_name
+        self.detectors_name = optimization_controller.modules_manager.detectors_name
+        super().__init__(optimization_controller)
 
         self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
             self.optimize_from)

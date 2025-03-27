@@ -1,2 +1,2 @@
-from . import bayesian_optimisation
+from . import bayesian_optimization
 from . import utils
