@@ -33,6 +33,8 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
+from pymodaq.extensions.optimisers_base.utils import GenericAlgorithm, OptimizerModelDefault
+
 if TYPE_CHECKING:
     from pymodaq.extensions.bayesian.bayesian_optimization import BayesianOptimisation
 
@@ -43,38 +45,30 @@ class StopType(BaseEnum):
     Predict = 0
 
 
-
-
 StoppingParameters = namedtuple('StoppingParameters',
                                 ['niter', 'stop_type', 'tolerance', 'npoints'])
 
 
-
-class BayesianAlgorithm:
+class BayesianAlgorithm(GenericAlgorithm):
 
     def __init__(self, ini_random: int, bounds: dict, **kwargs):
-
+        super().__init__(ini_random)
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
                                           **kwargs
                                           )
-        self._next_point: np.ndarray = None
-        self._suggested_coordinates: List[np.ndarray] = []
-        self.ini_random_points = ini_random
 
+    def set_prediction_function(self, kind: str, **kwargs):
+        self._prediction = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
 
-    def set_acquisition_function(self, kind: str, **kwargs):
-        self._acquisition = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
-
-
-    def update_acquisition_function(self):
+    def update_prediction_function(self):
         """ Update the parameters of the acquisition function (kappa decay for instance)"""
-        self._acquisition.decay_exploration()
+        self._prediction.decay_exploration()
 
 
     @property
     def tradeoff(self):
-        return self._acquisition.tradeoff
+        return self._prediction.tradeoff
 
     @property
     def bounds(self) -> List[np.ndarray]:
@@ -87,24 +81,9 @@ class BayesianAlgorithm:
         else:
             self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
 
-    def get_random_point(self) -> np.ndarray:
-        """ Get a random point coordinates in the defined bounds"""
-        point = []
-        for bound in self.bounds:
-            point.append((np.max(bound) - np.min(bound)) * np.random.random_sample() +
-                         np.min(bound))
-        return np.array(point)
-
-    def ask(self) -> np.ndarray:
-        if self.ini_random_points > 0:
-            self.ini_random_points -= 1
-            self._next_point = self.get_random_point()
-        else:
-           # Either algo suggests or acquisition function
-           # self._next_point = self._algo.space.params_to_array(self._algo.suggest())
-            self._next_point = self._acquisition.suggest(self._algo._gp, self._algo.space)
-        self._suggested_coordinates.append(self._next_point)
-        return self._next_point
+    def prediction_ask(self) -> np.ndarray:
+        """ Ask the prediction function or algo to provide the next point to probe"""
+        return self._acquisition.suggest(self._algo._gp, self._algo.space)
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
@@ -180,226 +159,4 @@ class BayesianAlgorithm:
         return dwa_measured, dwa_prediction
 
 
-class BayesianModelGeneric(ABC):
 
-    optimization_algorithm: BayesianAlgorithm = BayesianAlgorithm
-
-    actuators_name: List[str] = []
-    detectors_name: List[str] = []
-
-    observables_dim: List[ViewersEnum] = []
-
-    params = []  # to be subclassed
-
-    def __init__(self, optimization_controller: 'BayesianOptimisation'):
-        self.optimization_controller = optimization_controller  # instance of the pid_controller using this model
-        self.modules_manager: ModulesManager = optimization_controller.modules_manager
-
-        self.settings = self.optimization_controller.settings.child('models', 'model_params')  # set of parameters
-        self.check_modules(self.modules_manager)
-
-    def check_modules(self, modules_manager):
-        for act in self.actuators_name:
-            if act not in modules_manager.actuators_name:
-                logger.warning(f'The actuator {act} defined in the model is'
-                               f' not present in the Dashboard')
-                return False
-        for det in self.detectors_name:
-            if det not in modules_manager.detectors_name:
-                logger.warning(f'The detector {det} defined in the model is'
-                               f' not present in the Dashboard')
-
-    def update_detector_names(self):
-        names = self.optimization_controller.settings.child(
-            'main_settings', 'detector_modules').value()['selected']
-        self.data_names = []
-        for name in names:
-            name = name.split('//')
-            self.data_names.append(name)
-
-    def update_settings(self, param: Parameter):
-        """
-        Get a parameter instance whose value has been modified by a user on the UI
-        To be overwritten in child class
-        """
-        ...
-
-    def update_plots(self):
-        """ Called when updating the live plots """
-        pass
-
-    def ini_model_base(self):
-        self.modules_manager.selected_actuators_name = self.actuators_name
-        self.modules_manager.selected_detectors_name = self.detectors_name
-
-        self.ini_model()
-
-    def ini_model(self):
-        """ To be subclassed
-
-        Initialize whatever is needed by your custom model
-        """
-        raise NotImplementedError
-
-    def runner_initialized(self):
-        """ To be subclassed
-
-        Initialize whatever is needed by your custom model after the optimization runner is
-        initialized
-        """
-        pass
-
-    def convert_input(self, measurements: DataToExport) -> float:
-        """
-        Convert the measurements in the units to be fed to the Optimisation Controller
-        Parameters
-        ----------
-        measurements: DataToExport
-            data object exported from the detectors from which the model extract a float value
-            (fitness) to be fed to the algorithm
-
-        Returns
-        -------
-        float
-
-        """
-        raise NotImplementedError
-
-    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
-        """ Convert the output of the Optimisation Controller in units to be fed into the actuators
-        Parameters
-        ----------
-        outputs: list of numpy ndarray
-            output value from the controller from which the model extract a value of the same units as the actuators
-        best_individual: np.ndarray
-            the coordinates of the best individual so far
-        Returns
-        -------
-        DataToActuatorOpti: derived from DataToExport. Contains value to be fed to the actuators with a a mode
-            attribute, either 'rel' for relative or 'abs' for absolute.
-
-        """
-        raise NotImplementedError
-
-
-class BayesianModelDefault(BayesianModelGeneric):
-
-    actuators_name: List[str] = []  # to be populated dynamically at instantiation
-    detectors_name: List[str] = []  # to be populated dynamically at instantiation
-
-    params = [{'title': 'Optimizing signal', 'name': 'optimizing_signal', 'type': 'group',
-                'children': [
-                    {'title': 'Get data', 'name': 'data_probe', 'type': 'action'},
-                    {'title': 'Optimize 0Ds:', 'name': 'optimize_0d', 'type': 'itemselect',
-                     'checkbox': True},
-        ]},]
-
-    def __init__(self, optimization_controller: 'BayesianOptimisation'):
-        self.actuators_name = optimization_controller.modules_manager.actuators_name
-        self.detectors_name = optimization_controller.modules_manager.detectors_name
-        super().__init__(optimization_controller)
-
-        self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
-            self.optimize_from)
-
-    def ini_model(self):
-        pass
-
-    def optimize_from(self):
-        self.modules_manager.get_det_data_list()
-        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
-        data0D['selected'] = data0D['all_items']
-        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
-
-    def update_settings(self, param: Parameter):
-        pass
-
-    def convert_input(self, measurements: DataToExport) -> float:
-        """ Convert the measurements in the units to be fed to the Optimisation Controller
-
-        Parameters
-        ----------
-        measurements: DataToExport
-            data object exported from the detectors from which the model extract a float value
-            (fitness) to be fed to the algorithm
-
-        Returns
-        -------
-        float
-
-        """
-        data_name: str = self.settings['optimizing_signal', 'optimize_0d']['selected'][0]
-        origin, name = data_name.split('/')
-        return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
-
-    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
-        """ Convert the output of the Optimisation Controller in units to be fed into the actuators
-        Parameters
-        ----------
-        outputs: list of numpy ndarray
-            output value from the controller from which the model extract a value of the same units as the actuators
-        best_individual: np.ndarray
-            the coordinates of the best individual so far
-
-        Returns
-        -------
-        DataToActuators: derived from DataToExport. Contains value to be fed to the actuators
-        with a mode            attribute, either 'rel' for relative or 'abs' for absolute.
-
-        """
-        return DataToActuators('outputs', mode='abs',
-                               data=[DataActuator(self.modules_manager.actuators_name[ind],
-                                                  data=float(outputs[ind])) for ind in
-                                     range(len(outputs))])
-
-
-def get_bayesian_models(model_name=None):
-    """
-    Get PID Models as a list to instantiate Control Actuators per degree of liberty in the model
-
-    Returns
-    -------
-    list: list of disct containting the name and python module of the found models
-    """
-    models_import = []
-    discovered_models = get_entrypoints(group='pymodaq.models')
-    if len(discovered_models) > 0:
-        for pkg in discovered_models:
-            try:
-                module = importlib.import_module(pkg.value)
-                module_name = pkg.value
-
-                for mod in pkgutil.iter_modules([
-                    str(Path(module.__file__).parent.joinpath('models'))]):
-                    try:
-                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}',
-                                                               module)
-                        classes = inspect.getmembers(model_module, inspect.isclass)
-                        for name, klass in classes:
-                            if issubclass(klass, BayesianModelGeneric):
-                                if find_dict_in_list_from_key_val(models_import, 'name', mod.name)\
-                                        is None:
-                                    models_import.append({'name': klass.__name__,
-                                                          'module': model_module,
-                                                          'class': klass})
-
-                    except Exception as e:
-                        logger.warning(str(e))
-
-            except Exception as e:
-                logger.warning(f'Impossible to import the {pkg.value} bayesian model: {str(e)}')
-    if find_dict_in_list_from_key_val(models_import, 'name', 'BayesianModelDefault') \
-            is None:
-        models_import.append({'name': 'BayesianModelDefault',
-                              'module': inspect.getmodule(BayesianModelDefault),
-                              'class': BayesianModelDefault})
-    if model_name is None:
-        return models_import
-    else:
-        return find_dict_in_list_from_key_val(models_import, 'name', model_name)
-
-
-class BayesianConfig(BaseConfig):
-    """Main class to deal with configuration values for this plugin"""
-    config_template_path = None
-    config_name = f"bayesian_settings"
