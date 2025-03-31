@@ -5,7 +5,7 @@ Created the 03/10/2022
 @author: Sebastien Weber
 """
 from random import randint
-from typing import Optional, Type
+from typing import Optional, Type, Union
 from easydict import EasyDict as edict
 
 from qtpy import QtCore
@@ -22,12 +22,14 @@ from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 
 from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 
 
 class DAQTypesEnum(BaseEnum):
@@ -131,11 +133,50 @@ class ControlModule(QObject):
         self._send_to_tcpip = False
         self._tcpclient_thread = None
         self._hardware_thread = None
-        self.module_and_data_saver = None
+
         self.plugin_config: Optional[Config] = None
+
+        self._h5saver: Optional[H5Saver] = None
+        self._module_and_data_saver = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
+
+    def create_new_file(self, new_file: bool):
+        if new_file:
+            self.close_file()
+
+        self.module_and_data_saver.h5saver = self.h5saver
+        return True
+
+    @property
+    def h5saver(self):
+        if self._h5saver is None:
+            self._h5saver = H5Saver(backend=config('general', 'hdf5_backend'))
+        if self._h5saver.h5_file is None:
+            self._h5saver.init_file(update_h5=True)
+        if not self._h5saver.isopen():
+            self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver_temp: H5Saver):
+        self._h5saver = h5saver_temp
+
+    def close_file(self):
+        self.h5saver.close_file()
+
+    @property
+    def module_and_data_saver(self):
+        if not self._module_and_data_saver.h5saver.isopen():
+            self._module_and_data_saver.h5saver = self.h5saver
+        return self._module_and_data_saver
+
+    @module_and_data_saver.setter
+    def module_and_data_saver(self, mod: Union[DetectorSaver, ActuatorSaver]):
+        self._module_and_data_saver = mod
+        self._module_and_data_saver.h5saver = self.h5saver
+
 
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))

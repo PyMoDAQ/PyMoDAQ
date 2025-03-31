@@ -145,9 +145,9 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._title = title
 
-        self.module_and_data_saver: Union[None,
+        self._module_and_data_saver: Union[None,
                                           module_saving.DetectorSaver,
-                                          module_saving.DetectorEnlargeableSaver,
+                                          module_saving.DetectorTimeSaver,
                                           module_saving.DetectorExtendedSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
@@ -617,7 +617,7 @@ class DAQ_Viewer(ParameterControlModule):
     def _init_continuous_save(self):
         """ Initialize the continuous saving H5Saver object
 
-        Update the module_and_data_saver attribute as :class:`DetectorEnlargeableSaver` object
+        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
         """
         if self._h5saver_continuous.settings.child('do_save').value():
 
@@ -627,7 +627,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self._h5saver_continuous.init_file(update_h5=True)
 
-            self.module_and_data_saver = module_saving.DetectorEnlargeableSaver(self)
+            self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self.module_and_data_saver.get_set_node()
 
@@ -643,7 +643,7 @@ class DAQ_Viewer(ParameterControlModule):
                 self.logger.exception(str(e))
 
     def append_data(self, dte: DataToExport = None, where: Union[Node, str] = None):
-        """Appends current DataToExport to a DetectorEnlargeableSaver
+        """Appends current DataToExport to a DetectorTimeSaver
 
         Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
 
@@ -654,12 +654,13 @@ class DAQ_Viewer(ParameterControlModule):
         where: Node or str
         See Also
         --------
-        :class:`DetectorEnlargeableSaver`
+        :class:`DetectorTimeSaver`
         """
         if dte is None:
             dte = self._data_to_save_export
         self._add_data_to_saver(dte, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
                                 where=where)
+
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
     def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
@@ -698,7 +699,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         See Also
         --------
-        DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
+        DetectorSaver, DetectorTimeSaver, DetectorExtendedSaver
 
         """
         if dte is not None:
