@@ -13,3 +13,8 @@ class OptimizerToRunner(StrEnum):
 
     PREDICTION = 'prediction'
 
+
+class OptimizerThreadStatus(StrEnum):
+
+    ADD_DATA = "add_data"
+

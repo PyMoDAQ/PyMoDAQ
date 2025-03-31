@@ -2,6 +2,7 @@ import abc
 from typing import List,  Optional
 import tempfile
 from pathlib import Path
+from enum import StrEnum
 
 from qtpy import QtWidgets, QtCore
 import time
@@ -28,12 +29,13 @@ from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, Da
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.utils import CustomExt
 
+from pymodaq.utils.h5modules import module_saving
 
 from pymodaq.extensions.optimizers_base.utils import (
     get_optimizer_models, OptimizerModelGeneric,
     GenericAlgorithm, StopType, StoppingParameters,
     OptimizerConfig)
-from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
+from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
 logger = set_logger(get_module_name(__file__))
@@ -42,12 +44,13 @@ config = config_mod.Config()
 PREDICTION_PARAMS = []  # to be subclassed in ral optimizer implementations
 MODELS = get_optimizer_models()
 
-class DataNames(BaseEnum):
-    Fitness = 0
-    Individual = 1
-    ProbedData = 2
-    Actuators = 3
-    Tradeoff = 4
+
+class DataNames(StrEnum):
+    Fitness = 'fitness'
+    Individual = 'individual'
+    ProbedData = 'probed_data'
+    Actuators = 'actuators'
+    Tradeoff = 'tradeoff'
 
 
 def optimizer_params(prediction_params: list[dict]):
@@ -86,10 +89,12 @@ def optimizer_params(prediction_params: list[dict]):
     ]
 
 
-
 class OptimisationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
+    saver_signal = QtCore.Signal(DataToExport)
+
+    runner_command = QtCore.Signal(utils.ThreadCommand)
 
     def __init__(self, model_class: OptimizerModelGeneric, modules_manager: ModulesManager,
                  algorithm: GenericAlgorithm, stopping_params: StoppingParameters):
@@ -98,6 +103,7 @@ class OptimisationRunner(QtCore.QObject):
         self.det_done_datas: DataToExport = None
         self.input_from_dets: float = None
         self.outputs: List[np.ndarray] = []
+        self.output_to_actuators: DataToActuators = None
         self.dte_actuators: DataToExport = None
         self.stopping_params: StoppingParameters = stopping_params
 
@@ -107,8 +113,6 @@ class OptimisationRunner(QtCore.QObject):
         self.running = True
 
         self.optimization_algorithm: GenericAlgorithm = algorithm
-
-        self._ind_iter: int = 0
 
     def queue_command(self, command: utils.ThreadCommand):
         """
@@ -167,27 +171,32 @@ class OptimisationRunner(QtCore.QObject):
                 self.det_done_datas = self.modules_manager.grab_data()
                 self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
 
+                #log data
+                self.runner_command.emit(
+                    utils.ThreadCommand(OptimizerThreadStatus.ADD_DATA,))
+
                 # Run the algo internal mechanic
                 self.optimization_algorithm.tell(float(self.input_from_dets))
 
-                dte = DataToExport('algo',
-                                   data=[self.individual_as_data(
-                                       np.array([self.optimization_algorithm.best_fitness]),
-                                       DataNames.Fitness.name),
-                                       self.individual_as_data(
-                                           self.optimization_algorithm.best_individual,
-                                           DataNames.Individual.name),
-                                       DataCalculated(DataNames.ProbedData.name,
-                                                      data=[np.array([self.input_from_dets])],
-                                                      ),
-                                       self.output_to_actuators.merge_as_dwa(
-                                           'Data0D', DataNames.Actuators.name),
-                                       DataCalculated(
-                                           DataNames.Tradeoff.name,
-                                           data=[
-                                               np.array([self.optimization_algorithm.tradeoff])])
-                                   ])
+                dte = DataToExport('algo', data=[
+                    self.individual_as_data(
+                        np.array([self.optimization_algorithm.best_fitness]),
+                        DataNames.Fitness),
+                    self.individual_as_data(
+                        self.optimization_algorithm.best_individual,
+                        DataNames.Individual),
+                    DataCalculated(DataNames.ProbedData,
+                                   data=[np.array([self.input_from_dets])],),
+                    self.output_to_actuators.merge_as_dwa(
+                        'Data0D', DataNames.Actuators),
+                    DataCalculated(DataNames.Tradeoff,
+                                   data=[np.array([self.optimization_algorithm.tradeoff])])
+                    ])
                 self.algo_output_signal.emit(dte)
+                self.saver_signal.emit(
+                    DataToExport('ToSave',
+                                 data=self.det_done_datas.data+[
+                                     self.output_to_actuators.merge_as_dwa('Data0D', DataNames.Actuators)]))
 
                 self.optimization_algorithm.update_prediction_function()
 
@@ -246,17 +255,23 @@ class GenericOptimisation(CustomExt):
 
         self.optimizer_config = OptimizerConfig()
 
-        # With current implementation, it can not work as param tree is updated
-        #
         self.mainsettings_saver_loader = ConfigSaverLoader(
             self.settings.child('main_settings'), self.optimizer_config)
 
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
-
         self.enlargeable_saver: DataEnlargeableSaver = None
         self.live_plotter = LoaderPlotter(self.dockarea)
 
+        self._h5saver: H5Saver = None
+        self.h5saver.settings.child('do_save').hide()
+        self.h5saver.settings.child('custom_name').hide()
+        self.h5saver.new_file_sig.connect(self.create_new_file)
+
+        self._module_and_data_saver: module_saving.OptimizerSaver = None
+        self.module_and_data_saver = module_saving.ScanSaver(self)
+
+        self._ind_iter: int = 0
         self.enl_index = 0
 
         self.settings.child('models', 'ini_model').sigActivated.connect(
@@ -264,6 +279,45 @@ class GenericOptimisation(CustomExt):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+
+    @property
+    def h5saver(self):
+        if self._h5saver is None:
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('general', 'hdf5_backend'))
+        if self._h5saver.h5_file is None:
+            self._h5saver.init_file(update_h5=True)
+        if not self._h5saver.isopen():
+            self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver_temp: H5Saver):
+        self._h5saver = h5saver_temp
+
+    @property
+    def module_and_data_saver(self):
+        if not self._module_and_data_saver.h5saver.isopen():
+            self._module_and_data_saver.h5saver = self.h5saver
+        return self._module_and_data_saver
+
+    @module_and_data_saver.setter
+    def module_and_data_saver(self, mod: module_saving.OptimizerSaver):
+        self._module_and_data_saver = mod
+        self._module_and_data_saver.h5saver = self.h5saver
+
+    def create_new_file(self, new_file):
+        if new_file:
+            self.close_file()
+        self.module_and_data_saver.h5saver = self.h5saver  # force all control modules to update their h5saver
+        res = True
+
+        return res
+
+    def close_file(self):
+        self.h5saver.close_file()
+
+    def add_data(self, dte: DataToExport):
+        self.module_and_data_saver.add_data(dte, )
 
     @abc.abstractmethod
     def validate_config(self) -> bool:
@@ -566,6 +620,8 @@ class GenericOptimisation(CustomExt):
             self.runner_thread.runner = runner
             runner.algo_output_signal.connect(self.process_output)
             runner.algo_finished.connect(self.optimization_done)
+            runner.runner_command.connect(self.thread_status)
+            runner.saver_signal.connect(self.add_data)
             self.command_runner.connect(runner.queue_command)
 
             runner.moveToThread(self.runner_thread)
@@ -597,20 +653,20 @@ class GenericOptimisation(CustomExt):
     def process_output(self, dte: DataToExport):
 
         self.enl_index += 1
-        dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff.name))
+        dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
         self.settings.child('main_settings', 'prediction', 'tradeoff_actual').setValue(
             float(dwa_tradeoff[0][0])
         )
 
-        dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData.name))
-        dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name(DataNames.Actuators.name))
+        dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData))
+        dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name(DataNames.Actuators))
         self.viewer_observable.show_data(dte)
 
         # dwa_observations = self.algorithm.get_dwa_obervations(
         #     self.modules_manager.selected_actuators_name)
         self.model_class.update_plots()
 
-        best_individual = dte.get_data_from_name(DataNames.Individual.name)
+        best_individual = dte.get_data_from_name(DataNames.Individual)
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
 
 
@@ -643,6 +699,10 @@ class GenericOptimisation(CustomExt):
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
             QtWidgets.QApplication.processEvents()
+
+    def thread_status(self, status: utils.ThreadCommand):
+        pass
+
 
 
 

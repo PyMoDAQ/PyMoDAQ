@@ -98,14 +98,18 @@ class GenericAlgorithm(abc.ABC):
                          np.min(bound))
         return np.array(point)
 
-    def ask(self) -> np.ndarray:
+    def ask(self) -> list[np.ndarray]:
+        """ Predict next actuator values to probe
+
+        Return a list of numpy array, one per actuator. In general these array are 0D
+        """
         if self.ini_random_points > 0:
             self.ini_random_points -= 1
             self._next_point = self.get_random_point()
         else:
             self._next_point = self.prediction_ask()
         self._suggested_coordinates.append(self._next_point)
-        return self._next_point
+        return [np.atleast_1d(value) for value in self._next_point]
 
     @abc.abstractmethod
     def prediction_ask(self) -> np.ndarray:
@@ -297,10 +301,10 @@ class OptimizerModelDefault(OptimizerModelGeneric):
         with a mode            attribute, either 'rel' for relative or 'abs' for absolute.
 
         """
-        return DataToActuators('outputs', mode='abs',
-                               data=[DataActuator(self.modules_manager.actuators_name[ind],
-                                                  data=float(outputs[ind])) for ind in
-                                     range(len(outputs))])
+        return DataToActuators(
+            'outputs', mode='abs',
+            data=[DataActuator(self.modules_manager.actuators_name[ind],
+                               data=float(outputs[ind][0])) for ind in  range(len(outputs))])
 
 
 
