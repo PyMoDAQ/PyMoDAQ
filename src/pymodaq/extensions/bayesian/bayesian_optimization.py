@@ -1,49 +1,49 @@
-from typing import List,  Optional
-import tempfile
-from pathlib import Path
 
-from qtpy import QtWidgets, QtCore
-import time
-import numpy as np
-
-from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
-from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq_utils import utils
 
 from pymodaq_utils import config as config_mod
-from pymodaq_utils.enums import BaseEnum
-
-
-from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
-
-from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
-from pymodaq_gui.utils import QLED
-from pymodaq_gui.utils.utils import mkQApp
-from pymodaq_gui import utils as gutils
-from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.h5modules.saving import H5Saver
-
-from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
+from pymodaq_utils.utils import ThreadCommand
 
 
-from pymodaq.extensions.bayesian.utils import (
-    BayesianAlgorithm, StopType, StoppingParameters)
+from pymodaq.extensions.bayesian.utils import BayesianAlgorithm
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
+from pymodaq.extensions.optimizers_base.optimizer import (
+    GenericOptimisation, OptimisationRunner, optimizer_params)
+from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
+from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
-from pymodaq.extensions.optimisers_base.optimizer import (
-    GenericOptimisation, OptimizerModelGeneric, OptimiserConfig,
-    get_optimizer_models, find_key_in_nested_dict)
-from pymodaq.extensions.optimisers_base.utils import OptimizerModelDefault
+logger = set_logger(get_module_name(__file__))
+config = config_mod.Config()
+
 
 EXTENSION_NAME = 'BayesianOptimisation'
 CLASS_NAME = 'BayesianOptimisation'
 
-logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
+PREDICTION_NAMES = list(GenericAcquisitionFunctionFactory.keys())
+PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
+                      'value': PREDICTION_NAMES[0],
+                      'limits': PREDICTION_NAMES}
+                     ] + GenericAcquisitionFunctionFactory.get(
+    PREDICTION_NAMES[0]).params
+
+
+class BayesianOptimisationRunner(OptimisationRunner):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def queue_command(self, command: ThreadCommand):
+        """
+        """
+        if command.command == OptimizerToRunner.PREDICTION:
+            utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
+            self.optimization_algorithm.set_acquisition_function(
+                command.attribute['kind'],
+                **utility_params)
+        else:
+            super().queue_command(command)
 
 
 class BayesianOptimisation(GenericOptimisation):
@@ -51,14 +51,8 @@ class BayesianOptimisation(GenericOptimisation):
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
 
-    acquisition_functions_names = list(GenericAcquisitionFunctionFactory.keys())
-
-    prediction_params = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
-                          'value': acquisition_functions_names[0],
-                          'limits': acquisition_functions_names}
-                         ] + GenericAcquisitionFunctionFactory.get(
-        acquisition_functions_names[0]).params
-
+    runner = BayesianOptimisationRunner
+    params = optimizer_params(PREDICTION_PARAMS)
 
     def __init__(self, dockarea, dashboard):
         super().__init__(dockarea, dashboard)
@@ -98,12 +92,11 @@ class BayesianOptimisation(GenericOptimisation):
 
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(
-            # acquisition=self.settings['main_settings', 'prediction', 'kind'],
             ini_random=self.settings['main_settings', 'ini_random'],
             bounds=self.format_bounds())
 
 
-def main(init_qt=True):
+def main():
     from pymodaq_gui.utils.utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 

@@ -33,7 +33,7 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
-from pymodaq.extensions.optimisers_base.utils import GenericAlgorithm, OptimizerModelDefault
+from pymodaq.extensions.optimizers_base.utils import GenericAlgorithm, OptimizerModelDefault
 
 if TYPE_CHECKING:
     from pymodaq.extensions.bayesian.bayesian_optimization import BayesianOptimisation

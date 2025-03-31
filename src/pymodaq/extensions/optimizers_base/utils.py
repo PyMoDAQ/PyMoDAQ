@@ -352,7 +352,20 @@ def get_optimizer_models(model_name=None):
         return find_dict_in_list_from_key_val(models_import, 'name', model_name)
 
 
-class OptimiserConfig(BaseConfig):
+class OptimizerConfig(BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = None
-    config_name = f"optimiser_settings"
+    config_name = f"optimizer_settings"
+
+
+def find_key_in_nested_dict(dic, key):
+    stack = [dic]
+    while stack:
+        d = stack.pop()
+        if key in d:
+            return d[key]
+        for v in d.values():
+            if isinstance(v, dict):
+                stack.append(v)
+            if isinstance(v, list):
+                stack += v

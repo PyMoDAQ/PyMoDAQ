@@ -7,54 +7,40 @@ from qtpy import QtWidgets, QtCore
 import time
 import numpy as np
 
-from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
+
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
-
 from pymodaq_utils import config as config_mod
 from pymodaq_utils.enums import BaseEnum
-
-
-from pymodaq_gui.config import ConfigSaverLoader
 from pymodaq_utils.logger import set_logger, get_module_name
+
+from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils import QLED
-from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
+from pymodaq_gui.config import ConfigSaverLoader
 
-from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
-
-
-from pymodaq.extensions.optimisers_base.utils import (
-    get_optimizer_models, OptimizerModelGeneric,
-    GenericAlgorithm, StopType, StoppingParameters,
-    OptimiserConfig)
-
-
+from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.utils import CustomExt
+
+
+from pymodaq.extensions.optimizers_base.utils import (
+    get_optimizer_models, OptimizerModelGeneric,
+    GenericAlgorithm, StopType, StoppingParameters,
+    OptimizerConfig)
+from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
 
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
-
-def find_key_in_nested_dict(dic, key):
-    stack = [dic]
-    while stack:
-        d = stack.pop()
-        if key in d:
-            return d[key]
-        for v in d.values():
-            if isinstance(v, dict):
-                stack.append(v)
-            if isinstance(v, list):
-                stack += v
-
+PREDICTION_PARAMS = []  # to be subclassed in ral optimizer implementations
+MODELS = get_optimizer_models()
 
 class DataNames(BaseEnum):
     Fitness = 0
@@ -64,25 +50,11 @@ class DataNames(BaseEnum):
     Tradeoff = 4
 
 
-class GenericOptimisation(CustomExt):
-    """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
-    taken form the detectors as a function of one or more parameters controlled by the actuators.
-    """
-
-    command_runner = QtCore.Signal(utils.ThreadCommand)
-    models = get_optimizer_models()
-    explored_viewer_name = 'algo/ProbedData'
-    optimization_done_signal = QtCore.Signal(DataToExport)
-
-
-    prediction_functions_names: list[str]
-
-    prediction_params = []
-
-    params = [
+def optimizer_params(prediction_params: list[dict]):
+    return [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
          'children': [
-             {'title': 'Utility Function:', 'name': 'prediction', 'expanded': False, 'type': 'group',
+             {'title': 'Prediction Function:', 'name': 'prediction', 'expanded': False, 'type': 'group',
               'children': prediction_params
 
               },
@@ -102,7 +74,7 @@ class GenericOptimisation(CustomExt):
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True,
          'children': [
              {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-              'limits': [d['name'] for d in models]},
+              'limits': [d['name'] for d in MODELS]},
              {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
              {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
              {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
@@ -112,6 +84,149 @@ class GenericOptimisation(CustomExt):
             {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
 
     ]
+
+
+
+class OptimisationRunner(QtCore.QObject):
+    algo_output_signal = QtCore.Signal(DataToExport)
+    algo_finished = QtCore.Signal(DataToExport)
+
+    def __init__(self, model_class: OptimizerModelGeneric, modules_manager: ModulesManager,
+                 algorithm: GenericAlgorithm, stopping_params: StoppingParameters):
+        super().__init__()
+
+        self.det_done_datas: DataToExport = None
+        self.input_from_dets: float = None
+        self.outputs: List[np.ndarray] = []
+        self.dte_actuators: DataToExport = None
+        self.stopping_params: StoppingParameters = stopping_params
+
+        self.model_class: OptimizerModelGeneric = model_class
+        self.modules_manager: ModulesManager = modules_manager
+
+        self.running = True
+
+        self.optimization_algorithm: GenericAlgorithm = algorithm
+
+        self._ind_iter: int = 0
+
+    def queue_command(self, command: utils.ThreadCommand):
+        """
+        """
+        if command.command == OptimizerToRunner.RUN:
+            if command.attribute is None:
+                command.attribute = {}
+            self.run_opti(**command.attribute)
+
+        elif command.command == OptimizerToRunner.STOP:
+            self.running = False
+
+        elif command.command == OptimizerToRunner.STOPPING:
+            self.stopping_params: StoppingParameters = command.attribute
+
+        elif command.command == OptimizerToRunner.BOUNDS:
+            self.optimization_algorithm.bounds = command.attribute
+
+    def run_opti(self, sync_detectors=True, sync_acts=True):
+        """Start the optimization loop
+
+        Parameters
+        ----------
+        sync_detectors: (bool) if True will make sure all selected detectors (if any) all got their data before calling
+            the model
+        sync_acts: (bool) if True will make sure all selected actuators (if any) all reached their target position
+         before calling the model
+        """
+        self.running = True
+        converged = False
+        try:
+            if sync_detectors:
+                self.modules_manager.connect_detectors()
+            if sync_acts:
+                self.modules_manager.connect_actuators()
+
+            self.current_time = time.perf_counter()
+            logger.info('Optimisation loop starting')
+            while self.running:
+                self._ind_iter += 1
+
+                next_target = self.optimization_algorithm.ask()
+
+                self.outputs = next_target
+                self.output_to_actuators: DataToActuators = \
+                    self.model_class.convert_output(
+                        self.outputs,
+                        best_individual=self.optimization_algorithm.best_individual
+                    )
+
+                self.modules_manager.move_actuators(self.output_to_actuators,
+                                                    self.output_to_actuators.mode,
+                                                    polling=sync_acts)
+
+                # Do the evaluation (measurements)
+                self.det_done_datas = self.modules_manager.grab_data()
+                self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
+
+                # Run the algo internal mechanic
+                self.optimization_algorithm.tell(float(self.input_from_dets))
+
+                dte = DataToExport('algo',
+                                   data=[self.individual_as_data(
+                                       np.array([self.optimization_algorithm.best_fitness]),
+                                       DataNames.Fitness.name),
+                                       self.individual_as_data(
+                                           self.optimization_algorithm.best_individual,
+                                           DataNames.Individual.name),
+                                       DataCalculated(DataNames.ProbedData.name,
+                                                      data=[np.array([self.input_from_dets])],
+                                                      ),
+                                       self.output_to_actuators.merge_as_dwa(
+                                           'Data0D', DataNames.Actuators.name),
+                                       DataCalculated(
+                                           DataNames.Tradeoff.name,
+                                           data=[
+                                               np.array([self.optimization_algorithm.tradeoff])])
+                                   ])
+                self.algo_output_signal.emit(dte)
+
+                self.optimization_algorithm.update_prediction_function()
+
+                if self.optimization_algorithm.stopping(self._ind_iter, self.stopping_params):
+                    converged = True
+                    break
+
+            self.current_time = time.perf_counter()
+            QtWidgets.QApplication.processEvents()
+
+            logger.info('Optimisation loop exiting')
+            self.modules_manager.connect_actuators(False)
+            self.modules_manager.connect_detectors(False)
+
+            if converged:
+                self.algo_finished.emit(dte)
+
+        except Exception as e:
+            logger.exception(str(e))
+
+    @staticmethod
+    def individual_as_data(individual: np.ndarray, name: str = 'Individual') -> DataCalculated:
+        return DataCalculated(name, data=[np.atleast_1d(np.squeeze(coordinate)) for coordinate in
+                                          np.atleast_1d(np.squeeze(individual))])
+
+
+class GenericOptimisation(CustomExt):
+    """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
+    taken form the detectors as a function of one or more parameters controlled by the actuators.
+    """
+
+    command_runner = QtCore.Signal(utils.ThreadCommand)
+    explored_viewer_name = 'algo/ProbedData'
+    optimization_done_signal = QtCore.Signal(DataToExport)
+
+    runner = OptimisationRunner  # replace in real implementation if customization is needed
+
+
+    params = optimizer_params(PREDICTION_PARAMS)
 
     def __init__(self, dockarea, dashboard):
         super().__init__(dockarea, dashboard)
@@ -129,7 +244,7 @@ class GenericOptimisation(CustomExt):
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.setup_ui()
 
-        self.optimizer_config = OptimiserConfig()
+        self.optimizer_config = OptimizerConfig()
 
         # With current implementation, it can not work as param tree is updated
         #
@@ -195,13 +310,13 @@ class GenericOptimisation(CustomExt):
         self.dockarea.addDock(self.docks['observable'], 'right', self.docks['settings'])
         self.docks['observable'].addWidget(widget_observable)
 
-        if len(self.models) != 0:
-            self.get_set_model_params(self.models[0]['name'])
+        if len(MODELS) != 0:
+            self.get_set_model_params(MODELS[0]['name'])
 
     def get_set_model_params(self, model_name):
         self.settings.child('models', 'model_params').clearChildren()
-        if len(self.models) > 0:
-            model_class = utils.find_dict_in_list_from_key_val(self.models, 'name', model_name)['class']
+        if len(MODELS) > 0:
+            model_class = utils.find_dict_in_list_from_key_val(MODELS, 'name', model_name)['class']
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
 
@@ -251,12 +366,13 @@ class GenericOptimisation(CustomExt):
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'prediction'), []):
             if param.name() != 'tradeoff_actual':
-                self.update_utility_function()
+                self.update_prediction_function()
 
-    def update_utility_function(self):
+    def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
         uparams = {child.name() : child.value() for child in utility_settings.children()}
-        self.command_runner.emit(utils.ThreadCommand('prediction', uparams))
+        self.command_runner.emit(
+            utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
 
     def get_stopping_parameters(self) -> StoppingParameters:
         stopping_settings = self.settings.child('main_settings', 'stopping')
@@ -267,14 +383,15 @@ class GenericOptimisation(CustomExt):
         return stopping_params
 
     def update_stopping_criteria(self):
-        self.command_runner.emit(utils.ThreadCommand('stopping', self.get_stopping_parameters()))
+        self.command_runner.emit(
+            utils.ThreadCommand(OptimizerToRunner.STOPPING, self.get_stopping_parameters()))
 
     def update_bounds(self):
         bounds = {}
         for child in self.settings.child('main_settings', 'bounds').children():
             bounds[child.name()] = (child['min'], child['max'])
 
-        self.command_runner.emit(utils.ThreadCommand('bounds', bounds))
+        self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.BOUNDS, bounds))
 
     def setup_actions(self):
         logger.debug('setting actions')
@@ -317,7 +434,7 @@ class GenericOptimisation(CustomExt):
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()
         self.model_class = utils.find_dict_in_list_from_key_val(
-            self.models, 'name', model_name)['class'](self)
+            MODELS, 'name', model_name)['class'](self)
         self.model_class.ini_model_base()
 
     def ini_temp_file(self):
@@ -440,8 +557,8 @@ class GenericOptimisation(CustomExt):
             self.ini_live_plot()
 
             self.runner_thread = QtCore.QThread()
-            runner = OptimisationRunner(self.model_class, self.modules_manager, self.algorithm,
-                                        self.get_stopping_parameters())
+            runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
+                                 self.get_stopping_parameters())
             self.runner_thread.runner = runner
             runner.algo_output_signal.connect(self.process_output)
             runner.algo_finished.connect(self.optimization_done)
@@ -453,7 +570,7 @@ class GenericOptimisation(CustomExt):
             self.get_action('runner_led').set_as_true()
             self.set_action_enabled('run', True)
             self.model_class.runner_initialized()
-            self.update_utility_function()
+            self.update_prediction_function()
         else:
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
@@ -511,163 +628,16 @@ class GenericOptimisation(CustomExt):
     def run_optimization(self):
         if self.is_action_checked('run'):
             self.get_action('run').set_icon('pause')
-            self.command_runner.emit(utils.ThreadCommand('start', {}))
+            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.processEvents()
-            self.command_runner.emit(utils.ThreadCommand('run', {}))
+            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
         else:
             self.get_action('run').set_icon('run2')
-            self.command_runner.emit(utils.ThreadCommand('stop', {}))
+            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
 
             QtWidgets.QApplication.processEvents()
 
 
-class OptimisationRunner(QtCore.QObject):
-    algo_output_signal = QtCore.Signal(DataToExport)
-    algo_finished = QtCore.Signal(DataToExport)
-
-    def __init__(self, model_class: OptimizerModelGeneric, modules_manager: ModulesManager,
-                 algorithm: GenericAlgorithm, stopping_params: StoppingParameters):
-        super().__init__()
-
-        self.det_done_datas: DataToExport = None
-        self.input_from_dets: float = None
-        self.outputs: List[np.ndarray] = []
-        self.dte_actuators: DataToExport = None
-        self.stopping_params: StoppingParameters = stopping_params
-
-        self.model_class: OptimizerModelGeneric = model_class
-        self.modules_manager: ModulesManager = modules_manager
-
-        self.running = True
-
-        self.optimization_algorithm: GenericAlgorithm = algorithm
-
-        self._ind_iter: int = 0
-
-    @QtCore.Slot(utils.ThreadCommand)
-    def queue_command(self, command: utils.ThreadCommand):
-        """
-        """
-        if command.command == "run":
-            self.run_opti(**command.attribute)
-
-        elif command.command == "stop":
-            self.running = False
-
-        elif command.command == 'prediction':
-            utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
-            self.optimization_algorithm.set_acquisition_function(
-                command.attribute['kind'],
-                **utility_params)
-
-        elif command.command == 'stopping':
-            self.stopping_params: StoppingParameters = command.attribute
-
-        elif command.command == 'bounds':
-            self.optimization_algorithm.bounds = command.attribute
-
-    def run_opti(self, sync_detectors=True, sync_acts=True):
-        """Start the optimization loop
-
-        Parameters
-        ----------
-        sync_detectors: (bool) if True will make sure all selected detectors (if any) all got their data before calling
-            the model
-        sync_acts: (bool) if True will make sure all selected actuators (if any) all reached their target position
-         before calling the model
-        """
-        self.running = True
-        converged = False
-        try:
-            if sync_detectors:
-                self.modules_manager.connect_detectors()
-            if sync_acts:
-                self.modules_manager.connect_actuators()
-
-            self.current_time = time.perf_counter()
-            logger.info('Optimisation loop starting')
-            while self.running:
-                self._ind_iter += 1
-
-                next_target = self.optimization_algorithm.ask()
-
-                self.outputs = next_target
-                self.output_to_actuators: DataToActuators =\
-                    self.model_class.convert_output(
-                        self.outputs,
-                        best_individual=self.optimization_algorithm.best_individual
-                    )
-
-                self.modules_manager.move_actuators(self.output_to_actuators,
-                                                    self.output_to_actuators.mode,
-                                                    polling=sync_acts)
-
-                # Do the evaluation (measurements)
-                self.det_done_datas = self.modules_manager.grab_data()
-                self.input_from_dets = self.model_class.convert_input(self.det_done_datas)
-
-                # Run the algo internal mechanic
-                self.optimization_algorithm.tell(float(self.input_from_dets))
-
-                dte = DataToExport('algo',
-                                   data=[self.individual_as_data(
-                                       np.array([self.optimization_algorithm.best_fitness]),
-                                       DataNames.Fitness.name),
-                                       self.individual_as_data(
-                                           self.optimization_algorithm.best_individual,
-                                           DataNames.Individual.name),
-                                       DataCalculated(DataNames.ProbedData.name,
-                                                      data=[np.array([self.input_from_dets])],
-                                                      ),
-                                       self.output_to_actuators.merge_as_dwa(
-                                           'Data0D', DataNames.Actuators.name),
-                                       DataCalculated(
-                                           DataNames.Tradeoff.name,
-                                           data=[
-                                               np.array([self.optimization_algorithm.tradeoff])])
-                                         ])
-                self.algo_output_signal.emit(dte)
-
-                self.optimization_algorithm.update_acquisition_function()
-
-                if self.optimization_algorithm.stopping(self._ind_iter, self.stopping_params):
-                    converged = True
-                    break
-
-            self.current_time = time.perf_counter()
-            QtWidgets.QApplication.processEvents()
-
-            logger.info('Optimisation loop exiting')
-            self.modules_manager.connect_actuators(False)
-            self.modules_manager.connect_detectors(False)
-
-            if converged:
-                self.algo_finished.emit(dte)
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    @staticmethod
-    def individual_as_data(individual: np.ndarray, name: str = 'Individual') -> DataCalculated:
-        return DataCalculated(name, data=[np.atleast_1d(np.squeeze(coordinate)) for coordinate in
-                                          np.atleast_1d(np.squeeze(individual))])
-
-
-def main(init_qt=True):
-    from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
-
-    app = mkQApp('Bayesian Optimiser')
-    preset_file_name = config('presets', f'default_preset_for_scan')
-
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'Bayesian')
-
-    app.exec()
-
-    return dashboard, extension, win
-
-if __name__ == '__main__':
-    main()
 
