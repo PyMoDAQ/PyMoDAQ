@@ -416,16 +416,20 @@ class GenericOptimisation(CustomExt):
 
     def go_to_best(self):
         best_individual = self.algorithm.best_individual
-        actuators = self.modules_manager.selected_actuators_name
-        dte_act = DataToActuators('best', data=[
-            DataActuator(actuators[ind], data=float(best_individual[ind])) for ind in range(len(best_individual))
-        ],
-                                  mode='abs')
-        self.modules_manager.connect_actuators(True)
-        self.modules_manager.move_actuators(dte_act, polling=True)
-        self.modules_manager.connect_actuators(False)
+        if best_individual is not None:
+            actuators = self.modules_manager.selected_actuators_name
+            dte_act = DataToActuators('best',
+                                      data=[
+                                          DataActuator(actuators[ind],
+                                                       data=float(best_individual[ind]))
+                                          for ind in range(len(best_individual))
+                                      ],
+                                      mode='abs')
+            self.modules_manager.connect_actuators(True)
+            self.modules_manager.move_actuators(dte_act, polling=True)
+            self.modules_manager.connect_actuators(False)
 
-        self.modules_manager.grab_datas()
+            self.modules_manager.grab_datas()
 
     def quit(self):
         self.dockarea.parent().close()
@@ -628,6 +632,8 @@ class GenericOptimisation(CustomExt):
     def run_optimization(self):
         if self.is_action_checked('run'):
             self.get_action('run').set_icon('pause')
+            self.set_action_checked('gotobest', False)
+            self.set_action_enabled('gotobest', False)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.processEvents()
@@ -636,7 +642,6 @@ class GenericOptimisation(CustomExt):
             self.get_action('run').set_icon('run2')
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
-
             QtWidgets.QApplication.processEvents()
 
 
