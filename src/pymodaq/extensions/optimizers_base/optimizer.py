@@ -92,7 +92,7 @@ def optimizer_params(prediction_params: list[dict]):
 class OptimisationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
-    saver_signal = QtCore.Signal(DataToExport)
+    saver_signal = QtCore.Signal(DataToActuators)
 
     runner_command = QtCore.Signal(utils.ThreadCommand)
 
@@ -193,10 +193,7 @@ class OptimisationRunner(QtCore.QObject):
                                    data=[np.array([self.optimization_algorithm.tradeoff])])
                     ])
                 self.algo_output_signal.emit(dte)
-                self.saver_signal.emit(
-                    DataToExport('ToSave',
-                                 data=self.det_done_datas.data+[
-                                     self.output_to_actuators.merge_as_dwa('Data0D', DataNames.Actuators)]))
+                self.saver_signal.emit(self.output_to_actuators)
 
                 self.optimization_algorithm.update_prediction_function()
 
@@ -269,7 +266,6 @@ class GenericOptimisation(CustomExt):
         self.h5saver.new_file_sig.connect(self.create_new_file)
 
         self._module_and_data_saver: module_saving.OptimizerSaver = None
-        self.module_and_data_saver = module_saving.ScanSaver(self)
 
         self._ind_iter: int = 0
         self.enl_index = 0
@@ -309,15 +305,13 @@ class GenericOptimisation(CustomExt):
         if new_file:
             self.close_file()
         self.module_and_data_saver.h5saver = self.h5saver  # force all control modules to update their h5saver
-        res = True
-
-        return res
 
     def close_file(self):
         self.h5saver.close_file()
 
-    def add_data(self, dte: DataToExport):
-        self.module_and_data_saver.add_data(dte, )
+    def add_data(self, dta: DataToActuators):
+        if self.is_action_checked('save'):
+            self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in dta])
 
     @abc.abstractmethod
     def validate_config(self) -> bool:
@@ -352,6 +346,8 @@ class GenericOptimisation(CustomExt):
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
         self.modules_manager.show_only_control_modules(False)
+        splitter.addWidget(self.h5saver.settings_tree)
+        self.h5saver.settings_tree.setVisible(False)
         splitter.setSizes((int(self.dockarea.height() / 2),
                            int(self.dockarea.height() / 2)))
 
@@ -452,6 +448,8 @@ class GenericOptimisation(CustomExt):
         self.add_action('quit', 'Quit', 'close2', "Quit program")
         self.add_action('ini_model', 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
+        self.add_action('save', 'Save?', 'SaveAs', tip='If checked, data will be saved',
+                        checkable=True)
         self.add_action('ini_runner', 'Init the Optimisation Algorithm', 'ini', checkable=True,
                         enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
@@ -467,6 +465,7 @@ class GenericOptimisation(CustomExt):
         self.connect_action('ini_runner', self.ini_optimization_runner)
         self.connect_action('run', self.run_optimization)
         self.connect_action('gotobest', self.go_to_best)
+        self.connect_action('save', lambda: self.h5saver.settings_tree.setVisible)
 
     def go_to_best(self):
         best_individual = self.algorithm.best_individual
@@ -604,6 +603,14 @@ class GenericOptimisation(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
+    def ini_saver(self):
+        if self.is_action_checked('save'):
+            self.module_and_data_saver = module_saving.OptimizerSaver(
+                self, enl_axis_names=self.modules_manager.selected_actuators_name,
+                enl_axis_units=[act.units for act in self.modules_manager.actuators])
+            self.create_new_file(True)
+            self.module_and_data_saver.h5saver = self.h5saver
+
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
@@ -613,6 +620,7 @@ class GenericOptimisation(CustomExt):
 
             self.ini_temp_file()
             self.ini_live_plot()
+            self.ini_saver()
 
             self.runner_thread = QtCore.QThread()
             runner = self.runner(self.model_class, self.modules_manager, self.algorithm,

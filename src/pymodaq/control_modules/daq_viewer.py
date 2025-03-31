@@ -642,7 +642,9 @@ class DAQ_Viewer(ParameterControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self, dte: DataToExport = None, where: Union[Node, str] = None):
+    def append_data(self, dte: DataToExport = None,
+                    where: Union[Node, str] = None,
+                    **kwargs):
         """Appends current DataToExport to a DetectorTimeSaver
 
         Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
@@ -652,14 +654,17 @@ class DAQ_Viewer(ParameterControlModule):
         dte: DataToExport
             not really used
         where: Node or str
+        kwargs: dict
         See Also
         --------
         :class:`DetectorTimeSaver`
         """
         if dte is None:
             dte = self._data_to_save_export
-        self._add_data_to_saver(dte, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
-                                where=where)
+        self._add_data_to_saver(dte,
+                                init_step=self._h5saver_continuous.settings['N_saved'] == 0,
+                                where=where,
+                                **kwargs)
 
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 

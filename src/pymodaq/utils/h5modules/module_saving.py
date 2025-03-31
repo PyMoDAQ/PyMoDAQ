@@ -6,7 +6,7 @@ Created the 23/11/2022
 """
 from __future__ import annotations
 
-from typing import Union, List, Dict, Tuple, TYPE_CHECKING
+from typing import Union, List, Dict, Tuple, TYPE_CHECKING, Iterable
 import xml.etree.ElementTree as ET
 
 
@@ -249,12 +249,17 @@ class DetectorEnlargeableSaver(DetectorSaver):
     """
     group_type = GroupModuleType.DETECTOR
 
-    def __init__(self, module: DAQ_Viewer):
+    def __init__(self, module: DAQ_Viewer,
+                 enl_axis_names: Iterable[str] = None,
+                 enl_axis_units: Iterable[str] = None,):
         super().__init__(module)
+        self.enl_axis_names = enl_axis_names
+        self.enl_axis_units = enl_axis_units
         self._datatoexport_saver: DataToExportEnlargeableSaver = None
 
-    def update_after_h5changed(self, ):
-        self._datatoexport_saver = DataToExportEnlargeableSaver(self.h5saver)
+    def update_after_h5changed(self):
+        self._datatoexport_saver = DataToExportEnlargeableSaver(
+            self.h5saver, self.enl_axis_names, self.enl_axis_units)
 
 
 class DetectorExtendedSaver(DetectorSaver):
@@ -338,12 +343,17 @@ class ActuatorEnlargeableSaver(ActuatorTimeSaver):
     module
     """
 
-    def __init__(self, module: DAQ_Move):
+    def __init__(self, module: DAQ_Move,
+                 enl_axis_names: Iterable[str] = None,
+                 enl_axis_units: Iterable[str] = None,):
         super().__init__(module)
+        self.enl_axis_names = enl_axis_names
+        self.enl_axis_units = enl_axis_units
         self._datatoexport_saver: DataToExportEnlargeableSaver = None
 
     def update_after_h5changed(self, ):
-        self._datatoexport_saver = DataToExportTimedSaver(self.h5saver)
+        self._datatoexport_saver = DataToExportEnlargeableSaver(
+            self.h5saver, self.enl_axis_names, self.enl_axis_units)
 
 
     def add_data(self, where: Union[Node, str], data: DataToExport,
@@ -485,29 +495,24 @@ class OptimizerSaver(ScanSaver):
     """
     group_type = GroupModuleType.OPTIMIZER
 
-    def __init__(self, module):
+    def __init__(self, module,
+                 enl_axis_names: Iterable[str] = None,
+                 enl_axis_units: Iterable[str] = None,):
         super().__init__(module)
+        self.enl_axis_names = enl_axis_names
+        self.enl_axis_units = enl_axis_units
 
     def update_after_h5changed(self, ):
-        for module in self._module.modules_manager.modules_all:
-            if hasattr(module, 'module_and_data_saver'):
-                if module.module_type == 'DAQ_Move':
-                    module.module_and_data_saver = ActuatorEnlargeableSaver(module)
-                    module.module_and_data_saver.h5saver = self.h5saver
-                elif module.module_type == 'DAQ_Viewer':
-                    module.module_and_data_saver = DetectorEnlargeableSaver(module)
-                    module.module_and_data_saver.h5saver = self.h5saver
+        for module in self._module.modules_manager.detectors:
+            module.module_and_data_saver = DetectorEnlargeableSaver(
+                module, self.enl_axis_names, self.enl_axis_units)
+            module.module_and_data_saver.h5saver = self.h5saver
 
-    def add_nav_axes(self, axes: List[Axis]):
-        for detector in self._module.modules_manager.detectors:
-            detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
-    def add_data(self, dte: DataToExport = None, axis_values: Union[float, np.ndarray] = None,
+    def add_data(self, *args, axis_values: List[Union[float, np.ndarray]] = None,
                  **kwargs):
-        for module in self._module.modules_manager.modules:
+        for module in self._module.modules_manager.detectors:
             try:
                 module.append_data(where=self._module_group)
             except Exception as e:
                 logger.exception(f'Cannot append data: {str(e)}')
-
-        self.append_nav_axes(axis_values)
