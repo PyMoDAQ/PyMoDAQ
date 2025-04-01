@@ -661,8 +661,11 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if dte is None:
             dte = self._data_to_save_export
+        init_step = kwargs.pop('init_step', None)
+        if init_step is None:
+            init_step = self._h5saver_continuous.settings['N_saved'] == 0
         self._add_data_to_saver(dte,
-                                init_step=self._h5saver_continuous.settings['N_saved'] == 0,
+                                init_step=init_step,
                                 where=where,
                                 **kwargs)
 

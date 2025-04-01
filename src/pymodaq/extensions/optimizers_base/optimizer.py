@@ -89,10 +89,20 @@ def optimizer_params(prediction_params: list[dict]):
     ]
 
 
+class DataToActuatorsOpti(DataToActuators):
+    """ Specific class including the step in the optimization loop for further use"""
+    ind_iter: int
+    def __init__(self, *args, ind_iter=0, **kwargs):
+        super().__init__(*args, ind_iter=ind_iter, **kwargs)
+
+    def __repr__(self):
+        return f'{super().__repr__()} iter:{self.ind_iter}'
+
+
 class OptimisationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
-    saver_signal = QtCore.Signal(DataToActuators)
+    saver_signal = QtCore.Signal(DataToActuatorsOpti)
 
     runner_command = QtCore.Signal(utils.ThreadCommand)
 
@@ -111,8 +121,10 @@ class OptimisationRunner(QtCore.QObject):
         self.modules_manager: ModulesManager = modules_manager
 
         self.running = True
+        self._ind_iter = -1
 
         self.optimization_algorithm: GenericAlgorithm = algorithm
+
 
     def queue_command(self, command: utils.ThreadCommand):
         """
@@ -193,7 +205,10 @@ class OptimisationRunner(QtCore.QObject):
                                    data=[np.array([self.optimization_algorithm.tradeoff])])
                     ])
                 self.algo_output_signal.emit(dte)
-                self.saver_signal.emit(self.output_to_actuators)
+                self.saver_signal.emit(DataToActuatorsOpti(DataNames.Actuators,
+                                                           data = self.output_to_actuators.deepcopy().data,
+                                                           mode=self.output_to_actuators.mode,
+                                                           ind_iter=self._ind_iter))
 
                 self.optimization_algorithm.update_prediction_function()
 
@@ -201,9 +216,9 @@ class OptimisationRunner(QtCore.QObject):
                     converged = True
                     break
 
-            self.current_time = time.perf_counter()
-            QtWidgets.QApplication.processEvents()
-
+                self.current_time = time.perf_counter()
+                QtWidgets.QApplication.processEvents()
+                QtWidgets.QApplication.processEvents()
             logger.info('Optimisation loop exiting')
             self.modules_manager.connect_actuators(False)
             self.modules_manager.connect_detectors(False)
@@ -226,7 +241,7 @@ class GenericOptimisation(CustomExt):
     """
 
     command_runner = QtCore.Signal(utils.ThreadCommand)
-    explored_viewer_name = 'algo/ProbedData'
+    explored_viewer_name = f'algo/{DataNames.ProbedData}'
     optimization_done_signal = QtCore.Signal(DataToExport)
 
     runner = OptimisationRunner  # replace in real implementation if customization is needed
@@ -248,6 +263,12 @@ class GenericOptimisation(CustomExt):
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+
+        self._h5saver: H5Saver = None
+        self.h5saver.settings.child('do_save').hide()
+        self.h5saver.settings.child('custom_name').hide()
+        self.h5saver.new_file_sig.connect(self.create_new_file)
+
         self.setup_ui()
 
         self.optimizer_config = OptimizerConfig()
@@ -255,15 +276,12 @@ class GenericOptimisation(CustomExt):
         self.mainsettings_saver_loader = ConfigSaverLoader(
             self.settings.child('main_settings'), self.optimizer_config)
 
+        self._base_name: str = None
+
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
         self.enlargeable_saver: DataEnlargeableSaver = None
         self.live_plotter = LoaderPlotter(self.dockarea)
-
-        self._h5saver: H5Saver = None
-        self.h5saver.settings.child('do_save').hide()
-        self.h5saver.settings.child('custom_name').hide()
-        self.h5saver.new_file_sig.connect(self.create_new_file)
 
         self._module_and_data_saver: module_saving.OptimizerSaver = None
 
@@ -275,11 +293,21 @@ class GenericOptimisation(CustomExt):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+        self.ini_custom_attributes()
+
+    @property
+    def title(self):
+        return f'{self.__class__.__name__}'
+
+    def ini_custom_attributes(self):
+        """ Here you can reimplement specific attributes"""
+        self._base_name: str = 'Optimizer'  # base name used for naming the hdf5 file
 
     @property
     def h5saver(self):
         if self._h5saver is None:
             self._h5saver = H5Saver(save_type='optimizer', backend=config('general', 'hdf5_backend'))
+            self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():
@@ -309,9 +337,10 @@ class GenericOptimisation(CustomExt):
     def close_file(self):
         self.h5saver.close_file()
 
-    def add_data(self, dta: DataToActuators):
+    def add_data(self, dta: DataToActuatorsOpti):
         if self.is_action_checked('save'):
-            self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in dta])
+            self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in dta],
+                                                init_step=dta.ind_iter == 0)
 
     @abc.abstractmethod
     def validate_config(self) -> bool:
@@ -339,15 +368,18 @@ class GenericOptimisation(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
+        self.docks['saving'] = gutils.Dock('Saving')
+        self.docks['saving'].addWidget(self.h5saver.settings_tree)
+        self.dockarea.addDock(self.docks['saving'])
+
         self.docks['settings'] = gutils.Dock('Settings')
-        self.dockarea.addDock(self.docks['settings'])
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self.dockarea.addDock(self.docks['settings'], 'below', self.docks['saving'])
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self.docks['settings'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
-        self.modules_manager.show_only_control_modules(False)
-        splitter.addWidget(self.h5saver.settings_tree)
-        self.h5saver.settings_tree.setVisible(False)
+        self.modules_manager.show_only_control_modules(True)
+
         splitter.setSizes((int(self.dockarea.height() / 2),
                            int(self.dockarea.height() / 2)))
 
@@ -465,7 +497,8 @@ class GenericOptimisation(CustomExt):
         self.connect_action('ini_runner', self.ini_optimization_runner)
         self.connect_action('run', self.run_optimization)
         self.connect_action('gotobest', self.go_to_best)
-        self.connect_action('save', lambda: self.h5saver.settings_tree.setVisible)
+        self.connect_action('save', self.ini_saver)
+        self.h5saver.new_file_sig.connect(self.create_new_file)
 
     def go_to_best(self):
         best_individual = self.algorithm.best_individual
@@ -538,7 +571,7 @@ class GenericOptimisation(CustomExt):
 
         QtWidgets.QApplication.processEvents()
         win_width = self.dockarea.width()
-        self.docks['settings'].container().setSizes((int(win_width / 5),
+        self.docks['settings'].container().parent().setSizes((int(win_width / 5),
                                                      int(2 * win_width / 5),
                                                      int(2 * win_width / 5), 10, 10))
 
@@ -615,12 +648,15 @@ class GenericOptimisation(CustomExt):
         if self.is_action_checked('ini_runner'):
             self.set_algorithm()
 
+            if self.is_action_checked('save'):
+                node = self.module_and_data_saver.get_set_node(new=True)
+                self.h5saver.settings.child('current_scan_name').setValue(node.name)
+
             self.settings.child('models', 'ini_runner').setValue(True)
             self.enl_index = 0
 
             self.ini_temp_file()
             self.ini_live_plot()
-            self.ini_saver()
 
             self.runner_thread = QtCore.QThread()
             runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
@@ -695,6 +731,7 @@ class GenericOptimisation(CustomExt):
 
     def run_optimization(self):
         if self.is_action_checked('run'):
+            self.set_action_enabled('save', False)
             self.get_action('run').set_icon('pause')
             self.set_action_checked('gotobest', False)
             self.set_action_enabled('gotobest', False)
@@ -704,6 +741,7 @@ class GenericOptimisation(CustomExt):
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
         else:
             self.get_action('run').set_icon('run2')
+            self.set_action_enabled('save', True)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
             QtWidgets.QApplication.processEvents()

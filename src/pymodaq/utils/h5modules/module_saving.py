@@ -186,8 +186,8 @@ class DetectorSaver(ModuleSaver):
         return self._h5saver.add_det_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),
                                            metadata=metadata)
 
-    def add_data(self, where: Union[Node, str], data: DataToExport):
-        self._datatoexport_saver.add_data(where, data)
+    def add_data(self, where: Union[Node, str], data: DataToExport, **kwargs):
+        self._datatoexport_saver.add_data(where, data, **kwargs)
 
     def add_bkg(self, where: Union[Node, str], data_bkg: DataToExport):
         """ Adds a DataToExport as a background node in the h5file
@@ -439,9 +439,10 @@ class ScanSaver(ModuleSaver):
             saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
             saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
-        return self._h5saver.add_scan_group(where, title=self._module.title,
+        return self._h5saver.add_generic_group(where, title=self._module.title,
                                             settings_as_xml=ET.tostring(settings_xml),
-                                            metadata=metadata)
+                                            metadata=metadata,
+                                            group_type=self.group_type.name)
 
     def add_nav_axes(self, axes: List[Axis]):
         for detector in self._module.modules_manager.detectors:
@@ -513,6 +514,8 @@ class OptimizerSaver(ScanSaver):
                  **kwargs):
         for module in self._module.modules_manager.detectors:
             try:
-                module.append_data(where=self._module_group)
+                module.append_data(where=self._module_group,
+                                   axis_values=axis_values,
+                                   **kwargs)
             except Exception as e:
                 logger.exception(f'Cannot append data: {str(e)}')

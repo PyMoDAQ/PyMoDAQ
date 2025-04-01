@@ -54,8 +54,9 @@ class BayesianOptimisation(GenericOptimisation):
     runner = BayesianOptimisationRunner
     params = optimizer_params(PREDICTION_PARAMS)
 
-    def __init__(self, dockarea, dashboard):
-        super().__init__(dockarea, dashboard)
+    def ini_custom_attributes(self):
+        """ Here you can reimplement specific attributes"""
+        self._base_name: str = 'Bayesian'
 
     def validate_config(self) -> bool:
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')
