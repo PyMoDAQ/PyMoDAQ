@@ -75,8 +75,6 @@ class DAQ_Logger(CustomExt):
         super().__init__(dockarea, dashboard)
 
         self.wait_time = 1000
-
-        self.logger_thread = None
         self.logger: Union[H5Logger, DataBaseLogger] = None
         self.setup_ui()
 
@@ -293,25 +291,22 @@ class DAQ_Logger(CustomExt):
         res = self.set_logging()
 
         # mandatory to deal with multithreads
-        if self.logger_thread is not None:
+        if self.runner_thread is not None:
             self.command_DAQ_signal.disconnect()
-            if self.logger_thread.isRunning():
-                self.logger_thread.exit()
-                while not self.logger_thread.isFinished():
-                    QThread.msleep(100)
-                self.logger_thread = None
+            self.exit_runner_thread()
+            self.runner_thread = None
 
-        self.logger_thread = QThread()
+        self.runner_thread = QThread()
 
         log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
 
-        log_acquisition.moveToThread(self.logger_thread)
+        log_acquisition.moveToThread(self.runner_thread)
 
         self.command_DAQ_signal[list].connect(log_acquisition.queue_command)
         log_acquisition.status_sig[list].connect(self.thread_status)
 
-        self.logger_thread.log_acquisition = log_acquisition
-        self.logger_thread.start()
+        self.runner_thread.log_acquisition = log_acquisition
+        self.runner_thread.start()
 
         self._actions['start'].setEnabled(False)
         QtWidgets.QApplication.processEvents()

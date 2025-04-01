@@ -478,7 +478,7 @@ class BayesianOptimisation(CustomExt):
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
-            self.runner_thread.quit()
+            self.exit_runner_thread()
             self.get_action('runner_led').set_as_false()
 
     def clean_h5_temp(self):
