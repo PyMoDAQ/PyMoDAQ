@@ -1045,17 +1045,20 @@ class DashBoard(CustomApp):
                         self.preset_manager.preset_params.child('Moves').children()]
             plugins += [{'type': 'det', 'value': child} for child in
                         self.preset_manager.preset_params.child('Detectors').children()]
-
             for plug in plugins:
-                if plug["type"] == 'det':
-                    plug['ID'] = plug['value']['params', 'detector_settings', 'controller_ID']
-                    plug['status'] = plug['value']['params', 'detector_settings',
-                        'controller_status']
-                else:
-                    plug['ID'] = plug['value']['params', 'move_settings',
-                        'multiaxes', 'controller_ID']
-                    plug['status'] = plug['value'][
-                            'params', 'move_settings', 'multiaxes', 'multi_status']
+                    if plug["type"] == 'det':
+                        try:
+                            plug['ID'] = plug['value']['params', 'detector_settings', 'controller_ID']
+                            plug['status'] = plug['value']['params', 'detector_settings', 'controller_status']
+                        except KeyError as e:
+                            raise DetectorError
+                    else:
+                        try:
+                            plug['ID'] = plug['value']['params', 'move_settings','multiaxes', 'controller_ID']
+                            plug['status'] = plug['value']['params', 'move_settings', 'multiaxes', 'multi_status']
+                        except KeyError as e:
+                            raise ActuatorError
+
 
 
             IDs = list(set([plug['ID'] for plug in plugins]))
@@ -1433,8 +1436,11 @@ class DashBoard(CustomApp):
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
                     area.window().setVisible(True)
-                messagebox(text=f'{str(error)}\nQuitting the application...',
-                           title='Incompatibility')
+                messagebox(severity='critical', title="Preset loading error",
+                         text=f"""
+                            <p>Saved preset file is not compatible anymore.</p>
+                            <p>Please recreate the preset at <b>{filename}</b>.</p>
+                 """)
                 logger.exception(str(error))
 
                 self.quit_fun()
