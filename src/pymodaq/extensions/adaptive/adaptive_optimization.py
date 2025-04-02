@@ -5,9 +5,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 
-from pymodaq.extensions.bayesian.utils import BayesianAlgorithm
 
-from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.optimizer import (
     GenericOptimisation, OptimisationRunner, optimizer_params)

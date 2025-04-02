@@ -10,7 +10,7 @@ from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
 import numpy as np
 from collections import namedtuple
 
-from bayes_opt import BayesianOptimization
+from adaptive import Learner1D, Learner2D, LearnerND, Runner
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
