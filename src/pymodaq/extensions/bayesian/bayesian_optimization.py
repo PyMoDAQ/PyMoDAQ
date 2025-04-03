@@ -10,7 +10,7 @@ from pymodaq.extensions.bayesian.utils import BayesianAlgorithm
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimisation, OptimisationRunner, optimizer_params)
+    GenericOptimization, OptimizationRunner, optimizer_params)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
@@ -18,8 +18,8 @@ logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
 
-EXTENSION_NAME = 'BayesianOptimisation'
-CLASS_NAME = 'BayesianOptimisation'
+EXTENSION_NAME = 'BayesianOptimization'
+CLASS_NAME = 'BayesianOptimization'
 
 PREDICTION_NAMES = list(GenericAcquisitionFunctionFactory.keys())
 PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
@@ -29,7 +29,7 @@ PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
     PREDICTION_NAMES[0]).params
 
 
-class BayesianOptimisationRunner(OptimisationRunner):
+class BayesianOptimizationRunner(OptimizationRunner):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,12 +46,12 @@ class BayesianOptimisationRunner(OptimisationRunner):
             super().queue_command(command)
 
 
-class BayesianOptimisation(GenericOptimisation):
+class BayesianOptimization(GenericOptimization):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
 
-    runner = BayesianOptimisationRunner
+    runner = BayesianOptimizationRunner
     params = optimizer_params(PREDICTION_PARAMS)
 
     def ini_custom_attributes(self):

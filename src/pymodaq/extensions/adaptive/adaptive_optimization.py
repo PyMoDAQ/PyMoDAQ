@@ -5,10 +5,11 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 
+from pymodaq.extensions.adaptive.loss_function import LossFunctionFactory,LossDim
 
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimisation, OptimisationRunner, optimizer_params)
+    GenericOptimization, OptimizationRunner, optimizer_params)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
@@ -17,17 +18,17 @@ config = config_mod.Config()
 
 
 EXTENSION_NAME = 'AdaptiveScan'
-CLASS_NAME = 'AdaptiveOptimisation'
+CLASS_NAME = 'AdaptiveOptimization'
 
-PREDICTION_NAMES = list(GenericAcquisitionFunctionFactory.keys())
+PREDICTION_NAMES = list(LossFunctionFactory.keys(LossDim.LOSS_1D))
 PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
                       'value': PREDICTION_NAMES[0],
                       'limits': PREDICTION_NAMES}
-                     ] + GenericAcquisitionFunctionFactory.get(
-    PREDICTION_NAMES[0]).params
+                     ] + LossFunctionFactory.get(LossDim.LOSS_1D,
+                                                 PREDICTION_NAMES[0]).params
 
 
-class AdaptiveOptimisationRunner(OptimisationRunner):
+class AdaptiveOptimizationRunner(OptimizationRunner):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -99,7 +99,7 @@ class DataToActuatorsOpti(DataToActuators):
         return f'{super().__repr__()} iter:{self.ind_iter}'
 
 
-class OptimisationRunner(QtCore.QObject):
+class OptimizationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
     saver_signal = QtCore.Signal(DataToActuatorsOpti)
@@ -235,7 +235,7 @@ class OptimisationRunner(QtCore.QObject):
                                           np.atleast_1d(np.squeeze(individual))])
 
 
-class GenericOptimisation(CustomExt):
+class GenericOptimization(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
@@ -244,7 +244,7 @@ class GenericOptimisation(CustomExt):
     explored_viewer_name = f'algo/{DataNames.ProbedData}'
     optimization_done_signal = QtCore.Signal(DataToExport)
 
-    runner = OptimisationRunner  # replace in real implementation if customization is needed
+    runner = OptimizationRunner  # replace in real implementation if customization is needed
 
 
     params = optimizer_params(PREDICTION_PARAMS)
