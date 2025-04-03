@@ -81,6 +81,10 @@ class CustomExt(CustomApp):
         self.runner_thread : QtCore.QThread = None
 
     @property
+    def splash(self):
+        return self.dashboard.splash_sc
+
+    @property
     def modules_manager(self) -> ModulesManager:
         """useful tool to interact with DAQ_Moves and DAQ_Viewers
 
