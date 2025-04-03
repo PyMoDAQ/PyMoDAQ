@@ -5,7 +5,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 
-from pymodaq.extensions.bayesian.utils import BayesianAlgorithm
+from pymodaq.extensions.bayesian.utils import BayesianAlgorithm, BayesianConfig
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
@@ -53,6 +53,7 @@ class BayesianOptimization(GenericOptimization):
 
     runner = BayesianOptimizationRunner
     params = optimizer_params(PREDICTION_PARAMS)
+    config_saver = BayesianConfig
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""

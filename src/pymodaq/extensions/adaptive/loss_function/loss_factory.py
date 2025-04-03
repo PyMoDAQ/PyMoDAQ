@@ -1,11 +1,11 @@
 from abc import ABCMeta, abstractmethod
-from typing import Callable
+from typing import Callable, Type, Union, Sequence
 from enum import StrEnum
 
-from numpy.random import RandomState
+
+from adaptive.learner import Learner1D, Learner2D, LearnerND, BaseLearner
 
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
@@ -27,6 +27,30 @@ class LossDim(StrEnum):
         else:
             raise ValueError(f'No Loss with dim={dim} is known')
 
+    def get_learner_from_enum(self, bounds: Sequence[tuple[float, float]],
+                              loss_function: 'LossFunctionBase') -> Union[Learner1D, Learner2D, LearnerND]:
+        """ Return an instance of a Learner given the enum value
+
+        Parameters
+        ----------
+        bounds: type depends on the learner, could be a tuple of real numbers (Learner1D) or a tuple of tuples of real
+            numbers
+        loss_function: one of the LossFunction class as given by the LossFunctinoFactory
+
+        See Also:
+        ---------
+        :class:`LossFunctionFactory`
+        """
+        if self == self.LOSS_1D:
+            bounds = bounds[0]
+            return Learner1D(None, bounds, loss_per_interval=loss_function)
+        elif self == self.LOSS_2D:
+            return Learner2D(None, bounds, loss_per_triangle=loss_function)
+        elif self == self.LOSS_ND:
+            return LearnerND(None, bounds, loss_per_simplex=loss_function)
+        else:
+            raise ValueError(f'No learner for this enum: {self}')
+
 
 class LossFunctionBase(metaclass=ABCMeta):
     _loss : Callable
@@ -35,7 +59,7 @@ class LossFunctionBase(metaclass=ABCMeta):
     params : property(abstractmethod)
 
     def __call__(self, *args, **kwargs):
-        return self._loss(*args, **kwargs)
+        return self._loss(**kwargs)
 
 
 class LossFunctionFactory:
@@ -45,7 +69,7 @@ class LossFunctionFactory:
     def register(cls) -> Callable:
         """ To be used as a decorator
 
-        Register in the class registry a new scanner class using its 2 identifiers: scan_type and scan_sub_type
+        Register in the class registry a new LossFunction class using its 2 identifiers: LossDim and usual_name
         """
 
         def inner_wrapper(wrapped_class: LossFunctionBase) -> Callable:
@@ -62,15 +86,15 @@ class LossFunctionFactory:
         return inner_wrapper
 
     @classmethod
-    def get(cls, dim: LossDim, key : str) -> LossFunctionBase:
-        builder = cls._builders.get(dim).get(key)
-        if not builder:
+    def get(cls, dim: LossDim, key : str) -> Type[LossFunctionBase]:
+        loss = cls._builders.get(dim).get(key)
+        if not loss:
             raise ValueError(f'Unknown Loss function with dim={dim} and key={key}')
-        return builder
+        return loss
 
     @classmethod
     def create(cls, dim: LossDim, key: str, **kwargs) -> LossFunctionBase:
-        return cls.get(dim, key)(**kwargs)
+        return cls.get(dim, key)()(**kwargs)
 
     @classmethod
     def dims(cls) -> list[LossDim]:

@@ -8,93 +8,87 @@ Created the 31/08/2023
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
 
 import numpy as np
-from collections import namedtuple
-
-from adaptive import Learner1D, Learner2D, LearnerND, Runner
+from collections import OrderedDict
+from collections.abc import Iterable as IterableClass
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
+
+from pymodaq_data.data import (DataCalculated, DataRaw, Axis)
 
 
-from pymodaq_data.data import (DataToExport, DataCalculated,
-                                DataRaw, Axis)
-
-
-from pymodaq.extensions.optimizers_base.utils import GenericAlgorithm, OptimizerModelDefault
-
+from pymodaq.extensions.optimizers_base.utils import (
+    GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
+    OptimizerConfig)
+from pymodaq.extensions.adaptive.loss_function.loss_factory import LossDim, LossFunctionBase, LossFunctionFactory
 
 logger = set_logger(get_module_name(__file__))
 
 
-class StopType(BaseEnum):
-    Predict = 0
-
-
-StoppingParameters = namedtuple('StoppingParameters',
-                                ['niter', 'stop_type', 'tolerance', 'npoints'])
+class AdaptiveConfig(OptimizerConfig):
+    config_name = f"adaptive_settings"
 
 
 class AdaptiveAlgorithm(GenericAlgorithm):
 
-    def __init__(self, ini_random: int, bounds: dict, **kwargs):
+    def __init__(self, ini_random: int, bounds: list[tuple[float, float]],
+                 loss_type: LossDim, kind: str, **kwargs):
         super().__init__(ini_random)
-        self._algo = BayesianOptimization(f=None,
-                                          pbounds=bounds,
-                                          **kwargs
-                                          )
+        self._algo = loss_type.get_learner_from_enum(
+            bounds=bounds,
+            loss_function=LossFunctionFactory.create(loss_type, kind, **kwargs))
 
-    def set_prediction_function(self, kind: str, **kwargs):
-        self._prediction = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
+    def set_prediction_function(self, loss_type=LossDim.LOSS_1D, kind='',  **kwargs):
+        self._prediction = LossFunctionFactory.create(loss_type, kind, **kwargs)
 
     def update_prediction_function(self):
-        """ Update the parameters of the acquisition function (kappa decay for instance)"""
-        self._prediction.decay_exploration()
-
+        pass
 
     @property
-    def tradeoff(self):
-        return self._prediction.tradeoff
+    def tradeoff(self) -> float:
+        return 0.
 
     @property
     def bounds(self) -> List[np.ndarray]:
-        return [bound for bound in self._algo.space.bounds]
+        return [np.array(bound) if isinstance(bound, IterableClass) else np.array([bound]) for bound in self._algo.bounds]
 
     @bounds.setter
-    def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
-        if isinstance(bounds, dict):
-            self._algo.set_bounds(bounds)
-        else:
-            self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
+    def bounds(self, bounds: Union[Tuple[float, float], Iterable[np.ndarray]]):
+        #todo check the type
+        self._algo.bounds = bounds
 
     def prediction_ask(self) -> np.ndarray:
         """ Ask the prediction function or algo to provide the next point to probe"""
-        return self._acquisition.suggest(self._algo._gp, self._algo.space)
+        return np.atleast_1d(self._algo.ask(1)[0][0])
 
     def tell(self, function_value: float):
-        self._algo.register(params=self._next_point, target=function_value)
+        next_point = tuple(self._next_point)
+        if len(next_point) == 1:
+            next_point = next_point[0]  #Learner don't have the same tell method signature
+        self._algo.tell(x=next_point, y=function_value)
         
     @property
     def best_fitness(self) -> float:
-        return self._algo.max['target']
+        try:
+            return 1 / self._algo.losses.peekitem(-1)[1]
+        except (IndexError, ValueError):
+            return 1
 
     @property
     def best_individual(self) -> Union[np.ndarray, None]:
-        if self._algo.max is None:
-            return None
-        else:
-            max_param = self._algo.max.get('params', None)
-            if max_param is None:
-                return None
-            return self._algo.space.params_to_array(max_param)
+        try:
+            return np.atleast_1d(self._algo.losses.peekitem(-1)[0])
+        except IndexError:
+            return np.atleast_1d(self.bounds[0])
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:
             return True
         if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            coordinates = np.array(self._suggested_coordinates[-stopping_parameters.npoints:]).T
-            return np.all(np.std(coordinates, axis=1)
-                          < stopping_parameters.tolerance)
+            try:
+                return self.best_fitness < stopping_parameters.tolerance
+            except IndexError:
+                return False
         return False
 
     def _posterior(self, x_obs, y_obs, grid):

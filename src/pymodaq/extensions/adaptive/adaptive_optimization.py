@@ -4,14 +4,14 @@ from pymodaq_utils import config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
-
-from pymodaq.extensions.adaptive.loss_function import LossFunctionFactory,LossDim
-
-
 from pymodaq.extensions.optimizers_base.optimizer import (
     GenericOptimization, OptimizationRunner, optimizer_params)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
+
+from pymodaq.extensions.adaptive.loss_function import LossFunctionFactory,LossDim
+from pymodaq.extensions.adaptive.utils import AdaptiveAlgorithm, AdaptiveConfig
+
 
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
@@ -30,6 +30,7 @@ PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
 
 class AdaptiveOptimizationRunner(OptimizationRunner):
 
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -38,24 +39,28 @@ class AdaptiveOptimizationRunner(OptimizationRunner):
         """
         if command.command == OptimizerToRunner.PREDICTION:
             utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
-            self.optimization_algorithm.set_acquisition_function(
-                command.attribute['kind'],
-                **utility_params)
+            #todo pass LossDim enum into here also
+            self.optimization_algorithm.set_prediction_function(LossDim.LOSS_1D,
+                                                                command.attribute['kind'],
+                                                                **utility_params)
         else:
             super().queue_command(command)
 
 
-class AdaptiveOptimisation(GenericOptimisation):
+class AdaptiveOptimisation(GenericOptimization):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
 
-    runner = AdaptiveOptimisationRunner
+    runner = AdaptiveOptimizationRunner
     params = optimizer_params(PREDICTION_PARAMS)
+    config_saver = AdaptiveConfig
+
+    DISPLAY_BEST = False
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
-        self._base_name: str = 'Bayesian'
+        self._base_name: str = 'Adaptive'
 
     def validate_config(self) -> bool:
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')
@@ -63,7 +68,9 @@ class AdaptiveOptimisation(GenericOptimisation):
             try:
                 utility_params = { k : v for k, v in utility.items() \
                                    if k != "kind" and k != "tradeoff_actual" }
-                GenericAcquisitionFunctionFactory.create(utility['kind'], **utility_params)
+                #todo get loss type from params
+                LossFunctionFactory.create(LossDim.LOSS_1D,
+                                           utility['kind'], **utility_params)
             except ValueError:
                 return False
 
@@ -88,22 +95,29 @@ class AdaptiveOptimisation(GenericOptimisation):
             old_children = utility_settings.children()[1:]
             for child in old_children:
                 utility_settings.removeChild(child)
-            utility_settings.addChildren(GenericAcquisitionFunctionFactory.get(param.value()).params)
+            #todo add/get Lossdim from params
+            utility_settings.addChildren(LossFunctionFactory.get(LossDim.LOSS_1D,
+                                                                 param.value()).params)
+
+    def adaptive_bounds(self):
+        return list(self.format_bounds().values())
 
     def set_algorithm(self):
-        self.algorithm = BayesianAlgorithm(
+        self.algorithm = AdaptiveAlgorithm(
             ini_random=self.settings['main_settings', 'ini_random'],
-            bounds=self.format_bounds())
+            bounds=self.adaptive_bounds(),
+            loss_type=LossDim.LOSS_1D,
+            kind=self.settings['main_settings', 'prediction', 'kind'])
 
 
 def main():
     from pymodaq_gui.utils.utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-    app = mkQApp('Bayesian Optimiser')
+    app = mkQApp('Adaptive Optimiser')
     preset_file_name = config('presets', f'default_preset_for_scan')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'Bayesian')
+    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'AdaptiveScan')
 
     app.exec()
 
