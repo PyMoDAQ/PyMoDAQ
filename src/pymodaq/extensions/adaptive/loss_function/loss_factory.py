@@ -17,7 +17,8 @@ class LossDim(StrEnum):
     LOSS_2D = 'Loss2D'
     LOSS_ND = 'LossND'
 
-    def get_enum_from_dim_as_int(self, dim: int):
+    @staticmethod
+    def get_enum_from_dim_as_int(dim: int):
         if dim == 1:
             return LossDim.LOSS_1D
         elif dim == 2:
@@ -55,8 +56,8 @@ class LossDim(StrEnum):
 class LossFunctionBase(metaclass=ABCMeta):
     _loss : Callable
     dim: LossDim
-    usual_name : str
-    params : property(abstractmethod)
+    usual_name: str
+    params: list[dict] = []
 
     def __call__(self, *args, **kwargs):
         return self._loss(**kwargs)

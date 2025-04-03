@@ -59,6 +59,11 @@ class BayesianOptimization(GenericOptimization):
         """ Here you can reimplement specific attributes"""
         self._base_name: str = 'Bayesian'
 
+    def update_after_actuators_changed(self, actuators: list[str]):
+        """ Actions to do after the actuators have been updated
+        """
+        pass
+
     def validate_config(self) -> bool:
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')
         if utility:

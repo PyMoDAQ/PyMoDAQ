@@ -456,7 +456,6 @@ class GenericOptimization(CustomExt):
                self.settings.child('main_settings'), []):
             self.mainsettings_saver_loader.save_config()
 
-
     def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
         uparams = {child.name() : child.value() for child in utility_settings.children()}
@@ -607,11 +606,15 @@ class GenericOptimization(CustomExt):
         except Exception as e:
             logger.exception(f'Could not load the configuration')
 
-        self.update_after_actuators_changed()
+        self.update_after_actuators_changed(self.modules_manager.selected_actuators_name)
 
     @abc.abstractmethod
-    def update_after_actuators_changed(self):
-        """ Actions to do after the actuators have been updated"""
+    def update_after_actuators_changed(self, actuators: list[str]):
+        """ Actions to do after the actuators have been updated
+
+        To be implemented
+        """
+        ...
 
     def format_bounds(self):
         bound_dict = OrderedDict([])

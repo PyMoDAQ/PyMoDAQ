@@ -37,6 +37,7 @@ class AdaptiveAlgorithm(GenericAlgorithm):
         self._algo = loss_type.get_learner_from_enum(
             bounds=bounds,
             loss_function=LossFunctionFactory.create(loss_type, kind, **kwargs))
+        self._best = 1
 
     def set_prediction_function(self, loss_type=LossDim.LOSS_1D, kind='',  **kwargs):
         self._prediction = LossFunctionFactory.create(loss_type, kind, **kwargs)
@@ -65,21 +66,19 @@ class AdaptiveAlgorithm(GenericAlgorithm):
         next_point = tuple(self._next_point)
         if len(next_point) == 1:
             next_point = next_point[0]  #Learner don't have the same tell method signature
-        self._algo.tell(x=next_point, y=function_value)
+        self._algo.tell(next_point, function_value)
         
     @property
     def best_fitness(self) -> float:
-        try:
-            return 1 / self._algo.losses.peekitem(-1)[1]
-        except (IndexError, ValueError):
-            return 1
+        """ For adaptive optimization this is only used as a stopping critter"""
+        if 1/self._algo.loss() > self._best:
+            self._best = 1/self._algo.loss()
+        return self._best
 
     @property
     def best_individual(self) -> Union[np.ndarray, None]:
-        try:
-            return np.atleast_1d(self._algo.losses.peekitem(-1)[0])
-        except IndexError:
-            return np.atleast_1d(self.bounds[0])
+        """ For adaptive optimization this doesn't mean anything"""
+        return np.atleast_1d(self.bounds[0])
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:
@@ -91,52 +90,8 @@ class AdaptiveAlgorithm(GenericAlgorithm):
                 return False
         return False
 
-    def _posterior(self, x_obs, y_obs, grid):
 
-        if len(x_obs.shape) == 1:
-            x_obs = x_obs.reshape(-1, 1)
-            y_obs = y_obs.reshape(-1, 1)
-            grid = grid.reshape(-1, 1)
 
-        self._algo._gp.fit(x_obs, y_obs)
-
-        mu, sigma = self._algo._gp.predict(grid, return_std=True)
-        return mu, sigma
-
-    def get_dwa_obervations(self, actuators_name):
-        try:
-            axes = [Axis(act, data=np.array([res['params'][act] for res in self._algo.res])) for
-                    act in actuators_name]
-            data_arrays = [np.array([res['target'] for res in self._algo.res])]
-
-            return DataRaw('Observations', data=data_arrays, labels=actuators_name,
-                           axes=axes)
-
-        except Exception as e:
-            pass
-
-    def get_1D_dwa_gp(self, x: np.ndarray, actuator_name: str):
-        """ Get Measurements and predictions as DataWithAxes
-
-        Parameters
-        ----------
-        x: np.ndarray
-            linear grid to get the Bayesian Optimisation On
-        """
-
-        dwa_obervation = self.get_dwa_obervations([actuator_name])
-
-        mu, sigma = self._posterior(dwa_obervation.axes[0].get_data(),
-                                    dwa_obervation.data[0], x)
-
-        dwa_measured = DataCalculated('Measurements', data=[dwa_obervation.data[0]],
-                                      axes=[Axis('measured_axis',
-                                                 data=dwa_obervation.axes[0].get_data())],
-                                      labels=['Sampled'])
-        dwa_prediction = DataCalculated('Prediction', data=[mu],
-                                        axes=[Axis('tested_pos', data=x)],
-                                        errors=[1.96 * sigma])
-        return dwa_measured, dwa_prediction
 
 
 
