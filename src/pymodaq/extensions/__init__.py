@@ -16,5 +16,9 @@ from .h5browser import H5Browser  #backcompat but should be loaded from pymodaq_
 from .bayesian.bayesian_optimization import BayesianOptimization
 from .bayesian.utils import OptimizerModelDefault
 
+from .adaptive.adaptive_optimization import AdaptiveOptimisation
+
+
+
 
 
