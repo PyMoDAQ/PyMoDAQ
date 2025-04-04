@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
-from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver
+from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType
 
 from pymodaq.utils.parameter import Parameter
 from pymodaq.control_modules.mocks import MockScan, MockDAQMove, MockDAQViewer
@@ -32,7 +32,7 @@ class TestDetectorSaver:
         det_saver = DetectorSaver(module=mock_det)
         det_saver.h5saver = h5saver
 
-        assert det_saver.group_type.name == 'detector'
+        assert det_saver.group_type == GroupModuleType.DETECTOR
 
         for node in h5saver.walk_nodes('/'):
             assert 'detector' not in node.attrs
@@ -53,7 +53,7 @@ class TestScanSaver:
         scan_saver = ScanSaver(module=mock_scan_module)
         scan_saver.h5saver = h5saver
 
-        assert scan_saver.group_type.name == 'scan'
+        assert scan_saver.group_type == GroupModuleType.SCAN
 
         for node in h5saver.walk_nodes('/'):
             assert 'scan' not in node.attrs

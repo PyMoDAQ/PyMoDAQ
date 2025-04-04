@@ -114,6 +114,7 @@ class DataToActuators(DataToExport):
     mode: str
         either 'rel' or 'abs' for a relative or absolute change of the actuator's values
     """
+    mode: str
 
     def __init__(self, *args, mode='rel', **kwargs):
         if mode not in ['rel', 'abs']:

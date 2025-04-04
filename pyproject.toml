@@ -33,7 +33,7 @@ classifiers = [
 dependencies = [
     "pymodaq_utils>=0.0.14",
     "pymodaq_gui>=5.0.17",
-    "pymodaq_data>=5.0.18",
+    "pymodaq_data>=5.0.21",
     "easydict",
     "multipledispatch",
     "numpy < 2.0.0",

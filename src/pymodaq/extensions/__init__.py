@@ -14,7 +14,7 @@ from .pid.pid_controller import DAQ_PID
 from .h5browser import H5Browser  #backcompat but should be loaded from pymodaq_gui!
 
 from .bayesian.bayesian_optimization import BayesianOptimisation
-from .bayesian.utils import BayesianModelDefault, BayesianModelGeneric
+from .bayesian.utils import OptimizerModelDefault
 
 
 

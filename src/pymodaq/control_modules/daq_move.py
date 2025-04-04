@@ -128,7 +128,7 @@ class DAQ_Move(ParameterControlModule):
         if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get('actuator', ACTUATOR_TYPES[0])
 
-        self.module_and_data_saver = module_saving.ActuatorSaver(self)
+        self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
 
         self._move_done_bool = True
 
@@ -205,12 +205,13 @@ class DAQ_Move(ParameterControlModule):
             self.settings.child('move_settings', 'multiaxes', 'multi_status').setValue(
                 'Master' if is_master else 'Slave')
 
-    def append_data(self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None):
+    def append_data(self, dte: Optional[DataToExport] = None,
+                    where: Union[Node, str, None] = None):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
         Parameters
         ----------
-        data
+        dte: DataToExport, optional
         where: Node or str
         See Also
         --------
@@ -814,7 +815,7 @@ class DAQ_Move_Hardware(QObject):
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type.name == 'float':
-            self.hardware.move_abs(position.value())
+            self.hardware.move_abs(position.units_as(self.hardware.axis_unit).value()) # convert to plugin controller current axis units
         else:
             position.units = self.hardware.axis_unit  # convert to plugin controller current axis units
             self.hardware.move_abs(position)
