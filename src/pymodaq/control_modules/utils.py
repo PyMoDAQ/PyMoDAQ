@@ -215,13 +215,10 @@ class ControlModule(QObject):
             try:
                 self.update_status(status.attribute[0])
                 self._hardware_thread.quit()
-                self._hardware_thread.wait()
-                finished = self._hardware_thread.isFinished()
-                if finished:
-                    pass
-                else:
-                    print('Thread still running')
+                terminated = self._hardware_thread.wait(5000)
+                if not terminated:
                     self._hardware_thread.terminate()
+                    self._hardware_thread.wait()
                     self.update_status('thread is locked?!', 'log')
             except Exception as e:
                 logger.exception(f'Wrong call to the "close" command: \n{str(e)}')

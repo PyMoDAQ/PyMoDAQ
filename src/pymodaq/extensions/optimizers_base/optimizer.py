@@ -2,7 +2,7 @@ import abc
 from typing import List,  Optional
 import tempfile
 from pathlib import Path
-from enum import StrEnum
+
 
 from qtpy import QtWidgets, QtCore
 import time
@@ -12,7 +12,7 @@ import numpy as np
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
-from pymodaq_utils.enums import BaseEnum
+from pymodaq_utils.enums import BaseEnum, StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver

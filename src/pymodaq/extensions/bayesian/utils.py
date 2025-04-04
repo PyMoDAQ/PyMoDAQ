@@ -4,21 +4,17 @@ Created the 31/08/2023
 
 @author: Sebastien Weber
 """
-from abc import ABC
+
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
-from pathlib import Path
-import importlib
-import pkgutil
-import inspect
 import numpy as np
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
 
-from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum
-from pymodaq_utils.config import BaseConfig
+
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq_gui.managers.parameter_manager import Parameter
@@ -27,16 +23,11 @@ from pymodaq_gui.managers.parameter_manager import Parameter
 from pymodaq_data.data import (DataToExport, DataCalculated,
                                 DataRaw, Axis)
 
-from pymodaq.utils.data import DataActuator, DataToActuators
-from pymodaq.utils.managers.modules_manager import ModulesManager
-
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.utils import GenericAlgorithm, OptimizerModelDefault
 
-if TYPE_CHECKING:
-    from pymodaq.extensions.bayesian.bayesian_optimization import BayesianOptimisation
 
 logger = set_logger(get_module_name(__file__))
 

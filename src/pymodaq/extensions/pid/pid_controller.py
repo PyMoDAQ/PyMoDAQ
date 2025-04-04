@@ -126,7 +126,7 @@ class DAQ_PID(CustomExt):
             if self.settings['main_settings', 'pid_controls', 'output_limits', 'output_limit_max_enabled']:
                 output_limits[1] = self.settings['main_settings', 'pid_controls', 'output_limits', 'output_limit_max']
 
-            self.PIDThread = QThread()
+            self.runner_thread = QThread()
             pid_runner = PIDRunner(self.model_class, self.modules_manager, setpoints=self.setpoints,
                                    params=dict(Kp=self.settings['main_settings', 'pid_controls', 'pid_constants',
                                                                       'kp'],
@@ -140,24 +140,20 @@ class DAQ_PID(CustomExt):
                                                auto_mode=False),
                                    )
 
-            self.PIDThread.pid_runner = pid_runner
+            self.runner_thread.pid_runner = pid_runner
             pid_runner.pid_output_signal.connect(self.process_output)
             pid_runner.status_sig.connect(self.thread_status)
             self.command_pid.connect(pid_runner.queue_command)
 
-            pid_runner.moveToThread(self.PIDThread)
+            pid_runner.moveToThread(self.runner_thread)
 
-            self.PIDThread.start()
+            self.runner_thread.start()
             self.get_action('pid_led').set_as_true()
             self.enable_controls_pid_run(True)
 
         else:
             if hasattr(self, 'PIDThread'):
-                if self.PIDThread.isRunning():
-                    try:
-                        self.PIDThread.quit()
-                    except Exception:
-                        pass
+                self.exit_runner_thread()
             self.get_action('pid_led').set_as_false()
             self.enable_controls_pid_run(False)
 
@@ -462,7 +458,7 @@ class DAQ_PID(CustomExt):
         """
         try:
             try:
-                self.PIDThread.exit()
+                self.runner_thread.exit()
             except Exception as e:
                 print(e)
 

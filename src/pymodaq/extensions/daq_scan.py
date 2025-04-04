@@ -146,7 +146,7 @@ class DAQScan(QObject, ParameterManager):
         self.curvilinear_values = []
         self.plot_colors = utils.plot_colors
 
-        self.scan_thread: QThread = None
+        self.runner_thread: QThread = None
         self._h5saver: H5Saver = None
         self._module_and_data_saver: module_saving.ScanSaver = None
 
@@ -880,6 +880,13 @@ class DAQScan(QObject, ParameterManager):
         self._metada_dataset_set = True
         return res
 
+    def exit_runner_thread(self, duration : int = 5000):
+        self.runner_thread.quit()
+        terminated = self.runner_thread.wait(duration)
+        if not terminated:
+            self.runner_thread.terminate()
+            self.runner_thread.wait()
+
     def start_scan(self):
         """
             Start an acquisition calling the set_scan function.
@@ -919,27 +926,24 @@ class DAQScan(QObject, ParameterManager):
             self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver ill also be set on each detectors
 
             # mandatory to deal with multithreads
-            if self.scan_thread is not None:
+            if self.runner_thread is not None:
                 self.command_daq_signal.disconnect()
-                if self.scan_thread.isRunning():
-                    self.scan_thread.terminate()
-                    while not self.scan_thread.isFinished():
-                        QThread.msleep(100)
-                    self.scan_thread = None
+                self.exit_runner_thread()
+                self.runner_thread = None
 
-            self.scan_thread = QThread()
+            self.runner_thread = QThread()
 
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
                                                   )
 
             if config['scan']['scan_in_thread']:
-                scan_acquisition.moveToThread(self.scan_thread)
+                scan_acquisition.moveToThread(self.runner_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
             scan_acquisition.status_sig[utils.ThreadCommand].connect(self.thread_status)
 
-            self.scan_thread.scan_acquisition = scan_acquisition
-            self.scan_thread.start()
+            self.runner_thread.scan_acquisition = scan_acquisition
+            self.runner_thread.start()
 
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
