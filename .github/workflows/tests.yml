@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v4.2.2
  
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5.4.0
+        uses: actions/setup-python@v5.5.0
         with:
           python-version: ${{ matrix.python-version }}
           
@@ -79,7 +79,7 @@ jobs:
           pytest -vv --cov=pymodaq -n 1
           mv .coverage coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}_${{ matrix.qt-backend }}
           path: coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload badge artifact
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4.6.2
         with:
           name:  tests_${{runner.os}}_${{matrix.python-version}}_${{matrix.qt-backend}}
           path: '${{ steps.extract_branch.outputs.branch }}/tests_${{runner.os}}_${{matrix.python-version}}_${{matrix.qt-backend}}.svg'
@@ -130,7 +130,7 @@ jobs:
           ref: badges
      
       - name: Download badges
-        uses: actions/download-artifact@v4.1.9
+        uses: actions/download-artifact@v4.2.1
 
       - name: Reorganize badges
         run: |
@@ -163,7 +163,7 @@ jobs:
         uses: actions/checkout@v4.2.2
 
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4.1.9
+        uses: actions/download-artifact@v4.2.1
         with:
           path: ./coverage-reports
 
