@@ -315,6 +315,7 @@ class ModulesManager(QObject, ParameterManager):
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
+            QThread.msleep(10)
 
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
@@ -466,7 +467,7 @@ class ModulesManager(QObject, ParameterManager):
                     self.timeout_signal.emit(True)
                     logger.error('Timeout Fired during waiting for actuators to be moved')
                     break
-                QThread.msleep(20)
+                QThread.msleep(10)
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
