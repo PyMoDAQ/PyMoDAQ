@@ -50,7 +50,7 @@ dependencies = [
     "toml",
     "qtconsole",
     "pyleco>0.3; python_version>=\"3.8\"",
-    "bayesian-optimization",
+    "bayesian-optimization>=2.0",
     "adaptive",
 ]
 
