@@ -13,11 +13,6 @@ from bayes_opt import BayesianOptimization
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
-
-
-from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import Parameter
 
 
 from pymodaq_data.data import (DataToExport, DataCalculated,

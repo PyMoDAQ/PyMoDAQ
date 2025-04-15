@@ -9,6 +9,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
 
+
 class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
     _function : AcquisitionFunction
     _usual_name : str

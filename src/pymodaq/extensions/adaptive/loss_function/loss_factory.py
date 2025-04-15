@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable, Type, Union, Sequence
-from enum import StrEnum
+from pymodaq_utils.enums import StrEnum
 
 
 from adaptive.learner import Learner1D, Learner2D, LearnerND, BaseLearner
