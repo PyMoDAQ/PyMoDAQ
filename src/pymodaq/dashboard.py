@@ -348,6 +348,28 @@ class DashBoard(CustomApp):
             self.bayesian_module.quit()
         return self.bayesian_module
 
+    def load_adaptive(self, win=None):
+        if win is None:
+            self.adaptive_window = QtWidgets.QMainWindow()
+        else:
+            self.adaptive_window = win
+        dockarea = DockArea()
+        self.adaptive_window.setCentralWidget(dockarea)
+        self.adaptive_window.setWindowTitle('Adaptive Scan')
+        self.adaptive_module = extmod.AdaptiveOptimisation(dockarea=dockarea, dashboard=self)
+        self.extensions['adaptive'] = self.adaptive_module
+
+        if self.adaptive_module.validate_config():
+            self.adaptive_window.show()
+        else:
+            messagebox(severity='critical', title="Adaptive Optimisation error",
+                       text=f"""
+                    <p>Saved Adaptive Optimisation configuration file is not compatible anymore.</p>
+                    <p>Please delete the file at <b>{self.adaptive_module.config_path}</b>.</p>
+                """)
+            self.adaptive_module.quit()
+        return self.adaptive_module
+
     def load_extension_from_name(self, name: str) -> dict:
         return self.load_extensions_module(find_dict_in_list_from_key_val(extensions, 'name', name))
 
@@ -449,6 +471,7 @@ class DashBoard(CustomApp):
         self.add_action('do_pid', 'PID module', auto_toolbar=False)
         self.add_action('console', 'IPython Console', auto_toolbar=False)
         self.add_action('bayesian', 'Bayesian Optimisation', auto_toolbar=False)
+        self.add_action('adaptive', 'Adaptive Scan', auto_toolbar=False)
 
         self.add_action('about', 'About', 'information2')
         self.add_action('help', 'Help', 'help1')
@@ -526,6 +549,8 @@ class DashBoard(CustomApp):
         self.connect_action('do_pid', lambda: self.load_pid_module())
         self.connect_action('console', lambda: self.load_console())
         self.connect_action('bayesian', lambda: self.load_bayesian())
+        self.connect_action('adaptive', lambda: self.load_adaptive())
+
 
         self.connect_action('about', self.show_about)
         self.connect_action('help', self.show_help)
@@ -607,6 +632,7 @@ class DashBoard(CustomApp):
         self.extensions_menu.addAction(self.get_action('do_pid'))
         self.extensions_menu.addAction(self.get_action('console'))
         self.extensions_menu.addAction(self.get_action('bayesian'))
+        self.extensions_menu.addAction(self.get_action('adaptive'))
 
         # extensions from plugins
         extensions_actions = []

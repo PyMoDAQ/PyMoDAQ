@@ -53,6 +53,8 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
             extension = dashboard.load_pid_module()
         elif extension_name == 'Bayesian':
             extension = dashboard.load_bayesian()
+        elif extension_name == 'AdaptiveScan':
+            extension = dashboard.load_adaptive()
         else:
             extension = dashboard.load_extension_from_name(extension_name)
     else:

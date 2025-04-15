@@ -54,7 +54,7 @@ class GenericAlgorithm(abc.ABC):
         self.ini_random_points = ini_random
 
     @abc.abstractmethod
-    def set_prediction_function(self, kind: str, **kwargs):
+    def set_prediction_function(self, kind: str='', **kwargs):
         """ Set/Load a given function/class to predict next probed points"""
 
     @abc.abstractmethod
@@ -103,11 +103,11 @@ class GenericAlgorithm(abc.ABC):
 
         Return a list of numpy array, one per actuator. In general these array are 0D
         """
-        if self.ini_random_points > 0:
+        try:
+            self._next_point = self.prediction_ask()
+        except:
             self.ini_random_points -= 1
             self._next_point = self.get_random_point()
-        else:
-            self._next_point = self.prediction_ask()
         self._suggested_coordinates.append(self._next_point)
         return [np.atleast_1d(value) for value in self._next_point]
 
@@ -357,7 +357,10 @@ def get_optimizer_models(model_name=None):
 
 
 class OptimizerConfig(BaseConfig):
-    """Main class to deal with configuration values for this plugin"""
+    """Main class to deal with configuration values for this plugin
+
+    To b subclassed for real implementation if needed, see Optimizer class attribute config_saver
+    """
     config_template_path = None
     config_name = f"optimizer_settings"
 

@@ -1,6 +1,7 @@
 from bayes_opt.acquisition import UpperConfidenceBound, ExpectedImprovement, ProbabilityOfImprovement
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory, GenericAcquisitionFunctionBase
 
+
 @GenericAcquisitionFunctionFactory.register()
 class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
     _usual_name = "Upper Confidence Bound"

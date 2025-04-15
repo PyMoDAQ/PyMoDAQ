@@ -8,6 +8,8 @@ from qtpy import QtWidgets, QtCore
 import time
 import numpy as np
 
+from collections import OrderedDict
+
 
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
@@ -99,7 +101,7 @@ class DataToActuatorsOpti(DataToActuators):
         return f'{super().__repr__()} iter:{self.ind_iter}'
 
 
-class OptimisationRunner(QtCore.QObject):
+class OptimizationRunner(QtCore.QObject):
     algo_output_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
     saver_signal = QtCore.Signal(DataToActuatorsOpti)
@@ -235,7 +237,7 @@ class OptimisationRunner(QtCore.QObject):
                                           np.atleast_1d(np.squeeze(individual))])
 
 
-class GenericOptimisation(CustomExt):
+class GenericOptimization(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
@@ -244,14 +246,17 @@ class GenericOptimisation(CustomExt):
     explored_viewer_name = f'algo/{DataNames.ProbedData}'
     optimization_done_signal = QtCore.Signal(DataToExport)
 
-    runner = OptimisationRunner  # replace in real implementation if customization is needed
-
+    runner = OptimizationRunner  # replace in real implementation if customization is needed
+    DISPLAY_BEST = True
 
     params = optimizer_params(PREDICTION_PARAMS)
+
+    config_saver = OptimizerConfig  #to be redefined in real implementation if needed
 
     def __init__(self, dockarea, dashboard):
         super().__init__(dockarea, dashboard)
 
+        self._ini_runner = False
 
         self.algorithm: Optional[GenericAlgorithm] = None
         self.viewer_fitness: Optional[Viewer0D] = None
@@ -271,7 +276,7 @@ class GenericOptimisation(CustomExt):
 
         self.setup_ui()
 
-        self.optimizer_config = OptimizerConfig()
+        self.optimizer_config = self.config_saver()
 
         self.mainsettings_saver_loader = ConfigSaverLoader(
             self.settings.child('main_settings'), self.optimizer_config)
@@ -382,15 +387,15 @@ class GenericOptimisation(CustomExt):
 
         splitter.setSizes((int(self.dockarea.height() / 2),
                            int(self.dockarea.height() / 2)))
-
-        widget_observable = QtWidgets.QWidget()
-        widget_observable.setLayout(QtWidgets.QHBoxLayout())
-        observable_dockarea = gutils.DockArea()
-        widget_observable.layout().addWidget(observable_dockarea)
-        self.viewer_observable = ViewerDispatcher(observable_dockarea, direction='bottom')
-        self.docks['observable'] = gutils.Dock('Observable')
-        self.dockarea.addDock(self.docks['observable'], 'right', self.docks['settings'])
-        self.docks['observable'].addWidget(widget_observable)
+        if self.DISPLAY_BEST:
+            widget_observable = QtWidgets.QWidget()
+            widget_observable.setLayout(QtWidgets.QHBoxLayout())
+            observable_dockarea = gutils.DockArea()
+            widget_observable.layout().addWidget(observable_dockarea)
+            self.viewer_observable = ViewerDispatcher(observable_dockarea, direction='bottom')
+            self.docks['observable'] = gutils.Dock('Observable')
+            self.dockarea.addDock(self.docks['observable'], 'right', self.docks['settings'])
+            self.docks['observable'].addWidget(widget_observable)
 
         if len(MODELS) != 0:
             self.get_set_model_params(MODELS[0]['name'])
@@ -442,13 +447,14 @@ class GenericOptimisation(CustomExt):
         elif param.name() in putils.iter_children(
             self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
-        if self._save_main_settings and self.model_class is not None and param.name() in putils.iter_children(
-               self.settings.child('main_settings'), []):
-            self.mainsettings_saver_loader.save_config()
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'prediction'), []):
             if param.name() != 'tradeoff_actual':
                 self.update_prediction_function()
+
+        if self._save_main_settings and self.model_class is not None and param.name() in putils.iter_children(
+               self.settings.child('main_settings'), []):
+            self.mainsettings_saver_loader.save_config()
 
     def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
@@ -591,13 +597,27 @@ class GenericOptimisation(CustomExt):
                 {'title': 'max', 'name': 'max', 'type': 'float', 'value': 5},
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
-        self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
-            self.modules_manager.selected_actuators_name
-        self.mainsettings_saver_loader.load_config()
-        self._save_main_settings = True
+
+        try:
+            self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
+                                                       self.modules_manager.selected_actuators_name
+            self.mainsettings_saver_loader.load_config()
+            self._save_main_settings = True
+        except Exception as e:
+            logger.exception(f'Could not load the configuration')
+
+        self.update_after_actuators_changed(self.modules_manager.selected_actuators_name)
+
+    @abc.abstractmethod
+    def update_after_actuators_changed(self, actuators: list[str]):
+        """ Actions to do after the actuators have been updated
+
+        To be implemented
+        """
+        ...
 
     def format_bounds(self):
-        bound_dict = {}
+        bound_dict = OrderedDict([])
         for bound in self.settings.child('main_settings', 'bounds').children():
             bound_dict.update({bound.name(): (bound['min'], bound['max'])})
         return bound_dict
@@ -618,8 +638,9 @@ class GenericOptimisation(CustomExt):
             self.get_action('model_led').set_as_true()
             self.set_action_enabled('ini_model', False)
 
-            self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
-                                                  ['Fitness', 'Individual'])
+            if self.DISPLAY_BEST:
+                self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
+                                                      ['Fitness', 'Individual'])
             self.settings.child('models', 'ini_model').setValue(True)
             self.settings.child('models', 'ini_runner').setOpts(enabled=True)
             self.set_action_enabled('ini_runner', True)
@@ -646,41 +667,58 @@ class GenericOptimisation(CustomExt):
 
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
-            self.set_algorithm()
 
-            if self.is_action_checked('save'):
-                node = self.module_and_data_saver.get_set_node(new=True)
-                self.h5saver.settings.child('current_scan_name').setValue(node.name)
+            if not self._ini_runner:
+                self._ini_runner = True
+                self.set_algorithm()
 
-            self.settings.child('models', 'ini_runner').setValue(True)
-            self.enl_index = 0
+                if self.is_action_checked('save'):
+                    node = self.module_and_data_saver.get_set_node(new=True)
+                    self.h5saver.settings.child('current_scan_name').setValue(node.name)
 
-            self.ini_temp_file()
-            self.ini_live_plot()
+                self.settings.child('models', 'ini_runner').setValue(True)
+                self.enl_index = 0
 
-            self.runner_thread = QtCore.QThread()
-            runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
-                                 self.get_stopping_parameters())
-            self.runner_thread.runner = runner
-            runner.algo_output_signal.connect(self.process_output)
-            runner.algo_finished.connect(self.optimization_done)
-            runner.runner_command.connect(self.thread_status)
-            runner.saver_signal.connect(self.add_data)
-            self.command_runner.connect(runner.queue_command)
+                self.ini_temp_file()
+                self.ini_live_plot()
 
-            runner.moveToThread(self.runner_thread)
+                self.runner_thread = QtCore.QThread()
+                runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
+                                     self.get_stopping_parameters())
+                self.runner_thread.runner = runner
+                runner.algo_output_signal.connect(self.process_output)
+                runner.algo_finished.connect(self.optimization_done)
+                runner.runner_command.connect(self.thread_status)
+                runner.saver_signal.connect(self.add_data)
+                self.command_runner.connect(runner.queue_command)
 
-            self.runner_thread.start()
-            self.get_action('runner_led').set_as_true()
-            self.set_action_enabled('run', True)
-            self.model_class.runner_initialized()
-            self.update_prediction_function()
+                runner.moveToThread(self.runner_thread)
+
+                self.runner_thread.start()
+                self.get_action('runner_led').set_as_true()
+                self.set_action_enabled('run', True)
+                self.model_class.runner_initialized()
+                self.update_prediction_function()
         else:
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
+
+            self.splash.setVisible(True)
+            self.splash.showMessage('Quitting Runner Thread')
+            try:
+                self.command_runner.disconnect()
+            except TypeError:
+                pass
             self.runner_thread.quit()
+            self.runner_thread.wait(5000)
+            if not self.runner_thread.isFinished():
+                self.runner_thread.terminate()
+                self.runner_thread.wait()
+            self.runner_thread = None
+            self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
+            self._ini_runner = False
 
     def clean_h5_temp(self):
         if self.temp_path is not None:
@@ -697,22 +735,22 @@ class GenericOptimisation(CustomExt):
     def process_output(self, dte: DataToExport):
 
         self.enl_index += 1
-        dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
-        self.settings.child('main_settings', 'prediction', 'tradeoff_actual').setValue(
-            float(dwa_tradeoff[0][0])
-        )
-
+        try:
+            dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
+            self.settings.child('main_settings', 'prediction', 'tradeoff_actual').setValue(
+                float(dwa_tradeoff[0][0])
+            )
+        except KeyError:
+            pass
         dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name(DataNames.Actuators))
-        self.viewer_observable.show_data(dte)
+        if self.DISPLAY_BEST:
+            self.viewer_observable.show_data(dte)
 
-        # dwa_observations = self.algorithm.get_dwa_obervations(
-        #     self.modules_manager.selected_actuators_name)
         self.model_class.update_plots()
 
         best_individual = dte.get_data_from_name(DataNames.Individual)
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
-
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=dwa_actuators.values())

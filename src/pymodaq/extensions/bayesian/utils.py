@@ -13,11 +13,6 @@ from bayes_opt import BayesianOptimization
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
-
-
-from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import Parameter
 
 
 from pymodaq_data.data import (DataToExport, DataCalculated,
@@ -26,18 +21,17 @@ from pymodaq_data.data import (DataToExport, DataCalculated,
 
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
-from pymodaq.extensions.optimizers_base.utils import GenericAlgorithm, OptimizerModelDefault
+from pymodaq.extensions.optimizers_base.utils import (
+    GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
+    OptimizerConfig)
 
 
 logger = set_logger(get_module_name(__file__))
 
 
-class StopType(BaseEnum):
-    Predict = 0
+class BayesianConfig(OptimizerConfig):
+    config_name = f"bayesian_settings"
 
-
-StoppingParameters = namedtuple('StoppingParameters',
-                                ['niter', 'stop_type', 'tolerance', 'npoints'])
 
 
 class BayesianAlgorithm(GenericAlgorithm):
@@ -49,7 +43,7 @@ class BayesianAlgorithm(GenericAlgorithm):
                                           **kwargs
                                           )
 
-    def set_prediction_function(self, kind: str, **kwargs):
+    def set_prediction_function(self, kind: str = '', **kwargs):
         self._prediction = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
 
     def update_prediction_function(self):
@@ -74,7 +68,7 @@ class BayesianAlgorithm(GenericAlgorithm):
 
     def prediction_ask(self) -> np.ndarray:
         """ Ask the prediction function or algo to provide the next point to probe"""
-        return self._acquisition.suggest(self._algo._gp, self._algo.space)
+        return self._prediction.suggest(self._algo._gp, self._algo.space)
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
