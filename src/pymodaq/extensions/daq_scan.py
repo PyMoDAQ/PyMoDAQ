@@ -1099,7 +1099,6 @@ class DAQScanAcquisition(QObject):
 
     def start_acquisition(self):
         try:
-            #todo hoaw to apply newlayout to adaptive mode? => cannot has to be a new extension
 
             self.modules_manager.connect_actuators()
             self.modules_manager.connect_detectors()
@@ -1124,20 +1123,6 @@ class DAQScanAcquisition(QObject):
                         positions = self.scanner.positions_at(self.ind_scan)  # get positions
                     else:
                         pass
-                        #todo update for v4
-                        # positions = learner.ask(1)[0][-1]  # next point to probe
-                        # if self.scanner.scan_type == 'Tabular':  # translate normalized curvilinear position to real coordinates
-                        #     self.curvilinear = positions
-                        #     length = 0.
-                        #     for v in self.scanner.vectors:
-                        #         length += v.norm()
-                        #         if length >= self.curvilinear:
-                        #             vec = v
-                        #             frac_curvilinear = (self.curvilinear - (length - v.norm())) / v.norm()
-                        #             break
-                        #
-                        #     position = (vec.vectorize() * frac_curvilinear).translate_to(vec.p1()).p2()
-                        #     positions = [position.x(), position.y()]
 
                     self.status_sig.emit(
                         utils.ThreadCommand("Update_scan_index",
@@ -1152,21 +1137,7 @@ class DAQScanAcquisition(QObject):
                     QThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
 
                     #grab datas and wait for grab completion
-                    self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
-
-                    if self.isadaptive:
-                        #todo update for v4
-                        # det_channel = self.modules_manager.get_selected_probed_data()
-                        # det, channel = det_channel[0].split('/')
-                        # if self.scanner.scan_type == 'Tabular':
-                        #     self.curvilinear_array.append(np.array([self.curvilinear]))
-                        #     new_positions = self.curvilinear
-                        # elif self.scanner.scan_type == 'Scan1D':
-                        #     new_positions = positions[0]
-                        # else:
-                        #     new_positions = positions[:]
-                        # learner.tell(new_positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
-                        pass
+                    self.det_done(self.modules_manager.grab_data(positions=positions), positions)
 
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
@@ -1204,11 +1175,6 @@ class DAQScanAcquisition(QObject):
             self.status_sig.emit(
                 utils.ThreadCommand("add_data",
                                     dict(indexes=indexes, distribution=self.scanner.distribution)))
-
-            #todo related to adaptive (solution lies along the Enlargeable data saver)
-            if self.isadaptive:
-                for ind_ax, nav_axis in enumerate(self.navigation_axes):
-                    nav_axis.append(np.array(positions[ind_ax]))
 
             self.det_done_flag = True
 
