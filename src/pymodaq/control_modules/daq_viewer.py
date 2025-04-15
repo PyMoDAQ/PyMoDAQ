@@ -121,6 +121,9 @@ class DAQ_Viewer(ParameterControlModule):
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
 
+        self.override_grab_from_extension = False  # boolean allowing an extension to tell to init a grab or not
+        # (see DataMixer for reasons and use case in ModulesManager and dashboard method add_det_from_extension)
+
         if isinstance(parent, DockArea):
             self.dockarea = parent
         else:

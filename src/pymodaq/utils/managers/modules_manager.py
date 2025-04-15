@@ -287,8 +287,15 @@ class ModulesManager(QObject, ParameterManager):
         """
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
-    def grab_data(self, **kwargs):
-        """Do a single grab of connected and selected detectors"""
+    def grab_data(self, check_do_override=True, **kwargs):
+        """Do a single grab of connected and selected detectors
+
+        Parameter
+        ---------
+        check_do_override: bool
+            If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
+            override_grab_from_extension attribute
+        """
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
@@ -296,8 +303,9 @@ class ModulesManager(QObject, ParameterManager):
         tzero = time.perf_counter()
 
         for mod in self.detectors:
-            kwargs.update(dict(Naverage=mod.Naverage))
-            mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
+            if not (check_do_override and mod.override_grab_from_extension):
+                kwargs.update(dict(Naverage=mod.Naverage))
+                mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end
@@ -493,7 +501,8 @@ class ModulesManager(QObject, ParameterManager):
             if len(data) != 0:
                 self.det_done_datas.append(data)
 
-            if self._received_data == len(self.detectors):
+            # if self._received_data == len(self.detectors):
+            if len(self.det_done_datas) == len(self.detectors):
                 self.det_done_flag = True
                 self.settings.child('det_done').setValue(self.det_done_flag)
 

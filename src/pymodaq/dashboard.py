@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List, Any, TYPE_CHECKING
+from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
 
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -65,13 +65,12 @@ roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
 
 
-
-
 class ManagerEnums(BaseEnum):
     preset = 0
     remote = 1
     overshoot = 2
     roi = 3
+
 
 class PymodaqUpdateTableWidget(QTableWidget):
     '''
@@ -114,10 +113,9 @@ class PymodaqUpdateTableWidget(QTableWidget):
         self.setItem(row, 2, QTableWidgetItem(str(current_version)))
         self.setItem(row, 3, QTableWidgetItem(str(available_version)))
 
-
     def get_checked_data(self):
-    	checked = list(map(lambda c : c.isChecked(), self._checkboxes))
-    	return list(np.array(self._package_versions)[checked])
+        checked = list(map(lambda c : c.isChecked(), self._checkboxes))
+        return list(np.array(self._package_versions)[checked])
 
     def sizeHint(self):
         self.resizeColumnsToContents()
@@ -133,6 +131,7 @@ class PymodaqUpdateTableWidget(QTableWidget):
         	   + sum([self.rowHeight(i) for i in range(self.rowCount())])
 
         return QSize(width, height)
+
 
 class DashBoard(CustomApp):
     """
@@ -967,13 +966,33 @@ class DashBoard(CustomApp):
         detector_modules.append(det_mod_tmp)
         return det_mod_tmp
 
+    def override_det_from_extension(self, overriden_grabbers: Sequence[str] = None):
+        """ (Experimental) If an extension adding detectors within the Dashboard need to, it could call this
+        method.
+
+        Then if some other extension trigger a grab from it, the request of a grab won't be done twice
+
+        Parameters
+        ----------
+        overriden_grabbers: Sequence[str]
+            sequence of detector names whose corresponding modules should set their
+            attribute override_grab_from_extension to True.
+        """
+        if overriden_grabbers is not None:
+            for mod_name in overriden_grabbers:
+                mod = self.modules_manager.get_mod_from_name(mod_name, 'det')
+                if mod is not None:
+                    mod.override_grab_from_extension = True
+
     def add_det_from_extension(self, name: str, daq_type: str, instrument_name: str,
                                instrument_controller: Any):
+
         """ Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
         should be defined in the plugin of the extension and is used to mimic a grab while data
         are actually coming from the extension which loaded it
 
         For an exemple, see the pymodaq_plugins_datamixer plugin and its DataMixer extension
+        or the DAQ_PID extension
 
         Parameters
         ----------
