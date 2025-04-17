@@ -1,0 +1,244 @@
+from abc import abstractmethod
+
+from qtpy.QtWidgets import QComboBox
+from pint import DimensionalityError
+from qtpy import QtWidgets
+from typing import Union, List
+
+from pymodaq_utils.config import Config
+from pymodaq.control_modules.thread_commands import UiToMainMove
+from pymodaq.control_modules.utils import ControlModuleUI
+from pymodaq.utils.data import DataActuator
+from pymodaq_data import Q_
+from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
+from pymodaq_utils.utils import ThreadCommand
+
+
+config = Config()
+
+
+class DAQ_Move_UI_Base(ControlModuleUI):
+    """DAQ_Move user interface.
+
+    This class manages the UI and emit dedicated signals depending on actions from the user
+
+    Attributes
+    ----------
+    command_sig: Signal[Threadcommand]
+        This signal is emitted whenever some actions done by the user has to be
+        applied on the main module. Possible commands are:
+            * init
+            * quit
+            * get_value
+            * loop_get_value
+            * find_home
+            * stop
+            * move_abs
+            * move_rel
+            * show_log
+            * actuator_changed
+            * rel_value
+            * show_config
+            * show_plugin_config
+
+    Methods
+    -------
+    display_value(value: float)
+        Update the display of the actuator's value on the UI
+    do_init()
+        Programmatic init
+
+    See Also
+    --------
+    pymodaq.utils.daq_utils.ThreadCommand
+    """
+
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], title="DAQ_Move"):
+        super().__init__(parent)
+        self.title = title
+        self._unit = ''
+
+        self.actuators_combo: QComboBox = None
+        self.abs_value_sb: QSpinBoxWithShortcut = None
+        self.abs_value_sb_2: QSpinBoxWithShortcut = None
+        self.abs_value_sb_bis: QSpinBoxWithShortcut = None
+        self.ini_actuator_pb: PushButtonIcon = None
+        self.ini_state_led: QLED = None
+        self.move_done_led: QLED = None
+        self.current_value_sb: QSpinBox_ro = None
+        self.find_home_pb: PushButtonIcon = None
+        self.move_rel_plus_pb: PushButtonIcon = None
+        self.move_abs_pb: PushButtonIcon = None
+        self.rel_value_sb: QSpinBoxWithShortcut = None
+        self.move_rel_minus_pb: PushButtonIcon = None
+        self.stop_pb: PushButtonIcon = None
+        self.get_value_pb: PushButtonIcon = None
+        self.statusbar: QtWidgets.QStatusBar = None
+
+
+        self.setup_ui()
+
+        self.enable_move_buttons(False)
+
+    def display_value(self, value: DataActuator):
+        try:
+            self.current_value_sb.setValue(value.value(self._unit))
+        except DimensionalityError as e:
+            value.force_units(self._unit)
+            self.current_value_sb.setValue(value.value())
+
+    @property
+    def actuator_init(self):
+        """bool: the status of the init LED."""
+        return self.ini_state_led.get_state()
+
+    @actuator_init.setter
+    def actuator_init(self, status):
+        self.ini_state_led.set_as(status)
+        self.enable_move_buttons(status)
+
+    @property
+    def actuator(self):
+        return self.actuators_combo.currentText()
+
+    @actuator.setter
+    def actuator(self, act_name: str):
+        self.actuators_combo.setCurrentText(act_name)
+
+    @property
+    def actuators(self):
+        return [self.actuators_combo.itemText(ind) for ind in range(self.actuators_combo.count())]
+
+    @actuators.setter
+    def actuators(self, actuators: List[str]):
+        self.actuators_combo.clear()
+        self.actuators_combo.addItems(actuators)
+
+    @property
+    def move_done(self):
+        """bool: the status of the move_done LED."""
+        return self.move_done_led.get_state()
+
+    @move_done.setter
+    def move_done(self, status):
+        self.move_done_led.set_as(status)
+
+    def enable_move_buttons(self, status):
+        self.abs_value_sb.setEnabled(status)
+        self.abs_value_sb_2.setEnabled(status)
+
+        self.get_action('move_abs').setEnabled(status)
+        self.get_action('move_abs_2').setEnabled(status)
+
+    def set_abs_spinbox_properties(self, **properties):
+        """ Change the Spinbox properties
+
+        Parameters
+        --------
+        properties: dict or named parameters
+            possible keys are :
+
+            * decimals: to set the number of displayed decimals
+            * 'minimum': to set the minimum value
+            * 'maximum': to set the maximum value
+            * 'step': to set the step value
+
+        """
+        if 'decimals' in properties:
+            self.abs_value_sb.setDecimals(properties['decimals'])
+            self.abs_value_sb_2.setDecimals(properties['decimals'])
+            self.abs_value_sb_bis.setDecimals(properties['decimals'])
+        if 'minimum' in properties:
+            self.abs_value_sb.setMinimum(properties['minimum'])
+            self.abs_value_sb_2.setMinimum(properties['minimum'])
+            self.abs_value_sb_bis.setMinimum(properties['minimum'])
+        if 'maximum' in properties:
+            self.abs_value_sb.setMaximum(properties['maximum'])
+            self.abs_value_sb_2.setMaximum(properties['maximum'])
+            self.abs_value_sb_bis.setMaximum(properties['maximum'])
+        if 'step' in properties:
+            self.abs_value_sb.setSingleStep(properties['step'])
+            self.abs_value_sb_2.setSingleStep(properties['step'])
+            self.abs_value_sb_bis.setSingleStep(properties['step'])
+
+    def set_abs_value_red(self, value: Q_):
+        self.abs_value_sb_2.setValue(value.m_as(self._unit))
+
+    def set_abs_value_green(self, value: Q_):
+        self.abs_value_sb.setValue(value.m_as(self._unit))
+
+    def set_abs_value(self, value: Q_):
+        self.abs_value_sb_bis.setValue(value.m_as(self._unit))
+
+    def set_rel_value(self, value: Q_):
+        self.rel_value_sb.setValue(value.m_as(self._unit))
+
+    def set_unit_as_suffix(self, unit: str):
+        """Will append the actuator units in the value display"""
+        self._unit = unit
+        self.current_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_bis.setOpts(suffix=unit)
+        self.abs_value_sb.setOpts(suffix=unit)
+        self.abs_value_sb_2.setOpts(suffix=unit)
+        self.rel_value_sb.setOpts(suffix=unit)
+
+    def setup_docks(self):
+        self.actuators_combo = QComboBox()
+        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
+
+        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
+
+        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.ini_actuator_pb = PushButtonIcon('ini', 'Initialization', checkable=True,
+                                              tip='Start This actuator initialization')
+        self.ini_state_led = QLED(readonly=True)
+        self.move_done_led = QLED(readonly=True)
+        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
+                                            siPrefix=config('actuator', 'siprefix'),
+                                            )
+        self.find_home_pb = PushButtonIcon('home2', 'Find Home')
+        self.move_rel_plus_pb = PushButtonIcon('MoveUp', 'Set Rel. (+)')
+        self.move_abs_pb = PushButtonIcon('Move', 'Set Abs.',
+                                          tip='Set the value of the actuator to the set absolute value')
+        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'),
+                                                 key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
+        self.move_rel_minus_pb = PushButtonIcon('MoveDown', 'Set Rel. (-)')
+        self.stop_pb = PushButtonIcon('stop', 'Stop')
+        self.get_value_pb = PushButtonIcon('Help_32', 'Update Value')
+        self.statusbar = QtWidgets.QStatusBar()
+        self.statusbar.setMaximumHeight(30)
+
+    def close(self):
+        self.parent.close()
+
+    def do_init(self, do_init=True):
+        """Programmatically press the Init button
+        API entry
+        Parameters
+        ----------
+        do_init: bool
+            will fire the Init button depending on the argument value and the button check state
+        """
+        if do_init is not self.ini_actuator_pb.isChecked():
+            self.ini_actuator_pb.click()
+
+    def send_init(self, checked):
+        self.actuators_combo.setEnabled(not checked)
+        self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [self.ini_actuator_pb.isChecked(),
+                                                                self.actuators_combo.currentText()]))
+
+    def emit_move_abs(self, spinbox):
+        spinbox.editingFinished.emit()
+        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=spinbox.value(),
+                                                                                units=self._unit)))
+
+    def emit_move_rel(self, sign):
+        self.command_sig.emit(ThreadCommand(
+            UiToMainMove.MOVE_REL,
+            DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
+                         units=self._unit)))
+
+    def set_settings_tree(self, tree):
+        raise NotImplementedError

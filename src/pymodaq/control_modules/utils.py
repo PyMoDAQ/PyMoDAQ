@@ -4,6 +4,8 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+from importlib import import_module
+from pathlib import Path
 from random import randint
 from typing import Optional, Type, Union
 from easydict import EasyDict as edict
@@ -614,3 +616,22 @@ class ControlModuleUI(CustomApp):
     def send_init(self, checked: bool):
         """Should be implemented to send to the main app the fact that someone (un)checked init."""
         raise NotImplementedError
+
+
+def register_uis(parent_module_name: str = 'pymodaq.control_modules.daq_move_ui'):
+    uis = []
+    try:
+        scanner_module = import_module(f'{parent_module_name}.uis')
+
+        scanner_path = Path(scanner_module.__path__[0])
+
+        for file in scanner_path.iterdir():
+            if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
+                try:
+                    uis.append(import_module(f'.{file.stem}', scanner_module.__name__))
+                except (ModuleNotFoundError, Exception) as e:
+                    pass
+    except ModuleNotFoundError:
+        pass
+    finally:
+        return uis
