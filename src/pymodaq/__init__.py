@@ -27,7 +27,7 @@ try:
 
         from pymodaq_utils.config import Config
         from pymodaq.utils.scanner.utils import register_scanners
-        from pymodaq.control_modules.utils import register_uis
+        from pymodaq.control_modules.ui_utils import register_uis
         from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
 
         # issue on windows when using .NET code within multithreads, this below allows it but requires
@@ -85,9 +85,10 @@ try:
 
 
     except Exception as e:
-        print("Couldn't create the local folder to store logs , presets...\n"
-              f"{str(e)}")
-
+        try:
+            logger.exception(str(e))
+        except Exception as e:
+            print(str(e))
 
 
 except Exception as e:

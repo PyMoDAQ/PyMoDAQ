@@ -13,7 +13,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.control_modules.utils import ControlModuleUI
+from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq_gui.utils import Dock

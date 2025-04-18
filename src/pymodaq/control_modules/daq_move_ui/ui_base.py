@@ -7,10 +7,11 @@ from typing import Union, List
 
 from pymodaq_utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
-from pymodaq.control_modules.utils import ControlModuleUI
+from pymodaq.control_modules.ui_utils import ControlModuleUI
 from pymodaq.utils.data import DataActuator
 from pymodaq_data import Q_
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
+from pymodaq_gui.parameter import ParameterTree
 from pymodaq_utils.utils import ThreadCommand
 
 
@@ -53,6 +54,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
+    is_compact = False
+
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], title="DAQ_Move"):
         super().__init__(parent)
         self.title = title
@@ -74,6 +77,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.stop_pb: PushButtonIcon = None
         self.get_value_pb: PushButtonIcon = None
         self.statusbar: QtWidgets.QStatusBar = None
+
+        self._tree: ParameterTree = None
 
 
         self.setup_ui()

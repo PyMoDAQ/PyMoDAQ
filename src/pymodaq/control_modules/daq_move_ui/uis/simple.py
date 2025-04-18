@@ -13,6 +13,7 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 @ActuatorUIFactory.register('Simple')
 class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
+    is_compact = True
     def __init__(self, parent, title="DAQ_Move"):
 
         super().__init__(parent, title)
@@ -30,6 +31,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.abs_value_sb.setMinimumWidth(80)
         self.current_value_sb.set_font_size(10)
         self.current_value_sb.setMinimumHeight(20)
+        self.current_value_sb.setMinimumWidth(80)
 
 
     def setup_actions(self):
@@ -40,6 +42,8 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
         self.add_action('ini_actuator', 'Ini. Actuator', 'ini', toolbar=self.move_toolbar)
         self.add_widget('ini_led', self.ini_state_led, toolbar=self.move_toolbar)
+        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
+        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
         self.add_widget('abs_green', self.abs_value_sb, toolbar=self.move_toolbar)
         self.add_widget('abs_red', self.abs_value_sb_2, toolbar=self.move_toolbar)
         self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
@@ -47,8 +51,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute"
                                                              " value",
                         toolbar=self.move_toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
-        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
+
 
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
 
@@ -70,10 +73,8 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
 
-        self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
         self.abs_value_sb_2.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_2))
-
 
         self.ini_actuator_pb.clicked.connect(self.send_init)
 

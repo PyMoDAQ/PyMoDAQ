@@ -16,6 +16,8 @@ from ..factory import ActuatorUIFactory
 
 @ActuatorUIFactory.register('Original')
 class DAQ_Move_UI(DAQ_Move_UI_Base):
+    is_compact = False
+
     def __init__(self, parent, title="DAQ_Move"):
         super().__init__(parent, title)
 

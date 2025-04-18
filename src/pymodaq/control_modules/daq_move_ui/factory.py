@@ -1,9 +1,12 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
-from .ui_base import DAQ_Move_UI_Base
 from pymodaq_utils.logger import set_logger, get_module_name
 
+if TYPE_CHECKING:
+    from .ui_base import DAQ_Move_UI_Base
+
 logger = set_logger(get_module_name(__file__))
+
 
 
 class ActuatorUIFactory:
@@ -16,7 +19,7 @@ class ActuatorUIFactory:
         Register in the class registry a new scanner class using its 1 identifier
         """
 
-        def inner_wrapper(wrapped_class: DAQ_Move_UI_Base) -> DAQ_Move_UI_Base:
+        def inner_wrapper(wrapped_class: 'DAQ_Move_UI_Base') -> 'DAQ_Move_UI_Base':
             key = identifier
 
             if key not in cls._builders:
@@ -29,14 +32,14 @@ class ActuatorUIFactory:
 
 
     @classmethod
-    def get(cls, key : str) -> DAQ_Move_UI_Base:
+    def get(cls, key : str) -> 'DAQ_Move_UI_Base':
         builder = cls._builders.get(key)
         if not builder:
             raise ValueError(key)
         return builder
 
     @classmethod
-    def create(cls, key, **kwargs) -> DAQ_Move_UI_Base:
+    def create(cls, key, **kwargs) -> 'DAQ_Move_UI_Base':
         return cls._builders.get(key)(**kwargs)
 
     @classmethod

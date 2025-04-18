@@ -117,10 +117,12 @@ class DAQ_Move(ParameterControlModule):
 
         super().__init__(action_list=('save', 'update'), **kwargs)
 
-        if ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys():
-            DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
-        else:
-            DAQ_Move_UI = ActuatorUIFactory.get(config('actuator', 'ui'))
+        if not(ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()):
+            ui_identifier = config('actuator', 'ui')
+        self.settings.child('main_settings', 'ui_type').setValue(ui_identifier)
+        self.settings.child('main_settings', 'ui_type').setOpts(readonly=True)
+
+        DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
 
         self.parent = parent
         if parent is not None:
