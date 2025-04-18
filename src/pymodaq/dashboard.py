@@ -45,6 +45,7 @@ from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
 
@@ -207,6 +208,8 @@ class DashBoard(CustomApp):
         self.preset_file = None
         self.actuators_modules = []
         self.detector_modules = []
+
+        self.compact_actuator_dock: Dock = None
 
         self.setup_ui()
 
@@ -904,14 +907,32 @@ class DashBoard(CustomApp):
 
     def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms,
                  actuators_modules) -> DAQ_Move:
+        try:
+            ui_identifier = plug_settings['main_settings', 'ui_type']
+        except KeyError:
+            ui_identifier = None
+        is_compact = ActuatorUIFactory.get(ui_identifier).is_compact if ui_identifier is not None else False
 
-        move_docks.append(Dock(plug_name, size=(150, 250)))
-        if len(move_docks) == 1:
-            self.dockarea.addDock(move_docks[-1], 'right', self.logger_dock)
+        if is_compact:
+            if self.compact_actuator_dock is None:
+                self.compact_actuator_dock = Dock('Simple Actuators')
+                self.compact_actuator_dock.layout.setSpacing(0)
+                self.compact_actuator_dock.layout.setContentsMargins(0,0,0,0)
+
+            dock = self.compact_actuator_dock
+            self.logger_dock.area.addDock(dock, 'bottom')
         else:
-            self.dockarea.addDock(move_docks[-1], 'above', move_docks[-2])
+            dock = Dock(plug_name, size=(150, 250))
+            move_docks.append(dock)
+
+            if len(move_docks) == 1:
+                self.dockarea.addDock(dock, 'right', self.logger_dock)
+            else:
+                self.dockarea.addDock(dock, 'above', move_docks[-2])
+
         move_forms.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name)
+        mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name,
+                               ui_identifier=ui_identifier)
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -928,7 +949,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
-        move_docks[-1].addWidget(move_forms[-1])
+        dock.addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
 

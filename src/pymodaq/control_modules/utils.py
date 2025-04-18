@@ -8,7 +8,6 @@ from random import randint
 from typing import Optional, Type, Union
 from easydict import EasyDict as edict
 
-from qtpy import QtCore
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
 from pymodaq.control_modules.thread_commands import ThreadStatus
@@ -17,7 +16,6 @@ from pymodaq_utils.config import Config
 from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 
-from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.managers.parameter_manager import ParameterManager
@@ -577,40 +575,3 @@ class ParameterControlModule(ParameterManager, ControlModule):
             return status
 
 
-class ControlModuleUI(CustomApp):
-    """ Base Class for ControlModules UIs
-
-    Attributes
-    ----------
-    command_sig: Signal[Threadcommand]
-        This signal is emitted whenever some actions done by the user has to be
-        applied on the main module. Possible commands are:
-        See specific implementation
-
-    See Also
-    --------
-    :class:`daq_move_ui.DAQ_Move_UI`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
-    """
-    command_sig = QtCore.Signal(ThreadCommand)
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.config = config
-
-    def display_status(self, txt, wait_time=config('general', 'message_status_persistence')):
-        if self.statusbar is not None:
-            self.statusbar.showMessage(txt, wait_time)
-
-    def do_init(self, do_init=True):
-        """Programmatically press the Init button
-        API entry
-        Parameters
-        ----------
-        do_init: bool
-            will fire the Init button depending on the argument value and the button check state
-        """
-        raise NotImplementedError
-
-    def send_init(self, checked: bool):
-        """Should be implemented to send to the main app the fact that someone (un)checked init."""
-        raise NotImplementedError

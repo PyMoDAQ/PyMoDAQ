@@ -36,6 +36,7 @@ from pymodaq import Unit
 from pint.errors import OffsetUnitCalculusError
 
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -180,6 +181,10 @@ params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
+         'value': config('actuator', 'ui') if config('actuator', 'ui') in ActuatorUIFactory.keys() else
+         ActuatorUIFactory.keys()[0],
+         'limits': ActuatorUIFactory.keys()},
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
 
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',

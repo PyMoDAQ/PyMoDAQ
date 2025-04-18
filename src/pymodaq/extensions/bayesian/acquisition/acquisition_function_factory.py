@@ -64,7 +64,7 @@ class GenericAcquisitionFunctionFactory:
 
     @classmethod
     def create(cls, key, **kwargs) -> GenericAcquisitionFunctionBase:
-        return cls.get(key)(**kwargs)
+        return cls._builders.get(key)(**kwargs)
 
     @classmethod
     def keys(cls) -> list[str]:
