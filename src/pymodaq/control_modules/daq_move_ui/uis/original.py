@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QToolBar, QGridLayout
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QToolBar, QGridLayout
 from qtpy import QtWidgets
 
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base

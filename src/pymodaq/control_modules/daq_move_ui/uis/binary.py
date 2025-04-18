@@ -1,7 +1,7 @@
 import sys
 from typing import Union
 
-from PyQt6.QtWidgets import QVBoxLayout, QToolBar
+from qtpy.QtWidgets import QVBoxLayout, QToolBar
 from qtpy import QtWidgets
 
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
@@ -15,10 +15,10 @@ from pymodaq_utils.config import Config
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_move_ui.uis.simple import DAQ_Move_UI_Simple
-
+from pymodaq.utils.config import Config as ControlModulesConfig
 from enum import Enum
 
-config = Config()
+config = ControlModulesConfig()
 
 
 class BinaryValue(Enum):
