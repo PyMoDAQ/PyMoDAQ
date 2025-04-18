@@ -6,7 +6,7 @@ from typing import Callable, Sequence, List, Optional, Union
 import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import Config
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath

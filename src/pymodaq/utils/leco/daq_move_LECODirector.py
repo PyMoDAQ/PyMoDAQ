@@ -27,8 +27,6 @@ from pymodaq_utils.logger import set_logger, get_module_name
 logger = set_logger(get_module_name(__file__))
 
 
-
-
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """A control module, which in the dashboard, allows to control a remote Move module.
 
