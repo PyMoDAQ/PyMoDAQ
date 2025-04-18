@@ -41,12 +41,15 @@ from pymodaq.extensions.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
-config = Config()
+config_utils = Config()
+config = ControlModulesConfig()
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -297,14 +300,14 @@ class DAQScan(QObject, ParameterManager):
         # params about dataset attributes and scan attibutes
         date = QDateTime(QDate.currentDate(), QTime.currentTime())
         params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config_utils['user']['name']},
             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
             {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value': ''},
             {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
 
         params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config_utils['user']['name']},
             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
             {'title': 'Scan type:', 'name': 'scan_type', 'type': 'str', 'value': ''},
             {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'str', 'value': ''},
@@ -521,7 +524,7 @@ class DAQScan(QObject, ParameterManager):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():

@@ -56,9 +56,12 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
 from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands, LECOViewerCommands
+from pymodaq.utils.config import Config as ControlModulesConfig
+
 
 logger = set_logger(get_module_name(__file__))
-config = Config()
+config_utils = Config()
+config = ControlModulesConfig()
 
 local_path = get_set_local_dir()
 

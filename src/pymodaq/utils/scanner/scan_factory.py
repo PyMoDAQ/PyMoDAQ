@@ -25,6 +25,7 @@ from pymodaq_data.data import Axis, DataDistribution
 
 from pymodaq.utils.scanner.scan_config import ScanConfig
 from pymodaq_gui.config import ConfigSaverLoader
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 
 if TYPE_CHECKING:
@@ -33,8 +34,9 @@ if TYPE_CHECKING:
 
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
 
+config_utils = configmod.Config()
+config = ControlModulesConfig()
 
 class ScanParameterManager(ParameterManager):
     settings_name = 'scanner_settings'

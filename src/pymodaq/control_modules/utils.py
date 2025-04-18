@@ -30,7 +30,7 @@ from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommand
 
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
-
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 class DAQTypesEnum(BaseEnum):
     """enum relating a given DAQType and a viewer type
@@ -80,7 +80,8 @@ if len(DET_TYPES['DAQ0D']) == 0:
     raise DetectorError('No installed Detector')
 
 
-config = Config()
+config_utils = Config()
+config = ControlModulesConfig()
 logger = set_logger(get_module_name(__file__))
 
 
@@ -152,7 +153,7 @@ class ControlModule(QObject):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():
@@ -367,7 +368,7 @@ class ControlModule(QObject):
             config_tree = TreeFromToml(config)
             config_tree.show_dialog()
 
-            return Config()
+            return ControlModulesConfig()
 
     def update_status(self, txt: str, log=True):
         """Display a message in the ui status bar and eventually log the message

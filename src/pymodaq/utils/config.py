@@ -1,4 +1,6 @@
-from pymodaq_utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir,
+from pathlib import Path
+
+from pymodaq_utils.config import (BaseConfig, ConfigError, get_set_config_dir,
                                   USER, CONFIG_BASE_PATH, get_set_local_dir)
 from pymodaq_gui.config import get_set_roi_path
 
@@ -39,6 +41,8 @@ def get_set_overshoot_path():
     return get_set_config_dir('overshoot_configs')
 
 
-
-
+class Config(BaseConfig):
+    """Main class to deal with configuration values for this plugin"""
+    config_template_path = Path(__file__).parent.parent.joinpath('resources/config_template.toml')
+    config_name = f"config_pymodaq"
 
