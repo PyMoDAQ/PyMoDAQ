@@ -38,8 +38,9 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.utils import ParameterControlModule
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
                                                      UiToMainMove)
-from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
-from pymodaq.control_modules.move_utility_classes import (MoveCommand, DAQ_Move_base,
+
+
+from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base,
                                                           DataActuatorType, check_units,
                                                           DataUnitError)
 
@@ -49,6 +50,10 @@ from pymodaq.utils.leco.pymodaq_listener import MoveActorListener, LECOMoveComma
 
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq import Q_, Unit
+
+
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+
 
 
 
@@ -95,7 +100,7 @@ class DAQ_Move(ParameterControlModule):
 
     listener_class = MoveActorListener
 
-    def __init__(self, parent=None, title="DAQ Move", **kwargs):
+    def __init__(self, parent=None, title="DAQ Move", ui_identifier: str=None, **kwargs):
         """
 
         Parameters
@@ -111,6 +116,13 @@ class DAQ_Move(ParameterControlModule):
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         super().__init__(action_list=('save', 'update'), **kwargs)
+
+        if not(ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()):
+            ui_identifier = config('actuator', 'ui')
+        self.settings.child('main_settings', 'ui_type').setValue(ui_identifier)
+        self.settings.child('main_settings', 'ui_type').setOpts(readonly=True)
+
+        DAQ_Move_UI = ActuatorUIFactory.get(ui_identifier)
 
         self.parent = parent
         if parent is not None:
@@ -482,7 +494,7 @@ class DAQ_Move(ParameterControlModule):
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
-                if self.ui.is_action_checked('show_graph'):
+                if self.ui.has_action('show_graph') and self.ui.is_action_checked('show_graph'):
                     self.ui.show_data(DataToExport(name=self.title,
                                                    data=[data_act]))
             self._current_value = data_act

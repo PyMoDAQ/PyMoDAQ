@@ -27,19 +27,23 @@ try:
 
         from pymodaq_utils.config import Config
         from pymodaq.utils.scanner.utils import register_scanners
+        from pymodaq.control_modules.ui_utils import register_uis
         from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
 
         # issue on windows when using .NET code within multithreads, this below allows it but requires
         # the pywin32 (pythoncom) package
-        if importlib.util.find_spec('clr') is not None:
-            try:
-                import pythoncom
-                pythoncom.CoInitialize()
-            except ModuleNotFoundError as e:
-                infos = "You have installed plugins requiring the pywin32 package to work correctly," \
-                        " please type in *pip install pywin32* and restart PyMoDAQ"
-                print(infos)
-                logger.warning(infos)
+        try:
+            if importlib.util.find_spec('clr') is not None:
+                try:
+                    import pythoncom
+                    pythoncom.CoInitialize()
+                except ModuleNotFoundError as e:
+                    infos = "You have installed plugins requiring the pywin32 package to work correctly," \
+                            " please type in *pip install pywin32* and restart PyMoDAQ"
+                    print(infos)
+                    logger.warning(infos)
+        except ValueError:
+            pass
 
         config = Config()  # to ckeck for config file existence, otherwise create one
         copy_preset()
@@ -59,6 +63,11 @@ try:
                     " You should update it."
             print(infos)
             logger.warning(infos)
+        logger.info('*************************************************************************')
+        logger.info(f"Registering UIs...")
+        register_uis(parent_module_name='pymodaq.control_modules.daq_move_ui')
+        logger.info(f"Done")
+        logger.info('************************')
 
         logger.info('*************************************************************************')
         logger.info(f"Getting the list of instrument plugins...")
@@ -74,9 +83,12 @@ try:
         logger.info(f"Done")
         logger.info('************************')
 
-    except Exception:
-        print("Couldn't create the local folder to store logs , presets...")
 
+    except Exception as e:
+        try:
+            logger.exception(str(e))
+        except Exception as e:
+            print(str(e))
 
 
 except Exception as e:

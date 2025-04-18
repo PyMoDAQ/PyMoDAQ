@@ -255,3 +255,30 @@ to tailor the module's behaviour. The various field are written below together w
 * refresh_timeout_ms: interval in millisecond for probing the actuator's value in continuous mode
 * siprefix: tell if printing of current value use a SI prefix or not (µ, m, k, M...)
 * display_units: display units in the SpinBoxes
+
+
+Other Actuator UI
+-----------------
+
+.. note::
+   New in 5.1.0
+
+It is now possible to declare in the Preset menu, the feel and shape of the Actuators Graphical User Interfaces. This
+has been done in order to compactify the DashBoard where regular Actuator UI can quickly take a lot of room. If you
+don't need an access to advanced features, you can choose the layout among the *Simple* or
+*Binary* layout (while the usual one is called the *Original*), see below:
+
+
+.. figure:: /image/DAQ_Move/ui_type.png
+   :alt: ui_types
+
+   Selection of one of the possible UI layout.
+
+
+The figure below shows the three possibilities in one Dashboard:
+
+
+.. figure:: /image/DAQ_Move/dashboard_with_various_actuators.png
+   :alt: ui_types
+
+   Dashboard with actuators having a UI of type *Original*, *Simple* or *Binary*

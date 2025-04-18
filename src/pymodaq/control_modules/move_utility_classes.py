@@ -37,6 +37,8 @@ from pint.errors import OffsetUnitCalculusError
 
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
