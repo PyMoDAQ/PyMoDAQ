@@ -53,14 +53,16 @@ from pymodaq import Q_, Unit
 
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 
 
 local_path = config_mod.get_set_local_dir()
 sys.path.append(str(local_path))
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
+
+config_utils = config_mod.Config()
+config = ControlModulesConfig()
 
 DAQ_Move_Actuators = get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
