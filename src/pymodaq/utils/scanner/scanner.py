@@ -15,13 +15,16 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.scanner.utils import ScanInfo
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq.utils.data import DataToExport, DataActuator
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 logger = set_logger(get_module_name(__file__))
-config = Config()
+
+config_utils = Config()
+config = ControlModulesConfig()
 scanner_factory = ScannerFactory()
 
 

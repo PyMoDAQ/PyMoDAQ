@@ -36,13 +36,17 @@ from pymodaq import Unit
 from pint.errors import OffsetUnitCalculusError
 
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
+from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
+config_utils = configmod.Config()
+config = ControlModulesConfig()
 
 
 def check_units(dwa: DataActuator, units: str):
@@ -195,8 +199,8 @@ params = [
               'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-              'value': config('network', 'tcp-server', 'ip')},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
+              'value': config_utils('network', 'tcp-server', 'ip')},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'tcp-server', 'port')},
          ]},
         {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
@@ -204,8 +208,8 @@ params = [
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'leco-server', 'port')},
          ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}

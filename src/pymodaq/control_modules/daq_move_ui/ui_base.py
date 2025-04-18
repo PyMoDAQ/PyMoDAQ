@@ -13,9 +13,10 @@ from pymodaq_data import Q_
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_utils.utils import ThreadCommand
+from pymodaq.utils.config import Config as ControlModulesConfig
 
-
-config = Config()
+config_utils = Config()
+config = ControlModulesConfig()
 
 
 class DAQ_Move_UI_Base(ControlModuleUI):

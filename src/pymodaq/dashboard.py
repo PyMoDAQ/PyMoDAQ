@@ -48,9 +48,14 @@ from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
+from pymodaq.utils.config import Config as ControlModulesConfig
+
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
+config_utils = configmod.Config()
+config = ControlModulesConfig()
+
 
 get_instrument_plugins()
 extensions = extmod.get_extensions()
@@ -146,8 +151,8 @@ class DashBoard(CustomApp):
 
     params = [
             {'title': 'Log level', 'name': 'log_level', 'type': 'list',
-             'value': config('general', 'debug_level'),
-             'limits': config('general', 'debug_levels')},
+             'value': config_utils('general', 'debug_level'),
+             'limits': config_utils('general', 'debug_levels')},
 
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
                 {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '',
@@ -217,7 +222,7 @@ class DashBoard(CustomApp):
 
         logger.info('Dashboard Initialized')
 
-        if config('general', 'check_version'):
+        if config_utils('general', 'check_version'):
             if self.check_update(show=False):
                 sys.exit(0)
 
@@ -319,8 +324,8 @@ class DashBoard(CustomApp):
     def load_console(self):
         dock_console = Dock('QTConsole')
         self.dockarea.addDock(dock_console, 'bottom')
-        qtconsole = extmod.QtConsole(style_sheet=config('style', 'syntax_highlighting'),
-                                    syntax_style=config('style', 'syntax_highlighting'),
+        qtconsole = extmod.QtConsole(style_sheet=config_utils('style', 'syntax_highlighting'),
+                                    syntax_style=config_utils('style', 'syntax_highlighting'),
                                     custom_banner=extmod.console.BANNER)
         dock_console.addWidget(qtconsole)
         self.extensions['qtconsole'] = qtconsole
@@ -337,7 +342,7 @@ class DashBoard(CustomApp):
         dockarea = DockArea()
         self.bayesian_window.setCentralWidget(dockarea)
         self.bayesian_window.setWindowTitle('Bayesian Optimiser')
-        self.bayesian_module = extmod.BayesianOptimisation(dockarea=dockarea, dashboard=self)
+        self.bayesian_module = extmod.BayesianOptimization(dockarea=dockarea, dashboard=self)
         self.extensions['bayesian'] = self.bayesian_module
 
         if self.bayesian_module.validate_config():
@@ -410,7 +415,10 @@ class DashBoard(CustomApp):
                         auto_toolbar=False)
         self.add_action('quit', 'Quit', 'close2', "Quit program")
         self.toolbar.addSeparator()
-        self.add_action('config', 'Configuration file', 'tree', "General Settings")
+        self.add_action('config_utils', 'Utils Config.', 'tree',
+                        tip='Show utility configuration file')
+        self.add_action('config', 'Controls/Extensions Config.', 'tree',
+                        tip='Show Control Modules and Extensions configuration file')
         self.add_action('restart', 'Restart', '', "Restart the Dashboard",
                         auto_toolbar=False)
         self.add_action('leco', 'Run Leco Coordinator', '', 'Run a Coordinator on this localhost',
@@ -503,7 +511,8 @@ class DashBoard(CustomApp):
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
         self.connect_action('log', self.show_log)
-        self.connect_action('config', self.show_config)
+        self.connect_action('config_utils', lambda: self.show_config(config_utils))
+        self.connect_action('config', lambda: self.show_config(config))
         self.connect_action('quit', self.quit_fun)
         self.connect_action('restart', self.restart_fun)
         self.connect_action('leco', start_coordinator)
@@ -569,6 +578,7 @@ class DashBoard(CustomApp):
         # %% create Settings menu
         self.file_menu = menubar.addMenu('File')
         self.file_menu.addAction(self.get_action('log'))
+        self.file_menu.addAction(self.get_action('config_utils'))
         self.file_menu.addAction(self.get_action('config'))
         self.file_menu.addSeparator()
         self.file_menu.addAction(self.get_action('quit'))
@@ -657,8 +667,8 @@ class DashBoard(CustomApp):
         self.roi_menu.setEnabled(not status)
         self.remote_menu.setEnabled(not status)
         self.extensions_menu.setEnabled(not status)
-        self.file_menu.setEnabled(status)
-        self.settings_menu.setEnabled(status)
+        self.file_menu.setEnabled(True)
+        self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(status)
 
     def start_plugin_manager(self):
@@ -1623,9 +1633,9 @@ class DashBoard(CustomApp):
         import webbrowser
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
-    def show_config(self):
+    def show_config(self, config):
         from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
-        config_tree = TreeFromToml()
+        config_tree = TreeFromToml(config)
         config_tree.show_dialog()
 
     def setup_docks(self):
