@@ -775,9 +775,15 @@ class DashBoard(CustomApp):
                 if hasattr(self.extensions[ext], 'quit_fun'):
                     self.extensions[ext].quit_fun()
             for mov in self.actuators_modules:
-                mov.init_signal.disconnect(self.update_init_tree)
+                try:
+                    mov.init_signal.disconnect(self.update_init_tree)
+                except TypeError:
+                    pass
             for det in self.detector_modules:
-                det.init_signal.disconnect(self.update_init_tree)
+                try:
+                    det.init_signal.disconnect(self.update_init_tree)
+                except TypeError:
+                    pass
 
             for module in self.actuators_modules:
                 try:
