@@ -1049,7 +1049,8 @@ class DashBoard(CustomApp):
 
     def update_module_manager(self):
         if self.modules_manager is None:
-            self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
+            self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules,
+                                                  parent_name='Dashboard')
         else:
             self.modules_manager.actuators_all = self.actuators_modules
             self.modules_manager.detectors_all = self.detector_modules

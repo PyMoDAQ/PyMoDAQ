@@ -1,4 +1,4 @@
-from typing import List, Union, TYPE_CHECKING
+from typing import List, Union, TYPE_CHECKING, Optional, Sequence
 
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
@@ -68,9 +68,26 @@ class ModulesManager(QObject, ParameterManager):
         ]},
     ]
 
-    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], **kwargs):
+    def __init__(self,
+                 detectors: Optional[Sequence['DAQ_Viewer']] = None,
+                 actuators: Optional[Sequence['DAQ_Move']] = None,
+                 selected_detectors: Optional[Sequence['DAQ_Viewer']] = None,
+                 selected_actuators: Optional[Sequence['DAQ_Move']] = None,
+                 parent_name='',
+                 **kwargs):
+
         QObject.__init__(self)
         ParameterManager.__init__(self)
+        if detectors is None:
+            detectors = []
+        if actuators is None:
+            actuators = []
+        if selected_detectors is None:
+            selected_detectors = []
+        if selected_actuators is None:
+            selected_actuators = []
+
+        self.parent_name = parent_name
 
         for mod in selected_actuators:
             assert mod in actuators
@@ -99,6 +116,9 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
+
+    def __repr__(self):
+        return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
 
     def show_only_control_modules(self, show: True):
         self.settings.child('move_done').show(not show)
@@ -197,7 +217,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @property
     def modules(self):
-        """Get the list of all detectors and actuators"""
+        """Get the list of detectors and actuators"""
         return self.detectors + self.actuators
 
     @property
@@ -502,8 +522,7 @@ class ModulesManager(QObject, ParameterManager):
             if len(data) != 0:
                 self.det_done_datas.append(data)
 
-            # if self._received_data == len(self.detectors):
-            if len(self.det_done_datas) == len(self.detectors):
+            if self._received_data == len(self.detectors):
                 self.det_done_flag = True
                 self.settings.child('det_done').setValue(self.det_done_flag)
 

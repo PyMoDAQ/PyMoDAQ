@@ -996,7 +996,8 @@ class DAQScan(QObject, ParameterManager):
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
         scan_node = self.module_and_data_saver.get_last_node()
-        scan_node.attrs['scan_done'] = True
+        if scan_node is not None:
+            scan_node.attrs['scan_done'] = True
 
         if not self.dashboard.overshoot:
             self.set_ini_positions()  # do not set ini position again in case overshoot fired
