@@ -17,16 +17,18 @@ from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq_gui.utils import Dock
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import Config as ConfigUtils
 from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
+from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 
 
 viewer_factory = ViewerFactory()
 config = Config()
+config_utils = ConfigUtils()
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
