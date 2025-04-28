@@ -247,6 +247,7 @@ to tailor the module's behaviour. The various field are written below together w
     polling_timeout_s = 20  # s
     refresh_timeout_ms = 500  # ms
     siprefix = true
+    siprefix_even_without_units = false
     display_units = true
 
 * epsilon_default: default value for the actuator precision
@@ -254,6 +255,9 @@ to tailor the module's behaviour. The various field are written below together w
 * polling_timeout_s: Timeout in seconds during which the DAQ_Move tries to reach its target
 * refresh_timeout_ms: interval in millisecond for probing the actuator's value in continuous mode
 * siprefix: tell if printing of current value use a SI prefix or not (µ, m, k, M...)
+* siprefix_even_without_units: in case the controller is dimensionless (steps, ...) it could be misleading to include a
+  SI Prefix (as *m* could be understood either as meter or milli"nothing"). This boolean is False by default (no
+  SI Prefix when dimensionless) but this behaviour could be changed here
 * display_units: display units in the SpinBoxes
 
 
