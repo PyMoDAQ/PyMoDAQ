@@ -632,7 +632,9 @@ class DAQ_Move(ParameterControlModule):
     def units(self, unit: str):
         self.settings.child('move_settings', 'units').setValue(unit)
         if self.ui is not None and config('actuator', 'display_units'):
-            self.ui.set_unit_as_suffix(self.get_unit_to_display(unit))
+            unit = self.get_unit_to_display(unit)
+            self.ui.set_unit_as_suffix(unit)
+            self.ui.set_unit_prefix(unit != '' or config('actuator', 'siprefix_even_without_units'))
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:

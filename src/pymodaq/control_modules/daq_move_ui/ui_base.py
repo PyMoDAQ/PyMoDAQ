@@ -188,6 +188,14 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setOpts(suffix=unit)
         self.rel_value_sb.setOpts(suffix=unit)
 
+    def set_unit_prefix(self, show=True):
+        """ Change the display status of the spinbox SI prefix"""
+        self.current_value_sb.setOpts(siPrefix=show)
+        self.abs_value_sb_bis.setOpts(siPrefix=show)
+        self.abs_value_sb.setOpts(siPrefix=show)
+        self.abs_value_sb_2.setOpts(siPrefix=show)
+        self.rel_value_sb.setOpts(siPrefix=show)
+
     def setup_docks(self):
         self.actuators_combo = QComboBox()
         self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
