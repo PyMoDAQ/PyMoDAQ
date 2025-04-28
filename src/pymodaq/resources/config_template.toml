@@ -12,6 +12,7 @@ polling_timeout_s = 20  # s
 refresh_timeout_ms = 500  # ms
 timeout = 10000  # default duration in ms to wait for data to be acquirred
 siprefix = true  # tell if printing of current value use a SI prefix or not (µ, m, k, M...)
+siprefix_even_without_units = false
 display_units = true # display units in the SpinBoxes
 
 [actuator.binary]
