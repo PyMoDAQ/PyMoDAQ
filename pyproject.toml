@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils>=1.0.1",
+    "pymodaq_utils==1.0.1", #use strictly this version (yanked) for the moment until we found a better way to handle versioning
     "pymodaq_gui>=5.0.17",
     "pymodaq_data>=5.0.21",
     "easydict",
