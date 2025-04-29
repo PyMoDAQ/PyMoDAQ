@@ -8,3 +8,4 @@ Lab Stories
    :caption: Contents:
 
    lab_story_folder/arduino_ubuntu
+   lab_story_folder/basler
