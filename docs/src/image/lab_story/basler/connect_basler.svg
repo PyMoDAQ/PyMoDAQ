@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="130mm"
+   height="100mm"
+   viewBox="0 0 130 100"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.1-rc (06eac75fbf, 2025-03-29)"
+   sodipodi:docname="connect_basler.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.87481762"
+     inkscape:cx="374.93529"
+     inkscape:cy="188.03919"
+     inkscape:window-width="1324"
+     inkscape:window-height="699"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g2"
+       transform="matrix(0.55938788,0,0,0.55938788,0.10117536,21.576383)"
+       style="stroke-width:1.25137;stroke-dasharray:none">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:1.25137;stroke-dasharray:none"
+         id="rect1"
+         width="23.524622"
+         height="23.524622"
+         x="25.877083"
+         y="81.480743" />
+      <circle
+         style="fill:none;stroke:#000000;stroke-width:1.25137;stroke-dasharray:none"
+         id="path1"
+         cx="37.746323"
+         cy="93.349976"
+         r="7.5920367" />
+    </g>
+    <g
+       id="g11"
+       transform="translate(-48.391039,-19.961304)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+         id="rect2"
+         width="66.868217"
+         height="9.9109497"
+         x="64.799637"
+         y="48.118553" />
+      <g
+         id="g6">
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect3"
+           width="5.8035383"
+           height="6.0614662"
+           x="66.947144"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect4"
+           width="5.8035383"
+           height="6.0614662"
+           x="75.07383"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect5"
+           width="5.8035383"
+           height="6.0614662"
+           x="83.414375"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect6"
+           width="5.8035383"
+           height="6.0614662"
+           x="91.541061"
+           y="50.137093" />
+      </g>
+      <g
+         id="g10"
+         transform="translate(32.512729)">
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect7"
+           width="5.8035383"
+           height="6.0614662"
+           x="66.947144"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect8"
+           width="5.8035383"
+           height="6.0614662"
+           x="75.07383"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect9"
+           width="5.8035383"
+           height="6.0614662"
+           x="83.414375"
+           y="50.137093" />
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.5;stroke-dasharray:none"
+           id="rect10"
+           width="5.8035383"
+           height="6.0614662"
+           x="91.541061"
+           y="50.137093" />
+      </g>
+    </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.499999;stroke-dasharray:none"
+       id="rect11"
+       width="66.688896"
+       height="17.995417"
+       x="16.483194"
+       y="9.9806519" />
+    <rect
+       style="fill:none;stroke:#ffcc00;stroke-width:0.499999;stroke-dasharray:none"
+       id="rect12"
+       width="32.663948"
+       height="8.0147657"
+       x="17.390528"
+       y="29.185844" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.73092px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="31.097179"
+       y="26.304752"
+       id="text12"><tspan
+         sodipodi:role="line"
+         id="tspan12"
+         style="fill:#ffcc00;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="31.097179"
+         y="26.304752">PoE</tspan></text>
+    <g
+       id="g17"
+       transform="translate(-36.040567,-30.040522)"
+       style="stroke-width:0.7;stroke-dasharray:none">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+         id="rect13"
+         width="40.973965"
+         height="17.652788"
+         x="75.93988"
+         y="-152.96364"
+         transform="rotate(90)"
+         ry="0" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+         id="rect14"
+         width="4.563386"
+         height="15.6459"
+         x="77.373367"
+         y="-151.96021"
+         transform="rotate(90)"
+         ry="0" />
+      <path
+         style="fill:#ffcc00;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+         d="m 136.73109,84.759176 h 14.76492"
+         id="path15" />
+      <path
+         style="fill:#ffcc00;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+         d="m 136.73109,86.909408 h 14.76492"
+         id="path16" />
+      <path
+         style="fill:#ffcc00;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+         d="m 136.58774,89.346336 h 14.76492"
+         id="path17" />
+    </g>
+    <path
+       style="fill:#000080;stroke:#800080;stroke-width:0.499999;stroke-dasharray:none"
+       d="M 21.473523,32.966395 V 66.840121"
+       id="path18" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#800080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+       x="22.992662"
+       y="54.442387"
+       id="text18"><tspan
+         sodipodi:role="line"
+         id="tspan18"
+         style="fill:#800080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+         x="22.992662"
+         y="54.442387">RJ45</tspan></text>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.7;stroke-dasharray:none"
+       id="rect18"
+       width="16.051537"
+       height="5.7187653"
+       x="60.224812"
+       y="63.863258" />
+    <path
+       style="fill:#000080;stroke:#800080;stroke-width:0.499999;stroke-dasharray:none"
+       d="M 53.980273,32.966395 V 66.840121"
+       id="path19" />
+    <path
+       style="fill:#000080;stroke:#800080;stroke-width:0.499999;stroke-dasharray:none"
+       d="M 59.8512,66.573584 H 53.953541"
+       id="path20"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:#000080;stroke:#000080;stroke-width:0.499999;stroke-dasharray:none"
+       d="m 76.67019,66.584353 h 25.74704"
+       id="path21"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#800080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+       x="55.713272"
+       y="51.876064"
+       id="text21"><tspan
+         sodipodi:role="line"
+         id="tspan21"
+         style="fill:#800080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+         x="55.713272"
+         y="51.876064">RJ45</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#000080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+       x="80.09333"
+       y="71.123489"
+       id="text22"><tspan
+         id="tspan22"
+         style="fill:#000080;stroke:none;stroke-width:0.2;stroke-dasharray:none"
+         x="80.09333"
+         y="71.123489"
+         sodipodi:role="line">USB</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.73092px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="84.629761"
+       y="15.719213"
+       id="text23"><tspan
+         sodipodi:role="line"
+         id="tspan23"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="84.629761"
+         y="15.719213">PoE switch</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.73092px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="14.16031"
+       y="85.281342"
+       id="text24"><tspan
+         sodipodi:role="line"
+         id="tspan24"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="14.16031"
+         y="85.281342">Basler</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="14.16031"
+         y="89.944992"
+         id="tspan25">camera</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.73092px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="51.799709"
+       y="74.588333"
+       id="text27"><tspan
+         sodipodi:role="line"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="51.799709"
+         y="74.588333"
+         id="tspan27">external</tspan><tspan
+         sodipodi:role="line"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="51.799709"
+         y="79.251984"
+         id="tspan28">NIC</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.73092px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="98.744537"
+       y="44.162617"
+       id="text29"><tspan
+         sodipodi:role="line"
+         id="tspan29"
+         style="fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="98.744537"
+         y="44.162617">computer</tspan></text>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.4;stroke-dasharray:1.2, 1.2;stroke-dashoffset:0"
+       id="rect29"
+       width="55.193066"
+       height="19.478413"
+       x="49.142132"
+       y="61.443775"
+       ry="1.6402869" />
+    <text
+       xml:space="preserve"
+       style="font-size:2.82222px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:none;stroke:#ffcc00;stroke-width:0.235019;stroke-dasharray:none"
+       x="83.132736"
+       y="84.154465"
+       id="text30"><tspan
+         sodipodi:role="line"
+         id="tspan30"
+         style="font-size:2.82222px;fill:#000000;stroke:none;stroke-width:0.235019;stroke-dasharray:none"
+         x="83.132736"
+         y="84.154465">optional</tspan></text>
+  </g>
+</svg>
