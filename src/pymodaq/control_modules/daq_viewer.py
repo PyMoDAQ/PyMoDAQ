@@ -1276,6 +1276,7 @@ class DAQ_Detector(QObject):
 
         elif command.command == ControlToHardwareViewer.STOP_ALL:
             self.grab_state = False
+            #TODO: investigate as it seems to trigger twice the stop()
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))

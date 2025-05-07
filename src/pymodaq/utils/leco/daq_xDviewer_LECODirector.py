@@ -3,6 +3,8 @@ from typing import Optional, Union
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
+from pymodaq.utils.data import DataFromPlugins
+from pymodaq_data import DataToExport
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
@@ -13,6 +15,8 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq.utils.leco.leco_director import LECODirector, leco_parameters
 from pymodaq.utils.leco.director_utils import DetectorDirector
 from pymodaq_utils.logger import set_logger, get_module_name
+
+import numpy as np
 
 logger = set_logger(get_module_name(__file__))
 
@@ -31,6 +35,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     socket_types = ["GRABBER"]
     params = comon_parameters + leco_parameters
     live_mode_available = True
+    json = False
 
     def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
         DAQ_Viewer_base.__init__(self, parent=parent,
@@ -108,7 +113,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         """
         self.controller.stop_grab()
 
-    def set_data(self, data: Union[list, str, None],
+    def set_data(self, data: Union[list, str, float, None],
                  additional_payload: Optional[list[bytes]]=None) -> None:
         """
         Set the grabbed data signal.
@@ -117,7 +122,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         :param data: If None, look for the additional object
         """
-        if additional_payload is not None:
+        if data is not None:
+            if not isinstance(data, list):
+                data = [data]
+            dfp = DataFromPlugins(self.controller.actor, data=np.array(data))
+            dte = DataToExport('Copy', data=[dfp])
+        elif additional_payload:
             dte = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")
