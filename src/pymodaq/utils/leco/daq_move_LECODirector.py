@@ -50,7 +50,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
-
+    json = False
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
     for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
@@ -109,6 +109,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         position = self.check_bound(position)
         position = self.set_position_with_scaling(position)
         self.target_value = position
+        if self.json:
+            position = position.value(self.axis_unit)
         self.controller.move_abs(position=position)
 
     def move_rel(self, position: DataActuator) -> None:
@@ -116,6 +118,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.target_value = position + self.current_value
 
         position = self.set_position_relative_with_scaling(position)
+        if self.json:
+            position = position.value(self.axis_unit)
         self.controller.move_rel(position=position)
 
     def move_home(self):
@@ -136,9 +140,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     def _set_position_value(
         self, position: Union[str, float, None], additional_payload=None
     ) -> DataActuator:
-        if position:
+        if position is not None:
             pos = DataActuator(data=position)
-        elif additional_payload is not None:
+        elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
             raise ValueError("No position given")
