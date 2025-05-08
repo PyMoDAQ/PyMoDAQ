@@ -17,9 +17,9 @@
 Read a Basler camera
 ====================
 
-In this example of use, we will see how simple it is to interface a
+In this example of use, we will see how to interface a
 `Basler acA640-121gm <https://www.baslerweb.com/en/shop/aca640-121gm/>`_ camera with PyMoDAQ. This camera is quite cheap
-(about 300€) and commonly used for example to image a laser beam. However, in principle, the procedure we will describe
+(about 300€) and commonly used for example to image a laser beam. However, the procedure we will describe
 in the following should work for any Basler camera, as Basler provides a common software interface called *Pylon*.
 
 .. figure:: /image/lab_story/basler/basler.png
@@ -36,7 +36,7 @@ We will see that
 it only requires to be careful to buy the correct ethernet switch.
 
 .. note::
-   This documentation is presented for Ubuntu, but it should be very similar for Windows.
+   This documentation is presented for Ubuntu, but the procedure should be very similar for Windows.
 
 Connect the camera to the computer
 ----------------------------------
@@ -71,7 +71,7 @@ If our computer has only one ethernet plug (one embedded NIC) and we want to kee
 recommend to use an external NIC that can be plugged on a USB port of our computer. This device is about 30€.
 
 .. figure:: /image/lab_story/basler/external_nic.png
-   :width: 150
+   :width: 100
 
    Startech USB 3.0 to Gigabit Ethernet NIC adapter.
 
@@ -80,8 +80,9 @@ Once our local network is built, we can proceed to the software installation.
 Install the driver from Basler
 ------------------------------
 
-We first have to download the *Pylon* software from Basler from
-`this page <https://www.baslerweb.com/en/downloads/software/2012599532/>`_. In our case, since we are on Ubuntu, which
+We first have to download the
+`Pylon software from Basler <https://www.baslerweb.com/en/downloads/software/2012599532/>`_.
+In our case, since we are on Ubuntu, which
 is a Debian-based Linux distribution, we will choose the Debian installer.
 `Most probably, our processor architecture is x86_64 <https://www.redhat.com/en/topics/linux/ARM-vs-x86>`_, but we can
 check that with the
@@ -99,7 +100,7 @@ named *pylon-8.1.0_linux-x86_64_debs.tar.gz*. Let's right click and *Extract*, g
 
 The installer created a *pylon* folder in the `/opt <https://www.baeldung.com/linux/opt-directory>`_
 directory. Important executable files are in the */bin* subdirectory, we will be particularly interested in the
-*PylonGigEConfigurator*.
+*PylonGigEConfigurator*. Let's right click on this file, and in *Properties* tick *Executable as program*.
 
 .. figure:: /image/lab_story/basler/pylon_bin_directory.png
    :width: 500
@@ -107,7 +108,7 @@ directory. Important executable files are in the */bin* subdirectory, we will be
    *Pylon* /bin subdirectory.
 
 .. note::
-   *bin* stands for *binary* which means executable files, or programs that are directly readable by the machine.
+   *bin* stands for *binary* which means executable files. They are programs that are directly readable by the machine.
 
 Let's open a terminal and cd into this directory to run this binary file with the *auto-ip* option. This program will
 automatically scan our local network to see if there are Basler cameras plugged and attribute them an IP address.
@@ -122,3 +123,64 @@ Now that the communication with our camera has been established, let's read it w
 Install PyMoDAQ
 ---------------
 
+The installation of PyMoDAQ is quite standard and mainly described in the :ref:`Quick start <quick_start>`.
+
+We follow this procedure:
+
+* Install *Miniforge*.
+* Create a new Python environment with version 3.11 and activate it.
+* Install *pymodaq* **version 4.4.7** (*pip install pymodaq==4.4.7*) in the new environment and *pyqt5*
+* Let's be careful with the :ref:`few extra command lines <installation_tips>` for installing on Ubuntu.
+* Install *pymodaq_plugins_basler*
+
+We should check that our environment also contains *numpy* and *pypylon* with a
+`mamba list <https://mamba.readthedocs.io/en/latest/user_guide/mamba.html>`_ command. They should have been installed
+since they are dependencies of *pymodaq_plugins_basler*. *pypylon* is the Python wrapper of *Pylon* provided by Basler.
+
+Launch a 2D viewer
+------------------
+
+Once the installation is complete, let's run a
+
+``daq_viewer``
+
+and follow those steps:
+
+1. Select *DAQ2D*, since we are dealing with a camera
+2. Select *Basler* as a detector. A list of cameras should appear in the detector settings.
+3. Click *Init detector*. If the LED turns green it is a good sign ;)
+4. Hit *Snapshot*.
+
+.. figure:: /image/lab_story/basler/focus_on_chip.svg
+   :width: 600
+
+   Focus of an HeNe laser on the chip.
+
+This image has been acquired by focussing an HeNe laser on the chip of the camera.
+
+.. warning::
+   Let's be careful to attenuate at maximum our laser before doing that!
+
+5. The crosshair is a useful tool to check that you do not saturate the detector for example.
+6. The histogram will allow you to change the colorbar and the saturation of the representation of the detector data.
+
+.. warning::
+   Be careful to not reduce too much the exposure time otherwise we may use all the resources of the computer and make
+   it crash. 200ms is a good start!
+
+On Ubuntu, the *System monitor* can help us to directly visualize the CPU and RAM memory currently used.
+
+.. figure:: /image/lab_story/basler/system_monitor.png
+   :width: 600
+
+   System monitor on Ubuntu.
+
+That's it! :)
+
+Acknowledgements
+----------------
+
+We acknowledge the great work of the Basler company for providing a Linux-compatible driver and an open-source Python
+wrapper directly available on PyPI. An example to be followed!
+
+We also thank Benedikt Burger, Romain Géneaux and Sébastien Weber for the development of the Basler plugin.
