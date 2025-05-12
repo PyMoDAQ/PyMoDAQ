@@ -815,14 +815,21 @@ class DAQ_Move_base(QObject):
         """ Get the current position from the hardware with scaling conversion.
         """
         if self.settings['scaling', 'use_scaling']:
-            pos = (pos - self.settings['scaling', 'offset']) * self.settings['scaling', 'scaling']
+            if self.data_actuator_type == DataActuatorType.float:
+                pos = (pos - self.settings['scaling', 'offset']) * self.settings['scaling', 'scaling']
+            else:
+                pos = (pos - Q_(self.settings['scaling', 'offset'],
+                                self.axis_unit)) * self.settings['scaling', 'scaling']
         return pos
 
     def set_position_with_scaling(self, pos: DataActuator) -> DataActuator:
         """ Set the current position from the parameter and hardware with scaling conversion.
         """
         if self.settings['scaling', 'use_scaling']:
-            pos = pos / self.settings['scaling', 'scaling'] + self.settings['scaling', 'offset']
+            if self.data_actuator_type == DataActuatorType.DataActuator:
+                pos = pos / self.settings['scaling', 'scaling'] + Q_(self.settings['scaling', 'offset'], self.axis_unit)
+            else:
+                pos = pos / self.settings['scaling', 'scaling'] + self.settings['scaling', 'offset']
         return pos
 
     def set_position_relative_with_scaling(self, pos: DataActuator) -> DataActuator:
