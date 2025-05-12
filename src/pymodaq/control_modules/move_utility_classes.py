@@ -620,10 +620,16 @@ class DAQ_Move_base(QObject):
         Return the new position eventually coerced within the bounds
         """
         if self.settings['bounds', 'is_bounds']:
-            for data_array in position:
-                data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
-                data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
-            self.emit_status(ThreadCommand(ThreadStatusMove.OUT_OF_BOUNDS, []))
+            if self.data_actuator_type == DataActuatorType.DataActuator:
+                for data_array in position:
+                    data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
+                    data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
+                self.emit_status(ThreadCommand('outofbounds', []))
+            else:
+                if position > self.settings['bounds', 'max_bound']:
+                    position = self.settings['bounds', 'max_bound']
+                elif position < self.settings['bounds', 'min_bound']:
+                    position = self.settings['bounds', 'min_bound']
         return position
 
     def get_actuator_value(self):
