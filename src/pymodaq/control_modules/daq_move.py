@@ -520,6 +520,7 @@ class DAQ_Move(ParameterControlModule):
                 self._command_tcpip.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
 
         elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
+            logger.warning(f'The Actuator {self.title} has reached its defined bounds')
             self.bounds_signal.emit(True)
 
         elif status.command == ThreadStatusMove.SET_ALLOWED_VALUES:
