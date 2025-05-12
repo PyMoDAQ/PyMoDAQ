@@ -890,7 +890,7 @@ class DashBoard(CustomApp):
                 self.splash_sc.showMessage(mssg)
         QtWidgets.QApplication.processEvents()
 
-        mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
+        mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
         move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
@@ -1139,7 +1139,7 @@ class DashBoard(CustomApp):
                                 QtWidgets.QApplication.processEvents()
 
                         detector_modules[-1].settings.child('main_settings', 'overshoot').show()
-                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
+                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves_from_overshoot)
 
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
@@ -1519,7 +1519,19 @@ class DashBoard(CustomApp):
                 QtWidgets.QApplication.processEvents()
             self.settings.child('detectors', name).setValue(det.initialized_state)
 
-    def stop_moves(self, overshoot):
+    def do_stuff_from_out_bounds(self, out_of_bounds: bool):
+
+        if out_of_bounds:
+            logger.warning(f'Some actuators reached their bounds')
+            if self.scan_module is not None:
+                logger.warning(f'Stopping the DAQScan for out of bounds')
+                self.scan_module.stop_scan()
+
+    def stop_moves_from_overshoot(self, overshoot):
+        self.overshoot = overshoot
+        self.stop_moves()
+
+    def stop_moves(self, *args, **kwargs):
         """
             Foreach module of the move module object list, stop motion.
 
@@ -1527,7 +1539,6 @@ class DashBoard(CustomApp):
             --------
             stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
-        self.overshoot = overshoot
         if self.scan_module is not None:
             self.scan_module.stop_scan()
 
