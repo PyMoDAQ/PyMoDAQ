@@ -609,15 +609,18 @@ class DAQ_Move_base(QObject):
         if self.settings['bounds', 'is_bounds']:
             if self.data_actuator_type == DataActuatorType.DataActuator:
                 for data_array in position:
-                    data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
-                    data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
                     if np.any(data_array > self.settings['bounds', 'max_bound']) or \
                             np.any(data_array < self.settings['bounds', 'min_bound']):
-                        self.emit_status(ThreadCommand('outofbounds', []))
+                        self.emit_status(ThreadCommand('outofbounds'))
+                    data_array[data_array > self.settings['bounds', 'max_bound']] = self.settings['bounds', 'max_bound']
+                    data_array[data_array < self.settings['bounds', 'min_bound']] = self.settings['bounds', 'min_bound']
+
             else:
                 if position > self.settings['bounds', 'max_bound']:
+                    self.emit_status(ThreadCommand('outofbounds'))
                     position = self.settings['bounds', 'max_bound']
                 elif position < self.settings['bounds', 'min_bound']:
+                    self.emit_status(ThreadCommand('outofbounds'))
                     position = self.settings['bounds', 'min_bound']
         return position
 

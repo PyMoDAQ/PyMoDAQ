@@ -1520,7 +1520,12 @@ class DashBoard(CustomApp):
             self.settings.child('detectors', name).setValue(det.initialized_state)
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
-        logger.warning(f'Some actuators reached their bounds')
+
+        if out_of_bounds:
+            logger.warning(f'Some actuators reached their bounds')
+            if self.scan_module is not None:
+                logger.warning(f'Stopping the DAQScan for out of bounds')
+                self.scan_module.stop_scan()
 
     def stop_moves_from_overshoot(self, overshoot):
         self.overshoot = overshoot
