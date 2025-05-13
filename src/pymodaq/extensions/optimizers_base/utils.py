@@ -249,8 +249,8 @@ class OptimizerModelDefault(OptimizerModelGeneric):
                ]},]
 
     def __init__(self, optimization_controller):
-        self.actuators_name = optimization_controller.modules_manager.actuators_name
-        self.detectors_name = optimization_controller.modules_manager.detectors_name
+        self.actuators_name = optimization_controller.modules_manager.selected_actuators_name
+        self.detectors_name = optimization_controller.modules_manager.selected_detectors_name
         super().__init__(optimization_controller)
 
         self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
@@ -306,8 +306,6 @@ class OptimizerModelDefault(OptimizerModelGeneric):
             data=[DataActuator(self.modules_manager.selected_actuators_name[ind],
                                data=float(outputs[ind][0]),
                                units=self.modules_manager.actuators[ind].units) for ind in  range(len(outputs))])
-
-
 
 
 def get_optimizer_models(model_name=None):
