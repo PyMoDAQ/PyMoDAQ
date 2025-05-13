@@ -1,4 +1,4 @@
-
+from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -122,15 +122,19 @@ class AdaptiveOptimisation(GenericOptimization):
             LossFunctionFactory.get(uparams['lossdim'], uparams['kind'])
             self.command_runner.emit(
                 utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
-        except (KeyError, ValueError, AttributeError):
+        except (KeyError, ValueError, AttributeError) as e:
             pass
+            print(e)
 
     def update_after_actuators_changed(self, actuators: list[str]):
         """ Actions to do after the actuators have been updated
         """
-        self.settings.child('main_settings', 'prediction',
-                            'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
-        self.update_prediction_function()
+        try:
+            self.settings.child('main_settings', 'prediction',
+                                'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
+            self.update_prediction_function()
+        except ValueError as e:
+            messagebox(f'You cannot select [{actuators}] as no corresponding Loss function exists')
 
     def adaptive_bounds(self):
         return list(self.format_bounds().values())

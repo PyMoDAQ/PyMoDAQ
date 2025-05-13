@@ -88,8 +88,8 @@ class LossFunctionFactory:
 
     @classmethod
     def get(cls, dim: LossDim, key : str) -> Type[LossFunctionBase]:
-        loss = cls._builders.get(dim).get(key)
-        if not loss:
+        loss = cls._builders.get(dim, {key: None}).get(key)
+        if loss is None:
             raise ValueError(f'Unknown Loss function with dim={dim} and key={key}')
         return loss
 
@@ -103,4 +103,7 @@ class LossFunctionFactory:
 
     @classmethod
     def keys(cls, dim: LossDim) -> list[str]:
+        try:
             return list(cls._builders.get(dim).keys())
+        except (AttributeError, ValueError, KeyError) as e:
+            return []
