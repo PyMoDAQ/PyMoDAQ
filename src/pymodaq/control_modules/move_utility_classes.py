@@ -10,7 +10,6 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
-
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
 from pymodaq_utils.warnings import deprecation_msg
@@ -38,7 +37,6 @@ from pint.errors import OffsetUnitCalculusError
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -123,6 +121,7 @@ class MoveCommand:
         the value the move should reach
 
     """
+
     def __init__(self, move_type, value=0):
         if move_type not in MOVE_COMMANDS:
             raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
@@ -134,7 +133,6 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
                          master=True,
                          epsilon: float = config('actuator', 'epsilon_default')):
-
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -192,7 +190,7 @@ params = [
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
 
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
-            'value': config('actuator', 'refresh_timeout_ms')},
+         'value': config('actuator', 'refresh_timeout_ms')},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
@@ -208,7 +206,8 @@ params = [
               'value': False},
              {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"), "default": "localhost"},
+             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"),
+              "default": "localhost"},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'leco-server', 'port')},
          ]},
     ]},
@@ -286,11 +285,10 @@ class DAQ_Move_base(QObject):
     _epsilons: Union[float, List[float], Dict[str, float]] = None
     _epsilon = 1.0  # deprecated
 
-
     params = []
 
     data_actuator_type = DataActuatorType.float
-    data_shape = (1, )  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
+    data_shape = (1,)  # expected shape of the underlying actuator's value (in general a float so shape = (1, ))
 
     def __init__(self, parent: Optional['DAQ_Move_Hardware'] = None,
                  params_state: Optional[dict] = None,
@@ -320,7 +318,10 @@ class DAQ_Move_base(QObject):
             self._title = "myactuator"
 
         self._axis_units: Union[Dict[str, str], List[str]] = None
-        self.axis_units = self._controller_units.copy()
+        if isinstance(self._controller_units, str):
+            self.axis_units = self._controller_units
+        else:
+            self.axis_units = self._controller_units.copy()
         if self._epsilons is None:
             self._epsilons = self._epsilon
         self.epsilons = self._epsilons
@@ -630,11 +631,10 @@ class DAQ_Move_base(QObject):
 
     def get_actuator_value(self):
         if hasattr(self, 'check_position'):
-            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
+            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value', 3)
             return self.check_position()
         else:
             raise NotImplementedError
-
 
     def close(self):
         raise NotImplementedError
@@ -682,7 +682,8 @@ class DAQ_Move_base(QObject):
     def commit_common_settings(self, param):
         pass
 
-    def move_done(self, position: Optional[DataActuator] = None):  # the position argument is just there to match some signature of child classes
+    def move_done(self, position: Optional[
+        DataActuator] = None):  # the position argument is just there to match some signature of child classes
         """
             | Emit a move done signal transmitting the float position to hardware.
             | The position argument is just there to match some signature of child classes.
@@ -700,7 +701,7 @@ class DAQ_Move_base(QObject):
             else:
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
-            #of the plugin
+            # of the plugin
             position = DataActuator(self._title, data=position.value(),
                                     units=self.axis_unit)
         self.move_done_signal.emit(position)
@@ -948,7 +949,8 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     def commit_settings(self, param):
 
         if param.name() in putils.iter_children(self.settings.child('settings_client'), []):
-            actuator_socket: Socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
+            actuator_socket: Socket = \
+            [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.check_sended_with_serializer('set_info')
             path = putils.get_param_path(param)[2:]
             # get the path of this param as a list starting at parent 'infos'
