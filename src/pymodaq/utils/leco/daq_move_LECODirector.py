@@ -50,7 +50,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
-    json = False
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
     for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
@@ -71,7 +70,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.send_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
         ))
-
+        # To distinguish how to encode positions, it needs to now if it deals
+        # with a json-accepting or a binary-accepting actuator
+        # It is set to False by default. It then use the first received message
+        # from the actuator that should contain its position to decide if it
+        # need to switch to json.
+        self.json = False
     def ini_stage(self, controller=None):
         """Actuator communication initialization
 
@@ -98,6 +102,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         else:
             self.controller = controller
 
+        self.json = False
         # send a command to the Actor whose name is actor_name to send its settings
         self.controller.get_settings()
 
@@ -140,8 +145,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     def _set_position_value(
         self, position: Union[str, float, None], additional_payload=None
     ) -> DataActuator:
+
+        # This is the first received message, if position is set then
+        # it's included in the json payload and the director should
+        # usejson
         if position is not None:
             pos = DataActuator(data=position)
+            self.json = True
         elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
