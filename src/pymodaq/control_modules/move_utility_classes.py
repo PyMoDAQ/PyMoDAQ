@@ -174,7 +174,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                       'default': 0},
                      {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
                       'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
-                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names,
+                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names.copy(),
                       'value': axis_name},
                  ]},
              ] + comon_parameters(epsilon)
@@ -320,7 +320,7 @@ class DAQ_Move_base(QObject):
             self._title = "myactuator"
 
         self._axis_units: Union[Dict[str, str], List[str]] = None
-        self.axis_units = self._controller_units
+        self.axis_units = self._controller_units.copy()
         if self._epsilons is None:
             self._epsilons = self._epsilon
         self.epsilons = self._epsilons
@@ -449,6 +449,8 @@ class DAQ_Move_base(QObject):
             return self.settings['multiaxes', 'axis']
         elif isinstance(limits, dict):
             return find_keys_from_val(limits, val=self.settings['multiaxes', 'axis'])[0]
+        else:
+            return ''
 
     @axis_name.setter
     def axis_name(self, name: str):
