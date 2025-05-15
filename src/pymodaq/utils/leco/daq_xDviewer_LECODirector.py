@@ -3,11 +3,10 @@ from typing import Optional, Union
 
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.utils.data import DataFromPlugins
+from pymodaq.utils.data import DataFromPlugins, Axis
 from pymodaq_data import DataToExport
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
-
 
 from pymodaq.utils import data  # for serialization factory registration  # noqa: F401
 from pymodaq_gui.parameter import Parameter
@@ -42,7 +41,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                                  params_state=params_state)
         LECODirector.__init__(self, host=self.settings['host'])
         for method in (
-            self.set_data,
+                self.set_data,
         ):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
@@ -113,8 +112,8 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         """
         self.controller.stop_grab()
 
-    def set_data(self, data: Union[list, str, float, None],
-                 additional_payload: Optional[list[bytes]]=None) -> None:
+    def set_data(self, data: Union[dict,list, str, float, None],
+                 additional_payload: Optional[list[bytes]] = None) -> None:
         """
         Set the grabbed data signal.
 
@@ -122,13 +121,30 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         :param data: If None, look for the additional object
         """
-        if data is not None:
-            if not isinstance(data, list):
-                data = [data]
-            dfp = DataFromPlugins(self.controller.actor, data=np.array(data))
-            dte = DataToExport('Copy', data=[dfp])
-        elif additional_payload:
+        if additional_payload:
             dte = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        elif data is not None:
+            axes = []
+            labels = []
+            if isinstance(data, dict):
+                axes = [
+                    Axis( label=axis.get('label', ''),
+                          units=axis.get('units', ''),
+                          data=np.array(axis.get('data', [])),
+                          index=i
+                    ) for i, axis in enumerate(reversed(data.get('axes', [])))
+                ]
+                labels = data.get('labels', [])
+                data = data.get('data', [])
+
+            np_data = np.atleast_1d(data)
+            if np_data.ndim <= 2:
+                data = [np_data]
+            else:
+                data = [np.atleast_1d(d) for d in data]
+
+            dfp = DataFromPlugins(self.controller.actor, data=data, axes=axes[:data[0].ndim], labels=labels)
+            dte = DataToExport('Copy', data=[dfp])
         else:
             raise NotImplementedError("Not implemented to set a list of values.")
         self.dte_signal.emit(dte)
