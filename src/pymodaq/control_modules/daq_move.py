@@ -639,6 +639,8 @@ class DAQ_Move(ParameterControlModule):
             return '°C'
         elif 'V' in unit or 'volt' in unit.lower():
             return 'V'
+        elif 'Hz' in unit:
+            return 'Hz'
         else:
             return str(Q_(1, unit).to_base_units().units)
 
