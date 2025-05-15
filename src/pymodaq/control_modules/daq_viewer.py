@@ -589,7 +589,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_ALL, ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
         self._grabing = False
 
     @Slot()
@@ -1276,11 +1276,6 @@ class DAQ_Detector(QObject):
             QtWidgets.QApplication.processEvents()
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
-        elif command.command == ControlToHardwareViewer.STOP_ALL:
-            self.grab_state = False
-            self.detector.stop()
-            QtWidgets.QApplication.processEvents()
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
             self.detector.update_scanner(command.attribute[0])
