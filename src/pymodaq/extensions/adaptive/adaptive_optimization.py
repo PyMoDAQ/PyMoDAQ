@@ -134,7 +134,8 @@ class AdaptiveOptimisation(GenericOptimization):
                                 'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
             self.update_prediction_function()
         except ValueError as e:
-            messagebox(f'You cannot select [{actuators}] as no corresponding Loss function exists')
+            messagebox(title='Warning',
+                       text=f'You cannot select [{actuators}] as no corresponding Loss function exists')
 
     def adaptive_bounds(self):
         return list(self.format_bounds().values())
