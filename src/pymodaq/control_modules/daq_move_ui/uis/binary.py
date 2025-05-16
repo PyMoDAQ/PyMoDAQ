@@ -55,30 +55,37 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
         self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute"
                                                              " value",
                         toolbar=self.move_toolbar)
+
+
+        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
+
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
                         toolbar=self.move_toolbar)
-
+        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.move_toolbar.addSeparator()
+        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
+                        toolbar=self.move_toolbar)
         self.add_action('quit', 'Quit the module', 'close2', toolbar=self.move_toolbar)
         self.add_action('log', 'Show Log file', 'information2', toolbar=self.move_toolbar)
-
         self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
 
     def connect_things(self):
-        self.connect_action('ini_actuator', self.ini_actuator_pb.click)
+        super().connect_things()
+        # first disconnect actions from  the base class
+        self.connect_action('move_abs', None, connect=False)
+        self.connect_action('move_abs_2', None, connect=False)
 
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, )))
-        self.connect_action('show_settings', self.show_tree)
+        #then connect to the ones reimplemented here
         self.connect_action('move_abs', lambda: self.emit_move_abs(BinaryValue.VALUE_ONE.value))
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(BinaryValue.VALUE_TWO.value))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
 
-        self.ini_actuator_pb.clicked.connect(self.send_init)
-
-        self.actuators_combo.currentTextChanged.connect(
-            lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
-
-    def emit_move_abs(self, spinbox: Union[float, int]):
-        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=spinbox,
+    def emit_move_abs(self, abs_value: Union[float, int]):
+        self.command_sig.emit(ThreadCommand(UiToMainMove.MOVE_ABS, DataActuator(data=abs_value,
                                                                                 units=self._unit)))
 
 def main(init_qt=True):
