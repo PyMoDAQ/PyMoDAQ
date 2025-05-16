@@ -152,13 +152,15 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._detector_widget = QWidget()
         self._settings_widget = QWidget()
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
+
         bkg_widget = QWidget()
         bkg_widget.setLayout(QtWidgets.QHBoxLayout())
 
         widget.layout().addWidget(info_ui)
         widget.layout().addWidget(self.toolbar)
         widget.layout().addWidget(self._detector_widget)
-        widget.layout().addWidget(self._settings_widget)
+        if not config('viewer', 'settings_as_popup'):
+            widget.layout().addWidget(self._settings_widget)
         widget.layout().addStretch(0)
 
         info_ui.setLayout(QtWidgets.QHBoxLayout())
@@ -218,7 +220,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
-        self.connect_action('show_settings', lambda show: self._settings_widget.setVisible(show))
+        self.connect_action('show_settings', self._show_settings)
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, )))
         self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
 
@@ -244,6 +246,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
         self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
+
+    def _show_settings(self, show: bool = True):
+        self._settings_widget.setVisible(show)
+        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
 
     def update_viewers(self, viewers_type: List[ViewersEnum]):
         super().update_viewers(viewers_type)
