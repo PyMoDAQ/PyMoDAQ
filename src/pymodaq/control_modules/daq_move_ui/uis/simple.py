@@ -33,9 +33,11 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.current_value_sb.setMinimumHeight(20)
         self.current_value_sb.setMinimumWidth(80)
 
+        self.control_widget = QtWidgets.QWidget()
+        self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}: ', font_name="Tahoma",
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
                                               font_size=14, isbold=True, isitalic=True),
                         toolbar=self.move_toolbar)
 
@@ -57,35 +59,21 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
 
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
                         toolbar=self.move_toolbar)
-
+        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.move_toolbar.addSeparator()
+        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
+                        toolbar=self.move_toolbar)
         self.add_action('quit', 'Quit the module', 'close2', toolbar=self.move_toolbar)
         self.add_action('log', 'Show Log file', 'information2', toolbar=self.move_toolbar)
-
         self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
 
     def connect_things(self):
-        self.connect_action('ini_actuator', self.ini_actuator_pb.click)
-
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, )))
-        self.connect_action('show_settings', self.show_tree)
-        self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
-        self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
-
-        self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
-        self.abs_value_sb_2.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_2))
-
-        self.ini_actuator_pb.clicked.connect(self.send_init)
-
-        self.actuators_combo.currentTextChanged.connect(
-            lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
-
-    def set_settings_tree(self, tree):
-        self._tree = tree
-
-    def show_tree(self, show: bool = True):
-        self._tree.setVisible(show)
+        super().connect_things()
 
 
 def main(init_qt=True):
