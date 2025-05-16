@@ -76,8 +76,11 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
 
     def connect_things(self):
         super().connect_things()
+        # first disconnect actions from  the base class
         self.connect_action('move_abs', None, connect=False)
         self.connect_action('move_abs_2', None, connect=False)
+
+        #then connect to the ones reimplemented here
         self.connect_action('move_abs', lambda: self.emit_move_abs(BinaryValue.VALUE_ONE.value))
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(BinaryValue.VALUE_TWO.value))
 
