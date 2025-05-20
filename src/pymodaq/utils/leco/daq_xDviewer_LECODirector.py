@@ -146,7 +146,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             dfp = DataFromPlugins(self.controller.actor, data=data, axes=axes[:data[0].ndim], labels=labels)
             dte = DataToExport('Copy', data=[dfp])
         else:
-            raise NotImplementedError("Not implemented to set a list of values.")
+            raise ValueError("Can't set_data when data is None")
         self.dte_signal.emit(dte)
 
 
