@@ -714,7 +714,6 @@ class GenericOptimization(CustomExt):
             if not self.runner_thread.isFinished():
                 self.runner_thread.terminate()
                 self.runner_thread.wait()
-            self.runner_thread = None
             self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
