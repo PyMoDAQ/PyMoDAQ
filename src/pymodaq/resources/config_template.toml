@@ -15,6 +15,14 @@ siprefix = true  # tell if printing of current value use a SI prefix or not (µ,
 siprefix_even_without_units = false
 display_units = true # display units in the SpinBoxes
 
+[actuator.allowed_units]
+V = 'V'
+volt = 'volt'
+W = 'W'
+Hz = 'Hz'
+rpm = 'rpm'
+revolutions_per_minute = 'revolutions_per_minute'
+
 [actuator.binary]
 value_1 = 0
 value_2 = 1

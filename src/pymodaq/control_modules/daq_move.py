@@ -654,19 +654,14 @@ class DAQ_Move(ParameterControlModule):
         str: the unit to be displayed on the ui
         """
         if ('°' in unit or 'degree' in unit) and not '°C' in unit:
-            # special cas as pint base unit for angles are radians
+        # special cas as pint base unit for angles are radians
             return '°'
-        elif 'W' in unit or 'watt' in unit.lower():
-            return 'W'
-        elif '°C' in unit or 'Celsius' in unit:
+        elif '°C' in unit:
             return '°C'
-        elif 'V' in unit or 'volt' in unit.lower():
-            return 'V'
-        elif 'Hz' in unit:
-            return 'Hz'
-        elif 'rpm' in unit or 'revolutions_per_minute' in unit:
-            return 'rpm'
         else:
+            for key in config('actuator', 'allowed_units'):
+                if key in unit:
+                    return config('actuator', 'allowed_units', key)
             return str(Q_(1, unit).to_base_units().units)
 
     def update_settings(self):
