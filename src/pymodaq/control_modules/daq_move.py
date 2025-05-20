@@ -641,6 +641,8 @@ class DAQ_Move(ParameterControlModule):
             return 'V'
         elif 'Hz' in unit:
             return 'Hz'
+        elif 'rpm' in unit or 'revolutions_per_minute' in unit:
+            return 'rpm'
         else:
             return str(Q_(1, unit).to_base_units().units)
 
