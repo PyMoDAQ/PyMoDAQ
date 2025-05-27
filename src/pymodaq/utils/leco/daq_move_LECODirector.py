@@ -7,6 +7,8 @@ running: `python -m pyleco.coordinators.coordinator`
 
 """
 
+import numpy as np
+
 from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
@@ -76,6 +78,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         # from the actuator that should contain its position to decide if it
         # need to switch to json.
         self.json = False
+
     def ini_stage(self, controller=None):
         """Actuator communication initialization
 
@@ -115,7 +118,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         position = self.set_position_with_scaling(position)
         self.target_value = position
         if self.json:
-            position = position.value(self.axis_unit)
+            position = [data.m_as(self.axis_unit) for data in position.quantities ]
         self.controller.move_abs(position=position)
 
     def move_rel(self, position: DataActuator) -> None:
@@ -124,7 +127,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
         position = self.set_position_relative_with_scaling(position)
         if self.json:
-            position = position.value(self.axis_unit)
+            position = [data.m_as(self.axis_unit) for data in position.quantities ]
         self.controller.move_rel(position=position)
 
     def move_home(self):
@@ -143,13 +146,18 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     # Methods accessible via remote calls
     def _set_position_value(
-        self, position: Union[str, float, None], additional_payload=None
+        self, position: Union[list, str, float, None], additional_payload=None
     ) -> DataActuator:
 
         # This is the first received message, if position is set then
         # it's included in the json payload and the director should
         # usejson
         if position is not None:
+            np_position = np.atleast_1d(position)
+            if np_position.ndim <= 2:
+                position = [np_position]
+            else:
+                position = [np.atleast_1d(d) for d in position]
             pos = DataActuator(data=position)
             self.json = True
         elif additional_payload:
