@@ -290,7 +290,7 @@ class DAQ_PID(CustomExt):
             self.enable_controls_pid_run(True)
 
         else:
-            if hasattr(self, "PIDThread"):
+            if hasattr(self, "runner_thread"):
                 self.exit_runner_thread()
             self.get_action("pid_led").set_as_false()
             self.enable_controls_pid_run(False)
