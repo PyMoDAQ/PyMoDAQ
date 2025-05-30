@@ -608,7 +608,7 @@ class DAQ_Move(ParameterControlModule):
             self.units = status.attribute
 
     def _check_data_type(
-        self, data_act: Union[list[np.ndarray], float, DataActuator]
+        self, data_act: Union[list[np.ndarray], Number, DataActuator]
     ) -> DataActuator:
         """Make sure the data is a DataActuator
 
@@ -616,7 +616,7 @@ class DAQ_Move(ParameterControlModule):
         """
         if isinstance(data_act, list):  # backcompatibility
             data_act = np.array(data_act)
-        if isinstance(data_act, float):  # backcompatibility
+        if isinstance(data_act, Number):  # backcompatibility
             data_act = np.array([data_act])
         if isinstance(data_act, np.ndarray):  # backcompatibility
             data_act = DataActuator(data=[data_act], units=self.units)
