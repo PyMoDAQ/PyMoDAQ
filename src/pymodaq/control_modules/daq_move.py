@@ -616,6 +616,8 @@ class DAQ_Move(ParameterControlModule):
         """
         if isinstance(data_act, list):  # backcompatibility
             data_act = np.array(data_act)
+        if isinstance(data_act, float):  # backcompatibility
+            data_act = np.array([data_act])
         if isinstance(data_act, np.ndarray):  # backcompatibility
             data_act = DataActuator(data=[data_act], units=self.units)
         data_act.name = (
