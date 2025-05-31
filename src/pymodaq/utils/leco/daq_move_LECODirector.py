@@ -70,8 +70,10 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if param_dict is not None:
             param_dict["visible"] = False
 
-    def __init__(self, parent=None, params_state=None) -> None:
+    def __init__(self, parent=None, params_state=None, host: str = None) -> None:
         DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
+        if host is not None:
+            self.settings["host"] = host
         LECODirector.__init__(self, host=self.settings["host"])
 
         self.register_rpc_methods(

@@ -37,9 +37,16 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     live_mode_available = True
 
     def __init__(
-        self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs
+        self,
+        parent=None,
+        params_state=None,
+        host: str = None,
+        grabber_type: str = "0D",
+        **kwargs,
     ) -> None:
         DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state)
+        if host is not None:
+            self.settings["host"] = host
         LECODirector.__init__(self, host=self.settings["host"])
         for method in (self.set_data,):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
