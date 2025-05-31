@@ -1,7 +1,11 @@
 from __future__ import annotations
 from typing import Optional, Union
 
-from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
+from pymodaq.control_modules.viewer_utility_classes import (
+    DAQ_Viewer_base,
+    comon_parameters,
+    main,
+)
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
@@ -32,13 +36,12 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     params = comon_parameters + leco_parameters
     live_mode_available = True
 
-    def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
-        DAQ_Viewer_base.__init__(self, parent=parent,
-                                 params_state=params_state)
-        LECODirector.__init__(self, host=self.settings['host'])
-        for method in (
-            self.set_data,
-        ):
+    def __init__(
+        self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs
+    ) -> None:
+        DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state)
+        LECODirector.__init__(self, host=self.settings["host"])
+        for method in (self.set_data,):
             self.listener.register_binary_rpc_method(method, accept_binary_input=True)
 
         self.client_type = "GRABBER"
@@ -51,20 +54,21 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
     def ini_detector(self, controller=None):
         """
-            | Initialisation procedure of the detector updating the status dictionary.
-            |
-            | Init axes from image , here returns only None values (to tricky to di it with the
-              server and not really necessary for images anyway)
+        | Initialisation procedure of the detector updating the status dictionary.
+        |
+        | Init axes from image , here returns only None values (to tricky to di it with the
+          server and not really necessary for images anyway)
 
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
+        See Also
+        --------
+        utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
 
         actor_name = self.settings["actor_name"]
         if self.is_master:
-            self.controller = DetectorDirector(actor=actor_name,
-                                               communicator=self.communicator)
+            self.controller = DetectorDirector(
+                actor=actor_name, communicator=self.communicator
+            )
             try:
                 self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
             except TimeoutError:
@@ -75,41 +79,44 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.controller.get_settings()
 
         initialized = True
-        info = 'Viewer Director ready'
+        info = "Viewer Director ready"
         return info, initialized
 
     def grab_data(self, Naverage=1, **kwargs):
         """
-            Start new acquisition.
-            Grabbed indice is used to keep track of the current image in the average.
+        Start new acquisition.
+        Grabbed indice is used to keep track of the current image in the average.
 
-            ============== ========== ==============================
-            **Parameters**   **Type**  **Description**
+        ============== ========== ==============================
+        **Parameters**   **Type**  **Description**
 
-            *Naverage*        int       Number of images to average
-            ============== ========== ==============================
+        *Naverage*        int       Number of images to average
+        ============== ========== ==============================
 
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.process_cmds
+        See Also
+        --------
+        utility_classes.DAQ_TCP_server.process_cmds
         """
 
         self.ind_grabbed = 0  # to keep track of the current image in the average
         self.Naverage = Naverage
         self.controller.set_remote_name(self.communicator.full_name)
-        if kwargs.get('live', False):
+        if kwargs.get("live", False):
             self.controller.send_data_grab()
         else:
             self.controller.send_data_snap()
 
     def stop(self):
         """
-            not implemented.
+        not implemented.
         """
         self.controller.stop_grab()
 
-    def set_data(self, data: Union[list, str, None],
-                 additional_payload: Optional[list[bytes]]=None) -> None:
+    def set_data(
+        self,
+        data: Union[list, str, None],
+        additional_payload: Optional[list[bytes]] = None,
+    ) -> None:
         """
         Set the grabbed data signal.
 
@@ -124,5 +131,5 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.dte_signal.emit(dte)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(__file__, init=False)

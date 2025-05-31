@@ -9,8 +9,13 @@ running: `python -m pyleco.coordinators.coordinator`
 
 from typing import Union
 
-from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
-                                                          DataActuatorType, DataActuator)
+from pymodaq.control_modules.move_utility_classes import (
+    DAQ_Move_base,
+    comon_parameters_fun,
+    main,
+    DataActuatorType,
+    DataActuator,
+)
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 from pymodaq_utils.utils import ThreadCommand
@@ -18,8 +23,12 @@ from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 
-from pymodaq.utils.leco.leco_director import (LECODirector, leco_parameters, DirectorCommands,
-                                              DirectorReceivedCommands)
+from pymodaq.utils.leco.leco_director import (
+    LECODirector,
+    leco_parameters,
+    DirectorCommands,
+    DirectorReceivedCommands,
+)
 from pymodaq.utils.leco.director_utils import ActuatorDirector
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -30,47 +39,53 @@ logger = set_logger(get_module_name(__file__))
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """A control module, which in the dashboard, allows to control a remote Move module.
 
-        ================= ==============================
-        **Attributes**      **Type**
-        *command_server*    instance of Signal
-        *x_axis*            1D numpy array
-        *y_axis*            1D numpy array
-        *data*              double precision float array
-        ================= ==============================
+    ================= ==============================
+    **Attributes**      **Type**
+    *command_server*    instance of Signal
+    *x_axis*            1D numpy array
+    *y_axis*            1D numpy array
+    *data*              double precision float array
+    ================= ==============================
 
-        See Also
-        --------
-        utility_classes.DAQ_TCP_server
+    See Also
+    --------
+    utility_classes.DAQ_TCP_server
     """
+
     settings: Parameter
     controller: ActuatorDirector
-    _axis_names = ['']
-    _controller_units = ['']
+    _axis_names = [""]
+    _controller_units = [""]
     _epsilon = 1
 
     params_client = []  # parameters of a client grabber
     data_actuator_type = DataActuatorType.DataActuator
 
-    params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
+    params = (
+        comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
+    )
 
-    for param_name in ('multiaxes', 'units', 'epsilon', 'bounds', 'scaling'):
-        param_dict = find_dict_in_list_from_key_val(params, 'name', param_name)
+    for param_name in ("multiaxes", "units", "epsilon", "bounds", "scaling"):
+        param_dict = find_dict_in_list_from_key_val(params, "name", param_name)
         if param_dict is not None:
-            param_dict['visible'] = False
+            param_dict["visible"] = False
 
     def __init__(self, parent=None, params_state=None) -> None:
-        DAQ_Move_base.__init__(self, parent=parent,
-                               params_state=params_state)
-        LECODirector.__init__(self, host=self.settings['host'])
+        DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
+        LECODirector.__init__(self, host=self.settings["host"])
 
-        self.register_rpc_methods((
-            self.set_units,  # to set units accordingly to the one of the actor
-        ))
+        self.register_rpc_methods(
+            (
+                self.set_units,  # to set units accordingly to the one of the actor
+            )
+        )
 
-        self.register_binary_rpc_methods((
-            self.send_position,  # to display the actor position
-            self.set_move_done,  # to set the move as done
-        ))
+        self.register_binary_rpc_methods(
+            (
+                self.send_position,  # to display the actor position
+                self.set_move_done,  # to set the move as done
+            )
+        )
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
@@ -90,7 +105,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         actor_name = self.settings["actor_name"]
 
         if self.is_master:
-            self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
+            self.controller = ActuatorDirector(
+                actor=actor_name, communicator=self.communicator
+            )
             try:
                 self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
             except TimeoutError:
@@ -122,14 +139,15 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.controller.move_home()
 
     def get_actuator_value(self) -> DataActuator:
-        """ Get the current hardware value """
-        self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
+        """Get the current hardware value"""
+        self.controller.set_remote_name(
+            self.communicator.full_name
+        )  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 
     def stop_motion(self) -> None:
-        """
-        """
+        """ """
         self.controller.stop_motion()
 
     # Methods accessible via remote calls
@@ -146,12 +164,20 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self._current_value = pos
         return pos
 
-    def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
-        pos = self._set_position_value(position=position, additional_payload=additional_payload)
+    def send_position(
+        self, position: Union[str, float, None], additional_payload=None
+    ) -> None:
+        pos = self._set_position_value(
+            position=position, additional_payload=additional_payload
+        )
         self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
-    def set_move_done(self, position: Union[str, float, None], additional_payload=None) -> None:
-        pos = self._set_position_value(position=position, additional_payload=additional_payload)
+    def set_move_done(
+        self, position: Union[str, float, None], additional_payload=None
+    ) -> None:
+        pos = self._set_position_value(
+            position=position, additional_payload=additional_payload
+        )
         self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
 
     def set_units(self, units: str, additional_payload=None) -> None:
@@ -160,17 +186,17 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.axis_unit = units
 
     def set_settings(self, settings: bytes):
-        """ Get the content of the actor settings to pe populated in this plugin
+        """Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter
 
         Then set the plugin units from this information"""
         super().set_settings(settings)
-        self.axis_unit = self.settings['settings_client', 'units']
+        self.axis_unit = self.settings["settings_client", "units"]
 
     def close(self) -> None:
-        """ Clear the content of the settings_clients setting"""
+        """Clear the content of the settings_clients setting"""
         super().close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(__file__, init=False)
