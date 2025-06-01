@@ -28,6 +28,7 @@ from qtpy.QtCore import QObject, QThread, QTimer, Signal, Slot
 
 from pymodaq import Q_, Unit
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 from pymodaq.control_modules.move_utility_classes import (
     DAQ_Move_base,
     DataActuatorType,
@@ -130,7 +131,7 @@ class DAQ_Move(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Move_UI(parent, title)
+            self.ui: DAQ_Move_UI_Base = DAQ_Move_UI(parent, title)
         else:
             self.ui: Optional[DAQ_Move_UI] = None
 
