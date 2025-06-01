@@ -220,46 +220,88 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def setup_actions(self):
         self.add_action(
-            "grab", "Grab", "run2", "Grab data from the detector", checkable=True
-        )
-        self.add_action("snap", "Snap", "snap", "Take a snapshot from the detector")
-        self.add_action("stop", "Stop", "stop", "Stop grabing")
-        self.add_action(
-            "save_current", "Save Current Data", "SaveAs", "Save Current Data"
-        )
-        self.add_action("save_new", "Save New Data", "Snap&Save", "Save New Data")
-        self.add_action("open", "Load Data", "Open", "Load Saved Data")
-
-        self.add_action(
-            "show_controls",
-            "Show Controls",
-            "Settings",
-            "Show Controls to set DAQ and Detector type",
+            short_name="grab",
+            name="Grab",
+            icon_name="run2",
+            tip="Grab data from the detector",
             checkable=True,
         )
         self.add_action(
-            "show_settings", "Show Settings", "tree", "Show Settings", checkable=True
+            short_name="snap",
+            name="Snap",
+            icon_name="snap",
+            tip="Take a snapshot from the detector",
         )
-
-        self.add_action("quit", "Quit the module", "close2")
         self.add_action(
-            "show_config",
-            "Show Config",
-            "Settings",
-            "Show PyMoDAQ Config",
-            checkable=False,
-            toolbar=self.toolbar,
+            short_name="stop",
+            name="Stop",
+            icon_name="stop",
+            tip="Stop grabing",
         )
-        self.add_action("log", "Show Log file", "information2")
+        self.add_action(
+            short_name="save_current",
+            name="Save Current Data",
+            icon_name="SaveAs",
+            tip="Save Current Data",
+        )
+        self.add_action(
+            short_name="save_new",
+            name="Save New Data",
+            icon_name="Snap&Save",
+            tip="Save New Data",
+        )
+        self.add_action(
+            short_name="open",
+            name="Load Data",
+            icon_name="Open",
+            tip="Load Saved Data",
+        )
+        self.add_action(
+            short_name="show_controls",
+            name="Show Controls",
+            icon_name="Settings",
+            tip="Show Controls to set DAQ and Detector type",
+            checkable=True,
+        )
+        self.add_action(
+            short_name="show_settings",
+            name="Show Settings",
+            icon_name="tree",
+            tip="Show Settings",
+            checkable=True,
+        )
+        self.add_action(
+            short_name="quit",
+            name="Quit the module",
+            icon_name="close2",
+            tip="Close module",
+        )
+        self.add_action(
+            short_name="show_config",
+            name="Show Config",
+            icon_name="Settings",
+            tip="Show PyMoDAQ Config",
+            checkable=False,
+        )
+        self.add_action(
+            short_name="log",
+            name="Show Log file",
+            icon_name="information2",
+            tip="Open log file (in text editor)",
+        )
 
         self._data_ready_led = QLED(readonly=True)
         self.toolbar.addWidget(self._data_ready_led)
 
     def connect_things(self):
         self.connect_action(
-            "show_controls", lambda show: self._detector_widget.setVisible(show)
+            "show_controls",
+            lambda show: self._detector_widget.setVisible(show),
         )
-        self.connect_action("show_settings", self._show_settings)
+        self.connect_action(
+            "show_settings",
+            self._show_settings,
+        )
         self.connect_action(
             "quit",
             lambda: self.command_sig.emit(
@@ -293,11 +335,23 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                 )
             ),
         )
-        self.connect_action("stop", lambda: self.get_action("grab").setChecked(False))
-        self.connect_action("stop", lambda: self._enable_ini_buttons(True))
-        self.connect_action("stop", lambda: self._settings_widget.setEnabled(True))
+        self.connect_action(
+            "stop",
+            lambda: self.get_action("grab").setChecked(False),
+        )
+        self.connect_action(
+            "stop",
+            lambda: self._enable_ini_buttons(True),
+        )
+        self.connect_action(
+            "stop",
+            lambda: self._settings_widget.setEnabled(True),
+        )
 
-        self.connect_action("grab", self._grab)
+        self.connect_action(
+            "grab",
+            self._grab,
+        )
         self.connect_action(
             "snap",
             lambda: self.command_sig.emit(
