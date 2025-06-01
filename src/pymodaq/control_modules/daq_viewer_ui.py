@@ -5,26 +5,24 @@ Created the 05/09/2022
 @author: Sebastien Weber
 """
 
-
-from typing import List
 import sys
+from typing import List
 
+from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher, ViewerFactory
+from pymodaq_gui.utils import Dock
+from pymodaq_gui.utils.widgets import QLED, LabelWithFont, PushButtonIcon
+from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.enums import enum_checker
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
-from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.control_modules.ui_utils import ControlModuleUI
+from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
-from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
-from pymodaq_gui.utils import Dock
-from pymodaq_utils.config import Config as ConfigUtils
-from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
-from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
-from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_utils.enums import enum_checker
-from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
-
+from pymodaq.control_modules.ui_utils import ControlModuleUI
+from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
+from pymodaq.utils.config import Config
+from pymodaq.utils.daq_utils import ThreadCommand
 
 viewer_factory = ViewerFactory()
 config = Config()
@@ -66,9 +64,18 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, parent, title="DAQ_Viewer", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
+    def __init__(
+        self,
+        parent,
+        title="DAQ_Viewer",
+        daq_type="DAQ2D",
+        dock_settings=None,
+        dock_viewer=None,
+    ):
         ControlModuleUI.__init__(self, parent)
-        ViewerDispatcher.__init__(self, self.dockarea, title=title, next_to_dock=dock_settings)
+        ViewerDispatcher.__init__(
+            self, self.dockarea, title=title, next_to_dock=dock_settings
+        )
 
         self.title = title
 
@@ -85,10 +92,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.setup_docks()
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
-        self.daq_types = daq_type.names()  # init the combobox through the daq_types attribute
+        self.daq_types = (
+            daq_type.names()
+        )  # init the combobox through the daq_types attribute
         self.daq_type = daq_type
 
-        self.detectors = [det['name'] for det in DET_TYPES[self.daq_type.name]]
+        self.detectors = [det["name"] for det in DET_TYPES[self.daq_type.name]]
         self.setup_actions()  # see ActionManager MixIn class
         self.add_viewer(self.daq_type.to_viewer_type(), dock_viewer=dock_viewer)
         self.connect_things()
@@ -104,9 +113,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector.setter
     def detector(self, det_name: str):
         self._detectors_combo.setCurrentText(det_name)
+
     @property
     def detectors(self):
-        return [self._detectors_combo.itemText(ind) for ind in range(self._detectors_combo.count())]
+        return [
+            self._detectors_combo.itemText(ind)
+            for ind in range(self._detectors_combo.count())
+        ]
 
     @detectors.setter
     def detectors(self, detectors: List[str]):
@@ -144,7 +157,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         widget = QWidget()
         widget.setLayout(QVBoxLayout())
-        #widget.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
+        # widget.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
         widget.layout().setContentsMargins(2, 2, 2, 2)
         self._settings_dock.addWidget(widget)
 
@@ -159,14 +172,19 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         widget.layout().addWidget(info_ui)
         widget.layout().addWidget(self.toolbar)
         widget.layout().addWidget(self._detector_widget)
-        if not config('viewer', 'settings_as_popup'):
+        if not config("viewer", "settings_as_popup"):
             widget.layout().addWidget(self._settings_widget)
         widget.layout().addStretch(0)
 
         info_ui.setLayout(QtWidgets.QHBoxLayout())
-        info_ui.layout().addWidget(LabelWithFont(self.title, font_name="Tahoma", font_size=14, isbold=True,
-                                                 isitalic=True))
-        self._info_detector = LabelWithFont('', font_name="Tahoma", font_size=8, isbold=True, isitalic=True)
+        info_ui.layout().addWidget(
+            LabelWithFont(
+                self.title, font_name="Tahoma", font_size=14, isbold=True, isitalic=True
+            )
+        )
+        self._info_detector = LabelWithFont(
+            "", font_name="Tahoma", font_size=8, isbold=True, isitalic=True
+        )
         info_ui.layout().addWidget(self._info_detector)
 
         self._detector_widget.setLayout(QtWidgets.QGridLayout())
@@ -174,15 +192,17 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self._detectors_combo = QComboBox()
         self._detectors_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self._ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
+        self._ini_det_pb = PushButtonIcon(
+            "ini", "Init. Detector", True, "Initialize selected detector"
+        )
         self._ini_state_led = QLED(readonly=True)
-        self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
-        self._take_bkg_pb = QtWidgets.QPushButton('Take Bkg')
+        self._do_bkg_cb = QtWidgets.QCheckBox("Do Bkg")
+        self._take_bkg_pb = QtWidgets.QPushButton("Take Bkg")
         self._take_bkg_pb.setChecked(False)
 
-        self._detector_widget.layout().addWidget(LabelWithFont('DAQ type:'), 0, 0)
+        self._detector_widget.layout().addWidget(LabelWithFont("DAQ type:"), 0, 0)
         self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
-        self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
+        self._detector_widget.layout().addWidget(LabelWithFont("Detector:"), 1, 0)
         self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
         self._detector_widget.layout().addWidget(self._ini_det_pb, 0, 2)
         self._detector_widget.layout().addWidget(self._ini_state_led, 1, 2)
@@ -199,63 +219,151 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.layout().addWidget(tree)
 
     def setup_actions(self):
-        self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True)
-        self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
-        self.add_action('stop', 'Stop', 'stop', "Stop grabing")
-        self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
-        self.add_action('save_new', 'Save New Data', 'Snap&Save', "Save New Data")
-        self.add_action('open', 'Load Data', 'Open', "Load Saved Data")
+        self.add_action(
+            "grab", "Grab", "run2", "Grab data from the detector", checkable=True
+        )
+        self.add_action("snap", "Snap", "snap", "Take a snapshot from the detector")
+        self.add_action("stop", "Stop", "stop", "Stop grabing")
+        self.add_action(
+            "save_current", "Save Current Data", "SaveAs", "Save Current Data"
+        )
+        self.add_action("save_new", "Save New Data", "Snap&Save", "Save New Data")
+        self.add_action("open", "Load Data", "Open", "Load Saved Data")
 
-        self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
-                        checkable=True)
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
+        self.add_action(
+            "show_controls",
+            "Show Controls",
+            "Settings",
+            "Show Controls to set DAQ and Detector type",
+            checkable=True,
+        )
+        self.add_action(
+            "show_settings", "Show Settings", "tree", "Show Settings", checkable=True
+        )
 
-        self.add_action('quit', 'Quit the module', 'close2')
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.toolbar)
-        self.add_action('log', 'Show Log file', 'information2')
+        self.add_action("quit", "Quit the module", "close2")
+        self.add_action(
+            "show_config",
+            "Show Config",
+            "Settings",
+            "Show PyMoDAQ Config",
+            checkable=False,
+            toolbar=self.toolbar,
+        )
+        self.add_action("log", "Show Log file", "information2")
 
         self._data_ready_led = QLED(readonly=True)
         self.toolbar.addWidget(self._data_ready_led)
 
     def connect_things(self):
-        self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
-        self.connect_action('show_settings', self._show_settings)
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, )))
-        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
+        self.connect_action(
+            "show_controls", lambda show: self._detector_widget.setVisible(show)
+        )
+        self.connect_action("show_settings", self._show_settings)
+        self.connect_action(
+            "quit",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.QUIT,
+                )
+            ),
+        )
+        self.connect_action(
+            "show_config",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.SHOW_CONFIG,
+                )
+            ),
+        )
 
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_LOG, )))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.STOP, )))
-        self.connect_action('stop', lambda: self.get_action('grab').setChecked(False))
-        self.connect_action('stop', lambda: self._enable_ini_buttons(True))
-        self.connect_action('stop', lambda: self._settings_widget.setEnabled(True))
+        self.connect_action(
+            "log",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.SHOW_LOG,
+                )
+            ),
+        )
+        self.connect_action(
+            "stop",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.STOP,
+                )
+            ),
+        )
+        self.connect_action("stop", lambda: self.get_action("grab").setChecked(False))
+        self.connect_action("stop", lambda: self._enable_ini_buttons(True))
+        self.connect_action("stop", lambda: self._settings_widget.setEnabled(True))
 
-        self.connect_action('grab', self._grab)
-        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
+        self.connect_action("grab", self._grab)
+        self.connect_action(
+            "snap",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.SNAP,
+                )
+            ),
+        )
 
-        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
-        self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_NEW, )))
-        self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.OPEN, )))
+        self.connect_action(
+            "save_current",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.SAVE_CURRENT,
+                )
+            ),
+        )
+        self.connect_action(
+            "save_new",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.SAVE_NEW,
+                )
+            ),
+        )
+        self.connect_action(
+            "open",
+            lambda: self.command_sig.emit(
+                ThreadCommand(
+                    UiToMainViewer.OPEN,
+                )
+            ),
+        )
 
         self._ini_det_pb.clicked.connect(self.send_init)
 
         self._detectors_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, mod)))
+            lambda mod: self.command_sig.emit(
+                ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, mod)
+            )
+        )
         self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
-
-        self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
-        self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
+        self._do_bkg_cb.clicked.connect(
+            lambda checked: self.command_sig.emit(
+                ThreadCommand(UiToMainViewer.DO_BKG, checked)
+            )
+        )
+        self._take_bkg_pb.clicked.connect(
+            lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG))
+        )
 
     def _show_settings(self, show: bool = True):
         self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+        self._settings_widget.closeEvent = lambda event: self.set_action_checked(
+            "show_settings", False
+        )
 
     def update_viewers(self, viewers_type: List[ViewersEnum]):
         super().update_viewers(viewers_type)
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
-                                            attribute=dict(viewer_types=self.viewer_types,
-                                                           viewers=self.viewers)))
+        self.command_sig.emit(
+            ThreadCommand(
+                UiToMainViewer.VIEWERS_CHANGED,
+                attribute=dict(viewer_types=self.viewer_types, viewers=self.viewers),
+            )
+        )
 
     @property
     def data_ready(self):
@@ -269,28 +377,34 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         try:
             daq_type = enum_checker(DAQTypesEnum, daq_type)
 
-            self.command_sig.emit(ThreadCommand(UiToMainViewer.DAQ_TYPE_CHANGED, daq_type))
+            self.command_sig.emit(
+                ThreadCommand(UiToMainViewer.DAQ_TYPE_CHANGED, daq_type)
+            )
             if self.viewer_types != [daq_type.to_viewer_type()]:
                 self.update_viewers([daq_type.to_viewer_type()])
         except ValueError as e:
             pass
 
     def show_settings(self, show=True):
-        if (self.is_action_checked('show_settings') and not show) or \
-                (not self.is_action_checked('show_settings') and show):
-            self.get_action('show_settings').trigger()
-            
+        if (self.is_action_checked("show_settings") and not show) or (
+            not self.is_action_checked("show_settings") and show
+        ):
+            self.get_action("show_settings").trigger()
+
     def show_controls(self, show=True):
-        if (self.is_action_checked('show_controls') and not show) or \
-                (not self.is_action_checked('show_controls') and show):
-            self.get_action('show_controls').trigger()
+        if (self.is_action_checked("show_controls") and not show) or (
+            not self.is_action_checked("show_controls") and show
+        ):
+            self.get_action("show_controls").trigger()
 
     def _grab(self):
         """Slot from the *grab* action"""
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
-        self._enable_ini_buttons(not self.is_action_checked('grab'))
-        if not self.config('viewer', 'allow_settings_edition'):
-            self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+        self.command_sig.emit(
+            ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked("grab"))
+        )
+        self._enable_ini_buttons(not self.is_action_checked("grab"))
+        if not self.config("viewer", "allow_settings_edition"):
+            self._settings_widget.setEnabled(not self.is_action_checked("grab"))
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
@@ -311,29 +425,37 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         do_grab: bool
             will fire the Init button depending on the argument value and the button check state
         """
-        if (do_grab and not self.is_action_checked('grab')) or ((not do_grab) and self.is_action_checked('grab')):
-            self.get_action('grab').trigger()
+        if (do_grab and not self.is_action_checked("grab")) or (
+            (not do_grab) and self.is_action_checked("grab")
+        ):
+            self.get_action("grab").trigger()
 
     def do_snap(self):
         """Programmatically press the Snap button
         API entry
         """
-        self.get_action('snap').trigger()
+        self.get_action("snap").trigger()
 
     def do_stop(self):
         """Programmatically press the Stop button
         API entry
         """
-        self.get_action('stop').trigger()
-        if self.is_action_checked('grab'):
-            self.get_action('grab').trigger()
+        self.get_action("stop").trigger()
+        if self.is_action_checked("grab"):
+            self.get_action("grab").trigger()
 
     def send_init(self, checked: bool):
         self._enable_detchoices(not checked)
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
-                                            [checked,
-                                             self._daq_types_combo.currentText(),
-                                             self._detectors_combo.currentText()]))
+        self.command_sig.emit(
+            ThreadCommand(
+                UiToMainViewer.INIT,
+                [
+                    checked,
+                    self._daq_types_combo.currentText(),
+                    self._detectors_combo.currentText(),
+                ],
+            )
+        )
 
     def _enable_detchoices(self, enable=True):
         self._detectors_combo.setEnabled(enable)
@@ -347,33 +469,35 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector_init.setter
     def detector_init(self, status):
         if status:
-            self._info_detector.setText(f'{self.daq_type.name} : {self.detector}')
+            self._info_detector.setText(f"{self.daq_type.name} : {self.detector}")
         else:
-            self._info_detector.setText('')
+            self._info_detector.setText("")
         self._ini_state_led.set_as(status)
         self._enable_grab_buttons(status)
 
     def _enable_grab_buttons(self, status):
-        self.get_action('grab').setEnabled(status)
-        self.get_action('snap').setEnabled(status)
-        self.get_action('stop').setEnabled(status)
-        self.get_action('save_current').setEnabled(status)
-        self.get_action('save_new').setEnabled(status)
+        self.get_action("grab").setEnabled(status)
+        self.get_action("snap").setEnabled(status)
+        self.get_action("stop").setEnabled(status)
+        self.get_action("save_current").setEnabled(status)
+        self.get_action("save_new").setEnabled(status)
 
     def _enable_ini_buttons(self, status):
         self._ini_det_pb.setEnabled(status)
-        self.get_action('quit').setEnabled(status)
+        self.get_action("quit").setEnabled(status)
 
 
 def main(init_qt=True):
+    from pymodaq.control_modules.viewer_utility_classes import (
+        params as daq_viewer_params,
+    )
     from pymodaq.utils.gui_utils.dock import DockArea
-    from pymodaq.utils.parameter import ParameterTree, Parameter
-    from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
+    from pymodaq.utils.parameter import Parameter, ParameterTree
 
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
 
-    param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
+    param = Parameter.create(name="settings", type="group", children=daq_viewer_params)
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
 
@@ -393,12 +517,14 @@ def main(init_qt=True):
 
     prog.add_setting_tree(tree)
 
-    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
+    prog.update_viewers(
+        [ViewersEnum["Viewer0D"], ViewersEnum["Viewer1D"], ViewersEnum["Viewer2D"]]
+    )
 
     if init_qt:
         sys.exit(app.exec_())
     return prog, dockarea
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
