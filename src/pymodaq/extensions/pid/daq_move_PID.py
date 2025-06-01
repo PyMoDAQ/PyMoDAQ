@@ -67,7 +67,7 @@ class DAQ_Move_PID(DAQ_Move_base):
 
     def ini_attributes(self):
         self.controller: PIDController = None
-        self.last_positions = deque(maxlen=self.settings["check_stab","stab_queue"])
+        self.last_positions = deque(maxlen=self.settings["check_stab", "stab_queue"])
 
     def update_position(self, dict_val: dict):
         self.current_value = dict_val[self.parent.title]
@@ -75,7 +75,7 @@ class DAQ_Move_PID(DAQ_Move_base):
     def get_actuator_value(self):
         self.controller.emit_curr_points.emit()
         pos = self.current_value
-        self.last_positions.append(np.squeeze( self.current_value.data))
+        self.last_positions.append(np.squeeze(self.current_value.data))
         return pos
 
     def close(self):
@@ -85,7 +85,13 @@ class DAQ_Move_PID(DAQ_Move_base):
         cond = super().user_condition_to_reach_target()
         parameter_stab = self.settings.child("check_stab")
         if parameter_stab.value():
-            cond = np.std(np.array(self.last_positions)-np.squeeze(self.target_value.data)) < parameter_stab["threshold"]
+            np.array(self.controller.queue_points)
+            cond = (
+                np.std(
+                    np.array(self.last_positions) - np.squeeze(self.target_value.data)
+                )
+                < parameter_stab["threshold"]
+            )
         return cond
 
     def commit_settings(self, param):
