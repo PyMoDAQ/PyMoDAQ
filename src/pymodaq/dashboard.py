@@ -1132,9 +1132,12 @@ class DashBoard(CustomApp):
         move_forms,
         actuators_modules,
     ) -> DAQ_Move:
-        try:
-            ui_identifier = plug_settings["main_settings", "ui_type"]
-        except KeyError:
+        if plug_settings is not None:
+            try:
+                ui_identifier = plug_settings["main_settings", "ui_type"]
+            except KeyError:
+                ui_identifier = None
+        else:
             ui_identifier = None
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
