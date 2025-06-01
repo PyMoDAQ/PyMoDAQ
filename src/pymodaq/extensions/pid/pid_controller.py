@@ -1,7 +1,7 @@
 import time
 from functools import partial  # needed for the button to sync setpoint with currpoint
 from typing import Dict, List, TYPE_CHECKING
-
+from collections import deque
 import numpy as np
 
 from qtpy import QtGui, QtWidgets
@@ -111,6 +111,13 @@ class DAQ_PID(CustomExt):
                     "type": "float",
                     "value": 0.01,
                     "tooltip": "Precision at which move is considered as done",
+                },
+                {
+                    "title": "Queue length",
+                    "name": "queue",
+                    "type": "int",
+                    "value": 50,
+                    "tooltip": "Length of queue to calculate stability",
                 },
                 {
                     "title": "PID controls:",
@@ -223,6 +230,7 @@ class DAQ_PID(CustomExt):
         self.model_class: PIDModelGeneric = None
         self._curr_points = dict([])
         self._setpoints = dict([])
+        self.queue_points = []
 
         self.dock_area = dockarea
         self.check_moving = False
@@ -303,6 +311,9 @@ class DAQ_PID(CustomExt):
         inputs: DataRaw = data.get_data_from_name("inputs")
         outputs: DataRaw = data.get_data_from_name("outputs")
         self.curr_points = [float(array[0]) for array in inputs]
+        for ind, input in enumerate(inputs):
+            self.queue_points[ind].append(float(input[0]))
+        self.stab_points = [np.std(queue) for queue in self.queue_points]
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
 
@@ -402,6 +413,8 @@ class DAQ_PID(CustomExt):
 
         elif param.name() == "detector_modules":
             self.model_class.update_detector_names()
+        elif param.name() == "queue":
+            self.update_queues()
 
     def connect_things(self):
         logger.debug("connecting actions and other")
@@ -571,10 +584,28 @@ class DAQ_PID(CustomExt):
             self.models, "name", model_name
         )["class"](self)
         self.set_setpoints_buttons()
+        self.init_queues()
         self.model_class.ini_model()
         self.settings.child("main_settings", "epsilon").setValue(
             self.model_class.epsilon
         )
+
+    def init_queues(self):
+        self.queue_points = [
+            deque(maxlen=self.settings.child("main_settings", "queue").value())
+            for ind_set in range(self.model_class.Nsetpoints)
+        ]
+
+    def update_queues(self, refresh=False):
+        if refresh:
+            self.init_queues()
+        else:
+            self.queue_points = [
+                deque(
+                    queue, maxlen=self.settings.child("main_settings", "queue").value()
+                )
+                for queue in self.queue_points
+            ]
 
     def ini_model(self):
         try:
@@ -624,6 +655,15 @@ class DAQ_PID(CustomExt):
             self.curr_points_signal.emit(
                 dict(zip(self.model_class.setpoints_names, self.curr_points))
             )
+
+    @property
+    def stab_points(self):
+        return [sp.value() for sp in self.stabpoints_sb]
+
+    @stab_points.setter
+    def stab_points(self, values):
+        for ind, sp in enumerate(self.stabpoints_sb):
+            sp.setValue(values[ind])
 
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
