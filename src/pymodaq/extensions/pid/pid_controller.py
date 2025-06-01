@@ -42,6 +42,9 @@ logger = set_logger(get_module_name(__file__))
 def convert_output_limits(
     lim_min=-10.0, min_status=False, lim_max=10.0, max_status=False
 ):
+def convert_output_limits(
+    lim_min=-10.0, min_status=False, lim_max=10.0, max_status=False
+):
     output = [None, None]
     if min_status:
         output[0] = lim_min
@@ -61,6 +64,37 @@ class DAQ_PID(CustomExt):
     models = get_models()
 
     params = [
+        {
+            "title": "Models",
+            "name": "models",
+            "type": "group",
+            "expanded": True,
+            "visible": True,
+            "children": [
+                {
+                    "title": "Models class:",
+                    "name": "model_class",
+                    "type": "list",
+                    "limits": [d["name"] for d in models],
+                },
+                {
+                    "title": "Model params:",
+                    "name": "model_params",
+                    "type": "group",
+                    "children": [],
+                },
+            ],
+        },
+        {
+            "title": "Move settings:",
+            "name": "move_settings",
+            "expanded": True,
+            "type": "group",
+            "visible": False,
+            "children": [
+                {"title": "Units:", "name": "units", "type": "str", "value": ""}
+            ],
+        },
         {
             "title": "Models",
             "name": "models",
@@ -300,7 +334,7 @@ class DAQ_PID(CustomExt):
             self.enable_controls_pid_run(True)
 
         else:
-            if hasattr(self, "PIDThread"):
+            if hasattr(self, "runner_thread"):
                 self.exit_runner_thread()
             self.get_action("pid_led").set_as_false()
             self.enable_controls_pid_run(False)
