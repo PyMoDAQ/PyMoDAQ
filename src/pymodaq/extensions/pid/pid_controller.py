@@ -477,8 +477,14 @@ class DAQ_PID(CustomExt):
 
         logger.debug("settings the extension docks done")
 
-        labmaj = QtWidgets.QLabel("Sync Value:")
+        labmaj = QtWidgets.QLabel("Setpoints:")
+        self.toolbar_layout.addWidget(labmaj, 3, 0, 1, 2)
+        labmaj = QtWidgets.QLabel("Value:")
+        self.toolbar_layout.addWidget(labmaj, 4, 0, 1, 2)
+        labmaj = QtWidgets.QLabel("Stability:")
         self.toolbar_layout.addWidget(labmaj, 5, 0, 1, 2)
+        labmaj = QtWidgets.QLabel("Sync Value:")
+        self.toolbar_layout.addWidget(labmaj, 6, 0, 1, 2)
 
         verlayout.addWidget(widget_toolbar)
         verlayout.addWidget(self.settings_tree)
@@ -622,7 +628,7 @@ class DAQ_PID(CustomExt):
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
         self.currpoints_sb = []
-        self.stabpoints_le = []
+        self.stabpoints_sb = []
         self.syncvalue_pb = []
         for ind_set in range(self.model_class.Nsetpoints):
             label = LabelWithFont(
@@ -655,13 +661,25 @@ class DAQ_PID(CustomExt):
             self.currpoints_sb[-1].setFont(font)
             self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2 + ind_set, 1, 1)
 
+            self.stabpoints_sb.append(SpinBox())
+            self.stabpoints_sb[-1].setMinimumHeight(40)
+            self.stabpoints_sb[-1].setReadOnly(True)
+            self.stabpoints_sb[-1].setDecimals(6)
+            self.stabpoints_sb[-1].setButtonSymbols(
+                QtWidgets.QAbstractSpinBox.NoButtons
+            )
+            font = self.stabpoints_sb[-1].font()
+            font.setPointSizeF(20)
+            self.stabpoints_sb[-1].setFont(font)
+            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 1, 1)
+
             self.syncvalue_pb.append(
                 QtWidgets.QPushButton("Synchro {}".format(ind_set))
             )
             self.syncvalue_pb[ind_set].clicked.connect(
                 partial(self.currpoint_as_setpoint, ind_set)
             )
-            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 5, 2 + ind_set)
+            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, 2 + ind_set)
         self.setpoints_signal.connect(self.setpoints_external)
 
     def currpoint_as_setpoint(self, i=0):
