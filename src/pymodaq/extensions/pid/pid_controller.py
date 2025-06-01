@@ -42,9 +42,6 @@ logger = set_logger(get_module_name(__file__))
 def convert_output_limits(
     lim_min=-10.0, min_status=False, lim_max=10.0, max_status=False
 ):
-def convert_output_limits(
-    lim_min=-10.0, min_status=False, lim_max=10.0, max_status=False
-):
     output = [None, None]
     if min_status:
         output[0] = lim_min
@@ -64,37 +61,6 @@ class DAQ_PID(CustomExt):
     models = get_models()
 
     params = [
-        {
-            "title": "Models",
-            "name": "models",
-            "type": "group",
-            "expanded": True,
-            "visible": True,
-            "children": [
-                {
-                    "title": "Models class:",
-                    "name": "model_class",
-                    "type": "list",
-                    "limits": [d["name"] for d in models],
-                },
-                {
-                    "title": "Model params:",
-                    "name": "model_params",
-                    "type": "group",
-                    "children": [],
-                },
-            ],
-        },
-        {
-            "title": "Move settings:",
-            "name": "move_settings",
-            "expanded": True,
-            "type": "group",
-            "visible": False,
-            "children": [
-                {"title": "Units:", "name": "units", "type": "str", "value": ""}
-            ],
-        },
         {
             "title": "Models",
             "name": "models",
