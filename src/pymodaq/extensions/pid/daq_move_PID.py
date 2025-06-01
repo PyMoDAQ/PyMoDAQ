@@ -1,18 +1,23 @@
 from pymodaq_utils.utils import ThreadCommand
 
-from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun,
-                                                          DataActuatorType, DataActuator)
-
+from pymodaq.control_modules.move_utility_classes import (
+    DAQ_Move_base,
+    DataActuator,
+    DataActuatorType,
+    comon_parameters_fun,
+)
 from pymodaq.extensions.pid.actuator_controller import PIDController
 
 
 class DAQ_Move_PID(DAQ_Move_base):
-    """
-    """
-    _controller_units = ''
+    """ """
+
+    _controller_units = ""
     data_actuator_type = DataActuatorType.DataActuator
     is_multiaxes = False
-    stage_names = ['',]
+    stage_names = [
+        "",
+    ]
 
     params = comon_parameters_fun(is_multiaxes, stage_names, master=False)
 
@@ -34,8 +39,7 @@ class DAQ_Move_PID(DAQ_Move_base):
         pass
 
     def ini_stage(self, controller=None):
-        """
-        """
+        """ """
         self.controller = controller
 
         self.controller.curr_point.connect(self.update_position)
@@ -45,16 +49,14 @@ class DAQ_Move_PID(DAQ_Move_base):
         return info, initialized
 
     def move_abs(self, position: DataActuator):
-        """
-        """
+        """ """
         position = self.check_bound(position)
         self.target_position = position
 
         self.controller.setpoint.emit({self.parent.title: self.target_position})
 
     def move_rel(self, position: DataActuator):
-        """
-        """
+        """ """
         position = self.check_bound(self.current_value + position) - self.current_value
         self.target_position = position + self.current_value
 
@@ -62,16 +64,15 @@ class DAQ_Move_PID(DAQ_Move_base):
         self.poll_moving()
 
     def move_home(self):
-        """
-        """
-        self.emit_status(ThreadCommand('Update_Status', ['Move Home not implemented']))
+        """ """
+        self.emit_status(ThreadCommand("Update_Status", ["Move Home not implemented"]))
 
     def stop_motion(self):
         """
-          Call the specific move_done function (depending on the hardware).
+        Call the specific move_done function (depending on the hardware).
 
-          See Also
-          --------
-          move_done
+        See Also
+        --------
+        move_done
         """
         self.move_done()
