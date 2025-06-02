@@ -32,7 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "pymodaq_utils>=0.0.14, <1.0.0",
-    "pymodaq_gui>=5.0.17",
+    "pymodaq_gui>=5.0.17, <5.0.23",
     "pymodaq_data>=5.0.18",
     "easydict",
     "multipledispatch",
