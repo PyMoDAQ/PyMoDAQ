@@ -668,6 +668,7 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb = []
         self.currpoints_sb = []
         self.stabpoints_sb = []
+        self.meanpoints_sb = []
         self.syncvalue_pb = []
         for ind_set in range(self.model_class.Nsetpoints):
             label = LabelWithFont(
@@ -677,41 +678,26 @@ class DAQ_PID(CustomExt):
                 isbold=True,
                 isitalic=True,
             )
+            column_span = 1
+            self.toolbar_layout.addWidget(label, 2, 2 + ind_set, 1, column_span)
 
-            self.setpoints_sb.append(SpinBox())
-            self.setpoints_sb[-1].setMinimumHeight(40)
-            font = self.setpoints_sb[-1].font()
-            font.setPointSizeF(20)
-            self.setpoints_sb[-1].setFont(font)
-            self.setpoints_sb[-1].setDecimals(6)
-            self.toolbar_layout.addWidget(label, 2, 2 + ind_set, 1, 1)
-            self.toolbar_layout.addWidget(self.setpoints_sb[-1], 3, 2 + ind_set, 1, 1)
+            self.setpoints_sb.append(self.make_spinbox(no_button=False))
+            self.toolbar_layout.addWidget(
+                self.setpoints_sb[-1], 3, 2 + ind_set, 1, column_span
+            )
+
             self.setpoints_sb[-1].valueChanged.connect(self.update_runner_setpoints)
 
-            self.currpoints_sb.append(SpinBox())
-            self.currpoints_sb[-1].setMinimumHeight(40)
-            self.currpoints_sb[-1].setReadOnly(True)
-            self.currpoints_sb[-1].setDecimals(6)
-            self.currpoints_sb[-1].setButtonSymbols(
-                QtWidgets.QAbstractSpinBox.NoButtons
+            self.currpoints_sb.append(self.make_spinbox())
+            self.toolbar_layout.addWidget(
+                self.currpoints_sb[-1], 4, 2 + ind_set, 1, column_span
             )
-            font = self.currpoints_sb[-1].font()
-            font.setPointSizeF(20)
-            self.currpoints_sb[-1].setFont(font)
-            self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2 + ind_set, 1, 1)
 
-            self.stabpoints_sb.append(SpinBox())
-            self.stabpoints_sb[-1].setMinimumHeight(40)
-            self.stabpoints_sb[-1].setReadOnly(True)
-            self.stabpoints_sb[-1].setDecimals(6)
-            self.stabpoints_sb[-1].setButtonSymbols(
-                QtWidgets.QAbstractSpinBox.NoButtons
-            )
-            font = self.stabpoints_sb[-1].font()
-            font.setPointSizeF(20)
-            self.stabpoints_sb[-1].setFont(font)
-            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 1, 1)
+            self.meanpoints_sb.append(self.make_spinbox())
+            self.toolbar_layout.addWidget(self.meanpoints_sb[-1], 5, 2 + ind_set, 1, 1)
 
+            self.stabpoints_sb.append(self.make_spinbox())
+            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 2, 1)
             self.syncvalue_pb.append(
                 QtWidgets.QPushButton("Synchro {}".format(ind_set))
             )
@@ -720,6 +706,18 @@ class DAQ_PID(CustomExt):
             )
             self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, 2 + ind_set)
         self.setpoints_signal.connect(self.setpoints_external)
+
+    def make_spinbox(self, no_button=True):
+        """ """
+        spinbox = SpinBox()
+        spinbox.setMinimumHeight(40)
+        font = spinbox.font()
+        font.setPointSizeF(20)
+        spinbox.setFont(font)
+        spinbox.setDecimals(6)
+        if no_button:
+            spinbox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        return spinbox
 
     def currpoint_as_setpoint(self, i=0):
         """
@@ -924,7 +922,7 @@ class PIDRunner(QObject):
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()
-                QThread.msleep(int(self.sample_time))
+                QThread.msleep(self.sample_time)
 
             logger.info("PID loop exiting")
             self.modules_manager.connect_actuators(False)
