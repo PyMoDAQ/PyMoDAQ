@@ -134,6 +134,7 @@ class PresetManager:
         # tree.setMinimumWidth(400)
         # tree.setMinimumHeight(500)
         tree.setParameters(self.preset_params, showTop=False)
+        tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
