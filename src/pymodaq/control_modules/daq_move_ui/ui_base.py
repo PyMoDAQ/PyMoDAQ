@@ -142,9 +142,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def enable_move_buttons(self, status):
         self.abs_value_sb.setEnabled(status)
         self.abs_value_sb_2.setEnabled(status)
-
-        self.get_action('move_abs').setEnabled(status)
-        self.get_action('move_abs_2').setEnabled(status)
+        for action_name in ('move_abs', 'move_abs_2', 'move_rel'):
+            if action_name in self.actions_names:
+                self.get_action(action_name).setEnabled(status)
 
         self.control_widget.setEnabled(status)
 
