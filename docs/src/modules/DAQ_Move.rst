@@ -274,7 +274,7 @@ don't need an access to advanced features, you can choose the layout (see below)
 * *Original*: The usual full featured UI
 * *Simple*: UI on a single line allowing natively absolute moves
 * *Binary*: UI on a single line allowing natively two absolute moves only (configured in the config file)
-* *Relative*: UI on a single line allowing natively relative moves 
+* *Relative*: UI on a single line allowing natively relative moves
 
 
 .. figure:: /image/DAQ_Move/ui_type.png
