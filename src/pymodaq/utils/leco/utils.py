@@ -11,7 +11,7 @@ from pymodaq_utils.logger import set_logger
 
 
 logger = set_logger('leco_utils')
-JSON_TYPES = Union[str, int, float]
+JSON_TYPES = Union[str, int, float, list]
 
 ser_factory = SerializableFactory()
 

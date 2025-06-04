@@ -118,7 +118,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         position = self.set_position_with_scaling(position)
         self.target_value = position
         if self.json:
-            position = [data.m_as(self.axis_unit) for data in position.quantities ]
+            # if it's 0D, just send the position as a scalar
+            if hasattr(self, 'shape') and self.shape == (1, ):
+                position = position.value(self.axis_unit)
+            else:
+                # Until the GUI allows for it (next line), we send the single value repeated
+                # position = [data.m_as(self.axis_unit) for data in position.quantities]
+                position = np.full(self.shape, position.value(self.axis_unit)).tolist()
         self.controller.move_abs(position=position)
 
     def move_rel(self, position: DataActuator) -> None:
@@ -127,7 +133,14 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
         position = self.set_position_relative_with_scaling(position)
         if self.json:
-            position = [data.m_as(self.axis_unit) for data in position.quantities ]
+            # if it's 0D, just send the position as a scalar
+            if hasattr(self, 'shape') and self.shape == (1, ):
+                position = position.value(self.axis_unit)
+            else:
+                # Until the GUI allows for it (next line), we send the single value repeated
+                #position = [data.m_as(self.axis_unit) for data in position.quantities]
+                position = np.full(self.shape, position.value(self.axis_unit)).tolist()
+
         self.controller.move_rel(position=position)
 
     def move_home(self):
@@ -160,6 +173,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
                 position = [np.atleast_1d(d) for d in position]
             pos = DataActuator(data=position)
             self.json = True
+            self.shape = pos.shape
         elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
