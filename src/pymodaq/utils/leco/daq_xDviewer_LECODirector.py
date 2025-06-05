@@ -138,6 +138,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                 multichannel = data.get('multichannel', False)
                 data = data.get('data', [])
             if multichannel:
+                # data[0] may fail if data is empty, but it shouldn't happen
                 ndim = np.array(data[0]).ndim
                 data = [np.atleast_1d(d) for d in data]
             else:
