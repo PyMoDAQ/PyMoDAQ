@@ -184,7 +184,7 @@ jobs:
           coverage xml -i
 
       - name: Upload combined coverage report to Codecov
-        uses: codecov/codecov-action@v5.4.2
+        uses: codecov/codecov-action@v5.4.3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
