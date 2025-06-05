@@ -125,6 +125,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         elif data is not None:
             axes = []
             labels = []
+            multichannel = False
             if isinstance(data, dict):
                 axes = [
                     Axis( label=axis.get('label', ''),
@@ -134,15 +135,16 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                     ) for ind, axis in enumerate(data.get('axes', []))
                 ]
                 labels = data.get('labels', [])
+                multichannel = data.get('multichannel', False)
                 data = data.get('data', [])
-
-            np_data = np.atleast_1d(data)
-            if np_data.ndim <= 2:
-                data = [np_data]
-            else:
+            if multichannel:
+                ndim = np.array(data[0]).ndim
                 data = [np.atleast_1d(d) for d in data]
+            else:
+                ndim = np.array(data).ndim
+                data = [np.atleast_1d(data)]
 
-            dfp = DataFromPlugins(self.controller.actor, data=data, axes=axes[:data[0].ndim], labels=labels)
+            dfp = DataFromPlugins(self.controller.actor, data=data, axes=axes[:ndim], labels=labels)
             dte = DataToExport('Copy', data=[dfp])
         else:
             raise ValueError("Can't set_data when data is None")
