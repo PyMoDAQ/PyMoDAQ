@@ -281,7 +281,8 @@ class DAQ_PID(CustomExt):
                     ],
                     sample_time=self.settings[
                         "main_settings", "pid_controls", "sample_time"
-                    ],
+                    ]
+                    / 1000,
                     output_limits=output_limits,
                     auto_mode=False,
                 ),
@@ -730,7 +731,7 @@ class DAQ_PID(CustomExt):
         """ """
         try:
             try:
-                self.exit_runner_thread()
+                self.runner_thread.exit()
             except Exception as e:
                 print(e)
 
@@ -922,7 +923,7 @@ class PIDRunner(QObject):
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()
-                QThread.msleep(self.sample_time)
+                QThread.msleep(int(self.sample_time * 1000))
 
             logger.info("PID loop exiting")
             self.modules_manager.connect_actuators(False)
@@ -939,7 +940,10 @@ class PIDRunner(QObject):
         for pid in self.pids:
             for key in option:
                 if hasattr(pid, key):
-                    setattr(pid, key, option[key])
+                    if key == "sample_time":
+                        setattr(pid, key, option[key] / 1000)
+                    else:
+                        setattr(pid, key, option[key])
 
     def run_PID(self, last_values):
         logger.info("Stabilization started")
