@@ -94,43 +94,19 @@ class PymodaqUpdateTableWidget(QTableWidget):
 
     def __init__(self):
         super().__init__()
-
-        self._checkboxes = []
-        self._package_versions = []
+        self._row = 0
 
     def setHorizontalHeaderLabels(self, labels):
         super().setHorizontalHeaderLabels(labels)
         self.setColumnCount(len(labels))
 
-    def append_row(self, checkbox, package, current_version, available_version):
-        row = len(self._checkboxes)
+    def append_row(self, package, current_version, available_version):
+        # Add labels
+        self.setItem(self._row, 0, QTableWidgetItem(str(package)))
+        self.setItem(self._row, 1, QTableWidgetItem(str(current_version)))
+        self.setItem(self._row, 2, QTableWidgetItem(str(available_version)))
 
-        self._checkboxes.append(checkbox)
-        self._package_versions.append(f"{package}=={available_version}")
-
-        checkbox_widget = QWidget()
-
-        checkbox.setChecked(True)
-        checkbox.setToolTip("Check to install update")
-
-        checkbox_layout = QtWidgets.QHBoxLayout()
-        checkbox_layout.addWidget(checkbox)
-        checkbox_layout.setAlignment(Qt.AlignCenter)
-        checkbox_layout.setContentsMargins(0, 0, 0, 0)
-
-        checkbox_widget.setLayout(checkbox_layout)
-
-        # Add the checkbox widget to the table
-        self.setCellWidget(row, 0, checkbox_widget)
-
-        # Add labels in the other columns
-        self.setItem(row, 1, QTableWidgetItem(str(package)))
-        self.setItem(row, 2, QTableWidgetItem(str(current_version)))
-        self.setItem(row, 3, QTableWidgetItem(str(available_version)))
-
-    def get_checked_data(self):
-        checked = list(map(lambda c: c.isChecked(), self._checkboxes))
-        return list(np.array(self._package_versions)[checked])
+        self._row += 1
 
     def sizeHint(self):
         self.resizeColumnsToContents()
@@ -2054,49 +2030,28 @@ class DashBoard(CustomApp):
                 vlayout = QtWidgets.QVBoxLayout()
 
                 message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nPlease select the ones you want to install:"
+                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
                 )
                 message_label.setAlignment(Qt.AlignCenter)
 
                 table = PymodaqUpdateTableWidget()
                 table.setRowCount(len(packages_data))
-                table.setColumnCount(4)
+                table.setColumnCount(3)
                 table.setHorizontalHeaderLabels(
-                    ["Select", "Package", "Current version", "New version"]
+                    ["Package", "Current version", "New version"]
                 )
 
                 for p in packages_data:
-                    table.append_row(QCheckBox(), p[0], p[1], p[2])
-
-                button = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-                button.accepted.connect(dialog.accept)
-                button.rejected.connect(dialog.reject)
+                    table.append_row(p[0], p[1], p[2])
 
                 # The vlayout contains the message, the table and the buttons
                 # and is connected to the dialog window
                 vlayout.addWidget(message_label)
                 vlayout.addWidget(table)
-                vlayout.addWidget(button)
                 dialog.setLayout(vlayout)
 
                 ret = dialog.exec()
 
-                if ret == QDialog.Accepted:
-                    # If the update is accepted, the checked packages are extracted from the table
-                    # and send to the updater
-                    packages_to_update = table.get_checked_data()
-                    if len(packages_to_update) > 0:
-                        packages_to_update_str = ", ".join(packages_to_update)
-                        logger.info("Trying to update:")
-                        logger.info(f"\t {packages_to_update_str}")
-                        subprocess.Popen(
-                            ["pymodaq_updater", "--wait", "--file", __file__]
-                            + packages_to_update,
-                            stdin=subprocess.PIPE,
-                        )
-                        self.quit_fun()
-                        return True
-                    logger.info("Update found but no packages checked for update.")
             else:
                 if show:
                     msgBox = QtWidgets.QMessageBox()
