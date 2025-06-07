@@ -1125,20 +1125,20 @@ class DashBoard(CustomApp):
 
     def add_move(
         self,
-        plug_name,
-        plug_settings,
-        plug_type,
-        move_docks,
-        move_forms,
-        actuators_modules,
+        plug_name: str = None,
+        plug_settings: Parameter = None,
+        plug_type: str = None,
+        move_docks: list[Dock] = [],
+        move_forms: list[QtWidgets.QWidget] = [],
+        actuators_modules: list[DAQ_Move] = [],
     ) -> DAQ_Move:
-        if plug_settings is not None:
+        if plug_settings is None:
+            ui_identifier = config("actuator", "ui")
+        else:
             try:
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
-                ui_identifier = None
-        else:
-            ui_identifier = None
+                ui_identifier = config("actuator", "ui")
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
             if ui_identifier is not None
