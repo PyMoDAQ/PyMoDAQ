@@ -783,6 +783,7 @@ class PIDRunner(QObject):
         self.modules_manager = modules_manager
         Nsetpoints = model_class.Nsetpoints
         self.current_time = 0
+        self.time_elapsed = 0 # Time elapsed in the running loop
         self.inputs_from_dets = DataToExport(
             "inputs",
             data=[
@@ -892,6 +893,8 @@ class PIDRunner(QObject):
             logger.info("PID loop starting")
             while self.running:
                 # print('input: {}'.format(self.input))
+                self.current_time = time.perf_counter()
+
                 # # GRAB DATA FIRST AND WAIT ALL DETECTORS RETURNED
 
                 self.det_done_datas: DataToExport = self.modules_manager.grab_datas()
@@ -909,7 +912,6 @@ class PIDRunner(QObject):
                 if self.outputs is None:
                     self.outputs = [pid.setpoint for pid in self.pids]
 
-                dt = time.perf_counter() - self.current_time
                 self.outputs_to_actuators: DataToActuators = (
                     self.model_class.convert_output(self.outputs)
                 )
@@ -921,8 +923,9 @@ class PIDRunner(QObject):
                         polling=False,
                     )
 
-                self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()
+
+                self.time_elapsed = time.perf_counter() - self.current_time # Time elapsed since last loop
                 QThread.msleep(int(self.sample_time * 1000))
 
             logger.info("PID loop exiting")
