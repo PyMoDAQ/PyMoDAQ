@@ -909,21 +909,25 @@ class PIDRunner(QObject):
             self.current_time = time.perf_counter()
             logger.info("PID loop starting")
             while self.running:
-                # print('input: {}'.format(self.input))
-                self.current_time = time.perf_counter()
-
                 # # GRAB DATA FIRST AND WAIT ALL DETECTORS RETURNED
-
                 self.det_done_datas: DataToExport = self.modules_manager.grab_datas()
 
                 self.inputs_from_dets: DataToExport = self.model_class.convert_input(
                     self.det_done_datas
                 )
-
+                # # CHECK TIME ELAPSED FROM LAST LOOP
+                self.time_elapsed = (
+                    time.perf_counter() - self.current_time
+                )  # Time elapsed since last loop
+                sleep_time = self.sample_time - self.time_elapsed
+                if sleep_time > 0:
+                    QThread.msleep(int(sleep_time * 1000))
                 # # EXECUTE THE PID
                 self.outputs = []
                 for ind, pid in enumerate(self.pids):
                     self.outputs.append(pid(float(self.inputs_from_dets[ind][0][0])))
+
+                self.current_time = time.perf_counter() # Update current time
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 if self.outputs is None:
@@ -939,11 +943,7 @@ class PIDRunner(QObject):
                         self.outputs_to_actuators.mode,
                         polling=False,
                     )
-
                 QtWidgets.QApplication.processEvents()
-
-                self.time_elapsed = time.perf_counter() - self.current_time # Time elapsed since last loop
-                QThread.msleep(int(self.sample_time * 1000))
 
             logger.info("PID loop exiting")
             self.modules_manager.connect_actuators(False)
