@@ -911,7 +911,7 @@ class PIDRunner(QObject):
 
                 dt = time.perf_counter() - self.current_time
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs, dt, stab=True)
+                    self.model_class.convert_output(self.outputs)
                 )
 
                 if not self.paused:
