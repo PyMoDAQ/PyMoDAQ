@@ -125,16 +125,26 @@ class DAQ_PID(CustomExt):
                     "type": "group",
                     "children": [
                         {
+                            "title": "Time per loop (ms):",
+                            "name": "effective_sample_time",
+                            "type": "int",
+                            "value": 0,
+                            "readonly": True,
+                            "tip": "Time elapsed in the PID thread for each loop, ",
+                        },
+                        {
                             "title": "Sample time (ms):",
                             "name": "sample_time",
                             "type": "int",
                             "value": 10,
+                            "tip": "The minimum desired time between two PID calculations, ",
                         },
                         {
                             "title": "Refresh plot time (ms):",
                             "name": "refresh_plot_time",
                             "type": "int",
                             "value": 200,
+                            "tip": "Update display every x ms, ",
                         },
                         {
                             "title": "Output limits:",
@@ -290,6 +300,7 @@ class DAQ_PID(CustomExt):
 
             self.runner_thread.pid_runner = pid_runner
             pid_runner.pid_output_signal.connect(self.process_output)
+            pid_runner.time_elapsed_signal.connect(self.display_time_elapsed)
             pid_runner.status_sig.connect(self.thread_status)
             self.command_pid.connect(pid_runner.queue_command)
 
@@ -316,6 +327,10 @@ class DAQ_PID(CustomExt):
         self.stab_points = [np.std(queue) for queue in self.queue_points]
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
+
+    def display_time_elapsed(self, time_elapsed: float):
+        """Display the time elapsed in the PID thread"""
+        self.settings.child("main_settings", "pid_controls", "effective_sample_time").setValue(time_elapsed*1000)
 
     def enable_controls_pid(self, enable=False):
         self.set_action_enabled("ini_pid", enable)
@@ -761,6 +776,7 @@ class DAQ_PID(CustomExt):
 class PIDRunner(QObject):
     status_sig = Signal(list)
     pid_output_signal = Signal(DataToExport)
+    time_elapsed_signal = Signal(float)
 
     def __init__(
         self,
@@ -836,6 +852,7 @@ class PIDRunner(QObject):
         inputs_dwa.labels = self.modules_manager.selected_actuators_name
         dte.append(inputs_dwa)
         self.pid_output_signal.emit(dte)
+        self.time_elapsed_signal.emit(self.time_elapsed)       
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
