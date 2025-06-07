@@ -179,13 +179,6 @@ class DAQ_PID(CustomExt):
                             ],
                         },
                         {
-                            "title": "Auto mode:",
-                            "name": "auto_mode",
-                            "type": "bool",
-                            "value": False,
-                            "readonly": True,
-                        },
-                        {
                             "title": "Prop. on measurement:",
                             "name": "proportional_on_measurement",
                             "type": "bool",
