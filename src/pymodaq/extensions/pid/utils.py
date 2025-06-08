@@ -65,14 +65,14 @@ class PIDModelGeneric:
 
     def apply_constants(self):
         for kxx in self.konstants:
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'pid_constants',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'pid_constants',
                                                kxx).setValue(self.konstants[kxx])
 
     def apply_limits(self):
         for limit in self.limits:
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'output_limits',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'output_limits',
                                                f'output_limit_{limit}').setValue(self.limits[limit]['value'])
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'output_limits',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'output_limits',
                                                f'output_limit_{limit}_enabled').setValue(self.limits[limit]['state'])
 
     def check_modules(self, modules_manager):
