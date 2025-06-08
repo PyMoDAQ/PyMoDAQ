@@ -120,8 +120,8 @@ class DAQ_PID(CustomExt):
                     "tooltip": "Length of queue to calculate stability",
                 },
                 {
-                    "title": "PID controls:",
-                    "name": "pid_controls",
+                    "title": "PID settings:",
+                    "name": "pid_settings",
                     "type": "group",
                     "children": [
                         {
@@ -130,27 +130,28 @@ class DAQ_PID(CustomExt):
                             "type": "int",
                             "value": 0,
                             "readonly": True,
-                            "tip": "Time elapsed in the PID thread for each loop, ",
+                            "tooltip": "Time elapsed in the PID thread for each loop, ",
                         },
                         {
                             "title": "Sample time (ms):",
                             "name": "sample_time",
                             "type": "int",
                             "value": 10,
-                            "tip": "The minimum desired time between two PID calculations, ",
+                            "tooltip": "The minimum desired time between two PID calculations, ",
                         },
                         {
                             "title": "Refresh plot time (ms):",
                             "name": "refresh_plot_time",
                             "type": "int",
                             "value": 200,
-                            "tip": "Update display every x ms, ",
+                            "tooltip": "Update display every x ms, ",
                         },
                         {
                             "title": "Output limits:",
                             "name": "output_limits",
                             "expanded": True,
                             "type": "group",
+                            "tooltip": "Limits on the output of the PID controller, ",
                             "children": [
                                 {
                                     "title": "Output limit (min):",
@@ -183,6 +184,7 @@ class DAQ_PID(CustomExt):
                             "name": "proportional_on_measurement",
                             "type": "bool",
                             "value": False,
+                            "tooltip": "If True, the PID will stabilize the value instead of reducing the error (see pid.py)."
                         },
                         {
                             "title": "PID constants:",
@@ -250,21 +252,21 @@ class DAQ_PID(CustomExt):
             output_limits = [None, None]
             if self.settings[
                 "main_settings",
-                "pid_controls",
+                "pid_settings",
                 "output_limits",
                 "output_limit_min_enabled",
             ]:
                 output_limits[0] = self.settings[
-                    "main_settings", "pid_controls", "output_limits", "output_limit_min"
+                    "main_settings", "pid_settings", "output_limits", "output_limit_min"
                 ]
             if self.settings[
                 "main_settings",
-                "pid_controls",
+                "pid_settings",
                 "output_limits",
                 "output_limit_max_enabled",
             ]:
                 output_limits[1] = self.settings[
-                    "main_settings", "pid_controls", "output_limits", "output_limit_max"
+                    "main_settings", "pid_settings", "output_limits", "output_limit_max"
                 ]
 
             self.runner_thread = QThread()
@@ -274,16 +276,16 @@ class DAQ_PID(CustomExt):
                 setpoints=self.setpoints,
                 params=dict(
                     Kp=self.settings[
-                        "main_settings", "pid_controls", "pid_constants", "kp"
+                        "main_settings", "pid_settings", "pid_constants", "kp"
                     ],
                     Ki=self.settings[
-                        "main_settings", "pid_controls", "pid_constants", "ki"
+                        "main_settings", "pid_settings", "pid_constants", "ki"
                     ],
                     Kd=self.settings[
-                        "main_settings", "pid_controls", "pid_constants", "kd"
+                        "main_settings", "pid_settings", "pid_constants", "kd"
                     ],
                     sample_time=self.settings[
-                        "main_settings", "pid_controls", "sample_time"
+                        "main_settings", "pid_settings", "sample_time"
                     ]
                     / 1000,
                     output_limits=output_limits,
@@ -323,7 +325,7 @@ class DAQ_PID(CustomExt):
 
     def display_time_elapsed(self, time_elapsed: float):
         """Display the time elapsed in the PID thread"""
-        self.settings.child("main_settings", "pid_controls", "effective_sample_time").setValue(time_elapsed*1000)
+        self.settings.child("main_settings", "pid_settings", "effective_sample_time").setValue(time_elapsed*1000)
 
     def enable_controls_pid(self, enable=False):
         self.set_action_enabled("ini_pid", enable)
@@ -376,24 +378,24 @@ class DAQ_PID(CustomExt):
             )
 
         elif param.name() in putils.iter_children(
-            self.settings.child("main_settings", "pid_controls", "output_limits"), []
+            self.settings.child("main_settings", "pid_settings", "output_limits"), []
         ):
             output_limits = convert_output_limits(
                 self.settings[
-                    "main_settings", "pid_controls", "output_limits", "output_limit_min"
+                    "main_settings", "pid_settings", "output_limits", "output_limit_min"
                 ],
                 self.settings[
                     "main_settings",
-                    "pid_controls",
+                    "pid_settings",
                     "output_limits",
                     "output_limit_min_enabled",
                 ],
                 self.settings[
-                    "main_settings", "pid_controls", "output_limits", "output_limit_max"
+                    "main_settings", "pid_settings", "output_limits", "output_limit_max"
                 ],
                 self.settings[
                     "main_settings",
-                    "pid_controls",
+                    "pid_settings",
                     "output_limits",
                     "output_limit_max_enabled",
                 ],
@@ -404,11 +406,11 @@ class DAQ_PID(CustomExt):
             )
 
         elif param.name() in putils.iter_children(
-            self.settings.child("main_settings", "pid_controls", "pid_constants"), []
+            self.settings.child("main_settings", "pid_settings", "pid_constants"), []
         ):
-            Kp = self.settings["main_settings", "pid_controls", "pid_constants", "kp"]
-            Ki = self.settings["main_settings", "pid_controls", "pid_constants", "ki"]
-            Kd = self.settings["main_settings", "pid_controls", "pid_constants", "kd"]
+            Kp = self.settings["main_settings", "pid_settings", "pid_constants", "kp"]
+            Ki = self.settings["main_settings", "pid_settings", "pid_constants", "ki"]
+            Kd = self.settings["main_settings", "pid_settings", "pid_constants", "kd"]
             self.command_pid.emit(
                 ThreadCommand("update_options", dict(tunings=(Kp, Ki, Kd)))
             )
@@ -677,7 +679,7 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb = []
         self.currpoints_sb = []
         self.stabpoints_sb = []
-        self.meanpoints_sb = []
+        # self.meanpoints_sb = []
         self.syncvalue_pb = []
         for ind_set in range(self.model_class.Nsetpoints):
             label = LabelWithFont(
@@ -701,9 +703,6 @@ class DAQ_PID(CustomExt):
             self.toolbar_layout.addWidget(
                 self.currpoints_sb[-1], 4, 2 + ind_set, 1, column_span
             )
-
-            self.meanpoints_sb.append(self.make_spinbox())
-            self.toolbar_layout.addWidget(self.meanpoints_sb[-1], 5, 2 + ind_set, 1, 1)
 
             self.stabpoints_sb.append(self.make_spinbox())
             self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 2, 1)
