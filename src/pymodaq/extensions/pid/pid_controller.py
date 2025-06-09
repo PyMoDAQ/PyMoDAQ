@@ -850,13 +850,17 @@ class PIDRunner(QObject):
 
         self.paused = True
 
+        self.queue_length = 5 * int(self.refreshing_ouput_time * 1e-3 / self.sample_time)  # Queue length is approximately output_time/sampling_time (*5 for safety)
+        self.queue_outputs = [deque(maxlen=self.queue_length) for ind in range(len(self.outputs))]
+        [queue_output.append(output) for queue_output,output in zip(self.queue_outputs,self.outputs)]
+
     #     self.timeout_timer = QtCore.QTimer()
     #     self.timeout_timer.setInterval(10000)
     #     self.timeout_scan_flag = False
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
-
+        
         outputs_dwa = self.outputs_to_actuators.merge_as_dwa("Data0D", name="outputs")
         outputs_dwa.labels = self.modules_manager.selected_actuators_name
         dte = DataToExport("toplot", data=[outputs_dwa])
@@ -865,7 +869,9 @@ class PIDRunner(QObject):
         inputs_dwa.labels = self.modules_manager.selected_actuators_name
         dte.append(inputs_dwa)
         self.pid_output_signal.emit(dte)
-        self.time_elapsed_signal.emit(self.time_elapsed)       
+        self.time_elapsed_signal.emit(self.time_elapsed)
+        # Clear the queues until next timerEvent
+        [queue_output.clear() for queue_output in self.queue_outputs]
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
@@ -895,7 +901,9 @@ class PIDRunner(QObject):
             if command.attribute[0] == "refresh_plot_time":
                 self.killTimer(self.timer)
                 self.refreshing_ouput_time = command.attribute[1]
+                self.refresh_queues()
                 self.timer = self.startTimer(self.refreshing_ouput_time)
+
             elif command.attribute[0] == "timeout":
                 self.timeout_timer.setInterval(command.attribute[1])
 
@@ -945,10 +953,11 @@ class PIDRunner(QObject):
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
                 if self.outputs is None:
                     self.outputs = [pid.setpoint for pid in self.pids]
-
                 self.outputs_to_actuators: DataToActuators = (
-                    self.model_class.convert_output(self.outputs)
+                    self.model_class.convert_output(self.outputs, dt=None)
                 )
+                for data_output, queue_output in zip(self.outputs_to_actuators.data, self.queue_outputs):
+                    queue_output.append(data_output[0][0])
 
                 if not self.paused:
                     self.modules_manager.move_actuators(
@@ -969,12 +978,17 @@ class PIDRunner(QObject):
         for ind, pid in enumerate(self.pids):
             pid.setpoint = setpoints[ind]
 
+    def refresh_queues(self,):
+        self.queue_length = 5 * int(self.refreshing_ouput_time * 1e-3 / self.sample_time)  # Queue length is approximately output_time/sampling_time (*5 for safety)
+        self.queue_outputs = [deque(maxlen=self.queue_length) for ind in range(len(self.outputs))]
+
     def set_option(self, **option):
         for pid in self.pids:
             for key in option:
                 if hasattr(pid, key):
                     if key == "sample_time":
                         setattr(pid, key, option[key] / 1000)
+                        self.refresh_queues()
                     else:
                         setattr(pid, key, option[key])
 
