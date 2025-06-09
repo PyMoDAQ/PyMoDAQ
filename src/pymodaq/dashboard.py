@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
+from typing import Tuple, List, Any, TYPE_CHECKING, Sequence, Union
 
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -321,6 +321,105 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def remove_detectors(self, detector_modules: List[DAQ_Viewer] = []):
+        """
+        Remove the given list of detectors from the dashboard.
+        Parameters
+        ----------
+        actuator_modules: List[DAQ_Viewer]
+            List of DAQ_Viewer instances to be removed.
+        """
+        try:
+            for detector_module in detector_modules:
+                if detector_module in self.detector_modules:
+                    self.detector_modules.remove(detector_module)
+                detector_module.quit_fun()
+                dock = self.dockarea.docks.get(f'{detector_module.title} settings', None)
+                if dock:
+                    dock.close()
+                dock = self.dockarea.docks.get(f'{detector_module.title} viewer', None)
+                if dock:
+                    dock.close()                 
+            self.update_module_manager()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def remove_actuators(self, actuator_modules: List[DAQ_Move] = []):
+        """ 
+        Remove the given list of actuators from the dashboard.
+        Parameters
+        ----------
+        actuator_modules: List[DAQ_Move]
+            List of DAQ_Move instances to be removed.
+        """
+        try:
+            for actuator_module in actuator_modules:
+                if actuator_module in self.actuators_modules:
+                    self.actuators_modules.remove(actuator_module)
+                actuator_module.quit_fun()
+                dock = self.dockarea.docks.get(actuator_module.title, None)
+                if dock:
+                    dock.close()
+            self.update_module_manager()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def get_docks_from_modules(self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]) -> List[Dock]:
+        """
+        Get a list of Dock instances from the given modules.
+
+        Parameters
+        ----------
+        modules: Sequence[DAQ_Move/DAQ_Viewer]
+            Sequence of DAQ_Move or DAQ_Viewer instances.
+
+        Returns
+        -------
+        List[Dock]
+            List of Dock instances corresponding to the given modules.
+        """
+        docks = []
+        for module in modules:
+            if hasattr(module, "dock"):
+                docks.append(module.dock)
+        return docks
+
+    def remove_modules(self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = []):
+        """
+        Remove the given list of actuators/detectors from the dashboard.
+
+        Parameters
+        ----------
+        modules: List[DAQ_Move/DAQ_Viewer]
+            List of DAQ_Move/DAQ_Viewer instances to be removed.
+        """
+        try:
+            actuators_modules = []
+            detector_modules = []
+            for module in modules:
+                if isinstance(module, DAQ_Move):  # Test if module is an instance of DAQ_Move
+                    actuators_modules.append(module)
+                elif isinstance(module, DAQ_Viewer):  # Test if module is an instance of DAQ_Viewer
+                    detector_modules.append(module)
+                if isinstance(module, str):  # Test if module is a string (name of the module)
+                    actuators_modules.extend(
+                        self.modules_manager.get_mods_from_names([module,], "act") # For actuators
+                    )
+                    detector_modules.extend(
+                        self.modules_manager.get_mods_from_names(
+                            [
+                                module,
+                            ],
+                            "det",
+                        )  # For detectors
+                    )
+            if (hasattr(self, "actuators_modules")) & (self.actuators_modules is not None):  # Remove actuators
+                self.remove_actuators(actuators_modules)
+            if (hasattr(self, "detector_modules")) & (self.detector_modules is not None):  # Remove detectors
+                self.remove_detectors(detector_modules)
+        except Exception as e:
+            logger.exception(str(e))
+
     def clear_move_det_controllers(self):
         """
         Remove all docks containing Moves or Viewers.
@@ -331,16 +430,14 @@ class DashBoard(CustomApp):
         """
         try:
             # remove all docks containing Moves or Viewers
-            if hasattr(self, "actuators_modules"):
-                if self.actuators_modules is not None:
-                    for module in self.actuators_modules:
-                        module.quit_fun()
+            if hasattr(self, "actuators_modules") & self.actuators_modules is not None:
+                for module in self.actuators_modules:
+                    module.quit_fun()
                 self.actuators_modules = []
 
-            if hasattr(self, "detector_modules"):
-                if self.detector_modules is not None:
-                    for module in self.detector_modules:
-                        module.quit_fun()
+            if hasattr(self, "detector_modules") & self.detector_modules is not None:
+                for module in self.detector_modules:
+                    module.quit_fun()
                 self.detector_modules = []
         except Exception as e:
             logger.exception(str(e))
