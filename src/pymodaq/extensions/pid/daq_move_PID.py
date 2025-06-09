@@ -1,6 +1,6 @@
 from collections import deque
-import numpy as np
 
+import numpy as np
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.control_modules.move_utility_classes import (
@@ -28,7 +28,7 @@ class DAQ_Move_PID(DAQ_Move_base):
             "type": "bool",
             "value": False,
             "default": "False",
-            "tip": "Activate to only trigger move_done once ready",
+            "tooltip": "Activate to only trigger move_done once standard deviation over queue length is below threshold",
             "children": [
                 {
                     "title": "Stable:",
@@ -36,6 +36,7 @@ class DAQ_Move_PID(DAQ_Move_base):
                     "type": "led",
                     "value": False,
                     "default": False,
+                    "tooltip": "Red if the standard deviation of the last positions is above threshold, green if below",
                 },
                 {
                     "title": "Threshold:",
@@ -44,21 +45,16 @@ class DAQ_Move_PID(DAQ_Move_base):
                     "value": 0.1,
                     "default": 0.1,
                     "min": 0,
+                    "tooltip": "Standard deviation threshold to consider the stage stable",
                 },
                 {
                     "title": "Queue length:",
-                    "name": "stab_queue",
+                    "name": "queue_length",
                     "type": "int",
                     "default": 10,
                     "value": 50,
                     "min": 0,
-                },
-                {
-                    "title": "Clear queue:",
-                    "name": "clear_queue",
-                    "type": "bool",
-                    "default": False,
-                    "value": False,
+                    "tooltip": "Length of the queue used to compute the standard deviation for stability check",
                 },
             ],
         },
@@ -67,15 +63,19 @@ class DAQ_Move_PID(DAQ_Move_base):
 
     def ini_attributes(self):
         self.controller: PIDController = None
-        self.last_positions = deque(maxlen=self.settings["check_stab", "stab_queue"])
+        self.last_positions = deque(maxlen=self.settings["check_stab", "queue_length"])
 
     def update_position(self, dict_val: dict):
         self.current_value = dict_val[self.parent.title]
 
+    def _update_last_positions(self):
+        """Update last_positions with only new values from controller queue"""
+        if self.settings.child("check_stab").value():
+            self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
+
     def get_actuator_value(self):
         self.controller.emit_curr_points.emit()
         pos = self.current_value
-        self.last_positions.append(np.squeeze(self.current_value.data))
         return pos
 
     def close(self):
@@ -84,27 +84,32 @@ class DAQ_Move_PID(DAQ_Move_base):
     def user_condition_to_reach_target(self):
         cond = super().user_condition_to_reach_target()
         parameter_stab = self.settings.child("check_stab")
+
         if parameter_stab.value():
-            np.array(self.controller.queue_points)
-            cond = (
-                np.std(
-                    np.array(self.last_positions) - np.squeeze(self.target_value.data)
-                )
-                < parameter_stab["threshold"]
-            )
+            if len(self.controller.queue_points) >= self.settings["check_stab", "queue_length"]:
+                self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
+
+                cond = np.std(self.last_positions) < parameter_stab["threshold"]
+            else:
+                cond = False
+
+            parameter_stab.child("is_stab").setValue(cond)
+
         return cond
 
     def commit_settings(self, param):
         if param.name() == "check_stab":
             pass
-        elif param.name() == "stab_queue":
-            self.last_positions = deque(self.last_positions, maxlen=param.value())
+        elif param.name() == "queue_length":
+            self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
+            param.setOpts(max=self.controller.queue_points.maxlen)
 
     def ini_stage(self, controller: PIDController = None):
         """ """
         self.controller = controller
-
         self.controller.curr_point.connect(self.update_position)
+
+        self.settings.child("check_stab", "queue_length").setValue(self.controller.queue_points.maxlen)
 
         info = "PID stage"
         initialized = True
