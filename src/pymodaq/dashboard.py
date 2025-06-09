@@ -446,6 +446,12 @@ class DashBoard(CustomApp):
             self.pid_window = QtWidgets.QMainWindow()
         else:
             self.pid_window = win
+        self.pid_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle("PID Controller")
