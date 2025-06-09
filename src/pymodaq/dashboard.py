@@ -406,12 +406,12 @@ class DashBoard(CustomApp):
         """
         try:
             # remove all docks containing Moves or Viewers
-            if hasattr(self, "actuators_modules") & self.actuators_modules is not None:
+            if hasattr(self, "actuators_modules") & (self.actuators_modules is not None):
                 for module in self.actuators_modules:
                     module.quit_fun()
                 self.actuators_modules = []
 
-            if hasattr(self, "detector_modules") & self.detector_modules is not None:
+            if hasattr(self, "detector_modules") & (self.detector_modules is not None):
                 for module in self.detector_modules:
                     module.quit_fun()
                 self.detector_modules = []
