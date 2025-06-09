@@ -114,10 +114,17 @@ class DAQ_PID(CustomExt):
                 },
                 {
                     "title": "Queue length",
-                    "name": "queue",
+                    "name": "queue_length",
                     "type": "int",
-                    "value": 50,
+                    "value": 25,
                     "tooltip": "Length of queue to calculate stability",
+                },
+                {
+                    "title": "Refresh queue",
+                    "name": "refresh_queue",
+                    "type": "bool_push",
+                    "value": True,
+                    "label": "Refresh queues",
                 },
                 {
                     "title": "PID settings:",
@@ -184,7 +191,7 @@ class DAQ_PID(CustomExt):
                             "name": "proportional_on_measurement",
                             "type": "bool",
                             "value": False,
-                            "tooltip": "If True, the PID will stabilize the value instead of reducing the error (see pid.py)."
+                            "tooltip": "If True, the PID will stabilize the value instead of reducing the error (see pid.py).",
                         },
                         {
                             "title": "PID constants:",
@@ -235,7 +242,7 @@ class DAQ_PID(CustomExt):
         self.model_class: PIDModelGeneric = None
         self._curr_points = dict([])
         self._setpoints = dict([])
-        self.queue_points = []
+        self.queue_points = dict([])
 
         self.dock_area = dockarea
         self.check_moving = False
@@ -317,9 +324,18 @@ class DAQ_PID(CustomExt):
         inputs: DataRaw = data.get_data_from_name("inputs")
         outputs: DataRaw = data.get_data_from_name("outputs")
         self.curr_points = [float(array[0]) for array in inputs]
-        for ind, input in enumerate(inputs):
-            self.queue_points[ind].append(float(input[0]))
-        self.stab_points = [np.std(queue) for queue in self.queue_points]
+        for input, setpoint_name in zip(inputs, self.model_class.setpoints_names):
+            self.queue_points[setpoint_name].append(float(input[0]))
+
+        # Would that be useful to add too?
+        # self.mean_points = [
+        #     np.mean(np.array(queue) - setpoint)
+        #     for queue, setpoint in zip(self.queue_points.values(), self.setpoints)
+        # ]
+        self.stab_points = [
+            np.std(queue)
+            for queue in zip(self.queue_points.values())
+        ]
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
 
@@ -423,8 +439,12 @@ class DAQ_PID(CustomExt):
 
         elif param.name() == "detector_modules":
             self.model_class.update_detector_names()
-        elif param.name() == "queue":
+        elif param.name() == "queue_length":
             self.update_queues()
+        elif param.name() == "refresh_queue":
+            if param.value():
+                self.update_queues(refresh=True)
+                self.settings.child(param.name()).setValue(False)        
 
     def connect_things(self):
         logger.debug("connecting actions and other")
@@ -533,7 +553,7 @@ class DAQ_PID(CustomExt):
         # Now that we have the module manager, load PID if it is checked in managers
         try:
             for setp in self.model_class.setpoints_names:
-                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self))
+                self.dashboard.add_move_from_extension(setp, "PID", PIDController(self, setp))
             self.set_action_enabled("create_setp_actuators", False)
 
         except Exception as e:
@@ -601,21 +621,19 @@ class DAQ_PID(CustomExt):
         )
 
     def init_queues(self):
-        self.queue_points = [
-            deque(maxlen=self.settings.child("main_settings", "queue").value())
-            for ind_set in range(self.model_class.Nsetpoints)
-        ]
+        self.queue_points = {
+            setpoint_name: deque(maxlen=self.settings.child("main_settings", "queue_length").value())
+            for setpoint_name in self.model_class.setpoints_names
+        }
 
     def update_queues(self, refresh=False):
         if refresh:
             self.init_queues()
         else:
-            self.queue_points = [
-                deque(
-                    queue, maxlen=self.settings.child("main_settings", "queue").value()
-                )
-                for queue in self.queue_points
-            ]
+            self.queue_points = {
+                setpoint_name: deque(queue, maxlen=self.settings.child("main_settings", "queue_length").value())
+                for queue, setpoint_name in zip(self.queue_points,self.model_class.setpoints_names)
+            }
 
     def ini_model(self):
         try:
@@ -689,30 +707,29 @@ class DAQ_PID(CustomExt):
                 isbold=True,
                 isitalic=True,
             )
-            column_span = 1
-            self.toolbar_layout.addWidget(label, 2, 2 + ind_set, 1, column_span)
+            self.toolbar_layout.addWidget(label, 2, 2 + ind_set, 1, 1)
 
             self.setpoints_sb.append(self.make_spinbox(no_button=False))
             self.toolbar_layout.addWidget(
-                self.setpoints_sb[-1], 3, 2 + ind_set, 1, column_span
+                self.setpoints_sb[-1], 3, 2 + ind_set, 1, 1
             )
 
             self.setpoints_sb[-1].valueChanged.connect(self.update_runner_setpoints)
 
             self.currpoints_sb.append(self.make_spinbox())
             self.toolbar_layout.addWidget(
-                self.currpoints_sb[-1], 4, 2 + ind_set, 1, column_span
+                self.currpoints_sb[-1], 4, 2 + ind_set, 1, 1
             )
 
             self.stabpoints_sb.append(self.make_spinbox())
-            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 2, 1)
+            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 1, 1)
             self.syncvalue_pb.append(
                 QtWidgets.QPushButton("Synchro {}".format(ind_set))
             )
             self.syncvalue_pb[ind_set].clicked.connect(
                 partial(self.currpoint_as_setpoint, ind_set)
             )
-            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, 2 + ind_set)
+            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, 2 + ind_set, 1, 1)
         self.setpoints_signal.connect(self.setpoints_external)
 
     def make_spinbox(self, no_button=True):
@@ -792,7 +809,7 @@ class PIDRunner(QObject):
         self.modules_manager = modules_manager
         Nsetpoints = model_class.Nsetpoints
         self.current_time = 0
-        self.time_elapsed = 0 # Time elapsed in the running loop
+        self.time_elapsed = 0  # Time elapsed in the running loop
         self.inputs_from_dets = DataToExport(
             "inputs",
             data=[
@@ -837,6 +854,7 @@ class PIDRunner(QObject):
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
+
         outputs_dwa = self.outputs_to_actuators.merge_as_dwa("Data0D", name="outputs")
         outputs_dwa.labels = self.modules_manager.selected_actuators_name
         dte = DataToExport("toplot", data=[outputs_dwa])
