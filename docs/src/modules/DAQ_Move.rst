@@ -269,8 +269,12 @@ Other Actuator UI
 
 It is now possible to declare in the Preset menu, the feel and shape of the Actuators Graphical User Interfaces. This
 has been done in order to compactify the DashBoard where regular Actuator UI can quickly take a lot of room. If you
-don't need an access to advanced features, you can choose the layout among the *Simple* or
-*Binary* layout (while the usual one is called the *Original*), see below:
+don't need an access to advanced features, you can choose the layout (see below) among:
+
+* *Original*: The usual full featured UI
+* *Simple*: UI on a single line allowing natively absolute moves
+* *Binary*: UI on a single line allowing natively two absolute moves only (configured in the config file)
+* *Relative*: UI on a single line allowing natively relative moves
 
 
 .. figure:: /image/DAQ_Move/ui_type.png

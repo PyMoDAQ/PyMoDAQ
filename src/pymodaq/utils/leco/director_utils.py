@@ -35,14 +35,14 @@ class GenericDirector(Director):
 
 
 class DetectorDirector(GenericDirector):
-    def send_data_grab(self, grabber_type: str = "") -> None:
-        self.ask_rpc("send_data_grab", grabber_type=grabber_type)
+    def send_data_grab(self) -> None:
+        self.ask_rpc("send_data_grab")
 
-    def send_data_snap(self, grabber_type: str = "") -> None:
-        self.ask_rpc("send_data_snap", grabber_type=grabber_type)
+    def send_data_snap(self) -> None:
+        self.ask_rpc("send_data_snap")
 
-    def stop_grab(self, grabber_type: str = "") -> None:
-        self.ask_rpc("stop_grab", grabber_type=grabber_type)
+    def stop_grab(self) -> None:
+        self.ask_rpc("stop_grab")
 
 
 class ActuatorDirector(GenericDirector):
