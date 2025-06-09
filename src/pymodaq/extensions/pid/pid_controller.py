@@ -749,7 +749,8 @@ class DAQ_PID(CustomExt):
                 QThread.msleep(1000)
                 QtWidgets.QApplication.processEvents()
 
-            self.dock_area.parent().close()
+            self.dock_area.parent().close()            
+            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
 
         except Exception as e:
             print(e)
