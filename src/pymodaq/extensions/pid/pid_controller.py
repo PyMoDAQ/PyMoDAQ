@@ -123,8 +123,15 @@ class DAQ_PID(CustomExt):
                     "title": "Refresh queue",
                     "name": "refresh_queue",
                     "type": "bool_push",
-                    "value": True,
-                    "label": "Refresh queues",
+                    "value": False,
+                    "tooltip": "Refresh queues to zero length",
+                },
+                {
+                    "title": "Refresh plot",
+                    "name": "refresh_plot",
+                    "type": "bool_push",
+                    "value": False,
+                    "tooltip": "Refresh both plots to zero length",
                 },
                 {
                     "title": "PID settings:",
@@ -444,8 +451,13 @@ class DAQ_PID(CustomExt):
         elif param.name() == "refresh_queue":
             if param.value():
                 self.update_queues(refresh=True)
-                self.settings.child(param.name()).setValue(False)
-
+                self.settings.child("main_settings", param.name()).setValue(False)
+        elif param.name() == "refresh_plot":
+            if param.value():
+                self.input_viewer.view.data_displayer.clear_data()
+                self.output_viewer.view.data_displayer.clear_data()
+                self.settings.child('main_settings', param.name()).setValue(False)
+                
     def connect_things(self):
         logger.debug("connecting actions and other")
         self.connect_action(
