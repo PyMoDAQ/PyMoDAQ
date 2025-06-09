@@ -850,9 +850,10 @@ class PIDRunner(QObject):
 
         self.paused = True
 
-        self.queue_length = 5 * int(self.refreshing_ouput_time * 1e-3 / self.sample_time)  # Queue length is approximately output_time/sampling_time (*5 for safety)
-        self.queue_outputs = [deque(maxlen=self.queue_length) for ind in range(len(self.outputs))]
-        [queue_output.append(output) for queue_output,output in zip(self.queue_outputs,self.outputs)]
+        self.refresh_queues()  # Initialize queues with the desired length
+
+        [queue_output.append(output) for queue_output, output in zip(self.queue_outputs, self.outputs)]  # Prefill queues with initial output
+        self.clear_queues = True  # Clear queues on first iteration
 
     #     self.timeout_timer = QtCore.QTimer()
     #     self.timeout_timer.setInterval(10000)
@@ -870,8 +871,7 @@ class PIDRunner(QObject):
         dte.append(inputs_dwa)
         self.pid_output_signal.emit(dte)
         self.time_elapsed_signal.emit(self.time_elapsed)
-        # Clear the queues until next timerEvent
-        [queue_output.clear() for queue_output in self.queue_outputs]
+        self.clear_queues = True
 
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
@@ -956,6 +956,9 @@ class PIDRunner(QObject):
                 self.outputs_to_actuators: DataToActuators = (
                     self.model_class.convert_output(self.outputs, dt=None)
                 )
+                if self.clear_queues:
+                    [queue_output.clear() for queue_output in self.queue_outputs]
+                    self.clear_queues = False
                 for data_output, queue_output in zip(self.outputs_to_actuators.data, self.queue_outputs):
                     queue_output.append(data_output[0][0])
 
