@@ -444,7 +444,7 @@ class DAQ_PID(CustomExt):
         elif param.name() == "refresh_queue":
             if param.value():
                 self.update_queues(refresh=True)
-                self.settings.child(param.name()).setValue(False)        
+                self.settings.child(param.name()).setValue(False)
 
     def connect_things(self):
         logger.debug("connecting actions and other")
@@ -632,7 +632,7 @@ class DAQ_PID(CustomExt):
         else:
             self.queue_points = {
                 setpoint_name: deque(queue, maxlen=self.settings.child("main_settings", "queue_length").value())
-                for queue, setpoint_name in zip(self.queue_points,self.model_class.setpoints_names)
+                for queue, setpoint_name in zip(self.queue_points, self.model_class.setpoints_names)
             }
 
     def ini_model(self):
@@ -663,11 +663,13 @@ class DAQ_PID(CustomExt):
     def setpoints(self, values):
         for ind, sp in enumerate(self.setpoints_sb):
             sp.setValue(values[ind])
+        self.update_queues(refresh=True)  # Refresh queues when setpoints are updated
 
     def setpoints_external(self, values_dict: Dict[str, DataActuator]):
         for key in values_dict:
             index = self.model_class.setpoints_names.index(key)
             self.setpoints_sb[index].setValue(values_dict[key].value())
+            self.queue_points[key].clear()  # Refresh queue when setpoint is updated
 
     @property
     def curr_points(self):
@@ -755,7 +757,7 @@ class DAQ_PID(CustomExt):
         """ """
         try:
             try:
-                self.runner_thread.exit()
+                self.exit_runner_thread()
             except Exception as e:
                 print(e)
 
