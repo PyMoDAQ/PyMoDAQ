@@ -49,7 +49,7 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "pyleco>0.3; python_version>=\"3.8\"",
+    "pyleco>0.3, <=0.4.2; python_version>=\"3.8\"",
     "bayesian-optimization<2.0.0",
 ]
 
