@@ -810,7 +810,7 @@ class DAQ_Move_Hardware(QObject):
         position = check_units(position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
-        if self.hardware.data_actuator_type.name == 'float':
+        if self.hardware.data_actuator_type == self.hardware.data_actuator_type.float:
             self.hardware.move_abs(position.units_as(self.hardware.axis_unit).value()) # convert to plugin controller current axis units
         else:
             position.units = self.hardware.axis_unit  # convert to plugin controller current axis units
