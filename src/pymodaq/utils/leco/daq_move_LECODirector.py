@@ -119,7 +119,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self.target_value = position
         if self.json:
             # if it's 0D, just send the position as a scalar
-            if hasattr(self, 'shape') and self.shape == (1, ):
+            if hasattr(self, 'shape') and self.shape == ():
                 position = position.value(self.axis_unit)
             else:
                 # Until the GUI allows for it (next line), we send the single value repeated
@@ -134,7 +134,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         position = self.set_position_relative_with_scaling(position)
         if self.json:
             # if it's 0D, just send the position as a scalar
-            if hasattr(self, 'shape') and self.shape == (1, ):
+            if hasattr(self, 'ndim') and self.shape == ():
                 position = position.value(self.axis_unit)
             else:
                 # Until the GUI allows for it (next line), we send the single value repeated
@@ -159,21 +159,22 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     # Methods accessible via remote calls
     def _set_position_value(
-        self, position: Union[list, str, float, None], additional_payload=None
+        self, data: Union[dict, list, str, float, None], additional_payload=None
     ) -> DataActuator:
 
         # This is the first received message, if position is set then
         # it's included in the json payload and the director should
         # usejson
-        if position is not None:
-            np_position = np.atleast_1d(position)
-            if np_position.ndim <= 2:
-                position = [np_position]
-            else:
-                position = [np.atleast_1d(d) for d in position]
+
+
+        if data is not None:
+            position = data.get('position', [])
+
+            self.shape = np.array(position).shape
+            position = [np.atleast_1d(position)]
+
             pos = DataActuator(data=position)
             self.json = True
-            self.shape = pos.shape
         elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
         else:
@@ -182,12 +183,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self._current_value = pos
         return pos
 
-    def send_position(self, position: Union[str, float, None], additional_payload=None) -> None:
-        pos = self._set_position_value(position=position, additional_payload=additional_payload)
+    def send_position(self, data: Union[dict, list, str, float, None], additional_payload=None) -> None:
+        pos = self._set_position_value(data=data, additional_payload=additional_payload)
         self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
 
-    def set_move_done(self, position: Union[str, float, None], additional_payload=None) -> None:
-        pos = self._set_position_value(position=position, additional_payload=additional_payload)
+    def set_move_done(self, data: Union[dict, list, str, float, None], additional_payload=None) -> None:
+        pos = self._set_position_value(data=data, additional_payload=additional_payload)
         self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
 
     def set_units(self, units: str, additional_payload=None) -> None:
