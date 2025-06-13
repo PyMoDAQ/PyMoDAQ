@@ -122,7 +122,7 @@ class Scanner(QObject, ParameterManager):
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     @property
-    def actuators(self):
+    def actuators(self) -> list[DAQ_Move]:
         """list of str: Returns as a list the name of the selected actuators to describe the actual scan"""
         return self._actuators
 
@@ -209,7 +209,8 @@ class Scanner(QObject, ParameterManager):
         """ Extract the actuators positions at a given index in the scan as a DataToExport of DataActuators"""
         dte = DataToExport('scanner')
         for ind, pos in enumerate(self.positions[index]):
-            dte.append(DataActuator(self.actuators[ind].title, data=float(pos)))
+            dte.append(DataActuator(self.actuators[ind].title, data=float(pos),
+                                    units=self.actuators[ind].units))
         return dte
 
     @property
