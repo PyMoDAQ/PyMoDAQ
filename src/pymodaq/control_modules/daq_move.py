@@ -783,7 +783,7 @@ class DAQ_Move_Hardware(QObject):
             try:
                 infos = self.hardware.ini_stage(controller)  # return edict(info="", controller=, stage=)
             except Exception as e:
-                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                logger.exception("Hardware couldn't be initialized", exc_info=e)
                 infos = str(e), False
 
             if isinstance(infos, edict):  # following old plugin templating
