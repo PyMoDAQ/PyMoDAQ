@@ -1320,7 +1320,7 @@ class DAQ_Detector(QObject):
                 status.controller = self.detector.controller
 
             except Exception as e:
-                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                logger.exception("Hardware couldn't be initialized", exc_info=e)
                 infos = str(e), False
                 status.controller = None
 
