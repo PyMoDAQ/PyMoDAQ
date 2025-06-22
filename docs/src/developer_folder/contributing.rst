@@ -18,8 +18,10 @@ If you're willing to help, there are several ways to do it:
 
 For the last point, here are some pointers:
 
-you should fork and clone the up-to-date GitHub repo: https://github.com/PyMoDAQ
-using git command line or GitHub Desktop. Then create a dedicated branch name from the change you want to work on
+You should `fork and clone <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository/>`_
+the up-to-date GitHub repo: https://github.com/PyMoDAQ using git command line or GitHub Desktop
+(the latter is recommended for newcomers, just make sure to uncheck "Copy the ... branch only").
+Then create a dedicated branch name from the change you want to work on
 (using git).
 
 Finally it is advised to create a dedicated virtual environment for this and install PyMoDAQ's package as a developer. For example, using mamba as an environment manager:
