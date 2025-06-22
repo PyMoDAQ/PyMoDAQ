@@ -80,6 +80,10 @@ class CustomExt(CustomApp):
         self.dashboard = dashboard
         self.runner_thread : QtCore.QThread = None
 
+        self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
+                                               actuators=self.dashboard.actuators_modules,
+                                               parent_name=self.__class__.__name__)
+
     @property
     def splash(self):
         return self.dashboard.splash_sc
@@ -94,8 +98,7 @@ class CustomExt(CustomApp):
         -------
         ModulesManager
         """
-        if self.dashboard is not None:
-            return self.dashboard.modules_manager
+        return self._modules_manager
 
     def exit_runner_thread(self, duration : int = 5000):
         self.runner_thread.quit()
