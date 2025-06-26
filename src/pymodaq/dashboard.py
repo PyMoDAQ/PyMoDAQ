@@ -164,7 +164,7 @@ class DashBoard(CustomApp):
             {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
         ]
 
-    def __init__(self, dockarea, argv):
+    def __init__(self, dockarea, argv=[""]):
         """
 
         Parameters
