@@ -97,10 +97,12 @@ class AdaptiveOptimisation(GenericOptimization):
         """
         super().value_changed(param)
         if param.name() == 'lossdim':
-            self.settings.child('main_settings', 'prediction', 'kind').setLimits(
-                LossFunctionFactory.keys(param.value())
-            )
-
+            try:
+                self.settings.child('main_settings', 'prediction', 'kind').setLimits(
+                    LossFunctionFactory.keys(param.value())
+                )
+            except Exception as e:
+                pass
         elif param.name() == 'kind':
             utility_settings = self.settings.child('main_settings', 'prediction')
             old_children = utility_settings.children()[2:]
@@ -120,7 +122,7 @@ class AdaptiveOptimisation(GenericOptimization):
             LossFunctionFactory.get(uparams['lossdim'], uparams['kind'])
             self.command_runner.emit(
                 utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, AttributeError):
             pass
 
     def update_after_actuators_changed(self, actuators: list[str]):

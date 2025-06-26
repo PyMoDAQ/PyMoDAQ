@@ -263,8 +263,7 @@ class GenericOptimization(CustomExt):
         self.viewer_observable: Optional[ViewerDispatcher] = None
         self.model_class: Optional[OptimizerModelGeneric] = None
         self._save_main_settings = True
-        self._modules_manager = ModulesManager(self.dashboard.detector_modules,
-                                               self.dashboard.actuators_modules)
+
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
@@ -354,10 +353,6 @@ class GenericOptimization(CustomExt):
     @property
     def config_path(self) -> Path:
         return self.optimizer_config.config_path
-
-    @property
-    def modules_manager(self) -> ModulesManager:
-        return self._modules_manager
 
     def setup_docks(self):
         """

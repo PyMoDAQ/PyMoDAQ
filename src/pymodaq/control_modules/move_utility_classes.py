@@ -710,7 +710,7 @@ class DAQ_Move_base(QObject):
                 position = self.get_actuator_value()
         if position.name != self._title:  # make sure the emitted DataActuator has the name of the real implementation
             #of the plugin
-            position = DataActuator(self._title, data=position.value(),
+            position = DataActuator(self._title, data=position.value(self.axis_unit),
                                     units=self.axis_unit)
         self.move_done_signal.emit(position)
         self.move_is_done = True

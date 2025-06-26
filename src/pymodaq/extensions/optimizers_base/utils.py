@@ -303,8 +303,9 @@ class OptimizerModelDefault(OptimizerModelGeneric):
         """
         return DataToActuators(
             'outputs', mode='abs',
-            data=[DataActuator(self.modules_manager.actuators_name[ind],
-                               data=float(outputs[ind][0])) for ind in  range(len(outputs))])
+            data=[DataActuator(self.modules_manager.selected_actuators_name[ind],
+                               data=float(outputs[ind][0]),
+                               units=self.modules_manager.actuators[ind].units) for ind in  range(len(outputs))])
 
 
 
