@@ -77,7 +77,7 @@ daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"
 daq_scan = "pymodaq.extensions.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
-dashboard = "pymodaq.dashboard:main"
+dashboard = "pymodaq.dashboard_loader:main"
 h5browser = "pymodaq.extensions.h5browser:main"
 parameter_example = "pymodaq.examples.parameter_ex:main"
 

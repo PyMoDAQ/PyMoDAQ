@@ -164,7 +164,7 @@ class DashBoard(CustomApp):
             {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
         ]
 
-    def __init__(self, dockarea, argv=[""]):
+    def __init__(self, dockarea):
         """
 
         Parameters
@@ -210,14 +210,7 @@ class DashBoard(CustomApp):
 
         self.setup_ui()
 
-        # If a preset filename is given as command-line argument
-        # Start PyMoDAQ with the corresponding preset
-        if len(argv) > 1:
-            preset_filename = argv[1]
-            self.set_preset_mode(preset_filename)
-        # Else, start an empty dashboard
-        else:
-            self.mainwindow.setVisible(True)
+        self.mainwindow.setVisible(True)
 
         logger.info('Dashboard Initialized')
 
@@ -1741,25 +1734,3 @@ class DashBoard(CustomApp):
                 logging.info(txt)
         except Exception as e:
             pass
-
-
-def main():
-    from pymodaq_gui.utils.utils import mkQApp
-
-    app = mkQApp('Dashboard')
-
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
-
-    prog = DashBoard(area, sys.argv)
-
-    win.show()
-
-    app.exec()
-
-
-if __name__ == '__main__':
-    main()
