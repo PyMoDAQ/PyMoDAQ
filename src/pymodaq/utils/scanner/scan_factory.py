@@ -24,7 +24,12 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq_data.data import Axis, DataDistribution
 
 from pymodaq.utils.scanner.scan_config import ScanConfig
-from pymodaq_gui.config import ConfigSaverLoader
+try:
+    from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+except ModuleNotFoundError:
+    from pymodaq_gui.config import ConfigSaverLoader
+
+from pymodaq.utils.config import Config as ControlModulesConfig
 
 
 if TYPE_CHECKING:

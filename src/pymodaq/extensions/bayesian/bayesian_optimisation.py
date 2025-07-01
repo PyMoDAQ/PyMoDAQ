@@ -12,7 +12,7 @@ from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
 from pymodaq_utils.enums import BaseEnum
 
-from pymodaq_gui.config import ConfigSaverLoader
+
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
@@ -22,6 +22,11 @@ from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
+
+try:
+    from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+except ModuleNotFoundError:
+    from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
