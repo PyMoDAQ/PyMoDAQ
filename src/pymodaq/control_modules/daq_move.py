@@ -512,14 +512,21 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == 'units':
             self.units = status.attribute
 
-    def _check_data_type(self, data_act: Union[list[np.ndarray], float, DataActuator]) -> DataActuator:
+    def _check_data_type(self, data_act: Union[list, np.ndarray, Number, DataActuator]) -> DataActuator:
         """ Make sure the data is a DataActuator
 
         Mostly to make sure DAQ_Move is backcompatible with old style plugins
         """
         if isinstance(data_act, list):  # backcompatibility
-            data_act = data_act[0]
-        if isinstance(data_act, np.ndarray):  # backcompatibility
+            if isinstance(data_act[0], Number):
+                data_act = DataActuator(data=[np.atleast_1d(val) for val in data_act], units=self.units)
+            elif isinstance(data_act[0], np.ndarray):
+                data_act = DataActuator(data=data_act, units=self.units)
+            elif isinstance(data_act[0], DataActuator):
+                data_act = data_act[0]
+            else:
+                raise TypeError('Unknown data type')
+        elif isinstance(data_act, np.ndarray):  # backcompatibility
             data_act = DataActuator(data=[data_act], units=self.units)
         data_act.name = self.title  # for the DataActuator name to be the title of the DAQ_Move
         if (not Unit(self.units).is_compatible_with(Unit(data_act.units)) and
