@@ -25,7 +25,10 @@ from pymodaq_gui.utils import QLED
 from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
-from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+try:
+    from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+except ImportError: # for backcompatibility
+    from pymodaq_gui.config import ConfigSaverLoader
 
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter

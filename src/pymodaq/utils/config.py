@@ -2,8 +2,10 @@ from pathlib import Path
 
 from pymodaq_utils.config import (BaseConfig, ConfigError, get_set_config_dir,
                                   USER, CONFIG_BASE_PATH, get_set_local_dir)
-from pymodaq_gui.config_saver_loader import get_set_roi_path
-
+try:
+    from pymodaq_gui.config_saver_loader import get_set_roi_path
+except ImportError: # for backcompatibility
+    from pymodaq_gui.config import get_set_roi_path
 
 def get_set_preset_path():
     """ creates and return the config folder path for managers files
