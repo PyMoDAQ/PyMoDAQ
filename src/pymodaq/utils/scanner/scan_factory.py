@@ -26,7 +26,7 @@ from pymodaq.utils.scanner.scan_config import ScanConfig
 
 try:
     from pymodaq_gui.config_saver_loader import ConfigSaverLoader
-except ImportError: # for backcompatibility
+except ModuleNotFoundError:
     from pymodaq_gui.config import ConfigSaverLoader
 
 from pymodaq.utils.config import Config as ControlModulesConfig
