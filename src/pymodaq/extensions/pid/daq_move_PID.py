@@ -68,11 +68,6 @@ class DAQ_Move_PID(DAQ_Move_base):
     def update_position(self, dict_val: dict):
         self.current_value = dict_val[self.parent.title]
 
-    def _update_last_positions(self):
-        """Update last_positions with only new values from controller queue"""
-        if self.settings.child("check_stab").value():
-            self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
-
     def get_actuator_value(self):
         self.controller.emit_curr_points.emit()
         pos = self.current_value
