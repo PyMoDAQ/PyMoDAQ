@@ -99,7 +99,7 @@ class PymodaqUpdateTableWidget(QTableWidget):
     def setHorizontalHeaderLabels(self, labels):
         super().setHorizontalHeaderLabels(labels)
         self.setColumnCount(len(labels))
-        
+
     def append_row(self, package, current_version, available_version):
         # Add labels
         self.setItem(self._row, 0, QTableWidgetItem(str(package)))
@@ -310,18 +310,20 @@ class DashBoard(CustomApp):
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
                 detector_module.quit_fun()
-                dock = self.dockarea.docks.get(f'{detector_module.title} settings', None)
+                dock = self.dockarea.docks.get(
+                    f"{detector_module.title} settings", None
+                )
                 if dock:
                     dock.close()
-                dock = self.dockarea.docks.get(f'{detector_module.title} viewer', None)
+                dock = self.dockarea.docks.get(f"{detector_module.title} viewer", None)
                 if dock:
-                    dock.close()                 
+                    dock.close()
             self.update_module_manager()
         except Exception as e:
             logger.exception(str(e))
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = []):
-        """ 
+        """
         Remove the given list of actuators from the dashboard.
         Parameters
         ----------
@@ -340,7 +342,9 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def get_docks_from_modules(self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]) -> List[Dock]:
+    def get_docks_from_modules(
+        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]
+    ) -> List[Dock]:
         """
         Get a list of Dock instances from the given modules.
 
@@ -360,7 +364,9 @@ class DashBoard(CustomApp):
                 docks.append(module.dock)
         return docks
 
-    def remove_modules(self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = []):
+    def remove_modules(
+        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = []
+    ):
         """
         Remove the given list of actuators/detectors from the dashboard.
 
@@ -373,13 +379,24 @@ class DashBoard(CustomApp):
             actuators_modules = []
             detector_modules = []
             for module in modules:
-                if isinstance(module, DAQ_Move):  # Test if module is an instance of DAQ_Move
+                if isinstance(
+                    module, DAQ_Move
+                ):  # Test if module is an instance of DAQ_Move
                     actuators_modules.append(module)
-                elif isinstance(module, DAQ_Viewer):  # Test if module is an instance of DAQ_Viewer
+                elif isinstance(
+                    module, DAQ_Viewer
+                ):  # Test if module is an instance of DAQ_Viewer
                     detector_modules.append(module)
-                if isinstance(module, str):  # Test if module is a string (name of the module)
+                if isinstance(
+                    module, str
+                ):  # Test if module is a string (name of the module)
                     actuators_modules.extend(
-                        self.modules_manager.get_mods_from_names([module,], "act") # For actuators
+                        self.modules_manager.get_mods_from_names(
+                            [
+                                module,
+                            ],
+                            "act",
+                        )  # For actuators
                     )
                     detector_modules.extend(
                         self.modules_manager.get_mods_from_names(
@@ -389,9 +406,13 @@ class DashBoard(CustomApp):
                             "det",
                         )  # For detectors
                     )
-            if (hasattr(self, "actuators_modules")) & (self.actuators_modules is not None):  # Remove actuators
+            if (hasattr(self, "actuators_modules")) & (
+                self.actuators_modules is not None
+            ):  # Remove actuators
                 self.remove_actuators(actuators_modules)
-            if (hasattr(self, "detector_modules")) & (self.detector_modules is not None):  # Remove detectors
+            if (hasattr(self, "detector_modules")) & (
+                self.detector_modules is not None
+            ):  # Remove detectors
                 self.remove_detectors(detector_modules)
         except Exception as e:
             logger.exception(str(e))
@@ -406,7 +427,9 @@ class DashBoard(CustomApp):
         """
         try:
             # remove all docks containing Moves or Viewers
-            if hasattr(self, "actuators_modules") & (self.actuators_modules is not None):
+            if hasattr(self, "actuators_modules") & (
+                self.actuators_modules is not None
+            ):
                 for module in self.actuators_modules:
                     module.quit_fun()
                 self.actuators_modules = []
@@ -1204,20 +1227,20 @@ class DashBoard(CustomApp):
 
     def add_move(
         self,
-        plug_name,
-        plug_settings,
-        plug_type,
-        move_docks,
-        move_forms,
-        actuators_modules,
+        plug_name: str = None,
+        plug_settings: Parameter = None,
+        plug_type: str = None,
+        move_docks: list[Dock] = [],
+        move_forms: list[QtWidgets.QWidget] = [],
+        actuators_modules: list[DAQ_Move] = [],
     ) -> DAQ_Move:
-        if plug_settings is not None:
+        if plug_settings is None:
+            ui_identifier = config("actuator", "ui")
+        else:
             try:
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
-                ui_identifier = None
-        else:
-            ui_identifier = None
+                ui_identifier = config("actuator", "ui")
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
             if ui_identifier is not None
@@ -2121,8 +2144,9 @@ class DashBoard(CustomApp):
             new_versions = np.greater(available_versions, current_versions)
             # Combine package and version information and select only the ones with a newer version available
 
-            
-            packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
+            packages_data = np.array(
+                list(zip(packages, current_versions, available_versions))
+            )[new_versions]
 
             if len(packages_data) > 0:
                 # Create a QDialog window and different graphical components
@@ -2131,17 +2155,20 @@ class DashBoard(CustomApp):
 
                 vlayout = QtWidgets.QVBoxLayout()
 
-                message_label = QLabel("New versions of PyMoDAQ packages available!\nUse your package manager to update.")
+                message_label = QLabel(
+                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
+                )
                 message_label.setAlignment(Qt.AlignCenter)
 
                 table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data)) 
+                table.setRowCount(len(packages_data))
                 table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(["Package", "Current version", "New version"])
-                     
+                table.setHorizontalHeaderLabels(
+                    ["Package", "Current version", "New version"]
+                )
+
                 for p in packages_data:
                     table.append_row(p[0], p[1], p[2])
-
 
                 # The vlayout contains the message, the table and the buttons
                 # and is connected to the dialog window
