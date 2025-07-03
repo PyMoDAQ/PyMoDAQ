@@ -7,7 +7,7 @@ from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-import sys
+import argparse
 
 
 def main():
@@ -20,10 +20,14 @@ def main():
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
 
-    # If supplied with a command-line argument, start with preset
-    if len(sys.argv) > 1:
-        preset_name = sys.argv[1]
-        load_dashboard_with_preset(preset_name)
+    # Command-line argument parsing
+    parser = argparse.ArgumentParser(prog="dashboard", description="PyMoDAQ dashboard")
+    parser.add_argument("-p", "--preset", metavar="PRESET_NAME", help="preset name to load")
+    args = parser.parse_args()
+
+    # If preset name is supplied, load dashboard with this preset
+    if args.preset:
+        load_dashboard_with_preset(args.preset)
 
     # If no command-line arguments are supplied, start empty
     else:
