@@ -8,7 +8,7 @@ from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.utils import CustomExt
 
 
-def load_dashboard_with_preset(preset_name: str, extension_name: str="") -> \
+def load_dashboard_with_preset(preset_name: str, extension_name: str = "") -> \
         (DashBoard, CustomExt, QtWidgets.QMainWindow):
     """ Load the Dashboard using a given preset then load an extension
 
