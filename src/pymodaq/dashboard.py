@@ -297,7 +297,7 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def remove_detectors(self, detector_modules: List[DAQ_Viewer] = []):
+    def remove_detectors(self, detector_modules: List[DAQ_Viewer] = None):
         """
         Remove the given list of detectors from the dashboard.
         Parameters
@@ -305,6 +305,8 @@ class DashBoard(CustomApp):
         actuator_modules: List[DAQ_Viewer]
             List of DAQ_Viewer instances to be removed.
         """
+        if detector_modules is None:
+            detector_modules = []
         try:
             for detector_module in detector_modules:
                 if detector_module in self.detector_modules:
@@ -322,7 +324,7 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def remove_actuators(self, actuator_modules: List[DAQ_Move] = []):
+    def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
         """
         Remove the given list of actuators from the dashboard.
         Parameters
@@ -330,6 +332,8 @@ class DashBoard(CustomApp):
         actuator_modules: List[DAQ_Move]
             List of DAQ_Move instances to be removed.
         """
+        if actuator_modules is None:
+            actuator_modules = []
         try:
             for actuator_module in actuator_modules:
                 if actuator_module in self.actuators_modules:
@@ -365,7 +369,7 @@ class DashBoard(CustomApp):
         return docks
 
     def remove_modules(
-        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = []
+        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None
     ):
         """
         Remove the given list of actuators/detectors from the dashboard.
@@ -375,6 +379,8 @@ class DashBoard(CustomApp):
         modules: List[DAQ_Move/DAQ_Viewer]
             List of DAQ_Move/DAQ_Viewer instances to be removed.
         """
+        if modules is None:
+            modules = []
         try:
             actuators_modules = []
             detector_modules = []
@@ -1230,10 +1236,17 @@ class DashBoard(CustomApp):
         plug_name: str = None,
         plug_settings: Parameter = None,
         plug_type: str = None,
-        move_docks: list[Dock] = [],
-        move_forms: list[QtWidgets.QWidget] = [],
-        actuators_modules: list[DAQ_Move] = [],
-    ) -> DAQ_Move:
+        move_docks: list[Dock] = None,
+        move_forms: list[QtWidgets.QWidget] = None,
+        actuators_modules: list[DAQ_Move] = None,
+    ) -> DAQ_Move:        
+        if move_docks is None:
+            move_docks = []
+        if move_forms is None:
+            move_forms = []
+        if actuators_modules is None:
+            actuators_modules = []      
+
         if plug_settings is None:
             ui_identifier = config("actuator", "ui")
         else:
@@ -1241,6 +1254,7 @@ class DashBoard(CustomApp):
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
                 ui_identifier = config("actuator", "ui")
+
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
             if ui_identifier is not None
