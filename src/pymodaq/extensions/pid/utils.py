@@ -118,19 +118,21 @@ class PIDModelGeneric:
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[float], dt=0, stab=True) -> DataToActuators:
+    def convert_output(self, outputs: List[float], **kwargs) -> DataToActuators:
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
         ----------
         outputs: (list of float) output value from the PID from which the model extract a value of the same units as the actuator
-        dt: (float) elapsed time in seconds since last call
+        
         Returns
         -------
         DataToActuatorPID: the converted output as a DataToActuatorPID object (derived from DataToExport)
 
         """
-        logger.warning("dt and stab are deprecated, it will be removed in a future release.")
+        if kwargs.get('dt', None) is not None or kwargs.get('stab', None) is not None:
+            logger.warning("dt and stab are deprecated, it will be removed in a future release.")
+
         self.curr_output = outputs
         return DataToActuators('pid', mode='rel',
                                  data=[DataActuator(self.actuators_name[ind], data=outputs[ind])
