@@ -302,7 +302,7 @@ class DashBoard(CustomApp):
         Remove the given list of detectors from the dashboard.
         Parameters
         ----------
-        actuator_modules: List[DAQ_Viewer]
+        detector_modules: List[DAQ_Viewer]
             List of DAQ_Viewer instances to be removed.
         """
         if detector_modules is None:
