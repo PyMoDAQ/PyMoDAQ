@@ -1802,25 +1802,3 @@ class DashBoard(CustomApp):
                 logging.info(txt)
         except Exception as e:
             pass
-
-
-def main():
-    from pymodaq_gui.utils.utils import mkQApp
-
-    app = mkQApp('Dashboard')
-
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Dashboard')
-
-    prog = DashBoard(area)
-
-    win.show()
-
-    app.exec()
-
-
-if __name__ == '__main__':
-    main()
