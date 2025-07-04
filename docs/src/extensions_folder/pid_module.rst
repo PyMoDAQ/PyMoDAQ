@@ -4,7 +4,6 @@ PID Module
 ==========
 
 .. note::
-    For now this module is **not compatible with PyMoDAQ 4**. Please use the PyMoDAQ 3.6.8 version, as mentioned latter in this documentation. We are currently working on to update the PID extension.
 
 Introduction
 ------------
@@ -81,25 +80,26 @@ Demonstration with a virtual beam steering system
 
 Let us start from scratch, we follow the installation procedure of PyMoDAQ that you can find in the installation page: https://pymodaq.cnrs.fr/en/latest/usage/Installation.html
 
-We suppose that you have Miniconda3 or Anaconda3 installed.
+We suppose that you have Miniforge/Miniconda3/Anaconda3 installed.
 
 In a console, first create a dedicated environment and activate it
 
-``conda create -n mock_beam_steering python=3.8``
+``conda create -n mock_beam_steering python=3.10``
 
 ``conda activate mock_beam_steering``
 
-Install PyMoDAQ with the version that have been tested while writing this documentation
+Install PyMoDAQ with the latest version (all the features discussed here require version 5.1 at least).
 
-``pip install pymodaq==3.6.8``
+``pip install pymodaq``
 
-and the Qt5 backend
+and your favorite Qt backend
 
-``pip install pyqt5``
+``pip install PySide6``
 
 We also need to install (from source) another package that contains all the mock plugins to test the PID module. This step is optional if you wish to use the PID module with real actuators and detectors.
 
-``pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_pid.git``
+``pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples.git``
+In this folder, you will find all the tools that you need. Go to the resources folder and copy the beam_steering_mock.xml preset to the preset folder, usually found at this path ``C:\ProgramData\.pymodaq\preset_configs``. This is not necessary but you will be able to see it directly in the available presets when starting a dashboard.
 
 Preset configuration
 ^^^^^^^^^^^^^^^^^^^^
@@ -108,15 +108,17 @@ Launch a dashboard
 
 ``dashboard``
 
-.. note::
-    If at this step you get an error from the console, try to update to a newest version of the package "tables", for instance ``pip install tables==3.7`` and try again to launch a dashboard.
-
-
 In the main menu go to
 
-**Preset Modes > New Preset**
+**Preset Modes > Load Preset**
 
-Let us choose a name, for example **preset_mock_beam_steering**.
+and choose the beam_steering_mock that you just copied.
+
+PUT FIGURE
+
+You should now have this:
+
+
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
@@ -209,6 +211,8 @@ Let say now that we intend to move regularly the setpoint. We need a more reacti
 
 We will not go further in this documentation about how to configure a PID filter. For lots of applications, having just Kp is enough. If you want to go further you can start with this Wikipedia page: https://en.wikipedia.org/wiki/PID_controller.
 
+Nevertheless, to help you find the best value, we display the stability around the setpoint. This is done by calculating the standard deviation over the last X values where X is the length of the queue (found in the main settings). You can then change Kp, Ki and Kd to find the values that reduces the most this value. This tool is particularly useful as you now have access to the relative spread of your distribution and you can check its evolution according to the conditions in your experiment to find the largest source of noise.
+
 Automatic control of the setpoints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -216,31 +220,9 @@ Let us imagine now that we want to use this beam to characterize a sample, and t
 
 In order to do that, we will create virtual actuators on the dashboard that will control the setpoints of the PID module. Then, PyMoDAQ will see them as standard actuators, which means that we will be able to use any of the other modules, and in particular, perform any scan that can be configured with the DAQ_Scan module.
 
-**Preset configuration**
+For this purpose, you can click on the little blue plus button in the action bar. This will create a DAQ_move for each setpoint in the model. In our case, this will create two of them, one for each axis. In practice, you have access to all the usual DAQ_move properties which means you can change these setpoints from a remote computer, manually by pressing buttons or programatically during a DAQ scan for example.
 
-Start with a fresh dashboard, we have to change a bit the configuration of our preset to configure this functionality. Go to
-
-**Preset Modes > Modify preset**
-
-and select the one that we defined previously. You just need to tick **Use PID as actuator** and save it.
-
-    .. _fig_preset_pid_as_actuator:
-
-.. figure:: /image/PID_Module/preset_pid_as_actuator.png
-    :width: 400
-
-    Configuration of the preset for automatic control of the setpoints.
-
-**Moving the setpoints from the dashboard**
-
-Load this new preset. Notice that it now automatically loaded the PID module, and that our dashboard got two more actuators of type PID named **Xaxis** and **Yaxis**. If you change manually the position of those actuators, you should see that they control the setpoints of the PID module.
-
-    .. _fig_setpoints_as_actuators:
-
-.. figure:: /image/PID_Module/setpoints_as_actuators_v2.png
-    :width: 700
-
-    Virtual actuators on the dashboard control the setpoints of the PID module.
+The key point is now that the virtual actuators on the dashboard control the setpoints of the PID module.
 
 **Moving the setpoints with the DAQ Scan module**
 
@@ -279,6 +261,13 @@ The beam should follow automatically the scan that we have defined. Of course in
 
     Movement of the beam on the camera with a scan of the setpoints.
 
+**Stabilization between scan positions**
+
+So far, there is not much difference during the scan compared than with a standard actuator. However, the stabilization is constantly ongoing and it is possible that our position is not yet completely stabilized when we start the acquisition. Sometimes, it does not matter as you can just spend more time acquiring but for high-precision measurement this can be a drawback as you have to make sure you do not induce artifacts in your data from a bad stabilization.
+
+PUT FIGURES
+
+For this reason, in the settings of the actuator (the fake ones) there are some specific tools for this purpose. By ticking the check stability, the program will now wait for the stage to be stable before sending the move_done_signal used by the daq_scan to launch the next acquisition. By stable, we mean that the standard deviation over the last Y values (where Y is the length of the queue) has to be lower than the desired threshold. It should be noted that Y has to be lowered than X (the queue used in the PID window). 
 
 How to write my own PID application?
 ------------------------------------
