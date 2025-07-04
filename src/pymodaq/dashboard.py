@@ -1059,10 +1059,10 @@ class DashBoard(CustomApp):
                 " modifications into account!"
             )
             mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(mssg.Ok | mssg.Cancel)
+            mssg.setStandardButtons(mssg.StandardButton.Ok | mssg.StandardButton.Ok)
             ret = mssg.exec()
 
-        if ret == mssg.Ok or not ask:
+        if ret == mssg.StandardButton.Ok or not ask:
             self.quit_fun()
             subprocess.call([sys.executable, __file__])
 
