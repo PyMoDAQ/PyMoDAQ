@@ -115,9 +115,11 @@ In the main menu go to
 and choose the beam_steering_mock that you just copied.
 
 PUT FIGURE
+.. figure:: /image/PID_Module/dashboard_preset_not_loaded_pymodaq5.png
 
 You should now have this:
 
+.. figure:: /image/PID_Module/dashboard_preset_loaded_pymodaq5.png
 
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
@@ -265,7 +267,8 @@ The beam should follow automatically the scan that we have defined. Of course in
 
 So far, there is not much difference during the scan compared than with a standard actuator. However, the stabilization is constantly ongoing and it is possible that our position is not yet completely stabilized when we start the acquisition. Sometimes, it does not matter as you can just spend more time acquiring but for high-precision measurement this can be a drawback as you have to make sure you do not induce artifacts in your data from a bad stabilization.
 
-PUT FIGURES
+.. figure:: /image/PID_Module/check_stability.png
+    :width: 300
 
 For this reason, in the settings of the actuator (the fake ones) there are some specific tools for this purpose. By ticking the check stability, the program will now wait for the stage to be stable before sending the move_done_signal used by the daq_scan to launch the next acquisition. By stable, we mean that the standard deviation over the last Y values (where Y is the length of the queue) has to be lower than the desired threshold. It should be noted that Y has to be lowered than X (the queue used in the PID window). 
 
