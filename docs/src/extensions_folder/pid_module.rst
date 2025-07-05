@@ -92,16 +92,19 @@ Install PyMoDAQ with the latest version (all the features discussed here require
 
 ``pip install pymodaq``
 
-and your favorite Qt backend
+and your favorite Qt backend, we recommand using either PySide6 or PyQt6.
 
 ``pip install PySide6``
 
-We also need to install (from source) another package that contains all the mock plugins to test the PID module. This step is optional if you wish to use the PID module with real actuators and detectors.
+We also need to install (from source) another package that contains all the mock plugins to test the PID module. This step is optional if you wish to use the PID module with real actuators and detectors but it provides an interesting toy model and is a good introduction on its use and on its different components.
 
 ``pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples.git``
-In this folder, you will find all the tools that you need. Go to the resources folder and copy the beam_steering_mock.xml preset to the preset folder, usually found at this path ``C:\ProgramData\.pymodaq\preset_configs``. This is not necessary but you will be able to see it directly in the available presets when starting a dashboard.
 
-Preset configuration
+This will create a folder in your environment (you can also clone it to the folder of your choice). In this folder, you will find all the tools that you need.
+
+First, go to the resources folder and copy the beam_steering_mock.xml preset to the preset folder, usually found at this path ``C:\ProgramData\.pymodaq\preset_configs``. This is not necessary but you will be able to see it directly in the available presets when starting a dashboard.
+
+Configuration from copied preset
 ^^^^^^^^^^^^^^^^^^^^
 
 Launch a dashboard
@@ -114,13 +117,25 @@ In the main menu go to
 
 and choose the beam_steering_mock that you just copied.
 
-PUT FIGURE
 .. figure:: /image/PID_Module/dashboard_preset_not_loaded_pymodaq5.png
 
 You should now have this:
 
 .. figure:: /image/PID_Module/dashboard_preset_loaded_pymodaq5.png
 
+
+Configurations from custom preset
+^^^^^^^^^^^^^^^^^^^^
+
+If you choose to not use the proposed preset, you can make your own. In that case, the required steps are the following:
+
+Launch a dashboard
+
+``dashboard``
+
+In the main menu go to
+
+**Preset Modes > New Preset**
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
