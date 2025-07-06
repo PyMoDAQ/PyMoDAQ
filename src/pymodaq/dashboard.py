@@ -1800,7 +1800,7 @@ class DashBoard(CustomApp):
                     severity="critical",
                     title="Preset loading error",
                     text=f"""
-                            <p>{error}<\p>
+                            <p>{error}</p>
                             <p>This error may be related to:</p>
                             <p>Saved preset file is not compatible anymore.</p>
                             <p>Please recreate the preset at <b>{filename}</b>.</p>
