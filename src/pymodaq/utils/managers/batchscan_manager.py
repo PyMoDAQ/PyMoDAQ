@@ -62,10 +62,12 @@ class BatchManager(ParameterManager):
             msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Scan Batch Manager?")
             msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
-            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
-            modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
-            msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+            modify_button = msgBox.addButton(
+                "Modify", QtWidgets.QMessageBox.ButtonRole.AcceptRole
+            )
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
@@ -161,9 +163,9 @@ class BatchManager(ParameterManager):
 
         dialog.layout().addWidget(widget_all_settings)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-        buttonBox.addButton('Save', buttonBox.AcceptRole)
+        buttonBox.addButton('Save', buttonBox.ButtonRole.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.addButton("Cancel", buttonBox.ButtonRole.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         dialog.layout().addWidget(buttonBox)

@@ -62,6 +62,6 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
                        f"{file}\n"
                        f"Impossible to load the {extension_name} extension")
-        msgBox.setStandardButtons(msgBox.Ok)
+        msgBox.setStandardButtons(msgBox.StandardButton.Ok)
         ret = msgBox.exec()
     return dashboard, extension, win
