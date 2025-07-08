@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets
+from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
 import pymodaq_utils.config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,17 +38,17 @@ class PresetManager:
         self.preset_params: Parameter = None
 
         if msgbox:
-            msgBox = QtWidgets.QMessageBox()
+            msgBox = QMessageBox()
             msgBox.setText("Preset Manager?")
             msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+            cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
             new_button = msgBox.addButton(
-                "New", QtWidgets.QMessageBox.ButtonRole.ActionRole
+                "New", QMessageBox.ButtonRole.ActionRole
             )
             modify_button = msgBox.addButton(
-                "Modify", QtWidgets.QMessageBox.ButtonRole.AcceptRole
+                "Modify", QMessageBox.ButtonRole.AcceptRole
             )
-            msgBox.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+            msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
@@ -151,7 +152,7 @@ class PresetManager:
 
     def show_preset(self):
         """ """
-        dialog = QtWidgets.QDialog()
+        dialog = QDialog()
         vlayout = QtWidgets.QVBoxLayout()
         tree = ParameterTree()
         # tree.setMinimumWidth(400)
@@ -161,11 +162,11 @@ class PresetManager:
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+        buttonBox = QDialogButtonBox(parent=dialog)
 
-        buttonBox.addButton("Save", buttonBox.AcceptRole)
+        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", buttonBox.RejectRole)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
@@ -175,7 +176,7 @@ class PresetManager:
         path = self.preset_path
         file = None
 
-        if res == dialog.Accepted:
+        if res == QDialog.DialogCode.Accepted:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
@@ -217,7 +218,7 @@ class PresetManager:
             layout_file = layout_path.joinpath(self.filename + ".dock")
             layout_file.unlink(missing_ok=True)
 
-        return res == dialog.Accepted
+        return res == QDialog.DialogCode.Accepted
 
 
 if __name__ == "__main__":

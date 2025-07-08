@@ -12,15 +12,13 @@ from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
 
 
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QSize
+from qtpy.QtCore import Qt, QThread, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
-    QCheckBox,
-    QWidget,
     QLabel,
     QDialogButtonBox,
-    QDialog,
+    QMessageBox,
 )
 from time import perf_counter
 import numpy as np
@@ -144,7 +142,7 @@ class DashBoard(CustomApp):
             "title": "Log level",
             "name": "log_level",
             "type": "list",
-            "value": config_utils("general", "debug_level"),
+            "value": config_utils("general", "debug_levels")[0],
             "limits": config_utils("general", "debug_levels"),
         },
         {
@@ -968,7 +966,7 @@ class DashBoard(CustomApp):
                 if modified:
                     self.remove_preset_related_files(path.name)
                     if self.detector_modules:
-                        mssg = QtWidgets.QMessageBox()
+                        mssg = QMessageBox()
                         mssg.setText(
                             "You have to restart the application to take the modifications"
                             " into account!\n\n"
@@ -1052,14 +1050,14 @@ class DashBoard(CustomApp):
 
     def restart_fun(self, ask=False):
         ret = False
-        mssg = QtWidgets.QMessageBox()
+        mssg = QMessageBox()
         if ask:
             mssg.setText(
                 "You have to restart the application to take the"
                 " modifications into account!"
             )
             mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(mssg.StandardButton.Ok | mssg.StandardButton.Ok)
+            mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
             ret = mssg.exec()
 
         if ret == mssg.StandardButton.Ok or not ask:
@@ -2054,7 +2052,7 @@ class DashBoard(CustomApp):
 
             else:
                 if show:
-                    msgBox = QtWidgets.QMessageBox()
+                    msgBox = QMessageBox()
                     msgBox.setWindowTitle("Update check")
                     msgBox.setText("Everything is up to date!")
                     ret = msgBox.exec()
@@ -2097,9 +2095,9 @@ class DashBoard(CustomApp):
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-        buttonBox.addButton("Cancel", buttonBox.RejectRole)
-        buttonBox.addButton("Apply", buttonBox.AcceptRole)
+        buttonBox = QDialogButtonBox(parent=dialog)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.addButton("Apply", QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.rejected.connect(dialog.reject)
         buttonBox.accepted.connect(dialog.accept)
 
