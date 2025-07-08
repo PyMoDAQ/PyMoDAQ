@@ -142,7 +142,7 @@ class DashBoard(CustomApp):
             "title": "Log level",
             "name": "log_level",
             "type": "list",
-            "value": config_utils("general", "debug_levels")[0],
+            "value": config_utils("general", "debug_level"),
             "limits": config_utils("general", "debug_levels"),
         },
         {
