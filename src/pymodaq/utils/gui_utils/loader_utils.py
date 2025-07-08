@@ -29,7 +29,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     -------
 
     """
-    win = QtWidgets.QMainWindow()
+    win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
