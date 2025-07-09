@@ -199,8 +199,8 @@ objects will be done by converting both objects in the same units before doing t
 >>> import numpy as np
 >>> from pymodaq_data.data import DataRaw
 >>> array = np.array([0, 1, 2])
->>> dwa_s = data_mod.DataRaw('data', units='s', data=[array])
->>> dwa_ms = data_mod.DataRaw('data', units='ms', data=[array])
+>>> dwa_s = DataRaw('data', units='s', data=[array])
+>>> dwa_ms = DataRaw('data', units='ms', data=[array])
 >>> (dwa_s + dwa_ms)[0]
 [0., 1.001, 2.002]
 
@@ -226,7 +226,7 @@ the mean. `DataWithAxes` introduces therefore this concept as another object att
 
   data = DataWithAxes('mydata', source=DataSource['raw'], dim=DataDim['Data1D'],
                       data=[np.array([1,2,3])],
-                      axes=[Axis('axis', index=0, data=np.array([-1, 0, 1])),
+                      axes=[Axis('axis', index=0, data=np.array([-1, 0, 1]))],
                       errors=[np.array([0.01, 0.03, 0,1])])
 
 
