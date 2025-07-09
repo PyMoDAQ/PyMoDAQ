@@ -18,6 +18,7 @@ The flow of this module is as follow:
 * Use the actuators and detectors manually to drive your experiment
 * Select an action to perform: automated scan (DAQ_Scan) and/or log data (DAQ_Logger)
 
+.. _dashboard_cli_arguments_note:
 
 .. note::
 
