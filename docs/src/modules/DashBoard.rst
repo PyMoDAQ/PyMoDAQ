@@ -18,6 +18,18 @@ The flow of this module is as follow:
 * Use the actuators and detectors manually to drive your experiment
 * Select an action to perform: automated scan (DAQ_Scan) and/or log data (DAQ_Logger)
 
+.. _dashboard_cli_arguments_note:
+
+.. note::
+
+    This module can be started from a terminal, using the command ``dashboard`` in an activated environment where
+    PyMoDAQ is installed.
+
+    A list of accepted command-line arguments are available, you can list them using ``dashboard -h``. For now the
+    accepted arguments are the following:
+
+    * ``-p`` or ``--preset`` followed by an existing preset name will start the dashboard with the
+      selected preset loaded. For example ``dashboard -p preset_default`` should start the dashboard with the default preset.
 
 Introduction
 ------------
@@ -28,7 +40,6 @@ will be loaded as instances of DAQ_Move and DAQ_Viewer.
 The dashboard gives you full control for manual adjustments
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move on to
 different actions.
-
 
   .. _daq_scan_dashboard:
 
