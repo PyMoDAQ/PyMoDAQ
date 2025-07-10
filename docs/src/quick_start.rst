@@ -208,7 +208,7 @@ Once all the instruments of our experimental setup are controlled with a dedicat
 difficult task is behind us.
 
 We can now group them in a :ref:`Dashboard <dashboard_module>`, and enjoy all the features available through
-the Dashboard Extensions. A group on control modules in a dashboard can be saved in a :ref:`preset <preset_manager>`.
+the Dashboard Extensions. A group of control modules in a dashboard can be saved in a :ref:`preset <preset_manager>`.
 A dashboard can be started with command line arguments, as explained on the :ref:`dashboard page <dashboard_cli_arguments_note>`
 
 The :ref:`DAQ Scan <daq_scan_module>` extension is the first one to consider, as it meets the needs of any experiment
