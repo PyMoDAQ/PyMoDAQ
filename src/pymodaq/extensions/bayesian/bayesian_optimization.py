@@ -22,11 +22,15 @@ EXTENSION_NAME = 'BayesianOptimization'
 CLASS_NAME = 'BayesianOptimization'
 
 PREDICTION_NAMES = list(GenericAcquisitionFunctionFactory.keys())
-PREDICTION_PARAMS = [{'title': 'Kind', 'name': 'kind', 'type': 'list',
+PREDICTION_PARAMS = ([{'title': 'Kind', 'name': 'kind', 'type': 'list',
                       'value': PREDICTION_NAMES[0],
                       'limits': PREDICTION_NAMES}
-                     ] + GenericAcquisitionFunctionFactory.get(
-    PREDICTION_NAMES[0]).params
+                     ] +
+                     [{'title': 'Options', 'name': prediction_name.lower(), 'type': 'group',
+                       'children': GenericAcquisitionFunctionFactory.get(PREDICTION_NAMES[0]).params,
+                       'visible': True if ind==0 else False
+                     } for ind, prediction_name in enumerate(PREDICTION_NAMES)]
+                     )
 
 
 class BayesianOptimizationRunner(OptimizationRunner):
@@ -91,11 +95,9 @@ class BayesianOptimization(GenericOptimization):
         """
         super().value_changed(param)
         if param.name() == 'kind':
-            utility_settings = self.settings.child('main_settings', 'prediction')
-            old_children = utility_settings.children()[1:]
-            for child in old_children:
-                utility_settings.removeChild(child)
-            utility_settings.addChildren(GenericAcquisitionFunctionFactory.get(param.value()).params)
+            for prediction_setting in param.parent().children():
+                if prediction_setting.name() != 'kind':
+                    self.settings.child('main_settings', 'prediction', prediction_setting.name()).show(prediction_setting.name() == param.value().lower())
 
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(
@@ -108,9 +110,9 @@ def main():
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('Bayesian Optimiser')
-    preset_file_name = config('presets', f'default_preset_for_scan')
+    #preset_file_name = config('presets', f'beam_steering')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'Bayesian')
+    dashboard, extension, win = load_dashboard_with_preset('beam_steering', 'Bayesian')
 
     app.exec()
 
