@@ -42,10 +42,10 @@ class BayesianOptimizationRunner(OptimizationRunner):
         """
         """
         if command.command == OptimizerToRunner.PREDICTION:
-            utility_params = {k: v for k, v in command.attribute.items() if k != "kind" and k != "tradeoff_actual"}
+            kind = command.attribute.pop('kind')
             self.optimization_algorithm.set_acquisition_function(
-                command.attribute['kind'],
-                **utility_params)
+                kind,
+                **command.attribute)
         else:
             super().queue_command(command)
 

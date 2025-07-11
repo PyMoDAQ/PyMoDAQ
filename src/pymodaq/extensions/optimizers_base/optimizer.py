@@ -457,7 +457,9 @@ class GenericOptimization(CustomExt):
 
     def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
-        uparams = {child.name() : child.value() for child in utility_settings.children()}
+        kind = utility_settings.child('kind').value()
+        uparams = {child.name() : child.value() for child in utility_settings.child(kind.lower()).children()}
+        uparams['kind'] = kind
         self.command_runner.emit(
             utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
 
