@@ -4,7 +4,8 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
-    _usual_name = "Upper Confidence Bound"
+    usual_name = "Upper Confidence Bound"
+    short_name = "ucb"
     params = [
         {'title': 'Kappa:', 'name': 'kappa', 'type': 'slide', 'value': 2.576,
          'min': 0.001, 'max': 100, 'subtype': 'log',
@@ -40,7 +41,8 @@ class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
-    _usual_name = "Probability of Improvement"
+    usual_name = "Probability of Improvement"
+    short_name = "poi"
     params = [ 
         {'title': 'Xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
          'tip': 'Governs the exploration/exploitation tradeoff.'
@@ -72,7 +74,8 @@ class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericExpectedImprovement(GenericAcquisitionFunctionBase):
-    _usual_name = "Expected Improvement"
+    usual_name = "Expected Improvement"
+    short_name = "ei"
     params = [ 
         {'title': 'Xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
          'tip': 'Governs the exploration/exploitation tradeoff.'
