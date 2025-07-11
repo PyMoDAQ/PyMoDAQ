@@ -72,9 +72,9 @@ class BayesianOptimization(GenericOptimization):
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')
         if utility:
             try:
-                utility_params = { k : v for k, v in utility.items() \
-                                   if k != "kind" and k != "tradeoff_actual" }
-                GenericAcquisitionFunctionFactory.create(utility['kind'], **utility_params)
+                kind = utility.pop('kind', None)
+                if kind is not None:
+                    GenericAcquisitionFunctionFactory.create(kind, **utility)
             except ValueError:
                 return False
 
@@ -97,7 +97,9 @@ class BayesianOptimization(GenericOptimization):
         if param.name() == 'kind':
             for prediction_setting in param.parent().children():
                 if prediction_setting.name() != 'kind':
-                    self.settings.child('main_settings', 'prediction', prediction_setting.name()).show(prediction_setting.name() == param.value().lower())
+                    self.settings.child(
+                        'main_settings', 'prediction',
+                        prediction_setting.name()).show(prediction_setting.name() == param.value().lower())
 
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(

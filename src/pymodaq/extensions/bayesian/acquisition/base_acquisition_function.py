@@ -23,7 +23,12 @@ class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
 
     def __init__(self,  **kwargs):
         super().__init__()
-        self._function = UpperConfidenceBound(**kwargs)
+        self._function = UpperConfidenceBound(
+            kappa=kwargs.get('kappa', 2.576),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):
@@ -47,9 +52,15 @@ class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
         {'title': 'Exploration decay delay:', 'name': 'exploration_decay_delay', 'type': 'int', 'value': 20,
          'tip': 'Number of iterations that must have passed before applying the decay to xi.'}
     ]
+
     def __init__(self, **kwargs):
         super().__init__()
-        self._function = ProbabilityOfImprovement(**kwargs)
+        self._function = ProbabilityOfImprovement(
+            xi=kwargs.get('xi'),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):
@@ -75,7 +86,12 @@ class GenericExpectedImprovement(GenericAcquisitionFunctionBase):
     ]
     def __init__(self, **kwargs):
         super().__init__()
-        self._function = ExpectedImprovement(**kwargs)
+        self._function = ExpectedImprovement(
+            xi=kwargs.get('xi'),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):
