@@ -47,7 +47,7 @@ from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
 
-PREDICTION_PARAMS = []  # to be subclassed in ral optimizer implementations
+PREDICTION_PARAMS = []  # to be subclassed in real optimizer implementations
 MODELS = get_optimizer_models()
 
 
@@ -217,6 +217,8 @@ class OptimizationRunner(QtCore.QObject):
                                                            ind_iter=self._ind_iter))
 
                 self.optimization_algorithm.update_prediction_function()
+                self.runner_command.emit(
+                    utils.ThreadCommand(OptimizerThreadStatus.TRADE_OFF, attribute=self.optimization_algorithm.tradeoff))
 
                 if self.optimization_algorithm.stopping(self._ind_iter, self.stopping_params):
                     converged = True
@@ -785,7 +787,7 @@ class GenericOptimization(CustomExt):
             QtWidgets.QApplication.processEvents()
 
     def thread_status(self, status: utils.ThreadCommand):
-        pass
+        """To reimplement if needed"""
 
 
 

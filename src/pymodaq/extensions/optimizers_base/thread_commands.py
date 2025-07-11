@@ -17,4 +17,5 @@ class OptimizerToRunner(StrEnum):
 class OptimizerThreadStatus(StrEnum):
 
     ADD_DATA = "add_data"
+    TRADE_OFF = "tradeoff"
 

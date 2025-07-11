@@ -1,6 +1,6 @@
 
 
-from pymodaq_utils import config as config_mod
+from pymodaq_utils import config as config_mod, utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
@@ -12,7 +12,8 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 from pymodaq.extensions.optimizers_base.optimizer import (
     GenericOptimization, OptimizationRunner, optimizer_params)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
-from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
+from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
+
 
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
@@ -21,15 +22,16 @@ config = config_mod.Config()
 EXTENSION_NAME = 'BayesianOptimization'
 CLASS_NAME = 'BayesianOptimization'
 
-PREDICTION_NAMES = list(GenericAcquisitionFunctionFactory.keys())
+PREDICTION_NAMES = GenericAcquisitionFunctionFactory.usual_names()
+PREDICTION_SHORT_NAMES = GenericAcquisitionFunctionFactory.short_names()
 PREDICTION_PARAMS = ([{'title': 'Kind', 'name': 'kind', 'type': 'list',
                       'value': PREDICTION_NAMES[0],
-                      'limits': PREDICTION_NAMES}
+                      'limits': {name: short_name for name, short_name in zip(PREDICTION_NAMES, PREDICTION_SHORT_NAMES)}}
                      ] +
-                     [{'title': 'Options', 'name': prediction_name.lower(), 'type': 'group',
-                       'children': GenericAcquisitionFunctionFactory.get(PREDICTION_NAMES[0]).params,
+                     [{'title': 'Options', 'name': prediction_name, 'type': 'group',
+                       'children': GenericAcquisitionFunctionFactory.get(prediction_name).params,
                        'visible': True if ind==0 else False
-                     } for ind, prediction_name in enumerate(PREDICTION_NAMES)]
+                     } for ind, prediction_name in enumerate(PREDICTION_SHORT_NAMES)]
                      )
 
 
@@ -105,6 +107,12 @@ class BayesianOptimization(GenericOptimization):
         self.algorithm = BayesianAlgorithm(
             ini_random=self.settings['main_settings', 'ini_random'],
             bounds=self.format_bounds())
+
+    def thread_status(self, status: utils.ThreadCommand):
+        super().thread_status(status)
+        if status.command == OptimizerThreadStatus.TRADE_OFF:
+            kind = self.settings['main_settings', 'prediction', 'kind']
+            self.settings.child('main_settings', 'prediction', kind, 'tradeoff_actual').setValue(status.attribute)
 
 
 def main():

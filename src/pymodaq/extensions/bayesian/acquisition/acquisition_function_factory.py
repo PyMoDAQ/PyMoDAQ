@@ -24,11 +24,11 @@ class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
 
     @property
     def tradeoff(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @tradeoff.setter
     def tradeoff(self, tradeoff):
-        raise NotImplemented
+        raise NotImplementedError
 
     def suggest(self, gaussian_process, target_space, n_random = 1000, n_l_bfgs_b = 10, fit_gp = True):
         return self._function.suggest(gaussian_process, target_space, n_random, n_l_bfgs_b, fit_gp)
@@ -73,7 +73,7 @@ class GenericAcquisitionFunctionFactory:
 
     @classmethod
     def short_names(cls) -> list[str]:
-        return cls.keys()
+        return list(cls.keys())
 
     @classmethod
     def usual_names(cls) -> list[str]:
