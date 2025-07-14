@@ -71,7 +71,22 @@ PyMoDAQ's main functionalities directly writing in your console either:
 Execute a given python file
 +++++++++++++++++++++++++++
 
-If you knwow where, within PyMoDAQ directories, is the python file you want to run you can enter for instance:
+Every PyMoDAQ's file (*xxx.py*) which contains an entry point (a ``if __name__='__main__:'``
+statement at the end of the file) can be run by calling Python over it.
+Nevertheless, it's also possible to run them by calling their name (the xxx on the first brackets) in your console.
+This is allowed thanks to the following lines of code of the pyproject.toml file:
+
+.. figure:: /image/write_documentation/projects_scripts.png
+    :width: 600
+
+    Caption of the pyproject.toml file. The red box contains the part that makes possible
+    the execution of a given Python file by using your console.
+
+The Fig. 2.1 shows the script which allows you to launch PyMoDAQ's main modules.
+In orange we have the file name and in green between ``""`` the path of the file followed by ``:main``.
+
+All PyMoDAQ's modules are Python files with an entry point so each of them can be launched directly with your console.
+For PyModDAQ's main modules, you can also run them by entering the following commands:
 
 *  ``python -m pymodaq.dashboard``
 *  ``python -m pymodaq.extensions.daq_scan``
@@ -81,9 +96,9 @@ If you knwow where, within PyMoDAQ directories, is the python file you want to r
 *  ``python -m pymodaq.extensions.h5browser``
 *  ``python -m pymodaq_plugin_manager.manager``
 
-for PyMoDAQ's main modules. The *-m* option tells python to look within its *site-packages* folder (where you've just
-installed pymodaq) In fact if one of PyMoDAQ's file (*xxx.py*) as an entry point (a ``if __name__='__main__:'``
-statement at the end of the file), you can run it by calling python over it...
+The *-m* option tells Python to look within its *site-packages* folder (where you've just
+installed pymodaq). This can be useful if you create your own extension (see :ref:`Extension Plugins <extension_plugins>`)
+for example.
 
 
   .. _shortcut_section:
