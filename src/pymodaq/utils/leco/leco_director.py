@@ -1,7 +1,7 @@
 
 import random
 from pymodaq_utils.enums import StrEnum
-from typing import Callable, Sequence, List, Optional, Union
+from typing import Callable, cast, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
@@ -13,18 +13,19 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
+from pymodaq.utils.leco.rpc_method_definitions import GenericDirectorMethods, MoveDirectorMethods
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq.control_modules.thread_commands import ThreadStatusMove
 
 config = Config()
 
 class DirectorCommands(StrEnum):
-    SET_SETTINGS = 'set_settings'
-    SET_INFO = 'set_info'
+    SET_SETTINGS = GenericDirectorMethods.SET_DIRECTOR_SETTINGS
+    SET_INFO = GenericDirectorMethods.SET_DIRECTOR_INFO
 
-    SEND_POSITION = 'send_position'  # to display the actor position
-    SET_MOVE_DONE = 'set_move_done'
-    SET_UNITS = 'set_units'  # to set units accordingly to the one of the actor
+    SEND_POSITION = MoveDirectorMethods.SEND_POSITION  # to display the actor position
+    SET_MOVE_DONE = MoveDirectorMethods.SET_MOVE_DONE
+    SET_UNITS = MoveDirectorMethods.SET_UNITS  # to set units accordingly to the one of the actor
 
 
 class DirectorReceivedCommands(StrEnum):
@@ -110,7 +111,11 @@ class LECODirector:
         """ Write the value of a param upfated from the actor to here in the
         Parameter with path: ('move_settings', 'settings_client')
         """
-        param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
+        assert additional_payload
+        param = cast(
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+        )
 
         try:
             path = ['settings_client']
@@ -124,5 +129,6 @@ class LECODirector:
     def set_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter"""
+        GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
         params = ioxml.XML_string_to_parameter(settings)
         self.settings.child('settings_client').addChildren(params)

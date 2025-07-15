@@ -16,8 +16,17 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
+from pymodaq.utils.leco.rpc_method_definitions import (
+    GenericMethods,
+    MoveMethods,
+    ViewerMethods,
+    GenericDirectorMethods,
+    MoveDirectorMethods,
+    ViewerDirectorMethods,
+)
 
 
+# Commands for ThreadCommand
 class LECOClientCommands(StrEnum):
     LECO_CONNECTED = "leco_connected"
     LECO_DISCONNECTED = "leco_disconnected"
@@ -92,16 +101,22 @@ class ActorHandler(PymodaqPipeHandler):
 
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
-        self.register_binary_rpc_method(self.set_info, accept_binary_input=True)
-        self.register_rpc_method(self.send_data_grab)
-        self.register_rpc_method(self.send_data_snap)
-        self.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
-        self.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
-        self.register_rpc_method(self.move_home)
-        self.register_rpc_method(self.get_actuator_value)
-        self.register_rpc_method(self.stop_motion)
-        self.register_rpc_method(self.stop_grab)
-        self.register_rpc_method(self.get_settings)
+        self.register_binary_rpc_method(
+            self.set_info, name=GenericMethods.SET_INFO, accept_binary_input=True
+        )
+        self.register_rpc_method(self.send_data_grab, name=ViewerMethods.GRAB)
+        self.register_rpc_method(self.send_data_snap, name=ViewerMethods.SNAP)
+        self.register_binary_rpc_method(
+            self.move_abs, accept_binary_input=True, name=MoveMethods.MOVE_ABS
+        )
+        self.register_binary_rpc_method(
+            self.move_rel, accept_binary_input=True, name=MoveMethods.MOVE_REL
+        )
+        self.register_rpc_method(self.move_home, name=MoveMethods.MOVE_HOME)
+        self.register_rpc_method(self.get_actuator_value, name=MoveMethods.GET_ACTUATOR_VALUE)
+        self.register_rpc_method(self.stop_motion, name=MoveMethods.STOP_MOTION)
+        self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
+        self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
 
     @staticmethod
     def extract_pymodaq_object(
@@ -246,7 +261,9 @@ class ActorListener(PymodaqListener):
 
     def start_listen(self) -> None:
         super().start_listen()
-        self.message_handler.register_rpc_method(self.set_remote_name)
+        self.message_handler.register_rpc_method(
+            self.set_remote_name, name=GenericMethods.SET_REMOTE_NAME
+        )
 
     def set_remote_name(self, name: str) -> None:
         """Define what the name of the remote for answers is."""
@@ -273,51 +290,55 @@ class ActorListener(PymodaqListener):
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
 
         elif command.command == LECOViewerCommands.DATA_READY:
-            value = command.attribute  # type: ignore
-            self.communicator.ask_rpc(
-                receiver=self.remote_name,
-                method="set_data",
+            value = command.attribute
+            self.send_rpc_message_to_remote(
+                method=ViewerDirectorMethods.SET_DATA,
                 **binary_serialization_to_kwargs(value),
             )
 
         elif command.command == LECOCommands.SEND_INFO:
-            self.communicator.ask_rpc(
-                receiver=self.remote_name,
-                method="set_info",
+            self.send_rpc_message_to_remote(
+                method=GenericDirectorMethods.SET_DIRECTOR_INFO,
                 **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
 
         elif command.command == LECOMoveCommands.POSITION:
             value = command.attribute
             if isinstance(value, (list, tuple)):
                 value = value[0]  # for backward compatibility with attributes list
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="send_position",
-                                      **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
-                                      )
+            self.send_rpc_message_to_remote(
+                method=MoveDirectorMethods.SEND_POSITION,
+                **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
+            )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
             value = command.attribute
             if isinstance(value, (list, tuple)):
                 value = value[0]  # for backward compatibility with attributes list
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_move_done",
-                                      **binary_serialization_to_kwargs(value, data_key="position"),
-                                      )
+            self.send_rpc_message_to_remote(
+                method=MoveDirectorMethods.SET_MOVE_DONE,
+                **binary_serialization_to_kwargs(value, data_key="position"),
+            )
 
         elif command.command == LECOMoveCommands.UNITS_CHANGED:
             units: str = command.attribute
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_units",
-                                      units=units.encode(),
-                                      )
+            self.send_rpc_message_to_remote(
+                method=MoveDirectorMethods.SET_UNITS,
+                units=units.encode(),
+            )
 
         elif command.command == LECOCommands.SET_SETTINGS:
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method='set_settings',
-                                      settings=command.attribute.decode())
+            self.send_rpc_message_to_remote(
+                method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
+                settings=command.attribute.decode(),
+            )
 
         else:
-            raise IOError('Unknown TCP client command')
+            raise IOError("Unknown TCP client command")
+
+    def send_rpc_message_to_remote(self, method: str, **kwargs) -> None:
+        if not self.remote_name:
+            return
+        self.communicator.ask_rpc(receiver=self.remote_name, method=method, **kwargs)
 
 
 # to be able to separate them later on

@@ -519,7 +519,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
                 self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
-            # self._leco_client.cmd_signal.emit(ThreadCommand("set_info", attribute=["detector_settings", ""]))
+            # self._leco_client.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=["detector_settings", ""]))
         else:
             self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
             try:
