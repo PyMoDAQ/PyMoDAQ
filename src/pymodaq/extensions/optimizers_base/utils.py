@@ -305,7 +305,9 @@ class OptimizerModelDefault(OptimizerModelGeneric):
             'outputs', mode='abs',
             data=[DataActuator(self.modules_manager.selected_actuators_name[ind],
                                data=float(outputs[ind][0]),
-                               units=self.modules_manager.actuators[ind].units) for ind in  range(len(outputs))])
+                               units=self.modules_manager.actuators[ind].units,
+                               labels=[self.modules_manager.selected_actuators_name[ind]])
+                  for ind in  range(len(outputs))],)
 
 
 def get_optimizer_models(model_name=None):
