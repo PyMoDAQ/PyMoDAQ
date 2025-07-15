@@ -458,12 +458,19 @@ class GenericOptimization(CustomExt):
             self.mainsettings_saver_loader.save_config()
 
     def update_prediction_function(self):
+        """ Get the selected prediction function options and pass them to the Runner
+
+        Should be reimplemented in real Optimizer implementation
+        Something like:
+
         utility_settings = self.settings.child('main_settings', 'prediction')
         kind = utility_settings.child('kind').value()
-        uparams = {child.name() : child.value() for child in utility_settings.child(kind.lower()).children()}
+        uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
         uparams['kind'] = kind
         self.command_runner.emit(
             utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
+        """
+        pass
 
     def get_stopping_parameters(self) -> StoppingParameters:
         stopping_settings = self.settings.child('main_settings', 'stopping')
@@ -737,13 +744,13 @@ class GenericOptimization(CustomExt):
     def process_output(self, dte: DataToExport):
 
         self.enl_index += 1
-        try:
-            dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
-            self.settings.child('main_settings', 'prediction', 'tradeoff_actual').setValue(
-                float(dwa_tradeoff[0][0])
-            )
-        except KeyError:
-            pass
+        # try:
+        #     dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
+        #     self.settings.child('main_settings', 'prediction', 'options', 'tradeoff_actual').setValue(
+        #         float(dwa_tradeoff[0][0])
+        #     )
+        # except KeyError:
+        #     pass
         dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData))
         dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name(DataNames.Actuators))
         if self.DISPLAY_BEST:

@@ -29,8 +29,9 @@ PREDICTION_PARAMS = (
          {'title': 'Kind', 'name': 'kind', 'type': 'list',
           'value': PREDICTION_NAMES[0],
           'limits': PREDICTION_NAMES}] +
-        LossFunctionFactory.get(STARTING_LOSS_DIM,
-                                PREDICTION_NAMES[0]).params)
+        [{'title': 'Options', 'name': 'options', 'type': 'group',
+          'children': LossFunctionFactory.get(STARTING_LOSS_DIM, PREDICTION_NAMES[0]).params}]
+)
 
 
 class AdaptiveOptimizationRunner(OptimizationRunner):
@@ -43,12 +44,9 @@ class AdaptiveOptimizationRunner(OptimizationRunner):
         """
         """
         if command.command == OptimizerToRunner.PREDICTION:
-            utility_params = {k: v for k, v in command.attribute.items()
-                              if k not in ("kind", "tradeoff_actual", 'lossdim')}
-
-            self.optimization_algorithm.set_prediction_function(command.attribute['lossdim'],
-                                                                command.attribute['kind'],
-                                                                **utility_params)
+            kind = command.attribute.pop('kind')
+            lossdim = command.attribute.pop('lossdim')
+            self.optimization_algorithm.set_prediction_function(lossdim, kind, **command.attribute)
         else:
             super().queue_command(command)
 
@@ -102,24 +100,24 @@ class AdaptiveOptimisation(GenericOptimization):
                     LossFunctionFactory.keys(param.value())
                 )
             except Exception as e:
-                pass
+                logger.debug('Warning: Error while trying to infer the kind of loss, may be because limits just changed')
         elif param.name() == 'kind':
             utility_settings = self.settings.child('main_settings', 'prediction')
-            old_children = utility_settings.children()[2:]
-            for child in old_children:
-                utility_settings.removeChild(child)
+            utility_settings.child('options').clearChildren()
             try:
                 params = LossFunctionFactory.get(utility_settings['lossdim'],
                                                  param.value()).params
-                utility_settings.addChildren(params)
-            except (KeyError, ValueError):
-                pass
+                utility_settings.child('options').addChildren(params)
+            except (KeyError, ValueError) as e:
+                logger.debug('Warning: Error while trying to populate options for loss, may be because limits for'
+                             ' kind setting just changed')
 
     def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
         try:
-            uparams = {child.name() : child.value() for child in utility_settings.children()}
-            LossFunctionFactory.get(uparams['lossdim'], uparams['kind'])
+            uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
+            uparams['kind'] = utility_settings['kind']
+            uparams['lossdim'] = utility_settings['lossdim']
             self.command_runner.emit(
                 utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
         except (KeyError, ValueError, AttributeError) as e:

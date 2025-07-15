@@ -28,10 +28,8 @@ PREDICTION_PARAMS = ([{'title': 'Kind', 'name': 'kind', 'type': 'list',
                       'value': PREDICTION_NAMES[0],
                       'limits': {name: short_name for name, short_name in zip(PREDICTION_NAMES, PREDICTION_SHORT_NAMES)}}
                      ] +
-                     [{'title': 'Options', 'name': prediction_name, 'type': 'group',
-                       'children': GenericAcquisitionFunctionFactory.get(prediction_name).params,
-                       'visible': True if ind==0 else False
-                     } for ind, prediction_name in enumerate(PREDICTION_SHORT_NAMES)]
+                     [{'title': 'Options', 'name': 'options', 'type': 'group',
+                       'children': GenericAcquisitionFunctionFactory.get(PREDICTION_SHORT_NAMES[0]).params}]
                      )
 
 
@@ -70,6 +68,20 @@ class BayesianOptimization(GenericOptimization):
         """
         pass
 
+    def update_prediction_function(self):
+        """ Get the selected prediction function options and pass them to the Runner
+
+        Should be reimplemented in real Optimizer implementation
+        """
+        utility_settings = self.settings.child('main_settings', 'prediction')
+
+        kind = utility_settings.child('kind').value()
+        uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
+        uparams['kind'] = kind
+        self.command_runner.emit(
+            utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
+
+
     def validate_config(self) -> bool:
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')
         if utility:
@@ -97,11 +109,9 @@ class BayesianOptimization(GenericOptimization):
         """
         super().value_changed(param)
         if param.name() == 'kind':
-            for prediction_setting in param.parent().children():
-                if prediction_setting.name() != 'kind':
-                    self.settings.child(
-                        'main_settings', 'prediction',
-                        prediction_setting.name()).show(prediction_setting.name() == param.value().lower())
+            param.parent().child('options').clearChildren()
+            param.parent().child('options').addChildren(
+                GenericAcquisitionFunctionFactory.get(param.value()).params)
 
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(
@@ -111,8 +121,7 @@ class BayesianOptimization(GenericOptimization):
     def thread_status(self, status: utils.ThreadCommand):
         super().thread_status(status)
         if status.command == OptimizerThreadStatus.TRADE_OFF:
-            kind = self.settings['main_settings', 'prediction', 'kind']
-            self.settings.child('main_settings', 'prediction', kind, 'tradeoff_actual').setValue(status.attribute)
+            self.settings.child('main_settings', 'prediction', 'options', 'tradeoff_actual').setValue(status.attribute)
 
 
 def main():
