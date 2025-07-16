@@ -36,10 +36,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         DAQ_Viewer_base.__init__(self, parent=parent,
                                  params_state=params_state)
         LECODirector.__init__(self, host=self.settings['host'])
-        for method in (
-            self.set_data,
-        ):
-            self.listener.register_binary_rpc_method(method, accept_binary_input=True)
+        self.register_binary_rpc_methods((self.set_data,))
 
         self.client_type = "GRABBER"
         self.x_axis = None
@@ -103,9 +100,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             self.controller.send_data_snap()
 
     def stop(self):
-        """
-            not implemented.
-        """
+        """Stop grabbing."""
         self.controller.stop_grab()
 
     def set_data(self, data: Union[list, str, None],

@@ -91,13 +91,6 @@ class LECODirector:
         self.settings.child('settings_client').clearChildren()
         self.listener.stop_listen()
 
-    def stop(self):
-        """
-            not implemented.
-        """
-        pass
-        return ""
-
     def emit_status(self, status: ThreadCommand) -> None:
         """ Emit the status_sig signal with the given status ThreadCommand back to the main GUI.
         """

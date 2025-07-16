@@ -7,7 +7,7 @@ running: `python -m pyleco.coordinators.coordinator`
 
 """
 
-from typing import Union
+from typing import Optional, Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
@@ -43,7 +43,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         utility_classes.DAQ_TCP_server
     """
     settings: Parameter
-    controller: ActuatorDirector
+    controller: Optional[ActuatorDirector]
     _axis_names = ['']
     _controller_units = ['']
     _epsilon = 1

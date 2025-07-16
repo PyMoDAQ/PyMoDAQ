@@ -124,7 +124,9 @@ class ActorHandler(PymodaqPipeHandler):
         value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
     ):
         if value is None and additional_payload:
-            return cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
+            return cast(
+                DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0])
+            )
         else:
             return value
 
@@ -133,7 +135,10 @@ class ActorHandler(PymodaqPipeHandler):
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
-        param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
+        assert additional_payload
+        param = cast(
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+        )
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=param))
 
     def get_settings(self):
@@ -293,6 +298,9 @@ class ActorListener(PymodaqListener):
                 pass
             finally:
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
+
+        elif command.attribute is None:
+            raise IOError("Command does not contain an attribute")
 
         elif command.command == LECOViewerCommands.DATA_READY:
             value = command.attribute
