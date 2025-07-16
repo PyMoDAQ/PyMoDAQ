@@ -1168,6 +1168,7 @@ class DashBoard(CustomApp):
 
     def add_move_from_extension(
         self, name: str, instrument_name: str, instrument_controller: Any,
+            ui_identifier = None,
             **kwargs
     ):
         """Specific method to add a DAQ_Move within the Dashboard. This Particular actuator
@@ -1186,9 +1187,13 @@ class DashBoard(CustomApp):
         instrument_controller: object
             whatever object is used to communicate between the instrument module and the extension
             which created it
+        ui_identifier: str
+            One of the possible registered UI
         kwargs: named arguments to be passed to add_move
         """
-        actuator = self.add_move(name, None, instrument_name, [], [], [], **kwargs)
+        actuator = self.add_move(name, None, instrument_name, [], [], [],
+                                 ui_identifier=ui_identifier,
+                                 **kwargs)
         actuator.controller = instrument_controller
         actuator.master = False
         actuator.init_hardware_ui()
