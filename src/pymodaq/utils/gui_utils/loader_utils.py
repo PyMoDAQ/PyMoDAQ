@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from qtpy import QtWidgets
+from qtpy.QtWidgets import QMessageBox, QMainWindow
 
 from pymodaq.dashboard import DashBoard
 from pymodaq.utils.gui_utils import DockArea
@@ -8,8 +8,9 @@ from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.utils import CustomExt
 
 
-def load_dashboard_with_preset(preset_name: str, extension_name: str = "") -> \
-        (DashBoard, CustomExt, QtWidgets.QMainWindow):
+def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
+        (DashBoard, CustomExt, QMainWindow):
+
     """ Load the Dashboard using a given preset then load an extension
 
     Parameters
@@ -29,7 +30,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = "") -> \
     -------
 
     """
-    win = QtWidgets.QMainWindow()
+    win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
@@ -63,10 +64,10 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = "") -> \
             extension = None
 
     else:
-        msgBox = QtWidgets.QMessageBox()
+        msgBox = QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
                        f"{file}\n"
                        f"Impossible to load the {extension_name} extension")
-        msgBox.setStandardButtons(msgBox.Ok)
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
         ret = msgBox.exec()
     return dashboard, extension, win
