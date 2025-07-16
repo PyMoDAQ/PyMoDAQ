@@ -609,8 +609,10 @@ class GenericOptimization(CustomExt):
         params = []
         for actuator in actuators:
             params.append({'title': actuator, 'name': actuator, 'type': 'group', 'children': [
-                {'title': 'min', 'name': 'min', 'type': 'float', 'value': -5},
-                {'title': 'max', 'name': 'max', 'type': 'float', 'value': 5},
+                {'title': 'min', 'name': 'min', 'type': 'float',
+                 'value': config('optimizer', 'bounds', 'actuator_min')},
+                {'title': 'max', 'name': 'max', 'type': 'float',
+                 'value': config('optimizer', 'bounds','actuator_max')},
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
 
