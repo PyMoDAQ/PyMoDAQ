@@ -1061,7 +1061,7 @@ class DashBoard(CustomApp):
             mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
             ret = mssg.exec()
 
-        if ret == mssg.StandardButton.Ok or not ask:
+        if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
             subprocess.call([sys.executable, __file__])
 
