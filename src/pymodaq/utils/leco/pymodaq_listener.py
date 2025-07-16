@@ -6,6 +6,7 @@ from threading import Event
 from typing import cast, Optional, Union, List, Sequence, Type
 
 from pyleco.core import COORDINATOR_PORT
+from pyleco.json_utils.errors import JSONRPCError, RECEIVER_UNKNOWN, NODE_UNKNOWN
 from pyleco.utils.listener import Listener, PipeHandler
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
@@ -200,7 +201,7 @@ class PymodaqListener(Listener):
     :param host: Host name of the communication server.
     :param port: Port number of the communication server.
     """
-    remote_name: str = ""
+    remote_names: set[str]
 
     local_methods = ["pong", "set_log_level"]
 
@@ -214,6 +215,7 @@ class PymodaqListener(Listener):
                  **kwargs) -> None:
         super().__init__(name, host, port, logger=logger, timeout=timeout,
                          **kwargs)
+        self.remote_names = set()
         self.signals = ListenerSignals()
         # self.signals.message.connect(self.handle_message)
         self.cmd_signal = self.signals.cmd_signal
@@ -267,7 +269,10 @@ class ActorListener(PymodaqListener):
 
     def set_remote_name(self, name: str) -> None:
         """Define what the name of the remote for answers is."""
-        self.remote_name = name
+        self.remote_names.add(name)
+
+    def remove_remote_name(self, name: str) -> None:
+        self.remote_names.discard(name)
 
     def queue_command(self, command: ThreadCommand) -> None:
         """Queue a command to send it via LECO to the server."""
@@ -336,9 +341,14 @@ class ActorListener(PymodaqListener):
             raise IOError("Unknown TCP client command")
 
     def send_rpc_message_to_remote(self, method: str, **kwargs) -> None:
-        if not self.remote_name:
+        if not self.remote_names:
             return
-        self.communicator.ask_rpc(receiver=self.remote_name, method=method, **kwargs)
+        for name in list(self.remote_names):
+            try:
+                self.communicator.ask_rpc(receiver=name, method=method, **kwargs)
+            except JSONRPCError as exc:
+                if exc.rpc_error.code in (RECEIVER_UNKNOWN.code, NODE_UNKNOWN.code):
+                    self.remove_remote_name(name)
 
 
 # to be able to separate them later on
