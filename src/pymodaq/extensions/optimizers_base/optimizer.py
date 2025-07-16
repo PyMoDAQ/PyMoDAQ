@@ -303,7 +303,12 @@ class GenericOptimization(CustomExt):
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
             self.get_action('ini_runner').trigger)
+
         self.ini_custom_attributes()
+
+        if len(MODELS) == 1:
+            self.get_action('ini_model').trigger()
+
 
     @property
     def title(self):
@@ -385,6 +390,7 @@ class GenericOptimization(CustomExt):
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
         self.modules_manager.show_only_control_modules(True)
+        self.modules_manager.settings_tree.setEnabled(False)
 
         splitter.setSizes((int(self.dockarea.height() / 2),
                            int(self.dockarea.height() / 2)))
@@ -659,10 +665,14 @@ class GenericOptimization(CustomExt):
                 self.modules_manager.selected_actuators_name
             self.mainsettings_saver_loader.load_config()
 
-            try:  # this is correct for Default Model and probably for all models...
-                self.model_class.settings.child('optimizing_signal', 'data_probe').activate()
-            except Exception:
-                pass
+            self.modules_manager.settings_tree.setEnabled(True)
+            self.settings.child('models', 'ini_model').hide()
+
+            #Warning the activate method here is blocking???
+            # try:  # this is correct for Default Model and probably for all models...
+            #     self.model_class.settings.child('optimizing_signal', 'data_probe').activate()
+            # except Exception:
+            #     pass
 
         except Exception as e:
             logger.exception(str(e))
