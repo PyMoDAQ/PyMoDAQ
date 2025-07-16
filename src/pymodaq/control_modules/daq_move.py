@@ -12,7 +12,7 @@ from importlib import import_module
 from numbers import Number
 
 import sys
-from typing import List, Tuple, Union, Optional, Type
+from typing import List, Tuple, Union, Optional, Type, Iterable, Dict
 import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
@@ -21,7 +21,7 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq_utils import config as config_mod
@@ -644,6 +644,31 @@ class DAQ_Move(ParameterControlModule):
             self.ui.set_unit_as_suffix(unit)
             self.ui.set_unit_prefix(config('actuator', 'siprefix') and
                                     (unit != '' or config('actuator', 'siprefix_even_without_units')))
+
+    @property
+    def axis_names(self) -> Union[List, Dict]:
+        """ Get the names of all possible axis"""
+        return self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+
+    @property
+    def axis_name(self) -> str:
+        """ Get/Set the current axis"""
+        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        if isinstance(limits, list):
+            return self.settings['move_settings', 'multiaxes', 'axis']
+        elif isinstance(limits, dict):
+            return find_keys_from_val(limits,
+                                      val=self.settings['move_settings', 'multiaxes', 'axis'])[0]
+
+    @axis_name.setter
+    def axis_name(self, name: str):
+        """ Get/Set the current axis"""
+        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        if name in limits:
+            if isinstance(limits, list):
+                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(name)
+            elif isinstance(limits, dict):
+                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(limits[name])
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
