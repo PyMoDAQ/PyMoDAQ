@@ -118,6 +118,7 @@ class AdaptiveOptimisation(GenericOptimization):
             uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
             uparams['kind'] = utility_settings['kind']
             uparams['lossdim'] = utility_settings['lossdim']
+
             self.command_runner.emit(
                 utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
         except (KeyError, ValueError, AttributeError) as e:
@@ -127,11 +128,19 @@ class AdaptiveOptimisation(GenericOptimization):
     def update_after_actuators_changed(self, actuators: list[str]):
         """ Actions to do after the actuators have been updated
         """
-        try:
+        try:#see if there is some registered loss function for the defined type
             self.settings.child('main_settings', 'prediction',
                                 'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
             self.update_prediction_function()
+
+            LossFunctionFactory.create(self.settings['main_settings', 'prediction',
+                                                           'lossdim'],
+                                       self.settings['main_settings', 'prediction',
+                                                           'kind'])
+            self.get_action('ini_runner').setEnabled(True)
+
         except ValueError as e:
+            self.get_action('ini_runner').setEnabled(False)
             messagebox(title='Warning',
                        text=f'You cannot select [{actuators}] as no corresponding Loss function exists')
 
