@@ -1,4 +1,4 @@
-.. _leco:
+.. _leco_communication:
 
 LECO communication
 ==================
@@ -76,6 +76,8 @@ After the movement or data acquisition has finished, it will call a method on so
 If you want, that the Actor sends the request to your Director, you have to tell the Actor about your name via the ``set_remote_name()`` method.
 
 The :mod:`pymodaq.utils.leco.director_utils` module offers director classes, which makes it easier to call the corresponding methods of the Actor.
+
+.. _leco_communication_serialization:
 
 Serialization
 .............

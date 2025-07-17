@@ -130,3 +130,9 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     The final shape of the data would be (100, 256, 1024). The first dimension corresponds to a Navigation axis
     (the scan), and the rest to Signal axes (the real detector's data).
     The corresponding data has a dimensionality of DataND and a representation of (100|256,1024).
+
+  ZeroMQ
+    A high-level messaging library that simplifies network communication by providing an abstract, message-oriented
+    interface over TCP. Unlike low-level TCP, ZeroMQ handles connection management, buffering, and reconnections
+    automatically and supports asynchronous communication. It includes built-in messaging patterns such as request/reply
+    and publish/subscribe, making it easier to develop distributed systems with minimal networking code.
