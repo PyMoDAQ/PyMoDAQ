@@ -53,7 +53,7 @@ LECO Protocol
 ~~~~~~~~~~~~~
 LECO is a generic communication protocol to control experiments and measurement hardware and is the mean of communicating
 with components outsides of PyMoDAQ. More detailed information can be found on the
-`project page <<https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`. This page will provide
+`project page <https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`_. This page will provide
 a basic explanation of LECO.
 
 There are three essential and usefully LECO component interacting together in PyMoDAQ:
@@ -71,6 +71,11 @@ acting like they've been told to (*producing data*).
     :alt: LECO Architecture
 
     LECO Architecture
+
+
+In :numref:`fig_leco_arch` one can see the LECO network architecture. In this example, `Node 1` and `Node 2` are
+LECO actors, each with instruments connected and a PyMoDAQ instance. They are connected to the coordinator, allowing
+the directors on the `Main dashboard` to send command to control them and retrieve their data.
 
 
 JSON-RPC
