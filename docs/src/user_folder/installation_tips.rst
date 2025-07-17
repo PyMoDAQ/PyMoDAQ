@@ -62,9 +62,6 @@ PyMoDAQ's main functionalities directly writing in your console either:
 *  ``h5browser``
 *  ``plugin_manager``
 
-In fact, every PyMoDAQ's file (*xxx.py*) which contains an entry point (a ``if __name__='__main__:'``
-statement at the end of the file) can be run by calling Python over it.
-Nevertheless, it's also possible to run them by calling their name (the xxx on the first brackets) in your console as we saw above.
 This is allowed thanks to the following lines of code of the pyproject.toml file:
 
 .. figure:: /image/write_documentation/projects_scripts.png
