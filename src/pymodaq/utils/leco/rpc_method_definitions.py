@@ -29,8 +29,8 @@ class ViewerMethods(StrEnum):
 
 # Director module methods
 class GenericDirectorMethods(StrEnum):
-    SET_DIRECTOR_SETTINGS = "set_settings"
-    SET_DIRECTOR_INFO = "set_info"
+    SET_DIRECTOR_SETTINGS = "set_director_settings"
+    SET_DIRECTOR_INFO = "set_director_info"
 
 
 class MoveDirectorMethods(StrEnum):

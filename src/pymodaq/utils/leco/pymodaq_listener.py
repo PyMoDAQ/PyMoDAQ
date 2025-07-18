@@ -37,7 +37,7 @@ class LECOCommands(StrEnum):
     CONNECT = "ini_connection"
     QUIT = "quit"
     GET_SETTINGS = 'get_settings'
-    SET_SETTINGS = 'set_settings'
+    SET_DIRECTOR_SETTINGS = 'set_director_settings'
     SET_INFO = 'set_info'
     SEND_INFO = 'send_info'
 
@@ -339,7 +339,7 @@ class ActorListener(PymodaqListener):
                 units=units.encode(),
             )
 
-        elif command.command == LECOCommands.SET_SETTINGS:
+        elif command.command == LECOCommands.SET_DIRECTOR_SETTINGS:
             self.send_rpc_message_to_remote(
                 method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
                 settings=command.attribute.decode(),

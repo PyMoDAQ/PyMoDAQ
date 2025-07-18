@@ -567,7 +567,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
             else:
                 common_param = 'detector_settings'
             self._command_tcpip.emit(
-                ThreadCommand(LECOCommands.SET_SETTINGS,
+                ThreadCommand(LECOCommands.SET_DIRECTOR_SETTINGS,
                               ioxml.parameter_to_xml_string(
                                   self.settings.child(common_param))))
 

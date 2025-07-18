@@ -159,12 +159,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.axis_units.append(units)
         self.axis_unit = units
 
-    def set_settings(self, settings: bytes):
+    def set_director_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter
 
         Then set the plugin units from this information"""
-        super().set_settings(settings)
+        super().set_director_settings(settings)
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:

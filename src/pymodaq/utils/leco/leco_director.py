@@ -63,10 +63,10 @@ class LECODirector:
 
         #registering rpc methods common to all Directors
         self.register_rpc_methods((
-            self.set_settings,
+            self.set_director_settings,
         ))
         self.register_binary_rpc_methods((
-            self.set_info,
+            self.set_director_info,
         ))
 
     def register_binary_rpc_methods(self, methods: Sequence[Callable]) -> None:
@@ -97,7 +97,7 @@ class LECODirector:
         super().emit_status(status=status)  # type: ignore
 
     # Methods accessible via remote calls
-    def set_info(self,
+    def set_director_info(self,
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
@@ -119,7 +119,7 @@ class LECODirector:
             print(f'could not set the param {param} in the director:\n'
                   f'{str(e)}')
 
-    def set_settings(self, settings: bytes):
+    def set_director_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter"""
         GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
