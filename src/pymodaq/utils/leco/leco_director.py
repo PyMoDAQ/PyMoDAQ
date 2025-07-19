@@ -3,6 +3,7 @@ import random
 from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
+from pyleco.json_utils.errors import JSONRPCError, RECEIVER_UNKNOWN
 import pymodaq_gui.parameter.utils as putils
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
@@ -10,11 +11,12 @@ from pymodaq_utils.config import Config
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
+from qtpy.QtCore import QTimer
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq_utils.serialize.factory import SerializableFactory
-from pymodaq.control_modules.thread_commands import ThreadStatusMove
+from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 config = Config()
 
@@ -89,6 +91,26 @@ class LECODirector:
         """ Clear the content of the settings_clients setting"""
         self.settings.child('settings_client').clearChildren()
         self.listener.stop_listen()
+
+    def start_timer(self) -> None:
+        """To be called in child classes."""
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.check_actor_connection)
+        self.timer.start(1000)  # in seconds
+
+    def check_actor_connection(self) -> None:
+        try:
+            self.controller.ask_rpc("pong", timeout=0.1)
+        except JSONRPCError as exc:
+            if exc.rpc_error.code == RECEIVER_UNKNOWN.code:
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_UI, "do_init", args=[False]))
+            else:
+                self.emit_status(
+                    ThreadCommand(
+                        ThreadStatus.UPDATE_STATUS,
+                        f"Connection error to actor: {exc.rpc_error.message}",
+                    )
+                )
 
     def stop(self):
         """

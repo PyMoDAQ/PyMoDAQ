@@ -71,6 +71,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.send_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
         ))
+        self.start_timer()
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
