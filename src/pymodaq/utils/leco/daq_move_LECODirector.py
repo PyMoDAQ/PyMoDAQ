@@ -92,7 +92,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if self.is_master:
             self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
             try:
-                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+                self.controller.set_remote_name(self.communicator.full_name)
             except TimeoutError:
                 logger.warning("Timeout setting remote name.")
         else:

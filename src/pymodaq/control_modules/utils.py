@@ -202,6 +202,7 @@ class ControlModule(QObject):
         """
 
         if status.command == "Update_Status":
+            # legacy
             if len(status.attribute) > 1:
                 self.update_status(status.attribute[0], log=status.attribute[1])
             else:
