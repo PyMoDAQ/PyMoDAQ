@@ -123,7 +123,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def get_actuator_value(self) -> DataActuator:
         """ Get the current hardware value """
-        self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 

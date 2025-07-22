@@ -93,7 +93,6 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
 
         self.ind_grabbed = 0  # to keep track of the current image in the average
         self.Naverage = Naverage
-        self.controller.set_remote_name(self.communicator.full_name)
         if kwargs.get('live', False):
             self.controller.send_data_grab()
         else:
