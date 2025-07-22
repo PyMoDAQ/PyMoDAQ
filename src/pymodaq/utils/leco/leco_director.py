@@ -5,6 +5,7 @@ from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
+from pymodaq_utils.config import Config
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import Parameter
@@ -12,10 +13,13 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 
+config = Config()
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
+    {'title': 'Coordinator Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host")},
+    {'title': 'Coordinator Port:', 'name': 'port', 'type': 'int', 'value': config('network', "leco-server", "port")},     
 ]
 
 
