@@ -854,7 +854,7 @@ class DAQ_Move_Hardware(QObject):
         self.hardware.ispolling = polling
 
         if self.hardware.data_actuator_type.name == 'float':
-            self.hardware.move_rel(rel_position.value())
+            self.hardware.move_rel(rel_position.units_as(self.hardware.axis_unit).value())
         else:
             rel_position.units = self.hardware.axis_unit  # convert to plugin current axis units
             self.hardware.move_rel(rel_position)
