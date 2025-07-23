@@ -47,6 +47,12 @@ Any control module from any plugins package can be made an Actor.
     You can change the name, even after having clicked connect.
 
 
+.. _fig_leco_actor_daq_viewer:
+
+.. figure:: /image/leco_communication/leco_actor_daq_viewer.png
+    :alt: Mock plugin as a LECO Actor in a DAQ_Viewer
+
+    Mock plugin as a LECO Actor in a DAQ_Viewer
 Director
 --------
 
@@ -58,6 +64,12 @@ You can start the *LECODirector* module from the mock plugins package, either in
 3. Initialize the detector/actuator.
 4. Read values or control the module remotely.
 
+.. _fig_leco_director_daq_viewer:
+
+.. figure:: /image/leco_communication/leco_director_daq_viewer.png
+    :alt: Mock plugin as a LECO Director in a DAQ_Viewer
+
+    Mock plugin as a LECO Director in a DAQ_Viewer
 
 Developing with LECO for PyMoDAQ
 --------------------------------
