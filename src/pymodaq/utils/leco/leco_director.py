@@ -1,6 +1,8 @@
 import random
 from typing import Callable, Sequence, List
 
+
+from pyleco.core import COORDINATOR_PORT
 from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
@@ -48,12 +50,11 @@ class LECODirector:
     controller: GenericDirector
     settings: Parameter
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, host: str = 'localhost', port : int = COORDINATOR_PORT, **kwargs) -> None:
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
-        # TODO use the same Listener instance as the LECOActorModule
-        self.listener = PymodaqListener(name=name)
+
+        self.listener = PymodaqListener(name=name, host=host, port=port)
         self.listener.start_listen()
         self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((

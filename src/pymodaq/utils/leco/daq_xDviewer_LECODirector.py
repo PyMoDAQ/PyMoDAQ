@@ -32,15 +32,14 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     socket_types = ["GRABBER"]
     params = comon_parameters + leco_parameters
 
-    def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", host: str = None, **kwargs) -> None:
+    def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", host: str = None, port: int = None, **kwargs) -> None:
         DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state)
         if host is not None:
             self.settings["host"] = host
-        LECODirector.__init__(self, host=self.settings["host"])
-        self.register_rpc_methods((
-            self.set_x_axis,
-            self.set_y_axis,
-        ))
+        if port is not None:
+            self.settings["port"] = port
+        LECODirector.__init__(self, host=self.settings["host"], port=self.settings["port"])
+
         for method in (
             self.set_data,
         ):
