@@ -1,4 +1,4 @@
-.. _plugin_external_to_pymodaq:
+pr.. _plugin_external_to_pymodaq:
 
 
 Communication with devices outside of PyMoDAQ
@@ -142,25 +142,62 @@ that listens using a ``ROUTER`` type socket. This is why the external implementa
 Implementation guide
 ~~~~~~~~~~~~~~~~~~~~
 
-To implement a plugin outside of PyMoDAQ, one can look at the `mock examples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`.
-State machines to represent how your actuators and detector should answer to a type of request, depending on their
-current state works well.
+To implement a plugin outside of PyMoDAQ, it is recommended to start by examining the `mock examples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`_.
+A good approach is to use state machines (like LabView) to decide which messages are accepted —triggering corresponding
+actions—, and which messages are declined —resulting in JSON-RPC error messages—, as this depends on the received message
+and the current state.
+
 
 .. _fig_state_machine_actuator:
 
 .. figure:: /image/tutorial_pluginless_leco/state_machine_actuator.svg
-    :alt: State machine for exchanged LECO messages in an actuator
+    :alt: State machine for exchanged LECO messages with an actuator
 
-    State machine for exchanged LECO messages in an actuator
-
+    State machine for exchanged LECO messages with an actuator
 
 .. _fig_state_machine_detector:
 
 .. figure:: /image/tutorial_pluginless_leco/state_machine_detector.svg
-    :alt: State machine for exchanged LECO messages in an detector
+    :alt: State machine for exchanged LECO messages with a detector
 
-    State machine for exchanged LECO messages in an detector
+    State machine for exchanged LECO messages with a detector
+
+:numref:`fig_state_machine_actuator` and :numref:`fig_state_machine_detector` represent the state machines used in the
+mock examples implementation. They graphically represent the ``transitions`` attribute and the
+``handle_trame`` method in the examples and represent valid transitions —or in other words the messages (RPC requests)
+one can legally receive in a given state.
+
+To understand a typical workflow and how the example code works, one can look at :numref:`fig_sequence_diagram_actuator`
+and :numref:`fig_sequence_diagram_detector`. They're sequence diagrams of "classic" use-cases of an actuator and a
+detector. In these diagrams links between ``Actor``, ``Director`` and ``Coordinator`` are LECO trames containing a
+JSON-RPC request or response sent through a ZMQ socket.
+
+
+.. _fig_sequence_diagram_actuator:
+
+.. figure:: /image/tutorial_pluginless_leco/sequence_diagram_actuator.svg
+    :alt: Sequence diagram for exchanged LECO messages with an actuator
+
+    Sequence diagram for exchanged LECO messages with an actuator
 
 
 
-These plugins will interact with a LECODirector in PyMoDAQ.
+.. _fig_sequence_diagram_detector:
+
+.. figure:: /image/tutorial_pluginless_leco/sequence_diagram_detector.svg
+    :alt: Sequence diagram for exchanged LECO messages with a detector
+
+    Sequence diagram for exchanged LECO messages with a detector
+
+
+Using these diagrams to understand the ``mock examples`` code and the state machines to list all possibilities, it
+should be relatively easy to port for your setup. Once completed, please consider sharing your adaptation layer on
+GitHub, as once done for a language, it is universal.
+
+Compatibility
+~~~~~~~~~~~~~
+It is compatible with old Windows and python versions down to **Windows 7** and **Python 3.4** as long as one succeeds
+in installing an old ``pyzmq`` version compatible with **Python 3.4** such as version **17**.
+
+This means one could port their legacy setups to **PyMoDAQ** by writing the JSON-RPC communication layer and using an
+up-to-date machine to control the setup using **PyMoDAQ** with most of its functionality available.

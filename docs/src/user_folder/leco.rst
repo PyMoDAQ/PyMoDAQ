@@ -39,8 +39,7 @@ Any control module from any plugins package can be made an Actor.
      If the Coordinator is on the same machine (i.e. localhost) and on the default port, you do not have to enter anything.
    - `Name` defines how this module should participate in the LECO network.
      If you leave it empty, the name of the module is taken.
-3. Click on `connect`,
-4. Now the green lamp should be lit and the Actor is ready to be used
+3. Click on `connect`, the green lamp should be lit and the Actor is ready to be used
 
 .. note::
 
