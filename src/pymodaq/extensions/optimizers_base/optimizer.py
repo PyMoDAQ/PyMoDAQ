@@ -13,7 +13,6 @@ from collections import OrderedDict
 
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
-from pymodaq_utils import config as config_mod
 
 from pymodaq_utils.enums import BaseEnum, StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -36,6 +35,7 @@ from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.utils import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.utils import config as config_mod
 
 from pymodaq.extensions.optimizers_base.utils import (
     get_optimizer_models, OptimizerModelGeneric,
