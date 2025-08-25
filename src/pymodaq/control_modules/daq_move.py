@@ -593,8 +593,8 @@ class DAQ_Move(ParameterControlModule):
                     ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act)
                 )
 
-        elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
-            logger.warning(f"The Actuator {self.title} has reached its defined bounds")
+        elif status.command == 'outofbounds':
+            logger.warning(f'The Actuator {self.title} has reached its defined bounds')
             self.bounds_signal.emit(True)
 
         elif status.command == ThreadStatusMove.SET_ALLOWED_VALUES:
@@ -607,24 +607,20 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
 
-    def _check_data_type(
-        self, data_act: Union[list, np.ndarray, Number, DataActuator]
-    ) -> DataActuator:
-        """Make sure the data is a DataActuator
+    def _check_data_type(self, data_act: Union[list, np.ndarray, Number, DataActuator]) -> DataActuator:
+        """ Make sure the data is a DataActuator
 
         Mostly to make sure DAQ_Move is backcompatible with old style plugins
         """
         if isinstance(data_act, list):  # backcompatibility
             if isinstance(data_act[0], Number):
-                data_act = DataActuator(
-                    data=[np.atleast_1d(val) for val in data_act], units=self.units
-                )
+                data_act = DataActuator(data=[np.atleast_1d(val) for val in data_act], units=self.units)
             elif isinstance(data_act[0], np.ndarray):
                 data_act = DataActuator(data=data_act, units=self.units)
             elif isinstance(data_act[0], DataActuator):
                 data_act = data_act[0]
             else:
-                raise TypeError("Unknown data type")
+                raise TypeError('Unknown data type')
         elif isinstance(data_act, np.ndarray):  # backcompatibility
             data_act = DataActuator(data=[data_act], units=self.units)
         data_act.name = (
@@ -755,9 +751,17 @@ class DAQ_Move(ParameterControlModule):
         """
         if ("°" in unit or "degree" in unit) and not "°C" in unit:
             # special cas as pint base unit for angles are radians
-            return "°"
-        elif "°C" in unit:
-            return "°C"
+            return '°'
+        elif 'W' in unit or 'watt' in unit.lower():
+            return 'W'
+        elif '°C' in unit or 'Celsius' in unit:
+            return '°C'
+        elif 'V' in unit or 'volt' in unit.lower():
+            return 'V'
+        elif 'Hz' in unit:
+            return 'Hz'
+        elif 'rpm' in unit or 'revolutions_per_minute' in unit:
+            return 'rpm'
         else:
             for key in config("actuator", "allowed_units"):
                 if key in unit:
@@ -945,9 +949,7 @@ class DAQ_Move_Hardware(QObject):
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type == self.hardware.data_actuator_type.float:
-            self.hardware.move_abs(
-                position.units_as(self.hardware.axis_unit).value()
-            )  # convert to plugin controller current axis units
+            self.hardware.move_abs(position.units_as(self.hardware.axis_unit).value()) # convert to plugin controller current axis units
         else:
             position.units = (
                 self.hardware.axis_unit

@@ -3,18 +3,16 @@ from pymodaq_utils.enums import StrEnum
 
 import logging
 from threading import Event
-from typing import cast, Optional, Union, List, Sequence, Type
+from typing import Optional, Union, List, Type
 
 from pyleco.core import COORDINATOR_PORT
 from pyleco.utils.listener import Listener, PipeHandler
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
-from pymodaq_data.data import DataWithAxes
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import ioxml
-from pymodaq_gui.parameter.utils import ParameterWithPath
-
+from pymodaq_data.data import DataWithAxes
+from pymodaq_utils.serialize.serializer_legacy import SERIALIZABLE, DeSerializer
 from pymodaq.utils.leco.utils import binary_serialization_to_kwargs
 
 
@@ -68,35 +66,16 @@ class PymodaqPipeHandler(PipeHandler):
     def __init__(self, name: str, signals: ListenerSignals, **kwargs) -> None:
         super().__init__(name, **kwargs)
         self.signals = signals
-        self.register_data_types_for_deserialization()
 
-    def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
-    ) -> None:
-        """Register different data types for deserialization in subclasses."""
-        if types is None:
-            return
-        for cls in types:
-            SerializableFactory().register_from_type(
-                cls, cls.serialize, cls.deserialize
-            )
 
 class ActorHandler(PymodaqPipeHandler):
-    def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
-    ) -> None:
-        all_types: Sequence[type[SerializableBase]] = [DataWithAxes]
-        if types:
-            all_types.extend(types)  # type: ignore
-        super().register_data_types_for_deserialization(all_types)
 
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
-        self.register_binary_rpc_method(self.set_info, accept_binary_input=True)
-        self.register_rpc_method(self.send_data_grab)
-        self.register_rpc_method(self.send_data_snap)
-        self.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
-        self.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
+        self.register_rpc_method(self.set_info)
+        self.register_rpc_method(self.send_data)
+        self.register_rpc_method(self.move_abs)
+        self.register_rpc_method(self.move_rel)
         self.register_rpc_method(self.move_home)
         self.register_rpc_method(self.get_actuator_value)
         self.register_rpc_method(self.stop_motion)
@@ -104,13 +83,10 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.get_settings)
 
     @staticmethod
-    def extract_pymodaq_object(
-        value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
-    ):
-        if value is None and additional_payload:
-            return cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
-        else:
-            return value
+    def extract_dwa_object(data_string: str) -> DataWithAxes:
+        """Extract a DataWithAxes object from the received message."""
+        desererializer = DeSerializer.from_b64_string(data_string)
+        return desererializer.dwa_deserialization()
 
     # generic commands
     def set_info(self,
@@ -132,31 +108,13 @@ class ActorHandler(PymodaqPipeHandler):
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
     # actuator commands
-    def move_abs(
-        self,
-        position: Optional[Union[float, str]],
-        additional_payload: Optional[List[bytes]] = None,
-    ) -> None:
-        """Move to an absolute position.
+    def move_abs(self, position: Union[float, str]) -> None:
+        pos = self.extract_dwa_object(position) if isinstance(position, str) else position
+        self.signals.cmd_signal.emit(ThreadCommand("move_abs", attribute=[pos]))
 
-        :param position: Deprecated, should be None and content transferred binary.
-        :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
-        """
-        pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_ABS, pos))
-
-    def move_rel(
-        self,
-        position: Optional[Union[float, str]],
-        additional_payload: Optional[List[bytes]] = None,
-    ) -> None:
-        """Move by a relative position.
-
-        :param position: Deprecated, should be None and content transferred binary.
-        :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
-        """
-        pos = self.extract_pymodaq_object(position, additional_payload)
-        self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_REL, pos))
+    def move_rel(self, position: Union[float, str]) -> None:
+        pos = self.extract_dwa_object(position) if isinstance(position, str) else position
+        self.signals.cmd_signal.emit(ThreadCommand("move_rel", attribute=[pos]))
 
     def move_home(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_HOME))
@@ -287,34 +245,42 @@ class ActorListener(PymodaqListener):
                 **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
 
         elif command.command == LECOMoveCommands.POSITION:
-            value = command.attribute
-            if isinstance(value, (list, tuple)):
-                value = value[0]  # for backward compatibility with attributes list
+            value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="send_position",
-                                      **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
+                                      method="set_position",
+                                      **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
 
         elif command.command == LECOMoveCommands.MOVE_DONE:
-            value = command.attribute
-            if isinstance(value, (list, tuple)):
-                value = value[0]  # for backward compatibility with attributes list
+            value = command.attribute[0]  # type: ignore
             self.communicator.ask_rpc(receiver=self.remote_name,
                                       method="set_move_done",
                                       **binary_serialization_to_kwargs(value, data_key="position"),
                                       )
 
-        elif command.command == LECOMoveCommands.UNITS_CHANGED:
-            units: str = command.attribute
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method="set_units",
-                                      units=units.encode(),
-                                      )
+        elif command.command == 'x_axis':
+            value = command.attribute[0]  # type: ignore
+            if isinstance(value, SERIALIZABLE):
+                self.communicator.ask_rpc(receiver=self.remote_name,
+                                          method="set_x_axis",
+                                          **binary_serialization_to_kwargs(value),
+                                          )
+            elif isinstance(value, dict):
+                self.communicator.ask_rpc(receiver=self.remote_name, method="set_x_axis", **value)
+            else:
+                raise ValueError("Nothing to send!")
 
-        elif command.command == LECOCommands.SET_SETTINGS:
-            self.communicator.ask_rpc(receiver=self.remote_name,
-                                      method='set_settings',
-                                      settings=command.attribute.decode())
+        elif command.command == 'y_axis':
+            value = command.attribute[0]  # type: ignore
+            if isinstance(value, SERIALIZABLE):
+                self.communicator.ask_rpc(receiver=self.remote_name,
+                                          method="set_y_axis",
+                                          **binary_serialization_to_kwargs(value),
+                                          )
+            elif isinstance(value, dict):
+                self.communicator.ask_rpc(receiver=self.remote_name, method="set_y_axis", **value)
+            else:
+                raise ValueError("Nothing to send!")
 
         else:
             raise IOError('Unknown TCP client command')

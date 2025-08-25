@@ -53,8 +53,8 @@ from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq_gui.utils.splash import get_splash_sc
+
 from pymodaq import extensions as extmod
 from pymodaq.utils.config import Config as ControlModulesConfig
 
@@ -99,7 +99,7 @@ class PymodaqUpdateTableWidget(QTableWidget):
     def setHorizontalHeaderLabels(self, labels):
         super().setHorizontalHeaderLabels(labels)
         self.setColumnCount(len(labels))
-
+        
     def append_row(self, package, current_version, available_version):
         # Add labels
         self.setItem(self._row, 0, QTableWidgetItem(str(package)))
@@ -1298,8 +1298,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        dock.addWidget(move_forms[-1])
-
+        move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
 
@@ -1621,12 +1620,8 @@ class DashBoard(CustomApp):
                                 self.poll_init(detector_modules[-1])
                                 QtWidgets.QApplication.processEvents()
 
-                        detector_modules[-1].settings.child(
-                            "main_settings", "overshoot"
-                        ).show()
-                        detector_modules[-1].overshoot_signal[bool].connect(
-                            self.stop_moves_from_overshoot
-                        )
+                        detector_modules[-1].settings.child('main_settings', 'overshoot').show()
+                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves_from_overshoot)
 
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
@@ -2053,10 +2048,11 @@ class DashBoard(CustomApp):
             self.settings.child("detectors", name).setValue(det.initialized_state)
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
+
         if out_of_bounds:
-            logger.warning(f"Some actuators reached their bounds")
+            logger.warning(f'Some actuators reached their bounds')
             if self.scan_module is not None:
-                logger.warning(f"Stopping the DAQScan for out of bounds")
+                logger.warning(f'Stopping the DAQScan for out of bounds')
                 self.scan_module.stop_scan()
 
     def stop_moves_from_overshoot(self, overshoot):
@@ -2065,11 +2061,11 @@ class DashBoard(CustomApp):
 
     def stop_moves(self, *args, **kwargs):
         """
-        Foreach module of the move module object list, stop motion.
+            Foreach module of the move module object list, stop motion.
 
-        See Also
-        --------
-        stop_scan,  DAQ_Move_main.daq_move.stop_motion
+            See Also
+            --------
+            stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
         if self.scan_module is not None:
             self.scan_module.stop_scan()
@@ -2158,9 +2154,8 @@ class DashBoard(CustomApp):
             new_versions = np.greater(available_versions, current_versions)
             # Combine package and version information and select only the ones with a newer version available
 
-            packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
-            )[new_versions]
+            
+            packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
 
             if len(packages_data) > 0:
                 # Create a QDialog window and different graphical components
@@ -2169,22 +2164,19 @@ class DashBoard(CustomApp):
 
                 vlayout = QtWidgets.QVBoxLayout()
 
-                message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
-                )
+                message_label = QLabel("New versions of PyMoDAQ packages available!\nUse your package manager to update.")
                 message_label.setAlignment(Qt.AlignCenter)
 
                 table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data))
+                table.setRowCount(len(packages_data)) 
                 table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
-                )
-
+                table.setHorizontalHeaderLabels(["Package", "Current version", "New version"])
+                     
                 for p in packages_data:
                     table.append_row(p[0], p[1], p[2])
 
-                # The vlayout contains the message, the table and the buttons
+
+                # The vlayout contains the message, the table and the buttons                
                 # and is connected to the dialog window
                 vlayout.addWidget(message_label)
                 vlayout.addWidget(table)

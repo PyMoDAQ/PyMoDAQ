@@ -8,6 +8,10 @@ except ModuleNotFoundError:
 
 from pymodaq_utils.config import (BaseConfig, ConfigError, get_set_config_dir,
                                   USER, CONFIG_BASE_PATH, get_set_local_dir)
+try:
+    from pymodaq_gui.config_saver_loader import get_set_roi_path
+except ModuleNotFoundError:
+    from pymodaq_gui.config import get_set_roi_path
 
 
 def get_set_preset_path():

@@ -14,18 +14,12 @@ from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_p
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.utils import find_dict_in_list_from_key_val
-from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import (LECODirector, leco_parameters, DirectorCommands,
                                               DirectorReceivedCommands)
 from pymodaq.utils.leco.director_utils import ActuatorDirector
-
-from pymodaq_utils.logger import set_logger, get_module_name
-
-logger = set_logger(get_module_name(__file__))
-
+from pymodaq_utils.serialize.serializer_legacy import DeSerializer
 
 class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     """A control module, which in the dashboard, allows to control a remote Move module.
@@ -49,7 +43,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
     _epsilon = 1
 
     params_client = []  # parameters of a client grabber
-    data_actuator_type = DataActuatorType.DataActuator
+    data_actuator_type = DataActuatorType['float']  # DataActuatorType['DataActuator']
 
     params = comon_parameters_fun(axis_names=_axis_names, epsilon=_epsilon) + leco_parameters
 
@@ -137,9 +131,13 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         self, position: Union[str, float, None], additional_payload=None
     ) -> DataActuator:
         if position:
-            pos = DataActuator(data=position)
+            if isinstance(position, str):
+                deserializer = DeSerializer.from_b64_string(position)
+                pos = deserializer.dwa_deserialization()
+            else:
+                pos = DataActuator(data=position)
         elif additional_payload is not None:
-            pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
+            pos = DeSerializer(additional_payload[0]).dwa_deserialization()
         else:
             raise ValueError("No position given")
         pos = self.get_position_with_scaling(pos)  # type: ignore

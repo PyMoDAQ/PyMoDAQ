@@ -13,13 +13,10 @@ For remote control, you need to start a Coordinator, as described for remote con
 
 import logging
 from time import sleep
-from typing import cast, List, Optional
+from typing import List, Union
 
 from pyleco.utils.listener import Listener
 
-
-from pymodaq_data.data import DataWithAxes
-from pymodaq_utils.serialize.factory import SerializableFactory
 
 class QtLessModule:
     """Some module doing things without Qt.
@@ -36,9 +33,6 @@ class QtLessModule:
         self._fake_position = 0
         self.start_listen()
         self._stored = []
-        # register DataWithAxes for deserialization
-        cls = DataWithAxes
-        SerializableFactory().register_from_type(cls, cls.serialize, cls.deserialize)
 
     def start_listen(self) -> None:
         """Start to listen on incoming commands."""
@@ -51,9 +45,8 @@ class QtLessModule:
         register_rpc_method = self.communicator.register_rpc_method
         register_rpc_method(self.set_info)
         register_rpc_method(self.send_data)
-        # binary methods can accept additionally binary payload, like serialized pymodaq objects.
-        self.listener.register_binary_rpc_method(self.move_abs, accept_binary_input=True)
-        self.listener.register_binary_rpc_method(self.move_rel, accept_binary_input=True)
+        register_rpc_method(self.move_abs)
+        register_rpc_method(self.move_rel)
         register_rpc_method(self.move_home)
         register_rpc_method(self.get_actuator_value)
         register_rpc_method(self.stop_motion)
@@ -63,17 +56,7 @@ class QtLessModule:
         """Stop to listen on incoming commands."""
         self.listener.stop_listen()
 
-    @staticmethod
-    def extract_pymodaq_object(
-        value: Optional[float], additional_payload: Optional[List[bytes]]
-    ):
-        if value is None and additional_payload:
-            res = cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
-        else:
-            res = value
-        return res
-
-    # methods for being remote controlled
+    # smethods for being remote controlled
     # these methods are executed and cannot talk to the controlling module directly.
     # if you need to send a response (for example with a value) you have to store the information and
     # send it after these methods have been executed.
@@ -90,33 +73,13 @@ class QtLessModule:
         print("send_data")
 
     # actuator commands
-    def move_abs(
-        self,
-        position: Optional[float],
-        additional_payload: Optional[List[bytes]] = None,
-    ) -> None:
-        """Move to an absolute position.
+    def move_abs(self, position: Union[float, str]) -> None:
+        print("move_abs", position)
+        self._fake_position = float(position)
 
-        :param position: Deprecated, should be None and content transferred binary.
-        :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
-        """
-        pos = self.extract_pymodaq_object(position, additional_payload)
-        print("move_abs", pos)
-        self._fake_position = float(pos)
-
-    def move_rel(
-        self,
-        position: Optional[float],
-        additional_payload: Optional[List[bytes]] = None,
-    ) -> None:
-        """Move by a relative position.
-
-        :param position: Deprecated, should be None and content transferred binary.
-        :param additional_payload: binary frames containing the position as PyMoDAQ `DataActuator`.
-        """
-        pos = self.extract_pymodaq_object(position, additional_payload)
-        print("move_rel", pos)
-        self._fake_position += float(pos)
+    def move_rel(self, position: Union[float, str]) -> None:
+        print("move_rel", position)
+        self._fake_position += float(position)
 
     def move_home(self) -> None:
         self._fake_position = 0
