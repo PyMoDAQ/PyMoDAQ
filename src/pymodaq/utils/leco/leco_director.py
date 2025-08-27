@@ -112,7 +112,7 @@ class LECODirector:
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
-        """ Write the value of a param upfated from the actor to here in the
+        """ Write the value of a param updated from the actor to here in the
         Parameter with path: ('move_settings', 'settings_client')
         """
         param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])
