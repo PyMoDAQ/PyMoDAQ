@@ -1,10 +1,13 @@
 
 import random
+
+from pyleco.core import COORDINATOR_PORT
 from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
 from pyleco.json_utils.errors import JSONRPCError, RECEIVER_UNKNOWN
 import pymodaq_gui.parameter.utils as putils
+from pymodaq_utils.config import Config
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import Config
@@ -33,11 +36,13 @@ class DirectorReceivedCommands(StrEnum):
     MOVE_DONE = ThreadStatusMove.MOVE_DONE
     GET_ACTUATOR_VALUE = ThreadStatusMove.GET_ACTUATOR_VALUE
 
+config = Config()
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
     {'title': 'Coordinator Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host")},
+    {'title': 'Coordinator Port:', 'name': 'port', 'type': 'int', 'value': config('network', "leco-server", "port")}, 
     {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
 ]
 
@@ -53,11 +58,11 @@ class LECODirector:
     settings: Parameter
     _title: str
 
-    def __init__(self, host: str = 'localhost', **kwargs) -> None:
+    def __init__(self, host: str = 'localhost', port : int = COORDINATOR_PORT, **kwargs) -> None:
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
 
-        self.listener = PymodaqListener(name=name, host=host)
+        self.listener = PymodaqListener(name=name, host=host, port=port)
         self.listener.start_listen()
 
         self.communicator = self.listener.get_communicator()
@@ -129,7 +134,7 @@ class LECODirector:
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
-        """ Write the value of a param upfated from the actor to here in the
+        """ Write the value of a param updated from the actor to here in the
         Parameter with path: ('move_settings', 'settings_client')
         """
         param: ParameterWithPath = SerializableFactory().get_apply_deserializer(additional_payload[0])

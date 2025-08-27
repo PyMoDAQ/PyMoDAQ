@@ -1,7 +1,8 @@
 import numbers
 
+from abc import abstractmethod
 from time import perf_counter
-from typing import Union, List, Dict, TYPE_CHECKING, Optional
+from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
 from numbers import Number
 from collections.abc import Iterable
 
@@ -47,6 +48,8 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = configmod.Config()
 config = ControlModulesConfig()
+
+HardwareController = TypeVar("HardwareController")
 
 
 def check_units(dwa: DataActuator, units: str):
@@ -508,7 +511,12 @@ class DAQ_Move_base(QObject):
         """ To be subclassed, in order to init specific attributes needed by the real implementation"""
         self.controller = None
 
-    def ini_stage_init(self, old_controller=None, new_controller=None, slave_controller=None):
+    def ini_stage_init(
+        self,
+        old_controller: Optional[HardwareController] = None,
+        new_controller: Optional[HardwareController] = None,
+        slave_controller: Optional[HardwareController] = None,
+    ) -> Optional[HardwareController]:
         """Manage the Master/Slave controller issue
 
         First initialize the status dictionary
@@ -637,35 +645,36 @@ class DAQ_Move_base(QObject):
                     position = self.settings['bounds', 'min_bound']
         return position
 
+    @abstractmethod
     def get_actuator_value(self):
         if hasattr(self, 'check_position'):
             deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
-            return self.check_position()
+            return self.check_position()  # type: ignore
         else:
             raise NotImplementedError
 
-
-    def close(self):
+    @abstractmethod
+    def close(self) -> None:
         raise NotImplementedError
 
     def move_abs(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Abs'):
             deprecation_msg('move_Abs method in plugins is deprecated, use move_abs', 3)
-            self.move_Abs(value)
+            self.move_Abs(value)  # type: ignore
         else:
             raise NotImplementedError
 
     def move_rel(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Rel'):
             deprecation_msg('move_Rel method in plugins is deprecated, use move_rel', 3)
-            self.move_Rel(value)
+            self.move_Rel(value)  # type: ignore
         else:
             raise NotImplementedError
 
     def move_home(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
-            self.move_Home()
+            self.move_Home()  # type: ignore
         else:
             raise NotImplementedError
 
@@ -901,6 +910,29 @@ class DAQ_Move_base(QObject):
                 self.axis_name = param.value()
             elif param.name() == 'epsilon':
                 self.epsilon = param.value()
+
+    # abstract methods to be overwritten by the concrete implementations
+    @abstractmethod
+    def ini_stage(self, controller: Optional[HardwareController] = None) -> tuple[str, bool]:
+        """Actuator communication initialization
+
+        Parameters
+        ----------
+        controller: (object)
+            custom object of a PyMoDAQ plugin (Slave case). None if only one actuator by controller (Master case)
+
+        Returns
+        -------
+        info: str
+        initialized: bool
+            False if initialization failed otherwise True
+        """
+        pass
+
+    @abstractmethod
+    def stop_motion(self, value: DataActuator) -> None:
+        """Stop the actuator and emit move_done signal."""
+        pass
 
 
 class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
