@@ -1,10 +1,13 @@
 import random
 from typing import Callable, Sequence, List
 
+
+from pyleco.core import COORDINATOR_PORT
 from pymodaq_utils.enums import StrEnum
 from typing import Callable, Sequence, List, Optional, Union
 
 import pymodaq_gui.parameter.utils as putils
+from pymodaq_utils.config import Config
 # object used to send info back to the main thread:
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import Parameter
@@ -12,10 +15,13 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 
+config = Config()
 
 leco_parameters = [
     {'title': 'Actor name:', 'name': 'actor_name', 'type': 'str', 'value': "actor_name",
      'tip': 'Name of the actor plugin to communicate with.'},
+    {'title': 'Coordinator Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host")},
+    {'title': 'Coordinator Port:', 'name': 'port', 'type': 'int', 'value': config('network', "leco-server", "port")},     
 ]
 
 
@@ -44,12 +50,11 @@ class LECODirector:
     controller: GenericDirector
     settings: Parameter
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, host: str = 'localhost', port : int = COORDINATOR_PORT, **kwargs) -> None:
 
         name = f'{self._title}_{random.randrange(0, 10000)}_director'
-        # TODO use the same Listener instance as the LECOActorModule
-        self.listener = PymodaqListener(name=name)
+
+        self.listener = PymodaqListener(name=name, host=host, port=port)
         self.listener.start_listen()
         self.communicator = self.listener.get_communicator()
         self.register_rpc_methods((
