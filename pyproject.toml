@@ -57,7 +57,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "hatch", 
+    "hatch",
     "flake8",
     "h5py",
     "pytest",
@@ -100,3 +100,6 @@ omit = [
     "*/examples/*",
     "*/resources/*"
 ]
+
+[tool.ruff]
+line-length = 120
