@@ -70,7 +70,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             self.controller = DetectorDirector(actor=actor_name,
                                                communicator=self.communicator)
             try:
-                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+                self.controller.set_remote_name(self.communicator.full_name)
             except TimeoutError:
                 logger.warning("Timeout setting remote name.")
         else:

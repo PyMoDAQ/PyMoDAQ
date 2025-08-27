@@ -12,7 +12,7 @@ from importlib import import_module
 from numbers import Number
 
 import sys
-from typing import List, Tuple, Union, Optional, Type, Iterable, Dict
+from typing import List, Union, Optional, Dict, TypeVar, TYPE_CHECKING
 import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
@@ -55,7 +55,8 @@ from pymodaq import Q_, Unit
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.utils.config import Config as ControlModulesConfig
 
-
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 
 local_path = config_mod.get_set_local_dir()
 sys.path.append(str(local_path))
@@ -63,6 +64,8 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = config_mod.Config()
 config = ControlModulesConfig()
+
+HardwareController = TypeVar("HardwareController")
 
 DAQ_Move_Actuators = get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
@@ -101,8 +104,11 @@ class DAQ_Move(ParameterControlModule):
     params = daq_move_params
 
     listener_class = MoveActorListener
+    ui: Optional[DAQ_Move_UI_Base]
 
-    def __init__(self, parent=None, title="DAQ Move", ui_identifier: str=None, **kwargs):
+    def __init__(
+        self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs
+    ) -> None:
         """
 
         Parameters
@@ -130,7 +136,7 @@ class DAQ_Move(ParameterControlModule):
         if parent is not None:
             self.ui = DAQ_Move_UI(parent, title)
         else:
-            self.ui: Optional[DAQ_Move_UI] = None
+            self.ui = None
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_TYPES
@@ -807,7 +813,7 @@ class DAQ_Move_Hardware(QObject):
         pos = self.hardware.get_actuator_value()
         return pos
 
-    def ini_stage(self, params_state=None, controller=None):
+    def ini_stage(self, params_state=None, controller: Optional[HardwareController] = None) -> edict:
         """
             Init a stage updating the hardware and sending an hardware move_done signal.
 
@@ -832,6 +838,7 @@ class DAQ_Move_Hardware(QObject):
             class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.actuator_type),
                              'DAQ_Move_' + self.actuator_type)
             self.hardware = class_(self, params_state)
+            assert self.hardware is not None
             try:
                 infos = self.hardware.ini_stage(controller)  # return edict(info="", controller=, stage=)
             except Exception as e:
@@ -856,10 +863,11 @@ class DAQ_Move_Hardware(QObject):
             self.logger.exception(str(e))
             return status
 
-    def move_abs(self, position: DataActuator, polling=True):
+    def move_abs(self, position: DataActuator, polling: bool = True) -> None:
         """
 
         """
+        assert self.hardware is not None
         position = check_units(position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
@@ -870,10 +878,11 @@ class DAQ_Move_Hardware(QObject):
             self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
-    def move_rel(self, rel_position: DataActuator, polling=True):
+    def move_rel(self, rel_position: DataActuator, polling: bool = True) -> None:
         """
 
         """
+        assert self.hardware is not None
         rel_position = check_units(rel_position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
@@ -902,6 +911,7 @@ class DAQ_Move_Hardware(QObject):
             Make the hardware move to the init position.
 
         """
+        assert self.hardware is not None
         self.hardware.move_is_done = False
         self.hardware.move_home()
 
@@ -990,6 +1000,7 @@ class DAQ_Move_Hardware(QObject):
         """
         self.status_sig.emit(ThreadCommand(command="Update_Status", attribute=["Motion stoping", 'log']))
         self.motion_stoped = True
+        assert self.hardware is not None
         if self.hardware is not None and self.hardware.controller is not None:
             self.hardware.stop_motion()
         self.hardware.poll_timer.stop()
