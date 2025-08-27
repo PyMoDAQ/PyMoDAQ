@@ -299,51 +299,51 @@ class ActorListener(PymodaqListener):
             finally:
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
 
-        elif command.attribute is None:
-            raise IOError("Command does not contain an attribute")
+        elif command.attribute is not None:
+            # here are all methods requiring an attribute in the ThreadCommand
 
-        elif command.command == LECOViewerCommands.DATA_READY:
-            value = command.attribute
-            self.send_rpc_message_to_remote(
-                method=ViewerDirectorMethods.SET_DATA,
-                **binary_serialization_to_kwargs(value),
-            )
+            if command.command == LECOViewerCommands.DATA_READY:
+                value = command.attribute
+                self.send_rpc_message_to_remote(
+                    method=ViewerDirectorMethods.SET_DATA,
+                    **binary_serialization_to_kwargs(value),
+                )
 
-        elif command.command == LECOCommands.SEND_INFO:
-            self.send_rpc_message_to_remote(
-                method=GenericDirectorMethods.SET_DIRECTOR_INFO,
-                **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
+            elif command.command == LECOCommands.SEND_INFO:
+                self.send_rpc_message_to_remote(
+                    method=GenericDirectorMethods.SET_DIRECTOR_INFO,
+                    **binary_serialization_to_kwargs(command.attribute, data_key='parameter'))
 
-        elif command.command == LECOMoveCommands.POSITION:
-            value = command.attribute
-            if isinstance(value, (list, tuple)):
-                value = value[0]  # for backward compatibility with attributes list
-            self.send_rpc_message_to_remote(
-                method=MoveDirectorMethods.SEND_POSITION,
-                **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
-            )
+            elif command.command == LECOMoveCommands.POSITION:
+                value = command.attribute
+                if isinstance(value, (list, tuple)):
+                    value = value[0]  # for backward compatibility with attributes list
+                self.send_rpc_message_to_remote(
+                    method=MoveDirectorMethods.SEND_POSITION,
+                    **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
+                )
 
-        elif command.command == LECOMoveCommands.MOVE_DONE:
-            value = command.attribute
-            if isinstance(value, (list, tuple)):
-                value = value[0]  # for backward compatibility with attributes list
-            self.send_rpc_message_to_remote(
-                method=MoveDirectorMethods.SET_MOVE_DONE,
-                **binary_serialization_to_kwargs(value, data_key="position"),
-            )
+            elif command.command == LECOMoveCommands.MOVE_DONE:
+                value = command.attribute
+                if isinstance(value, (list, tuple)):
+                    value = value[0]  # for backward compatibility with attributes list
+                self.send_rpc_message_to_remote(
+                    method=MoveDirectorMethods.SET_MOVE_DONE,
+                    **binary_serialization_to_kwargs(value, data_key="position"),
+                )
 
-        elif command.command == LECOMoveCommands.UNITS_CHANGED:
-            units: str = command.attribute
-            self.send_rpc_message_to_remote(
-                method=MoveDirectorMethods.SET_UNITS,
-                units=units.encode(),
-            )
+            elif command.command == LECOMoveCommands.UNITS_CHANGED:
+                units: str = command.attribute
+                self.send_rpc_message_to_remote(
+                    method=MoveDirectorMethods.SET_UNITS,
+                    units=units.encode(),
+                )
 
-        elif command.command == LECOCommands.SET_DIRECTOR_SETTINGS:
-            self.send_rpc_message_to_remote(
-                method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
-                settings=command.attribute.decode(),
-            )
+            elif command.command == LECOCommands.SET_DIRECTOR_SETTINGS:
+                self.send_rpc_message_to_remote(
+                    method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
+                    settings=command.attribute.decode(),
+                )
 
         else:
             raise IOError("Unknown TCP client command")

@@ -58,8 +58,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if param_dict is not None:
             param_dict['visible'] = False
 
-
-    def __init__(self, parent=None, params_state=None, host: str = None, port : int = None, **kwargs) -> None:
+    def __init__(
+        self, parent=None, params_state=None, host: Optional[str] = None, port: Optional[int] = None, **kwargs
+    ) -> None:
         DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
         if host is not None:
             self.settings["host"] = host
