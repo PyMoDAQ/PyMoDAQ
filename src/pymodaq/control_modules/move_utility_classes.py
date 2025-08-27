@@ -657,7 +657,6 @@ class DAQ_Move_base(QObject):
     def close(self) -> None:
         raise NotImplementedError
 
-    @abstractmethod
     def move_abs(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Abs'):
             deprecation_msg('move_Abs method in plugins is deprecated, use move_abs', 3)
@@ -665,7 +664,6 @@ class DAQ_Move_base(QObject):
         else:
             raise NotImplementedError
 
-    @abstractmethod
     def move_rel(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Rel'):
             deprecation_msg('move_Rel method in plugins is deprecated, use move_rel', 3)
@@ -673,7 +671,6 @@ class DAQ_Move_base(QObject):
         else:
             raise NotImplementedError
 
-    @abstractmethod
     def move_home(self, value: Union[float, DataActuator]):
         if hasattr(self, 'move_Home'):
             deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
