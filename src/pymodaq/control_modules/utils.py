@@ -202,6 +202,7 @@ class ControlModule(QObject):
         """
 
         if status.command == "Update_Status":
+            # legacy
             if len(status.attribute) > 1:
                 self.update_status(status.attribute[0], log=status.attribute[1])
             else:
@@ -509,13 +510,25 @@ class ParameterControlModule(ParameterManager, ControlModule):
             name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
         return name
 
+    def get_leco_host_port(self) -> tuple:
+        host = self.settings["main_settings", "leco", "host"]
+        port = self.settings["main_settings", "leco", "port"]
+        if host == '':
+            # take the localhost as default
+            host = 'localhost'
+        if port == '':
+            # take the default port as 12300
+            port = 12300
+        return (host, port)    
+
     def connect_leco(self, connect: bool) -> None:
         if connect:
             name = self.get_leco_name()
+            host, port = self.get_leco_host_port()
             try:
                 self._leco_client.name = name
             except AttributeError:
-                self._leco_client = self.listener_class(name=name)
+                self._leco_client = self.listener_class(name=name, host=host, port=port)
                 self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
             self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
             self._leco_client.start_listen()

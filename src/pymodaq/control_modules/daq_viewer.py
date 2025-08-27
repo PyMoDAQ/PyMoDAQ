@@ -9,7 +9,6 @@ from importlib import import_module
 
 import os
 from pathlib import Path
-from random import randint
 import sys
 from typing import List, Tuple, Union, Optional
 import time
@@ -107,11 +106,17 @@ class DAQ_Viewer(ParameterControlModule):
     params = daq_viewer_params
 
     listener_class = ViewerActorListener
+    ui: Optional[DAQ_Viewer_UI]
 
-    def __init__(self, parent: DockArea=None, title="Testing",
-                 daq_type=config('viewer', 'daq_type'),
-                 dock_settings=None, dock_viewer=None,
-                 **kwargs):
+    def __init__(
+        self,
+        parent: Optional[DockArea] = None,
+        title: str = "Testing",
+        daq_type=config("viewer", "daq_type"),
+        dock_settings=None,
+        dock_viewer=None,
+        **kwargs,
+    ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
@@ -134,11 +139,11 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui: DAQ_Viewer_UI = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
+            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
                                                    dock_settings=dock_settings,
                                                    dock_viewer=dock_viewer)
         else:
-            self.ui: Optional[DAQ_Viewer_UI] = None
+            self.ui = None
 
         if self.ui is not None:
             QtWidgets.QApplication.processEvents()

@@ -32,10 +32,22 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
     params = comon_parameters + leco_parameters
     live_mode_available = True
 
-    def __init__(self, parent=None, params_state=None, grabber_type: str = "0D", **kwargs) -> None:
-        DAQ_Viewer_base.__init__(self, parent=parent,
-                                 params_state=params_state)
-        LECODirector.__init__(self, host=self.settings['host'])
+    def __init__(
+        self,
+        parent=None,
+        params_state=None,
+        grabber_type: str = "0D",
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        **kwargs,
+    ) -> None:
+        DAQ_Viewer_base.__init__(self, parent=parent, params_state=params_state)
+        if host is not None:
+            self.settings["host"] = host
+        if port is not None:
+            self.settings["port"] = port
+        LECODirector.__init__(self, host=self.settings["host"], port=self.settings["port"])
+
         self.register_binary_rpc_methods((self.set_data,))
 
         self.client_type = "GRABBER"
@@ -63,7 +75,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             self.controller = DetectorDirector(actor=actor_name,
                                                communicator=self.communicator)
             try:
-                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
+                self.controller.set_remote_name(self.communicator.full_name)
             except TimeoutError:
                 logger.warning("Timeout setting remote name.")
         else:

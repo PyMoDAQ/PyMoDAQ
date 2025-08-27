@@ -258,12 +258,11 @@ class DashBoard(CustomApp):
             if self.check_update(show=False):
                 sys.exit(0)
 
-    @classmethod
     @property
-    def splash_sc(cls) -> QtWidgets.QSplashScreen:
-        if cls._splash_sc is None:
-            cls._splash_sc = get_splash_sc()
-        return cls._splash_sc
+    def splash_sc(self) -> QtWidgets.QSplashScreen:
+        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
+            self._splash_sc = get_splash_sc()
+        return self._splash_sc
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -1811,7 +1810,7 @@ class DashBoard(CustomApp):
                     severity="critical",
                     title="Preset loading error",
                     text=f"""
-                            <p>{error}<\p>
+                            <p>{error}</p>
                             <p>This error may be related to:</p>
                             <p>Saved preset file is not compatible anymore.</p>
                             <p>Please recreate the preset at <b>{filename}</b>.</p>
