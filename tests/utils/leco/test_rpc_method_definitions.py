@@ -15,7 +15,9 @@ discover_string = Request(1, "rpc.discover").model_dump_json()
 class Test_MoveDirector_methods:
     @pytest.fixture(scope="class")
     def methods(self) -> list[str]:
-        dir = DAQ_Move_LECODirector()
+        dir_class = DAQ_Move_LECODirector
+        dir_class.start_timer = print  # type: ignore
+        dir = dir_class()
         response = dir.listener.message_handler.rpc.process_request(discover_string)
         assert response is not None
         result = dir.listener.message_handler.rpc_generator.get_result_from_response(response)
@@ -35,7 +37,9 @@ class Test_MoveDirector_methods:
 class Test_ViewerDirector_methods:
     @pytest.fixture(scope="class")
     def methods(self) -> list[str]:
-        dir = DAQ_xDViewer_LECODirector()
+        dir_class = DAQ_xDViewer_LECODirector
+        dir_class.start_timer = print  # type: ignore
+        dir = dir_class()
         response = dir.listener.message_handler.rpc.process_request(discover_string)
         assert response is not None
         result = dir.listener.message_handler.rpc_generator.get_result_from_response(response)
