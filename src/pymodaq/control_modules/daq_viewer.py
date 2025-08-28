@@ -601,7 +601,7 @@ class DAQ_Viewer(ParameterControlModule):
     def _raise_timeout(self):
         """  Print the "timeout occurred" error message in the status bar via the update_status method.
         """
-        self.update_status("Timeout occured", log_type="log")
+        self.update_status("Timeout occurred", log_type="log")
 
     @staticmethod
     def load_data():
@@ -1277,13 +1277,13 @@ class DAQ_Detector(QObject):
 
         elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
 
         elif command.command == ControlToHardwareViewer.STOP_ALL:
             self.grab_state = False
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
             self.detector.update_scanner(command.attribute[0])

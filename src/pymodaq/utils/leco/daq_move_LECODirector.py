@@ -7,7 +7,7 @@ running: `python -m pyleco.coordinators.coordinator`
 
 """
 
-from typing import Union
+from typing import Optional, Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
@@ -43,7 +43,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         utility_classes.DAQ_TCP_server
     """
     settings: Parameter
-    controller: ActuatorDirector
+    controller: Optional[ActuatorDirector]
     _axis_names = ['']
     _controller_units = ['']
     _epsilon = 1
@@ -58,8 +58,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if param_dict is not None:
             param_dict['visible'] = False
 
-
-    def __init__(self, parent=None, params_state=None, host: str = None, port : int = None, **kwargs) -> None:
+    def __init__(
+        self, parent=None, params_state=None, host: Optional[str] = None, port: Optional[int] = None, **kwargs
+    ) -> None:
         DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
         if host is not None:
             self.settings["host"] = host
@@ -127,7 +128,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def get_actuator_value(self) -> DataActuator:
         """ Get the current hardware value """
-        self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 
@@ -163,12 +163,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.axis_units.append(units)
         self.axis_unit = units
 
-    def set_settings(self, settings: bytes):
+    def set_director_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter
 
         Then set the plugin units from this information"""
-        super().set_settings(settings)
+        super().set_director_settings(settings)
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:

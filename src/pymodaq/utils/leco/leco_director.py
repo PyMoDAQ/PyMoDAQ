@@ -17,18 +17,19 @@ from qtpy.QtCore import QTimer
 
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
+from pymodaq.utils.leco.rpc_method_definitions import GenericDirectorMethods, MoveDirectorMethods
 from pymodaq_utils.serialize.factory import SerializableFactory
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 config = Config()
 
 class DirectorCommands(StrEnum):
-    SET_SETTINGS = 'set_settings'
-    SET_INFO = 'set_info'
+    SET_SETTINGS = GenericDirectorMethods.SET_DIRECTOR_SETTINGS
+    SET_INFO = GenericDirectorMethods.SET_DIRECTOR_INFO
 
-    SEND_POSITION = 'send_position'  # to display the actor position
-    SET_MOVE_DONE = 'set_move_done'
-    SET_UNITS = 'set_units'  # to set units accordingly to the one of the actor
+    SEND_POSITION = MoveDirectorMethods.SEND_POSITION  # to display the actor position
+    SET_MOVE_DONE = MoveDirectorMethods.SET_MOVE_DONE
+    SET_UNITS = MoveDirectorMethods.SET_UNITS  # to set units accordingly to the one of the actor
 
 
 class DirectorReceivedCommands(StrEnum):
@@ -68,10 +69,10 @@ class LECODirector:
 
         #registering rpc methods common to all Directors
         self.register_rpc_methods((
-            self.set_settings,
+            self.set_director_settings,
         ))
         self.register_binary_rpc_methods((
-            self.set_info,
+            self.set_director_info,
         ))
 
     def register_binary_rpc_methods(self, methods: Sequence[Callable]) -> None:
@@ -101,7 +102,8 @@ class LECODirector:
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_actor_connection)
         try:
-            timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))  # cast is used by the type checker to infer the returned type (when many are possible)
+            # cast is used by the type checker to infer the returned type (when many are possible)
+            timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))
         except KeyError:
             timeout = 1000
         self.timer.start(timeout)  # in milli seconds
@@ -133,14 +135,19 @@ class LECODirector:
         super().emit_status(status=status)  # type: ignore
 
     # Methods accessible via remote calls
-    def set_info(self,
+    def set_director_info(self,
                  parameter: Optional[Union[float, str]],
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
         """ Write the value of a param updated from the actor to here in the
         Parameter with path: ('move_settings', 'settings_client')
         """
-        param = cast(ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]))  # cast is used by the type checker to infer the returned type (when many are possible)
+        GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
+        assert additional_payload
+        # cast is used by the type checker to infer the returned type (when many are possible)
+        param = cast(
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+        )
 
         try:
             path = ['settings_client']
@@ -151,8 +158,9 @@ class LECODirector:
             print(f'could not set the param {param} in the director:\n'
                   f'{str(e)}')
 
-    def set_settings(self, settings: bytes):
+    def set_director_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter"""
+        GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
         params = ioxml.XML_string_to_parameter(settings)
         self.settings.child('settings_client').addChildren(params)
