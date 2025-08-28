@@ -57,6 +57,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
         self.grabber_type = grabber_type
         self.ind_data = 0
         self.data_mock = None
+        self.start_timer()
 
     def ini_detector(self, controller=None):
         """
