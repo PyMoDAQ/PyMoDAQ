@@ -101,7 +101,7 @@ class LECODirector:
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_actor_connection)
         try:
-            timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))
+            timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))  # cast is used by the type checker to infer the returned type (when many are possible)
         except KeyError:
             timeout = 1000
         self.timer.start(timeout)  # in milli seconds
@@ -140,7 +140,7 @@ class LECODirector:
         """ Write the value of a param updated from the actor to here in the
         Parameter with path: ('move_settings', 'settings_client')
         """
-        param = cast(ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]))
+        param = cast(ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]))  # cast is used by the type checker to infer the returned type (when many are possible)
 
         try:
             path = ['settings_client']
