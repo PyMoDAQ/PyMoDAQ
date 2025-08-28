@@ -121,7 +121,7 @@ jobs:
       branch: ${{ steps.extract_branch.outputs.branch }}
 
   badge-update:
-    if: github.repository_owner == 'PyMoDAQ'
+    if: github.repository == 'PyMoDAQ/PyMoDAQ' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     runs-on: ubuntu-latest
     needs: tests # Ensure this job runs after all matrix jobs complete
     steps:
