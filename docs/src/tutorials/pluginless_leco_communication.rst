@@ -1,4 +1,4 @@
-pr.. _plugin_external_to_pymodaq:
+.. _plugin_external_to_pymodaq:
 
 
 Communication with devices outside of PyMoDAQ
@@ -74,8 +74,9 @@ acting like they've been told to (*producing data*).
 
 
 In :numref:`fig_leco_arch` one can see the LECO network architecture. In this example, `Node 1` and `Node 2` are
-LECO actors, each with instruments connected and a PyMoDAQ instance. They are connected to the coordinator, allowing
-the directors on the `Main dashboard` to send command to control them and retrieve their data.
+PyMoDAQ Dashboard instance, each with a set of Control/Instrument Modules corresponding to the devices (actors)
+connected. They are connected to the coordinator over the network, allowing the directors on the `Main dashboard` to
+send command to control them and retrieve their data.
 
 
 JSON-RPC
@@ -196,8 +197,555 @@ GitHub, as once done for a language, it is universal.
 
 Compatibility
 ~~~~~~~~~~~~~
-It is compatible with old Windows and python versions down to **Windows 7** and **Python 3.4** as long as one succeeds
-in installing an old ``pyzmq`` version compatible with **Python 3.4** such as version **17**.
+We tested the communication by porting examples to **Python 3.4** on a **Linux** machine. It should be compatible down to
+**Windows XP**, as long as one succeeds installing an old ``pyzmq`` version compatible with **Python 3.4**,
+such as version **17** (*good luck though!*).
 
 This means one could port their legacy setups to **PyMoDAQ** by writing the JSON-RPC communication layer and using an
 up-to-date machine to control the setup using **PyMoDAQ** with most of its functionality available.
+
+
+
+Here is a list of exchanged messages.
+
+Network API Message Reference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All communication uses **LECO multipart frames** over ZMQ:
+
+- ``[ version, receiver, sender, LECO header, payload ]``
+
+  - ``version``: 1 byte (always ``b"\x00"``)
+  - ``receiver``: UTF-8 string (e.g. ``"COORDINATOR"``)
+  - ``sender``: UTF-8 string (device name)
+  - ``LECO header``: 20 bytes = ``conversation_id`` (16B) + ``message_id`` (3B) + ``message_type`` (1B)
+    - ``conversation_id`` can be randomly generated and should be the same for a conversation (a sequence of
+    requests/responses) but can be changed between each next request if wanted.
+    - ``message_id`` generaly starts at 0, but must stay the same between a request and its answer.
+    - ``message_type`` is always JSON (value of ``1``)
+        .. note::
+            This specification is subject to change; please keep up to date with the
+            `LECO documentation <https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`_
+            and its `GitHub repository <https://github.com/pymeasure/leco-protocol>`_.
+  - ``payload``: UTF-8 JSON (JSON-RPC 2.0)
+  .. note::
+     In the following message examples, given ``id`` values are not specific to the ``method``, the must remain
+     the same between a method and its result, but could be any valid integer value.
+
+Unless specified otherwise, a reponse is always sent to the ``sender`` of the request. Also, with asynchronous requests,
+the receiver (probably a LECODirector) will always respond the asynchronous requests, either with empty responses or
+with error messages. It is up to the developper to take them into consideration.
+
+Here is a recap of JSON-RPC payload structure:
+
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": <int>,
+      "jsonrpc": "2.0",
+      "method": "<name>",
+      "params": { ... }
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": <same>,
+      "jsonrpc": "2.0",
+      "result": <any|null>
+    }
+
+- Error::
+
+.. code-block:: json
+
+    {
+      "id": null,
+      "jsonrpc": "2.0",
+      "error": { "code": <int>, "message": "<str>" }
+    }
+
+Common Messages
+^^^^^^^^^^^^^^^
+These are the messages used in both actuator and detector communication.
+
+``sign_in``
+"""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "sign_in",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Error::
+
+.. code-block:: json
+
+    {
+      "id": null,
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32091,
+        "message": "The name is already taken."
+      }
+    }
+Registers a LECO component with the coordinator. It is sent to ``receiver="COORDINATOR"`` and is the only message where
+communication is initiated by the device. It sends the sign_in request and receive either a valid response or an error
+when the name is already taken.
+
+``sign_out``
+""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 2,
+      "jsonrpc": "2.0",
+      "method": "sign_out",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 2,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+Unregister a LECO component with the coordinator. It is crucial to try as much as possible to send the message as it
+will otherwise keep the name unusable for at least a few minutes.
+
+
+``set_remote_name``
+"""""""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 3,
+      "jsonrpc": "2.0",
+      "method": "set_remote_name",
+      "params": {"name": "<remote>"}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 3,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+Most instrument data shared between LECO components is shared asynchronously, thus an actor will need to initiate
+communication with a director. Using this method, an actor stores the name of the director to which it should
+send requests in the future.
+
+``get_settings``
+""""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 4,
+      "jsonrpc": "2.0",
+      "method": "get_settings",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 4,
+      "jsonrpc": "2.0",
+      "result": {}
+    }
+
+Ask for the instrument settings, so that they can be accessed (read/write) by the LECODirector. The easiest is to send
+an empty JSON object, as settings are expected to use binary serialization. Doing so makes it impossible to access the
+settings on the Director side. **It's a known limitation of communication with non PyMoDAQ components**.
+
+``pong``
+""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 5,
+      "jsonrpc": "2.0",
+      "method": "pong",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 5,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+A method sent by the coordinator to check if a LECO component is still alive, after a moment of inactivity.
+
+``rpc.discover``
+""""""""""""""""
+Not implemented and it should not even be called. Response can be an error:
+
+.. code-block:: json
+
+    {
+      "id": null,
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -1,
+        "message": "NotImplemented"
+      }
+    }
+
+Actuator Messages
+^^^^^^^^^^^^^^^^^
+Messages only used when communicating with an actuator.
+
+``move_home``
+"""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 6,
+      "jsonrpc": "2.0",
+      "method": "move_home",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 6,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async device-initiated messages::
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "send_position",
+      "params": {"data": {"position": <current>}}
+    }
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "set_move_done",
+      "params": {"data": {"position": <final>}}
+    }
+
+A request to ``move_home``, i.e. to move to a setpoint value. A first request is sent, then the reponse is sent. In the
+background, the request to move is sent to the actuator. Until the target value is reached (or a ``stop_move`` is
+received), the actuator is probed and its value is sent to the ``remote name`` stored after ``set_remote_name``,
+periodicaly, using the ``send_position`` request. Once done moving, the final value is sent with ``set_move_done``.
+
+Actuator values are generaly 0D and if PyMoDAQ's daq_move GUI is used, they should be 0D. However, if used
+programmatically, to build extensions or other virtual devices, exchanging 0D, 1D, and 2D actuator values is allowed.
+
+``move_abs``
+""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 7,
+      "jsonrpc": "2.0",
+      "method": "move_abs",
+      "params": {"position": <number|2D array>}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 7,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async: same sequence of ``send_position`` then ``set_move_done``.
+
+Similar to ``move_home``, except that an absolute value to reach is sent in the first request.
+
+``move_rel``
+""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 8,
+      "jsonrpc": "2.0",
+      "method": "move_rel",
+      "params": {"position": <delta number|2D array>}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 8,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async: same sequence of ``send_position`` then ``set_move_done``.
+
+Similar to ``move_home``, except that a relative value to reach is sent in the first request.
+
+``stop_motion``
+"""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 9,
+      "jsonrpc": "2.0",
+      "method": "stop_motion",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 9,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+
+A request to stop a ``move_*`` action if one is occuring. The movement should be stopped before sending the response.
+
+``get_actuator_value``
+""""""""""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 10,
+      "jsonrpc": "2.0",
+      "method": "get_actuator_value",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 10,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async::
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "set_units",
+      "params": {"units": "<str>"}
+    }
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "send_position",
+      "params": {"data": {"position": <current>}}
+    }
+
+A request to ask for the current value. First the response is sent. Then, the actuator is probed and its units are sent
+(if it uses units) as a parameter of ``set_units``. Finally, its value is sent with ``send_position``.
+
+Detector Messages
+^^^^^^^^^^^^^^^^^
+Messages only used when communicating with a actuator.
+
+``send_data_grab``
+""""""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 11,
+      "jsonrpc": "2.0",
+      "method": "send_data_grab",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 11,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async (repeated)::
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "set_data",
+      "params": {
+        "data": {
+          "data": <RawDetectorData>,
+          "axes": [ {"data":[...], "units":"...", "label":"..."} ], # Optional
+          "labels": ["ch0", ...], # Optional
+          "multichannel": <bool> # Optional if false
+        }
+      }
+    }
+Ask data from a detector. First the actor should send its response. Then in background, using
+the ``remote name`` stored after ``set_remote_name``, ``set_data`` requests are sent periodically, with ``data`` as a
+parameter.
+
+It continues until a ``stop_grab`` request is received.
+
+``<RawDetectorData>`` is a 0, 1 or 2D data array, depending on the detector. When using multichannel, it gets
+wrapped in another layer of array corresponding the channels. So ``[<RawDetectorData>, <RawDetectorData>]`` for two
+channels, where each ``<RawDetectorData>`` is of a shape matching the expected detector dimension.
+
+.. note::
+    ND data should also work but was not tested!
+
+``send_data_snap``
+""""""""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 12,
+      "jsonrpc": "2.0",
+      "method": "send_data_snap",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 12,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async (single)::
+
+.. code-block:: json
+
+    {
+      "jsonrpc": "2.0",
+      "method": "set_data",
+      "params": {
+        "data": {
+          "data": <RawDetectorData>,
+          "axes": [ {"data":[...], "units":"...", "label":"..."} ], # Optional
+          "labels": ["ch0", ...], # Optional
+          "multichannel": <bool> # Optional if false
+        }
+      }
+    }
+Same as ``send_data_grab`` but only once.
+
+``stop_grab``
+"""""""""""""
+- Request::
+
+.. code-block:: json
+
+    {
+      "id": 13,
+      "jsonrpc": "2.0",
+      "method": "stop_grab",
+      "params": {}
+    }
+
+- Expected Response::
+
+.. code-block:: json
+
+    {
+      "id": 13,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+The request sent when the acquisition should stop. The detector should stop acquiring and send data before responding to
+this request.
+
+Errors
+^^^^^^
+
+When a request is not supposed to be received in the current state according to :numref:`fig_state_machine_actuator`
+and :numref:`fig_state_machine_detector`, one should still answer but with an error:
+
+.. code-block:: json
+
+    {
+      "id": null,
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -100,
+        "message": "Request received is invalid in current state."
+      }
+    }
+
+``message`` and ``code`` values are user-defined.
