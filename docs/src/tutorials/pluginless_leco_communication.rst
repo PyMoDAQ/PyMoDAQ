@@ -1,7 +1,7 @@
 .. _plugin_external_to_pymodaq:
 
 
-Communication with devices outside of PyMoDAQ
+Communication With Devices Outside of PyMoDAQ
 =============================================
 The preferred way of using a detector or an actuator with PyMoDAQ is of course to implement its instrument plugin,
 as explained :ref:`in the plugin development page<plugin_development>`.
@@ -11,7 +11,7 @@ then be still used while benefiting all of PyMoDAQ's advantages: extensions, sav
 
 There are  two different use cases: eiter your code is in python or it is not.
 
-Python devices drivers without PyMoDAQ Plugin
+Python Devices Drivers Without PyMoDAQ Plugin
 ------------------------------------------
 If you are already communicating with devices in python and that the effort to translate them into pymodaq plugins
 is too high (or time too short), you can easily connect them with the PymoDAQ ecosystem (even though it is *really*
@@ -25,7 +25,7 @@ writing a plugin, so once again it is advised to consider writing the plugin dir
 All of PyMoDAQ functionalities are available through this solution, except a local GUI for the device.
 The LECODirector will still provide a remote GUI functionality, see :ref:`leco_communication` for more details.
 
-Drivers in another language
+Drivers in Another Language
 ---------------------------
 The most interesting case and recommended use-case is if there's a part or all of your **already existing** setup
 implemented in another language, for example in LabView. It becomes interesting if you want to benefit from the
@@ -140,7 +140,7 @@ that listens using a ``ROUTER`` type socket. This is why the external implementa
 
 
 
-Implementation guide
+Implementation Guide
 ~~~~~~~~~~~~~~~~~~~~
 
 To implement a plugin outside of PyMoDAQ, it is recommended to start by examining the `mock examples <https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples>`_.
@@ -236,11 +236,12 @@ Unless specified otherwise, a reponse is always sent to the ``sender`` of the re
 the receiver (probably a LECODirector) will always respond the asynchronous requests, either with empty responses or
 with error messages. It is up to the developper to take them into consideration.
 
+
 Here is a recap of JSON-RPC payload structure:
 
-- Request::
+- Request:
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "id": <int>,
@@ -249,9 +250,9 @@ Here is a recap of JSON-RPC payload structure:
       "params": { ... }
     }
 
-- Expected Response::
+- Expected Response:
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "id": <same>,
@@ -259,9 +260,9 @@ Here is a recap of JSON-RPC payload structure:
       "result": <any|null>
     }
 
-- Error::
+- Error:
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "id": null,
@@ -269,176 +270,263 @@ Here is a recap of JSON-RPC payload structure:
       "error": { "code": <int>, "message": "<str>" }
     }
 
+
+
+Message Summary
+^^^^^^^^^^^^^^^^
+
+**Common Messages**
+
+.. list-table::
+   :header-rows: 0
+   :widths: 20 80
+
+
+   * - :py:attr:`sign_in`
+     - Registers a LECO component with the coordinator.
+   * - :py:attr:`sign_out`
+     - Unregister a LECO component with the coordinator.
+   * - :py:attr:`set_remote_name`
+     - Store the director name for asynchronous communication.
+   * - :py:attr:`get_settings`
+     - Request instrument settings (read/write) from LECODirector.
+   * - :py:attr:`pong`
+     - Check if a LECO component is alive.
+   * - :py:attr:`rpc.discover`
+     - Not implemented; calling it returns an error.
+
+**Actuator Messages**
+
+.. list-table::
+   :header-rows: 0
+   :widths: 20 80
+
+   * - :py:attr:`move_home`
+     - Move actuator to home setpoint; async updates via send_position/set_move_done.
+   * - :py:attr:`move_abs`
+     - Move actuator to absolute position; async updates as above.
+   * - :py:attr:`move_rel`
+     - Move actuator by relative delta; async updates as above.
+   * - :py:attr:`stop_motion`
+     - Stop any ongoing movement immediately.
+   * - :py:attr:`get_actuator_value`
+     - Request current actuator value; async updates include set_units and send_position.
+
+**Detector Messages**
+
+.. list-table::
+   :header-rows: 0
+   :widths: 20 80
+
+   * - :py:attr:`send_data_grab`
+     - Ask data from detector repeatedly until stop_grab.
+   * - :py:attr:`send_data_snap`
+     - Ask data from detector once.
+   * - :py:attr:`stop_grab`
+     - Stop detector acquisition.
+
+
+**Error Messages**
+
+.. list-table::
+   :header-rows: 0
+   :widths: 20 80
+
+   * - :py:attr:`invalid_request`
+     - Error message returned when request is invalid in current state.
+
+
+
 Common Messages
 ^^^^^^^^^^^^^^^
 These are the messages used in both actuator and detector communication.
 
-``sign_in``
-"""""""""""
-- Request::
 
-.. code-block:: json
 
-    {
-      "id": 1,
-      "jsonrpc": "2.0",
-      "method": "sign_in",
-      "params": {}
-    }
-
-- Expected Response::
-
-.. code-block:: json
-
-    {
-      "id": 1,
-      "jsonrpc": "2.0",
-      "result": null
-    }
-
-- Error::
-
-.. code-block:: json
-
-    {
-      "id": null,
-      "jsonrpc": "2.0",
-      "error": {
-        "code": -32091,
-        "message": "The name is already taken."
-      }
-    }
+.. py:attribute:: sign_in
 Registers a LECO component with the coordinator. It is sent to ``receiver="COORDINATOR"`` and is the only message where
 communication is initiated by the device. It sends the sign_in request and receive either a valid response or an error
 when the name is already taken.
 
-``sign_out``
-""""""""""""
-- Request::
+- Request:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 2,
-      "jsonrpc": "2.0",
-      "method": "sign_out",
-      "params": {}
-    }
+     {
+       "id": 1,
+       "jsonrpc": "2.0",
+       "method": "sign_in",
+       "params": {}
+     }
 
-- Expected Response::
+- Expected Response:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 2,
-      "jsonrpc": "2.0",
-      "result": null
-    }
+     {
+       "id": 1,
+       "jsonrpc": "2.0",
+       "result": null
+     }
+
+- Error:
+
+ .. code-block:: json
+
+     {
+       "id": null,
+       "jsonrpc": "2.0",
+       "error": {
+         "code": -32091,
+         "message": "The name is already taken."
+       }
+     }
+
+
+
+
+.. py:attribute:: sign_out
 Unregister a LECO component with the coordinator. It is crucial to try as much as possible to send the message as it
 will otherwise keep the name unusable for at least a few minutes.
 
+- Request:
 
-``set_remote_name``
-"""""""""""""""""""
-- Request::
+ .. code-block:: json
 
-.. code-block:: json
+     {
+       "id": 2,
+       "jsonrpc": "2.0",
+       "method": "sign_out",
+       "params": {}
+     }
 
-    {
-      "id": 3,
-      "jsonrpc": "2.0",
-      "method": "set_remote_name",
-      "params": {"name": "<remote>"}
-    }
+- Expected Response:
 
-- Expected Response::
+ .. code-block:: json
 
-.. code-block:: json
+     {
+       "id": 2,
+       "jsonrpc": "2.0",
+       "result": null
+     }
 
-    {
-      "id": 3,
-      "jsonrpc": "2.0",
-      "result": null
-    }
 
+
+
+.. py:attribute:: set_remote_name
 Most instrument data shared between LECO components is shared asynchronously, thus an actor will need to initiate
 communication with a director. Using this method, an actor stores the name of the director to which it should
 send requests in the future.
 
-``get_settings``
-""""""""""""""""
-- Request::
+- Request:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 4,
-      "jsonrpc": "2.0",
-      "method": "get_settings",
-      "params": {}
-    }
+     {
+       "id": 3,
+       "jsonrpc": "2.0",
+       "method": "set_remote_name",
+       "params": {"name": "<remote>"}
+     }
 
-- Expected Response::
+- Expected Response:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 4,
-      "jsonrpc": "2.0",
-      "result": {}
-    }
+     {
+       "id": 3,
+       "jsonrpc": "2.0",
+       "result": null
+     }
 
+
+
+
+.. py:attribute:: get_settings
 Ask for the instrument settings, so that they can be accessed (read/write) by the LECODirector. The easiest is to send
 an empty JSON object, as settings are expected to use binary serialization. Doing so makes it impossible to access the
 settings on the Director side. **It's a known limitation of communication with non PyMoDAQ components**.
 
-``pong``
-""""""""
-- Request::
+- Request:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 5,
-      "jsonrpc": "2.0",
-      "method": "pong",
-      "params": {}
-    }
+     {
+       "id": 4,
+       "jsonrpc": "2.0",
+       "method": "get_settings",
+       "params": {}
+     }
 
-- Expected Response::
+- Expected Response:
 
-.. code-block:: json
+ .. code-block:: json
 
-    {
-      "id": 5,
-      "jsonrpc": "2.0",
-      "result": null
-    }
+     {
+       "id": 4,
+       "jsonrpc": "2.0",
+       "result": {}
+     }
 
+
+
+
+.. py:attribute:: pong
 A method sent by the coordinator to check if a LECO component is still alive, after a moment of inactivity.
 
-``rpc.discover``
-""""""""""""""""
+- Request:
+
+ .. code-block:: json
+
+     {
+       "id": 5,
+       "jsonrpc": "2.0",
+       "method": "pong",
+       "params": {}
+     }
+
+- Expected Response:
+
+ .. code-block:: json
+
+     {
+       "id": 5,
+       "jsonrpc": "2.0",
+       "result": null
+     }
+
+
+
+
+.. py:attribute:: rpc.discover
 Not implemented and it should not even be called. Response can be an error:
 
 .. code-block:: json
 
-    {
-      "id": null,
-      "jsonrpc": "2.0",
-      "error": {
-        "code": -1,
-        "message": "NotImplemented"
-      }
-    }
+   {
+     "id": null,
+     "jsonrpc": "2.0",
+     "error": {
+       "code": -1,
+       "message": "NotImplemented"
+     }
+   }
 
 Actuator Messages
 ^^^^^^^^^^^^^^^^^
 Messages only used when communicating with an actuator.
 
-``move_home``
-"""""""""""""
-- Request::
+
+.. py:attribute:: move_home
+A request to ``move_home``, i.e. to move to a setpoint value. A first request is sent, then the reponse is sent. In the
+background, the request to move is sent to the actuator. Until the target value is reached (or a ``stop_move`` is
+received), the actuator is probed and its value is sent to the ``remote name`` stored after ``set_remote_name``,
+periodicaly, using the ``send_position`` request. Once done moving, the final value is sent with ``set_move_done``.
+
+Actuator values are generaly 0D and if PyMoDAQ's daq_move GUI is used, they should be 0D. However, if used
+programmatically, to build extensions or other virtual devices, exchanging 0D, 1D, and 2D actuator values is allowed.
+
+- Request:
 
 .. code-block:: json
 
@@ -449,7 +537,7 @@ Messages only used when communicating with an actuator.
       "params": {}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -459,9 +547,9 @@ Messages only used when communicating with an actuator.
       "result": null
     }
 
-- Async device-initiated messages::
+- Async device-initiated messages:
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "jsonrpc": "2.0",
@@ -469,7 +557,7 @@ Messages only used when communicating with an actuator.
       "params": {"data": {"position": <current>}}
     }
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "jsonrpc": "2.0",
@@ -477,19 +565,13 @@ Messages only used when communicating with an actuator.
       "params": {"data": {"position": <final>}}
     }
 
-A request to ``move_home``, i.e. to move to a setpoint value. A first request is sent, then the reponse is sent. In the
-background, the request to move is sent to the actuator. Until the target value is reached (or a ``stop_move`` is
-received), the actuator is probed and its value is sent to the ``remote name`` stored after ``set_remote_name``,
-periodicaly, using the ``send_position`` request. Once done moving, the final value is sent with ``set_move_done``.
 
-Actuator values are generaly 0D and if PyMoDAQ's daq_move GUI is used, they should be 0D. However, if used
-programmatically, to build extensions or other virtual devices, exchanging 0D, 1D, and 2D actuator values is allowed.
+.. py:attribute:: move_abs
+Similar to ``move_home``, except that an absolute value to reach is sent in the first request.
 
-``move_abs``
-""""""""""""
-- Request::
+- Request:
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "id": 7,
@@ -498,7 +580,7 @@ programmatically, to build extensions or other virtual devices, exchanging 0D, 1
       "params": {"position": <number|2D array>}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -510,13 +592,14 @@ programmatically, to build extensions or other virtual devices, exchanging 0D, 1
 
 - Async: same sequence of ``send_position`` then ``set_move_done``.
 
-Similar to ``move_home``, except that an absolute value to reach is sent in the first request.
 
-``move_rel``
-""""""""""""
-- Request::
 
-.. code-block:: json
+.. py:attribute:: move_rel
+Similar to ``move_home``, except that a relative value to reach is sent in the first request.
+
+- Request:
+
+.. code-block:: pseudojson
 
     {
       "id": 8,
@@ -525,7 +608,7 @@ Similar to ``move_home``, except that an absolute value to reach is sent in the 
       "params": {"position": <delta number|2D array>}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -537,11 +620,12 @@ Similar to ``move_home``, except that an absolute value to reach is sent in the 
 
 - Async: same sequence of ``send_position`` then ``set_move_done``.
 
-Similar to ``move_home``, except that a relative value to reach is sent in the first request.
 
-``stop_motion``
-"""""""""""""""
-- Request::
+
+.. py:attribute:: stop_motion
+A request to stop a ``move_*`` action if one is occuring. The movement should be stopped before sending the response.
+
+- Request:
 
 .. code-block:: json
 
@@ -552,7 +636,7 @@ Similar to ``move_home``, except that a relative value to reach is sent in the f
       "params": {}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -563,11 +647,13 @@ Similar to ``move_home``, except that a relative value to reach is sent in the f
     }
 
 
-A request to stop a ``move_*`` action if one is occuring. The movement should be stopped before sending the response.
 
-``get_actuator_value``
-""""""""""""""""""""""
-- Request::
+
+.. py:attribute:: get_actuator_value
+A request to ask for the current value. First the response is sent. Then, the actuator is probed and its units are sent
+(if it uses units) as a parameter of ``set_units``. Finally, its value is sent with ``send_position``.
+
+- Request:
 
 .. code-block:: json
 
@@ -578,7 +664,7 @@ A request to stop a ``move_*`` action if one is occuring. The movement should be
       "params": {}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -588,7 +674,7 @@ A request to stop a ``move_*`` action if one is occuring. The movement should be
       "result": null
     }
 
-- Async::
+- Async:
 
 .. code-block:: json
 
@@ -598,7 +684,7 @@ A request to stop a ``move_*`` action if one is occuring. The movement should be
       "params": {"units": "<str>"}
     }
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "jsonrpc": "2.0",
@@ -606,52 +692,14 @@ A request to stop a ``move_*`` action if one is occuring. The movement should be
       "params": {"data": {"position": <current>}}
     }
 
-A request to ask for the current value. First the response is sent. Then, the actuator is probed and its units are sent
-(if it uses units) as a parameter of ``set_units``. Finally, its value is sent with ``send_position``.
+
 
 Detector Messages
 ^^^^^^^^^^^^^^^^^
 Messages only used when communicating with a actuator.
 
-``send_data_grab``
-""""""""""""""""""
-- Request::
 
-.. code-block:: json
-
-    {
-      "id": 11,
-      "jsonrpc": "2.0",
-      "method": "send_data_grab",
-      "params": {}
-    }
-
-- Expected Response::
-
-.. code-block:: json
-
-    {
-      "id": 11,
-      "jsonrpc": "2.0",
-      "result": null
-    }
-
-- Async (repeated)::
-
-.. code-block:: json
-
-    {
-      "jsonrpc": "2.0",
-      "method": "set_data",
-      "params": {
-        "data": {
-          "data": <RawDetectorData>,
-          "axes": [ {"data":[...], "units":"...", "label":"..."} ], # Optional
-          "labels": ["ch0", ...], # Optional
-          "multichannel": <bool> # Optional if false
-        }
-      }
-    }
+.. py:attribute:: send_data_grab
 Ask data from a detector. First the actor should send its response. Then in background, using
 the ``remote name`` stored after ``set_remote_name``, ``set_data`` requests are sent periodically, with ``data`` as a
 parameter.
@@ -665,32 +713,30 @@ channels, where each ``<RawDetectorData>`` is of a shape matching the expected d
 .. note::
     ND data should also work but was not tested!
 
-``send_data_snap``
-""""""""""""""""""
-- Request::
+- Request:
 
 .. code-block:: json
 
     {
-      "id": 12,
+      "id": 11,
       "jsonrpc": "2.0",
-      "method": "send_data_snap",
+      "method": "send_data_grab",
       "params": {}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
     {
-      "id": 12,
+      "id": 11,
       "jsonrpc": "2.0",
       "result": null
     }
 
-- Async (single)::
+- Async (repeated):
 
-.. code-block:: json
+.. code-block:: pseudojson
 
     {
       "jsonrpc": "2.0",
@@ -704,11 +750,54 @@ channels, where each ``<RawDetectorData>`` is of a shape matching the expected d
         }
       }
     }
+
+
+.. py:attribute:: send_data_snap
 Same as ``send_data_grab`` but only once.
 
-``stop_grab``
-"""""""""""""
-- Request::
+- Request:
+
+.. code-block:: json
+
+    {
+      "id": 12,
+      "jsonrpc": "2.0",
+      "method": "send_data_snap",
+      "params": {}
+    }
+
+- Expected Response:
+
+.. code-block:: json
+
+    {
+      "id": 12,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+- Async (single):
+
+.. code-block:: pseudojson
+
+    {
+      "jsonrpc": "2.0",
+      "method": "set_data",
+      "params": {
+        "data": {
+          "data": <RawDetectorData>,
+          "axes": [ {"data":[...], "units":"...", "label":"..."} ], # Optional
+          "labels": ["ch0", ...], # Optional
+          "multichannel": <bool> # Optional if false
+        }
+      }
+    }
+
+
+.. py:attribute:: stop_grab
+The request sent when the acquisition should stop. The detector should stop acquiring and send data before responding to
+this request.
+- Request:
 
 .. code-block:: json
 
@@ -719,7 +808,7 @@ Same as ``send_data_grab`` but only once.
       "params": {}
     }
 
-- Expected Response::
+- Expected Response:
 
 .. code-block:: json
 
@@ -728,11 +817,12 @@ Same as ``send_data_grab`` but only once.
       "jsonrpc": "2.0",
       "result": null
     }
-The request sent when the acquisition should stop. The detector should stop acquiring and send data before responding to
-this request.
 
-Errors
-^^^^^^
+
+Error Messages
+^^^^^^^^^^^^^^
+
+.. py:attribute:: invalid_request
 
 When a request is not supposed to be received in the current state according to :numref:`fig_state_machine_actuator`
 and :numref:`fig_state_machine_detector`, one should still answer but with an error:
@@ -748,4 +838,6 @@ and :numref:`fig_state_machine_detector`, one should still answer but with an er
       }
     }
 
-``message`` and ``code`` values are user-defined.
+.. note::
+    ``message`` and ``code`` values are user-defined.
+
