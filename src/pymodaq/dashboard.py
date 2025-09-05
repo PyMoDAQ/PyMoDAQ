@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence
 import argparse
 
 
