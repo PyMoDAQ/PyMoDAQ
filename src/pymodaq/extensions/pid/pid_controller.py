@@ -644,7 +644,7 @@ class DAQ_PID(CustomExt):
         else:
             self.queue_points = {
                 setpoint_name: deque(queue, maxlen=self.settings.child("main_settings", "queue_length").value())
-                for queue, setpoint_name in zip(self.queue_points, self.model_class.setpoints_names)
+                for queue, setpoint_name in zip(self.queue_points.values(), self.model_class.setpoints_names)
             }
 
     def ini_model(self):
