@@ -23,7 +23,6 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq_data.data import Axis, DataDistribution
 
 from pymodaq.utils.scanner.scan_config import ScanConfig
-
 try:
     from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 except ModuleNotFoundError:

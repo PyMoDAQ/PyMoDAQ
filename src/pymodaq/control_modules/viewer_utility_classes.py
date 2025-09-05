@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Union, Iterable
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
@@ -267,6 +268,7 @@ class DAQ_Viewer_base(QObject):
         self.controller = controller
         return controller
 
+    @abstractmethod
     def ini_detector(self, controller=None):
         """
         Mandatory
@@ -274,6 +276,7 @@ class DAQ_Viewer_base(QObject):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def close(self):
         """
         Mandatory
@@ -281,6 +284,7 @@ class DAQ_Viewer_base(QObject):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def grab_data(self, Naverage=1, **kwargs):
         """
         Mandatory
@@ -288,6 +292,7 @@ class DAQ_Viewer_base(QObject):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def stop(self):
         """
         Mandatory

@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils==1.0.2", #use strictly this version (yanked) for the moment until we found a better way to handle versioning
+    "pymodaq_utils >= 1.0.2", #use strictly this version (yanked) for the moment until we found a better way to handle versioning
     "pymodaq_gui>=5.0.23",
     "pymodaq_data>=5.0.21",
     "easydict",
@@ -49,15 +49,14 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "pyleco>0.3; python_version>=\"3.8\"",
-    "bayesian-optimization>=2.0",
-    "adaptive",
+    "pyleco>0.3, <=0.4.2; python_version>=\"3.8\"",
+    "bayesian-optimization<2.0.0",
 ]
 
 
 [project.optional-dependencies]
 dev = [
-    "hatch", 
+    "hatch",
     "flake8",
     "h5py",
     "pytest",
@@ -100,3 +99,6 @@ omit = [
     "*/examples/*",
     "*/resources/*"
 ]
+
+[tool.ruff]
+line-length = 120

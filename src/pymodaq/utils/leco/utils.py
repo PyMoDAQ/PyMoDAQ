@@ -5,15 +5,26 @@ from typing import Any, Optional, Union, get_args, TypeVar
 
 
 from pymodaq.utils import data
-from pymodaq_utils.serialize.factory import SerializableFactory
+# import also the DeSerializer for easier imports in dependents
+from pymodaq_utils.serialize.serializer_legacy import Serializer, DeSerializer, SerializableFactory
 
+# type: ignore  # noqa
 from pymodaq_utils.logger import set_logger
 
 
 logger = set_logger('leco_utils')
+ser_factory = SerializableFactory()
 JSON_TYPES = Union[str, int, float]
 
-ser_factory = SerializableFactory()
+
+
+def serialize_object(pymodaq_object: Union[SERIALIZABLE, Any]) -> Union[str, Any]:
+    """Serialize a pymodaq object, if it is not JSON compatible."""
+    if isinstance(pymodaq_object, get_args(JSON_TYPES)):
+        return pymodaq_object
+    else:
+        return Serializer(pymodaq_object).to_b64_string() # will raise a proper error if the object
+    #is not serializable
 
 
 ## this form below is to be compatible with python <= 3.10
@@ -37,8 +48,13 @@ def binary_serialization(
     """
     if isinstance(pymodaq_object, get_args(JSON_TYPES)):
         return pymodaq_object, None
-    return None, [SerializableFactory().get_apply_serializer(pymodaq_object)]
-
+    elif isinstance(pymodaq_object, get_args(SERIALIZABLE)):
+        return None, [Serializer(pymodaq_object).to_bytes()]
+    else:
+        raise ValueError(
+            f"{pymodaq_object} of type '{type(pymodaq_object).__name__}' is neither "
+            "JSON serializable, nor via PyMoDAQ."
+        )
 
 
 def binary_serialization_to_kwargs(
@@ -70,5 +86,6 @@ def start_coordinator():
                 run_coordinator()
             else:
                 logger.info('Coordinator already running')
-    except ConnectionRefusedError:
+    except ConnectionRefusedError as e:
         run_coordinator()
+

@@ -15,7 +15,6 @@ from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
 
-from pymodaq_utils.enums import BaseEnum, StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 try:
     from pymodaq_gui.config_saver_loader import ConfigSaverLoader
@@ -31,7 +30,17 @@ from pymodaq_gui import utils as gutils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.h5modules.saving import H5Saver
 
-from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
+try:
+    from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+except ModuleNotFoundError:
+    from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
+
+from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
+
+
+from pymodaq.extensions.bayesian.utils import (get_bayesian_models, BayesianModelGeneric,
+                                               BayesianAlgorithm, UtilityKind,
+                                               UtilityParameters, StopType, StoppingParameters)
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.utils import CustomExt
 
