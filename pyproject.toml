@@ -31,9 +31,9 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils>=0.0.14, <1.0.0",
-    "pymodaq_gui>=5.0.17, <5.0.23",
-    "pymodaq_data>=5.0.18",
+    "pymodaq_utils >= 1.0.2", #use strictly this version (yanked) for the moment until we found a better way to handle versioning
+    "pymodaq_gui>=5.0.23",
+    "pymodaq_data>=5.0.21",
     "easydict",
     "multipledispatch",
     "numpy < 2.0.0",
@@ -56,7 +56,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "hatch", 
+    "hatch",
     "flake8",
     "h5py",
     "pytest",
@@ -99,3 +99,6 @@ omit = [
     "*/examples/*",
     "*/resources/*"
 ]
+
+[tool.ruff]
+line-length = 120
