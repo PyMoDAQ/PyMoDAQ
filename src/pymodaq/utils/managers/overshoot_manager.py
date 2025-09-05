@@ -1,5 +1,4 @@
 from qtpy import QtWidgets
-from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 import sys
 import os
 
@@ -122,13 +121,13 @@ class OvershootManager:
         self._activated = False
 
         if msgbox:
-            msgBox = QMessageBox()
+            msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Overshoot Manager?")
             msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
-            new_button = msgBox.addButton("New", QMessageBox.ButtonRole.ActionRole)
-            modify_button = msgBox.addButton("Modify", QMessageBox.ButtonRole.AcceptRole)
-            msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
+            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
+            modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
@@ -174,7 +173,7 @@ class OvershootManager:
         """
 
         """
-        dialog = QDialog()
+        dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()
         tree = ParameterTree()
         tree.setMinimumWidth(400)
@@ -183,18 +182,18 @@ class OvershootManager:
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=dialog)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.addButton('Save', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about this managers')
         res = dialog.exec()
 
-        if res == QDialog.DialogCode.Accepted:
+        if res == dialog.Accepted:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')

@@ -4,7 +4,6 @@ import sys
 from typing import List
 
 from qtpy import QtWidgets, QtCore
-from qtpy.QtWidgets import QMessageBox, QDialog, QDialogButtonBox
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import config as config_mod
@@ -60,13 +59,13 @@ class BatchManager(ParameterManager):
         self.batch_path = path
 
         if msgbox:
-            msgBox = QMessageBox()
+            msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Scan Batch Manager?")
             msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
-            new_button = msgBox.addButton("New", QMessageBox.ButtonRole.AcceptRole)
-            modify_button = msgBox.addButton('Modify', QMessageBox.ButtonRole.AcceptRole)
-            msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
+            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
+            modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
@@ -155,16 +154,16 @@ class BatchManager(ParameterManager):
     def show_tree(self):
 
 
-        dialog = QDialog()
+        dialog = QtWidgets.QDialog()
         dialog.setLayout(QtWidgets.QVBoxLayout())
 
         widget_all_settings = QtWidgets.QWidget()
 
         dialog.layout().addWidget(widget_all_settings)
-        buttonBox = QDialogButtonBox(parent=dialog)
-        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+        buttonBox.addButton('Save', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         dialog.layout().addWidget(buttonBox)
@@ -187,11 +186,11 @@ class BatchManager(ParameterManager):
 
         res = dialog.exec()
 
-        if res == QDialog.DialogCode.Accepted:
+        if res == dialog.Accepted:
             ioxml.parameter_to_xml_file(
                 self.settings, self.batch_path.joinpath(self.settings.child('filename').value()))
 
-        return res == QDialog.DialogCode.Accepted
+        return res == dialog.Accepted
 
     def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
         while True:

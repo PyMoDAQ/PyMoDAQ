@@ -3,7 +3,6 @@ import sys
 
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtGui, QtWidgets
-from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
 
 from pymodaq.utils.config import get_set_remote_path
@@ -154,9 +153,9 @@ class ShortcutSelection(QtWidgets.QDialog):
         hor_layout.addWidget(label)
         hor_layout.addWidget(self.label)
 
-        buttonBox = QDialogButtonBox()
-        buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
-        buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
+        buttonBox = QtWidgets.QDialogButtonBox()
+        buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
+        buttonBox.addButton(QtWidgets.QDialogButtonBox.Cancel)
         layout.addWidget(self.label)
         layout.addWidget(buttonBox)
 
@@ -245,9 +244,9 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
 
         layout.addWidget(self.settings_tree)
 
-        buttonBox = QDialogButtonBox()
-        buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
-        buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
+        buttonBox = QtWidgets.QDialogButtonBox()
+        buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
+        buttonBox.addButton(QtWidgets.QDialogButtonBox.Cancel)
         layout.addWidget(buttonBox)
 
         buttonBox.accepted.connect(self.accept)
@@ -262,17 +261,13 @@ class RemoteManager(QObject):
         self.actuators = actuators
         self.detectors = detectors
         if msgbox:
-            msgBox = QMessageBox()
+            msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Preset Manager?")
             msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
-            new_button = msgBox.addButton(
-                "New", QMessageBox.ButtonRole.ActionRole
-            )
-            modify_button = msgBox.addButton(
-                "Modify", QMessageBox.ButtonRole.AcceptRole
-            )
-            msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
+            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
+            modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
+            msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
@@ -448,7 +443,7 @@ class RemoteManager(QObject):
         """
 
         """
-        dialog = QDialog()
+        dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()
         tree = ParameterTree()
         # tree.setMinimumWidth(400)
@@ -457,18 +452,18 @@ class RemoteManager(QObject):
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=dialog)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.addButton('Save', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about the actions and their shortcuts')
         res = dialog.exec()
 
-        if res == QDialog.DialogCode.Accepted:
+        if res == dialog.Accepted:
             # save preset parameters in a xml file
             ioxml.parameter_to_xml_file(
                 self.remote_params, os.path.join(remote_path, self.remote_params.child('filename').value()))

@@ -10,15 +10,8 @@ from pyleco.directors.director import Director
 
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter, ioxml
-from pymodaq.utils.data import DataActuator
-from pymodaq.utils.leco.utils import binary_serialization_to_kwargs, SerializableFactory
-from pymodaq.utils.leco.rpc_method_definitions import (
-    GenericMethods,
-    MoveMethods,
-    ViewerMethods,
-)
-
-from pymodaq_gui.parameter.utils import ParameterWithPath
+from pymodaq.control_modules.move_utility_classes import DataActuator
+from pymodaq.utils.leco.utils import serialize_object
 
 
 class GenericDirector(Director):
@@ -26,50 +19,38 @@ class GenericDirector(Director):
 
     def set_remote_name(self, name: Optional[str] = None):
         """Set the remote name of the Module (i.e. where it should send responses to)."""
-        self.ask_rpc(
-            method=GenericMethods.SET_REMOTE_NAME, name=name or self.communicator.name
-        )
+        self.ask_rpc(method="set_remote_name", name=name or self.communicator.name)
 
     def set_info(self, param: Parameter):
         # It removes the first two parts (main_settings and detector_settings?)
         pwp = ParameterWithPath(param, putils.get_param_path(param)[2:])
-        self.ask_rpc(
-            method=GenericMethods.SET_INFO,
-            **binary_serialization_to_kwargs(pwp, data_key="parameter"),
-        )
+        self.ask_rpc(method="set_info",
+                     **binary_serialization_to_kwargs(pwp, data_key='parameter'))
 
-    def get_settings(
-        self,
-    ) -> None:
-        self.ask_rpc(GenericMethods.GET_SETTINGS)
+    def get_settings(self,) -> None:
+        self.ask_rpc('get_settings')
 
 
 class DetectorDirector(GenericDirector):
     def send_data_grab(self) -> None:
-        self.ask_rpc(ViewerMethods.GRAB)
+        self.ask_rpc("send_data_grab")
 
     def send_data_snap(self) -> None:
-        self.ask_rpc(ViewerMethods.SNAP)
+        self.ask_rpc("send_data_snap")
 
     def stop_grab(self) -> None:
-        self.ask_rpc(ViewerMethods.STOP)
+        self.ask_rpc("stop_grab")
 
 
 class ActuatorDirector(GenericDirector):
     def move_abs(self, position: Union[float, DataActuator]) -> None:
-        self.ask_rpc(
-            MoveMethods.MOVE_ABS,
-            **binary_serialization_to_kwargs(position, data_key="position"),
-        )
+        self.ask_rpc("move_abs", position=serialize_object(position))
 
     def move_rel(self, position: Union[float, DataActuator]) -> None:
-        self.ask_rpc(
-            MoveMethods.MOVE_REL,
-            **binary_serialization_to_kwargs(position, data_key="position"),
-        )
+        self.ask_rpc("move_rel", position=serialize_object(position))
 
     def move_home(self) -> None:
-        self.ask_rpc(MoveMethods.MOVE_HOME)
+        self.ask_rpc("move_home")
 
     def get_actuator_value(self) -> None:
         """Request that the actuator value is sent later on.
@@ -77,10 +58,9 @@ class ActuatorDirector(GenericDirector):
         Later the `set_data` method will be called.
         """
         # according to DAQ_Move, this supersedes "check_position"
-        self.ask_rpc(MoveMethods.GET_ACTUATOR_VALUE)
+        self.ask_rpc("get_actuator_value")
 
-    def stop_motion(
-        self,
-    ) -> None:
+    def stop_motion(self,) -> None:
         # not implemented in DAQ_Move!
-        self.ask_rpc(MoveMethods.STOP_MOTION)
+        self.ask_rpc("stop_motion")
+

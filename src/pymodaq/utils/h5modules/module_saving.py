@@ -12,7 +12,6 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
@@ -31,14 +30,6 @@ if TYPE_CHECKING:
 
 
 logger = set_logger(get_module_name(__file__))
-
-
-class GroupModuleType(BaseEnum):
-    DETECTOR = 0
-    ACTUATOR = 1
-    SCAN = 2
-    DATALOGGER = 3
-    OPTIMIZER = 4
 
 
 class ModuleSaver(metaclass=ABCMeta):

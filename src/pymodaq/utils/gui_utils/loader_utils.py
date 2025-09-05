@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from qtpy.QtWidgets import QMessageBox, QMainWindow
+from qtpy import QtWidgets
 
 from pymodaq.dashboard import DashBoard
 from pymodaq.utils.gui_utils import DockArea
@@ -9,8 +9,7 @@ from pymodaq.extensions.utils import CustomExt
 
 
 def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
-        (DashBoard, CustomExt, QMainWindow):
-
+        (DashBoard, CustomExt, QtWidgets.QMainWindow):
     """ Load the Dashboard using a given preset then load an extension
 
     Parameters
@@ -30,7 +29,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     -------
 
     """
-    win = QMainWindow()
+    win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
@@ -46,28 +45,23 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
 
     if file is not None and file.exists():
         dashboard.set_preset_mode(file)
-
-        if extension_name:
-            if extension_name == 'DAQScan':
-                extension = dashboard.load_scan_module()
-            elif extension_name == 'DAQLogger':
-                extension = dashboard.load_log_module()
-            elif extension_name == 'DAQ_PID':
-                extension = dashboard.load_pid_module()
-            elif extension_name == 'Bayesian':
-                extension = dashboard.load_bayesian()
-            elif extension_name == 'AdaptiveScan':
-                extension = dashboard.load_adaptive()
-            else:
-                extension = dashboard.load_extension_from_name(extension_name)
+        if extension_name == 'DAQScan':
+            extension = dashboard.load_scan_module()
+        elif extension_name == 'DAQLogger':
+            extension = dashboard.load_log_module()
+        elif extension_name == 'DAQ_PID':
+            extension = dashboard.load_pid_module()
+        elif extension_name == 'Bayesian':
+            extension = dashboard.load_bayesian()
+        elif extension_name == 'AdaptiveScan':
+            extension = dashboard.load_adaptive()
         else:
-            extension = None
-
+            extension = dashboard.load_extension_from_name(extension_name)
     else:
-        msgBox = QMessageBox()
+        msgBox = QtWidgets.QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
                        f"{file}\n"
                        f"Impossible to load the {extension_name} extension")
-        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msgBox.setStandardButtons(msgBox.Ok)
         ret = msgBox.exec()
     return dashboard, extension, win

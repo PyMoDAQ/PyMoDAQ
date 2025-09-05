@@ -12,6 +12,7 @@ import copy
 
 import os
 from pathlib import Path
+from random import randint
 import sys
 from typing import List, Tuple, Union, Optional
 import time
@@ -109,17 +110,11 @@ class DAQ_Viewer(ParameterControlModule):
     params = daq_viewer_params
 
     listener_class = ViewerActorListener
-    ui: Optional[DAQ_Viewer_UI]
 
-    def __init__(
-        self,
-        parent: Optional[DockArea] = None,
-        title: str = "Testing",
-        daq_type=config("viewer", "daq_type"),
-        dock_settings=None,
-        dock_viewer=None,
-        **kwargs,
-    ):
+    def __init__(self, parent: DockArea=None, title="Testing",
+                 daq_type=config('viewer', 'daq_type'),
+                 dock_settings=None, dock_viewer=None,
+                 **kwargs):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
@@ -142,11 +137,11 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
+            self.ui: DAQ_Viewer_UI = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
                                                    dock_settings=dock_settings,
                                                    dock_viewer=dock_viewer)
         else:
-            self.ui = None
+            self.ui: Optional[DAQ_Viewer_UI] = None
 
         if self.ui is not None:
             QtWidgets.QApplication.processEvents()
@@ -604,7 +599,7 @@ class DAQ_Viewer(ParameterControlModule):
     def _raise_timeout(self):
         """  Print the "timeout occurred" error message in the status bar via the update_status method.
         """
-        self.update_status("Timeout occurred", log_type="log")
+        self.update_status("Timeout occured", log_type="log")
 
     @staticmethod
     def load_data():
@@ -1280,13 +1275,13 @@ class DAQ_Detector(QObject):
 
         elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
         elif command.command == ControlToHardwareViewer.STOP_ALL:
             self.grab_state = False
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
+            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stoping grab'))
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
             self.detector.update_scanner(command.attribute[0])

@@ -16,7 +16,6 @@ from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -384,9 +383,9 @@ class DAQScan(QObject, ParameterManager):
 
             vlayout.addWidget(tree)
             dialog.setLayout(vlayout)
-            buttonBox = QDialogButtonBox(parent=dialog)
-            buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-            buttonBox.addButton("Apply", QDialogButtonBox.ButtonRole.AcceptRole)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
+            buttonBox.addButton('Apply', buttonBox.AcceptRole)
             buttonBox.rejected.connect(dialog.reject)
             buttonBox.accepted.connect(dialog.accept)
 

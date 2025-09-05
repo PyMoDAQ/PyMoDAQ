@@ -7,7 +7,7 @@ running: `python -m pyleco.coordinators.coordinator`
 
 """
 
-from typing import Optional, Union
+from typing import Union
 
 from pymodaq.control_modules.move_utility_classes import (DAQ_Move_base, comon_parameters_fun, main,
                                                           DataActuatorType, DataActuator)
@@ -37,7 +37,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         utility_classes.DAQ_TCP_server
     """
     settings: Parameter
-    controller: Optional[ActuatorDirector]
+    controller: ActuatorDirector
     _axis_names = ['']
     _controller_units = ['']
     _epsilon = 1
@@ -52,15 +52,11 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if param_dict is not None:
             param_dict['visible'] = False
 
-    def __init__(
-        self, parent=None, params_state=None, host: Optional[str] = None, port: Optional[int] = None, **kwargs
-    ) -> None:
-        DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
-        if host is not None:
-            self.settings["host"] = host
-        if port is not None:
-            self.settings["port"] = port
-        LECODirector.__init__(self, host=self.settings["host"], port=self.settings["port"])
+    def __init__(self, parent=None, params_state=None) -> None:
+        DAQ_Move_base.__init__(self, parent=parent,
+                               params_state=params_state)
+        LECODirector.__init__(self, host=self.settings['host'])
+
         self.register_rpc_methods((
             self.set_units,  # to set units accordingly to the one of the actor
         ))
@@ -69,7 +65,6 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.send_position,  # to display the actor position
             self.set_move_done,  # to set the move as done
         ))
-        self.start_timer()
 
     def ini_stage(self, controller=None):
         """Actuator communication initialization
@@ -91,7 +86,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
         if self.is_master:
             self.controller = ActuatorDirector(actor=actor_name, communicator=self.communicator)
             try:
-                self.controller.set_remote_name(self.communicator.full_name)
+                self.controller.set_remote_name(self.communicator.full_name)  # type: ignore
             except TimeoutError:
                 logger.warning("Timeout setting remote name.")
         else:
@@ -122,6 +117,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def get_actuator_value(self) -> DataActuator:
         """ Get the current hardware value """
+        self.controller.set_remote_name(self.communicator.full_name)  # to ensure communication
         self.controller.get_actuator_value()
         return self._current_value
 
@@ -161,12 +157,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             self.axis_units.append(units)
         self.axis_unit = units
 
-    def set_director_settings(self, settings: bytes):
+    def set_settings(self, settings: bytes):
         """ Get the content of the actor settings to pe populated in this plugin
         'settings_client' parameter
 
         Then set the plugin units from this information"""
-        super().set_director_settings(settings)
+        super().set_settings(settings)
         self.axis_unit = self.settings['settings_client', 'units']
 
     def close(self) -> None:

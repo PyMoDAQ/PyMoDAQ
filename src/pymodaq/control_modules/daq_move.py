@@ -12,7 +12,7 @@ from importlib import import_module
 from numbers import Number
 
 import sys
-from typing import List, Union, Optional, Dict, TypeVar, TYPE_CHECKING
+from typing import List, Tuple, Union, Optional, Type
 import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
@@ -21,7 +21,7 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.utils import find_keys_from_val
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils import utils
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq_utils import config as config_mod
@@ -68,8 +68,6 @@ from pymodaq import Q_, Unit
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.utils.config import Config as ControlModulesConfig
 
-if TYPE_CHECKING:
-    from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 
 local_path = config_mod.get_set_local_dir()
 sys.path.append(str(local_path))
@@ -77,8 +75,6 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = config_mod.Config()
 config = ControlModulesConfig()
-
-HardwareController = TypeVar("HardwareController")
 
 DAQ_Move_Actuators = get_plugins("daq_move")
 ACTUATOR_TYPES = [mov["name"] for mov in DAQ_Move_Actuators]
@@ -118,15 +114,10 @@ class DAQ_Move(ParameterControlModule):
     params = daq_move_params
 
     listener_class = MoveActorListener
-    ui: Optional[DAQ_Move_UI_Base]
 
     def __init__(
-        self,
-        parent=None,
-        title="DAQ Move",
-        ui_identifier: Optional[str] = None,
-        **kwargs,
-    ) -> None:
+        self, parent=None, title="DAQ Move", ui_identifier: str = None, **kwargs
+    ):
         """
 
         Parameters
@@ -156,7 +147,7 @@ class DAQ_Move(ParameterControlModule):
         if parent is not None:
             self.ui = DAQ_Move_UI(parent, title)
         else:
-            self.ui = None
+            self.ui: Optional[DAQ_Move_UI] = None
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_TYPES
@@ -602,8 +593,8 @@ class DAQ_Move(ParameterControlModule):
                     ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act)
                 )
 
-        elif status.command == "outofbounds":
-            logger.warning(f"The Actuator {self.title} has reached its defined bounds")
+        elif status.command == 'outofbounds':
+            logger.warning(f'The Actuator {self.title} has reached its defined bounds')
             self.bounds_signal.emit(True)
 
         elif status.command == ThreadStatusMove.SET_ALLOWED_VALUES:
@@ -616,24 +607,20 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
 
-    def _check_data_type(
-        self, data_act: Union[list, np.ndarray, Number, DataActuator]
-    ) -> DataActuator:
-        """Make sure the data is a DataActuator
+    def _check_data_type(self, data_act: Union[list, np.ndarray, Number, DataActuator]) -> DataActuator:
+        """ Make sure the data is a DataActuator
 
         Mostly to make sure DAQ_Move is backcompatible with old style plugins
         """
         if isinstance(data_act, list):  # backcompatibility
             if isinstance(data_act[0], Number):
-                data_act = DataActuator(
-                    data=[np.atleast_1d(val) for val in data_act], units=self.units
-                )
+                data_act = DataActuator(data=[np.atleast_1d(val) for val in data_act], units=self.units)
             elif isinstance(data_act[0], np.ndarray):
                 data_act = DataActuator(data=data_act, units=self.units)
             elif isinstance(data_act[0], DataActuator):
                 data_act = data_act[0]
             else:
-                raise TypeError("Unknown data type")
+                raise TypeError('Unknown data type')
         elif isinstance(data_act, np.ndarray):  # backcompatibility
             data_act = DataActuator(data=[data_act], units=self.units)
         data_act.name = (
@@ -746,38 +733,6 @@ class DAQ_Move(ParameterControlModule):
                 and (unit != "" or config("actuator", "siprefix_even_without_units"))
             )
 
-    @property
-    def axis_names(self) -> Union[List, Dict]:
-        """Get the names of all possible axis"""
-        return self.settings.child("move_settings", "multiaxes", "axis").opts["limits"]
-
-    @property
-    def axis_name(self) -> str:
-        """Get/Set the current axis"""
-        limits = self.settings.child("move_settings", "multiaxes", "axis").opts[
-            "limits"
-        ]
-        if isinstance(limits, list):
-            return self.settings["move_settings", "multiaxes", "axis"]
-        elif isinstance(limits, dict):
-            return find_keys_from_val(
-                limits, val=self.settings["move_settings", "multiaxes", "axis"]
-            )[0]
-
-    @axis_name.setter
-    def axis_name(self, name: str):
-        """Get/Set the current axis"""
-        limits = self.settings.child("move_settings", "multiaxes", "axis").opts[
-            "limits"
-        ]
-        if name in limits:
-            if isinstance(limits, list):
-                self.settings.child("move_settings", "multiaxes", "axis").setValue(name)
-            elif isinstance(limits, dict):
-                self.settings.child("move_settings", "multiaxes", "axis").setValue(
-                    limits[name]
-                )
-
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
         """Get the unit to be displayed in the UI
@@ -796,17 +751,17 @@ class DAQ_Move(ParameterControlModule):
         """
         if ("°" in unit or "degree" in unit) and not "°C" in unit:
             # special cas as pint base unit for angles are radians
-            return "°"
-        elif "W" in unit or "watt" in unit.lower():
-            return "W"
-        elif "°C" in unit or "Celsius" in unit:
-            return "°C"
-        elif "V" in unit or "volt" in unit.lower():
-            return "V"
-        elif "Hz" in unit:
-            return "Hz"
-        elif "rpm" in unit or "revolutions_per_minute" in unit:
-            return "rpm"
+            return '°'
+        elif 'W' in unit or 'watt' in unit.lower():
+            return 'W'
+        elif '°C' in unit or 'Celsius' in unit:
+            return '°C'
+        elif 'V' in unit or 'volt' in unit.lower():
+            return 'V'
+        elif 'Hz' in unit:
+            return 'Hz'
+        elif 'rpm' in unit or 'revolutions_per_minute' in unit:
+            return 'rpm'
         else:
             for key in config("actuator", "allowed_units"):
                 if key in unit:
@@ -927,9 +882,7 @@ class DAQ_Move_Hardware(QObject):
         pos = self.hardware.get_actuator_value()
         return pos
 
-    def ini_stage(
-        self, params_state=None, controller: Optional[HardwareController] = None
-    ) -> edict:
+    def ini_stage(self, params_state=None, controller=None):
         """
         Init a stage updating the hardware and sending an hardware move_done signal.
 
@@ -958,7 +911,6 @@ class DAQ_Move_Hardware(QObject):
                 "DAQ_Move_" + self.actuator_type,
             )
             self.hardware = class_(self, params_state)
-            assert self.hardware is not None
             try:
                 infos = self.hardware.ini_stage(
                     controller
@@ -991,16 +943,13 @@ class DAQ_Move_Hardware(QObject):
             self.logger.exception(str(e))
             return status
 
-    def move_abs(self, position: DataActuator, polling: bool = True) -> None:
+    def move_abs(self, position: DataActuator, polling=True):
         """ """
-        assert self.hardware is not None
         position = check_units(position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type == self.hardware.data_actuator_type.float:
-            self.hardware.move_abs(
-                position.units_as(self.hardware.axis_unit).value()
-            )  # convert to plugin controller current axis units
+            self.hardware.move_abs(position.units_as(self.hardware.axis_unit).value()) # convert to plugin controller current axis units
         else:
             position.units = (
                 self.hardware.axis_unit
@@ -1008,17 +957,14 @@ class DAQ_Move_Hardware(QObject):
             self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
-    def move_rel(self, rel_position: DataActuator, polling: bool = True) -> None:
+    def move_rel(self, rel_position: DataActuator, polling=True):
         """ """
-        assert self.hardware is not None
         rel_position = check_units(rel_position, self.hardware.axis_unit)
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
 
         if self.hardware.data_actuator_type.name == "float":
-            self.hardware.move_rel(
-                rel_position.units_as(self.hardware.axis_unit).value()
-            )
+            self.hardware.move_rel(rel_position.value())
         else:
             rel_position.units = (
                 self.hardware.axis_unit
@@ -1043,7 +989,6 @@ class DAQ_Move_Hardware(QObject):
         Make the hardware move to the init position.
 
         """
-        assert self.hardware is not None
         self.hardware.move_is_done = False
         self.hardware.move_home()
 
@@ -1137,7 +1082,6 @@ class DAQ_Move_Hardware(QObject):
             ThreadCommand(command="Update_Status", attribute=["Motion stoping", "log"])
         )
         self.motion_stoped = True
-        assert self.hardware is not None
         if self.hardware is not None and self.hardware.controller is not None:
             self.hardware.stop_motion()
         self.hardware.poll_timer.stop()

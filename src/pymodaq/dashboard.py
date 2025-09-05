@@ -8,18 +8,19 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
-import argparse
+from typing import Tuple, List, Any, TYPE_CHECKING, Sequence, Union
 
 
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QThread, Signal, QSize
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
+    QCheckBox,
+    QWidget,
     QLabel,
     QDialogButtonBox,
-    QMessageBox,
+    QDialog,
 )
 from time import perf_counter
 import numpy as np
@@ -98,7 +99,7 @@ class PymodaqUpdateTableWidget(QTableWidget):
     def setHorizontalHeaderLabels(self, labels):
         super().setHorizontalHeaderLabels(labels)
         self.setColumnCount(len(labels))
-
+        
     def append_row(self, package, current_version, available_version):
         # Add labels
         self.setItem(self._row, 0, QTableWidgetItem(str(package)))
@@ -258,11 +259,12 @@ class DashBoard(CustomApp):
             if self.check_update(show=False):
                 sys.exit(0)
 
+    @classmethod
     @property
-    def splash_sc(self) -> QtWidgets.QSplashScreen:
-        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
-            self._splash_sc = get_splash_sc()
-        return self._splash_sc
+    def splash_sc(cls) -> QtWidgets.QSplashScreen:
+        if cls._splash_sc is None:
+            cls._splash_sc = get_splash_sc()
+        return cls._splash_sc
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -1098,7 +1100,7 @@ class DashBoard(CustomApp):
                 if modified:
                     self.remove_preset_related_files(path.name)
                     if self.detector_modules:
-                        mssg = QMessageBox()
+                        mssg = QtWidgets.QMessageBox()
                         mssg.setText(
                             "You have to restart the application to take the modifications"
                             " into account!\n\n"
@@ -1182,19 +1184,17 @@ class DashBoard(CustomApp):
 
     def restart_fun(self, ask=False):
         ret = False
-        mssg = QMessageBox()
+        mssg = QtWidgets.QMessageBox()
         if ask:
             mssg.setText(
                 "You have to restart the application to take the"
                 " modifications into account!"
             )
             mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(
-                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
-            )
+            mssg.setStandardButtons(mssg.Ok | mssg.Cancel)
             ret = mssg.exec()
 
-        if ret == QMessageBox.StandardButton.Ok or not ask:
+        if ret == mssg.Ok or not ask:
             self.quit_fun()
             subprocess.call([sys.executable, __file__])
 
@@ -1239,19 +1239,15 @@ class DashBoard(CustomApp):
         move_docks: list[Dock] = None,
         move_forms: list[QtWidgets.QWidget] = None,
         actuators_modules: list[DAQ_Move] = None,
-        ui_identifier: str = None,
-        **kwargs,
-    ) -> DAQ_Move:
+    ) -> DAQ_Move:        
         if move_docks is None:
             move_docks = []
         if move_forms is None:
             move_forms = []
         if actuators_modules is None:
-            actuators_modules = []
+            actuators_modules = []      
 
-        if ui_identifier is not None:
-            pass
-        elif plug_settings is None:
+        if plug_settings is None:
             ui_identifier = config("actuator", "ui")
         else:
             try:
@@ -1307,12 +1303,7 @@ class DashBoard(CustomApp):
         return mov_mod_tmp
 
     def add_move_from_extension(
-        self,
-        name: str,
-        instrument_name: str,
-        instrument_controller: Any,
-        ui_identifier=None,
-        **kwargs,
+        self, name: str, instrument_name: str, instrument_controller: Any
     ):
         """Specific method to add a DAQ_Move within the Dashboard. This Particular actuator
         should be defined in the plugin of the extension and is used to mimic an actuator while
@@ -1330,20 +1321,8 @@ class DashBoard(CustomApp):
         instrument_controller: object
             whatever object is used to communicate between the instrument module and the extension
             which created it
-        ui_identifier: str
-            One of the possible registered UI
-        kwargs: named arguments to be passed to add_move
         """
-        actuator = self.add_move(
-            name,
-            None,
-            instrument_name,
-            [],
-            [],
-            [],
-            ui_identifier=ui_identifier,
-            **kwargs,
-        )
+        actuator = self.add_move(name, None, instrument_name, [], [], [])
         actuator.controller = instrument_controller
         actuator.master = False
         actuator.init_hardware_ui()
@@ -1641,12 +1620,8 @@ class DashBoard(CustomApp):
                                 self.poll_init(detector_modules[-1])
                                 QtWidgets.QApplication.processEvents()
 
-                        detector_modules[-1].settings.child(
-                            "main_settings", "overshoot"
-                        ).show()
-                        detector_modules[-1].overshoot_signal[bool].connect(
-                            self.stop_moves_from_overshoot
-                        )
+                        detector_modules[-1].settings.child('main_settings', 'overshoot').show()
+                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves_from_overshoot)
 
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
@@ -1961,7 +1936,7 @@ class DashBoard(CustomApp):
                     severity="critical",
                     title="Preset loading error",
                     text=f"""
-                            <p>{error}</p>
+                            <p>{error}<\p>
                             <p>This error may be related to:</p>
                             <p>Saved preset file is not compatible anymore.</p>
                             <p>Please recreate the preset at <b>{filename}</b>.</p>
@@ -2073,10 +2048,11 @@ class DashBoard(CustomApp):
             self.settings.child("detectors", name).setValue(det.initialized_state)
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
+
         if out_of_bounds:
-            logger.warning(f"Some actuators reached their bounds")
+            logger.warning(f'Some actuators reached their bounds')
             if self.scan_module is not None:
-                logger.warning(f"Stopping the DAQScan for out of bounds")
+                logger.warning(f'Stopping the DAQScan for out of bounds')
                 self.scan_module.stop_scan()
 
     def stop_moves_from_overshoot(self, overshoot):
@@ -2085,11 +2061,11 @@ class DashBoard(CustomApp):
 
     def stop_moves(self, *args, **kwargs):
         """
-        Foreach module of the move module object list, stop motion.
+            Foreach module of the move module object list, stop motion.
 
-        See Also
-        --------
-        stop_scan,  DAQ_Move_main.daq_move.stop_motion
+            See Also
+            --------
+            stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
         if self.scan_module is not None:
             self.scan_module.stop_scan()
@@ -2178,9 +2154,8 @@ class DashBoard(CustomApp):
             new_versions = np.greater(available_versions, current_versions)
             # Combine package and version information and select only the ones with a newer version available
 
-            packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
-            )[new_versions]
+            
+            packages_data = np.array(list(zip(packages, current_versions, available_versions)))[new_versions]
 
             if len(packages_data) > 0:
                 # Create a QDialog window and different graphical components
@@ -2189,22 +2164,19 @@ class DashBoard(CustomApp):
 
                 vlayout = QtWidgets.QVBoxLayout()
 
-                message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
-                )
+                message_label = QLabel("New versions of PyMoDAQ packages available!\nUse your package manager to update.")
                 message_label.setAlignment(Qt.AlignCenter)
 
                 table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data))
+                table.setRowCount(len(packages_data)) 
                 table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
-                )
-
+                table.setHorizontalHeaderLabels(["Package", "Current version", "New version"])
+                     
                 for p in packages_data:
                     table.append_row(p[0], p[1], p[2])
 
-                # The vlayout contains the message, the table and the buttons
+
+                # The vlayout contains the message, the table and the buttons                
                 # and is connected to the dialog window
                 vlayout.addWidget(message_label)
                 vlayout.addWidget(table)
@@ -2214,7 +2186,7 @@ class DashBoard(CustomApp):
 
             else:
                 if show:
-                    msgBox = QMessageBox()
+                    msgBox = QtWidgets.QMessageBox()
                     msgBox.setWindowTitle("Update check")
                     msgBox.setText("Everything is up to date!")
                     ret = msgBox.exec()
@@ -2257,9 +2229,9 @@ class DashBoard(CustomApp):
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=dialog)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.addButton("Apply", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+        buttonBox.addButton("Cancel", buttonBox.RejectRole)
+        buttonBox.addButton("Apply", buttonBox.AcceptRole)
         buttonBox.rejected.connect(dialog.reject)
         buttonBox.accepted.connect(dialog.accept)
 
@@ -2292,9 +2264,7 @@ class DashBoard(CustomApp):
 
 def main():
     from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
-    # Create application and main window
     app = mkQApp("Dashboard")
 
     win = QtWidgets.QMainWindow()
@@ -2303,23 +2273,10 @@ def main():
     win.resize(1000, 500)
     win.setWindowTitle("PyMoDAQ Dashboard")
 
-    # Command-line argument parsing
-    parser = argparse.ArgumentParser(prog="dashboard", description="PyMoDAQ dashboard")
-    parser.add_argument(
-        "-p", "--preset", metavar="PRESET_NAME", help="preset name to load"
-    )
-    args = parser.parse_args()
+    prog = DashBoard(area)
 
-    # If preset name is supplied, load dashboard with this preset
-    if args.preset:
-        load_dashboard_with_preset(args.preset)
+    win.show()
 
-    # If no command-line arguments are supplied, start empty
-    else:
-        prog = DashBoard(area)
-        win.show()
-
-    # Run application
     app.exec()
 
 
