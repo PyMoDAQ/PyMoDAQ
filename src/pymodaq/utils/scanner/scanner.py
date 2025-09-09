@@ -53,6 +53,12 @@ class Scanner(QObject, ParameterManager):
          'limits': scanner_factory.scan_types()},
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
+        {'title': 'Units handling', 'name': 'units_handling', 'type': 'group', 'children': [
+            {'title': 'Display units', 'name': 'display_units', 'type': 'bool', 'value': False},
+            {'title': 'Use same units', 'name': 'use_same_units', 'type': 'bool', 'value': True},
+            {'title': 'Common units', 'name': 'common_units', 'type': 'str', 'value': ''},
+            ]},
+
     ]
 
     def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]),
@@ -85,9 +91,11 @@ class Scanner(QObject, ParameterManager):
 
     def set_scanner(self):
         try:
-            self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
-                                                             self.settings['scan_sub_type'],
-                                                             actuators=self.actuators)
+            self._scanner: ScannerBase = scanner_factory.get(
+                self.settings['scan_type'],
+                self.settings['scan_sub_type'],
+                actuators=self.actuators,
+                display_units=self.settings['units_handling', 'display_units'])
 
             while True:
                 child = self._scanner_settings_widget.layout().takeAt(0)
@@ -98,6 +106,8 @@ class Scanner(QObject, ParameterManager):
 
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
+            if len(self.actuators) > 0:
+                self.settings.child('units_handling', 'common_units').setValue(self.actuators[0].units)
 
         except ValueError as e:
             pass
@@ -118,6 +128,13 @@ class Scanner(QObject, ParameterManager):
             self.set_scanner()
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
             self.settings.child('scan_sub_type').setOpts(tip=self._scanner.__doc__)
+        elif param.name() == 'display_units':
+            self.settings.child('units_handling', 'use_same_units').setValue(not param.value())
+            self.set_scanner()
+        elif param.name() == 'use_same_units':
+            self.settings.child('units_handling', 'display_units').setValue(not param.value())
+            self.settings.child('units_handling', 'common_units').show(param.value())
+            self.set_scanner()
 
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
