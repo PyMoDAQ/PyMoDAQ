@@ -137,9 +137,7 @@ class TabularScanner(ScannerBase):
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        styledItemDelegate = QtWidgets.QStyledItemDelegate()
-        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
-        self.table_view.setItemDelegate(styledItemDelegate)
+        self.table_view.setItemDelegate(gutils.SpinBoxDelegate())
 
         self.table_view.setDragEnabled(True)
         self.table_view.setDropIndicatorShown(True)
@@ -271,9 +269,7 @@ class TabularScannerSubSegmented(TabularScanner):
         self.table_view_points.horizontalHeader().setStretchLastSection(True)
         self.table_view_points.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view_points.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        styledItemDelegate = QtWidgets.QStyledItemDelegate()
-        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
-        self.table_view.setItemDelegate(styledItemDelegate)
+        self.table_view.setItemDelegate(gutils.SpinBoxDelegate())
 
         self.table_view_points.setDragEnabled(True)
         self.table_view_points.setDropIndicatorShown(True)
