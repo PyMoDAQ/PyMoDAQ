@@ -59,6 +59,7 @@ class TableModelSequential(gutils.TableModel):
         start = Q_(self.data(self.index(row, 1), QtCore.Qt.DisplayRole))
         stop = Q_(self.data(self.index(row, 2), QtCore.Qt.DisplayRole))
         step = Q_(self.data(self.index(row, 3), QtCore.Qt.DisplayRole))
+        value = Q_(value)
         isstep = False
         if col == 1:  # the start
             start = value
@@ -68,13 +69,13 @@ class TableModelSequential(gutils.TableModel):
             isstep = True
             step = value
         try:
-            if np.abs(step) < 1e-12 or start == stop:
+            if np.abs(step).magnitude < 1e-12 or start == stop:
                 return False
             if np.sign(stop - start) != np.sign(step):
                 if isstep:
-                    self._data[row][2] = -stop
+                    self._data[row][2] = str(-stop)
                 else:
-                    self._data[row][3] = -step
+                    self._data[row][3] = str(-step)
         except (TypeError, ValueError):
             return False
         return True
@@ -123,9 +124,15 @@ class SequentialScanner(ScannerBase):
                         ind_row = names.index(act.title)
                         init_data.append(self.table_model.get_data_all()[ind_row])
                     else:
-                        init_data.append([act.title, '0.', '1.', '0.1'])
+                        if self.display_units:
+                            init_data = [[act.title, f'0. {act.units}', f'1. {act.units}', f'0.1 {act.units}'] for act in self._actuators]
+                        else:
+                            init_data.append([act.title, '0.', '1.', '0.1'])
             else:
-                init_data = [[act.title, '0.', '1.', '0.1'] for act in self._actuators]
+                if self.display_units:
+                    init_data = [[act.title, f'0. {act.units}', f'1. {act.units}', f'0.1 {act.units}'] for act in self._actuators]
+                else:
+                    init_data = [[act.title, '0.', '1.', '0.1'] for act in self._actuators]
         self.table_model = TableModelSequential(init_data, )
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('seq_table').setValue(self.table_model)
@@ -164,7 +171,7 @@ class SequentialScanner(ScannerBase):
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         for ind_actuator, actuator in enumerate(self.actuators):
-            styledItemDelegate = gutils.SpinBoxDelegate(units=actuator.units)
+            styledItemDelegate = gutils.SpinBoxDelegate(units=actuator.units if self.display_units else None)
             self.table_view.setItemDelegateForRow(ind_actuator, styledItemDelegate)
 
         self.table_view.setDragEnabled(True)
@@ -193,8 +200,8 @@ class SequentialScanner(ScannerBase):
                 state = self.pos_above_stops(positions, steps, stops)
                 if not np.any(np.array(state)):
                     all_positions.append(positions.copy())
-
-        self.get_info_from_positions(np.array(all_positions))
+        all_positions = np.array([[elt.magnitude for elt in positions] for positions in all_positions])
+        self.get_info_from_positions(all_positions)
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}', units=act.units, data=self.axes_unique[ind], index=ind)
