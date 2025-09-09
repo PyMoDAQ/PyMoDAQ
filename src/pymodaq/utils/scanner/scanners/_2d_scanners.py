@@ -69,9 +69,14 @@ class Scan2DLinear(Scan2DBase):
 
     def set_units(self):
         """ Update settings units depending on the scanner type and the display_units boolean"""
-        for ind_child, child in enumerate(self.settings.children()):
-            child.setOpts(
-                suffix='' if not self.display_units else self.actuators[ind_child//3].units)
+        if len(self.actuators) > 0:
+            for child in self.settings.child('axis1').children():
+                child.setOpts(
+                    suffix='' if not self.display_units else self.actuators[0].units)
+        if len(self.actuators) > 1:
+            for child in self.settings.child('axis2').children():
+                child.setOpts(
+                    suffix='' if not self.display_units else self.actuators[1].units)
 
     def get_pos(self):
         starts = np.array([self.settings[ax, f'start_{ax}'] for ax in self.axes])
