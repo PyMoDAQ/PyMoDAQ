@@ -27,15 +27,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.79677878"
-     inkscape:cx="72.793103"
-     inkscape:cy="259.16855"
+     inkscape:zoom="2.2536307"
+     inkscape:cx="394.03084"
+     inkscape:cy="912.97123"
      inkscape:window-width="2560"
      inkscape:window-height="1404"
      inkscape:window-x="1920"
      inkscape:window-y="525"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g1842" />
+     inkscape:current-layer="g1692" />
   <defs
      id="defs1096" />
   <g
@@ -48,6 +48,16 @@
        x="228.9375"
        y="6"
        id="rect1098" />
+    <text
+       fill="#000000"
+       font-family="sans-serif"
+       font-size="13px"
+       lengthAdjust="spacing"
+       textLength="95.075203"
+       x="544.01367"
+       y="1061.9419"
+       id="text1578-6"
+       transform="translate(-251.99389,434.85729)">set_data(data)</text>
     <text
        fill="#000000"
        font-family="sans-serif"
@@ -67,6 +77,16 @@
        x="523.6631"
        y="6"
        id="rect1102" />
+    <text
+       fill="#000000"
+       font-family="sans-serif"
+       font-size="13px"
+       lengthAdjust="spacing"
+       textLength="95.075203"
+       x="544.01367"
+       y="1061.9419"
+       id="text1578-7"
+       transform="translate(-1.3112663,406.81773)">set_data(data)</text>
     <text
        fill="#000000"
        font-family="sans-serif"
@@ -1895,28 +1915,20 @@
        class="message"
        data-participant-1="Actor"
        data-participant-2="Coordinator"
-       id="g1692">
+       id="g1692"
+       transform="translate(-1.2758894,1.0368325)">
       <polygon
          fill="#181818"
-         points="538.0137,1468.7344,528.0137,1472.7344,538.0137,1476.7344,534.0137,1472.7344"
-         style="stroke:#181818;stroke-width:1;"
+         points="528.0137,1472.7344 538.0137,1476.7344 534.0137,1472.7344 538.0137,1468.7344 "
+         style="stroke:#181818;stroke-width:1"
          id="polygon1686" />
       <line
-         style="stroke:#181818;stroke-width:1;"
-         x1="532.0137"
-         x2="819.2434"
+         style="stroke:#181818;stroke-width:1"
+         x1="532.01367"
+         x2="819.24341"
          y1="1472.7344"
          y2="1472.7344"
          id="line1688" />
-      <text
-         fill="#000000"
-         font-family="sans-serif"
-         font-size="13"
-         lengthAdjust="spacing"
-         textLength="106.4692"
-         x="544.0137"
-         y="1467.6685"
-         id="text1690">send_data(data)</text>
     </g>
     <g
        class="message"
@@ -1935,15 +1947,6 @@
          y1="1501.8672"
          y2="1501.8672"
          id="line1696" />
-      <text
-         fill="#000000"
-         font-family="sans-serif"
-         font-size="13"
-         lengthAdjust="spacing"
-         textLength="128.6797"
-         x="292.0869"
-         y="1496.8013"
-         id="text1698">send_position(data)</text>
     </g>
     <g
        class="message"

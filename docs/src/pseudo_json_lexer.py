@@ -26,7 +26,7 @@ class PseudoJsonLexer(RegexLexer):
             # booleans/null
             (r'\b(true|false|null)\b', Keyword),
             # numbers
-            (r'\d+(\.\d+)?', Number),
+            (r'-?\d+(\.\d+)?', Number),
             # key-value pair: key as Name.Tag
             (r'(")([^"]+)(")(\s*)(:)', bygroups(String, Name.Tag, String, Text, Punctuation)),
             # placeholder values like <...>

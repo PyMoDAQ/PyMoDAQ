@@ -223,10 +223,10 @@ All communication uses **LECO multipart frames** over ZMQ:
     requests/responses) but can be changed between each next request if wanted.
     - ``message_id`` generaly starts at 0, but must stay the same between a request and its answer.
     - ``message_type`` is always JSON (value of ``1``)
-        .. note::
-            This specification is subject to change; please keep up to date with the
-            `LECO documentation <https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`_
-            and its `GitHub repository <https://github.com/pymeasure/leco-protocol>`_.
+    .. note::
+        This specification is subject to change; please keep up to date with the
+        `LECO documentation <https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`_
+        and its `GitHub repository <https://github.com/pymeasure/leco-protocol>`_.
   - ``payload``: UTF-8 JSON (JSON-RPC 2.0)
   .. note::
      In the following message examples, given ``id`` values are not specific to the ``method``, the must remain
@@ -278,53 +278,107 @@ Message Summary
 **Common Messages**
 
 .. list-table::
-   :header-rows: 0
-   :widths: 20 80
+   :header-rows: 1
+   :widths: 20 80 10
 
-
+   * - Method
+     - Description
+     - Flow
    * - :py:attr:`sign_in`
      - Registers a LECO component with the coordinator.
+     - Actor    → Coordinator
    * - :py:attr:`sign_out`
      - Unregister a LECO component with the coordinator.
+     - Actor    → Coordinator
    * - :py:attr:`set_remote_name`
      - Store the director name for asynchronous communication.
+     - Director → Actor
    * - :py:attr:`get_settings`
      - Request instrument settings (read/write) from LECODirector.
+     - Director → Actor
    * - :py:attr:`pong`
      - Check if a LECO component is alive.
+     - Coordinator → Actor
    * - :py:attr:`rpc.discover`
      - Not implemented; calling it returns an error.
+     - Director → Actor
 
-**Actuator Messages**
+**Actuator Messages (Synchronous)**
 
 .. list-table::
-   :header-rows: 0
-   :widths: 20 80
+   :header-rows: 1
+   :widths: 20 80 10
 
+   * - Method
+     - Description
+     - Flow
    * - :py:attr:`move_home`
      - Move actuator to home setpoint; async updates via send_position/set_move_done.
+     - Director → Actor
    * - :py:attr:`move_abs`
      - Move actuator to absolute position; async updates as above.
+     - Director → Actor
    * - :py:attr:`move_rel`
      - Move actuator by relative delta; async updates as above.
+     - Director → Actor
    * - :py:attr:`stop_motion`
      - Stop any ongoing movement immediately.
+     - Director → Actor
    * - :py:attr:`get_actuator_value`
      - Request current actuator value; async updates include set_units and send_position.
+     - Director → Actor
 
-**Detector Messages**
+**Actuator Messages (Asynchronous)**
 
 .. list-table::
-   :header-rows: 0
-   :widths: 20 80
+   :header-rows: 1
+   :widths: 20 80 10
 
+   * - Method
+     - Description
+     - Flow
+   * - :py:attr:`send_position`
+     - Send the current actuator position.
+     - Actor → Director
+   * - :py:attr:`set_move_done`
+     - Indicates the end of a move by providing the final position.
+     - Actor → Director
+   * - :py:attr:`set_units`
+     - Send units used by the actuator.
+     - Actor → Director
+
+
+**Detector Messages (Synchronous)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80 10
+
+   * - Method
+     - Description
+     - Flow
    * - :py:attr:`send_data_grab`
      - Ask data from detector repeatedly until stop_grab.
+     - Director → Actor
    * - :py:attr:`send_data_snap`
      - Ask data from detector once.
+     - Director → Actor
    * - :py:attr:`stop_grab`
      - Stop detector acquisition.
+     - Director → Actor
 
+**Detector Messages (Asynchronous)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80 10
+
+   * - Method
+     - Description
+     - Flow
+   * - :py:attr:`set_data`
+     - Send acquired data with optional multichannel, labels and axes metadata.
+     - Actor → Director
 
 **Error Messages**
 
@@ -344,9 +398,11 @@ These are the messages used in both actuator and detector communication.
 
 
 .. py:attribute:: sign_in
-Registers a LECO component with the coordinator. It is sent to ``receiver="COORDINATOR"`` and is the only message where
-communication is initiated by the device. It sends the sign_in request and receive either a valid response or an error
-when the name is already taken.
+   Communication flow: Actor → Coordinator
+
+
+Registers a LECO component with the coordinator. It is sent to ``receiver="COORDINATOR"``. It sends the sign_in request and receive either a valid response or an error
+when the name is already taken. The coordinator retrieves the name from ``sender`` in the LECO protocol header.
 
 - Request:
 
@@ -386,6 +442,7 @@ when the name is already taken.
 
 
 .. py:attribute:: sign_out
+   Communication flow: Actor → Coordinator
 Unregister a LECO component with the coordinator. It is crucial to try as much as possible to send the message as it
 will otherwise keep the name unusable for at least a few minutes.
 
@@ -414,9 +471,10 @@ will otherwise keep the name unusable for at least a few minutes.
 
 
 .. py:attribute:: set_remote_name
+   Communication flow: Director → Actor
 Most instrument data shared between LECO components is shared asynchronously, thus an actor will need to initiate
 communication with a director. Using this method, an actor stores the name of the director to which it should
-send requests in the future.
+send requests in the future. The stored name is the one in ``sender`` in the LECO protocol header.
 
 - Request:
 
@@ -443,6 +501,7 @@ send requests in the future.
 
 
 .. py:attribute:: get_settings
+   Communication flow: Director → Actor
 Ask for the instrument settings, so that they can be accessed (read/write) by the LECODirector. The easiest is to send
 an empty JSON object, as settings are expected to use binary serialization. Doing so makes it impossible to access the
 settings on the Director side. **It's a known limitation of communication with non PyMoDAQ components**.
@@ -472,6 +531,7 @@ settings on the Director side. **It's a known limitation of communication with n
 
 
 .. py:attribute:: pong
+   Communication flow: Coordinator → Actor
 A method sent by the coordinator to check if a LECO component is still alive, after a moment of inactivity.
 
 - Request:
@@ -499,6 +559,7 @@ A method sent by the coordinator to check if a LECO component is still alive, af
 
 
 .. py:attribute:: rpc.discover
+   Communication flow: Director → Actor
 Not implemented and it should not even be called. Response can be an error:
 
 .. code-block:: json
@@ -512,19 +573,24 @@ Not implemented and it should not even be called. Response can be an error:
      }
    }
 
-Actuator Messages
-^^^^^^^^^^^^^^^^^
-Messages only used when communicating with an actuator.
+
+.. _actuator_synchronous_message:
+
+Actuator Messages (Synchronous)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Messages only used when communicating with an actuator. These are the requests made by the Director and correspond to
+a possible action of a :ref:`DAQ_Move <DAQ_Move_module>` GUI.
 
 
 .. py:attribute:: move_home
-A request to ``move_home``, i.e. to move to a setpoint value. A first request is sent, then the reponse is sent. In the
-background, the request to move is sent to the actuator. Until the target value is reached (or a ``stop_move`` is
-received), the actuator is probed and its value is sent to the ``remote name`` stored after ``set_remote_name``,
-periodicaly, using the ``send_position`` request. Once done moving, the final value is sent with ``set_move_done``.
+   Communication flow: Director → Actor
 
-Actuator values are generaly 0D and if PyMoDAQ's daq_move GUI is used, they should be 0D. However, if used
-programmatically, to build extensions or other virtual devices, exchanging 0D, 1D, and 2D actuator values is allowed.
+A request to ``move_home``, i.e. to move to a setpoint value. A first request is sent, followed by the reponse. In the
+background, a request to move is sent to the actuator. Until the target value is reached (or a :py:attr:`stop_move` is
+received), the actuator is probed and its value is periodically sent to the remote name stored after
+:py:attr:`set_remote_name` using the :py:attr:`send_position` request. Once done moving, the final value is sent with
+:py:attr:`set_move_done`.
+
 
 - Request:
 
@@ -547,27 +613,14 @@ programmatically, to build extensions or other virtual devices, exchanging 0D, 1
       "result": null
     }
 
-- Async device-initiated messages:
+- Async actuator-initiated messages:
 
-.. code-block:: pseudojson
-
-    {
-      "jsonrpc": "2.0",
-      "method": "send_position",
-      "params": {"data": {"position": <current>}}
-    }
-
-.. code-block:: pseudojson
-
-    {
-      "jsonrpc": "2.0",
-      "method": "set_move_done",
-      "params": {"data": {"position": <final>}}
-    }
-
+Sequence of :py:attr:`send_position`, then :py:attr:`set_move_done`
 
 .. py:attribute:: move_abs
-Similar to ``move_home``, except that an absolute value to reach is sent in the first request.
+   Communication flow: Director → Actor
+
+Similar to :py:attr:`move_home`, except that an absolute value to reach is sent in the first request.
 
 - Request:
 
@@ -577,7 +630,7 @@ Similar to ``move_home``, except that an absolute value to reach is sent in the 
       "id": 7,
       "jsonrpc": "2.0",
       "method": "move_abs",
-      "params": {"position": <number|2D array>}
+      "params": {"position": <number|1D array|2D array>}
     }
 
 - Expected Response:
@@ -590,12 +643,16 @@ Similar to ``move_home``, except that an absolute value to reach is sent in the 
       "result": null
     }
 
-- Async: same sequence of ``send_position`` then ``set_move_done``.
+- Async actuator-initiated messages:
+
+Sequence of :py:attr:`send_position`, then :py:attr:`set_move_done`
 
 
 
 .. py:attribute:: move_rel
-Similar to ``move_home``, except that a relative value to reach is sent in the first request.
+   Communication flow: Director → Actor
+
+Similar to :py:attr:`move_home`, except that a delta from the value to reach is sent in the first request.
 
 - Request:
 
@@ -605,7 +662,7 @@ Similar to ``move_home``, except that a relative value to reach is sent in the f
       "id": 8,
       "jsonrpc": "2.0",
       "method": "move_rel",
-      "params": {"position": <delta number|2D array>}
+      "params": {"position": <number|1D array|2D array>}
     }
 
 - Expected Response:
@@ -618,11 +675,15 @@ Similar to ``move_home``, except that a relative value to reach is sent in the f
       "result": null
     }
 
-- Async: same sequence of ``send_position`` then ``set_move_done``.
+- Async actuator-initiated messages:
+
+Sequence of :py:attr:`send_position`, then :py:attr:`set_move_done`
 
 
 
 .. py:attribute:: stop_motion
+   Communication flow: Director → Actor
+
 A request to stop a ``move_*`` action if one is occuring. The movement should be stopped before sending the response.
 
 - Request:
@@ -647,11 +708,11 @@ A request to stop a ``move_*`` action if one is occuring. The movement should be
     }
 
 
-
-
 .. py:attribute:: get_actuator_value
+   Communication flow: Director → Actor
+
 A request to ask for the current value. First the response is sent. Then, the actuator is probed and its units are sent
-(if it uses units) as a parameter of ``set_units``. Finally, its value is sent with ``send_position``.
+(if it uses units) as a parameter of :py:attr:`set_units`. Finally, its value is sent with :py:attr:`send_position`.
 
 - Request:
 
@@ -674,51 +735,141 @@ A request to ask for the current value. First the response is sent. Then, the ac
       "result": null
     }
 
-- Async:
+- Async actuator-initiated messages:
 
-.. code-block:: json
+An optional :py:attr:`set_unit` followed by :py:attr:`send_position`
 
-    {
-      "jsonrpc": "2.0",
-      "method": "set_units",
-      "params": {"units": "<str>"}
-    }
+
+
+Actuator Messages (Asynchronous)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Messages only used when communicating with an actuator. These are asynchronous responses (in the form of JSON-RPC
+requests) made by the Actor, in response of :ref:`synchronous requests <actuator_synchronous_message>`.
+They are sent to the receiver saved after processing :py:attr:`set_remote_name`.
+
+.. py:attribute:: send_position
+   Communication flow: Actor → Director
+
+Send the current position to the Director. It is either a number, a 1D array or a 2D array.
+
+A 2D actuator could be, for example a `Spatial Light Modulator <SLM>`_, where each pixel is controled and correspond to
+a phase.
+
+.. _SLM: https://en.wikipedia.org/wiki/Spatial_light_modulator
+
+.. warning::
+    Actuator values are mostly 0D and if PyMoDAQ's daq_move GUI is used, they should be 0D. However, if used
+    programmatically, to build extensions or other virtual devices, exchanging 0D, 1D, and 2D actuator values is allowed.
+
+- Request:
 
 .. code-block:: pseudojson
 
     {
+      "id": 10,
       "jsonrpc": "2.0",
       "method": "send_position",
-      "params": {"data": {"position": <current>}}
+      "params": {"data": {"position": <number|1D array|2D array>}}
     }
 
+- Expected Response:
 
+.. code-block:: json
 
-Detector Messages
-^^^^^^^^^^^^^^^^^
-Messages only used when communicating with a actuator.
+    {
+      "id": 10,
+      "jsonrpc": "2.0",
+      "result": null
+    }
 
+- Examples:
 
-.. py:attribute:: send_data_grab
-Ask data from a detector. First the actor should send its response. Then in background, using
-the ``remote name`` stored after ``set_remote_name``, ``set_data`` requests are sent periodically, with ``data`` as a
-parameter.
+On a 2x2 SLM, to send the normalized phases  ``[[0,1/2], [1/3, 2/3]]``, ``params`` should be set to:
 
-It continues until a ``stop_grab`` request is received.
+.. code-block:: json
 
-``<RawDetectorData>`` is a 0, 1 or 2D data array, depending on the detector. When using multichannel, it gets
-wrapped in another layer of array corresponding the channels. So ``[<RawDetectorData>, <RawDetectorData>]`` for two
-channels, where each ``<RawDetectorData>`` is of a shape matching the expected detector dimension.
+    {
+      "data" : {
+        "position": [[0, 0.5], [0.3333333333333333, 0.6666666666666666]]
+      }
+    }
 
-.. note::
-    ND data should also work but was not tested!
+.. py:attribute:: set_move_done
+   Communication flow: Actor → Director
+
+After a ``move_*`` command is completed or stopped, a ``set_move_done`` with the final position is sent to the Director.
+The position is of the same shape as in py:attr:`send_position`.
+
+- Request:
+
+.. code-block:: pseudojson
+
+    {
+      "id": 11,
+      "jsonrpc": "2.0",
+      "method": "set_move_done",
+      "params": {"data": {"position": <number|1D array|2D array>}}
+    }
+
+- Expected Reponse:
+
+.. code-block:: json
+
+    {
+      "id": 11,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+.. py:attribute:: set_units
+   Communication flow: Actor → Director
+
+An optional message, to set units used by the actuator. The ``units`` should be a string of the unit symbol of
+the used units. For example `"cm"` for centimeters.
 
 - Request:
 
 .. code-block:: json
 
     {
-      "id": 11,
+      "id": 12,
+      "jsonrpc": "2.0",
+      "method": "set_units",
+      "params": {"units": "<str>"}
+    }
+
+- Expected Response:
+
+.. code-block:: json
+
+    {
+      "id": 12,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+Detector Messages (Synchronous)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Messages only used when communicating with a actuator. These are the requests made by the Director and correspond to
+a possible action of a :ref:`DAQ_Viewer <DAQ_Viewer_module>` GUI.
+
+
+.. py:attribute:: send_data_grab
+   Communication flow: Director → Actor
+
+Ask data from a detector. First the actor should send its response. Then in background, using
+the remote name stored after ``set_remote_name``, ``set_data`` requests are sent periodically, with ``data`` as a
+parameter.
+
+It continues until a ``stop_grab`` request is received.
+
+
+- Request:
+
+.. code-block:: json
+
+    {
+      "id": 13,
       "jsonrpc": "2.0",
       "method": "send_data_grab",
       "params": {}
@@ -729,30 +880,19 @@ channels, where each ``<RawDetectorData>`` is of a shape matching the expected d
 .. code-block:: json
 
     {
-      "id": 11,
+      "id": 13,
       "jsonrpc": "2.0",
       "result": null
     }
 
-- Async (repeated):
 
-.. code-block:: pseudojson
+- Async detector-initiated messages:
 
-    {
-      "jsonrpc": "2.0",
-      "method": "set_data",
-      "params": {
-        "data": {
-          "data": <RawDetectorData>,
-          "axes": [ {"data":[...], "units":"...", "label":"..."} ], # Optional
-          "labels": ["ch0", ...], # Optional
-          "multichannel": <bool> # Optional if false
-        }
-      }
-    }
-
+Sequence of :py:attr:`set_data` until a :py:attr:`stop_grab` is received.
 
 .. py:attribute:: send_data_snap
+   Communication flow: Director → Actor
+
 Same as ``send_data_grab`` but only once.
 
 - Request:
@@ -760,7 +900,7 @@ Same as ``send_data_grab`` but only once.
 .. code-block:: json
 
     {
-      "id": 12,
+      "id": 14,
       "jsonrpc": "2.0",
       "method": "send_data_snap",
       "params": {}
@@ -771,16 +911,71 @@ Same as ``send_data_grab`` but only once.
 .. code-block:: json
 
     {
-      "id": 12,
+      "id": 14,
       "jsonrpc": "2.0",
       "result": null
     }
 
-- Async (single):
+- Async detector-initiated messages:
+
+One :py:attr:`set_data` request.
+
+.. py:attribute:: stop_grab
+   Communication flow: Director → Actor
+
+The request sent when the acquisition should stop. The detector should stop acquiring and send data before answering to
+this request.
+
+- Request:
+
+.. code-block:: json
+
+    {
+      "id": 15,
+      "jsonrpc": "2.0",
+      "method": "stop_grab",
+      "params": {}
+    }
+
+- Expected Response:
+
+.. code-block:: json
+
+    {
+      "id": 15,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+
+
+
+Detector Messages (Asynchronous)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Messages only used when communicating with an detector. These are asynchronous responses (in the form of JSON-RPC
+requests) made by the Actor, in response of :ref:`synchronous requests <detector_synchronous_message>`.
+They are sent to the receiver saved after processing :py:attr:`set_remote_name`.
+
+.. py:attribute:: set_data
+   Communication flow: Actor → Director
+
+Send acquired data to the Director, in the form of ``<RawDetectorData>`` and some optional metadata about axes,
+and multichannel
+
+``<RawDetectorData>`` is a number, a 1D array or 2D data array of number. When using multichannel, it gets wrapped in
+another layer of array corresponding the channels. So ``[<RawDetectorData>, <RawDetectorData>]`` for two channels,
+where each ``<RawDetectorData>`` is of a shape matching the expected detector dimension.
+
+
+.. warning::
+    ND data should also work but was not tested!
+
+
+- Request:
 
 .. code-block:: pseudojson
 
     {
+      "id": 16,
       "jsonrpc": "2.0",
       "method": "set_data",
       "params": {
@@ -793,30 +988,75 @@ Same as ``send_data_grab`` but only once.
       }
     }
 
-
-.. py:attribute:: stop_grab
-The request sent when the acquisition should stop. The detector should stop acquiring and send data before responding to
-this request.
-- Request:
-
-.. code-block:: json
-
-    {
-      "id": 13,
-      "jsonrpc": "2.0",
-      "method": "stop_grab",
-      "params": {}
-    }
-
 - Expected Response:
 
 .. code-block:: json
 
     {
-      "id": 13,
+      "id": 16,
       "jsonrpc": "2.0",
       "result": null
     }
+
+
+- Examples:
+
+The simplest form for ``<RawDetectorData>`` is 0D without any metadata, so it would look like:
+
+.. code-block:: pseudojson
+
+    {
+      "data": {
+        "data": 131.20,
+      }
+    }
+
+
+But it can be more complex, for example 1D detector may send data with an axis:
+
+.. note::
+    Axes work similarly to :ref:`those in PyMoDAQ data <data_axis>`, except that index is only determined by its
+    position in the array (it can not be affected dynamically). The first axis correspond to the outermost dimension of
+    data, the second axis to the second to last dimension, and so on.
+
+.. code-block:: pseudojson
+
+    {
+      "data": {
+        "axes": [
+          {
+            "data": [ 0.0, 0.92, 2.20, 4.0],
+            "label": "shift",
+            "units": "cm"
+          }
+        ], # Each element in an axis (data, label, units) is optional
+        "data": [42.15, 48.68, 24.45, 35.38],
+        "labels": null,
+      }
+    }
+
+If the detector is multichannel it may be useful to label each channel:
+
+.. code-block:: pseudojson
+
+    {
+      "data": {
+        "axes": [
+          {
+            "data": [ 0.0, 0.92, 2.20, 4.0]
+            "label": "shift",
+            "units": "cm"
+          }
+        ], # Each element in an axis (data, label, units) is optional
+        "data": [
+            [-42.15, 48.68, -24.45, -35.38],
+            [ 0.0, 0.1, 0.05, 0.06]
+        ]
+        "labels": ["x shift", "y shift"],
+        "multichannel": true # Mandatory, otherwise data is interpreted as 2D
+      }
+    }
+
 
 
 Error Messages
