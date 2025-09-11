@@ -5,6 +5,7 @@ from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtWidgets
 
+from pymodaq_gui.messenger import messagebox
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 import pymodaq_utils.utils as utils
@@ -54,9 +55,9 @@ class Scanner(QObject, ParameterManager):
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
         {'title': 'Units handling', 'name': 'units_handling', 'type': 'group', 'children': [
-            {'title': 'Display units', 'name': 'display_units', 'type': 'bool', 'value': False},
-            {'title': 'Use same units', 'name': 'use_same_units', 'type': 'bool', 'value': True},
-            {'title': 'Common units', 'name': 'common_units', 'type': 'str', 'value': ''},
+            {'title': 'Display units', 'name': 'display_units', 'type': 'bool', 'value': True},
+            {'title': 'Use same units', 'name': 'use_same_units', 'type': 'bool', 'value': False},
+            {'title': 'Common units', 'name': 'common_units', 'type': 'str', 'value': '', 'visible': False},
             ]},
 
     ]
@@ -106,8 +107,6 @@ class Scanner(QObject, ParameterManager):
 
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
             self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
-            if len(self.actuators) > 0:
-                self.settings.child('units_handling', 'common_units').setValue(self.actuators[0].units)
 
         except ValueError as e:
             pass
@@ -124,7 +123,7 @@ class Scanner(QObject, ParameterManager):
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
-        if param.name() in ['scan_type', 'scan_sub_type']:
+        if param.name() in ['scan_sub_type']:
             self.set_scanner()
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
             self.settings.child('scan_sub_type').setOpts(tip=self._scanner.__doc__)
@@ -134,7 +133,16 @@ class Scanner(QObject, ParameterManager):
         elif param.name() == 'use_same_units':
             self.settings.child('units_handling', 'display_units').setValue(not param.value())
             self.settings.child('units_handling', 'common_units').show(param.value())
-            self.set_scanner()
+            if param.value() and len(self.actuators) > 0:
+                units = set([act.units for act in self.actuators])
+                if len(units) > 1:
+                    messagebox(title='Info',
+                               text='Could not use the same units for all settings as units are not compatible')
+                    param.setValue(False)
+                else:
+                    self.settings.child('units_handling', 'common_units').setValue(list(units)[0])
+                    self.set_scanner()
+
 
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
@@ -265,10 +273,12 @@ def main():
     from pymodaq.utils.parameter import ParameterTree
     app = QtWidgets.QApplication(sys.argv)
 
+    units = ['nm', 'kW', 'ms']
+
     class MoveMock:
         def __init__(self, ind: int = 0):
             self.title = f'act_{ind}'
-            self.units = f'units_{ind}'
+            self.units = units[ind]
 
     actuators = [MoveMock(ind) for ind in range(3)]
 
