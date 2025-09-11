@@ -331,8 +331,6 @@ class ModulesManager(QObject, ParameterManager):
 
         while not self.det_done_flag:
             # wait for grab done signals to end
-
-            QtWidgets.QApplication.processEvents()
             if time.perf_counter() - tzero > self.detector_timeout:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')

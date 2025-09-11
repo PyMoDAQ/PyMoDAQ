@@ -752,7 +752,24 @@ class DAQ_Move_base(QObject):
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
 
-    def _condition_to_reach_target(self) -> bool:
+    def _condition_to_reach_target(self, check_absolute_difference=True,) -> bool:
+        """Implement the condition for exiting the polling mechanism and specifying that the
+        target value has been reached
+
+        Returns
+        -------
+        bool: if True, PyMoDAQ considers the target value has been reached
+        See Also
+        --------
+        absolute_difference_condition_to_reach_target
+        user_condition_to_reach_target
+        """
+        cond = True
+        if check_absolute_difference:
+            cond = self.absolute_difference_condition_to_reach_target()            
+        return cond and self.user_condition_to_reach_target()
+
+    def absolute_difference_condition_to_reach_target(self) -> bool:
         """ Implement the condition for exiting the polling mechanism and specifying that the
         target value has been reached
 
@@ -779,7 +796,7 @@ class DAQ_Move_base(QObject):
             else:
                 raise e
 
-        return (epsilon_calculated < self.epsilon) and self.user_condition_to_reach_target()
+        return (epsilon_calculated < self.epsilon)
 
     def user_condition_to_reach_target(self) -> bool:
         """ Implement a user defined condition for exiting the polling mechanism and specifying
