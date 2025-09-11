@@ -272,8 +272,7 @@ class TabularScannerSubSegmented(TabularScanner):
         self.update_table_view_points()
 
     def update_table_view(self):
-        self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         self.delegates = []
@@ -284,16 +283,15 @@ class TabularScannerSubSegmented(TabularScanner):
                 ind_actuator, self.delegates[-1])
 
     def update_table_view_points(self):
-        self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table_view_points.horizontalHeader().setStretchLastSection(True)
+        self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table_view_points.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view_points.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        self.delegates = []
+        self.delegates_points = []
         for ind_actuator, actuator in enumerate(self.actuators):
-            self.delegates.append(gutils.SpinBoxDelegate(self.table_view,
+            self.delegates_points.append(gutils.SpinBoxDelegate(self.table_view,
                                                          units=actuator.units if self.display_units else None))
             self.table_view.setItemDelegateForColumn(
-                ind_actuator, self.delegates[-1])
+                ind_actuator, self.delegates_points[-1])
 
         self.table_view_points.setDragEnabled(True)
         self.table_view_points.setDropIndicatorShown(True)
@@ -311,9 +309,8 @@ class TabularScannerSubSegmented(TabularScanner):
     def set_scan(self):
         points = [Point(coordinates) for coordinates in self.table_model_points.get_data_all()]
         positions = get_sub_segmented_positions(self.settings['tabular_step'], points)
-
         self.table_model.set_data_all(positions)
-        positions = np.array(self.table_model.get_data_all())
+        positions = np.array([[Q_(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
         self.get_info_from_positions(positions)
 
     def update_from_scan_selector(self, scan_selector: Selector):
