@@ -78,7 +78,10 @@ class AdaptiveAlgorithm(GenericAlgorithm):
     @property
     def best_individual(self) -> Union[np.ndarray, None]:
         """ For adaptive optimization this doesn't mean anything"""
-        return np.atleast_1d(self.bounds[0])
+        if len(self._algo.data) > 0:
+            return np.array(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
+        else:
+            return self._algo.bounds[0]
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:
