@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Tuple, TYPE_CHECKING, Iterable
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class TableModelSequential(gutils.TableModel):
         editable = [False, True, True, True]
         if 'editable' in kwargs:
             editable = kwargs.pop('editable')
-        super().__init__(data, header, editable=editable, **kwargs)
+        super().__init__(data, header, editable=editable, cast=str, **kwargs)
 
     def __repr__(self):
         return f'{self.__class__.__name__} from module {self.__class__.__module__}'
@@ -98,6 +98,7 @@ class SequentialScanner(ScannerBase):
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
         super().__init__(actuators, display_units=display_units)
+        self.delegates: Iterable[gutils.SpinBoxDelegate] = []
         self.update_model()
 
     def set_units(self):
@@ -170,9 +171,13 @@ class SequentialScanner(ScannerBase):
         #self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        self.delegates = []  # ItemDelegates should have parents and be instance attribute to work with setItemDelegateForColumn
         for ind_actuator, actuator in enumerate(self.actuators):
-            styledItemDelegate = gutils.SpinBoxDelegate(units=actuator.units if self.display_units else None)
-            self.table_view.setItemDelegateForRow(ind_actuator, styledItemDelegate)
+
+            self.delegates.append(gutils.SpinBoxDelegate(self.table_view,
+                                                         units=actuator.units if self.display_units else None))
+            self.table_view.setItemDelegateForRow(
+                ind_actuator, self.delegates[-1])
 
         self.table_view.setDragEnabled(True)
         self.table_view.setDropIndicatorShown(True)
