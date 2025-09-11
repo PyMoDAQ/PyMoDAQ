@@ -1001,6 +1001,13 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+                    self.create_menu_slot_roi(
+                        config_mod_pymodaq.get_set_roi_path().joinpath(self.preset_file.name)
+                    ),
+                )
+
 
         except Exception as e:
             logger.exception(str(e))
@@ -1015,6 +1022,12 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+                    self.create_menu_slot_remote(
+                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
+                    ),
+                )
 
         except Exception as e:
             logger.exception(str(e))
@@ -1029,6 +1042,12 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
+                    self.create_menu_slot_over(
+                        config_mod_pymodaq.get_set_overshoot_path().joinpath(self.preset_file.name)
+                    ),
+                )
         except Exception as e:
             logger.exception(str(e))
 
