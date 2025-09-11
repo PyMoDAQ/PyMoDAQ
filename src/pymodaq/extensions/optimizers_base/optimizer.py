@@ -387,8 +387,8 @@ class GenericOptimization(CustomExt):
         self.dockarea.addDock(self.docks['settings'], 'below', self.docks['saving'])
         splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self.docks['settings'].addWidget(splitter)
-        splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
+        splitter.addWidget(self.settings_tree)
         self.modules_manager.show_only_control_modules(True)
         self.modules_manager.settings_tree.setEnabled(False)
 
@@ -689,7 +689,8 @@ class GenericOptimization(CustomExt):
 
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
-
+            self.settings_tree.setEnabled(False)
+            self.modules_manager.settings_tree.setEnabled(False)
             if not self._ini_runner:
                 self._ini_runner = True
                 self.set_algorithm()
@@ -722,6 +723,8 @@ class GenericOptimization(CustomExt):
                 self.model_class.runner_initialized()
                 self.update_prediction_function()
         else:
+            self.settings_tree.setEnabled(True)
+            self.modules_manager.settings_tree.setEnabled(True)
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
@@ -732,11 +735,12 @@ class GenericOptimization(CustomExt):
                 self.command_runner.disconnect()
             except TypeError:
                 pass
-            self.runner_thread.quit()
-            self.runner_thread.wait(5000)
-            if not self.runner_thread.isFinished():
-                self.runner_thread.terminate()
-                self.runner_thread.wait()
+            if self.runner_thread is not None:
+                self.runner_thread.quit()
+                self.runner_thread.wait(5000)
+                if not self.runner_thread.isFinished():
+                    self.runner_thread.terminate()
+                    self.runner_thread.wait()
             self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
@@ -794,6 +798,7 @@ class GenericOptimization(CustomExt):
             self.get_action('run').set_icon('pause')
             self.set_action_checked('gotobest', False)
             self.set_action_enabled('gotobest', False)
+            self.set_action_enabled('ini_runner', False)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.processEvents()
@@ -803,6 +808,7 @@ class GenericOptimization(CustomExt):
             self.set_action_enabled('save', True)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
+            self.set_action_enabled('ini_runner', True)
             QtWidgets.QApplication.processEvents()
 
     def thread_status(self, status: utils.ThreadCommand):
