@@ -604,7 +604,7 @@ class DAQScan(QObject, ParameterManager):
         actuators = self.modules_manager.actuators
         dte = data_mod.DataToExport(name="move_at")
         for ind, pos in enumerate(positions):
-            dte.append(DataActuator(actuators[ind].title, data=float(pos)))
+            dte.append(DataActuator(actuators[ind].title, data=float(pos), units=actuators[ind].units))
 
         self.modules_manager.move_actuators(dte, polling=False)
 
