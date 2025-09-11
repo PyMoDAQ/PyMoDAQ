@@ -139,18 +139,19 @@ In the main menu go to
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
+
     .. _fig_actuators_config:
 
-.. figure:: /image/PID_Module/preset_actuators_config.png
+.. figure:: /image/PID_Module/PID_settings_actuators.png
     :width: 350
 
     The mock actuators configuration.
 
-Now, add a 2D detector by selecting **DAQ2D/BeamSteering** in the menu, and configure it as follow
+Now, add a 2D detector by selecting **DAQ2D/MockCamera** in the menu, and configure it as follow
 
     .. _fig_camera_config:
 
-.. figure:: /image/PID_Module/preset_camera.png
+.. figure:: /image/PID_Module/PID_settings_detector.png
     :width: 350
 
     The mock camera configuration.
@@ -161,14 +162,10 @@ Back to the dashboard menu
 
 **Preset Modes > Load preset > preset_mock_beam_steering**
 
-Your dashboard should look like this once you have grabbed the camera and unwrapped the option menus of the actuators.
+You should now have this:
 
-    .. _fig_dashboard_preset_loaded:
+.. figure:: /image/PID_Module/dashboard_preset_loaded_pymodaq5.png
 
-.. figure:: /image/PID_Module/dashboard_preset_loaded.png
-    :width: 700
-
-    The dashboard after loading the preset.
 
 If you now try a relative move with Xpiezo or Ypiezo, you will see that the position of the laser spot on your virtual camera is moving horizontally or vertically, as if you were playing with a motorized optical mount.
 
@@ -181,23 +178,23 @@ The loading of the PID module is done through the dashboard menu
 
 **Extensions > PID Module**
 
-It will popup a new window, in Model class select PIDModelBeamSteering and **(1) initialize the model**.
+It will popup a new window, in the parameter tree settings, look for the Model class parameter and select PIDModelBeamSteering, then press **(2) initialize the model**.
 
-Configure it as follow:
 
-* camera refresh time (in the dashboard) = 200 ms
-* PID controls/sample time = 200 ms
-* PID controls/refresh plot time = 200 ms
-* threshold = 2
-
-Then **(2) intialize the PID** and **(3) start the PID** loop with the **PLAY** button. Notice that at this stage the corrections are calculated, but the piezo motors are not moving. It is only when you will **(4) untick the PAUSE button** that the corrections will be applied.
+Then **(3) intialize the PID** and **(4) start the PID** loop with the **PLAY** button. Notice that at this stage the corrections are calculated, but the piezo motors are not moving. It is only when you will **(5) untick the PAUSE button** that the corrections will be applied.
 
     .. _fig_pid_module_interface:
 
-.. figure:: /image/PID_Module/pid_kp_change_v2.png
+.. figure:: /image/PID_Module/PID_layout_2.png
     :width: 700
 
     The PID module interface.
+
+
+Once you start the PID, you will immedialy get information on the effective time taken by the PID to send commands. This is indicated by the **(8) Time per loop (ms)** settings . This tells you the minimum sample time that you can achieve with your current acquisition settings. Overall, it mostly depends on your detector acquisition time.
+**(9) The sample time** is the time that the PID will wait before giving its instruction. The minimum time cannot be lower than the one given by **(8)** but you can ask to wait for longer times to avoid fast oscillations. In that case, after the acquisition, the PID loop will wait until the time spent in the loop is equal to the sample time.
+Lastly, the refresh plot time is the information that will be given by the PID on the GUI for the user. Once the refresh plot time is finished, a signal will be sent to the GUI to display the current value in  the **(12) Value** spinbox and will update the **(13) Stability** spinbox. In addition, the input/output value of the PID will also be plotted on the PID input/output
+The **(13) Stability** value is obtained by calculating the standard deviation over the last X values where X is the **(7) queue length** that you can find in the main settings. This tool is particularly useful as it gives you a numerical value to evaluate relative spread of your distribution and you can check its evolution according: (1) to the conditions in your experiment to find the largest source of noise and (2) the PID settings.
 
 PID configuration
 ^^^^^^^^^^^^^^^^^
@@ -228,8 +225,6 @@ Let say now that we intend to move regularly the setpoint. We need a more reacti
 
 We will not go further in this documentation about how to configure a PID filter. For lots of applications, having just Kp is enough. If you want to go further you can start with this Wikipedia page: https://en.wikipedia.org/wiki/PID_controller.
 
-Nevertheless, to help you find the best value, we display the stability around the setpoint. This is done by calculating the standard deviation over the last X values where X is the length of the queue (found in the main settings). You can then change Kp, Ki and Kd to find the values that reduces the most this value. This tool is particularly useful as you now have access to the relative spread of your distribution and you can check its evolution according to the conditions in your experiment to find the largest source of noise.
-
 Automatic control of the setpoints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -237,7 +232,7 @@ Let us imagine now that we want to use this beam to characterize a sample, and t
 
 In order to do that, we will create virtual actuators on the dashboard that will control the setpoints of the PID module. Then, PyMoDAQ will see them as standard actuators, which means that we will be able to use any of the other modules, and in particular, perform any scan that can be configured with the DAQ_Scan module.
 
-For this purpose, you can click on the little blue plus button in the action bar. This will create a DAQ_move for each setpoint in the model. In our case, this will create two of them, one for each axis. In practice, you have access to all the usual DAQ_move properties which means you can change these setpoints from a remote computer, manually by pressing buttons or programatically during a DAQ scan for example.
+For this purpose, you can click on the **(6) little blue plus button** in the action bar. This will create a DAQ_move for each setpoint in the model. In our case, this will create two of them, one for each axis. In practice, you have access to all the usual DAQ_move properties which means you can change these setpoints from a remote computer, manually by pressing buttons or programatically during a DAQ scan for example.
 
 The key point is now that the virtual actuators on the dashboard control the setpoints of the PID module.
 
