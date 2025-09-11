@@ -39,6 +39,15 @@ class DAQ_Move_PID(DAQ_Move_base):
                     "tooltip": "Red if the standard deviation of the last positions is above threshold, green if below",
                 },
                 {
+                    "title": "Current stability:",
+                    "name": "current_stab",
+                    "type": "float",
+                    "value": 0,
+                    "default": 0,
+                    "readonly": True,
+                    "tooltip": "",
+                },
+                {
                     "title": "Threshold:",
                     "name": "threshold",
                     "type": "float",
@@ -82,9 +91,12 @@ class DAQ_Move_PID(DAQ_Move_base):
 
         if parameter_stab.value():
             if len(self.controller.queue_points) >= self.settings["check_stab", "queue_length"]:
-                self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
-
-                cond = np.std(self.last_positions) < parameter_stab["threshold"]
+                self.last_positions = deque(
+                    self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"]
+                )
+                current_stab = np.std(self.last_positions)
+                parameter_stab.child("current_stab").setValue(current_stab)
+                cond = current_stab <= parameter_stab["threshold"]
             else:
                 cond = False
 
@@ -96,7 +108,9 @@ class DAQ_Move_PID(DAQ_Move_base):
         if param.name() == "check_stab":
             pass
         elif param.name() == "queue_length":
-            self.last_positions = deque(self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"])
+            self.last_positions = deque(
+                self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"]
+            )
             param.setOpts(max=self.controller.queue_points.maxlen)
 
     def ini_stage(self, controller: PIDController = None):
