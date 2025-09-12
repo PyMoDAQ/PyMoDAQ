@@ -39,17 +39,6 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-def convert_output_limits(
-    lim_min=-10.0, min_status=False, lim_max=10.0, max_status=False
-):
-    output = [None, None]
-    if min_status:
-        output[0] = lim_min
-    if max_status:
-        output[1] = lim_max
-    return output
-
-
 class DAQ_PID(CustomExt):
     """ """
 
@@ -260,28 +249,10 @@ class DAQ_PID(CustomExt):
         self.enable_controls_pid_run(False)
 
         self.emit_curr_points_sig.connect(self.emit_curr_points)
-
+    
     def ini_PID(self):
         if self.is_action_checked("ini_pid"):
-            output_limits = [None, None]
-            if self.settings[
-                "main_settings",
-                "pid_settings",
-                "output_limits",
-                "output_limit_min_enabled",
-            ]:
-                output_limits[0] = self.settings[
-                    "main_settings", "pid_settings", "output_limits", "output_limit_min"
-                ]
-            if self.settings[
-                "main_settings",
-                "pid_settings",
-                "output_limits",
-                "output_limit_max_enabled",
-            ]:
-                output_limits[1] = self.settings[
-                    "main_settings", "pid_settings", "output_limits", "output_limit_max"
-                ]
+            output_limits = self.get_output_limits()
             self.update_queues(refresh=True)
             self.runner_thread = QThread()
             pid_runner = PIDRunner(
@@ -346,6 +317,15 @@ class DAQ_PID(CustomExt):
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs)
 
+    def get_output_limits(self):
+        output_limits = [None, None]
+        output_parameters = self.settings.child("main_settings", "pid_settings", "output_limits")
+        if output_parameters["output_limit_min_enabled"]:
+            output_limits[0] = output_parameters[ "output_limit_min"]
+        if output_parameters["output_limit_max_enabled"]:
+            output_limits[1] = output_parameters[ "output_limit_max"]            
+        return output_limits
+
     def display_time_elapsed(self, time_elapsed: float):
         """Display the time elapsed in the PID thread"""
         self.settings.child("main_settings", "pid_settings", "effective_sample_time").setValue(time_elapsed*1000)
@@ -403,27 +383,7 @@ class DAQ_PID(CustomExt):
         elif param.name() in putils.iter_children(
             self.settings.child("main_settings", "pid_settings", "output_limits"), []
         ):
-            output_limits = convert_output_limits(
-                self.settings[
-                    "main_settings", "pid_settings", "output_limits", "output_limit_min"
-                ],
-                self.settings[
-                    "main_settings",
-                    "pid_settings",
-                    "output_limits",
-                    "output_limit_min_enabled",
-                ],
-                self.settings[
-                    "main_settings", "pid_settings", "output_limits", "output_limit_max"
-                ],
-                self.settings[
-                    "main_settings",
-                    "pid_settings",
-                    "output_limits",
-                    "output_limit_max_enabled",
-                ],
-            )
-
+            output_limits = self.get_output_limits()           
             self.command_pid.emit(
                 ThreadCommand("update_options", dict(output_limits=output_limits))
             )
