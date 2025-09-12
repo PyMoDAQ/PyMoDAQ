@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 
 from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 
 from pymodaq_utils.enums import BaseEnum, StrEnum
@@ -106,7 +107,7 @@ class DataToActuatorsOpti(DataToActuators):
 
 
 class OptimizationRunner(QtCore.QObject):
-    algo_output_signal = QtCore.Signal(DataToExport)
+    algo_live_plot_signal = QtCore.Signal(DataToExport, DataToActuators, DataCalculated)
     algo_finished = QtCore.Signal(DataToExport)
     saver_signal = QtCore.Signal(DataToActuatorsOpti)
 
@@ -203,14 +204,17 @@ class OptimizationRunner(QtCore.QObject):
                     self.individual_as_data(
                         self.optimization_algorithm.best_individual,
                         DataNames.Individual),
-                    DataCalculated(DataNames.ProbedData,
-                                   data=[np.array([self.input_from_dets])],),
-                    self.output_to_actuators.merge_as_dwa(
-                        'Data0D', DataNames.Actuators),
+
                     DataCalculated(DataNames.Tradeoff,
                                    data=[np.array([self.optimization_algorithm.tradeoff])])
                     ])
-                self.algo_output_signal.emit(dte)
+                self.algo_live_plot_signal.emit(dte,
+                                                self.output_to_actuators,
+                                                DataCalculated(DataNames.ProbedData,
+                                                               data=[np.array([self.input_from_dets])],
+                                                               origin='algo'))
+
+                
                 self.saver_signal.emit(DataToActuatorsOpti(DataNames.Actuators,
                                                            data = self.output_to_actuators.deepcopy().data,
                                                            mode=self.output_to_actuators.mode,
@@ -689,6 +693,10 @@ class GenericOptimization(CustomExt):
 
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
+            if not self.model_class.has_fitness_observable():
+                messagebox(title='Warning', text='No 0D observable has been chosen as a fitness value for the algorithm')
+                self.set_action_checked('ini_runner', False)
+                return
             self.settings_tree.setEnabled(False)
             self.modules_manager.settings_tree.setEnabled(False)
             if not self._ini_runner:
@@ -709,7 +717,7 @@ class GenericOptimization(CustomExt):
                 runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
                                      self.get_stopping_parameters())
                 self.runner_thread.runner = runner
-                runner.algo_output_signal.connect(self.process_output)
+                runner.algo_live_plot_signal.connect(self.do_live_plot)
                 runner.algo_finished.connect(self.optimization_done)
                 runner.runner_command.connect(self.thread_status)
                 runner.saver_signal.connect(self.add_data)
@@ -757,31 +765,21 @@ class GenericOptimization(CustomExt):
         self.go_to_best()
         self.optimization_done_signal.emit(dte)
 
-    def process_output(self, dte: DataToExport):
-
+    def do_live_plot(self, dte_algo, dta: DataToActuators, dwa_data: DataCalculated):
         self.enl_index += 1
-        # try:
-        #     dwa_tradeoff = dte.remove(dte.get_data_from_name(DataNames.Tradeoff))
-        #     self.settings.child('main_settings', 'prediction', 'options', 'tradeoff_actual').setValue(
-        #         float(dwa_tradeoff[0][0])
-        #     )
-        # except KeyError:
-        #     pass
-        dwa_data = dte.remove(dte.get_data_from_name(DataNames.ProbedData))
-        dwa_actuators: DataActuator = dte.remove(dte.get_data_from_name(DataNames.Actuators))
-        if self.DISPLAY_BEST:
-            self.viewer_observable.show_data(dte)
-
         self.model_class.update_plots()
 
-        best_individual = dte.get_data_from_name(DataNames.Individual)
+        if self.DISPLAY_BEST:
+            self.viewer_observable.show_data(dte_algo)
+
+        best_individual = dte_algo.get_data_from_name(DataNames.Individual)
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
-                                        axis_values=dwa_actuators.values())
+                                        axis_values=[dwa.value() for dwa in dta])
         if len(best_indiv_as_list) == 1 or (
                 len(best_indiv_as_list) == 2 and self.enl_index >= 3):
-            self.update_data_plot(target_at=dwa_actuators.values(),
+            self.update_data_plot(target_at=[dwa.value() for dwa in dta],
                                   crosshair_at=best_indiv_as_list)
 
     def update_data_plot(self, target_at=None, crosshair_at=None):
