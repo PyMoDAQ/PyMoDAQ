@@ -282,7 +282,7 @@ class DAQ_PID(CustomExt):
                 output_limits[1] = self.settings[
                     "main_settings", "pid_settings", "output_limits", "output_limit_max"
                 ]
-
+            self.update_queues(refresh=True)
             self.runner_thread = QThread()
             pid_runner = PIDRunner(
                 self.model_class,
