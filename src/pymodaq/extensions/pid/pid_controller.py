@@ -310,7 +310,7 @@ class DAQ_PID(CustomExt):
     def process_output(self, data: DataToExport):
         outputs: DataRaw = data.get_data_from_name("outputs")
         inputs: DataRaw = data.get_data_from_name("inputs")
-        self.curr_points = [float(_input[-1]) for _input in inputs]
+        self.curr_points = [float(_input[-1]) for _input in inputs.isig[-1]]
         inputs_plot = DataRaw("inputs",data=[np.array([_curr_point,]) for _curr_point in self.curr_points],labels=self.model_class.setpoints_names) 
         for _input, _setpoint_name in zip(inputs, self.model_class.setpoints_names):
             self.queue_points[_setpoint_name].extend(_input)
