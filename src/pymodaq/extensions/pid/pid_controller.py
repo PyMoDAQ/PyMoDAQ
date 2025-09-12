@@ -109,6 +109,14 @@ class DAQ_PID(CustomExt):
                     "tooltip": "Length of queue to calculate stability",
                 },
                 {
+                    "title": "Weighting type",
+                    "name": "queue_weighting",
+                    "type": "int",
+                    "value": 0,
+                    "tooltip": """Type of weighting when calculating the stability. The weight goes as q**N where q is the qth element in the queue and N is the wanted order.
+                    """,
+                },                                
+                {
                     "title": "Refresh queue",
                     "name": "refresh_queue",
                     "type": "bool_push",
@@ -239,6 +247,7 @@ class DAQ_PID(CustomExt):
         self._curr_points = dict([])
         self._setpoints = dict([])
         self.queue_points = dict([])
+        self.build_weight_array()
 
         self.dock_area = dockarea
         self.check_moving = False
@@ -317,7 +326,12 @@ class DAQ_PID(CustomExt):
         ]
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs_plot)
-
+    def build_weight_array(self):
+        # Build a weighting array of the form np.arange(1+queue_length)**(queue_weighting)
+        self.queue_weight = np.arange(1+
+                         self.settings.child("main_settings","queue_length").value()
+                         )**self.settings.child("main_settings","queue_weighting").value()
+        
     def get_output_limits(self):
         output_limits = [None, None]
         output_parameters = self.settings.child("main_settings", "pid_settings", "output_limits")
@@ -409,6 +423,8 @@ class DAQ_PID(CustomExt):
             self.model_class.update_detector_names()
         elif param.name() == "queue_length":
             self.update_queues()
+        elif param.name() == "queue_weighting":
+            self.build_weight_array()
         elif param.name() == "refresh_queue":
             if param.value():
                 self.update_queues(refresh=True)
@@ -587,7 +603,7 @@ class DAQ_PID(CustomExt):
             self.models, "name", model_name
         )["class"](self)
         self.set_setpoints_buttons()
-        self.init_queues()
+        self.update_queues(refresh=True)
         self.model_class.ini_model()
         self.settings.child("main_settings", "epsilon").setValue(
             self.model_class.epsilon
@@ -607,6 +623,7 @@ class DAQ_PID(CustomExt):
                 setpoint_name: deque(queue, maxlen=self.settings.child("main_settings", "queue_length").value())
                 for queue, setpoint_name in zip(self.queue_points.values(), self.model_class.setpoints_names)
             }
+        self.build_weight_array()
 
     def ini_model(self):
         try:
