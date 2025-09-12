@@ -763,7 +763,7 @@ class DAQ_PID(CustomExt):
         Function used by the sync buttons. The button i will attribute the value of the i-th currpoint to the i-th setpoint.
         """
         self.setpoints_sb[i].setValue(self.curr_points[i])
-        self.update_runner_setpoints
+        self.update_runner_setpoints()
 
     def quit_fun(self):
         """ """
