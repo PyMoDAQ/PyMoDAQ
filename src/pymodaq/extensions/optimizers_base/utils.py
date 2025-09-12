@@ -152,6 +152,11 @@ class OptimizerModelGeneric(ABC):
         self.settings = self.optimization_controller.settings.child('models', 'model_params')  # set of parameters
         self.check_modules(self.modules_manager)
 
+    @abc.abstractmethod
+    def has_fitness_observable(self) -> bool:
+        """ Should return True if the model defined a 0D data to be used as fitness value"""
+        return False
+
     def check_modules(self, modules_manager):
         for act in self.actuators_name:
             if act not in modules_manager.actuators_name:
@@ -255,6 +260,10 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
         self.settings.child('optimizing_signal', 'data_probe').sigActivated.connect(
             self.optimize_from)
+
+    def has_fitness_observable(self) -> bool:
+        """ Should return True if the model defined a 0D data to be used as fitness value"""
+        return len(self.settings.child('optimizing_signal', 'optimize_0d').value()['selected']) == 1
 
     def ini_model(self):
         pass
