@@ -56,8 +56,8 @@ class Scanner(QObject, ParameterManager):
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
         {'title': 'Units handling', 'name': 'units_handling', 'type': 'group', 'children': [
             {'title': 'Display units', 'name': 'display_units', 'type': 'bool', 'value': True},
-            {'title': 'Use same units', 'name': 'use_same_units', 'type': 'bool', 'value': False},
-            {'title': 'Common units', 'name': 'common_units', 'type': 'str', 'value': '', 'visible': False},
+            {'title': 'Default units', 'name': 'common_units', 'type': 'str', 'value': '', 'visible': False,
+             'readonly': True},
             ]},
 
     ]
@@ -128,21 +128,20 @@ class Scanner(QObject, ParameterManager):
             self.settings.child('scan_type').setOpts(tip=self._scanner.__doc__)
             self.settings.child('scan_sub_type').setOpts(tip=self._scanner.__doc__)
         elif param.name() == 'display_units':
-            self.settings.child('units_handling', 'use_same_units').setValue(not param.value())
-            self.set_scanner()
-        elif param.name() == 'use_same_units':
-            self.settings.child('units_handling', 'display_units').setValue(not param.value())
-            self.settings.child('units_handling', 'common_units').show(param.value())
-            if param.value() and len(self.actuators) > 0:
+            if not param.value() and len(self.actuators) > 0:
+
                 units = set([act.units for act in self.actuators])
                 if len(units) > 1:
                     messagebox(title='Info',
                                text='Could not use the same units for all settings as units are not compatible')
-                    param.setValue(False)
+                    param.setValue(True)
+                    self.settings.child('units_handling', 'common_units').show(False)
                 else:
                     self.settings.child('units_handling', 'common_units').setValue(list(units)[0])
-                    self.set_scanner()
-
+                    self.settings.child('units_handling', 'common_units').show(True)
+            else:
+                self.settings.child('units_handling', 'common_units').show(False)
+            self.set_scanner()
 
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
