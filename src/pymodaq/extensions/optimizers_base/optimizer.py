@@ -697,6 +697,7 @@ class GenericOptimization(CustomExt):
                 messagebox(title='Warning', text='No 0D observable has been chosen as a fitness value for the algorithm')
                 self.set_action_checked('ini_runner', False)
                 return
+
             self.settings_tree.setEnabled(False)
             self.modules_manager.settings_tree.setEnabled(False)
             if not self._ini_runner:
@@ -724,7 +725,6 @@ class GenericOptimization(CustomExt):
                 self.command_runner.connect(runner.queue_command)
 
                 runner.moveToThread(self.runner_thread)
-
                 self.runner_thread.start()
                 self.get_action('runner_led').set_as_true()
                 self.set_action_enabled('run', True)
@@ -752,6 +752,7 @@ class GenericOptimization(CustomExt):
             self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
+            self.set_action_enabled('run', False)
 
     def clean_h5_temp(self):
         if self.temp_path is not None:
