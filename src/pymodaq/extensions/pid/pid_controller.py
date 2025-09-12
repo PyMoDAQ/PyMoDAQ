@@ -923,8 +923,6 @@ class PIDRunner(QObject):
                 self.current_time = time.perf_counter() # Update current time
 
                 # # APPLY THE PID OUTPUT TO THE ACTUATORS
-                if self.outputs is None:
-                    self.outputs = [pid.setpoint for pid in self.pids]
                 self.outputs_to_actuators: DataToActuators = (
                     self.model_class.convert_output(self.outputs, dt=None)
                 )
