@@ -44,10 +44,12 @@ StoppingParameters = namedtuple('StoppingParameters',
 
 class GenericAlgorithm(abc.ABC):
 
-    def __init__(self, ini_random: int):
+    def __init__(self, ini_random: int, bounds: dict):
 
         self._algo = abstract_attribute()  #could be a Bayesian on Adapative algorithm
         self._prediction = abstract_attribute()  # could be an acquisition function...
+
+        self.actuators = list(bounds.keys())
 
         self._next_point: np.ndarray = None
         self._suggested_coordinates: List[np.ndarray] = []

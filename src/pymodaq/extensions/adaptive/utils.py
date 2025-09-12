@@ -33,7 +33,7 @@ class AdaptiveAlgorithm(GenericAlgorithm):
 
     def __init__(self, ini_random: int, bounds: list[tuple[float, float]],
                  loss_type: LossDim, kind: str, **kwargs):
-        super().__init__(ini_random)
+        super().__init__(ini_random, bounds)
         self._algo = loss_type.get_learner_from_enum(
             bounds=bounds,
             loss_function=LossFunctionFactory.create(loss_type, kind, **kwargs))

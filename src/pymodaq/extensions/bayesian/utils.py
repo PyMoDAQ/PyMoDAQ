@@ -37,11 +37,12 @@ class BayesianConfig(OptimizerConfig):
 class BayesianAlgorithm(GenericAlgorithm):
 
     def __init__(self, ini_random: int, bounds: dict, **kwargs):
-        super().__init__(ini_random)
+        super().__init__(ini_random, bounds)
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
                                           **kwargs
                                           )
+        self.sorting_index: list = None
 
     def set_prediction_function(self, kind: str = '', **kwargs):
         self._prediction = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
@@ -50,13 +51,17 @@ class BayesianAlgorithm(GenericAlgorithm):
         """ Update the parameters of the acquisition function (kappa decay for instance)"""
         self._prediction.decay_exploration()
 
-
     @property
     def tradeoff(self):
         return self._prediction.tradeoff
 
+    def reorder_array(self, arr: np.ndarray):
+        return np.array([self._algo.space.array_to_params(arr)[key] for key in self.actuators])
+
     @property
     def bounds(self) -> List[np.ndarray]:
+        """ Return bounds in the order specified at the beginning.
+        """
         return [bound for bound in self._algo.space.bounds]
 
     @bounds.setter
@@ -67,15 +72,37 @@ class BayesianAlgorithm(GenericAlgorithm):
             self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
 
     def prediction_ask(self) -> np.ndarray:
-        """ Ask the prediction function or algo to provide the next point to probe"""
-        return self._prediction.suggest(self._algo._gp, self._algo.space)
+        """ Ask the prediction function or algo to provide the next point to probe
+
+        Warning the space algo object is sorting by name the bounds...
+        """
+        return self.reorder_array(self._prediction.suggest(self._algo._gp, self._algo.space))
+
+    def ask(self) -> list[np.ndarray]:
+        """ Predict next actuator values to probe
+
+        Return a list of numpy array, one per actuator. In general these array are 0D
+        """
+        try:
+            self._next_point = self.prediction_ask()
+            self._suggested_coordinates.append(self._next_point)
+            return [np.atleast_1d(value) for value in self._next_point]
+        except:
+            self.ini_random_points -= 1
+            self._next_point = self.get_random_point()
+            self._suggested_coordinates.append(self._next_point)
+            return self.reorder_array([np.atleast_1d(value) for value in self._next_point])
+
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
         
     @property
     def best_fitness(self) -> float:
-        return self._algo.max['target']
+        if self._algo.max is None:
+            return 0.001
+        else:
+            return self._algo.max['target']
 
     @property
     def best_individual(self) -> Union[np.ndarray, None]:
@@ -85,7 +112,7 @@ class BayesianAlgorithm(GenericAlgorithm):
             max_param = self._algo.max.get('params', None)
             if max_param is None:
                 return None
-            return self._algo.space.params_to_array(max_param)
+            return self.reorder_array(self._algo.space.params_to_array(max_param))
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:

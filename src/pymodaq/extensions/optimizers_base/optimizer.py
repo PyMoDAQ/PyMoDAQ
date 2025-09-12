@@ -731,6 +731,7 @@ class GenericOptimization(CustomExt):
                 self.model_class.runner_initialized()
                 self.update_prediction_function()
         else:
+            self.set_action_enabled('ini_runner', False)
             self.settings_tree.setEnabled(True)
             self.modules_manager.settings_tree.setEnabled(True)
             if self.is_action_checked('run'):
@@ -753,6 +754,7 @@ class GenericOptimization(CustomExt):
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
             self.set_action_enabled('run', False)
+            self.set_action_enabled('ini_runner', True)  # reactivate the action only when the thread is finished
 
     def clean_h5_temp(self):
         if self.temp_path is not None:
@@ -777,7 +779,9 @@ class GenericOptimization(CustomExt):
         best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
-                                        axis_values=[dwa.value() for dwa in dta])
+                                        axis_values=[
+                                            dta.get_data_from_name(
+                                                act).value() for act in self.modules_manager.actuators_name])
         if len(best_indiv_as_list) == 1 or (
                 len(best_indiv_as_list) == 2 and self.enl_index >= 3):
             self.update_data_plot(target_at=[dwa.value() for dwa in dta],
