@@ -311,19 +311,20 @@ class DAQ_PID(CustomExt):
         outputs: DataRaw = data.get_data_from_name("outputs")
         inputs: DataRaw = data.get_data_from_name("inputs")
         self.curr_points = [float(_input[-1]) for _input in inputs]
-        inputs_plot = DataRaw("inputs",data=[np.array([curr_point,]) for curr_point in self.curr_points],labels=self.model_class.setpoints_names) 
-        for _input, _setpoint, _setpoint_name in zip(inputs, self.setpoints, self.model_class.setpoints_names):
-            self.queue_points[_setpoint_name].extend(_input-_setpoint)
+        inputs_plot = DataRaw("inputs",data=[np.array([_curr_point,]) for _curr_point in self.curr_points],labels=self.model_class.setpoints_names) 
+        for _input, _setpoint_name in zip(inputs, self.model_class.setpoints_names):
+            self.queue_points[_setpoint_name].extend(_input)
 
         # Would that be useful to add too?
         # self.mean_points = [
         #     np.mean(np.array(queue) - setpoint)
         #     for queue, setpoint in zip(self.queue_points.values(), self.setpoints)
         # ]
+        queues_length = len(list(self.queue_points.values())[0])
         self.stab_points = [
-            np.std(queue)
-            for queue in zip(self.queue_points.values())
-        ]
+            np.sqrt(np.cov(_queue, aweights=self.queue_weight[:queues_length], ddof=0))
+            for _queue in zip(self.queue_points.values())
+        ]            
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs_plot)
     def build_weight_array(self):
