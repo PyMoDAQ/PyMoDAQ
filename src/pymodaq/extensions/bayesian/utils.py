@@ -58,9 +58,16 @@ class BayesianAlgorithm(GenericAlgorithm):
     def tradeoff(self):
         return self._prediction.tradeoff
 
+    def get_random_point(self) -> dict[str, float]:
+        """ Get a random point coordinates in the defined bounds"""
+        point = dict()
+        for key, vals in self.bounds.items():
+            point[key] = (np.max(vals) - np.min(vals)) * np.random.random_sample() + np.min(vals)
+        return point
+
     @property
     def bounds(self) -> dict[str, float]:
-        """ Return bounds in the order specified at the beginning.
+        """ Return bounds as a dict.
         """
         return self._algo.space.array_to_params(self._algo.space.bounds)
 

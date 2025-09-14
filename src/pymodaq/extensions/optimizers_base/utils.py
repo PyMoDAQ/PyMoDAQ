@@ -80,7 +80,7 @@ class GenericAlgorithm(abc.ABC):
         self._prediction = abstract_attribute()  # could be an acquisition function...
 
         self.actuators = actuators
-        self.ini_bound = bounds
+        self.ini_bounds = bounds
 
         self._next_point: Optional[dict[str, float]] = None
         self._suggested_coordinates: list[dict[str, float]]  = []
@@ -114,7 +114,7 @@ class GenericAlgorithm(abc.ABC):
     @property
     @abc.abstractmethod
     def bounds(self) -> dict[str, tuple[float, float]]:
-        pass
+        ...
 
     @bounds.setter
     def bounds(self, bounds: dict[str, tuple[float, float]]):
@@ -123,13 +123,10 @@ class GenericAlgorithm(abc.ABC):
         else:
             raise TypeError('Invalid bounds definition')
 
+    @abc.abstractmethod
     def get_random_point(self) -> dict[str, float]:
         """ Get a random point coordinates in the defined bounds"""
-        point = []
-        for bound in self.bounds:
-            point.append((np.max(bound) - np.min(bound)) * np.random.random_sample() +
-                         np.min(bound))
-        return self._algo.space.array_to_params(np.array(point))
+        ...
 
     def ask(self) -> dict[str, float]:
         """ Predict next actuator values to probe

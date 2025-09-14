@@ -108,7 +108,7 @@ class DataToActuatorsOpti(DataToActuators):
 
 
 class OptimizationRunner(QtCore.QObject):
-    algo_live_plot_signal = QtCore.Signal(DataToExport, DataToActuators, DataCalculated)
+    algo_live_plot_signal = QtCore.Signal(DataToExport)
     algo_finished = QtCore.Signal(DataToExport)
     saver_signal = QtCore.Signal(DataToActuatorsOpti)
 
@@ -761,24 +761,34 @@ class GenericOptimization(CustomExt):
         self.go_to_best()
         self.optimization_done_signal.emit(dte)
 
-    def do_live_plot(self, dte_algo, dta: DataToActuators, dwa_data: DataCalculated):
+    def do_live_plot(self, dte_algo: DataToExport):
         self.enl_index += 1
         self.model_class.update_plots()
 
         if self.DISPLAY_BEST:
             self.viewer_observable.show_data(dte_algo)
 
-        best_individual = dte_algo.get_data_from_name(DataNames.Individual)
-        best_indiv_as_list = [float(best_individual[ind][0]) for ind in range(len(best_individual))]
+        best_individual = [
+            dte_algo.get_data_from_name_origin(
+                act,
+                DataNames.Individual)
+            .value() for act in self.modules_manager.selected_actuators_name]
+
+
+        dwa_data = dte_algo.get_data_from_name(DataNames.ProbedData)
+
+        actuators_values = [
+            dte_algo.get_data_from_name_origin(
+                act,
+                DataNames.Actuators)
+            .value() for act in self.modules_manager.selected_actuators_name]
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
-                                        axis_values=[
-                                            dta.get_data_from_name(
-                                                act).value() for act in self.modules_manager.actuators_name])
-        if len(best_indiv_as_list) == 1 or (
-                len(best_indiv_as_list) == 2 and self.enl_index >= 3):
-            self.update_data_plot(target_at=[dwa.value() for dwa in dta],
-                                  crosshair_at=best_indiv_as_list)
+                                        axis_values=actuators_values)
+        if len(best_individual) == 1 or (
+                len(best_individual) == 2 and self.enl_index >= 3):
+            self.update_data_plot(target_at=actuators_values,
+                                  crosshair_at=best_individual)
 
     def update_data_plot(self, target_at=None, crosshair_at=None):
         self.live_plotter.load_plot_data(remove_navigation=False,
