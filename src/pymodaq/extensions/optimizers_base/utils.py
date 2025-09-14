@@ -6,6 +6,7 @@ Created the 31/08/2023
 """
 import abc
 from abc import ABC
+from collections import OrderedDict
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable, Optional
 from pathlib import Path
 import importlib
@@ -41,6 +42,9 @@ class StopType(BaseEnum):
 StoppingParameters = namedtuple('StoppingParameters',
                                 ['niter', 'stop_type', 'tolerance', 'npoints'])
 
+class PredictionError(Exception):
+    pass
+
 
 def individual_as_dte(individual: dict[str, float], actuators: list['DAQ_Move'],
                       name: str = 'Individual') -> DataToExport:
@@ -70,12 +74,13 @@ def individual_as_dta(individual: dict[str, float], actuators: list['DAQ_Move'],
 
 class GenericAlgorithm(abc.ABC):
 
-    def __init__(self, ini_random: int, bounds: dict):
+    def __init__(self, ini_random: int, bounds: OrderedDict[str, tuple[float, float]], actuators: list[str]):
 
-        self._algo = abstract_attribute()  #could be a Bayesian on Adapative algorithm
+        self._algo = abstract_attribute()  #could be a Bayesian on Adaptive algorithm
         self._prediction = abstract_attribute()  # could be an acquisition function...
 
-        self.actuators = list(bounds.keys())
+        self.actuators = actuators
+        self.ini_bound = bounds
 
         self._next_point: Optional[dict[str, float]] = None
         self._suggested_coordinates: list[dict[str, float]]  = []
@@ -108,11 +113,11 @@ class GenericAlgorithm(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def bounds(self) -> dict[str, float]:
+    def bounds(self) -> dict[str, tuple[float, float]]:
         pass
 
     @bounds.setter
-    def bounds(self, bounds: dict[str, float]):
+    def bounds(self, bounds: dict[str, tuple[float, float]]):
         if isinstance(bounds, dict):
             self._algo.set_bounds(bounds)
         else:
@@ -133,7 +138,7 @@ class GenericAlgorithm(abc.ABC):
         """
         try:
             self._next_point = self.prediction_ask()
-        except:
+        except PredictionError:
             self.ini_random_points -= 1
             self._next_point = self.get_random_point()
         self._suggested_coordinates.append(self._next_point)

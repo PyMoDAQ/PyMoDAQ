@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 from typing import Callable, Type, Union, Sequence
 from pymodaq_utils.enums import StrEnum
 
@@ -28,7 +29,7 @@ class LossDim(StrEnum):
         else:
             raise ValueError(f'No Loss with dim={dim} is known')
 
-    def get_learner_from_enum(self, bounds: Sequence[tuple[float, float]],
+    def get_learner_from_enum(self, bounds: OrderedDict[str, tuple[float, float]],
                               loss_function: 'LossFunctionBase') -> Union[Learner1D, Learner2D, LearnerND]:
         """ Return an instance of a Learner given the enum value
 
@@ -43,12 +44,12 @@ class LossDim(StrEnum):
         :class:`LossFunctionFactory`
         """
         if self == self.LOSS_1D:
-            bounds = bounds[0]
+            bounds = bounds.popitem(last=False)[1]
             return Learner1D(None, bounds, loss_per_interval=loss_function)
         elif self == self.LOSS_2D:
-            return Learner2D(None, bounds, loss_per_triangle=loss_function)
+            return Learner2D(None, tuple(bounds.values()), loss_per_triangle=loss_function)
         elif self == self.LOSS_ND:
-            return LearnerND(None, bounds, loss_per_simplex=loss_function)
+            return LearnerND(None, tuple(bounds.values()), loss_per_simplex=loss_function)
         else:
             raise ValueError(f'No learner for this enum: {self}')
 

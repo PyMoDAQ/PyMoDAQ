@@ -31,9 +31,10 @@ class AdaptiveConfig(OptimizerConfig):
 
 class AdaptiveAlgorithm(GenericAlgorithm):
 
-    def __init__(self, ini_random: int, bounds: list[tuple[float, float]],
+    def __init__(self, ini_random: int, bounds: OrderedDict[str, tuple[float, float]],
+                 actuators: list[str],
                  loss_type: LossDim, kind: str, **kwargs):
-        super().__init__(ini_random, bounds)
+        super().__init__(ini_random, bounds, actuators)
         self._algo = loss_type.get_learner_from_enum(
             bounds=bounds,
             loss_function=LossFunctionFactory.create(loss_type, kind, **kwargs))

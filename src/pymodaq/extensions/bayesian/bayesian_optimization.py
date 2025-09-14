@@ -116,7 +116,8 @@ class BayesianOptimization(GenericOptimization):
     def set_algorithm(self):
         self.algorithm = BayesianAlgorithm(
             ini_random=self.settings['main_settings', 'ini_random'],
-            bounds=self.format_bounds())
+            bounds=self.format_bounds(),
+            actuators=self.modules_manager.selected_actuators_name)
 
     def thread_status(self, status: utils.ThreadCommand):
         super().thread_status(status)

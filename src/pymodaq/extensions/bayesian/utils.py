@@ -6,10 +6,13 @@ Created the 31/08/2023
 """
 
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
+
+import bayes_opt.exception
 import numpy as np
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
+from bayes_opt.exception import TargetSpaceEmptyError
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -23,7 +26,7 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 
 from pymodaq.extensions.optimizers_base.utils import (
     GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
-    OptimizerConfig)
+    OptimizerConfig, PredictionError)
 
 
 logger = set_logger(get_module_name(__file__))
@@ -36,8 +39,8 @@ class BayesianConfig(OptimizerConfig):
 
 class BayesianAlgorithm(GenericAlgorithm):
 
-    def __init__(self, ini_random: int, bounds: dict, **kwargs):
-        super().__init__(ini_random, bounds)
+    def __init__(self, ini_random: int, bounds: dict[str, tuple[float, float]], actuators: list[str], **kwargs):
+        super().__init__(ini_random, bounds, actuators)
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
                                           **kwargs
@@ -73,7 +76,11 @@ class BayesianAlgorithm(GenericAlgorithm):
 
         Warning the space algo object is sorting by name the bounds...
         """
-        return self._algo.space.array_to_params(self._prediction.suggest(self._algo._gp, self._algo.space))
+        try:
+            return self._algo.space.array_to_params(self._prediction.suggest(self._algo._gp, self._algo.space))
+        except TargetSpaceEmptyError as e:
+            raise PredictionError(str(e))
+
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)

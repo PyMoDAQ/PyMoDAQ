@@ -144,13 +144,10 @@ class AdaptiveOptimisation(GenericOptimization):
             messagebox(title='Warning',
                        text=f'You cannot select [{actuators}] as no corresponding Loss function exists')
 
-    def adaptive_bounds(self):
-        return list(self.format_bounds().values())
-
     def set_algorithm(self):
         self.algorithm = AdaptiveAlgorithm(
             ini_random=1,
-            bounds=self.adaptive_bounds(),
+            bounds=self.format_bounds(),
             loss_type=LossDim(self.settings['main_settings', 'prediction', 'lossdim']),
             kind=self.settings['main_settings', 'prediction', 'kind'])
 
