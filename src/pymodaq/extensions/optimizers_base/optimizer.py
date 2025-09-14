@@ -41,7 +41,7 @@ from pymodaq.utils import config as config_mod
 from pymodaq.extensions.optimizers_base.utils import (
     get_optimizer_models, OptimizerModelGeneric,
     GenericAlgorithm, StopType, StoppingParameters,
-    OptimizerConfig)
+    OptimizerConfig, individual_as_dta, individual_as_dte)
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
@@ -104,6 +104,7 @@ class DataToActuatorsOpti(DataToActuators):
 
     def __repr__(self):
         return f'{super().__repr__()} iter:{self.ind_iter}'
+
 
 
 class OptimizationRunner(QtCore.QObject):
@@ -173,7 +174,7 @@ class OptimizationRunner(QtCore.QObject):
             while self.running:
                 self._ind_iter += 1
 
-                next_target = self.optimization_algorithm.ask()
+                next_target: dict[str, float] = self.optimization_algorithm.ask()
 
                 self.outputs = next_target
                 self.output_to_actuators: DataToActuators = \
@@ -181,6 +182,8 @@ class OptimizationRunner(QtCore.QObject):
                         self.outputs,
                         best_individual=self.optimization_algorithm.best_individual
                     )
+                for dwa in self.output_to_actuators:
+                    dwa.origin = DataNames.Actuators
 
                 self.modules_manager.move_actuators(self.output_to_actuators,
                                                     self.output_to_actuators.mode,
@@ -195,24 +198,19 @@ class OptimizationRunner(QtCore.QObject):
                     utils.ThreadCommand(OptimizerThreadStatus.ADD_DATA,))
 
                 # Run the algo internal mechanic
-                self.optimization_algorithm.tell(float(self.input_from_dets))
+                self.optimization_algorithm.tell(self.input_from_dets)
 
-                dte = DataToExport('algo', data=[
-                    self.individual_as_data(
-                        np.array([self.optimization_algorithm.best_fitness]),
-                        DataNames.Fitness),
-                    self.individual_as_data(
-                        self.optimization_algorithm.best_individual,
-                        DataNames.Individual),
-
-                    DataCalculated(DataNames.Tradeoff,
-                                   data=[np.array([self.optimization_algorithm.tradeoff])])
-                    ])
-                self.algo_live_plot_signal.emit(dte,
-                                                self.output_to_actuators,
-                                                DataCalculated(DataNames.ProbedData,
-                                                               data=[np.array([self.input_from_dets])],
-                                                               origin='algo'))
+                dte_algo = individual_as_dte(self.optimization_algorithm.best_individual,
+                                             self.modules_manager.actuators,
+                                             DataNames.Individual)
+                dte_algo.append([DataCalculated(DataNames.Fitness,
+                                               data=[np.atleast_1d(self.optimization_algorithm.best_fitness)]),
+                                 ])
+                dte_algo.append(self.output_to_actuators)
+                dte_algo.append(DataCalculated(DataNames.ProbedData,
+                                               data=[np.array([self.input_from_dets])],
+                                               origin='algo'))
+                self.algo_live_plot_signal.emit(dte_algo)
 
                 
                 self.saver_signal.emit(DataToActuatorsOpti(DataNames.Actuators,
@@ -240,11 +238,6 @@ class OptimizationRunner(QtCore.QObject):
 
         except Exception as e:
             logger.exception(str(e))
-
-    @staticmethod
-    def individual_as_data(individual: np.ndarray, name: str = 'Individual') -> DataCalculated:
-        return DataCalculated(name, data=[np.atleast_1d(np.squeeze(coordinate)) for coordinate in
-                                          np.atleast_1d(np.squeeze(individual))])
 
 
 class GenericOptimization(CustomExt):

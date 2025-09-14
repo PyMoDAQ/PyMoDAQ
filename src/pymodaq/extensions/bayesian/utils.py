@@ -55,14 +55,11 @@ class BayesianAlgorithm(GenericAlgorithm):
     def tradeoff(self):
         return self._prediction.tradeoff
 
-    def reorder_array(self, arr: np.ndarray):
-        return np.array([self._algo.space.array_to_params(arr)[key] for key in self.actuators])
-
     @property
-    def bounds(self) -> List[np.ndarray]:
+    def bounds(self) -> dict[str, float]:
         """ Return bounds in the order specified at the beginning.
         """
-        return [bound for bound in self._algo.space.bounds]
+        return self._algo.space.array_to_params(self._algo.space.bounds)
 
     @bounds.setter
     def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
@@ -71,28 +68,12 @@ class BayesianAlgorithm(GenericAlgorithm):
         else:
             self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
 
-    def prediction_ask(self) -> np.ndarray:
+    def prediction_ask(self) -> dict[str, float]:
         """ Ask the prediction function or algo to provide the next point to probe
 
         Warning the space algo object is sorting by name the bounds...
         """
-        return self.reorder_array(self._prediction.suggest(self._algo._gp, self._algo.space))
-
-    def ask(self) -> list[np.ndarray]:
-        """ Predict next actuator values to probe
-
-        Return a list of numpy array, one per actuator. In general these array are 0D
-        """
-        try:
-            self._next_point = self.prediction_ask()
-            self._suggested_coordinates.append(self._next_point)
-            return [np.atleast_1d(value) for value in self._next_point]
-        except:
-            self.ini_random_points -= 1
-            self._next_point = self.get_random_point()
-            self._suggested_coordinates.append(self._next_point)
-            return self.reorder_array([np.atleast_1d(value) for value in self._next_point])
-
+        return self._algo.space.array_to_params(self._prediction.suggest(self._algo._gp, self._algo.space))
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
@@ -105,14 +86,14 @@ class BayesianAlgorithm(GenericAlgorithm):
             return self._algo.max['target']
 
     @property
-    def best_individual(self) -> Union[np.ndarray, None]:
+    def best_individual(self) -> Union[dict[str, float], None]:
         if self._algo.max is None:
             return None
         else:
             max_param = self._algo.max.get('params', None)
             if max_param is None:
                 return None
-            return self.reorder_array(self._algo.space.params_to_array(max_param))
+            return max_param
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:

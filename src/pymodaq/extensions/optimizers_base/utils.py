@@ -6,7 +6,7 @@ Created the 31/08/2023
 """
 import abc
 from abc import ABC
-from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
+from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable, Optional
 from pathlib import Path
 import importlib
 import pkgutil
@@ -42,6 +42,32 @@ StoppingParameters = namedtuple('StoppingParameters',
                                 ['niter', 'stop_type', 'tolerance', 'npoints'])
 
 
+def individual_as_dte(individual: dict[str, float], actuators: list['DAQ_Move'],
+                      name: str = 'Individual') -> DataToExport:
+    """ Create a DataToExport from the individual coordinates and the list of selected actuators"""
+    return DataToExport(
+        name,
+        data=[DataCalculated(actuators[ind].title,
+                             data=[np.atleast_1d(individual[actuators[ind].title])],
+                             units=actuators[ind].units,
+                             labels=[actuators[ind].title],
+                             origin=name)
+              for ind in range(len(individual))],)
+
+
+def individual_as_dta(individual: dict[str, float], actuators: list['DAQ_Move'],
+                      name: str = 'Individual', mode='abs') -> DataToActuators:
+    """ Create a DataToActuators from the individual coordinates and the list of selected actuators"""
+    return DataToActuators(
+        name, mode=mode,
+        data=[DataActuator(actuators[ind].title,
+                           data=[np.atleast_1d(individual[actuators[ind].title])],
+                           units=actuators[ind].units,
+                           labels=[actuators[ind].title],
+                           origin=name)
+              for ind in range(len(individual))],)
+
+
 class GenericAlgorithm(abc.ABC):
 
     def __init__(self, ini_random: int, bounds: dict):
@@ -51,8 +77,8 @@ class GenericAlgorithm(abc.ABC):
 
         self.actuators = list(bounds.keys())
 
-        self._next_point: np.ndarray = None
-        self._suggested_coordinates: List[np.ndarray] = []
+        self._next_point: Optional[dict[str, float]] = None
+        self._suggested_coordinates: list[dict[str, float]]  = []
         self.ini_random_points = ini_random
 
     @abc.abstractmethod
@@ -82,28 +108,28 @@ class GenericAlgorithm(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def bounds(self) -> List[np.ndarray]:
+    def bounds(self) -> dict[str, float]:
         pass
 
     @bounds.setter
-    def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
+    def bounds(self, bounds: dict[str, float]):
         if isinstance(bounds, dict):
             self._algo.set_bounds(bounds)
         else:
-            self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
+            raise TypeError('Invalid bounds definition')
 
-    def get_random_point(self) -> np.ndarray:
+    def get_random_point(self) -> dict[str, float]:
         """ Get a random point coordinates in the defined bounds"""
         point = []
         for bound in self.bounds:
             point.append((np.max(bound) - np.min(bound)) * np.random.random_sample() +
                          np.min(bound))
-        return np.array(point)
+        return self._algo.space.array_to_params(np.array(point))
 
-    def ask(self) -> list[np.ndarray]:
+    def ask(self) -> dict[str, float]:
         """ Predict next actuator values to probe
 
-        Return a list of numpy array, one per actuator. In general these array are 0D
+        Return a DataToActuator, one DataWithAxes per actuator. In general these dwa are 0D
         """
         try:
             self._next_point = self.prediction_ask()
@@ -111,10 +137,10 @@ class GenericAlgorithm(abc.ABC):
             self.ini_random_points -= 1
             self._next_point = self.get_random_point()
         self._suggested_coordinates.append(self._next_point)
-        return [np.atleast_1d(value) for value in self._next_point]
+        return self._next_point
 
     @abc.abstractmethod
-    def prediction_ask(self) -> np.ndarray:
+    def prediction_ask(self) -> dict[str, float]:
         """ Ask the prediction function or algo to provide the next point to probe"""
 
     @abc.abstractmethod
@@ -128,7 +154,7 @@ class GenericAlgorithm(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def best_individual(self) -> Union[np.ndarray, None]:
+    def best_individual(self) -> Union[dict[str, float], None]:
         pass
 
     @abc.abstractmethod
@@ -226,17 +252,18 @@ class OptimizerModelGeneric(ABC):
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
+    def convert_output(self, outputs: dict[str, Union[float, np.ndarray]],
+                       best_individual: Optional[dict[str, float]] = None) -> DataToActuators:
         """ Convert the output of the Optimisation Controller in units to be fed into the actuators
         Parameters
         ----------
-        outputs: list of numpy ndarray
+        outputs: dict with name of the actuator as key and the value to move to as a float (or ndarray)
             output value from the controller from which the model extract a value of the same units as the actuators
-        best_individual: np.ndarray
+        best_individual: dict[str, float]
             the coordinates of the best individual so far
         Returns
         -------
-        DataToActuatorOpti: derived from DataToExport. Contains value to be fed to the actuators with a a mode
+        DataToActuatorOpti: derived from DataToExport. Contains value to be fed to the actuators with a 'mode'
             attribute, either 'rel' for relative or 'abs' for absolute.
 
         """
@@ -297,28 +324,22 @@ class OptimizerModelDefault(OptimizerModelGeneric):
         origin, name = data_name.split('/')
         return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
 
-    def convert_output(self, outputs: List[np.ndarray], best_individual=None) -> DataToActuators:
+    def convert_output(self, outputs: dict[str, Union[float, np.ndarray]],
+                       best_individual: Optional[dict[str, float]] = None) -> DataToActuators:
         """ Convert the output of the Optimisation Controller in units to be fed into the actuators
         Parameters
         ----------
-        outputs: list of numpy ndarray
+        outputs: dict with name of the actuator as key and the value to move to as a float (or ndarray)
             output value from the controller from which the model extract a value of the same units as the actuators
-        best_individual: np.ndarray
+        best_individual: dict[str, float]
             the coordinates of the best individual so far
-
         Returns
         -------
-        DataToActuators: derived from DataToExport. Contains value to be fed to the actuators
-        with a mode            attribute, either 'rel' for relative or 'abs' for absolute.
+        DataToActuatorOpti: derived from DataToExport. Contains value to be fed to the actuators with a 'mode'
+            attribute, either 'rel' for relative or 'abs' for absolute.
 
         """
-        return DataToActuators(
-            'outputs', mode='abs',
-            data=[DataActuator(self.modules_manager.selected_actuators_name[ind],
-                               data=float(outputs[ind][0]),
-                               units=self.modules_manager.actuators[ind].units,
-                               labels=[self.modules_manager.selected_actuators_name[ind]])
-                  for ind in  range(len(outputs))],)
+        return individual_as_dta(outputs, self.modules_manager.actuators, 'outputs', mode='abs')
 
 
 def get_optimizer_models(model_name=None):
