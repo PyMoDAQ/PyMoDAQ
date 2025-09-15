@@ -31,6 +31,8 @@ from pymodaq_data.data import (DataToExport, DataCalculated,
 from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.utils.managers.modules_manager import ModulesManager
 
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 logger = set_logger(get_module_name(__file__))
 
