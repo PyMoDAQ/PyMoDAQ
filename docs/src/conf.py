@@ -16,6 +16,7 @@ import os
 import sys
 import datetime
 
+sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('./src'))
 sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions'))
 sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions/bayesian'))
@@ -75,6 +76,13 @@ extensions = [
 ]
 
 qt_documentation = "PySide6"
+
+# -- Custom Pygments lexer -----------------------------------------------------
+from sphinx.highlighting import lexers
+from pseudo_json_lexer import PseudoJsonLexer
+
+lexers['pseudojson'] = PseudoJsonLexer()
+
 # -- Options for autodocumentation ---------------------------------------------
 numfig = True
 
@@ -208,3 +216,5 @@ intersphinx_mapping = {'python': ('https://docs.python.org/', None)}
 datatables_options = {
 
 }
+
+

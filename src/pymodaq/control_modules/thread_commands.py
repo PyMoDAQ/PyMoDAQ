@@ -85,7 +85,6 @@ class ControlToHardwareViewer(StrEnum):
     SINGLE = 'single'
     GRAB = 'grab'
     STOP_GRAB = 'stop_grab'
-    STOP_ALL = 'stop_all'
     ROI_SELECT = 'roi_select'
     UPDATE_SCANNER = 'update_scanner'  # may be deprecated
     CROSSHAIR = 'crosshair'

@@ -594,7 +594,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_ALL, ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
         self._grabing = False
 
     @Slot()
@@ -1277,13 +1277,10 @@ class DAQ_Detector(QObject):
 
         elif command.command == ControlToHardwareViewer.STOP_GRAB:
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
-
-        elif command.command == ControlToHardwareViewer.STOP_ALL:
-            self.grab_state = False
             self.detector.stop()
             QtWidgets.QApplication.processEvents()
             self.status_sig.emit(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Stopping grab'))
+
 
         elif command.command == ControlToHardwareViewer.UPDATE_SCANNER:  # may be deprecated
             self.detector.update_scanner(command.attribute[0])
@@ -1381,8 +1378,7 @@ class DAQ_Detector(QObject):
             self.average_done = True  # expected to make sure the single_grab stop by itself
             self.data_detector_sig.emit(data)
         self.waiting_for_data = False
-        if not self.grab_state:
-            self.detector.stop()
+
 
     def single(self, Naverage=1, *args, **kwargs):
         """ Convenience function to grab a single set of data
