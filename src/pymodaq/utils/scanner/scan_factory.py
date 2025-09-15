@@ -87,11 +87,12 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     distribution: DataDistribution = abstract_attribute()
     save_settings = True
 
-    def __init__(self, actuators: List[DAQ_Move] = None):
+    def __init__(self, actuators: List[DAQ_Move] = None, display_units=True):
         super().__init__()
         self.positions: np.ndarray = None
         self.n_steps = 1
         self.config = ScanConfig()
+        self.display_units = display_units
         base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
 
         self.config_saver_loader = ConfigSaverLoader(self.settings,
@@ -102,9 +103,16 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
         self.set_settings_titles()
         self.set_settings_values()
+        if len(actuators) > 0:
+            self.set_units()
 
         if self.check_steps():
             self.set_scan()
+
+    @abstractmethod
+    def set_units(self):
+        """ Update settings units depending on the scanner type and the display_units boolean"""
+        ...
 
     def set_settings_titles(self):
         """Update the settings accordingly with the selected actuators"""

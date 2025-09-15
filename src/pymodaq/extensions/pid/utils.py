@@ -65,14 +65,14 @@ class PIDModelGeneric:
 
     def apply_constants(self):
         for kxx in self.konstants:
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'pid_constants',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'pid_constants',
                                                kxx).setValue(self.konstants[kxx])
 
     def apply_limits(self):
         for limit in self.limits:
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'output_limits',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'output_limits',
                                                f'output_limit_{limit}').setValue(self.limits[limit]['value'])
-            self.pid_controller.settings.child('main_settings', 'pid_controls', 'output_limits',
+            self.pid_controller.settings.child('main_settings', 'pid_settings', 'output_limits',
                                                f'output_limit_{limit}_enabled').setValue(self.limits[limit]['state'])
 
     def check_modules(self, modules_manager):
@@ -118,18 +118,21 @@ class PIDModelGeneric:
         """
         raise NotImplementedError
 
-    def convert_output(self, outputs: List[float], dt, stab=True) -> DataToActuators:
+    def convert_output(self, outputs: List[float], **kwargs) -> DataToActuators:
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
         ----------
         outputs: (list of float) output value from the PID from which the model extract a value of the same units as the actuator
-        dt: (float) elapsed time in seconds since last call
+        
         Returns
         -------
         DataToActuatorPID: the converted output as a DataToActuatorPID object (derived from DataToExport)
 
         """
+        if kwargs.get('dt', None) is not None or kwargs.get('stab', None) is not None:
+            logger.warning("dt and stab are deprecated, it will be removed in a future release.")
+
         self.curr_output = outputs
         return DataToActuators('pid', mode='rel',
                                  data=[DataActuator(self.actuators_name[ind], data=outputs[ind])

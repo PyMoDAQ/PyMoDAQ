@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, List, Any, TYPE_CHECKING, Sequence
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence
 import argparse
 
 
@@ -258,12 +258,11 @@ class DashBoard(CustomApp):
             if self.check_update(show=False):
                 sys.exit(0)
 
-    @classmethod
     @property
-    def splash_sc(cls) -> QtWidgets.QSplashScreen:
-        if cls._splash_sc is None:
-            cls._splash_sc = get_splash_sc()
-        return cls._splash_sc
+    def splash_sc(self) -> QtWidgets.QSplashScreen:
+        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
+            self._splash_sc = get_splash_sc()
+        return self._splash_sc
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -296,6 +295,132 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
+    def remove_detectors(self, detector_modules: List[DAQ_Viewer] = None):
+        """
+        Remove the given list of detectors from the dashboard.
+        Parameters
+        ----------
+        detector_modules: List[DAQ_Viewer]
+            List of DAQ_Viewer instances to be removed.
+        """
+        if detector_modules is None:
+            detector_modules = []
+        try:
+            for detector_module in detector_modules:
+                if detector_module in self.detector_modules:
+                    self.detector_modules.remove(detector_module)
+                detector_module.quit_fun()
+                dock = self.dockarea.docks.get(
+                    f"{detector_module.title} settings", None
+                )
+                if dock:
+                    dock.close()
+                dock = self.dockarea.docks.get(f"{detector_module.title} viewer", None)
+                if dock:
+                    dock.close()
+            self.update_module_manager()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
+        """
+        Remove the given list of actuators from the dashboard.
+        Parameters
+        ----------
+        actuator_modules: List[DAQ_Move]
+            List of DAQ_Move instances to be removed.
+        """
+        if actuator_modules is None:
+            actuator_modules = []
+        try:
+            for actuator_module in actuator_modules:
+                if actuator_module in self.actuators_modules:
+                    self.actuators_modules.remove(actuator_module)
+                actuator_module.quit_fun()
+                dock = self.dockarea.docks.get(actuator_module.title, None)
+                if dock:
+                    dock.close()
+            self.update_module_manager()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def get_docks_from_modules(
+        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]
+    ) -> List[Dock]:
+        """
+        Get a list of Dock instances from the given modules.
+
+        Parameters
+        ----------
+        modules: Sequence[DAQ_Move/DAQ_Viewer]
+            Sequence of DAQ_Move or DAQ_Viewer instances.
+
+        Returns
+        -------
+        List[Dock]
+            List of Dock instances corresponding to the given modules.
+        """
+        docks = []
+        for module in modules:
+            if hasattr(module, "dock"):
+                docks.append(module.dock)
+        return docks
+
+    def remove_modules(
+        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None
+    ):
+        """
+        Remove the given list of actuators/detectors from the dashboard.
+
+        Parameters
+        ----------
+        modules: List[DAQ_Move/DAQ_Viewer]
+            List of DAQ_Move/DAQ_Viewer instances to be removed.
+        """
+        if modules is None:
+            modules = []
+        try:
+            actuators_modules = []
+            detector_modules = []
+            for module in modules:
+                if isinstance(
+                    module, DAQ_Move
+                ):  # Test if module is an instance of DAQ_Move
+                    actuators_modules.append(module)
+                elif isinstance(
+                    module, DAQ_Viewer
+                ):  # Test if module is an instance of DAQ_Viewer
+                    detector_modules.append(module)
+                if isinstance(
+                    module, str
+                ):  # Test if module is a string (name of the module)
+                    actuators_modules.extend(
+                        self.modules_manager.get_mods_from_names(
+                            [
+                                module,
+                            ],
+                            "act",
+                        )  # For actuators
+                    )
+                    detector_modules.extend(
+                        self.modules_manager.get_mods_from_names(
+                            [
+                                module,
+                            ],
+                            "det",
+                        )  # For detectors
+                    )
+            if (hasattr(self, "actuators_modules")) & (
+                self.actuators_modules is not None
+            ):  # Remove actuators
+                self.remove_actuators(actuators_modules)
+            if (hasattr(self, "detector_modules")) & (
+                self.detector_modules is not None
+            ):  # Remove detectors
+                self.remove_detectors(detector_modules)
+        except Exception as e:
+            logger.exception(str(e))
+
     def clear_move_det_controllers(self):
         """
         Remove all docks containing Moves or Viewers.
@@ -306,16 +431,16 @@ class DashBoard(CustomApp):
         """
         try:
             # remove all docks containing Moves or Viewers
-            if hasattr(self, "actuators_modules"):
-                if self.actuators_modules is not None:
-                    for module in self.actuators_modules:
-                        module.quit_fun()
+            if hasattr(self, "actuators_modules") & (
+                self.actuators_modules is not None
+            ):
+                for module in self.actuators_modules:
+                    module.quit_fun()
                 self.actuators_modules = []
 
-            if hasattr(self, "detector_modules"):
-                if self.detector_modules is not None:
-                    for module in self.detector_modules:
-                        module.quit_fun()
+            if hasattr(self, "detector_modules") & (self.detector_modules is not None):
+                for module in self.detector_modules:
+                    module.quit_fun()
                 self.detector_modules = []
         except Exception as e:
             logger.exception(str(e))
@@ -348,6 +473,12 @@ class DashBoard(CustomApp):
             self.pid_window = QtWidgets.QMainWindow()
         else:
             self.pid_window = win
+        self.pid_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle("PID Controller")
@@ -870,6 +1001,13 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+                    self.create_menu_slot_roi(
+                        config_mod_pymodaq.get_set_roi_path().joinpath(self.preset_file.name)
+                    ),
+                )
+
 
         except Exception as e:
             logger.exception(str(e))
@@ -884,6 +1022,12 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+                    self.create_menu_slot_remote(
+                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
+                    ),
+                )
 
         except Exception as e:
             logger.exception(str(e))
@@ -898,6 +1042,12 @@ class DashBoard(CustomApp):
                     "",
                 )
                 self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
+                    self.create_menu_slot_over(
+                        config_mod_pymodaq.get_set_overshoot_path().joinpath(self.preset_file.name)
+                    ),
+                )
         except Exception as e:
             logger.exception(str(e))
 
@@ -1103,12 +1253,19 @@ class DashBoard(CustomApp):
             plug_name: str = None,
             plug_settings: Parameter = None,
             plug_type: str = None,
-            move_docks: list[Dock] = [],
-            move_forms: list[QtWidgets.QWidget] = [],
-            actuators_modules: list[DAQ_Move] = [],
+            move_docks: list[Dock] = None,
+            move_forms: list[QtWidgets.QWidget] = None,
+            actuators_modules: list[DAQ_Move] = None,
             ui_identifier: str = None,
             **kwargs
-    ) -> DAQ_Move:
+    ) -> DAQ_Move:        
+        if move_docks is None:
+            move_docks = []
+        if move_forms is None:
+            move_forms = []
+        if actuators_modules is None:
+            actuators_modules = []      
+
         if ui_identifier is not None:
             pass
         elif plug_settings is None:
@@ -1118,6 +1275,7 @@ class DashBoard(CustomApp):
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
                 ui_identifier = config("actuator", "ui")
+
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
             if ui_identifier is not None
@@ -1811,7 +1969,7 @@ class DashBoard(CustomApp):
                     severity="critical",
                     title="Preset loading error",
                     text=f"""
-                            <p>{error}<\p>
+                            <p>{error}</p>
                             <p>This error may be related to:</p>
                             <p>Saved preset file is not compatible anymore.</p>
                             <p>Please recreate the preset at <b>{filename}</b>.</p>

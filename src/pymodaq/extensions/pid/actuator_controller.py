@@ -7,7 +7,8 @@ if TYPE_CHECKING:
 class PIDController:
     """ Fake controller object for the DAQ_Move_PID"""
 
-    def __init__(self, daq_pid: 'DAQ_PID'):
+    def __init__(self, daq_pid: 'DAQ_PID', set_point_name: str = 'setpoint'):
         self.curr_point = daq_pid.curr_points_signal
         self.setpoint = daq_pid.setpoints_signal
         self.emit_curr_points = daq_pid.emit_curr_points_sig
+        self.queue_points = daq_pid.queue_points[set_point_name]
