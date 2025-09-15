@@ -320,10 +320,10 @@ class DAQ_PID(CustomExt):
         #     np.mean(np.array(queue) - setpoint)
         #     for queue, setpoint in zip(self.queue_points.values(), self.setpoints)
         # ]
-        queues_length = len(list(self.queue_points.values())[0])
+        # queues_length = len(list(self.queue_points.values())[0])
         self.stab_points = [
-            np.sqrt(np.cov(_queue, aweights=self.queue_weight[:queues_length], ddof=0))
-            for _queue in zip(self.queue_points.values())
+            np.sqrt(np.cov(_queue, aweights=self.queue_weight[:len(_queue)], ddof=0))
+            for _queue in self.queue_points.values()
         ]            
         self.output_viewer.show_data(outputs)
         self.input_viewer.show_data(inputs_plot)
