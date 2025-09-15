@@ -530,7 +530,7 @@ class GenericOptimization(CustomExt):
             dte_act = DataToActuators('best',
                                       data=[
                                           DataActuator(actuators[ind],
-                                                       data=float(best_individual[ind]))
+                                                       data=float(best_individual[actuators[ind]]))
                                           for ind in range(len(best_individual))
                                       ],
                                       mode='abs')
@@ -592,10 +592,11 @@ class GenericOptimization(CustomExt):
                 if not viewer.is_action_checked('scatter'):
                     viewer.get_action('scatter').trigger()
             if viewer.has_action('autolevels'):
-                if not viewer.is_action_checked('autolevels'):
+                if viewer.is_action_checked('autolevels'):
+                    viewer.get_action('autolevels').trigger()
                     viewer.get_action('autolevels').trigger()
             if viewer.has_action('aspect_ratio'):
-                if not viewer.is_action_checked('aspect_ratio'):
+                if viewer.is_action_checked('aspect_ratio'):
                     viewer.get_action('aspect_ratio').trigger()
 
         QtWidgets.QApplication.processEvents()
