@@ -118,10 +118,7 @@ class GenericAlgorithm(abc.ABC):
 
     @bounds.setter
     def bounds(self, bounds: dict[str, tuple[float, float]]):
-        if isinstance(bounds, dict):
-            self._algo.set_bounds(bounds)
-        else:
-            raise TypeError('Invalid bounds definition')
+        ...
 
     @abc.abstractmethod
     def get_random_point(self) -> dict[str, float]:

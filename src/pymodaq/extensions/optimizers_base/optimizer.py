@@ -591,6 +591,12 @@ class GenericOptimization(CustomExt):
             if viewer.has_action('scatter'):
                 if not viewer.is_action_checked('scatter'):
                     viewer.get_action('scatter').trigger()
+            if viewer.has_action('autolevels'):
+                if not viewer.is_action_checked('autolevels'):
+                    viewer.get_action('autolevels').trigger()
+            if viewer.has_action('aspect_ratio'):
+                if not viewer.is_action_checked('aspect_ratio'):
+                    viewer.get_action('aspect_ratio').trigger()
 
         QtWidgets.QApplication.processEvents()
         win_width = self.dockarea.width()
@@ -710,9 +716,10 @@ class GenericOptimization(CustomExt):
         self.model_class.runner_initialized()
         self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RESTART, self.algorithm))
         self.update_prediction_function()
-        for viewer in self.viewer_observable.viewers:
-            if isinstance(viewer, Viewer0D):
-                viewer.view.data_displayer.clear_data()
+        if self.viewer_observable is not None:
+            for viewer in self.viewer_observable.viewers:
+                if isinstance(viewer, Viewer0D):
+                    viewer.view.data_displayer.clear_data()
 
         self.enl_index = 0
         self.ini_temp_file()

@@ -72,11 +72,11 @@ class BayesianAlgorithm(GenericAlgorithm):
         return self._algo.space.array_to_params(self._algo.space.bounds)
 
     @bounds.setter
-    def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
+    def bounds(self, bounds: Dict[str, Tuple[float, float]]):
         if isinstance(bounds, dict):
             self._algo.set_bounds(bounds)
         else:
-            self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
+            raise TypeError('Bounds should be defined as a dictionary')
 
     def prediction_ask(self) -> dict[str, float]:
         """ Ask the prediction function or algo to provide the next point to probe

@@ -148,6 +148,7 @@ class AdaptiveOptimisation(GenericOptimization):
         self.algorithm = AdaptiveAlgorithm(
             ini_random=1,
             bounds=self.format_bounds(),
+            actuators=self.modules_manager.selected_actuators_name,
             loss_type=LossDim(self.settings['main_settings', 'prediction', 'lossdim']),
             kind=self.settings['main_settings', 'prediction', 'kind'])
 
