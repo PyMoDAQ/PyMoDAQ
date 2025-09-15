@@ -77,7 +77,7 @@ def optimizer_params(prediction_params: list[dict]):
                    'min': 1e-8, 'max': 1, 'subtype': 'log', },
                   {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
               ]},
-             {'title': 'Ini. State', 'name': 'ini_random', 'type': 'int', 'value': 5},
+             {'title': 'Ini. Random Points', 'name': 'ini_random', 'type': 'int', 'value': 5},
              {'title': 'bounds', 'name': 'bounds', 'type': 'group', 'children': []},
          ]},
 
@@ -150,6 +150,9 @@ class OptimizationRunner(QtCore.QObject):
 
         elif command.command == OptimizerToRunner.BOUNDS:
             self.optimization_algorithm.bounds = command.attribute
+
+        elif command.command == OptimizerToRunner.RESTART:
+            self.optimization_algorithm = command.attribute
 
     def run_opti(self, sync_detectors=True, sync_acts=True):
         """Start the optimization loop
@@ -234,7 +237,7 @@ class OptimizationRunner(QtCore.QObject):
             self.modules_manager.connect_detectors(False)
 
             if converged:
-                self.algo_finished.emit(dte)
+                self.algo_finished.emit(dte_algo)
 
         except Exception as e:
             logger.exception(str(e))
@@ -262,7 +265,6 @@ class GenericOptimization(CustomExt):
         self._ini_runner = False
 
         self.algorithm: Optional[GenericAlgorithm] = None
-        self.viewer_fitness: Optional[Viewer0D] = None
         self.viewer_observable: Optional[ViewerDispatcher] = None
         self.model_class: Optional[OptimizerModelGeneric] = None
         self._save_main_settings = True
@@ -505,6 +507,7 @@ class GenericOptimization(CustomExt):
                         enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
         self.add_action('run', 'Run Optimisation', 'run2', checkable=True, enabled=False)
+        self.add_action('restart', 'Restart algo', 'Refresh2', checkable=False, enabled=False)
         self.add_action('gotobest', 'Got to best individual', 'move_contour', enabled=False,
                         tip='Go to the best individual guessed by the algorithm')
         logger.debug('actions set')
@@ -515,6 +518,7 @@ class GenericOptimization(CustomExt):
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimization_runner)
         self.connect_action('run', self.run_optimization)
+        self.connect_action('restart', self.restart_algo)
         self.connect_action('gotobest', self.go_to_best)
         self.connect_action('save', self.ini_saver)
         self.h5saver.new_file_sig.connect(self.create_new_file)
@@ -654,8 +658,8 @@ class GenericOptimization(CustomExt):
             self.set_action_enabled('ini_model', False)
 
             if self.DISPLAY_BEST:
-                self.viewer_observable.update_viewers(['Viewer0D', 'Viewer0D'],
-                                                      ['Fitness', 'Individual'])
+                self.viewer_observable.update_viewers(['Viewer0D'] + ['Viewer0D' for _ in self.modules_manager.selected_actuators_name],
+                                                      ['Fitness'] + [act for act in self.modules_manager.selected_actuators_name])
             self.settings.child('models', 'ini_model').setValue(True)
             self.settings.child('models', 'ini_runner').setOpts(enabled=True)
             self.set_action_enabled('ini_runner', True)
@@ -684,6 +688,39 @@ class GenericOptimization(CustomExt):
             self.create_new_file(True)
             self.module_and_data_saver.h5saver = self.h5saver
 
+    def recursive_enable(self, param: putils.Parameter, enable=True):
+        param.setOpts(enabled=enable)
+        for child in param.children():
+            self.recursive_enable(child, enable)
+
+    def enable_settings_run(self, enable=True):
+        self.modules_manager.settings_tree.setEnabled(enable)
+        self.recursive_enable(self.settings.child('models'), enable)
+        self.recursive_enable(self.settings.child('main_settings', 'bounds'), enable)
+        self.recursive_enable(self.settings.child('main_settings', 'ini_random'), enable)
+
+    def restart_algo(self):
+        running = False
+        if self.is_action_checked('run'):
+            running = True
+            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
+            QtWidgets.QApplication.processEvents()
+
+        self.set_algorithm()
+        self.model_class.runner_initialized()
+        self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RESTART, self.algorithm))
+        self.update_prediction_function()
+        for viewer in self.viewer_observable.viewers:
+            if isinstance(viewer, Viewer0D):
+                viewer.view.data_displayer.clear_data()
+
+        self.enl_index = 0
+        self.ini_temp_file()
+        self.ini_live_plot()
+
+        if running:
+            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
+
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
             if not self.model_class.has_fitness_observable():
@@ -691,8 +728,7 @@ class GenericOptimization(CustomExt):
                 self.set_action_checked('ini_runner', False)
                 return
 
-            self.settings_tree.setEnabled(False)
-            self.modules_manager.settings_tree.setEnabled(False)
+            self.enable_settings_run(False)
             if not self._ini_runner:
                 self._ini_runner = True
                 self.set_algorithm()
@@ -721,12 +757,12 @@ class GenericOptimization(CustomExt):
                 self.runner_thread.start()
                 self.get_action('runner_led').set_as_true()
                 self.set_action_enabled('run', True)
+                self.set_action_enabled('restart', True)
                 self.model_class.runner_initialized()
                 self.update_prediction_function()
         else:
             self.set_action_enabled('ini_runner', False)
-            self.settings_tree.setEnabled(True)
-            self.modules_manager.settings_tree.setEnabled(True)
+            self.enable_settings_run(True)
             if self.is_action_checked('run'):
                 self.get_action('run').trigger()
                 QtWidgets.QApplication.processEvents()
@@ -747,6 +783,7 @@ class GenericOptimization(CustomExt):
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
             self.set_action_enabled('run', False)
+            self.set_action_enabled('restart', False)
             self.set_action_enabled('ini_runner', True)  # reactivate the action only when the thread is finished
 
     def clean_h5_temp(self):
@@ -765,8 +802,13 @@ class GenericOptimization(CustomExt):
         self.enl_index += 1
         self.model_class.update_plots()
 
-        if self.DISPLAY_BEST:
-            self.viewer_observable.show_data(dte_algo)
+        dwa_data = dte_algo.pop(dte_algo.index_from_name_origin(DataNames.ProbedData, 'algo'))
+
+        actuators_values = [
+            dte_algo.get_data_from_name_origin(
+                act,
+                DataNames.Actuators)
+            .value() for act in self.modules_manager.selected_actuators_name]
 
         best_individual = [
             dte_algo.get_data_from_name_origin(
@@ -774,14 +816,26 @@ class GenericOptimization(CustomExt):
                 DataNames.Individual)
             .value() for act in self.modules_manager.selected_actuators_name]
 
+        fitness = dte_algo.get_data_from_name('fitness')
 
-        dwa_data = dte_algo.get_data_from_name(DataNames.ProbedData)
+        dte_live = DataToExport('Live', data=[
+            DataCalculated('Fitness',
+                           data=[np.atleast_1d(dwa_data.value()), np.atleast_1d(fitness.value())],
+                           labels=['Fitness', 'Fitness_best']
+                           ),])
+        for ind, act in enumerate(self.modules_manager.actuators):
+            dte_live.append([
+                DataCalculated(act.title,
+                               data=[np.atleast_1d(actuators_values[ind]),
+                                     np.atleast_1d(best_individual[ind])],
+                               labels=[act.title, f'{act.title}_best'],
+                               units=act.units
+                           ),
+                                ])
 
-        actuators_values = [
-            dte_algo.get_data_from_name_origin(
-                act,
-                DataNames.Actuators)
-            .value() for act in self.modules_manager.selected_actuators_name]
+        if self.DISPLAY_BEST:
+            self.viewer_observable.show_data(dte_live)
+
 
         self.enlargeable_saver.add_data('/RawData', dwa_data,
                                         axis_values=actuators_values)

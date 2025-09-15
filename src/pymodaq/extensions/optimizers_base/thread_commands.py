@@ -10,7 +10,7 @@ class OptimizerToRunner(StrEnum):
     STOP = 'stop'
     STOPPING = 'stopping'
     BOUNDS = 'bounds'
-
+    RESTART = 'restart'
     PREDICTION = 'prediction'
 
 
