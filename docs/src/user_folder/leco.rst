@@ -1,4 +1,4 @@
-.. _leco:
+.. _leco_communication:
 
 LECO communication
 ==================
@@ -36,16 +36,22 @@ Any control module from any plugins package can be made an Actor.
 1. Start the module you want to control your instrument.
 2. Select in the main settings the LECO options.
    - `Host` name and `port` are the host name and port of the Coordinator started above.
-     If the Coordinator is on the same machine (i.e. localhost) and on the default port, you do not have to enter anything.
+   If the Coordinator is on the same machine (i.e. localhost) and on the default port, you do not have to enter anything.
    - `Name` defines how this module should participate in the LECO network.
-     If you leave it empty, the name of the module is taken.
-3. Click on `connect`,
-4. Now the green lamp should be lit and the Actor is ready to be used
+   If you leave it empty, the name of the module is taken.
+3. Click on `connect`, the green lamp should be lit and the Actor is ready to be used
 
 .. note::
 
     You can change the name, even after having clicked connect.
 
+
+.. _fig_leco_actor_daq_viewer:
+
+.. figure:: /image/leco_communication/leco_actor_daq_viewer.png
+    :alt: Mock plugin as a LECO Actor in a DAQ_Viewer
+
+    Mock plugin as a LECO Actor in a DAQ_Viewer
 
 Director
 --------
@@ -58,6 +64,12 @@ You can start the *LECODirector* module from the mock plugins package, either in
 3. Initialize the detector/actuator.
 4. Read values or control the module remotely.
 
+.. _fig_leco_director_daq_viewer:
+
+.. figure:: /image/leco_communication/leco_director_daq_viewer.png
+    :alt: Mock plugin as a LECO Director in a DAQ_Viewer
+
+    Mock plugin as a LECO Director in a DAQ_Viewer
 
 Developing with LECO for PyMoDAQ
 --------------------------------
@@ -76,6 +88,8 @@ After the movement or data acquisition has finished, it will call a method on so
 If you want, that the Actor sends the request to your Director, you have to tell the Actor about your name via the ``set_remote_name()`` method.
 
 The :mod:`pymodaq.utils.leco.director_utils` module offers director classes, which makes it easier to call the corresponding methods of the Actor.
+
+.. _leco_communication_serialization:
 
 Serialization
 .............
