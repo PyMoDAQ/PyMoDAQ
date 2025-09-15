@@ -11,7 +11,17 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory
 from pymodaq.utils.parameter import utils as putils
 
 scanner_factory = ScannerFactory()
-config_scanner = dict(actuators=['act1', 'act2', 'act3'])
+
+units = ['nm', 'kW', 'ms']
+
+class MoveMock:
+    def __init__(self, ind: int = 0):
+        self.title = f'act_{ind}'
+        self.units = units[ind]
+
+actuators = [MoveMock(ind) for ind in range(3)]
+
+config_scanner = dict(actuators=actuators)
 
 
 class TestSettings:

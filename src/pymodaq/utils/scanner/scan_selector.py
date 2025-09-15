@@ -311,9 +311,7 @@ class ScanSelector(ParameterManager, QObject):
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        styledItemDelegate = QtWidgets.QStyledItemDelegate()
-        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
-        self.table_view.setItemDelegate(styledItemDelegate)
+        self.table_view.setItemDelegate(gutils.SpinBoxDelegate())
 
         self.table_view.setDragEnabled(False)
         self.table_view.setDropIndicatorShown(False)

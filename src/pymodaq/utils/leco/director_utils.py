@@ -47,12 +47,12 @@ class DetectorDirector(GenericDirector):
 
 
 class ActuatorDirector(GenericDirector):
-    def move_abs(self, position: Union[float, DataActuator]) -> None:
+    def move_abs(self, position: Union[list, float, DataActuator]) -> None:
         self.ask_rpc(
             MoveMethods.MOVE_ABS, **binary_serialization_to_kwargs(position, data_key="position")
         )
 
-    def move_rel(self, position: Union[float, DataActuator]) -> None:
+    def move_rel(self, position: Union[list, float, DataActuator]) -> None:
         self.ask_rpc(
             MoveMethods.MOVE_REL, **binary_serialization_to_kwargs(position, data_key="position")
         )

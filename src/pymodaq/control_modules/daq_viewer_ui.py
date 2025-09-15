@@ -225,11 +225,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
 
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_LOG, )))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.STOP, )))
-        self.connect_action('stop', lambda: self.get_action('grab').setChecked(False))
-        self.connect_action('stop', lambda: self._enable_ini_buttons(True))
-        self.connect_action('stop', lambda: self._settings_widget.setEnabled(True))
-
+        self.connect_action('stop', self._stop)
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
@@ -291,6 +287,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._enable_ini_buttons(not self.is_action_checked('grab'))
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+
+    def _stop(self):
+        """Slot from the *stop* action"""
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.STOP, ))
+        self.get_action('grab').setChecked(False)
+        self._enable_ini_buttons(True)
+        self._settings_widget.setEnabled(True)
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

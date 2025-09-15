@@ -32,8 +32,8 @@ class Scan2DBase(ScannerBase):
                 ]
     axes = ('axis1','axis2')    
     n_axes = 2
-    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
-        super().__init__(actuators=actuators)
+    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
+        super().__init__(actuators=actuators, display_units=display_units)
         self.axes_unique = []
 
         
@@ -64,8 +64,19 @@ class Scan2DLinear(Scan2DBase):
     scan_type = 'Scan2D'
     scan_subtype = 'Linear'
 
-    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
-        super().__init__(actuators=actuators)
+    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
+        super().__init__(actuators=actuators, display_units=display_units)
+
+    def set_units(self):
+        """ Update settings units depending on the scanner type and the display_units boolean"""
+        if len(self.actuators) > 0:
+            for child in self.settings.child('axis1').children():
+                child.setOpts(
+                    suffix='' if not self.display_units else self.actuators[0].units)
+        if len(self.actuators) > 1:
+            for child in self.settings.child('axis2').children():
+                child.setOpts(
+                    suffix='' if not self.display_units else self.actuators[1].units)
 
     def get_pos(self):
         starts = np.array([self.settings[ax, f'start_{ax}'] for ax in self.axes])
@@ -133,8 +144,8 @@ class Scan2DLinear(Scan2DBase):
 class Scan2DLinearBF(Scan2DLinear):
     scan_subtype = 'LinearBackForce'
 
-    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
-        super().__init__(actuators=actuators)
+    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
+        super().__init__(actuators=actuators, display_units=display_units)
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
@@ -163,8 +174,8 @@ class Scan2DLinearBF(Scan2DLinear):
 class Scan2DRandom(Scan2DLinear):
     scan_subtype = 'Random'
 
-    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
-        super().__init__(actuators=actuators)
+    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
+        super().__init__(actuators=actuators, display_units=display_units)
 
     def set_scan(self):
         super().set_scan()
@@ -197,8 +208,8 @@ class Scan2DSpiral(Scan2DLinear):
                ]},
               ]  
    
-    def __init__(self, actuators: List['DAQ_Move'] = None, **_ignored):
-        super().__init__(actuators=actuators)
+    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
+        super().__init__(actuators=actuators, display_units=display_units)
 
     def set_settings_titles(self):
         if len(self.actuators) == 2:
