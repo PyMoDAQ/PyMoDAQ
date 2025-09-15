@@ -700,29 +700,31 @@ class DAQ_PID(CustomExt):
                 isbold=True,
                 isitalic=True,
             )
-            self.toolbar_layout.addWidget(label, 2, 2 + ind_set, 1, 1)
+            col_ind = 2 + ind_set
+
+            self.toolbar_layout.addWidget(label, 2, col_ind, 1, 1)
 
             self.setpoints_sb.append(self.make_spinbox(no_button=False))
             self.toolbar_layout.addWidget(
-                self.setpoints_sb[-1], 3, 2 + ind_set, 1, 1
+                self.setpoints_sb[-1], 3, col_ind, 1, 1
             )
 
             self.setpoints_sb[-1].valueChanged.connect(self.update_runner_setpoints)
 
             self.currpoints_sb.append(self.make_spinbox())
             self.toolbar_layout.addWidget(
-                self.currpoints_sb[-1], 4, 2 + ind_set, 1, 1
+                self.currpoints_sb[-1], 4, col_ind, 1, 1
             )
 
             self.stabpoints_sb.append(self.make_spinbox())
-            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, 2 + ind_set, 1, 1)
+            self.toolbar_layout.addWidget(self.stabpoints_sb[-1], 5, col_ind, 1, 1)
             self.syncvalue_pb.append(
                 QtWidgets.QPushButton("Synchro {}".format(ind_set))
             )
             self.syncvalue_pb[ind_set].clicked.connect(
                 partial(self.currpoint_as_setpoint, ind_set)
             )
-            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, 2 + ind_set, 1, 1)
+            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 6, col_ind, 1, 1)
         self.setpoints_signal.connect(self.setpoints_external)
 
     def make_spinbox(self, no_button=True):
