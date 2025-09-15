@@ -976,7 +976,8 @@ class PIDRunner(QObject):
             for key in option:
                 if hasattr(pid, key):
                     if key == "sample_time":
-                        setattr(pid, key, option[key] / 1000)
+                        self.sample_time = option[key] / 1000
+                        setattr(pid, key, self.sample_time)
                         self.refresh_queues()
                     else:
                         setattr(pid, key, option[key])
