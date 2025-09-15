@@ -571,8 +571,8 @@ class DAQ_PID(CustomExt):
             QtWidgets.QApplication.processEvents()
 
             self.command_pid.emit(
-                ThreadCommand("run_PID", [self.model_class.curr_output])
-            )
+                ThreadCommand("run_PID", [np.zeros_like(self.model_class.curr_output)])
+                )
         else:
             self.get_action("run").set_icon("run2")
             self.command_pid.emit(ThreadCommand("stop_PID"))
