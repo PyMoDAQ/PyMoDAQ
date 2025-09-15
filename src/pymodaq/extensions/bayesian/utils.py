@@ -113,8 +113,10 @@ class BayesianAlgorithm(GenericAlgorithm):
         if ind_iter >= stopping_parameters.niter:
             return True
         if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            coordinates = np.array(self._suggested_coordinates[-stopping_parameters.npoints:]).T
-            return np.all(np.std(coordinates, axis=1)
+            coordinates = np.atleast_1d([
+                [coordinates[act] for coordinates in self._suggested_coordinates[-stopping_parameters.npoints:]]
+                for act in self.actuators])
+            return np.all((np.std(coordinates, axis=1) / np.mean(coordinates, axis=1))
                           < stopping_parameters.tolerance)
         return False
 

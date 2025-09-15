@@ -97,7 +97,7 @@ class AdaptiveAlgorithm(GenericAlgorithm):
         """ Return the individual coordinates with best fitness"""
 
         if len(self._algo.data) > 0:
-            individual_array =  np.array(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
+            individual_array =  np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
         else:
             individual_array =  np.atleast_1d(self._algo.bounds[0])
         return dict(zip(self.actuators, individual_array))

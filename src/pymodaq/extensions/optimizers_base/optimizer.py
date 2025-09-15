@@ -153,6 +153,7 @@ class OptimizationRunner(QtCore.QObject):
 
         elif command.command == OptimizerToRunner.RESTART:
             self.optimization_algorithm = command.attribute
+            self._ind_iter = -1
 
     def run_opti(self, sync_detectors=True, sync_acts=True):
         """Start the optimization loop
@@ -707,10 +708,9 @@ class GenericOptimization(CustomExt):
         self.recursive_enable(self.settings.child('main_settings', 'ini_random'), enable)
 
     def restart_algo(self):
-        running = False
+
         if self.is_action_checked('run'):
-            running = True
-            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
+            self.get_action('run').trigger()
             QtWidgets.QApplication.processEvents()
 
         self.set_algorithm()
@@ -726,8 +726,7 @@ class GenericOptimization(CustomExt):
         self.ini_temp_file()
         self.ini_live_plot()
 
-        if running:
-            self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
+        self.get_action('run').trigger()
 
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
@@ -804,6 +803,7 @@ class GenericOptimization(CustomExt):
 
     def optimization_done(self, dte: DataToExport):
         self.go_to_best()
+        self.get_action('run').trigger()
         self.optimization_done_signal.emit(dte)
 
     def do_live_plot(self, dte_algo: DataToExport):
