@@ -8,8 +8,6 @@ from adaptive.learner.learner2D import (
     resolution_loss_function,
     minimize_triangle_surface_loss,
     thresholded_loss_function,
-    triangle_loss,
-
 )
 
 
@@ -19,10 +17,6 @@ def default_loss_function(*args, **kwargs):  #should be wrapped to handle eventu
 
 def uniform_loss_function(**kwargs):  #should be wrapped to handle eventual initializing argument, see params attributes below
     return uniform_loss
-
-
-def triangle_loss_function(**kwargs):  #should be wrapped to handle eventual initializing argument, see params attributes below
-    return triangle_loss
 
 
 def minimize_triangle_surface_loss_function(**kwargs):  #should be wrapped to handle eventual initializing argument, see params attributes below
@@ -77,10 +71,3 @@ class ThresholdLoss(LossFunctionBase):
         {'title': 'Priority factor:', 'name': 'priority_factor', 'type': 'float', 'value': 0.1,},
     ]
 
-
-@LossFunctionFactory.register()
-class TriangleLoss(LossFunctionBase):
-    _loss = staticmethod(triangle_loss)
-    dim = LossDim.LOSS_2D
-    usual_name = 'Triangle'
-    params = []
