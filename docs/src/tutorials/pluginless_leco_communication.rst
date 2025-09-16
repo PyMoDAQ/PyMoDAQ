@@ -12,7 +12,7 @@ then be still used while benefiting all of PyMoDAQ's advantages: extensions, sav
 There are  two different use cases: eiter your code is in python or it is not.
 
 Python Devices Drivers Without PyMoDAQ Plugin
-------------------------------------------
+---------------------------------------------
 If you are already communicating with devices in python and that the effort to translate them into pymodaq plugins
 is too high (or time too short), you can easily connect them with the PymoDAQ ecosystem (even though it is *really*
 recommended to implement their instrument plugin).
@@ -211,7 +211,7 @@ Here is a list of exchanged messages.
 Network API Message Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All communication uses **LECO multipart frames** over ZMQ:
+All communication uses **LECO multipart frames** over ZMQ using a ``DEALER`` type socket:
 
 - ``[ version, receiver, sender, LECO header, payload ]``
 
@@ -223,11 +223,13 @@ All communication uses **LECO multipart frames** over ZMQ:
     requests/responses) but can be changed between each next request if wanted.
     - ``message_id`` generaly starts at 0, but must stay the same between a request and its answer.
     - ``message_type`` is always JSON (value of ``1``)
+
     .. note::
         This specification is subject to change; please keep up to date with the
         `LECO documentation <https://leco-laboratory-experiment-control-protocol.readthedocs.io/en/latest/>`_
         and its `GitHub repository <https://github.com/pymeasure/leco-protocol>`_.
   - ``payload``: UTF-8 JSON (JSON-RPC 2.0)
+
   .. note::
      In the following message examples, given ``id`` values are not specific to the ``method``, the must remain
      the same between a method and its result, but could be any valid integer value.
@@ -249,6 +251,10 @@ Here is a recap of JSON-RPC payload structure:
       "method": "<name>",
       "params": { ... }
     }
+
+.. tip::
+    When an entry value is not set, such as ``params`` in ``sign_in`` messages, it can either be left empty (``{}``),
+    explicitly set to ``null`` or omitted.
 
 - Expected Response:
 
@@ -443,6 +449,7 @@ when the name is already taken. The coordinator retrieves the name from ``sender
 
 .. py:attribute:: sign_out
    Communication flow: Actor → Coordinator
+
 Unregister a LECO component with the coordinator. It is crucial to try as much as possible to send the message as it
 will otherwise keep the name unusable for at least a few minutes.
 
@@ -472,6 +479,7 @@ will otherwise keep the name unusable for at least a few minutes.
 
 .. py:attribute:: set_remote_name
    Communication flow: Director → Actor
+
 Most instrument data shared between LECO components is shared asynchronously, thus an actor will need to initiate
 communication with a director. Using this method, an actor stores the name of the director to which it should
 send requests in the future. The stored name is the one in ``sender`` in the LECO protocol header.
@@ -502,6 +510,7 @@ send requests in the future. The stored name is the one in ``sender`` in the LEC
 
 .. py:attribute:: get_settings
    Communication flow: Director → Actor
+
 Ask for the instrument settings, so that they can be accessed (read/write) by the LECODirector. The easiest is to send
 an empty JSON object, as settings are expected to use binary serialization. Doing so makes it impossible to access the
 settings on the Director side. **It's a known limitation of communication with non PyMoDAQ components**.
@@ -532,6 +541,7 @@ settings on the Director side. **It's a known limitation of communication with n
 
 .. py:attribute:: pong
    Communication flow: Coordinator/Director → Actor
+
 A method sent by the coordinator to check if a LECO component is still alive, after a moment of inactivity. It is also
 sent periodically by the director.
 
@@ -561,6 +571,7 @@ sent periodically by the director.
 
 .. py:attribute:: rpc.discover
    Communication flow: Director → Actor
+
 Not implemented and it should not even be called. Response can be an error:
 
 .. code-block:: json
@@ -849,6 +860,8 @@ the used units. For example `"cm"` for centimeters.
       "result": null
     }
 
+.. _detector_synchronous_message:
+
 Detector Messages (Synchronous)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Messages only used when communicating with a actuator. These are the requests made by the Director and correspond to
@@ -951,7 +964,7 @@ this request.
 
 
 Detector Messages (Asynchronous)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Messages only used when communicating with an detector. These are asynchronous responses (in the form of JSON-RPC
 requests) made by the Actor, in response of :ref:`synchronous requests <detector_synchronous_message>`.
 They are sent to the receiver saved after processing :py:attr:`set_remote_name`.
