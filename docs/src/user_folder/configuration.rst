@@ -95,8 +95,11 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
     default_preset_for_scan = "preset_default"
     default_preset_for_logger = "preset_default"
 
-For list entries, the default value used by PyMoDAQ is the first one. You can change it either by modifying the file
- and placing the desired value as the first element or directly from the GUI by selecting it from the combo box.
+.. important::
+
+  For list entries, the default value used by PyMoDAQ is the first one. You can change it either by modifying the file
+  and placing the desired value as the first element or directly from the GUI by selecting it from the combo box.
+
 
 .. _plugins_configuration_files:
 
