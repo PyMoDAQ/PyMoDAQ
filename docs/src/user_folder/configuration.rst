@@ -97,8 +97,8 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
 
 .. important::
 
-  For list entries, the default value used by PyMoDAQ is the first one. You can change it either by modifying the file
-  and placing the desired value as the first element or directly from the GUI by selecting it from the combo box.
+   For list entries, the default value used by PyMoDAQ is the first one. You can change it either by modifying the file
+   and placing the desired value as the first element or directly from the GUI by selecting it from the combo box.
 
 
 .. _plugins_configuration_files:
