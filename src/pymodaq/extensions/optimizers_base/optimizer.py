@@ -719,6 +719,10 @@ class GenericOptimization(CustomExt):
                 enl_axis_units=[act.units for act in self.modules_manager.actuators])
             self.create_new_file(True)
             self.module_and_data_saver.h5saver = self.h5saver
+            self.check_create_save_node()
+        else:
+            self.module_and_data_saver.forget_h5()
+            self.module_and_data_saver.h5saver.close_file()
 
     def recursive_enable(self, param: putils.Parameter, enable=True):
         param.setOpts(enabled=enable)
@@ -750,7 +754,16 @@ class GenericOptimization(CustomExt):
         self.ini_temp_file()
         self.ini_live_plot()
 
+        if self.is_action_checked('save'):
+            self.check_create_save_node()
+
         self.get_action('run').trigger()
+
+    def check_create_save_node(self):
+        node_is_empty = (
+                len(self.module_and_data_saver.get_set_node().get_child('Detector000').children()) == 0)
+        node = self.module_and_data_saver.get_set_node(new= not node_is_empty)
+        self.h5saver.settings.child('current_scan_name').setValue(node.name)
 
     def ini_optimization_runner(self):
         if self.is_action_checked('ini_runner'):
@@ -765,8 +778,7 @@ class GenericOptimization(CustomExt):
                 self.set_algorithm()
 
                 if self.is_action_checked('save'):
-                    node = self.module_and_data_saver.get_set_node(new=True)
-                    self.h5saver.settings.child('current_scan_name').setValue(node.name)
+                    self.check_create_save_node()
 
                 self.settings.child('models', 'ini_runner').setValue(True)
                 self.enl_index = 0

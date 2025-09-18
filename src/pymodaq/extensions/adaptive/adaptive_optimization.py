@@ -62,6 +62,10 @@ class AdaptiveOptimisation(GenericOptimization):
 
     DISPLAY_BEST = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.get_action('save').trigger()
+
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
         self._base_name: str = 'Adaptive'
