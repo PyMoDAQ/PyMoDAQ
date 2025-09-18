@@ -733,6 +733,8 @@ class GenericOptimization(CustomExt):
                     QtWidgets.QApplication.processEvents()
                 self.get_action(OptimizerAction.INI_RUNNER).trigger()  # for the model/algo de-initialization to correctly resave data
                 # afterwards
+                QtWidgets.QApplication.processEvents()
+                self.get_action(OptimizerAction.INI_RUNNER).trigger()
 
     def ini_saver(self):
         if self.is_action_checked(OptimizerAction.SAVE):
