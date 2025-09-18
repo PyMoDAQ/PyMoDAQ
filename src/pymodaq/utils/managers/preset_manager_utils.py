@@ -106,7 +106,7 @@ def make_viewer_params(typ):
                 main_child['children'] = params_hardware
         controller_dict = get_param_dict_from_name(main_child['children'], 'controller_ID')
         controller_dict['value'] = random.randint(0, 9999)
-        
+
         return params
     
 class PresetScalableGroupMove(GroupParameter):
@@ -126,10 +126,10 @@ class PresetScalableGroupMove(GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
-        opts['addList'] = [mov['name'] for mov in DAQ_Move_Stage_type]
+        opts['addMenu'] = [mov['name'] for mov in DAQ_Move_Stage_type]
         super().__init__(**opts)
 
-    def addNew(self, typ):
+    def addNew(self, typ:tuple):
         """
             Add a child.
 
@@ -139,6 +139,7 @@ class PresetScalableGroupMove(GroupParameter):
             =============== ===========
         """
         name_prefix = 'move'
+        typ = typ[-1]
         new_index = find_last_index(self.children(), name_prefix, format_string='02.0f')
         params = make_move_params(typ)
         child = {'title': f'Actuator {new_index}',
@@ -171,20 +172,18 @@ class PresetScalableGroupDet(GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'groupdet'
         opts['addText'] = "Add"
-        options = []
-        for name in [plugin['name'] for plugin in DAQ_0DViewer_Det_types]:
-            options.append('DAQ0D/' + name)
-        for name in [plugin['name'] for plugin in DAQ_1DViewer_Det_types]:
-            options.append('DAQ1D/' + name)
-        for name in [plugin['name'] for plugin in DAQ_2DViewer_Det_types]:
-            options.append('DAQ2D/' + name)
-        for name in [plugin['name'] for plugin in DAQ_NDViewer_Det_types]:
-            options.append('DAQND/' + name)
-        opts['addList'] = options
+        options = [
+        {'DAQ0D': [name for name in [plugin['name'] for plugin in DAQ_0DViewer_Det_types]],
+        'DAQ1D': [name for name in [plugin['name'] for plugin in DAQ_1DViewer_Det_types]],
+        'DAQ2D': [name for name in [plugin['name'] for plugin in DAQ_2DViewer_Det_types]],
+        'DAQND': [name for name in [plugin['name'] for plugin in DAQ_NDViewer_Det_types]],
+         }
+        ]
+        opts['addMenu'] = options
 
         super().__init__(**opts)
 
-    def addNew(self, typ):
+    def addNew(self, typ:tuple):
         """
             Add a child.
 
@@ -195,6 +194,7 @@ class PresetScalableGroupDet(GroupParameter):
         """
         try:
             name_prefix = 'det'
+            typ = "/".join(typ)
             new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
             params = make_viewer_params(typ)
             child = {'title': f'Det {new_index}', 'name': new_index,
