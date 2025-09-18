@@ -5,7 +5,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params)
+    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
@@ -64,7 +64,7 @@ class AdaptiveOptimisation(GenericOptimization):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.get_action('save').trigger()
+        self.get_action(OptimizerAction.SAVE).trigger()
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
@@ -141,10 +141,10 @@ class AdaptiveOptimisation(GenericOptimization):
                                                            'lossdim'],
                                        self.settings['main_settings', 'prediction',
                                                            'kind'])
-            self.get_action('ini_runner').setEnabled(True)
+            self.get_action(OptimizerAction.INI_RUNNER).setEnabled(True)
 
         except ValueError as e:
-            self.get_action('ini_runner').setEnabled(False)
+            self.get_action(OptimizerAction.INI_RUNNER).setEnabled(False)
             messagebox(title='Warning',
                        text=f'You cannot select [{actuators}] as no corresponding Loss function exists')
 

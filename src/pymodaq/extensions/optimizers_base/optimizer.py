@@ -53,6 +53,17 @@ PREDICTION_PARAMS = []  # to be subclassed in real optimizer implementations
 MODELS = get_optimizer_models()
 
 
+class OptimizerAction(StrEnum):
+    QUIT = 'quit'
+    INI_MODEL = 'ini_model'
+    SAVE = 'save'
+    INI_RUNNER = 'ini_runner'
+    RUN = 'run'
+    RESTART = 'restart'
+    GO_TO_BEST = 'gotobest'
+    GO_TO = 'goto'
+
+
 class DataNames(StrEnum):
     Fitness = 'fitness'
     Individual = 'individual'
@@ -300,15 +311,15 @@ class GenericOptimization(CustomExt):
         self.enl_index = 0
 
         self.settings.child('models', 'ini_model').sigActivated.connect(
-            self.get_action('ini_model').trigger)
+            self.get_action(OptimizerAction.INI_MODEL).trigger)
 
         self.settings.child('models', 'ini_runner').sigActivated.connect(
-            self.get_action('ini_runner').trigger)
+            self.get_action(OptimizerAction.INI_RUNNER).trigger)
 
         self.ini_custom_attributes()
 
         if len(MODELS) == 1:
-            self.get_action('ini_model').trigger()
+            self.get_action(OptimizerAction.INI_MODEL).trigger()
 
 
     @property
@@ -354,7 +365,7 @@ class GenericOptimization(CustomExt):
         self.h5saver.close_file()
 
     def add_data(self, dta: DataToActuatorsOpti):
-        if self.is_action_checked('save'):
+        if self.is_action_checked(OptimizerAction.SAVE):
             self.module_and_data_saver.add_data(axis_values=[dwa[0] for dwa in dta],
                                                 init_step=dta.ind_iter == 0)
 
@@ -500,32 +511,32 @@ class GenericOptimization(CustomExt):
 
     def setup_actions(self):
         logger.debug('setting actions')
-        self.add_action('quit', 'Quit', 'close2', "Quit program")
-        self.add_action('ini_model', 'Init Model', 'ini')
+        self.add_action(OptimizerAction.QUIT, 'Quit', 'close2', "Quit program")
+        self.add_action(OptimizerAction.INI_MODEL, 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
-        self.add_action('save', 'Save?', 'SaveAs', tip='If checked, data will be saved',
+        self.add_action(OptimizerAction.SAVE, 'Save?', 'SaveAs', tip='If checked, data will be saved',
                         checkable=True)
-        self.add_action('ini_runner', 'Init the Optimisation Algorithm', 'ini', checkable=True,
+        self.add_action(OptimizerAction.INI_RUNNER, 'Init the Optimisation Algorithm', 'ini', checkable=True,
                         enabled=False)
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
-        self.add_action('run', 'Run Optimisation', 'run2', checkable=True, enabled=False)
-        self.add_action('restart', 'Restart algo', 'Refresh2', checkable=False, enabled=False)
-        self.add_action('gotobest', 'Go to best', 'Rendezvous', enabled=False,
+        self.add_action(OptimizerAction.RUN, 'Run Optimisation', 'run2', checkable=True, enabled=False)
+        self.add_action(OptimizerAction.RESTART, 'Restart algo', 'Refresh2', checkable=False, enabled=False)
+        self.add_action(OptimizerAction.GO_TO_BEST, 'Go to best', 'Rendezvous', enabled=False,
                         tip='Go to the position optimizing the signal')
-        self.add_action('goto', 'Go to ', 'move_contour', enabled=False, checkable=True,
+        self.add_action(OptimizerAction.GO_TO, 'Go to ', 'move_contour', enabled=False, checkable=True,
                         tip='Go to the double clicked position in the plot')
         logger.debug('actions set')
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action('quit', self.quit)
-        self.connect_action('save', self.do_save)
-        self.connect_action('ini_model', self.ini_model)
-        self.connect_action('ini_runner', self.ini_optimization_runner)
-        self.connect_action('run', self.run_optimization)
-        self.connect_action('restart', self.restart_algo)
-        self.connect_action('gotobest', self.go_to_best)
-        self.connect_action('goto', self.allow_go_to)
+        self.connect_action(OptimizerAction.QUIT, self.quit)
+        self.connect_action(OptimizerAction.SAVE, self.do_save)
+        self.connect_action(OptimizerAction.INI_MODEL, self.ini_model)
+        self.connect_action(OptimizerAction.INI_RUNNER, self.ini_optimization_runner)
+        self.connect_action(OptimizerAction.RUN, self.run_optimization)
+        self.connect_action(OptimizerAction.RESTART, self.restart_algo)
+        self.connect_action(OptimizerAction.GO_TO_BEST, self.go_to_best)
+        self.connect_action(OptimizerAction.GO_TO, self.allow_go_to)
         self.h5saver.new_file_sig.connect(self.create_new_file)
 
     def go_to_best(self):
@@ -632,8 +643,8 @@ class GenericOptimization(CustomExt):
                                                      int(2 * win_width / 5), 10, 10))
 
     def update_actuators(self, actuators: List[str]):
-        if self.is_action_checked('ini_runner'):
-            self.get_action('ini_runner').trigger()
+        if self.is_action_checked(OptimizerAction.INI_RUNNER):
+            self.get_action(OptimizerAction.INI_RUNNER).trigger()
             QtWidgets.QApplication.processEvents()
 
         self._save_main_settings = False
@@ -688,14 +699,14 @@ class GenericOptimization(CustomExt):
 
             self.enable_controls_opti(True)
             self.get_action('model_led').set_as_true()
-            self.set_action_enabled('ini_model', False)
+            self.set_action_enabled(OptimizerAction.INI_MODEL, False)
 
             if self.DISPLAY_BEST:
                 self.viewer_observable.update_viewers(['Viewer0D'] + ['Viewer0D' for _ in self.modules_manager.selected_actuators_name],
                                                       ['Fitness'] + [act for act in self.modules_manager.selected_actuators_name])
             self.settings.child('models', 'ini_model').setValue(True)
             self.settings.child('models', 'ini_runner').setOpts(enabled=True)
-            self.set_action_enabled('ini_runner', True)
+            self.set_action_enabled(OptimizerAction.INI_RUNNER, True)
 
             self.mainsettings_saver_loader.base_path = [self.model_class.__class__.__name__] + \
                 self.modules_manager.selected_actuators_name
@@ -715,16 +726,16 @@ class GenericOptimization(CustomExt):
 
     def do_save(self):
         """ Properly prepare the extension for saving """
-        if self.is_action_checked('save'):
-            if self.is_action_checked('ini_runner'):
-                if self.is_action_checked('run'):
-                    self.get_action('run').trigger()
+        if self.is_action_checked(OptimizerAction.SAVE):
+            if self.is_action_checked(OptimizerAction.INI_RUNNER):
+                if self.is_action_checked(OptimizerAction.RUN):
+                    self.get_action(OptimizerAction.RUN).trigger()
                     QtWidgets.QApplication.processEvents()
-                self.get_action('ini_runner').trigger()  # for the model/algo de-initialization to correctly resave data
+                self.get_action(OptimizerAction.INI_RUNNER).trigger()  # for the model/algo de-initialization to correctly resave data
                 # afterwards
 
     def ini_saver(self):
-        if self.is_action_checked('save'):
+        if self.is_action_checked(OptimizerAction.SAVE):
             self.module_and_data_saver = module_saving.OptimizerSaver(
                 self, enl_axis_names=self.modules_manager.selected_actuators_name,
                 enl_axis_units=[act.units for act in self.modules_manager.actuators])
@@ -748,8 +759,8 @@ class GenericOptimization(CustomExt):
 
     def restart_algo(self):
 
-        if self.is_action_checked('run'):
-            self.get_action('run').trigger()
+        if self.is_action_checked(OptimizerAction.RUN):
+            self.get_action(OptimizerAction.RUN).trigger()
             QtWidgets.QApplication.processEvents()
 
         self.set_algorithm()
@@ -765,10 +776,10 @@ class GenericOptimization(CustomExt):
         self.ini_temp_file()
         self.ini_live_plot()
 
-        if self.is_action_checked('save'):
+        if self.is_action_checked(OptimizerAction.SAVE):
             self.check_create_save_node()
 
-        self.get_action('run').trigger()
+        self.get_action(OptimizerAction.RUN).trigger()
 
     def check_create_save_node(self):
         node_is_empty = (
@@ -778,10 +789,10 @@ class GenericOptimization(CustomExt):
         self.h5saver.settings.child('current_scan_name').setValue(node.name)
 
     def ini_optimization_runner(self):
-        if self.is_action_checked('ini_runner'):
+        if self.is_action_checked(OptimizerAction.INI_RUNNER):
             if not self.model_class.has_fitness_observable():
                 messagebox(title='Warning', text='No 0D observable has been chosen as a fitness value for the algorithm')
-                self.set_action_checked('ini_runner', False)
+                self.set_action_checked(OptimizerAction.INI_RUNNER, False)
                 return
 
             self.enable_settings_run(False)
@@ -789,7 +800,7 @@ class GenericOptimization(CustomExt):
                 self._ini_runner = True
                 self.set_algorithm()
 
-                if self.is_action_checked('save'):
+                if self.is_action_checked(OptimizerAction.SAVE):
                     self.ini_saver()
                     self.check_create_save_node()
 
@@ -812,15 +823,15 @@ class GenericOptimization(CustomExt):
                 runner.moveToThread(self.runner_thread)
                 self.runner_thread.start()
                 self.get_action('runner_led').set_as_true()
-                self.set_action_enabled('run', True)
-                self.set_action_enabled('restart', True)
+                self.set_action_enabled(OptimizerAction.RUN, True)
+                self.set_action_enabled(OptimizerAction.RESTART, True)
                 self.model_class.runner_initialized()
                 self.update_prediction_function()
         else:
-            self.set_action_enabled('ini_runner', False)
+            self.set_action_enabled(OptimizerAction.INI_RUNNER, False)
             self.enable_settings_run(True)
-            if self.is_action_checked('run'):
-                self.get_action('run').trigger()
+            if self.is_action_checked(OptimizerAction.RUN):
+                self.get_action(OptimizerAction.RUN).trigger()
                 QtWidgets.QApplication.processEvents()
 
             self.splash.setVisible(True)
@@ -838,9 +849,9 @@ class GenericOptimization(CustomExt):
             self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False
-            self.set_action_enabled('run', False)
-            self.set_action_enabled('restart', False)
-            self.set_action_enabled('ini_runner', True)  # reactivate the action only when the thread is finished
+            self.set_action_enabled(OptimizerAction.RUN, False)
+            self.set_action_enabled(OptimizerAction.RESTART, False)
+            self.set_action_enabled(OptimizerAction.INI_RUNNER, True)  # reactivate the action only when the thread is finished
 
     def clean_h5_temp(self):
         if self.temp_path is not None:
@@ -852,7 +863,7 @@ class GenericOptimization(CustomExt):
 
     def optimization_done(self, dte: DataToExport):
         self.go_to_best()
-        self.get_action('run').trigger()
+        self.get_action(OptimizerAction.RUN).trigger()
         self.optimization_done_signal.emit(dte)
 
     def do_live_plot(self, dte_algo: DataToExport):
@@ -910,24 +921,24 @@ class GenericOptimization(CustomExt):
         pass
 
     def run_optimization(self):
-        if self.is_action_checked('run'):
-            self.set_action_enabled('save', False)
-            self.get_action('run').set_icon('pause')
-            self.set_action_enabled('gotobest', False)
-            self.set_action_checked('goto', False)
-            self.set_action_enabled('goto', False)
-            self.set_action_enabled('ini_runner', False)
+        if self.is_action_checked(OptimizerAction.RUN):
+            self.set_action_enabled(OptimizerAction.SAVE, False)
+            self.get_action(OptimizerAction.RUN).set_icon('pause')
+            self.set_action_enabled(OptimizerAction.GO_TO_BEST, False)
+            self.set_action_checked(OptimizerAction.GO_TO, False)
+            self.set_action_enabled(OptimizerAction.GO_TO, False)
+            self.set_action_enabled(OptimizerAction.INI_RUNNER, False)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.processEvents()
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.RUN))
         else:
-            self.get_action('run').set_icon('run2')
-            self.set_action_enabled('save', True)
+            self.get_action(OptimizerAction.RUN).set_icon('run2')
+            self.set_action_enabled(OptimizerAction.SAVE, True)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
-            self.set_action_enabled('gotobest', True)
-            self.set_action_enabled('goto', True)
-            self.set_action_enabled('ini_runner', True)
+            self.set_action_enabled(OptimizerAction.GO_TO_BEST, True)
+            self.set_action_enabled(OptimizerAction.GO_TO, True)
+            self.set_action_enabled(OptimizerAction.INI_RUNNER, True)
             QtWidgets.QApplication.processEvents()
 
     def thread_status(self, status: utils.ThreadCommand):

@@ -10,7 +10,7 @@ from pymodaq.extensions.bayesian.utils import BayesianAlgorithm, BayesianConfig
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params)
+    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
