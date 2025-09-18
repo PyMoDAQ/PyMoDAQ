@@ -450,6 +450,7 @@ class DashBoard(CustomApp):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
+        win.setWindowTitle("Scanner")
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
         self.extensions["DAQScan"] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
@@ -462,6 +463,7 @@ class DashBoard(CustomApp):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
+        win.setWindowTitle("Logger")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions["DAQ_Logger"] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
