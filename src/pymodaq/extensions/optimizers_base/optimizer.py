@@ -22,6 +22,7 @@ try:
 except ModuleNotFoundError:
     from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
 
+
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
 from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
@@ -518,13 +519,13 @@ class GenericOptimization(CustomExt):
     def connect_things(self):
         logger.debug('connecting things')
         self.connect_action('quit', self.quit)
+        self.connect_action('save', self.do_save)
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimization_runner)
         self.connect_action('run', self.run_optimization)
         self.connect_action('restart', self.restart_algo)
         self.connect_action('gotobest', self.go_to_best)
         self.connect_action('goto', self.allow_go_to)
-        self.connect_action('save', self.ini_saver)
         self.h5saver.new_file_sig.connect(self.create_new_file)
 
     def go_to_best(self):
@@ -712,6 +713,16 @@ class GenericOptimization(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
+    def do_save(self):
+        """ Properly prepare the extension for saving """
+        if self.is_action_checked('save'):
+            if self.is_action_checked('ini_runner'):
+                if self.is_action_checked('run'):
+                    self.get_action('run').trigger()
+                    QtWidgets.QApplication.processEvents()
+                self.get_action('ini_runner').trigger()  # for the model/algo de-initialization to correctly resave data
+                # afterwards
+
     def ini_saver(self):
         if self.is_action_checked('save'):
             self.module_and_data_saver = module_saving.OptimizerSaver(
@@ -761,7 +772,8 @@ class GenericOptimization(CustomExt):
 
     def check_create_save_node(self):
         node_is_empty = (
-                len(self.module_and_data_saver.get_set_node().get_child('Detector000').children()) == 0)
+            len(self.module_and_data_saver.get_set_node().children()) == 0 or
+            len(self.module_and_data_saver.get_set_node().get_child('Detector000').children()) == 0)
         node = self.module_and_data_saver.get_set_node(new= not node_is_empty)
         self.h5saver.settings.child('current_scan_name').setValue(node.name)
 
@@ -778,6 +790,7 @@ class GenericOptimization(CustomExt):
                 self.set_algorithm()
 
                 if self.is_action_checked('save'):
+                    self.ini_saver()
                     self.check_create_save_node()
 
                 self.settings.child('models', 'ini_runner').setValue(True)
