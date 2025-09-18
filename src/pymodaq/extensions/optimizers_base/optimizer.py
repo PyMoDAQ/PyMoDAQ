@@ -509,8 +509,10 @@ class GenericOptimization(CustomExt):
         self.add_widget('runner_led', QLED, toolbar=self.toolbar)
         self.add_action('run', 'Run Optimisation', 'run2', checkable=True, enabled=False)
         self.add_action('restart', 'Restart algo', 'Refresh2', checkable=False, enabled=False)
-        self.add_action('gotobest', 'Got to best individual', 'move_contour', enabled=False,
-                        tip='Go to the best individual guessed by the algorithm')
+        self.add_action('gotobest', 'Go to best', 'Rendezvous', enabled=False,
+                        tip='Go to the position optimizing the signal')
+        self.add_action('goto', 'Go to ', 'move_contour', enabled=False, checkable=True,
+                        tip='Go to the double clicked position in the plot')
         logger.debug('actions set')
 
     def connect_things(self):
@@ -521,17 +523,19 @@ class GenericOptimization(CustomExt):
         self.connect_action('run', self.run_optimization)
         self.connect_action('restart', self.restart_algo)
         self.connect_action('gotobest', self.go_to_best)
+        self.connect_action('goto', self.allow_go_to)
         self.connect_action('save', self.ini_saver)
         self.h5saver.new_file_sig.connect(self.create_new_file)
 
     def go_to_best(self):
         best_individual = self.algorithm.best_individual
         if best_individual is not None:
-            actuators = self.modules_manager.selected_actuators_name
+            actuators = self.modules_manager.actuators
             dte_act = DataToActuators('best',
                                       data=[
-                                          DataActuator(actuators[ind],
-                                                       data=float(best_individual[actuators[ind]]))
+                                          DataActuator(actuators[ind].title,
+                                                       data=float(best_individual[actuators[ind].title]),
+                                                       units=actuators[ind].units)
                                           for ind in range(len(best_individual))
                                       ],
                                       mode='abs')
@@ -539,7 +543,27 @@ class GenericOptimization(CustomExt):
             self.modules_manager.move_actuators(dte_act, polling=True)
             self.modules_manager.connect_actuators(False)
 
-            self.modules_manager.grab_datas()
+    def allow_go_to(self, enable=True):
+        if len(self.live_plotter.viewers) > 0:
+            if enable:
+                self.live_plotter.viewers[0].sig_double_clicked.connect(self.go_to)
+            else:
+                self.live_plotter.viewers[0].sig_double_clicked.disconnect(self.go_to)
+
+    def go_to(self, *positions):
+        actuators = self.modules_manager.actuators
+        dte_act = DataToActuators('best',
+                                  data=[
+                                      DataActuator(actuators[ind].title,
+                                                   data=float(positions[ind]),
+                                                   units=actuators[ind].units)
+                                      for ind in range(len(positions))
+                                  ],
+                                  mode='abs')
+        self.modules_manager.connect_actuators(True)
+        self.modules_manager.move_actuators(dte_act, polling=True)
+        self.modules_manager.connect_actuators(False)
+
 
     def quit(self):
         self.dockarea.parent().close()
@@ -864,8 +888,9 @@ class GenericOptimization(CustomExt):
         if self.is_action_checked('run'):
             self.set_action_enabled('save', False)
             self.get_action('run').set_icon('pause')
-            self.set_action_checked('gotobest', False)
             self.set_action_enabled('gotobest', False)
+            self.set_action_checked('goto', False)
+            self.set_action_enabled('goto', False)
             self.set_action_enabled('ini_runner', False)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.START))
             QtWidgets.QApplication.processEvents()
@@ -876,6 +901,7 @@ class GenericOptimization(CustomExt):
             self.set_action_enabled('save', True)
             self.command_runner.emit(utils.ThreadCommand(OptimizerToRunner.STOP))
             self.set_action_enabled('gotobest', True)
+            self.set_action_enabled('goto', True)
             self.set_action_enabled('ini_runner', True)
             QtWidgets.QApplication.processEvents()
 
