@@ -7,6 +7,7 @@ class OptimizerToRunner(StrEnum):
     """
     START = 'start'
     RUN = 'run'
+    PAUSE = 'pause'
     STOP = 'stop'
     STOPPING = 'stopping'
     BOUNDS = 'bounds'
