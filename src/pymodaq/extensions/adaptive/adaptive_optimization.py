@@ -1,11 +1,11 @@
-
+from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params)
+    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
@@ -29,8 +29,9 @@ PREDICTION_PARAMS = (
          {'title': 'Kind', 'name': 'kind', 'type': 'list',
           'value': PREDICTION_NAMES[0],
           'limits': PREDICTION_NAMES}] +
-        LossFunctionFactory.get(STARTING_LOSS_DIM,
-                                PREDICTION_NAMES[0]).params)
+        [{'title': 'Options', 'name': 'options', 'type': 'group',
+          'children': LossFunctionFactory.get(STARTING_LOSS_DIM, PREDICTION_NAMES[0]).params}]
+)
 
 
 class AdaptiveOptimizationRunner(OptimizationRunner):
@@ -43,12 +44,9 @@ class AdaptiveOptimizationRunner(OptimizationRunner):
         """
         """
         if command.command == OptimizerToRunner.PREDICTION:
-            utility_params = {k: v for k, v in command.attribute.items()
-                              if k not in ("kind", "tradeoff_actual", 'lossdim')}
-
-            self.optimization_algorithm.set_prediction_function(command.attribute['lossdim'],
-                                                                command.attribute['kind'],
-                                                                **utility_params)
+            kind = command.attribute.pop('kind')
+            lossdim = command.attribute.pop('lossdim')
+            self.optimization_algorithm.set_prediction_function(lossdim, kind, **command.attribute)
         else:
             super().queue_command(command)
 
@@ -63,6 +61,10 @@ class AdaptiveOptimisation(GenericOptimization):
     config_saver = AdaptiveConfig
 
     DISPLAY_BEST = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.get_action(OptimizerAction.SAVE).trigger()
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
@@ -102,43 +104,55 @@ class AdaptiveOptimisation(GenericOptimization):
                     LossFunctionFactory.keys(param.value())
                 )
             except Exception as e:
-                pass
+                logger.debug('Warning: Error while trying to infer the kind of loss, may be because limits just changed')
         elif param.name() == 'kind':
             utility_settings = self.settings.child('main_settings', 'prediction')
-            old_children = utility_settings.children()[2:]
-            for child in old_children:
-                utility_settings.removeChild(child)
+            utility_settings.child('options').clearChildren()
             try:
                 params = LossFunctionFactory.get(utility_settings['lossdim'],
                                                  param.value()).params
-                utility_settings.addChildren(params)
-            except (KeyError, ValueError):
-                pass
+                utility_settings.child('options').addChildren(params)
+            except (KeyError, ValueError) as e:
+                logger.debug('Warning: Error while trying to populate options for loss, may be because limits for'
+                             ' kind setting just changed')
 
     def update_prediction_function(self):
         utility_settings = self.settings.child('main_settings', 'prediction')
         try:
-            uparams = {child.name() : child.value() for child in utility_settings.children()}
-            LossFunctionFactory.get(uparams['lossdim'], uparams['kind'])
+            uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
+            uparams['kind'] = utility_settings['kind']
+            uparams['lossdim'] = utility_settings['lossdim']
+
             self.command_runner.emit(
                 utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
-        except (KeyError, ValueError, AttributeError):
+        except (KeyError, ValueError, AttributeError) as e:
             pass
+            print(e)
 
     def update_after_actuators_changed(self, actuators: list[str]):
         """ Actions to do after the actuators have been updated
         """
-        self.settings.child('main_settings', 'prediction',
-                            'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
-        self.update_prediction_function()
+        try:#see if there is some registered loss function for the defined type
+            self.settings.child('main_settings', 'prediction',
+                                'lossdim').setValue(LossDim.get_enum_from_dim_as_int(len(actuators)))
+            self.update_prediction_function()
 
-    def adaptive_bounds(self):
-        return list(self.format_bounds().values())
+            LossFunctionFactory.create(self.settings['main_settings', 'prediction',
+                                                           'lossdim'],
+                                       self.settings['main_settings', 'prediction',
+                                                           'kind'])
+            self.get_action(OptimizerAction.INI_RUNNER).setEnabled(True)
+
+        except ValueError as e:
+            self.get_action(OptimizerAction.INI_RUNNER).setEnabled(False)
+            messagebox(title='Warning',
+                       text=f'You cannot select [{actuators}] as no corresponding Loss function exists')
 
     def set_algorithm(self):
         self.algorithm = AdaptiveAlgorithm(
             ini_random=1,
-            bounds=self.adaptive_bounds(),
+            bounds=self.format_bounds(),
+            actuators=self.modules_manager.selected_actuators_name,
             loss_type=LossDim(self.settings['main_settings', 'prediction', 'lossdim']),
             kind=self.settings['main_settings', 'prediction', 'kind'])
 
