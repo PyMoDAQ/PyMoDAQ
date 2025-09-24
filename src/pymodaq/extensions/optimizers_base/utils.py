@@ -40,6 +40,7 @@ logger = set_logger(get_module_name(__file__))
 class StopType(StrEnum):
     NONE = 'None'
     PREDICT = 'Predict'
+    BEST = 'Best'
 
 
 StoppingParameters = namedtuple('StoppingParameters',

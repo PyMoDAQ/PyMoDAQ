@@ -119,6 +119,13 @@ class BayesianAlgorithm(GenericAlgorithm):
                     for act in self.actuators])
                 return np.all(np.abs((np.std(coordinates, axis=1) / np.mean(coordinates, axis=1)))
                               < stopping_parameters.tolerance)
+            elif stopping_parameters.stop_type == StopType.BEST:
+                coordinates = np.atleast_1d(
+                    [[best['params'][act] for best in
+                      sorted(self._algo.res, key=lambda x: x['target'])[-stopping_parameters.npoints:]]
+                     for act in self.actuators])
+                return np.all(np.abs((np.std(coordinates, axis=1) / np.mean(coordinates, axis=1)))
+                              < stopping_parameters.tolerance)
         return False
 
     def _posterior(self, x_obs, y_obs, grid):
