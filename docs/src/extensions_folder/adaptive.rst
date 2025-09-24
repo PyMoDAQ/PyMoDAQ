@@ -38,3 +38,42 @@ Of course there are some limitations:
 
 * Because the algorithm learns from variation of measurements, the results of a measurement of the *observable* should
   not be too noisy.
+
+Figure :numref:`adaptive_running_gui_fig` displays the Adaptive GUI. Most of its features are similar to the
+:ref:`bayesian_extension` extension (as they both inherit from the Optimizer set of base classes).
+
+.. _adaptive_running_gui_fig:
+
+.. figure:: adaptive_data/running_gui.png
+   :alt: GUI
+
+   User Interface of the Adaptive Optimization extension during a run, sampling non-linearly a 1D Gaussian shaped data.
+
+The algorithm use a *loss* function to determine the next probed coordinates (actuators value). They are categorized
+given the number of selected actuators: Loss1D, Loss2D, LossND with subtypes allowing to tune the algorithm. See figure
+:numref:`adaptive_loss1D_fig` for the result of various Loss1D subtypes.
+
+
+.. _adaptive_loss1D_fig:
+
+.. figure:: adaptive_data/loss1D.png
+   :alt: GUI
+
+   Taken from
+   `Adaptive Tutorials <https://adaptive.readthedocs.io/en/latest/tutorial/tutorial.Learner1D/#looking-at-curvature>`__.
+   Sampling of a sinus/exponential function using various 1D losses functions.
+
+
+
+.. note::
+
+  It is entirely possible and very easy to develop a custom loss function. PyMoDAQ uses a factory pattern
+  to register new loss function and they can be added in the `pymodaq.extensions.adaptive.loss_function`
+  module. See the `adaptive tutorials <https://adaptive.readthedocs.io/en/latest/tutorial/tutorial/>`__ for some
+  exemples.
+
+.. note::
+
+  While the python-adpative package features parallel calculation/function evaluation, PyMoDAQ can only run a given
+  detector in a single process (it doesn't make sense otherwise...) therefore no parallel computing is leveraged in this
+  extension.
