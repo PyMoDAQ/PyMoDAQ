@@ -10,6 +10,7 @@ through their python package:
 
 .. figure:: adaptive_data/adaptive_logo.png
    :alt: logo
+   :width: 40%
 
    Taken from
    `Adaptive Tutorials <https://adaptive.readthedocs.io/en/latest/>`__.

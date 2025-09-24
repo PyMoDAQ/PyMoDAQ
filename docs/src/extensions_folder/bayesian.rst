@@ -171,6 +171,7 @@ choose between exploration (of the phase space) versus exploitation (optimizing 
 
 .. figure:: bayesian_data/gui_settings.png
    :alt: GUI
+   :width: 60%
 
    Zoom on the settings of the GUI.
 
