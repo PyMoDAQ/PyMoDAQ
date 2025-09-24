@@ -5,7 +5,16 @@ Adaptive Scanning
 
 First of all, this work is heavily supported by the work of Bas Nijholt and co-workers
 through their python package:
-`python-adaptive <https://github.com/python-adaptive/adaptive>`__
+`python-adaptive <https://github.com/python-adaptive/adaptive>`
+
+
+.. figure:: adaptive_data/adaptive_logo.png
+   :alt: logo
+
+   Taken from
+   `Adaptive Tutorials <https://adaptive.readthedocs.io/en/latest/>`__.
+   Sampling of a complex 2D function using adaptive!
+
 
 Introduction
 ++++++++++++
@@ -40,7 +49,8 @@ Of course there are some limitations:
   not be too noisy.
 
 Figure :numref:`adaptive_running_gui_fig` displays the Adaptive GUI. Most of its features are similar to the
-:ref:`bayesian_extension` extension (as they both inherit from the Optimizer set of base classes).
+:ref:`bayesian_extension` extension (as they both inherit from the Optimizer set of base classes). See the
+:ref:`bayesian_usage` for more details on how to init/use the extension.
 
 .. _adaptive_running_gui_fig:
 

@@ -72,6 +72,8 @@ see :ref:`bayesian_settings` and `here <http://bayesian-optimization.github.io/B
   `here <https://github.com/PyMoDAQ/notebooks/blob/main/notebooks/gaussian_process.ipynb>`__, where you can
   define your black box function (that in general you don't know) and play with kernels and utility functions.
 
+.. _bayesian_usage:
+
 Usage
 +++++
 
