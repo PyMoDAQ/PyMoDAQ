@@ -86,7 +86,7 @@ def optimizer_params(prediction_params: list[dict]):
               'children': [
                   {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
                   {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
-                   'limits': StopType.names()},
+                   'limits': list(StopType.__members__.values())},
                   {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
                    'min': 1e-8, 'max': 1, 'subtype': 'log', },
                   {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},

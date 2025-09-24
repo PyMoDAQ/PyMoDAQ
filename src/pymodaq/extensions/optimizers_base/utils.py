@@ -18,7 +18,7 @@ from collections import namedtuple
 from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.enums import BaseEnum
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.config import BaseConfig
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
@@ -37,8 +37,9 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 
-class StopType(BaseEnum):
-    Predict = 0
+class StopType(StrEnum):
+    NONE = 'None'
+    PREDICT = 'Predict'
 
 
 StoppingParameters = namedtuple('StoppingParameters',
