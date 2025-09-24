@@ -139,9 +139,9 @@ class PresetManager:
         dialog.setLayout(vlayout)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-        buttonBox.addButton('Save', buttonBox.AcceptRole)
+        buttonBox.addButton('Save', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.addButton('Cancel', QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
@@ -151,7 +151,7 @@ class PresetManager:
         path = self.preset_path
         file= None
 
-        if res == dialog.Accepted:
+        if res == QtWidgets.QDialog.DialogCode.Accepted:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
@@ -182,7 +182,7 @@ class PresetManager:
             layout_file = layout_path.joinpath(self.filename + '.dock')
             layout_file.unlink(missing_ok=True)
 
-        return res == dialog.Accepted
+        return res == QtWidgets.QDialog.DialogCode.Accepted
 
 
 if __name__ == '__main__':

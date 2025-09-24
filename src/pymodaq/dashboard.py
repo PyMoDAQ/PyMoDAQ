@@ -819,10 +819,11 @@ class DashBoard(CustomApp):
             mssg.setText('You have to restart the application to take the'
                          ' modifications into account!')
             mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(mssg.Ok | mssg.Cancel)
+            mssg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok |
+                                    QtWidgets.QMessageBox.StandardButton.Cancel)
             ret = mssg.exec()
 
-        if ret == mssg.Ok or not ask:
+        if ret == QtWidgets.QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
             subprocess.call([sys.executable, __file__])
 
@@ -1692,8 +1693,8 @@ class DashBoard(CustomApp):
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-        buttonBox.addButton('Cancel', buttonBox.RejectRole)
-        buttonBox.addButton('Apply', buttonBox.AcceptRole)
+        buttonBox.addButton('Cancel', QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.addButton('Apply', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.rejected.connect(dialog.reject)
         buttonBox.accepted.connect(dialog.accept)
 
