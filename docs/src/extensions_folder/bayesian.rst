@@ -77,8 +77,8 @@ Usage
 
 :numref:`bayesian_gui_fig` shows the GUI of the Bayesian Optimisation extension. It consists of three panels:
 
-* Settings (left): allow configuration of the model, the search bounds, the acquisition function, selection of which
-  detector and actuators will `participate` to the optimisation.
+* Settings (left): allow selection of which detector and actuators will `participate` to the optimisation, configuration
+  of the model, defining the search bounds, selecting the acquisition function, the stopping criteria...
 * Observable (middle): here will be plotted the evolution of the result of the optimisation. On the top, the best
   reached target value will be plotted. On the bottom, the coordinates (value) of the input parameters that gave the
   best reached target will be plotted.
@@ -95,15 +95,22 @@ Toolbar:
 --------
 
 -  |quit|: quit the extension
--  |ini|: Initialise the selected model
--  |ini|: Initialise the Bayesian algorithm with given settings
--  |run|: Run the Bayesian algorithm
--  |goto|: Move the selected actuators to the values given by the best target reached by the algorithm
+-  |ini|: Initialise the selected model and the Bayesian algorithm with given settings
+-  |run|: Run/Pause the Bayesian algorithm
+-  |restart|: Restart the algorithm
+-  |stop|: Stop the algorithm
+-  |go_to_best|: Move the selected actuators to the values given by the best target reached by the algorithm
+-  |goto|: When activated, a double click on the Probed Data live viewer will move the actuators to the positions
+   corresponding to the click
+
 
 .. |quit| image:: bayesian_data/quit.png
 .. |ini| image:: bayesian_data/ini.png
 .. |run| image:: bayesian_data/run.png
 .. |goto| image:: bayesian_data/goto.png
+.. |go_to_best| image:: bayesian_data/go_to_best.png
+.. |stop| image:: bayesian_data/stop.png
+.. |restart| image:: bayesian_data/restart.png
 
 
 .. _bayesian_settings:
