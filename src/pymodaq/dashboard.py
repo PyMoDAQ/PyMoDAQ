@@ -558,6 +558,34 @@ class DashBoard(CustomApp):
             self.adaptive_module.quit()
         return self.adaptive_module
 
+    def load_datamixer(self, win=None):
+        if win is None:
+            self.datamixer_window = QtWidgets.QMainWindow()
+        else:
+            self.datamixer_window = win
+        dockarea = DockArea()
+        self.datamixer_window.setCentralWidget(dockarea)
+        self.datamixer_window.setWindowTitle("DataMixer")
+        self.datamixer_module = extmod.DataMixer(
+            parent=dockarea, dashboard=self
+        )
+        self.extensions["datamixer"] = self.datamixer_module
+
+        if self.datamixer_module.validate_config():
+            self.datamixer_window.show()
+        else:
+            messagebox(
+                severity="critical",
+                title="DataMixer error",
+                text=f"""
+                    <p>Saved DataMixer configuration file is not compatible anymore.</p>
+                    <p>Please delete the file at <b>{self.datamixer_module.config_path}</b>.</p>
+                """,
+            )
+            self.datamixer_module.quit()
+        return self.datamixer_module
+
+
     def load_extension_from_name(self, name: str) -> dict:
         return self.load_extensions_module(
             find_dict_in_list_from_key_val(extensions, "name", name)

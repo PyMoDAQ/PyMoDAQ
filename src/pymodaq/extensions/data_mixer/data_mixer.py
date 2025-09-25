@@ -1,5 +1,6 @@
 from qtpy import QtWidgets, QtCore
 import numpy as np
+from pathlib import Path
 
 from typing import Optional
 
@@ -9,8 +10,9 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_data.data import DataToExport, DataWithAxes
 
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import Config as PyMoConfig
 from pymodaq.extensions.utils import CustomExt
+
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED
@@ -18,10 +20,12 @@ from pymodaq_gui.parameter import utils as putils
 
 
 from pymodaq.extensions.data_mixer.model import get_models, DataMixerModel
+from pymodaq.extensions.data_mixer.utils import DataMixerConfig, find_key_in_nested_dict
 
 logger = set_logger(get_module_name(__file__))
 
-main_config = Config()
+config_utils = Config()
+config_pymodaq = PyMoConfig()
 
 EXTENSION_NAME = 'Data Mixer'  # the name that will be displayed in the extension list in the
 # dashboard
@@ -47,7 +51,7 @@ class DataMixer(CustomExt):
         super().__init__(parent, dashboard)
 
         self.model_class: Optional[DataMixerModel] = None
-
+        self.datamixer_config = DataMixerConfig()
         self.setup_ui()
 
         self.settings.child('models', 'ini_model').sigActivated.connect(
@@ -91,6 +95,20 @@ class DataMixer(CustomExt):
 
         if len(self.models) != 0:
             self.get_set_model_params(self.models[0]['name'])
+
+    @property
+    def config_path(self) -> Path:
+        return self.datamixer_config.config_path
+
+    def validate_config(self) -> bool:
+        """ Read eventually saved settings from self.datamixer_config
+
+        Example
+        -------
+        utility = find_key_in_nested_dict(self.datamixer_config.to_dict(), 'prediction')
+
+        """
+        return True
 
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
@@ -167,7 +185,7 @@ class DataMixer(CustomExt):
             self.models, 'name', model_name)['class'](self)
         self.model_class.ini_model_base()
 
-    def setup_menu(self):
+    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """Non mandatory method to be subclassed in order to create a menubar
 
         create menu for actions contained into the self._actions, for instance:
@@ -218,7 +236,7 @@ def main():
 
     app = mkQApp('DataMixer')
 
-    preset_file_name = main_config('preset')
+    preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
     app.exec()
 
