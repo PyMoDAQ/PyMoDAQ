@@ -15,6 +15,8 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_data.data import DataToExport
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -32,6 +34,7 @@ class DataMixerModel:
         self.data_mixer = data_mixer
         self.modules_manager: ModulesManager = data_mixer.modules_manager
         self.settings: Parameter = self.data_mixer.settings.child('models', 'model_params')
+
 
     def ini_model_base(self):
         """ Method to add things that should be executed before instantiating the model"""

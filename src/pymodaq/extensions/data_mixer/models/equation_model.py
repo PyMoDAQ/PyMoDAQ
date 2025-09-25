@@ -2,6 +2,7 @@ from pymodaq.extensions.data_mixer.model import DataMixerModel, np  # np will be
 
 from pymodaq_data.data import DataToExport, DataWithAxes
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 
 from pymodaq.extensions.data_mixer.parser import (
     extract_data_names, split_formulae, replace_names_in_formula)
@@ -26,11 +27,16 @@ class DataMixerModelEquation(DataMixerModel):
     ]
 
     def ini_model(self):
+        self.model_saver_loader = ConfigSaverLoader(self.settings, self.data_mixer.datamixer_config,
+                                                    base_path=[self.__class__.__name__])
         self.show_data_list()
+        self.model_saver_loader.load_config()
 
     def update_settings(self, param: Parameter):
         if param.name() == 'get_data':
             self.show_data_list()
+        elif param.name() == 'edit_formula':
+            self.model_saver_loader.save_config(param)
 
     def get_formulae(self) -> str:
         """ Read the content of the formula QTextEdit widget"""
@@ -79,6 +85,7 @@ class DataMixerModelEquation(DataMixerModel):
         """
         formula_to_eval, names = replace_names_in_formula(formula)
         dwa = eval(formula_to_eval)
+        dwa/dwa
         dwa.name = name
         return dwa
 
