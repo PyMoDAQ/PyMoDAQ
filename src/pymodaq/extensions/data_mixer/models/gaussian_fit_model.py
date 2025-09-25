@@ -4,7 +4,7 @@ from pymodaq.extensions.data_mixer.model import DataMixerModel, np  # np will be
 
 from pymodaq_utils.math_utils import gauss1D, my_moment
 
-from pymodaq_data.data import DataToExport, DataWithAxes, DataCalculated
+from pymodaq_data.data import DataToExport, DataWithAxes, DataCalculated, DataDim
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.extensions.data_mixer.parser import (
@@ -16,20 +16,33 @@ def gaussian_fit(x, amp, x0, dx, offset):
     return amp * gauss1D(x, x0, dx) + offset
 
 
-class DataMixerModelFit(DataMixerModel):
+class DataMixerGaussianFitModel(DataMixerModel):
     params = [
-
+        {'title': 'Get Data:', 'name': 'get_data', 'type': 'bool_push', 'value': False,
+         'label': 'Get Data'},
+        {'title': 'Data1D:', 'name': 'data1D', 'type': 'itemselect',
+         'value': dict(all_items=[], selected=[])},
     ]
 
     def ini_model(self):
-        pass
+        self.show_data_list()
+
+    def get_formulae(self) -> str:
+        """ Read the content of the formula QTextEdit widget"""
+        return self.settings['edit_formula']
+
+    def show_data_list(self):
+        dte = self.modules_manager.get_det_data_list()
+        data_list1D = dte.get_full_names('data1D')
+        self.settings.child('data1D').setValue(dict(all_items=data_list1D, selected=[]))
 
     def update_settings(self, param: Parameter):
-        pass
+        if param.name() == 'get_data':
+            self.show_data_list()
 
     def process_dte(self, dte: DataToExport):
         dte_processed = DataToExport('computed')
-        dwa = dte.get_data_from_full_name('Det 01/mymock').deepcopy()
+        dwa = dte.get_data_from_full_name(self.settings['data1D']['selected'][0])
         dwa_fit = dwa.fit(gaussian_fit, self.get_guess(dwa))
         dwa.append(dwa_fit)
         dte_processed.append(dwa)
