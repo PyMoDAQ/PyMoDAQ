@@ -763,6 +763,7 @@ class DashBoard(CustomApp):
         self.add_action("console", "IPython Console", auto_toolbar=False)
         self.add_action("bayesian", "Bayesian Optimisation", auto_toolbar=False)
         self.add_action("adaptive", "Adaptive Scan", auto_toolbar=False)
+        self.add_action("datamixer", "DataMixer", auto_toolbar=False)
 
         self.add_action("about", "About", "information2")
         self.add_action("help", "Help", "help1")
@@ -872,6 +873,7 @@ class DashBoard(CustomApp):
         self.connect_action("console", lambda: self.load_console())
         self.connect_action("bayesian", lambda: self.load_bayesian())
         self.connect_action("adaptive", lambda: self.load_adaptive())
+        self.connect_action("datamixer", lambda: self.load_datamixer())
 
         self.connect_action("about", self.show_about)
         self.connect_action("help", self.show_help)
@@ -971,6 +973,7 @@ class DashBoard(CustomApp):
         self.extensions_menu.addAction(self.get_action("console"))
         self.extensions_menu.addAction(self.get_action("bayesian"))
         self.extensions_menu.addAction(self.get_action("adaptive"))
+        self.extensions_menu.addAction(self.get_action("datamixer"))
 
         # extensions from plugins
         extensions_actions = []
