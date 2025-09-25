@@ -38,6 +38,18 @@ class DataMixerModelEquation(DataMixerModel):
         elif param.name() == 'edit_formula':
             self.model_saver_loader.save_config(param)
 
+    def process_dte(self, dte: DataToExport):
+        formulae = split_formulae(self.get_formulae())
+        dte_processed = DataToExport('Computed')
+        for ind, formula in enumerate(formulae):
+            try:
+                dwa = self.compute_formula(formula, dte,
+                                           name=f'Formula_{ind:03.0f}')
+                dte_processed.append(dwa)
+            except Exception as e:
+                logger.exception(f'{str(e)}')
+        return dte_processed
+
     def get_formulae(self) -> str:
         """ Read the content of the formula QTextEdit widget"""
         return self.settings['edit_formula']
@@ -55,17 +67,6 @@ class DataMixerModelEquation(DataMixerModel):
         self.settings.child('data2D').setValue(dict(all_items=data_list2D, selected=[]))
         self.settings.child('dataND').setValue(dict(all_items=data_listND, selected=[]))
 
-    def process_dte(self, dte: DataToExport):
-        formulae = split_formulae(self.get_formulae())
-        dte_processed = DataToExport('Computed')
-        for ind, formula in enumerate(formulae):
-            try:
-                dwa = self.compute_formula(formula, dte,
-                                           name=f'Formula_{ind:03.0f}')
-                dte_processed.append(dwa)
-            except Exception as e:
-                logger.exception(f'{str(e)}')
-        return dte_processed
 
     def compute_formula(self, formula: str, dte: DataToExport,
                         name: str) -> DataWithAxes:

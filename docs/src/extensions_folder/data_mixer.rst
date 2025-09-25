@@ -99,3 +99,84 @@ now look at live post-process data while scanning!!! For this to happen just pre
 DAQ_Viewer will appear in the Dashboard!!
 
 .. |plus| image:: datamixer_data/plus.png
+
+Example of code for a Model
++++++++++++++++++++++++++++
+
+.. code-block::
+
+    class DataMixerModelEquation(DataMixerModel):
+        params = [
+            {'title': 'Get Data:', 'name': 'get_data', 'type': 'bool_push', 'value': False,
+             'label': 'Get Data'},
+            {'title': 'Edit Formula:', 'name': 'edit_formula', 'type': 'text', 'value': ''},
+            ...
+        ]
+
+        def ini_model(self):
+            self.model_saver_loader = ConfigSaverLoader(self.settings, self.data_mixer.datamixer_config,
+                                                        base_path=[self.__class__.__name__])
+            self.show_data_list()
+            self.model_saver_loader.load_config()
+
+        def update_settings(self, param: Parameter):
+            if param.name() == 'get_data':
+                self.show_data_list()
+            elif param.name() == 'edit_formula':
+                self.model_saver_loader.save_config(param)
+
+        def process_dte(self, dte: DataToExport):
+            formulae = split_formulae(self.get_formulae())
+            dte_processed = DataToExport('Computed')
+            for ind, formula in enumerate(formulae):
+                try:
+                    dwa = self.compute_formula(formula, dte,
+                                               name=f'Formula_{ind:03.0f}')
+                    dte_processed.append(dwa)
+                except Exception as e:
+                    logger.exception(f'{str(e)}')
+            return dte_processed
+
+        def get_formulae(self) -> str:
+            """ Read the content of the formula QTextEdit widget"""
+            return self.settings['edit_formula']
+
+        def show_data_list(self):
+            ...
+
+
+        def compute_formula(self, formula: str, dte: DataToExport,
+                            name: str) -> DataWithAxes:
+            """ Compute the operations in formula using data stored in dte
+
+            Parameters
+            ----------
+            formula: str
+                The mathematical formula using numpy and data fullnames within curly brackets
+            dte: DataToExport
+            name: str
+                The name to give to the produced DataWithAxes
+
+            Returns
+            -------
+            DataWithAxes: the results of the formula computation
+            """
+            formula_to_eval, names = replace_names_in_formula(formula)
+            dwa = eval(formula_to_eval)
+            dwa.name = name
+            return dwa
+
+As you see, to be valid (and seen by PyMoDAQ), the model should inherit the ``DataMixerModel`` base class defining
+internal mechanisms but also exposing the interface and the methods you have to reimplement:
+
+* ``ini_model``: will be called after you clicked the ini model button. Place here whatever should be done. Here one
+  create a ConfigSaverLoader that will cache and load the last formula you entered. Data will also be probed from the
+  selected detector (if any)
+* ``update_settings``: will be called whenever you change one of the model settings.
+* ``process_dte``: will be called whenever you press the snap button.
+
+
+.. note::
+
+  For a model to be "seen" by PyMoDAQ either place it in the ``pymodaq.extensions.data_mixer.models`` module or any
+  models module/folder of a PyMoDAQ plugin.
