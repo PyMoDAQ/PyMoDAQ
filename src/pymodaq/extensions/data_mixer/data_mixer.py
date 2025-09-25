@@ -115,6 +115,9 @@ class DataMixer(CustomExt):
 
         """
         self.add_action('quit', 'Quit', 'close2', "Quit program")
+        combo_model = QtWidgets.QComboBox()
+        combo_model.addItems([model['name'] for  model in self.models])
+        self.add_widget('models', combo_model, tip='List of available models')
         self.add_action('ini_model', 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
         self.add_action('snap', 'Snap Detectors', 'snap',
@@ -125,12 +128,16 @@ class DataMixer(CustomExt):
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods"""
         self.connect_action('quit', self.quit)
+        self.connect_action('models', self.update_model_settings_from_action, signal_name='currentTextChanged')
         self.connect_action('ini_model', self.ini_model)
         self.modules_manager.det_done_signal.connect(self.process_data)
         self.dte_computed_signal.connect(self.plot_computed_results)
         self.connect_action('snap', self.snap)
         self.modules_manager.detectors_changed.connect(self.update_connect_detectors)
         self.connect_action('create_computed_detectors', self.create_computed_detectors)
+
+    def update_model_settings_from_action(self, model: str):
+        self.settings.child('models', 'model_class').setValue(model)
 
     def process_data(self, dte: DataToExport):
         if self.model_class is not None:
@@ -176,11 +183,13 @@ class DataMixer(CustomExt):
         self.get_action('model_led').set_as_true()
         self.set_action_enabled('ini_model', False)
         self.settings.child('models', 'ini_model').setValue(True)
+        self.set_action_enabled('models', False)
+        self.settings.child('models', 'model_class').setOpts(enabled=False)
 
         self.update_connect_detectors()
 
     def set_model(self):
-        model_name = self.settings.child('models', 'model_class').value()
+        model_name = self.settings['models', 'model_class']
         self.model_class = find_dict_in_list_from_key_val(
             self.models, 'name', model_name)['class'](self)
         self.model_class.ini_model_base()
@@ -222,6 +231,7 @@ class DataMixer(CustomExt):
         """
         if param.name() == 'model_class':
             self.get_set_model_params(param.value())
+            self.get_action('models').setCurrentText(param.value())
         elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
             if self.model_class is not None:
                 self.model_class.update_settings(param)

@@ -42,20 +42,23 @@ class DataMixerGaussianFitModel(DataMixerModel):
 
     def process_dte(self, dte: DataToExport):
         dte_processed = DataToExport('computed')
-        dwa = dte.get_data_from_full_name(self.settings['data1D']['selected'][0])
-        dwa_fit = dwa.fit(gaussian_fit, self.get_guess(dwa))
-        dwa.append(dwa_fit)
-        dte_processed.append(dwa)
-        dte_processed.append(
-            DataCalculated('Coeffs',
-                           data=[np.atleast_1d(coeff) for coeff in dwa_fit.fit_coeffs[0]],
-                           labels=['amp', 'x0', 'dx', 'offset']))
+        if len(self.settings['data1D']['selected']) !=  0:
+
+            dwa = dte.get_data_from_full_name(self.settings['data1D']['selected'][0])
+            dwa_fit = dwa.fit(gaussian_fit, self.get_guess(dwa), data_index=0)
+            dwa.append(dwa_fit)
+            dte_processed.append(dwa)
+            dte_processed.append(
+                DataCalculated('Coeffs',
+                               data=[np.atleast_1d(coeff) for coeff in dwa_fit.fit_coeffs[0]],
+                               labels=['amp', 'x0', 'dx', 'offset']))
 
         return dte_processed
 
     @staticmethod
     def get_guess(dwa):
         offset = np.min(dwa).value()
+        dwa.create_missing_axes()
         moments = my_moment(dwa.axes[0].get_data(), dwa.data[0])
         amp = (np.max(dwa) - np.min(dwa)).value()
         x0 = float(moments[0])

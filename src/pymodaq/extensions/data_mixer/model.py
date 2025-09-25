@@ -19,7 +19,7 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 logger = set_logger(get_module_name(__file__))
 
 if TYPE_CHECKING:
-    from pymodaq_plugins_datamixer.extensions.data_mixer import DataMixer
+    from pymodaq.extensions.data_mixer import DataMixer
     from pymodaq.utils.managers.modules_manager import ModulesManager
 
 
@@ -30,7 +30,7 @@ class DataMixerModel:
 
     def __init__(self, data_mixer: 'DataMixer'):
         self.data_mixer = data_mixer
-        self.modules_manager: ModulesManager = data_mixer.dashboard.modules_manager
+        self.modules_manager: ModulesManager = data_mixer.modules_manager
         self.settings: Parameter = self.data_mixer.settings.child('models', 'model_params')
 
     def ini_model_base(self):
@@ -63,14 +63,17 @@ class PkgMock:
     value: str
 
 
-
-def get_models(model_name=None):
+def get_models(model_name=None) -> list[dict[(str, str), (str, type)]]:
     """
     Get DataMixer Models
 
     Returns
     -------
-    list: list of dict containting the name and python module of the found models
+    list: list of dict containing the name and python module of the found models
+
+    Example
+    -------
+    model = [{'name': 'MyModel', 'class': DataModel}]
     """
     models_import = []
     discovered_models = list(get_entrypoints(group='pymodaq.models'))
