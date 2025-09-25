@@ -238,6 +238,7 @@ class DataMixer(CustomExt):
 
     def quit(self):
         self.mainwindow.close()
+        self.dashboard.remove_modules(['DataMixer'])
 
 
 def main():

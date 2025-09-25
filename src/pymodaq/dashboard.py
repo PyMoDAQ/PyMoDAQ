@@ -449,6 +449,12 @@ class DashBoard(CustomApp):
         if win is None:
             win = QtWidgets.QMainWindow()
         area = DockArea()
+        win.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         win.setCentralWidget(area)
         win.setWindowTitle("Scanner")
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
@@ -462,6 +468,12 @@ class DashBoard(CustomApp):
         if win is None:
             win = QtWidgets.QMainWindow()
         area = DockArea()
+        win.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         win.setCentralWidget(area)
         win.setWindowTitle("Logger")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
@@ -509,6 +521,12 @@ class DashBoard(CustomApp):
             self.bayesian_window = QtWidgets.QMainWindow()
         else:
             self.bayesian_window = win
+        self.bayesian_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.bayesian_window.setCentralWidget(dockarea)
         self.bayesian_window.setWindowTitle("Bayesian Optimiser")
@@ -536,6 +554,12 @@ class DashBoard(CustomApp):
             self.adaptive_window = QtWidgets.QMainWindow()
         else:
             self.adaptive_window = win
+        self.adaptive_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.adaptive_window.setCentralWidget(dockarea)
         self.adaptive_window.setWindowTitle("Adaptive Scan")
@@ -563,6 +587,12 @@ class DashBoard(CustomApp):
             self.datamixer_window = QtWidgets.QMainWindow()
         else:
             self.datamixer_window = win
+        self.datamixer_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.datamixer_window.setCentralWidget(dockarea)
         self.datamixer_window.setWindowTitle("DataMixer")
