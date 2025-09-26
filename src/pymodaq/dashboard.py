@@ -528,7 +528,7 @@ class DashBoard(CustomApp):
                 <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
             """,
             )
-            self.bayesian_module.quit()
+            self.bayesian_module.quit_fun()
         return self.bayesian_module
 
     def load_adaptive(self, win=None):
@@ -555,7 +555,7 @@ class DashBoard(CustomApp):
                     <p>Please delete the file at <b>{self.adaptive_module.config_path}</b>.</p>
                 """,
             )
-            self.adaptive_module.quit()
+            self.adaptive_module.quit_fun()
         return self.adaptive_module
 
     def load_extension_from_name(self, name: str) -> dict:

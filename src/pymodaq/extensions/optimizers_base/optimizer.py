@@ -497,7 +497,7 @@ class GenericOptimization(CustomExt):
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action('quit', self.quit)
+        self.connect_action('quit', self.quit_fun)
         self.connect_action('ini_model', self.ini_model)
         self.connect_action('ini_runner', self.ini_optimization_runner)
         self.connect_action('run', self.run_optimization)
@@ -522,7 +522,7 @@ class GenericOptimization(CustomExt):
 
             self.modules_manager.grab_datas()
 
-    def quit(self):
+    def quit_fun(self):
         self.dockarea.parent().close()
         self.clean_h5_temp()
 
