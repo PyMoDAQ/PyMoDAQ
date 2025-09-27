@@ -11,8 +11,9 @@ logger = set_logger(get_module_name(__file__))
 
 
 class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
-    _function : AcquisitionFunction
-    _usual_name : str
+    _function: AcquisitionFunction
+    usual_name: str
+    short_name: str
     params : property(abstractmethod)
 
     def base_acq(self, mean, std):
@@ -23,11 +24,11 @@ class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
 
     @property
     def tradeoff(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @tradeoff.setter
     def tradeoff(self, tradeoff):
-        raise NotImplemented
+        raise NotImplementedError
 
     def suggest(self, gaussian_process, target_space, n_random = 1000, n_l_bfgs_b = 10, fit_gp = True):
         return self._function.suggest(gaussian_process, target_space, n_random, n_l_bfgs_b, fit_gp)
@@ -44,7 +45,7 @@ class GenericAcquisitionFunctionFactory:
         """
 
         def inner_wrapper(wrapped_class: GenericAcquisitionFunctionBase) -> Callable:
-            key = wrapped_class._usual_name
+            key = wrapped_class.short_name
 
             if key not in cls._builders:
                 cls._builders[key] = wrapped_class
@@ -68,4 +69,12 @@ class GenericAcquisitionFunctionFactory:
 
     @classmethod
     def keys(cls) -> list[str]:
-            return list(cls._builders.keys())
+        return list(cls._builders.keys())
+
+    @classmethod
+    def short_names(cls) -> list[str]:
+        return list(cls.keys())
+
+    @classmethod
+    def usual_names(cls) -> list[str]:
+        return [cls.get(builder).usual_name for builder in cls._builders]

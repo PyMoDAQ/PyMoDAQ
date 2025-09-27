@@ -4,7 +4,8 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
-    _usual_name = "Upper Confidence Bound"
+    usual_name = "Upper Confidence Bound"
+    short_name = "ucb"
     params = [
         {'title': 'Kappa:', 'name': 'kappa', 'type': 'slide', 'value': 2.576,
          'min': 0.001, 'max': 100, 'subtype': 'log',
@@ -23,7 +24,12 @@ class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
 
     def __init__(self,  **kwargs):
         super().__init__()
-        self._function = UpperConfidenceBound(**kwargs)
+        self._function = UpperConfidenceBound(
+            kappa=kwargs.get('kappa', 2.576),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):
@@ -35,7 +41,8 @@ class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
-    _usual_name = "Probability of Improvement"
+    usual_name = "Probability of Improvement"
+    short_name = "poi"
     params = [ 
         {'title': 'Xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
          'tip': 'Governs the exploration/exploitation tradeoff.'
@@ -47,9 +54,15 @@ class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
         {'title': 'Exploration decay delay:', 'name': 'exploration_decay_delay', 'type': 'int', 'value': 20,
          'tip': 'Number of iterations that must have passed before applying the decay to xi.'}
     ]
+
     def __init__(self, **kwargs):
         super().__init__()
-        self._function = ProbabilityOfImprovement(**kwargs)
+        self._function = ProbabilityOfImprovement(
+            xi=kwargs.get('xi'),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):
@@ -61,7 +74,8 @@ class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
 
 @GenericAcquisitionFunctionFactory.register()
 class GenericExpectedImprovement(GenericAcquisitionFunctionBase):
-    _usual_name = "Expected Improvement"
+    usual_name = "Expected Improvement"
+    short_name = "ei"
     params = [ 
         {'title': 'Xi:', 'name': 'xi', 'type': 'slide', 'value': 0,
          'tip': 'Governs the exploration/exploitation tradeoff.'
@@ -75,7 +89,12 @@ class GenericExpectedImprovement(GenericAcquisitionFunctionBase):
     ]
     def __init__(self, **kwargs):
         super().__init__()
-        self._function = ExpectedImprovement(**kwargs)
+        self._function = ExpectedImprovement(
+            xi=kwargs.get('xi'),
+            exploration_decay=kwargs.get('exploration_decay', None),
+            exploration_decay_delay=kwargs.get('exploration_decay_delay', None),
+            random_state=kwargs.get('random_state', None),
+        )
 
     @property
     def tradeoff(self):

@@ -6,10 +6,13 @@ Created the 31/08/2023
 """
 
 from typing import List, TYPE_CHECKING, Union, Dict, Tuple, Iterable
+
+import bayes_opt.exception
 import numpy as np
 from collections import namedtuple
 
 from bayes_opt import BayesianOptimization
+from bayes_opt.exception import TargetSpaceEmptyError
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -23,7 +26,7 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 
 from pymodaq.extensions.optimizers_base.utils import (
     GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
-    OptimizerConfig)
+    OptimizerConfig, PredictionError)
 
 
 logger = set_logger(get_module_name(__file__))
@@ -36,12 +39,13 @@ class BayesianConfig(OptimizerConfig):
 
 class BayesianAlgorithm(GenericAlgorithm):
 
-    def __init__(self, ini_random: int, bounds: dict, **kwargs):
-        super().__init__(ini_random)
+    def __init__(self, ini_random: int, bounds: dict[str, tuple[float, float]], actuators: list[str], **kwargs):
+        super().__init__(ini_random, bounds, actuators)
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
                                           **kwargs
                                           )
+        self.sorting_index: list = None
 
     def set_prediction_function(self, kind: str = '', **kwargs):
         self._prediction = GenericAcquisitionFunctionFactory.create(kind, **kwargs)
@@ -50,50 +54,78 @@ class BayesianAlgorithm(GenericAlgorithm):
         """ Update the parameters of the acquisition function (kappa decay for instance)"""
         self._prediction.decay_exploration()
 
-
     @property
     def tradeoff(self):
         return self._prediction.tradeoff
 
+    def get_random_point(self) -> dict[str, float]:
+        """ Get a random point coordinates in the defined bounds"""
+        point = dict()
+        for key, vals in self.bounds.items():
+            point[key] = (np.max(vals) - np.min(vals)) * np.random.random_sample() + np.min(vals)
+        return point
+
     @property
-    def bounds(self) -> List[np.ndarray]:
-        return [bound for bound in self._algo.space.bounds]
+    def bounds(self) -> dict[str, float]:
+        """ Return bounds as a dict.
+        """
+        return self._algo.space.array_to_params(self._algo.space.bounds)
 
     @bounds.setter
-    def bounds(self, bounds: Union[Dict[str, Tuple[float, float]], Iterable[np.ndarray]]):
+    def bounds(self, bounds: Dict[str, Tuple[float, float]]):
         if isinstance(bounds, dict):
             self._algo.set_bounds(bounds)
         else:
-            self._algo.set_bounds(self._algo.space.array_to_params(np.array(bounds)))
+            raise TypeError('Bounds should be defined as a dictionary')
 
-    def prediction_ask(self) -> np.ndarray:
-        """ Ask the prediction function or algo to provide the next point to probe"""
-        return self._prediction.suggest(self._algo._gp, self._algo.space)
+    def prediction_ask(self) -> dict[str, float]:
+        """ Ask the prediction function or algo to provide the next point to probe
+
+        Warning the space algo object is sorting by name the bounds...
+        """
+        try:
+            return self._algo.space.array_to_params(self._prediction.suggest(self._algo._gp, self._algo.space))
+        except TargetSpaceEmptyError as e:
+            raise PredictionError(str(e))
+
 
     def tell(self, function_value: float):
         self._algo.register(params=self._next_point, target=function_value)
         
     @property
     def best_fitness(self) -> float:
-        return self._algo.max['target']
+        if self._algo.max is None:
+            return 0.001
+        else:
+            return self._algo.max['target']
 
     @property
-    def best_individual(self) -> Union[np.ndarray, None]:
+    def best_individual(self) -> Union[dict[str, float], None]:
         if self._algo.max is None:
             return None
         else:
             max_param = self._algo.max.get('params', None)
             if max_param is None:
                 return None
-            return self._algo.space.params_to_array(max_param)
+            return max_param
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
         if ind_iter >= stopping_parameters.niter:
             return True
-        if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            coordinates = np.array(self._suggested_coordinates[-stopping_parameters.npoints:]).T
-            return np.all(np.std(coordinates, axis=1)
-                          < stopping_parameters.tolerance)
+        if ind_iter > stopping_parameters.npoints:
+            if stopping_parameters.stop_type == StopType.PREDICT:
+                coordinates = np.atleast_1d([
+                    [coordinates[act] for coordinates in self._suggested_coordinates[-stopping_parameters.npoints:]]
+                    for act in self.actuators])
+                return np.all(np.abs((np.std(coordinates, axis=1) / np.mean(coordinates, axis=1)))
+                              < stopping_parameters.tolerance)
+            elif stopping_parameters.stop_type == StopType.BEST:
+                coordinates = np.atleast_1d(
+                    [[best['params'][act] for best in
+                      sorted(self._algo.res, key=lambda x: x['target'])[-stopping_parameters.npoints:]]
+                     for act in self.actuators])
+                return np.all(np.abs((np.std(coordinates, axis=1) / np.mean(coordinates, axis=1)))
+                              < stopping_parameters.tolerance)
         return False
 
     def _posterior(self, x_obs, y_obs, grid):

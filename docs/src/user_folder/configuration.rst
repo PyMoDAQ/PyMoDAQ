@@ -71,7 +71,6 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
         pwd = "pymodaq"
 
     [general]
-    debug_level = "DEBUG" #either "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
     debug_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     check_version = true  #automatically check version at startup
 
@@ -95,6 +94,11 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
     [presets]
     default_preset_for_scan = "preset_default"
     default_preset_for_logger = "preset_default"
+
+.. important::
+
+   For list entries, the default value used by PyMoDAQ is the first one. You can change it either by modifying the file
+   and placing the desired value as the first element or directly from the GUI by selecting it from the combo box.
 
 
 .. _plugins_configuration_files:
