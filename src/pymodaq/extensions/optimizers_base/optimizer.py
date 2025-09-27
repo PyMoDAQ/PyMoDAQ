@@ -22,6 +22,7 @@ try:
 except ModuleNotFoundError:
     from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
 
+from pymodaq_utils.config import Config as ConfigUtils
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
@@ -49,6 +50,7 @@ from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
 logger = set_logger(get_module_name(__file__))
 config = config_mod.Config()
+config_utils = ConfigUtils()
 
 PREDICTION_PARAMS = []  # to be subclassed in real optimizer implementations
 MODELS = get_optimizer_models()
@@ -57,6 +59,7 @@ MODELS = get_optimizer_models()
 class OptimizerAction(StrEnum):
     QUIT = 'quit'
     INI_MODEL = 'ini_model'
+    MODELS = 'models'
     SAVE = 'save'
     INI_RUNNER = 'ini_runner'
     RUN = 'run'
@@ -341,7 +344,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(save_type='optimizer', backend=config_utils('general', 'hdf5_backend'))
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
@@ -486,6 +489,7 @@ class GenericOptimization(CustomExt):
         '''
         if param.name() == 'model_class':
             self.get_set_model_params(param.value())
+            self.get_action(OptimizerAction.MODELS).setCurrentText(param.value())
         elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
             if self.model_class is not None:
                 self.model_class.update_settings(param)
@@ -541,6 +545,9 @@ class GenericOptimization(CustomExt):
     def setup_actions(self):
         logger.debug('setting actions')
         self.add_action(OptimizerAction.QUIT, 'Quit', 'close2', "Quit program")
+        combo_model = QtWidgets.QComboBox()
+        combo_model.addItems([model['name'] for  model in MODELS])
+        self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
         self.add_action(OptimizerAction.INI_MODEL, 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
         self.add_action(OptimizerAction.SAVE, 'Save?', 'SaveAs', tip='If checked, data will be saved',
@@ -562,6 +569,9 @@ class GenericOptimization(CustomExt):
     def connect_things(self):
         logger.debug('connecting things')
         self.connect_action(OptimizerAction.QUIT, self.quit)
+        self.connect_action('models', self.update_model_settings_from_action,
+                            signal_name='currentTextChanged')
+
         self.connect_action(OptimizerAction.SAVE, self.do_save)
         self.connect_action(OptimizerAction.INI_MODEL, self.ini_model)
         self.connect_action(OptimizerAction.INI_RUNNER, self.ini_optimization_runner)
@@ -571,6 +581,10 @@ class GenericOptimization(CustomExt):
         self.connect_action(OptimizerAction.GO_TO_BEST, self.go_to_best)
         self.connect_action(OptimizerAction.GO_TO, self.allow_go_to)
         self.h5saver.new_file_sig.connect(self.create_new_file)
+
+
+    def update_model_settings_from_action(self, model: str):
+        self.settings.child('models', 'model_class').setValue(model)
 
     def go_to_best(self):
         best_individual = self.algorithm.best_individual
@@ -733,6 +747,7 @@ class GenericOptimization(CustomExt):
             self.enable_controls_opti(True)
             self.get_action('model_led').set_as_true()
             self.set_action_enabled(OptimizerAction.INI_MODEL, False)
+            self.set_action_enabled(OptimizerAction.MODELS, False)
 
             if self.DISPLAY_BEST:
                 self.viewer_observable.update_viewers(['Viewer0D'] + ['Viewer0D' for _ in self.modules_manager.selected_actuators_name],
