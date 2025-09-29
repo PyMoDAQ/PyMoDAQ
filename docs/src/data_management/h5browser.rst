@@ -1,8 +1,8 @@
 
 .. _H5Browser_module:
 
-H5Browser
-=========
+Data Browsing: the H5Browser module
+===================================
 
 Exploring data
 ++++++++++++++

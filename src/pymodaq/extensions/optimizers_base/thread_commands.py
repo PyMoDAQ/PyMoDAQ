@@ -7,14 +7,16 @@ class OptimizerToRunner(StrEnum):
     """
     START = 'start'
     RUN = 'run'
+    PAUSE = 'pause'
     STOP = 'stop'
     STOPPING = 'stopping'
     BOUNDS = 'bounds'
-
+    RESTART = 'restart'
     PREDICTION = 'prediction'
 
 
 class OptimizerThreadStatus(StrEnum):
 
     ADD_DATA = "add_data"
+    TRADE_OFF = "tradeoff"
 

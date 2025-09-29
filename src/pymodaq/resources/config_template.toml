@@ -47,3 +47,8 @@ sort1D = true
 wait_time = 0
 wait_time_between = 0
 timeout = 10000  # in millisecond
+
+[optimizer]
+    [optimizer.bounds]
+    actuator_min = -10
+    actuator_max = 10

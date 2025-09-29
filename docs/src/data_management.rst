@@ -20,4 +20,5 @@ transparently by all of PyMoDAQ's modules.
 
    data_management/data_objects
    data_management/saving_loading_data
+   data_management/h5browser
    data_management/plotting_data_objects
