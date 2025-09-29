@@ -4,6 +4,7 @@ from pathlib import Path
 from qtpy import QtCore
 
 
+from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq_gui.utils import CustomApp
 
 from pymodaq_utils.utils import ThreadCommand
@@ -52,6 +53,11 @@ class ControlModuleUI(CustomApp):
         """Should be implemented to send to the main app the fact that someone (un)checked init."""
         raise NotImplementedError
 
+    def quit(self):
+        raise NotImplementedError
+
+    def quit_fun(self):
+        self.quit()
 
 def register_uis(parent_module_name: str = 'pymodaq.control_modules.daq_move_ui'):
     uis = []

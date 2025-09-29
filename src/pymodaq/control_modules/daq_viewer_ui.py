@@ -132,6 +132,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.addItems(dtypes)
         self.daq_type = DAQTypesEnum[dtypes[0]]
 
+
     def close(self):
         for dock in self.viewer_docks:
             dock.close()
@@ -198,6 +199,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
 
+    def quit(self):
+        self._stop()
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, ))
+
     def setup_actions(self):
         self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True)
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
@@ -221,7 +226,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', self._show_settings)
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, )))
+        self.connect_action('quit', self.quit)
         self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
 
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_LOG, )))

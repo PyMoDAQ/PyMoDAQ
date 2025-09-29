@@ -94,12 +94,12 @@ class FunctionPlotter(CustomApp):
         logger.debug('actions set')
 
     def connect_things(self):
-        self.connect_action('quit', self.quit)
+        self.connect_action('quit', self.quit_fun)
         self.connect_action('plot', self.plot)
 
         self.connect_action('plot_seq', self.plot_all)
 
-    def quit(self):
+    def quit_fun(self):
         self.mainwindow.close()
 
     def plot(self):

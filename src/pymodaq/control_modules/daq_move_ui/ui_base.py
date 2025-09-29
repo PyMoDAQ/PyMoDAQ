@@ -300,6 +300,13 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def set_settings_tree(self, tree):
         self._tree = tree
 
+    def _stop(self):
+        self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, ))
+
+    def quit(self):
+        self._stop()
+        self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, ))
+
     def connect_things(self):
         if 'show_controls' in self.actions_names:
             self.connect_action('show_controls', self.show_controls)
@@ -314,7 +321,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         if 'log' in self.actions_names:
             self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
         if 'stop' in self.actions_names:
-            self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+            self.connect_action('stop', self._stop)
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
         if 'ini_actuator' in self.actions_names:
@@ -340,7 +347,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuators_combo.currentTextChanged.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
         if 'quit' in self.actions_names:
-            self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, )))
+            self.connect_action('quit', lambda: self.quit)
         if 'refresh_value' in self.actions_names:
             self.connect_action('refresh_value',
                                 lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,

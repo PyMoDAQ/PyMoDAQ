@@ -101,8 +101,9 @@ class CustomExt(CustomApp):
         return self._modules_manager
 
     def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
+        if self.runner_thread is not None and self.runner_thread.isRunning():
+            self.runner_thread.quit()
+            terminated = self.runner_thread.wait(duration)
+            if not terminated:
+                self.runner_thread.terminate()
+                self.runner_thread.wait()

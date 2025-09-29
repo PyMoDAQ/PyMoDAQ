@@ -70,7 +70,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.set_action_enabled('stop', enable)
 
     def connect_things(self):
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
+        self.connect_action('quit', self.quit_fun)
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
@@ -212,6 +212,8 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         super().update_viewers(viewers_type, viewers_name, force)
         self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
                                                                               viewers=self.viewers)))
+    def quit_fun(self):
+        self.command_sig.emit(ThreadCommand('quit'))
 
 def main():
 
