@@ -449,6 +449,12 @@ class DashBoard(CustomApp):
         if win is None:
             win = QtWidgets.QMainWindow()
         area = DockArea()
+        win.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         win.setCentralWidget(area)
         win.setWindowTitle("Scanner")
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
@@ -462,6 +468,12 @@ class DashBoard(CustomApp):
         if win is None:
             win = QtWidgets.QMainWindow()
         area = DockArea()
+        win.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         win.setCentralWidget(area)
         win.setWindowTitle("Logger")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
@@ -509,6 +521,12 @@ class DashBoard(CustomApp):
             self.bayesian_window = QtWidgets.QMainWindow()
         else:
             self.bayesian_window = win
+        self.bayesian_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.bayesian_window.setCentralWidget(dockarea)
         self.bayesian_window.setWindowTitle("Bayesian Optimiser")
@@ -536,6 +554,12 @@ class DashBoard(CustomApp):
             self.adaptive_window = QtWidgets.QMainWindow()
         else:
             self.adaptive_window = win
+        self.adaptive_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         dockarea = DockArea()
         self.adaptive_window.setCentralWidget(dockarea)
         self.adaptive_window.setWindowTitle("Adaptive Scan")
@@ -557,6 +581,40 @@ class DashBoard(CustomApp):
             )
             self.adaptive_module.quit()
         return self.adaptive_module
+
+    def load_datamixer(self, win=None):
+        if win is None:
+            self.datamixer_window = QtWidgets.QMainWindow()
+        else:
+            self.datamixer_window = win
+        self.datamixer_window.setWindowFlags(
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
+        dockarea = DockArea()
+        self.datamixer_window.setCentralWidget(dockarea)
+        self.datamixer_window.setWindowTitle("DataMixer")
+        self.datamixer_module = extmod.DataMixer(
+            parent=dockarea, dashboard=self
+        )
+        self.extensions["datamixer"] = self.datamixer_module
+
+        if self.datamixer_module.validate_config():
+            self.datamixer_window.show()
+        else:
+            messagebox(
+                severity="critical",
+                title="DataMixer error",
+                text=f"""
+                    <p>Saved DataMixer configuration file is not compatible anymore.</p>
+                    <p>Please delete the file at <b>{self.datamixer_module.config_path}</b>.</p>
+                """,
+            )
+            self.datamixer_module.quit()
+        return self.datamixer_module
+
 
     def load_extension_from_name(self, name: str) -> dict:
         return self.load_extensions_module(
@@ -735,6 +793,7 @@ class DashBoard(CustomApp):
         self.add_action("console", "IPython Console", auto_toolbar=False)
         self.add_action("bayesian", "Bayesian Optimisation", auto_toolbar=False)
         self.add_action("adaptive", "Adaptive Scan", auto_toolbar=False)
+        self.add_action("datamixer", "DataMixer", auto_toolbar=False)
 
         self.add_action("about", "About", "information2")
         self.add_action("help", "Help", "help1")
@@ -844,6 +903,7 @@ class DashBoard(CustomApp):
         self.connect_action("console", lambda: self.load_console())
         self.connect_action("bayesian", lambda: self.load_bayesian())
         self.connect_action("adaptive", lambda: self.load_adaptive())
+        self.connect_action("datamixer", lambda: self.load_datamixer())
 
         self.connect_action("about", self.show_about)
         self.connect_action("help", self.show_help)
@@ -943,6 +1003,7 @@ class DashBoard(CustomApp):
         self.extensions_menu.addAction(self.get_action("console"))
         self.extensions_menu.addAction(self.get_action("bayesian"))
         self.extensions_menu.addAction(self.get_action("adaptive"))
+        self.extensions_menu.addAction(self.get_action("datamixer"))
 
         # extensions from plugins
         extensions_actions = []

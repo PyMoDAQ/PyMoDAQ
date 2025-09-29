@@ -3,6 +3,7 @@
 default_preset_for_scan = "preset_default"
 default_preset_for_logger = "preset_default"
 default_preset_for_pid = "beam_steering_mock"
+default_preset_for_datamixer = "preset_default"
 
 [actuator]
 ui = 'Simple'  # one of ['Simple', 'Original', 'Binary', ...]

@@ -30,6 +30,7 @@ from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.utils.config import Config as ControlModulesConfig
 
+
 class DAQTypesEnum(BaseEnum):
     """enum relating a given DAQType and a viewer type
     See Also

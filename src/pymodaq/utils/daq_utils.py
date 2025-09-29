@@ -124,6 +124,20 @@ def get_instrument_plugins():  # pragma: no cover
     except Exception as e:
         logger.debug(f'Impossible to import PID utility plugin: {str(e)}')
 
+    # add utility plugin for DataMixer
+    try:
+        data_mixer_module = importlib.import_module('pymodaq.extensions.data_mixer')
+        mod = [{'name': 'DataMixer',
+                'module': data_mixer_module,
+                'parent_module': data_mixer_module,
+                'type': 'daq_0Dviewer'}]
+        importlib.import_module(f'{data_mixer_module.__package__}.daq_0Dviewer_DataMixer')
+        plugins_import.extend(mod)
+
+    except Exception as e:
+        logger.debug(f'Impossible to import the DataMixer utility plugin: {str(e)}')
+
+
     plugins_import.sort(key=lambda mod: mod['name'])
     return plugins_import
 

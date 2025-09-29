@@ -279,25 +279,28 @@ class ModulesManager(QObject, ParameterManager):
     def get_det_data_list(self) -> DataToExport:
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
-        self.connect_detectors()
-        datas: DataToExport = self.grab_data()
+        if len(self.detectors) == 0:
+            return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
+        else:
+            self.connect_detectors()
+            datas: DataToExport = self.grab_data()
 
-        data_list0D = datas.get_full_names('data0D')
-        data_list1D = datas.get_full_names('data1D')
-        data_list2D = datas.get_full_names('data2D')
-        data_listND = datas.get_full_names('dataND')
+            data_list0D = datas.get_full_names('data0D')
+            data_list1D = datas.get_full_names('data1D')
+            data_list2D = datas.get_full_names('data2D')
+            data_listND = datas.get_full_names('dataND')
 
-        self.settings.child('data_dimensions', 'det_data_list0D').setValue(
-            dict(all_items=data_list0D, selected=[]))
-        self.settings.child('data_dimensions', 'det_data_list1D').setValue(
-            dict(all_items=data_list1D, selected=[]))
-        self.settings.child('data_dimensions', 'det_data_list2D').setValue(
-            dict(all_items=data_list2D, selected=[]))
-        self.settings.child('data_dimensions', 'det_data_listND').setValue(
-            dict(all_items=data_listND, selected=[]))
+            self.settings.child('data_dimensions', 'det_data_list0D').setValue(
+                dict(all_items=data_list0D, selected=[]))
+            self.settings.child('data_dimensions', 'det_data_list1D').setValue(
+                dict(all_items=data_list1D, selected=[]))
+            self.settings.child('data_dimensions', 'det_data_list2D').setValue(
+                dict(all_items=data_list2D, selected=[]))
+            self.settings.child('data_dimensions', 'det_data_listND').setValue(
+                dict(all_items=data_listND, selected=[]))
 
-        self.connect_detectors(False)
-        return datas
+            self.connect_detectors(False)
+            return datas
 
     def get_selected_probed_data(self, dim='0D'):
         """Get the name of selected data names of a given dimensionality
