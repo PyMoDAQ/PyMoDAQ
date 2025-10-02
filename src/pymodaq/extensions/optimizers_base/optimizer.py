@@ -89,7 +89,8 @@ def optimizer_params(prediction_params: list[dict]):
               'children': [
                   {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
                   {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
-                   'limits': StopType.values()},
+                   'limits': StopType.values(), 'value': str(StopType.NONE),
+                   'tip': StopType.NONE.tip()},
                   {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
                    'min': 1e-8, 'max': 1, 'subtype': 'log', },
                   {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
@@ -499,6 +500,9 @@ class GenericOptimization(CustomExt):
         elif param.name() in putils.iter_children(
             self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
+            if param.name() == 'stop_type':
+                self.settings.child('main_settings', 'stopping', 'stop_type').setOpts(
+                    tip=StopType(param.value()).tip())
         elif param.name() in putils.iter_children(
                 self.settings.child('main_settings', 'prediction'), []):
             if param.name() != 'tradeoff_actual':
