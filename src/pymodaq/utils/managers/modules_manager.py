@@ -326,16 +326,23 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_flag = False
         self.settings.child('det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
+        
+        if 'DataMixer' in self.selected_detectors_name:
+            overridden_detectors = self.get_mod_from_name(
+                'DataMixer', 'det').settings.child('main_settings', 'overridden_detectors').opts['limits']
+        else:
+            overridden_detectors = []
 
         for mod in self.detectors:
-            if not (check_do_override and mod.override_grab_from_extension):
+            #if not (check_do_override and mod.override_grab_from_extension):
+            if mod.title not in overridden_detectors:    
                 kwargs.update(dict(Naverage=mod.Naverage))
                 mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
-            if time.perf_counter() - tzero > self.detector_timeout:
+            if time.perf_counter() - tzero > self.detector_timeout / 1000:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
