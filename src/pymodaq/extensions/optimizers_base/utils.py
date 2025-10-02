@@ -42,6 +42,16 @@ class StopType(StrEnum):
     PREDICT = 'Predict'
     BEST = 'Best'
 
+    def tip(self):
+        if self == StopType.NONE:
+            return 'Stopping only after the number of iteration has been reached'
+        elif self == StopType.PREDICT:
+            return ('Stopping either after the number of iteration has been reached or the last N'
+                    'tested coordinates have a standard deviation less than tolerance')
+        elif self == StopType.BEST:
+            return ('Stopping either after the number of iteration has been reached or the N best '
+                    'coordinates have a standard deviation less than tolerance')
+
 
 StoppingParameters = namedtuple('StoppingParameters',
                                 ['niter', 'stop_type', 'tolerance', 'npoints'])
