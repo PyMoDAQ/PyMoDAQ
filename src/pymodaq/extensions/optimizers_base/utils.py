@@ -48,7 +48,7 @@ class StopType(StrEnum):
         elif self == StopType.PREDICT:
             return ('Stopping either after the number of iteration has been reached or the last N'
                     'tested coordinates have a standard deviation less than tolerance')
-        elif self == StopType.PREDICT:
+        elif self == StopType.BEST:
             return ('Stopping either after the number of iteration has been reached or the N best '
                     'coordinates have a standard deviation less than tolerance')
 
