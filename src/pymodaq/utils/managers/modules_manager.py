@@ -329,7 +329,8 @@ class ModulesManager(QObject, ParameterManager):
         
         if 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
-                'DataMixer', 'det').settings.child('main_settings', 'overridden_detectors').opts['limits']
+                'DataMixer', 'det').settings.child(
+                'detector_settings', 'overridden_detectors').opts['limits']
         else:
             overridden_detectors = []
 
