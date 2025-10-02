@@ -25,7 +25,11 @@ class DAQ_0DViewer_DataMixer(DAQ_Viewer_base):
          hardware library.
 
     """
-    params = comon_parameters+[]
+    params = (comon_parameters+
+              [
+                  {'title': 'Related Detectors', 'name': 'overridden_detectors', 'type': 'list',
+                   'readonly': True}  # mandatory to know what detectors are related to the DataMixer
+              ])
 
     def ini_attributes(self):
         self.controller: DataMixer = None

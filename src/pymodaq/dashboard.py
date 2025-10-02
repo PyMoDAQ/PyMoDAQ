@@ -1477,8 +1477,8 @@ class DashBoard(CustomApp):
         return det_mod_tmp
 
     def override_det_from_extension(self, overriden_grabbers: Sequence[str] = None):
-        """(Experimental) If an extension adding detectors within the Dashboard need to, it could call this
-        method.
+        """(Experimental) If an extension adding detectors within the Dashboard need to,
+         it could call this method.
 
         Then if some other extension trigger a grab from it, the request of a grab won't be done twice
 
