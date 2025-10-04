@@ -49,6 +49,7 @@ from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveEr
 from pymodaq.utils.daq_utils import get_instrument_plugins
 from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq.utils import config as config_mod_pymodaq
+from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -445,94 +446,32 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self, win=None):
-        if win is None:
-            win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        win.setCentralWidget(area)
-        win.setWindowTitle("Scanner")
+    def load_scan_module(self):
+        win, area = make_window(title="Scanner")
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
         self.extensions["DAQScan"] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
-        # win.setWindowTitle("DAQScan")
         win.show()
         return self.scan_module
 
-    def load_log_module(self, win=None):
-        if win is None:
-            win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        win.setCentralWidget(area)
-        win.setWindowTitle("Logger")
+    def load_log_module(self):
+        win, area = make_window(title="Logger")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions["DAQ_Logger"] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
         win.show()
         return self.log_module
 
-    def load_pid_module(self, win=None):
-        if win is None:
-            self.pid_window = QtWidgets.QMainWindow()
-        else:
-            self.pid_window = win
-        self.pid_window.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        dockarea = DockArea()
-        self.pid_window.setCentralWidget(dockarea)
-        self.pid_window.setWindowTitle("PID Controller")
-        self.pid_module = extmod.DAQ_PID(dockarea=dockarea, dashboard=self)
+    def load_pid_module(self):
+        self.pid_window, area = make_window(title="PID Controller")
+        self.pid_module = extmod.DAQ_PID(dockarea=area, dashboard=self)
         self.extensions["DAQ_PID"] = self.pid_module
         self.pid_window.show()
         return self.pid_module
 
-    def load_console(self):
-        dock_console = Dock("QTConsole")
-        self.dockarea.addDock(dock_console, "bottom")
-        qtconsole = extmod.QtConsole(
-            style_sheet=config_utils("style", "syntax_highlighting"),
-            syntax_style=config_utils("style", "syntax_highlighting"),
-            custom_banner=extmod.console.BANNER,
-        )
-        dock_console.addWidget(qtconsole)
-        self.extensions["qtconsole"] = qtconsole
-
-        qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
-
-        return qtconsole
-
-    def load_bayesian(self, win=None):
-        if win is None:
-            self.bayesian_window = QtWidgets.QMainWindow()
-        else:
-            self.bayesian_window = win
-        self.bayesian_window.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        dockarea = DockArea()
-        self.bayesian_window.setCentralWidget(dockarea)
-        self.bayesian_window.setWindowTitle("Bayesian Optimiser")
-        self.bayesian_module = extmod.BayesianOptimization(
-            dockarea=dockarea, dashboard=self
-        )
+    def load_bayesian(self):
+        self.bayesian_window, area = make_window(title="Bayesian Optimiser")
+        self.bayesian_module = extmod.BayesianOptimization(dockarea=area, dashboard=self)
         self.extensions["bayesian"] = self.bayesian_module
 
         if self.bayesian_module.validate_config():
@@ -549,23 +488,9 @@ class DashBoard(CustomApp):
             self.bayesian_module.quit()
         return self.bayesian_module
 
-    def load_adaptive(self, win=None):
-        if win is None:
-            self.adaptive_window = QtWidgets.QMainWindow()
-        else:
-            self.adaptive_window = win
-        self.adaptive_window.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        dockarea = DockArea()
-        self.adaptive_window.setCentralWidget(dockarea)
-        self.adaptive_window.setWindowTitle("Adaptive Scan")
-        self.adaptive_module = extmod.AdaptiveOptimisation(
-            dockarea=dockarea, dashboard=self
-        )
+    def load_adaptive(self):
+        self.adaptive_window, area = make_window(title="Adaptive Scan")
+        self.adaptive_module = extmod.AdaptiveOptimisation(dockarea=area, dashboard=self)
         self.extensions["adaptive"] = self.adaptive_module
 
         if self.adaptive_module.validate_config():
@@ -582,23 +507,9 @@ class DashBoard(CustomApp):
             self.adaptive_module.quit()
         return self.adaptive_module
 
-    def load_datamixer(self, win=None):
-        if win is None:
-            self.datamixer_window = QtWidgets.QMainWindow()
-        else:
-            self.datamixer_window = win
-        self.datamixer_window.setWindowFlags(
-            Qt.Window
-            | Qt.WindowTitleHint
-            | Qt.WindowMinimizeButtonHint
-            | Qt.WindowMaximizeButtonHint
-        )
-        dockarea = DockArea()
-        self.datamixer_window.setCentralWidget(dockarea)
-        self.datamixer_window.setWindowTitle("DataMixer")
-        self.datamixer_module = extmod.DataMixer(
-            parent=dockarea, dashboard=self
-        )
+    def load_datamixer(self):
+        self.datamixer_window, area = make_window(title="DataMixer")
+        self.datamixer_module = extmod.DataMixer(parent=area, dashboard=self)
         self.extensions["datamixer"] = self.datamixer_module
 
         if self.datamixer_module.validate_config():
@@ -615,6 +526,20 @@ class DashBoard(CustomApp):
             self.datamixer_module.quit()
         return self.datamixer_module
 
+    def load_console(self):
+        dock_console = Dock("QTConsole")
+        self.dockarea.addDock(dock_console, "bottom")
+        qtconsole = extmod.QtConsole(
+            style_sheet=config_utils("style", "syntax_highlighting"),
+            syntax_style=config_utils("style", "syntax_highlighting"),
+            custom_banner=extmod.console.BANNER,
+        )
+        dock_console.addWidget(qtconsole)
+        self.extensions["qtconsole"] = qtconsole
+
+        qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
+
+        return qtconsole
 
     def load_extension_from_name(self, name: str) -> dict:
         return self.load_extensions_module(
