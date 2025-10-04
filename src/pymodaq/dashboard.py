@@ -523,7 +523,7 @@ class DashBoard(CustomApp):
                     <p>Please delete the file at <b>{self.datamixer_module.config_path}</b>.</p>
                 """,
             )
-            self.datamixer_module.quit()
+            self.datamixer_module.quit_fun()
         return self.datamixer_module
 
     def load_console(self):
