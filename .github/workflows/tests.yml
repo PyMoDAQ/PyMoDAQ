@@ -40,10 +40,10 @@ jobs:
         
 
       - name: Checkout the repo
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
  
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v6.0.0
         with:
           python-version: ${{ matrix.python-version }}
           
@@ -125,12 +125,12 @@ jobs:
     needs: tests # Ensure this job runs after all matrix jobs complete
     steps:
        # switch to badges branches to commit
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           ref: badges
      
       - name: Download badges
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v5.0.0
 
       - name: Reorganize badges
         run: |
@@ -149,7 +149,7 @@ jobs:
           git commit  --allow-empty -m "Add/Update badge"
 
       - name: Push badges
-        uses: ad-m/github-push-action@v0.8.0
+        uses: ad-m/github-push-action@v1.0.0
         if: ${{ success() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -160,10 +160,10 @@ jobs:
 
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v5.0.0
         with:
           path: ./coverage-reports
 
@@ -184,7 +184,7 @@ jobs:
           coverage xml -i
 
       - name: Upload combined coverage report to Codecov
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
