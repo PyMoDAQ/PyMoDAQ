@@ -313,12 +313,6 @@ class OptimizerModelDefault(OptimizerModelGeneric):
     def ini_model(self):
         pass
 
-    def optimize_from(self):
-        self.modules_manager.get_det_data_list()
-        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
-        data0D['selected'] = data0D['all_items']
-        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
-
     def update_settings(self, param: Parameter):
         pass
 
@@ -356,6 +350,12 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
         """
         return individual_as_dta(outputs, self.modules_manager.actuators, 'outputs', mode='abs')
+
+    def optimize_from(self):
+        self.modules_manager.get_det_data_list()
+        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
+        data0D['selected'] = data0D['all_items']
+        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
 
 
 def get_optimizer_models(model_name=None):
