@@ -87,10 +87,11 @@ def optimizer_params(prediction_params: list[dict]):
               },
              {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
               'children': [
-                  {'title': 'Niteration', 'name': 'niter', 'type': 'int', 'value': 100, 'min': -1},
+                  {'title': 'Niteration', 'name': 'niter', 'type': 'int',
+                   'value': config('optimizer', 'n_iter'), 'min': 5},
                   {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
-                   'limits': StopType.values(), 'value': str(StopType.NONE),
-                   'tip': StopType.NONE.tip()},
+                   'limits': StopType.values(), 'value': str(StopType.ITER),
+                   'tip': StopType.ITER.tip()},
                   {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
                    'min': 1e-8, 'max': 1, 'subtype': 'log', },
                   {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
@@ -500,7 +501,7 @@ class GenericOptimization(CustomExt):
         elif param.name() in putils.iter_children(
             self.settings.child('main_settings', 'stopping'), []):
             self.update_stopping_criteria()
-            if param.name() == 'stop_type':
+            if param.name() == 'stop_type' and param.value() is not None:
                 self.settings.child('main_settings', 'stopping', 'stop_type').setOpts(
                     tip=StopType(param.value()).tip())
         elif param.name() in putils.iter_children(

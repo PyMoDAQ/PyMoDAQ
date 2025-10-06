@@ -39,11 +39,14 @@ logger = set_logger(get_module_name(__file__))
 
 class StopType(StrEnum):
     NONE = 'None'
+    ITER = 'Iter'
     PREDICT = 'Predict'
     BEST = 'Best'
 
     def tip(self):
         if self == StopType.NONE:
+            return 'Stopping only after the number of iteration has been reached'
+        elif self == StopType.ITER:
             return 'Stopping only after the number of iteration has been reached'
         elif self == StopType.PREDICT:
             return ('Stopping either after the number of iteration has been reached or the last N'
@@ -310,12 +313,6 @@ class OptimizerModelDefault(OptimizerModelGeneric):
     def ini_model(self):
         pass
 
-    def optimize_from(self):
-        self.modules_manager.get_det_data_list()
-        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
-        data0D['selected'] = data0D['all_items']
-        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
-
     def update_settings(self, param: Parameter):
         pass
 
@@ -353,6 +350,12 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
         """
         return individual_as_dta(outputs, self.modules_manager.actuators, 'outputs', mode='abs')
+
+    def optimize_from(self):
+        self.modules_manager.get_det_data_list()
+        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
+        data0D['selected'] = data0D['all_items']
+        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
 
 
 def get_optimizer_models(model_name=None):

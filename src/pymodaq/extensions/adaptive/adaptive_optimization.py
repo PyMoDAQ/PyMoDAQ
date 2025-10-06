@@ -5,7 +5,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.extensions.optimizers_base.optimizer import (
-    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
+    GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction, StopType)
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
@@ -65,11 +65,15 @@ class AdaptiveOptimisation(GenericOptimization):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.get_action(OptimizerAction.SAVE).trigger()
+        self.settings.child('main_settings', 'ini_random').hide()
+        self.settings.child('main_settings', 'stopping', 'tolerance').hide()
+        self.settings.child('main_settings', 'stopping', 'npoints').hide()
+        self.settings.child('main_settings', 'stopping', 'stop_type').setLimits(
+            [StopType.NONE.value, StopType.ITER.value])
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
         self._base_name: str = 'Adaptive'
-        self.settings.child('main_settings', 'ini_random').hide()
 
     def validate_config(self) -> bool:
         utility = find_key_in_nested_dict(self.optimizer_config.to_dict(), 'prediction')

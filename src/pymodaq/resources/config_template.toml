@@ -50,6 +50,8 @@ wait_time_between = 0
 timeout = 10000  # in millisecond
 
 [optimizer]
+    n_iter = 100
+
     [optimizer.bounds]
     actuator_min = -10
     actuator_max = 10

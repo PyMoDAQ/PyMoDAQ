@@ -102,14 +102,18 @@ class AdaptiveAlgorithm(GenericAlgorithm):
             individual_array =  np.atleast_1d(self._algo.bounds[0])
         return dict(zip(self.actuators, individual_array))
 
+    def best_individuals(self, n_best):
+        if len(self._algo.data) > n_best:
+            individual_array =  np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
+        else:
+            individual_array =  np.atleast_1d(self._algo.bounds[0])
+        return dict(zip(self.actuators, individual_array))
+
+
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
-        if ind_iter >= stopping_parameters.niter:
-            return True
-        if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            try:
-                return self.best_fitness < stopping_parameters.tolerance
-            except IndexError:
-                return False
+        if stopping_parameters.stop_type != StopType.NONE:
+            if ind_iter >= stopping_parameters.niter:  # For instance StopType.ITER
+                return True
         return False
 
 

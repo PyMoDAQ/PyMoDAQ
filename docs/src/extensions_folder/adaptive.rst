@@ -88,3 +88,10 @@ given the number of selected actuators: Loss1D, Loss2D, LossND with subtypes all
   While the python-adpative package features parallel calculation/function evaluation, PyMoDAQ can only run a given
   detector in a single process (it doesn't make sense otherwise...) therefore no parallel computing is leveraged in this
   extension.
+
+
+The Stopping criteria
+*********************
+
+By default the algorithm will stop after it reached the given number of iterations (*Niteration* setting).
+But if you want to let it run indefinitely (or using a manual stop), you can use the *None* stop type.
