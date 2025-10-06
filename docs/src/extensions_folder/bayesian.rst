@@ -1,7 +1,17 @@
 .. _bayesian_extension:
 
+
+
 Bayesian Optimisation
 =====================
+
+
+.. figure:: bayesian_data/bayesian_logo.png
+   :alt: logo
+   :width: 60%
+
+   Bayesian Extension logo
+
 
 First of all, this work is heavily supported by the work of Fernando Nogueira through its python package:
 `bayesian-optimization <https://github.com/bayesian-optimization/BayesianOptimization>`__ and the underlying use

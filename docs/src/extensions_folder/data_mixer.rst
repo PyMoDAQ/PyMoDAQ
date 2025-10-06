@@ -46,8 +46,8 @@ Models are classes allowing to customize the post-processing. They have been int
 :ref:`Adaptive <adaptive_extension>` modules. They are therefore also used in the DataMixer to perform custom tasks.
 But they are still python classes one has to write for each postprocessing one want to try. They are therefore okay if
 you're going to often use them or if they are general enough to be used in various situations. The tow models shipped
-with the extension are of the last kind. The first is the Gaussian fit model allowing to fit 1D data by Gaussians, see
-figure :numref:`datamixer_gaussian_fit`. The second allows you to define in a text box the mathematical expressions you
+with the extension are of the last kind. The first is the Gaussian fit model allowing to fit 1D data by Gaussians.
+The second allows you to define in a text box the mathematical expressions you
 want to perform between you raw data, see :ref:`equation_model`.
 
 
