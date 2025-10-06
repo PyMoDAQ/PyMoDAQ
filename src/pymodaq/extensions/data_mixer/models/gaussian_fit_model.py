@@ -27,10 +27,6 @@ class DataMixerGaussianFitModel(DataMixerModel):
     def ini_model(self):
         self.show_data_list()
 
-    def get_formulae(self) -> str:
-        """ Read the content of the formula QTextEdit widget"""
-        return self.settings['edit_formula']
-
     def show_data_list(self):
         dte = self.modules_manager.get_det_data_list()
         data_list1D = dte.get_full_names('data1D')
