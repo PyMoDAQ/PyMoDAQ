@@ -103,13 +103,16 @@ class AdaptiveAlgorithm(GenericAlgorithm):
         return dict(zip(self.actuators, individual_array))
 
     def stopping(self, ind_iter: int, stopping_parameters: StoppingParameters):
-        if ind_iter >= stopping_parameters.niter:
-            return True
-        if ind_iter > stopping_parameters.npoints and stopping_parameters.stop_type == 'Predict':
-            try:
-                return self.best_fitness < stopping_parameters.tolerance
-            except IndexError:
-                return False
+        if stopping_parameters.stop_type != StopType.NONE:
+            if ind_iter >= stopping_parameters.niter:  # For instance StopType.ITER
+                return True
+            if (ind_iter > stopping_parameters.npoints and
+                    (stopping_parameters.stop_type == StopType.PREDICT or
+                     stopping_parameters.stop_type == StopType.BEST)):
+                try:
+                    return self.best_fitness < stopping_parameters.tolerance
+                except IndexError:
+                    return False
         return False
 
 

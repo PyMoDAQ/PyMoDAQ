@@ -39,11 +39,14 @@ logger = set_logger(get_module_name(__file__))
 
 class StopType(StrEnum):
     NONE = 'None'
+    ITER = 'Iter'
     PREDICT = 'Predict'
     BEST = 'Best'
 
     def tip(self):
         if self == StopType.NONE:
+            return 'Stopping only after the number of iteration has been reached'
+        elif self == StopType.ITER:
             return 'Stopping only after the number of iteration has been reached'
         elif self == StopType.PREDICT:
             return ('Stopping either after the number of iteration has been reached or the last N'
