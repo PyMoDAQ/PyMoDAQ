@@ -86,7 +86,6 @@ class DataMixerModelEquation(DataMixerModel):
         """
         formula_to_eval, names = replace_names_in_formula(formula)
         dwa = eval(formula_to_eval)
-        dwa/dwa
         dwa.name = name
         return dwa
 
