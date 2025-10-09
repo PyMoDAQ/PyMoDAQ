@@ -258,6 +258,13 @@ class DashBoard(CustomApp):
             if self.check_update(show=False):
                 sys.exit(0)
 
+        try:
+            if config('user', 'loadlast') and config('user', 'lastloadok'):
+                logger.warning("Automatically loading"+str(config('user', 'lastpreset')))
+                self.set_file_preset(self.preset_path / Path(config('user', 'lastpreset')+'.xml'))
+        except configmod.ConfigError as ke_error:
+            logger.warning(repr(ke_error))
+
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
         if not hasattr(self, "_splash_sc") or self._splash_sc is None:
@@ -939,6 +946,18 @@ class DashBoard(CustomApp):
         self.preset_menu.addAction(self.get_action("modify_preset"))
         self.preset_menu.addSeparator()
         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
+        self.preset_menu.addSeparator()
+        toggle_loadlast = self.preset_menu.addAction('Load last Preset at startup')
+        toggle_loadlast.setCheckable(True)
+        try:
+            toggle_loadlast.setChecked(config('user', 'loadlast'))
+        except configmod.ConfigError as conf_error:
+            logger.warning(repr(conf_error))
+            toggle_loadlast.setChecked(False)
+        toggle_loadlast.setToolTip("Load last Preset at startup")
+        # toggle_loadlast.setIconSize(QSize(15, 15)) can't change icon size
+        # import utils.manager.action_manager.ActionManager ?
+        toggle_loadlast.changed.connect(self.modify_loadlast_config)
 
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == ".xml":
@@ -1170,6 +1189,14 @@ class DashBoard(CustomApp):
                 pass
         except Exception as e:
             logger.exception(str(e))
+
+    @staticmethod
+    def modify_loadlast_config():
+        try:
+            config['user', 'loadlast'] = not config('user', 'loadlast')
+        except configmod.ConfigError:
+            config['user', 'loadlast'] = True
+        config.save()
 
     def modify_preset(self):
         try:
@@ -1561,6 +1588,9 @@ class DashBoard(CustomApp):
         if not isinstance(filename, Path):
             filename = Path(filename)
 
+        config['user', 'lastloadok'] = False
+        config.save()
+
         if filename.suffix == ".xml":
             self.preset_file = filename
             self.preset_manager.set_file_preset(filename, show=False)
@@ -1730,6 +1760,11 @@ class DashBoard(CustomApp):
             self.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.title}")
             if self.pid_module is not None:
                 self.pid_module.set_module_manager(detector_modules, actuators_modules)
+
+            config['user', 'lastpreset'] = filename.name.strip(".xml")
+            config['user', 'lastloadok'] = True
+            config.save()
+
             return actuators_modules, detector_modules
         else:
             logger.error("Invalid file selected")
