@@ -5,6 +5,7 @@ import sys
 import datetime
 import subprocess
 import logging
+from functools import total_ordering
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
@@ -260,10 +261,19 @@ class DashBoard(CustomApp):
 
         try:
             if config('user', 'loadlast') and config('user', 'lastloadok'):
-                logger.warning("Automatically loading"+str(config('user', 'lastpreset')))
-                self.set_file_preset(self.preset_path / Path(config('user', 'lastpreset')+'.xml'))
+                #todo os.path.isfile(self.preset_path / Path(config('user', 'lastpreset')+'.xml'))
+                lastpresetfullpath = self.preset_path / Path(config('user', 'lastpreset')+'.xml')
+                Path(lastpresetfullpath).resolve(strict=True)
+                logger.warning(f"Automatically loading {config('user', 'lastpreset')}")
+                self.set_file_preset(lastpresetfullpath)
         except configmod.ConfigError as ke_error:
             logger.warning(repr(ke_error))
+        except FileNotFoundError:
+            logger.warning(f"Last preset {config('user', 'lastpreset')} not found. Not loading it !!")
+            config['user', 'loadlast'] = False
+            config.save()
+
+
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -1195,7 +1205,8 @@ class DashBoard(CustomApp):
         try:
             config['user', 'loadlast'] = not config('user', 'loadlast')
         except configmod.ConfigError:
-            config['user', 'loadlast'] = True
+            config['user', 'loadlast'] = False
+            logger.warning(f"Config Error : changed load last user config to {config['user', 'loadlast']}")
         config.save()
 
     def modify_preset(self):
@@ -1588,12 +1599,15 @@ class DashBoard(CustomApp):
         if not isinstance(filename, Path):
             filename = Path(filename)
 
+
         config['user', 'lastloadok'] = False
         config.save()
 
         if filename.suffix == ".xml":
             self.preset_file = filename
             self.preset_manager.set_file_preset(filename, show=False)
+            config['user', 'lastpreset'] = filename.name.rstrip(".xml")
+            config.save()
             move_docks = []
             det_docks_settings = []
             det_docks_viewer = []
@@ -1761,7 +1775,6 @@ class DashBoard(CustomApp):
             if self.pid_module is not None:
                 self.pid_module.set_module_manager(detector_modules, actuators_modules)
 
-            config['user', 'lastpreset'] = filename.name.strip(".xml")
             config['user', 'lastloadok'] = True
             config.save()
 
