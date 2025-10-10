@@ -5,7 +5,6 @@ import sys
 import datetime
 import subprocess
 import logging
-from functools import total_ordering
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
@@ -957,6 +956,7 @@ class DashBoard(CustomApp):
         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
         self.preset_menu.addSeparator()
         toggle_loadlast = self.preset_menu.addAction('Load last Preset at startup')
+        #toggle_loadlast.triggered.connect(self.preset_menu.show)
         toggle_loadlast.setCheckable(True)
         try:
             toggle_loadlast.setChecked(config('user', 'loadlast'))
