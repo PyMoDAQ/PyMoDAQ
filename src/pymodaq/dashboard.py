@@ -269,7 +269,7 @@ class DashBoard(CustomApp):
             logger.warning(repr(ke_error))
         except FileNotFoundError:
             logger.warning(f"Last preset {config('user', 'lastpreset')} not found. Not loading it !!")
-            config['user', 'loadlast'] = False
+            config['user', 'lastloadok'] = False
             config.save()
 
 
