@@ -261,7 +261,6 @@ class DashBoard(CustomApp):
 
         try:
             if config('user', 'loadlast') and config('user', 'lastloadok'):
-                #todo os.path.isfile(self.preset_path / Path(config('user', 'lastpreset')+'.xml'))
                 lastpresetfullpath = self.preset_path / Path(config('user', 'lastpreset')+'.xml')
                 Path(lastpresetfullpath).resolve(strict=True)
                 logger.warning(f"Automatically loading {config('user', 'lastpreset')}")
