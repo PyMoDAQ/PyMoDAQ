@@ -370,9 +370,421 @@ Best Practices
 See Also
 --------
 
-.. * :doc:`action_manager_api` - Complete API reference
+
+* :ref:`Action Manager API <api-managers_action_manager>`
 * Qt Documentation on QAction
 * PyMoDAQ Icon Library
+
+
+Parameter Manager
++++++++++++++++++
+
+
+Overview
+--------
+
+The Parameter Manager is built on top of `pyqtgraph's Parameter system <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_, extending it with additional functionality for application settings management. It provides a complete UI widget that combines pyqtgraph's ParameterTree with a toolbar for common operations like saving, loading, and searching.
+
+If you're not familiar with pyqtgraph Parameters, please first read the `pyqtgraph Parameter documentation <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_ to understand the underlying system.
+
+To find an example of the different parameter types, look at the parameter_ex.py in the examples folder.
+
+Key Additional Features
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Beyond pyqtgraph's Parameter system, this module adds:
+
+* **Integrated toolbar** with save, load, and update buttons
+* **XML persistence** for saving/loading parameter trees
+* **Search functionality** with real-time filtering and keyboard shortcuts (Ctrl+F, Esc)
+* **Collapsible toolbar** to maximize screen space
+* **Automatic callback routing** to simplified handler methods
+* **Structure validation** when updating settings from files
+
+Getting Started
+---------------
+
+Basic Usage
+~~~~~~~~~~~
+
+Create a subclass of ParameterManager and define your parameter structure using pyqtgraph's parameter dictionary format:
+
+.. code-block:: python
+
+    from pymodaq_gui.managers.parameter_manager import ParameterManager
+    
+    class MySettings(ParameterManager):
+        settings_name = 'my_app_settings'
+        params = [
+            {'title': 'General:', 'name': 'general', 'type': 'group', 'children': [
+                {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Default'},
+                {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 42},
+            ]},
+        ]
+    
+    # Create instance
+    settings = MySettings()
+    
+    # Get the widget to display in your UI
+    widget = settings.settings_tree  # This is a QWidget with toolbar + tree
+
+**Note:** The ``params`` list uses pyqtgraph's parameter dictionary format. See `pyqtgraph parameter types <https://pyqtgraph.readthedocs.io/en/latest/parametertree/parametertypes.html>`_ for all available parameter types and options.
+
+Toolbar Actions
+~~~~~~~~~~~~~~~
+
+Control which toolbar actions are displayed:
+
+.. code-block:: python
+
+    # Include all actions (default)
+    settings = MySettings(action_list=('search', 'save', 'update', 'load'))
+    
+    # Only save and load
+    settings = MySettings(action_list=('save', 'load'))
+    
+    # No toolbar actions
+    settings = MySettings(action_list=())
+
+Available actions:
+
+* ``'search'``: Search field with debounced input and keyboard shortcuts
+* ``'save'``: Save current settings to XML file
+* ``'update'``: Update settings from XML (validates structure matches)
+* ``'load'``: Load settings from XML (replaces current structure)
+
+Accessing Parameters
+~~~~~~~~~~~~~~~~~~~~
+
+Use pyqtgraph's standard Parameter methods to access and modify values:
+
+.. code-block:: python
+
+    # Access nested parameters using child()
+    value = settings.settings.child('general', 'value').value()
+    
+    # Set values using setValue()
+    settings.settings.child('general', 'value').setValue(100)
+    
+    # Access parameter objects
+    param = settings.settings.child('general', 'name')
+    print(param.name())   # 'name'
+    print(param.title())  # 'Name:'
+    print(param.type())   # 'str'
+
+For complete details on Parameter methods, see `pyqtgraph Parameter API <https://pyqtgraph.readthedocs.io/en/latest/parametertree/parameter.html>`_.
+
+Novel Features
+--------------
+
+Simplified Change Callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Parameter Manager simplifies pyqtgraph's change handling by routing different change types to dedicated methods:
+
+.. code-block:: python
+
+    class MySettings(ParameterManager):
+        params = [
+            {'title': 'Settings:', 'name': 'settings', 'type': 'group', 'children': [
+                {'title': 'Mode:', 'name': 'mode', 'type': 'list',
+                 'values': ['A', 'B'], 'value': 'A'},
+                {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10},
+            ]},
+        ]
+        
+        def value_changed(self, param):
+            """Called when any parameter value changes"""
+            if param.name() == 'mode':
+                print(f"Mode changed to: {param.value()}")
+        
+        def child_added(self, param, data):
+            """Called when a child parameter is added"""
+            print(f"Child {data.name()} added to {param.name()}")
+        
+        def param_deleted(self, param):
+            """Called when a parameter is removed"""
+            print(f"Parameter {param.name()} was deleted")
+        
+        def options_changed(self, param, data):
+            """Called when parameter options change (visible, enabled, etc.)"""
+            if 'visible' in data:
+                print(f"{param.name()} visibility changed to {data['visible']}")
+        
+        def limits_changed(self, param, data):
+            """Called when parameter limits change"""
+            min_val, max_val = data
+            print(f"{param.name()} limits changed to [{min_val}, {max_val}]")
+
+**Comparison to pyqtgraph:** Instead of handling all changes in a single ``sigTreeStateChanged`` handler, the Parameter Manager automatically routes changes to specific methods based on type.
+
+XML Persistence
+~~~~~~~~~~~~~~~
+
+Built-in methods for saving and loading parameter trees to/from XML:
+
+.. code-block:: python
+
+    from pathlib import Path
+    
+    settings = MySettings()
+    
+    # Save settings
+    settings.save_settings_slot(Path('my_settings.xml'))
+    
+    # Load settings (replaces tree structure)
+    settings.load_settings_slot(Path('my_settings.xml'))
+    
+    # Update settings (requires matching structure)
+    settings.update_settings_slot(Path('compatible_settings.xml'))
+
+**Key difference between load and update:**
+
+* ``load_settings_slot()``: Completely replaces the parameter tree with the loaded structure
+* ``update_settings_slot()``: Only updates values; validates that the loaded tree has the same structure (parameter names and hierarchy) as the current tree
+
+Search Functionality
+~~~~~~~~~~~~~~~~~~~~
+
+The search feature filters parameters in real-time:
+
+.. code-block:: python
+
+    # Enable search in toolbar
+    settings = MySettings(action_list=('search', 'save', 'load'))
+    
+    # Keyboard shortcuts automatically available:
+    # Ctrl+F: Activate search field
+    # Esc: Clear search and collapse toolbar
+    
+    # Programmatic search
+    settings.search_settings_slot('exposure')  # Shows only matching parameters
+
+The search is implemented with:
+
+* **Debounced input** (200ms delay) to avoid excessive filtering during typing
+* **Case-insensitive matching** against parameter names and titles
+* **Tree visibility management** using pyqtgraph's parameter options
+
+Creating Parameters from Different Sources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The static ``create_parameter()`` method creates Parameter objects from various inputs:
+
+.. code-block:: python
+
+    from pymodaq_gui.managers.parameter_manager import ParameterManager
+    from pathlib import Path
+    
+    # From dictionary list (standard pyqtgraph format)
+    params_list = [
+        {'title': 'Value:', 'name': 'val', 'type': 'int', 'value': 5}
+    ]
+    param = ParameterManager.create_parameter(params_list)
+    
+    # From XML file
+    param = ParameterManager.create_parameter(Path('settings.xml'))
+    
+    # From existing Parameter (creates copy)
+    existing_param = Parameter.create(name='test', type='group')
+    param_copy = ParameterManager.create_parameter(existing_param)
+
+This is useful when you need to create parameter objects outside of a ParameterManager instance.
+
+Complete Examples
+-----------------
+
+Example 1: Camera Settings with Dynamic UI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from pymodaq_gui.managers.parameter_manager import ParameterManager
+    from qtpy import QtWidgets
+    import sys
+    
+    class CameraSettings(ParameterManager):
+        settings_name = 'camera'
+        params = [
+            {'title': 'Acquisition:', 'name': 'acquisition', 'type': 'group', 'children': [
+                {'title': 'Mode:', 'name': 'mode', 'type': 'list',
+                 'values': ['Auto', 'Manual'], 'value': 'Auto'},
+                {'title': 'Exposure (ms):', 'name': 'exposure', 'type': 'int',
+                 'value': 100, 'min': 1, 'max': 10000, 'readonly': True},
+                {'title': 'Gain:', 'name': 'gain', 'type': 'float',
+                 'value': 1.0, 'min': 0.1, 'max': 10.0, 'readonly': True},
+            ]},
+        ]
+        
+        def value_changed(self, param):
+            """Enable/disable manual controls based on mode"""
+            if param.name() == 'mode':
+                is_manual = param.value() == 'Manual'
+                self.settings.child('acquisition', 'exposure').setOpts(readonly=not is_manual)
+                self.settings.child('acquisition', 'gain').setOpts(readonly=not is_manual)
+    
+    
+    if __name__ == '__main__':
+        app = QtWidgets.QApplication(sys.argv)
+        settings = CameraSettings()
+        settings.settings_tree.show()
+        sys.exit(app.exec_())
+
+Example 2: Application with Persistent Settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from pymodaq_gui.managers.parameter_manager import ParameterManager
+    from qtpy import QtWidgets
+    from pathlib import Path
+    import sys
+    
+    class AppSettings(ParameterManager):
+        settings_name = 'myapp'
+        params = [
+            {'title': 'Preferences:', 'name': 'prefs', 'type': 'group', 'children': [
+                {'title': 'Theme:', 'name': 'theme', 'type': 'list',
+                 'values': ['Light', 'Dark'], 'value': 'Light'},
+                {'title': 'Auto-save:', 'name': 'autosave', 'type': 'bool', 'value': True},
+                {'title': 'Save Interval (min):', 'name': 'save_interval', 'type': 'int',
+                 'value': 5, 'min': 1, 'max': 60},
+            ]},
+        ]
+        
+        def __init__(self):
+            super().__init__(action_list=('search', 'save', 'load'))
+            self.config_file = Path.home() / '.myapp' / 'config.xml'
+            self.load_config()
+        
+        def load_config(self):
+            """Load config on startup if it exists"""
+            if self.config_file.exists():
+                self.load_settings_slot(self.config_file)
+        
+        def save_config(self):
+            """Save config"""
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            self.save_settings_slot(self.config_file)
+        
+        def value_changed(self, param):
+            """Auto-save on any change"""
+            if param.name() in ['theme', 'autosave', 'save_interval']:
+                self.save_config()
+    
+    
+    if __name__ == '__main__':
+        app = QtWidgets.QApplication(sys.argv)
+        
+        window = QtWidgets.QMainWindow()
+        settings = AppSettings()
+        window.setCentralWidget(settings.settings_tree)
+        window.setWindowTitle('App Settings')
+        window.show()
+        
+        sys.exit(app.exec_())
+
+Example 3: Using ParameterTreeWidget Standalone
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ParameterTreeWidget without subclassing ParameterManager:
+
+.. code-block:: python
+
+    from pymodaq_gui.managers.parameter_manager import ParameterTreeWidget
+    from pymodaq_gui.parameter import Parameter
+    from qtpy import QtWidgets
+    
+    app = QtWidgets.QApplication([])
+    
+    # Create widget with toolbar
+    tree_widget = ParameterTreeWidget(action_list=('save', 'load', 'search'))
+    
+    # Create parameters using pyqtgraph
+    params = [
+        {'title': 'Settings:', 'name': 'settings', 'type': 'group', 'children': [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 42},
+        ]},
+    ]
+    root_param = Parameter.create(name='root', type='group', children=params)
+    
+    # Set parameters in tree
+    tree_widget.tree.setParameters(root_param, showTop=False)
+    
+    # Show widget
+    tree_widget.widget.show()
+    app.exec_()
+
+Best Practices
+--------------
+
+1. **Use pyqtgraph parameter types**: Leverage the full range of pyqtgraph's parameter types (int, float, str, bool, list, color, file, etc.)
+
+2. **Structure validation**: Use ``update_settings_slot()`` instead of ``load_settings_slot()`` when loading user-provided settings files to ensure structure compatibility
+
+3. **Efficient filtering**: The search feature uses ``treeChangeBlocker()`` for efficient batch updates when filtering large trees
+
+4. **Keyboard shortcuts**: Enable the search action to provide users with Ctrl+F and Esc shortcuts for better UX
+
+5. **Separate concerns**: Override only the callback methods you need (``value_changed``, ``child_added``, etc.)
+
+6. **XML file management**: Store settings in a user config directory using ``pymodaq_utils.config.get_set_config_dir()``
+
+Common Patterns
+---------------
+
+Conditional Visibility
+~~~~~~~~~~~~~~~~~~~~~~
+
+Show/hide parameters based on other parameter values:
+
+.. code-block:: python
+
+    def value_changed(self, param):
+        if param.name() == 'enable_advanced':
+            self.settings.child('advanced_group').setOpts(
+                visible=param.value()
+            )
+
+Dynamic Parameter Creation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add/remove parameters dynamically:
+
+.. code-block:: python
+
+    def value_changed(self, param):
+        if param.name() == 'num_channels':
+            parent = self.settings.child('channels')
+            # Remove existing children
+            parent.clearChildren()
+            # Add new children
+            for i in range(param.value()):
+                parent.addChild({
+                    'title': f'Channel {i}:', 
+                    'name': f'ch_{i}', 
+                    'type': 'bool', 
+                    'value': True
+                })
+
+Cascading Updates
+~~~~~~~~~~~~~~~~~
+
+Update related parameters when one changes:
+
+.. code-block:: python
+
+    def value_changed(self, param):
+        if param.name() == 'sample_rate':
+            max_freq = param.value() / 2  # Nyquist
+            self.settings.child('filter', 'cutoff').setLimits((0, max_freq))
+
+See Also
+--------
+
+* :ref:`Parameter Manager API <api-managers_parameter_manager>`
+* `pyqtgraph Parameter documentation <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_
+* `pyqtgraph ParameterTree documentation <https://pyqtgraph.readthedocs.io/en/latest/parametertree/parametertree.html>`_
 
 Modules Manager
 +++++++++++++++
