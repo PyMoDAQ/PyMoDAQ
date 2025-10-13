@@ -563,8 +563,12 @@ The search feature filters parameters in real-time:
 The search is implemented with:
 
 * **Debounced input** (200ms delay) to avoid excessive filtering during typing
-* **Case-insensitive matching** against parameter names and titles
+* **Case-insensitive matching** against parameter titles
 * **Tree visibility management** using pyqtgraph's parameter options
+
+The search is only active when the widget containing the line edit is expanded (i.e. after pressing Ctrl+F or pressing the push button).
+Pressing again Ctrl + F / Esc / push button will collapse the widget and restore the tree. 
+The search currently only acts on the setOpts at the parameter level and not on the tree itself. This aspect could be change in the future.
 
 Creating Parameters from Different Sources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
