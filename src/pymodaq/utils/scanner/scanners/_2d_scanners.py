@@ -60,7 +60,7 @@ class Scan2DLinear(Scan2DBase):
                ]},
               ]    
     n_axes = 2
-    distribution = DataDistribution['uniform']
+    distribution = DataDistribution.uniform
     scan_type = 'Scan2D'
     scan_subtype = 'Linear'
 
