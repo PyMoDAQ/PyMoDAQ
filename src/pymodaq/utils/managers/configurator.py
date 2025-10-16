@@ -41,6 +41,32 @@ layout_path = config_mod_pymodaq.get_set_layout_path()
 ser_factory = SerializableFactory()
 
 
+def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
+    if 'Actuators' in param.path or 'Moves' in param.path:
+        try:
+            index = param.path[::-1].index('Actuators')
+        except ValueError:
+            index = param.path[::-1].index('Moves')  #backcompat with old style preset
+    elif 'Detectors' in param.path:
+        index = param.path[::-1].index('Detectors')
+    else:
+        return None
+    return len(param.path) - index
+
+
+def get_module_from_param(param: ParameterWithPath) -> Union[str, None]:
+    index = get_module_index_from_param(param)
+    if index is None:
+        return None
+
+    index = len(param.path) - index
+    param_module = param.parameter
+    for _ in range(index-1):
+        param_module = param_module.parent()
+    module = param_module.child('name').value()
+    return module
+
+
 @SerializableFactory.register_decorator()
 @dataclass
 class ConfiguratorEntry:
@@ -147,10 +173,16 @@ class ConfiguratorModel(TableModel):
     def edit_data(self, index):
         entry = self._data[index.row()]
         dialog = QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
 
-        tree = ParameterTree()
-        tree.setParameters(entry.setting.parameter)
+        vlayout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(vlayout)
+
+        module_index = get_module_index_from_param(entry.setting)
+        vlayout.addWidget(QtWidgets.QLabel(
+            f'Setting from module {entry.module_name} with path:\n {entry.setting.path[module_index+2:]}'))
+        setting = Parameter.create(name='settings', type='group', children=[entry.setting.parameter.saveState()])
+        tree = ParameterTree(parent=dialog)
+        tree.setParameters(setting, showTop=False)
         buttonBox = QDialogButtonBox(parent=dialog)
         buttonBox.addButton("Done", QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
@@ -163,7 +195,7 @@ class ConfiguratorModel(TableModel):
         res = dialog.exec()
 
         if res:
-            entry
+            entry.setting.parameter.setValue(setting.children()[0].value())
 
 
     def add_data(self, row, data: ConfiguratorEntry = None):
@@ -256,8 +288,7 @@ class ConfiguratorTableView(QtWidgets.QTableView):
 
     def edit_row(self):
         index = self.currentIndex()
-        index_source = index.model().mapToSource(index)
-        index_source.model().edit_data(index_source)
+        index.model().edit_data(index)
 
     def setmenu(self, status):
         if status:
@@ -318,28 +349,11 @@ class ParameterTree(ParameterTree):
     def mimeData(self, items):
         data = QMimeData()
         param_with_path = ParameterWithPath(items[0].param)
-        module = self.get_module_from_param(param_with_path)
+        module = get_module_from_param(param_with_path)
         if module is not None:
             entry = ConfiguratorEntry(module, param_with_path)
             data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
         return data
-
-    def get_module_from_param(self, param: ParameterWithPath) -> Union[str, None]:
-        if 'Actuators' in param.path or 'Moves' in param.path:
-            try:
-                index = param.path[::-1].index('Actuators')
-            except ValueError:
-                index = param.path[::-1].index('Moves')  #backcompat with old style preset
-        elif 'Detectors' in param.path:
-            index = param.path[::-1].index('Detectors')
-        else:
-            return None
-
-        param_module = param.parameter
-        for _ in range(index-1):
-            param_module = param_module.parent()
-        module = param_module.child('name').value()
-        return module
 
 
 
@@ -400,8 +414,16 @@ class Configurator:
         add_button.setIcon(icon)
         add_button.clicked.connect(self.add_setting)
 
-        widget_buttons.layout().addWidget(add_button)
+        remove_button = QtWidgets.QPushButton('Remove')
+        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowLeft')
+        icon = widget_buttons.style().standardIcon(pixmapi)
+        remove_button.setIcon(icon)
+        remove_button.clicked.connect(self.remove_setting)
 
+        widget_buttons.layout().addStretch()
+        widget_buttons.layout().addWidget(add_button)
+        widget_buttons.layout().addWidget(remove_button)
+        widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
         hlayout.addWidget(self.tree_in)
@@ -420,8 +442,14 @@ class Configurator:
 
 
     def add_setting(self):
-        current_setting = self.tree_in.currentItem()
+        current_setting = self.tree_in.currentItem().param
+        module = get_module_from_param(ParameterWithPath(current_setting))
+        entry = ConfiguratorEntry(module, ParameterWithPath(current_setting))
+        self.config_model.add_data(self.config_model.rowCount(), entry)
 
+    def remove_setting(self):
+        current_index = self.table_out.currentIndex()
+        self.config_model.remove_data(current_index.row())
 
 if __name__ == "__main__":
 
