@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 from dataclasses import dataclass
 from typing import Union, Tuple
-
+import numpy as np
 from docutils.nodes import title
 from qtpy import QtWidgets, QtCore
 
@@ -18,11 +18,15 @@ from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_path
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils.widgets.table import TableView, TableModel
+from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq_gui.parameter import ioxml
+from pymodaq_gui import utils as gutils
 from pymodaq_gui.messenger import dialog as dialogbox
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.extensions import get_models
 from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+
+from pymodaq.utils.config import get_set_configurator_path
 
 
 import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
@@ -79,11 +83,15 @@ mock_entry = ConfiguratorEntry('Photodiode',
 
 
 class ConfiguratorModel(TableModel):
-    def __init__(self, data: list[ConfiguratorEntry]=None, header=['Module Name', 'Setting Title', 'Value'], cast=str):
+    def __init__(self, data: list[ConfiguratorEntry]=None,
+                 header=('Module Name', 'Setting Title', 'Value'),
+                 actuators: list[str] = None
+                 ):
         self._data: list[ConfiguratorEntry] = None
+        self.actuators = actuators
         if data is None:
-            data = [mock_entry]
-        super().__init__(data, header, editable=[False, False, True], cast=cast)
+            data = []
+        super().__init__(data, header, editable=[False, False, False])
         pass
 
     def columnCount(self, parent):
@@ -121,6 +129,7 @@ class ConfiguratorModel(TableModel):
                     return Qt.CheckState.Unchecked
         return QVariant()
 
+
     def dropMimeData(self, data: QMimeData, action, row, column, parent):
         if row == -1:
             row = self.rowCount(parent)
@@ -131,6 +140,169 @@ class ConfiguratorModel(TableModel):
         self.data_tmp = entry
         self.insertRows(row, 1, parent)
         return True
+
+    def clear(self):
+        self._data = []
+
+    def edit_data(self, index):
+        entry = self._data[index.row()]
+        dialog = QDialog()
+        vlayout = QtWidgets.QVBoxLayout()
+
+        tree = ParameterTree()
+        tree.setParameters(entry.setting.parameter)
+        buttonBox = QDialogButtonBox(parent=dialog)
+        buttonBox.addButton("Done", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.accepted.connect(dialog.accept)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.rejected.connect(dialog.reject)
+
+        vlayout.addWidget(tree)
+        vlayout.addWidget(buttonBox)
+        dialog.setWindowTitle("Edit the setting")
+        res = dialog.exec()
+
+        if res:
+            entry
+
+
+    def add_data(self, row, data: ConfiguratorEntry = None):
+        if data is None:
+            data = self.get_data_from_value_widget()
+
+        if data is not None:
+            self.insert_data(row, data)
+
+    def get_data_from_value_widget(self) -> ConfiguratorEntry:
+        suffix = ''
+
+        dialog = QDialog()
+        vlayout = QtWidgets.QVBoxLayout()
+        widget = QtWidgets.QWidget()
+        widget.setLayout(QtWidgets.QHBoxLayout())
+        actuator_cb = QtWidgets.QComboBox()
+        actuator_cb.addItems(self.actuators)
+
+        value_sb = SpinBox(suffix=suffix, siPrefix= True)
+        widget.layout().addWidget(actuator_cb)
+        widget.layout().addWidget(value_sb)
+
+        vlayout.addWidget(widget)
+        dialog.setLayout(vlayout)
+        buttonBox = QDialogButtonBox(parent=dialog)
+
+        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.accepted.connect(dialog.accept)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.rejected.connect(dialog.reject)
+
+        vlayout.addWidget(buttonBox)
+        dialog.setWindowTitle("Fill in information about this actuator target value")
+        res = dialog.exec()
+
+        if res:
+            return ConfiguratorEntry(actuator_cb.currentText(),
+                                     ParameterWithPath(
+                                         parameter=
+                                         Parameter.create(title= 'Actuator Value',
+                                                          name='actuator_value',
+                                                          type='float',
+                                                          value=value_sb.value(),
+                                                          suffix=suffix)))
+
+    def remove_data(self, row):
+        self.remove_row(row)
+
+    def load(self):
+        fname = gutils.select_file(start_path=get_set_configurator_path(), save=False, ext='*')
+        if fname is not None and fname != '':
+            while self.rowCount(self.index(-1, -1)) > 0:
+                self.remove_row(0)
+
+            with open(fname, 'rb') as file:
+                lines = file.readlines()
+            all_lines = b''
+            for line in lines:
+                all_lines += line
+            data = []
+            while len(all_lines) > 0:
+                entry, all_lines = ConfiguratorEntry.deserialize(all_lines)
+                data.append(entry)
+            for row in data:
+                self.insert_data(self.rowCount(self.index(-1, -1)), row)
+
+    def save(self):
+        fname = gutils.select_file(start_path=get_set_configurator_path(), save=True, ext='config',
+                                   force_save_extension=True)
+        with open(fname, 'wb') as file:
+            file.writelines([ConfiguratorEntry.serialize(entry) for entry in self._data])
+
+
+
+class ConfiguratorTableView(QtWidgets.QTableView):
+    """
+    """
+
+    valueChanged = QtCore.Signal(list)
+    add_data_signal = QtCore.Signal(int)
+    remove_row_signal = QtCore.Signal(int)
+    load_data_signal = QtCore.Signal()
+    save_data_signal = QtCore.Signal()
+
+    def __init__(self, menu=False):
+        super().__init__()
+        self.setmenu(menu)
+        self.doubleClicked.connect(self.edit_row)
+
+    def edit_row(self):
+        index = self.currentIndex()
+        index_source = index.model().mapToSource(index)
+        index_source.model().edit_data(index_source)
+
+    def setmenu(self, status):
+        if status:
+            self.menu = QtWidgets.QMenu()
+            self.menu.addAction('Add Actuator Value', self.add)
+            self.menu.addAction('Remove selected row', self.remove)
+            self.menu.addAction('Clear all', self.clear)
+            self.menu.addSeparator()
+            self.menu.addAction('Load Configurator file', lambda: self.load_data_signal.emit())
+            self.menu.addAction('Save Configurator file', lambda: self.save_data_signal.emit())
+        else:
+            self.menu = None
+
+    def contextMenuEvent(self, event):
+        if self.menu is not None:
+            self.menu.exec(event.globalPos())
+
+    def clear(self):
+        self.model().clear()
+
+    def add(self):
+        self.add_data_signal.emit(self.currentIndex().row())
+
+    def remove(self):
+        self.remove_row_signal.emit(self.currentIndex().row())
+
+    def data_has_changed(self, topleft, bottomright, roles):
+        self.valueChanged.emit([topleft, bottomright, roles])
+
+    def get_table_value(self):
+        """
+
+        """
+        return self.model()
+
+    def set_table_value(self, data_model):
+        """
+
+        """
+        try:
+            self.setModel(data_model)
+            self.model().dataChanged.connect(self.data_has_changed)
+        except Exception as e:
+            pass
+
 
 
 class ParameterTree(ParameterTree):
@@ -173,6 +345,7 @@ class ParameterTree(ParameterTree):
 
 class Configurator:
     def __init__(self, file_path: Path):
+        self._actuators: list[str] = None
         self.control_modules_settings: Parameter = None
         self.set_dashboard_content_from_file(file_path)
 
@@ -183,6 +356,9 @@ class Configurator:
             title="Control Modules:", name="control_modules", type="group", children=children
         )
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
+        self._actuators = [
+            param.child('name').value() for param in self.control_modules_settings.child('Moves').children()]
+
         self.show_configurator()
 
     def show_configurator(self):
@@ -193,10 +369,19 @@ class Configurator:
         self.tree_in.setAcceptDrops(False)
         self.tree_in.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
 
-        self.table_out = TableView()
-        self.config_model = ConfiguratorModel()
-        self.table_out.setModel(self.config_model)
+        self.table_out = ConfiguratorTableView(True)
+        self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_out.horizontalHeader().setStretchLastSection(True)
+        self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
+
+        self.config_model = ConfiguratorModel(actuators=self._actuators)
+        self.table_out.setModel(self.config_model)
+        self.table_out.add_data_signal[int].connect(self.config_model.add_data)
+        self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
+        self.table_out.load_data_signal.connect(self.config_model.load)
+        self.table_out.save_data_signal.connect(self.config_model.save)
 
         self.main_widget = QtWidgets.QWidget()
 
