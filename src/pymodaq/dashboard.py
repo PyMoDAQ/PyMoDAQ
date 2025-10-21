@@ -528,7 +528,7 @@ class DashBoard(CustomApp):
         return self.datamixer_module
 
     def load_configurator(self, win=None):
-        self.configurator_window, area = make_window(win=win, title="DataMixer")
+        self.configurator_window, area = make_window(win=win, title="Configurator")
         self.configurator_module = Configurator()
         self.configurator_module.populate_from_settings(self.get_settings_all())
         self.extensions["configurator"] = self.configurator_module
@@ -1152,15 +1152,20 @@ class DashBoard(CustomApp):
         )
 
         for ind_act, actuator in enumerate(self.actuators_modules):
+            actuator_settings = Parameter.create(name='settings', type='group', children=[])
+            actuator_settings.restoreState(actuator.settings.saveState())
+
             settings.child('actuators').addChild(
-                {{'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',
-                  'children': actuator.settings.saveState()},}
+                {'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',},
             )
+            settings.child('actuators', f'actuator_{ind_act:03.0f}').addChildren(actuator_settings.children())
         for ind_det, detector in enumerate(self.detector_modules):
+            detector_settings = Parameter.create(name='settings', type='group', children=[])
+            detector_settings.restoreState(detector.settings.saveState())
+
             settings.child('detectors').addChild(
-                {{'title': detector.title, 'name': f'detectors_{ind_det:03.0f}', 'type': 'group',
-                  'children': detector.settings.saveState()},}
-            )
+                    {'title': detector.title, 'name': f'detector_{ind_det:03.0f}', 'type': 'group',})
+            settings.child('detectors', f'detector_{ind_det:03.0f}').addChildren(detector_settings.children())
 
         return settings
 
