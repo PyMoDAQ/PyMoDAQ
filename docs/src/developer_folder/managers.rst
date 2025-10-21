@@ -360,7 +360,7 @@ Best Practices
 --------------
 
 1. **Organize actions logically**: Group related actions together in your ``setup_actions`` method
-2. **Use meaningful short names**: Choose clear, descriptive short names for easy reference
+2. **Use meaningful short names**: Choose clear, descriptive short names for easy reference. Even better, is to list the action names within a StrEnum. This avoids mistakes when writing strings while giving access to automatic autocompletion when calling the action name (see extensions/optimizers_base/optimizer.py for an example).
 3. **Provide tooltips**: Always add helpful tooltips to guide users
 4. **Use keyboard shortcuts**: Add shortcuts for frequently used actions
 5. **Manage state appropriately**: Keep enabled/disabled state in sync with application logic
@@ -383,11 +383,11 @@ Parameter Manager
 Overview
 --------
 
-The Parameter Manager is built on top of `pyqtgraph's Parameter system <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_, extending it with additional functionality for application settings management. It provides a complete UI widget that combines pyqtgraph's ParameterTree with a toolbar for common operations like saving, loading, and searching.
+The ``ParameterManager`` serves as a layer on top of the Parameter and ParameterTree helping classes to handle changes in the settings and providing a unique interface for all modules in PyMoDAQ dealing with Parameters.
+The Parameter Manager is built on top of `pyqtgraph's Parameter system <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_, extending it with additional functionality for application settings management. It provides a complete UI widget that combines pyqtgraph's ParameterTree with a toolbar (inherited from the ``ActionManager``) for common operations like saving, loading, and searching. If you're not familiar with pyqtgraph Parameters, please first read the `pyqtgraph Parameter documentation <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_ to understand the underlying system.
+To find an example of the different parameter types available in PyMoDAQ, look at the ``parameter_ex.py`` in the examples folder.
 
-If you're not familiar with pyqtgraph Parameters, please first read the `pyqtgraph Parameter documentation <https://pyqtgraph.readthedocs.io/en/latest/parametertree/index.html>`_ to understand the underlying system.
 
-To find an example of the different parameter types, look at the parameter_ex.py in the examples folder.
 
 Key Additional Features
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -461,11 +461,13 @@ Use pyqtgraph's standard Parameter methods to access and modify values:
 .. code-block:: python
 
     # Access nested parameters using child()
-    value = settings.settings.child('general', 'value').value()
-    
-    # Set values using setValue()
-    settings.settings.child('general', 'value').setValue(100)
-    
+    value = settings.settings.child('settings', 'value').value()
+    value = manager.settings['settings', 'value']
+
+    # Set value
+    manager.settings.child('settings', 'timeout').setValue(2000)
+    mode = manager.settings['settings', 'timeout'] = 2000
+
     # Access parameter objects
     param = settings.settings.child('general', 'name')
     print(param.name())   # 'name'
