@@ -361,6 +361,7 @@ Best Practices
 
 1. **Organize actions logically**: Group related actions together in your ``setup_actions`` method
 2. **Use meaningful short names**: Choose clear, descriptive short names for easy reference. Even better, is to list the action names within a StrEnum. This avoids mistakes when writing strings while giving access to automatic autocompletion when calling the action name (see extensions/optimizers_base/optimizer.py for an example).
+2. **Use meaningful short names**: Choose clear, descriptive short names for easy reference. Even better, is to list the action names within a StrEnum. This avoids mistakes when writing strings while giving access to automatic autocompletion when calling the action name (see extensions/optimizers_base/optimizer.py for an example).
 3. **Provide tooltips**: Always add helpful tooltips to guide users
 4. **Use keyboard shortcuts**: Add shortcuts for frequently used actions
 5. **Manage state appropriately**: Keep enabled/disabled state in sync with application logic
