@@ -30,7 +30,8 @@ build:
       - git fetch --depth=1 origin +refs/tags/*:refs/tags/*
     pre_build:
       - export QT_DEBUG_PLUGINS=1
-#      - sudo mkdir -p /etc/.pymodaq # cannot use sudo command in readthedoc...
+      - export QT_QPA_PLATFORM=offscreen
+      #      - sudo mkdir -p /etc/.pymodaq # cannot use sudo command in readthedoc...
 #      - sudo chmod uo+rw /etc/.pymodaq
       - python docs/automodule.py || true
 
