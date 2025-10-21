@@ -455,7 +455,7 @@ class DashBoard(CustomApp):
         return self.scan_module
 
     def load_log_module(self, win=None):
-        win, area = make_window(win=win, title="Scanner")
+        win, area = make_window(win=win, title="Logger")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions["DAQ_Logger"] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
