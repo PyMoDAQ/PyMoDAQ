@@ -24,6 +24,15 @@ French version `here`__
 
 __ https://youtu.be/TrRy6HL3h3c
 
+
+.. figure:: /image/JT_Pymodaq_2025.png
+   :alt: Pymodaq days
+
+   The 43 people attending the last PyMoDAQ days in Montpellier. This three days workshop allowed multiple discussions
+   on realisations, instrumentations, new and future features! See you in october 2026 for the nex PyMoDAQ Days in Orsay
+
+
+
    .. _training:
 
 Next training sessions
@@ -37,9 +46,12 @@ Training sessions and gathering of the community are organized every year.
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Fourth edition of the PyMoDAQ's Days: Montpellier 8-10 October 2025.
-   * Training session in Gif sur Yvette, France, 3-7 march 2025, `CNRS Formation Entreprise`__
-   * Training session in Toulouse, France, 23-26 June 2025, Action Nationale de Formation CNRS
+   * Training session in Gif sur Yvette, France, 1-5 december 2025, `CNRS Formation Entreprise`__
+   * Training session in Gif sur Yvette, France, 3-7 march 2026, `CNRS Formation Entreprise`__
+   * Training session in Bordeaux, France, 15-18 June 2026, Action Nationale de Formation CNRS
+   * Fifth edition of the PyMoDAQ's Days: Orsay 7-9 October 2026.
+
+
 
 __ https://cnrsformation.cnrs.fr/liste-stages-mc-PyMoDAq.html
 
