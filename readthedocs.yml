@@ -29,10 +29,11 @@ build:
       - git fetch --prune --unshallow
       - git fetch --depth=1 origin +refs/tags/*:refs/tags/*
     pre_build:
-      - python docs/automodule.py || true
       - export QT_DEBUG_PLUGINS=1
       - sudo mkdir -p /etc/.pymodaq
       - sudo chmod uo+rw /etc/.pymodaq
+      - python docs/automodule.py || true
+
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
