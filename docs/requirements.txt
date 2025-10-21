@@ -7,7 +7,7 @@ toml
 pyqt6
 numpydoc
 sphinx-datatables
-#pymodaq @ git+https://github.com/PyMoDAQ/pymodaq.git@5.1.x_dev # uncomment for test purpose
+pymodaq @ git+https://github.com/PyMoDAQ/pymodaq.git@5.2.x_dev # uncomment for test purpose
 pymodaq_gui @ git+https://github.com/PyMoDAQ/pymodaq_gui.git@5.0.x_dev
 pymodaq_utils @ git+https://github.com/PyMoDAQ/pymodaq_utils.git@1.0.x_dev
 pymodaq_data @ git+https://github.com/PyMoDAQ/pymodaq_data.git@5.0.x_dev
