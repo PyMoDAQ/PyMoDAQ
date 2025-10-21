@@ -1,3 +1,5 @@
+.. _api-managers:
+
 Managers
 ********
 
@@ -16,6 +18,7 @@ API of the various managers, special classes to deals with QAction, Parameters, 
     ModulesManager
 
 
+.. _api-managers_action_manager:
 .. currentmodule:: pymodaq_gui.managers.action_manager
 .. autoclass:: QAction
    :members:
@@ -27,7 +30,7 @@ API of the various managers, special classes to deals with QAction, Parameters, 
 .. autoclass:: ActionManager
    :members:
 
-
+.. _api-managers_parameter_manager:
 .. currentmodule:: pymodaq_gui.managers.parameter_manager
 
 .. autoclass:: ParameterManager
