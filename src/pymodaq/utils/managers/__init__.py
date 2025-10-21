@@ -1,0 +1,4 @@
+from .configurator.configurator import Configurator
+from modules_manager import ModulesManager
+from preset_manager import PresetManager
+from remote_manager import RemoteManager
