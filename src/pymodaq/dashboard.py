@@ -57,6 +57,7 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
 from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.utils.managers import Configurator
 
 
 logger = set_logger(get_module_name(__file__))
@@ -526,6 +527,14 @@ class DashBoard(CustomApp):
             self.datamixer_module.quit_fun()
         return self.datamixer_module
 
+    def load_configurator(self, win=None):
+        self.configurator_window, area = make_window(win=win, title="DataMixer")
+        self.configurator_module = Configurator()
+        self.configurator_module.populate_from_settings(self.get_settings_all())
+        self.extensions["configurator"] = self.configurator_module
+        return self.configurator_module
+
+
     def load_console(self):
         dock_console = Dock("QTConsole")
         self.dockarea.addDock(dock_console, "bottom")
@@ -719,6 +728,7 @@ class DashBoard(CustomApp):
         self.add_action("bayesian", "Bayesian Optimisation", auto_toolbar=False)
         self.add_action("adaptive", "Adaptive Scan", auto_toolbar=False)
         self.add_action("datamixer", "DataMixer", auto_toolbar=False)
+        self.add_action("configurator", "Configurator", auto_toolbar=False)
 
         self.add_action("about", "About", "information2")
         self.add_action("help", "Help", "help1")
@@ -829,6 +839,7 @@ class DashBoard(CustomApp):
         self.connect_action("bayesian", lambda: self.load_bayesian())
         self.connect_action("adaptive", lambda: self.load_adaptive())
         self.connect_action("datamixer", lambda: self.load_datamixer())
+        self.connect_action("configurator", lambda: self.load_configurator())
 
         self.connect_action("about", self.show_about)
         self.connect_action("help", self.show_help)
@@ -929,6 +940,7 @@ class DashBoard(CustomApp):
         self.extensions_menu.addAction(self.get_action("bayesian"))
         self.extensions_menu.addAction(self.get_action("adaptive"))
         self.extensions_menu.addAction(self.get_action("datamixer"))
+        self.extensions_menu.addAction(self.get_action("configurator"))
 
         # extensions from plugins
         extensions_actions = []
