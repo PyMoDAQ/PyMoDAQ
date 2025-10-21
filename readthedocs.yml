@@ -22,7 +22,7 @@ build:
     - x11-utils
     - libgl1
     - libegl1
-    - qt6-base
+    - qt6-base-dev
 
   jobs:
     post_checkout:
