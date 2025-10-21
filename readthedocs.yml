@@ -15,6 +15,7 @@ build:
     - libxcb-image0
     - libxcb-keysyms1
     - libxcb-cursor0
+    - libxcb-cursor-dev
     - libxcb-randr0
     - libxcb-render-util0
     - libxcb-xinerama0
