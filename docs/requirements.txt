@@ -4,7 +4,7 @@ releases
 sphinx-csv-filter
 pillow
 toml
-pyqt6
+pyqt5
 numpydoc
 sphinx-datatables
 #pymodaq @ git+https://github.com/PyMoDAQ/pymodaq.git@5.2.x_dev # uncomment for test purpose
