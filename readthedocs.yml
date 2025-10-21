@@ -30,8 +30,8 @@ build:
       - git fetch --depth=1 origin +refs/tags/*:refs/tags/*
     pre_build:
       - export QT_DEBUG_PLUGINS=1
-      - sudo mkdir -p /etc/.pymodaq
-      - sudo chmod uo+rw /etc/.pymodaq
+      - mkdir -p /etc/.pymodaq
+      - chmod uo+rw /etc/.pymodaq
       - python docs/automodule.py || true
 
 
