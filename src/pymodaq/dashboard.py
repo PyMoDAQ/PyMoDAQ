@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
 import argparse
 
 
@@ -244,8 +244,8 @@ class DashBoard(CustomApp):
 
         self.overshoot = False
         self.preset_file = None
-        self.actuators_modules = []
-        self.detector_modules = []
+        self.actuators_modules: Iterable[DAQ_Move] = []
+        self.detector_modules: Iterable[DAQ_Viewer] = []
 
         self.compact_actuator_dock: Dock = None
 
@@ -1128,6 +1128,30 @@ class DashBoard(CustomApp):
             missing_ok=True
         )
         config_mod_pymodaq.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
+
+    def get_settings_all(self):
+        """Retrieve settings from all control modules and return it as a grouped Parameter"""
+        settings = Parameter.create(
+            title="Control Modules Settings",
+            name="control_modules_settings",
+            type="group",
+            children=[{'title': 'Actuators:', 'name': 'actuators', 'type': 'group'},
+                      {'title': 'Detectors:', 'name': 'detectors', 'type': 'group'},],
+        )
+
+        for ind_act, actuator in enumerate(self.actuators_modules):
+            settings.child('actuators').addChild(
+                {{'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',
+                  'children': actuator.settings.saveState()},}
+            )
+        for ind_det, detector in enumerate(self.detector_modules):
+            settings.child('detectors').addChild(
+                {{'title': detector.title, 'name': f'detectors_{ind_det:03.0f}', 'type': 'group',
+                  'children': detector.settings.saveState()},}
+            )
+
+        return settings
+
 
     def quit_fun(self):
         """
