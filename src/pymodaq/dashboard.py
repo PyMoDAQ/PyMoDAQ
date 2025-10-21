@@ -446,31 +446,31 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self):
-        win, area = make_window(title="Scanner")
+    def load_scan_module(self, win=None):
+        win, area = make_window(win=win, title="Scanner")
         self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
         self.extensions["DAQScan"] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
         return self.scan_module
 
-    def load_log_module(self):
-        win, area = make_window(title="Logger")
+    def load_log_module(self, win=None):
+        win, area = make_window(win=win, title="Scanner")
         self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions["DAQ_Logger"] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
         win.show()
         return self.log_module
 
-    def load_pid_module(self):
-        self.pid_window, area = make_window(title="PID Controller")
+    def load_pid_module(self, win=None):
+        self.pid_window, area = make_window(win=win, title="PID Controller")
         self.pid_module = extmod.DAQ_PID(dockarea=area, dashboard=self)
         self.extensions["DAQ_PID"] = self.pid_module
         self.pid_window.show()
         return self.pid_module
 
-    def load_bayesian(self):
-        self.bayesian_window, area = make_window(title="Bayesian Optimiser")
+    def load_bayesian(self, win=None):
+        self.bayesian_window, area = make_window(win=win, title="Bayesian Optimiser")
         self.bayesian_module = extmod.BayesianOptimization(dockarea=area, dashboard=self)
         self.extensions["bayesian"] = self.bayesian_module
 
@@ -488,8 +488,8 @@ class DashBoard(CustomApp):
             self.bayesian_module.quit()
         return self.bayesian_module
 
-    def load_adaptive(self):
-        self.adaptive_window, area = make_window(title="Adaptive Scan")
+    def load_adaptive(self, win=None):
+        self.adaptive_window, area = make_window(win=win, title="Adaptive Scan")
         self.adaptive_module = extmod.AdaptiveOptimisation(dockarea=area, dashboard=self)
         self.extensions["adaptive"] = self.adaptive_module
 
@@ -507,8 +507,8 @@ class DashBoard(CustomApp):
             self.adaptive_module.quit()
         return self.adaptive_module
 
-    def load_datamixer(self):
-        self.datamixer_window, area = make_window(title="DataMixer")
+    def load_datamixer(self, win=None):
+        self.datamixer_window, area = make_window(win=win, title="DataMixer")
         self.datamixer_module = extmod.DataMixer(parent=area, dashboard=self)
         self.extensions["datamixer"] = self.datamixer_module
 
