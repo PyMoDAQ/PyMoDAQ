@@ -184,7 +184,7 @@ class DAQ_Logger(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
-        self.dockarea.close()
+        self.dockarea.parent().close()
 
     def set_continuous_save(self):
         """
