@@ -26,7 +26,14 @@ class Configurator:
         self.control_modules_settings: Parameter = None
 
 
-    def set_dashboard_content_from_file(self, file_path: Path):
+    def populate_from_settings(self, settings: Parameter):
+        self.control_modules_settings = settings
+        self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
+        self._actuators = [
+            param.opts['title'] for param in self.control_modules_settings.child('Actuators').children()]
+        self.show_configurator()
+
+    def populate_from_file(self, file_path: Path):
 
         children = ioxml.XML_file_to_parameter(file_path)
         self.control_modules_settings = Parameter.create(
@@ -35,7 +42,6 @@ class Configurator:
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
         self._actuators = [
             param.child('name').value() for param in self.control_modules_settings.child('Moves').children()]
-
         self.show_configurator()
 
     def show_configurator(self):
@@ -124,6 +130,6 @@ if __name__ == "__main__":
 
 
     prog = Configurator()
-    prog.set_dashboard_content_from_file(preset_path)
+    prog.populate_from_file(preset_path)
 
     sys.exit(app.exec_())
