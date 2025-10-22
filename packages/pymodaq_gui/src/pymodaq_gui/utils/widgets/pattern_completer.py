@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (
+from qtpy.QtWidgets import (
     QWidget,
     QCompleter,
     QLineEdit,
@@ -7,8 +7,8 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QListView,  # For word wrap
 )
-from PyQt6.QtCore import Qt, QRect
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QTextCursor, QFontMetrics
+from qtpy.QtCore import Qt, QRect
+from qtpy.QtGui import QStandardItemModel, QStandardItem, QTextCursor, QFontMetrics
 
 
 class PatternCompleter:
