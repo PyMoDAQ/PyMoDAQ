@@ -56,7 +56,7 @@ from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
-from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.utils.config import Config as ControlModulesConfig, get_set_configurator_path
 from pymodaq.utils.managers import Configurator
 
 
@@ -73,6 +73,7 @@ extensions = extmod.get_extensions()
 local_path = configmod.get_set_local_dir()
 now = datetime.datetime.now()
 preset_path = config_mod_pymodaq.get_set_preset_path()
+configurator_path = config_mod_pymodaq.get_set_configurator_path()
 log_path = configmod.get_set_log_path()
 layout_path = config_mod_pymodaq.get_set_layout_path()
 overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
@@ -85,6 +86,7 @@ class ManagerEnums(BaseEnum):
     remote = 1
     overshoot = 2
     roi = 3
+    configuration = 4
 
 
 class PymodaqUpdateTableWidget(QTableWidget):
@@ -247,6 +249,7 @@ class DashBoard(CustomApp):
         self.preset_file = None
         self.actuators_modules: Iterable[DAQ_Move] = []
         self.detector_modules: Iterable[DAQ_Viewer] = []
+        self.configurator: Configurator = None
 
         self.compact_actuator_dock: Dock = None
 
@@ -527,14 +530,6 @@ class DashBoard(CustomApp):
             self.datamixer_module.quit_fun()
         return self.datamixer_module
 
-    def load_configurator(self, win=None):
-        self.configurator_window, area = make_window(win=win, title="Configurator")
-        self.configurator_module = Configurator()
-        self.configurator_module.populate_from_settings(self.get_settings_all())
-        self.extensions["configurator"] = self.configurator_module
-        return self.configurator_module
-
-
     def load_console(self):
         dock_console = Dock("QtConsole")
         self.dockarea.addDock(dock_console, "bottom")
@@ -653,6 +648,33 @@ class DashBoard(CustomApp):
         )
         self.add_action("load_preset", "LOAD", "Open", tip="Load the selected Preset: ")
         self.update_preset_action_list()
+        self.toolbar.addSeparator()
+
+        self.add_action(
+            "new_configuration",
+            "New Configuration",
+            "",
+            'Create a new particular experimental configuration',
+            auto_toolbar=False,
+        )
+        self.add_action(
+            "modify_configuration",
+            "Modify Configuration",
+            "",
+            'Modify an existing experimental configuration',
+            auto_toolbar=False,
+        )
+
+        self.add_widget(
+            "configuration_list",
+            QtWidgets.QComboBox,
+            toolbar=self.toolbar,
+            signal_str="currentTextChanged",
+            slot=self.update_configuration_action,
+        )
+        self.add_action("load_configuration", "LOAD", "Open", tip="Load the selected configuration")
+        self.update_configuration_action_list()
+
 
         self.add_action(
             "new_overshoot",
@@ -762,6 +784,31 @@ class DashBoard(CustomApp):
             f"Load the {preset_name}.xml preset file!"
         )
 
+    def update_configuration_action_list(self):
+        configurations = []
+        self.get_action("configuration_list").clear()
+        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+            if file.suffix == ".xml":
+                filestem = file.stem
+                if not self.has_action(
+                        self.get_action_from_file(file, ManagerEnums.configuration)
+                ):
+                    self.add_action(
+                        self.get_action_from_file(file, ManagerEnums.configuration),
+                        filestem,
+                        "",
+                        f"Load the {filestem}.xml preset",
+                        auto_toolbar=False,
+                    )
+                configurations.append(filestem)
+
+        self.get_action("configuration_list").addItems(configurations)
+
+    def update_configuration_action(self, config_name: str):
+        self.get_action("load_configuration").setToolTip(
+            f"Load the {config_name}.xml configuration file!"
+        )
+
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
         self.connect_action("log", self.show_log)
@@ -787,6 +834,23 @@ class DashBoard(CustomApp):
             lambda: self.set_preset_mode(
                 self.preset_path.joinpath(
                     f"{self.get_action('preset_list').currentText()}.xml"
+                )
+            ),
+        )
+        self.connect_action("new_configuration", self.create_experimental_configuration)
+        self.connect_action("modify_configuration", self.modify_experimental_configuration)
+
+        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+            if file.suffix == ".xml":
+                self.connect_action(
+                    self.get_action_from_file(file, ManagerEnums.configuration),
+                    self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
+                )
+        self.connect_action(
+            "load_configuration",
+            lambda: self.set_experimental_configuration(
+                get_set_configurator_path(self.preset_file.stem).joinpath(
+                    f"{self.get_action('configuration_list').currentText()}.xml"
                 )
             ),
         )
@@ -940,7 +1004,6 @@ class DashBoard(CustomApp):
         self.extensions_menu.addAction(self.get_action("bayesian"))
         self.extensions_menu.addAction(self.get_action("adaptive"))
         self.extensions_menu.addAction(self.get_action("datamixer"))
-        self.extensions_menu.addAction(self.get_action("configurator"))
 
         # extensions from plugins
         extensions_actions = []
@@ -1060,6 +1123,20 @@ class DashBoard(CustomApp):
                 self.new_preset_created.emit()
         except Exception as e:
             logger.exception(str(e))
+
+    def create_experimental_configuration(self):
+        self.configurator = Configurator()
+        self.configurator.populate_from_settings(self.get_settings_all())
+        self.configurator.create_modify_configurator(self.preset_file.stem)
+
+    def modify_experimental_configuration(self):
+        self.configurator = Configurator()
+        self.configurator.populate_from_settings(self.get_settings_all())
+        self.configurator.create_modify_configurator(self.preset_file.stem, modify=True)
+
+    def set_experimental_configuration(self, configuration_file_path: Path):
+        pass
+
 
     @staticmethod
     def get_action_from_file(file: Path, manager: ManagerEnums):

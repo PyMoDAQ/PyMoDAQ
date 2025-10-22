@@ -162,8 +162,8 @@ class PresetManager:
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=dialog)
 
+        buttonBox = QDialogButtonBox(parent=dialog)
         buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
         buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
