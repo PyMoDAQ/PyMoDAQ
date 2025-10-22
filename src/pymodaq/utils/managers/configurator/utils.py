@@ -237,8 +237,9 @@ class ConfiguratorModel(TableModel):
     def remove_data(self, row):
         self.remove_row(row)
 
-    def load(self):
-        fname = gutils.select_file(start_path=get_set_configurator_path(), save=False, ext='*')
+    def load(self, fname: str = None):
+        if fname is None:
+            fname = gutils.select_file(start_path=get_set_configurator_path(), save=False, ext='*')
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
@@ -255,9 +256,10 @@ class ConfiguratorModel(TableModel):
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
 
-    def save(self):
-        fname = gutils.select_file(start_path=get_set_configurator_path(), save=True, ext='config',
-                                   force_save_extension=True)
+    def save(self, fname: str = None):
+        if fname is None:
+            fname = gutils.select_file(start_path=get_set_configurator_path(), save=True, ext='config',
+                                       force_save_extension=True)
         with open(fname, 'wb') as file:
             file.writelines([ConfiguratorEntry.serialize(entry) for entry in self._data])
 

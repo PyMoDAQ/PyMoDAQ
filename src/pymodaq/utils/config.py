@@ -16,11 +16,13 @@ def get_set_preset_path():
     return get_set_config_dir('preset_configs')
 
 
-def get_set_configurator_path():
+def get_set_configurator_path(subfolder: str = None):
     """ creates and return the config folder path for managers files
     """
-    return get_set_config_dir('configurator_configs')
-
+    if subfolder:
+        return get_set_config_dir('configurator_configs').joinpath(subfolder)
+    else:
+        return get_set_config_dir('configurator_configs')
 
 def get_set_batch_path():
     """ creates and return the config folder path for managers files
