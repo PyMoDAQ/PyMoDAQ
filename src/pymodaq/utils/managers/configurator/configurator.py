@@ -15,7 +15,7 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, )
-
+from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 logger = set_logger(get_module_name(__file__))
 
@@ -30,7 +30,7 @@ class Configurator:
         self.control_modules_settings = settings
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
         self._actuators = [
-            param.opts['title'] for param in self.control_modules_settings.child('Actuators').children()]
+            param.opts['title'] for param in self.control_modules_settings.child('actuators').children()]
         self.show_configurator()
 
     def populate_from_file(self, file_path: Path):
@@ -46,8 +46,9 @@ class Configurator:
 
     def show_configurator(self):
 
-        self.tree_in = ConfiguratorParameterTree()
-        self.tree_in.setParameters(self.control_modules_settings, showTop=False)
+        self.parameter_manager = ParameterManager(tree_class=ConfiguratorParameterTree)
+        self.tree_in = self.parameter_manager.tree
+        self.parameter_manager.settings = self.control_modules_settings
         self.tree_in.setDragEnabled(True)
         self.tree_in.setAcceptDrops(False)
         self.tree_in.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
@@ -73,7 +74,6 @@ class Configurator:
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
 
-
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
 
@@ -95,7 +95,7 @@ class Configurator:
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
-        hlayout.addWidget(self.tree_in)
+        hlayout.addWidget(self.parameter_manager.settings_tree)
         hlayout.addWidget(widget_buttons)
         hlayout.addWidget(self.table_out)
 

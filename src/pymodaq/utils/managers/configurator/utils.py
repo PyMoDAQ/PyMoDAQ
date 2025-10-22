@@ -14,6 +14,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_path
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTreeWidget
 from pymodaq_gui.utils.widgets.table import TableView, TableModel
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 
@@ -30,13 +31,16 @@ ser_factory = SerializableFactory()
 
 
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
-    if 'Actuators' in param.path or 'Moves' in param.path:
+    if 'actuators' in param.path or 'Moves' in param.path:
         try:
-            index = param.path[::-1].index('Actuators')
+            index = param.path[::-1].index('actuators')
         except ValueError:
             index = param.path[::-1].index('Moves')  #backcompat with old style preset
-    elif 'Detectors' in param.path:
-        index = param.path[::-1].index('Detectors')
+    elif 'Detectors' in param.path or 'detectors' in param.path:
+        try:
+            index = param.path[::-1].index('detectors')
+        except ValueError:
+            index = param.path[::-1].index('Detectors')  #backcompat with old style preset
     else:
         return None
     return len(param.path) - index

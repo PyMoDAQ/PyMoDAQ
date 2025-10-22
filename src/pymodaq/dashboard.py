@@ -536,7 +536,7 @@ class DashBoard(CustomApp):
 
 
     def load_console(self):
-        dock_console = Dock("QTConsole")
+        dock_console = Dock("QtConsole")
         self.dockarea.addDock(dock_console, "bottom")
         qtconsole = extmod.QtConsole(
             style_sheet=config_utils("style", "syntax_highlighting"),
@@ -1156,7 +1156,10 @@ class DashBoard(CustomApp):
             actuator_settings.restoreState(actuator.settings.saveState())
 
             settings.child('actuators').addChild(
-                {'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',},
+                {'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': actuator.title}
+                 ]},
             )
             settings.child('actuators', f'actuator_{ind_act:03.0f}').addChildren(actuator_settings.children())
         for ind_det, detector in enumerate(self.detector_modules):
@@ -1164,7 +1167,11 @@ class DashBoard(CustomApp):
             detector_settings.restoreState(detector.settings.saveState())
 
             settings.child('detectors').addChild(
-                    {'title': detector.title, 'name': f'detector_{ind_det:03.0f}', 'type': 'group',})
+                    {'title': detector.title, 'name': f'detector_{ind_det:03.0f}', 'type': 'group',
+                     'children': [
+                         {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': detector.title}
+                     ]},
+                     )
             settings.child('detectors', f'detector_{ind_det:03.0f}').addChildren(detector_settings.children())
 
         return settings
