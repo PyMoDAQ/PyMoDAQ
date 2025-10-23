@@ -108,7 +108,7 @@ class ConfiguratorEntry:
         return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
-def parameter_with_path_from_file(fname: str) -> list[ParameterWithPath]:
+def config_entry_from_path(fname: str) -> list[ParameterWithPath]:
     with open(fname, 'rb') as file:
         lines = file.readlines()
     all_lines = b''
@@ -276,7 +276,7 @@ class ConfiguratorModel(TableModel):
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
-            data = parameter_with_path_from_file(fname)
+            data = config_entry_from_path(fname)
 
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
