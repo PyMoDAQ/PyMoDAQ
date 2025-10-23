@@ -31,7 +31,7 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
-class ConfiguratorActions(StrEnum):
+class ConfiguratorActions(StrEnum): # used in the DashBoard
     New = "new_configuration"
     Modify = "modify_configuration"
     Label = "configuration_label"
@@ -40,14 +40,14 @@ class ConfiguratorActions(StrEnum):
 
 
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
-    if 'actuators' in param.path or 'Moves' in param.path:
+    if ModuleType.Actuator in param.path or 'Moves' in param.path:
         try:
-            index = param.path[::-1].index('actuators')
+            index = param.path[::-1].index(ModuleType.Actuator)
         except ValueError:
             index = param.path[::-1].index('Moves')  #backcompat with old style preset
-    elif 'Detectors' in param.path or 'detectors' in param.path:
+    elif 'Detectors' in param.path or ModuleType.Detector in param.path:
         try:
-            index = param.path[::-1].index('detectors')
+            index = param.path[::-1].index(ModuleType.Detector)
         except ValueError:
             index = param.path[::-1].index('Detectors')  #backcompat with old style preset
     else:
@@ -59,9 +59,9 @@ def get_module_from_param(param: ParameterWithPath) -> Union[tuple[str, ModuleTy
     index = get_module_index_from_param(param)
     if index is None:
         return None
-    if 'actuators' in param.path or 'Moves' in param.path:
+    if ModuleType.Actuator in param.path or 'Moves' in param.path:
         module_type = ModuleType.Actuator
-    elif 'Detectors' in param.path or 'detectors' in param.path:
+    elif 'Detectors' in param.path or ModuleType.Detector in param.path:
         module_type = ModuleType.Detector
     else:
         return None
@@ -258,6 +258,8 @@ class ConfiguratorModel(TableModel):
 
         if res:
             return ConfiguratorEntry(actuator_cb.currentText(),
+                                     module_type=ModuleType.Actuator,
+                                     setting=
                                      ParameterWithPath(
                                          parameter=
                                          Parameter.create(title= 'Actuator Value',
