@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 
-logger = set_logger(get_module_name(__file__))
 
+logger = set_logger(get_module_name(__file__))
 config_utils = Config()
 config = ControlModulesConfig()
 
