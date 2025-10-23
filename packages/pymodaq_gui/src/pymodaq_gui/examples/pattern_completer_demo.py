@@ -5,7 +5,7 @@ This demonstrates various use cases for the PatternCompleter mixin class.
 All examples are accessible through tabs in a single window.
 """
 
-from PyQt6.QtWidgets import (
+from qtpy.QtWidgets import (
     QApplication,
     QMainWindow,
     QVBoxLayout,
@@ -17,8 +17,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
 )
-from PyQt6.QtCore import QTimer
-from pattern_completer import (
+from qtpy.QtCore import QTimer
+from pymodaq_gui.utils.widgets.pattern_completer import (
     PatternLineEdit,
     PatternTextEdit,
     PatternPlainTextEdit,
@@ -372,7 +372,7 @@ class PatternCompleterDemo(QMainWindow):
         tabs.addTab(create_word_wrap_example(), "5. Word Wrap")
         tabs.addTab(create_dynamic_updates_example(), "6. Dynamic Updates")
         tabs.addTab(create_table_delegate_example(), "7. Table Delegate")
-        tabs.addTab(create_code_editor_example(), "8. Code Editor")
+        # tabs.addTab(create_code_editor_example(), "8. Code Editor") #Not working currently
 
         self.setCentralWidget(tabs)
 
