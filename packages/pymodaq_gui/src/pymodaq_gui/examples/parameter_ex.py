@@ -25,11 +25,8 @@ registerParameterType('groupedit', ScalableGroup, override=True)
 
 def create_text_parameter():
     text_params = {
-        "name": "Text Editing with pattern completion",
-        "type": "group",
-        "children": [
-            {
-                "name": "Message",
+                "name": "text_with_pattern",
+                "title": "Text Editing with pattern completion",
                 "type": "text_pattern",
                 "value": "",
                 "patterns": {
@@ -42,9 +39,8 @@ def create_text_parameter():
                     "case_sensitive": False,
                     "visual_indicator": True,
                 },
-            },
-        ],
-    }
+            }
+
     return text_params
 
 class ParameterEx(ParameterManager):
