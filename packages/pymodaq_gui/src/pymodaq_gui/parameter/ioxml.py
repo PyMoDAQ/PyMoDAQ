@@ -331,19 +331,19 @@ def elt_to_dict(el):
         except:
             pass
 
-    # if 'patterns' in el.attrib.keys():
-    #     try:
-    #         patterns = eval(el.get('patterns'))
-    #         param.update(dict(patterns=patterns))
-    #     except:
-    #         pass
+    if 'patterns' in el.attrib.keys():
+        try:
+            patterns = eval(el.get('patterns'))
+            param.update(dict(patterns=patterns))
+        except:
+            pass
 
-    # if 'completer_config' in el.attrib.keys():
-    #     try:
-    #         completer_config = eval(el.get('completer_config'))
-    #         param.update(dict(completer_config=completer_config))
-    #     except:
-    #         pass
+    if 'completer_config' in el.attrib.keys():
+        try:
+            completer_config = eval(el.get('completer_config'))
+            param.update(dict(completer_config=completer_config))
+        except:
+            pass
 
     return param
 
