@@ -13,7 +13,8 @@ from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
-                                                       get_module_from_param, parameter_with_path_from_file)
+                                                       get_module_from_param, parameter_with_path_from_file,
+                                                       ModuleType)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 from pymodaq.utils.config import get_set_configurator_path
@@ -45,10 +46,10 @@ class Configurator:
         self.control_modules_settings = settings
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
         self._actuators = [
-            param.opts['title'] for param in self.control_modules_settings.child('actuators').children()]
+            param.opts['title'] for param in self.control_modules_settings.child(ModuleType.Actuator).children()]
 
     def populate_from_preset_file(self, file_path: Path):
-        ### for quick testing purpose, not meant to be used at the end"""
+        """ for quick testing purpose, not meant to be used at the end"""
         children = ioxml.XML_file_to_parameter(file_path)
         self.control_modules_settings = Parameter.create(
             title="Control Modules:", name="control_modules", type="group", children=children
