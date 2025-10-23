@@ -358,6 +358,9 @@ class TestPatternParameterIntegration:
 
         assert param.opts['patterns']['@'] == ['alice', 'bob', 'charlie', 'david']
 
+        param.setOpts(patterns={"@": ["alice",]})
+
+        assert param.opts["patterns"]["@"] == ["alice",]
         # Add new pattern
         param.add_pattern('#', ['python', 'java'])
         qtbot.wait(50)
