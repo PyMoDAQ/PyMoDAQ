@@ -8,12 +8,12 @@ from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter import Parameter, ioxml
-from pymodaq_gui.parameter.utils import ParameterWithPath
+from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_from_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
-                                                       get_module_from_param, parameter_with_path_from_file,
+                                                       get_module_from_param, config_entry_from_path,
                                                        ModuleType)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 
@@ -30,16 +30,16 @@ class Configurator:
         self.control_modules_settings: Parameter = None
 
     @staticmethod
-    def parameter_with_path_from_file(filename: str) -> list[ParameterWithPath]:
-        return parameter_with_path_from_file(filename)
+    def config_entry_from_path(filename: str) -> list[ConfiguratorEntry]:
+        return config_entry_from_path(filename)
 
     @staticmethod
-    def check_parameters(parameters: list[ParameterWithPath], settings: Parameter):
-        """Check if the extracted parameters are compatible with the given settings
+    def check_parameters(entries: list[ConfiguratorEntry], settings: Parameter):
+        """Check if the extracted Config entries are compatible with the given settings
         in terms of path"""
         incompatible_index = []
-        for pwp in parameters:
-            pass
+        for entry in entries:
+            settings.child(entry.module_type.value).children()
 
 
     def populate_from_settings(self, settings: Parameter):
