@@ -31,7 +31,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
 from pymodaq_utils import config as configmod
-from pymodaq_utils.enums import BaseEnum
+from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
@@ -87,6 +87,14 @@ class ManagerEnums(BaseEnum):
     overshoot = 2
     roi = 3
     configuration = 4
+    
+    
+class PresetActions(StrEnum):
+    New = "new_preset"
+    Modify = "modify_preset"
+    Label = "label"
+    List = "preset_list"
+    Load = "load_preset"
 
 
 class PymodaqUpdateTableWidget(QTableWidget):
@@ -584,112 +592,59 @@ class DashBoard(CustomApp):
             "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
         )
         self.add_action("quit", "Quit", "close2", "Quit program")
-        self.toolbar.addSeparator()
-        self.add_action(
-            "config_utils",
-            "Utils Config.",
-            "tree",
-            tip="Show utility configuration file",
-        )
-        self.add_action(
-            "config",
-            "Controls/Extensions Config.",
-            "tree",
-            tip="Show Control Modules and Extensions configuration file",
-        )
-        self.add_action(
-            "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False
-        )
-        self.add_action(
-            "leco",
-            "Run Leco Coordinator",
-            "",
-            "Run a Coordinator on this localhost",
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "load_layout",
-            "Load Layout",
-            "",
-            "Load the Saved Docks layout corresponding to the current preset",
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "save_layout",
-            "Save Layout",
-            "",
-            "Save the Saved Docks layout corresponding to the current preset",
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False
-        )
-        self.add_action(
-            "new_preset",
-            "New Preset",
-            "",
-            'Create a new experimental setup configuration file: a "preset"',
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "modify_preset",
-            "Modify Preset",
-            "",
-            'Modify an existing experimental setup configuration file: a "preset"',
-            auto_toolbar=False,
-        )
 
-        self.add_widget(
-            "preset_list",
-            QtWidgets.QComboBox,
-            toolbar=self.toolbar,
-            signal_str="currentTextChanged",
-            slot=self.update_preset_action,
-        )
-        self.add_action("load_preset", "LOAD", "Open", tip="Load the selected Preset: ")
+        self.toolbar.addSeparator()
+
+        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
+        self.add_action("config", "Controls/Extensions Config.", "tree",
+                        tip="Show Control Modules and Extensions configuration file",)
+        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
+        self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
+                        auto_toolbar=False,)
+        self.add_action("load_layout", "Load Layout", "",
+                        "Load the Saved Docks layout corresponding to the current preset",
+                        auto_toolbar=False,)
+        self.add_action("save_layout", "Save Layout", "",
+                        "Save the Saved Docks layout corresponding to the current preset",
+                        auto_toolbar=False,)
+        self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
+
+
+        self.add_action(PresetActions.New, "New Preset", "",
+                        'Create a new experimental setup configuration file: a "preset"',
+                        auto_toolbar=False,)
+        self.add_action(PresetActions.Modify, "Modify Preset", "",
+                        'Modify an existing experimental setup configuration file: a "preset"',
+                        auto_toolbar=False,)
+        self.add_widget("preset_label", QtWidgets.QLabel('Preset:'), toolbar=self.toolbar)
+        self.add_widget(PresetActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
+                        signal_str="currentTextChanged", slot=self.update_preset_action,)
+        self.add_action(PresetActions.Load, "LOAD", "Open", tip="Load the selected Preset: ")
         self.update_preset_action_list()
+
         self.toolbar.addSeparator()
 
-        self.add_action(
-            "new_configuration",
-            "New Configuration",
-            "",
-            'Create a new particular experimental configuration',
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "modify_configuration",
-            "Modify Configuration",
-            "",
-            'Modify an existing experimental configuration',
-            auto_toolbar=False,
-        )
+        self.add_action("new_configuration", "New Configuration", "",
+                        'Create a new particular experimental configuration',
+                        auto_toolbar=False,)
+        self.add_action("modify_configuration", "Modify Configuration", "",
+                        'Modify an existing experimental configuration',
+                        auto_toolbar=False,)
+        self.add_widget("configuration_label", QtWidgets.QLabel('Configuration:'),
+                        toolbar=self.toolbar, visible=False)
+        self.add_widget("configuration_list", QtWidgets.QComboBox, toolbar=self.toolbar,
+                        signal_str="currentTextChanged",
+                        slot=self.update_configuration_action,
+                        enabled=False, visible=False)
+        self.add_action("load_configuration", "LOAD", "Open", tip="Load the selected configuration",
+                        enabled=False, visible=False)
 
-        self.add_widget(
-            "configuration_list",
-            QtWidgets.QComboBox,
-            toolbar=self.toolbar,
-            signal_str="currentTextChanged",
-            slot=self.update_configuration_action,
-        )
-        self.add_action("load_configuration", "LOAD", "Open", tip="Load the selected configuration")
-        self.update_configuration_action_list()
-
-
-        self.add_action(
-            "new_overshoot",
-            "New Overshoot",
-            "",
-            "Create a new experimental setup overshoot configuration file",
-            auto_toolbar=False,
-        )
-        self.add_action(
-            "modify_overshoot",
-            "Modify Overshoot",
-            "",
-            "Modify an existing experimental setup overshoot configuration file",
-            auto_toolbar=False,
-        )
+        self.add_action("new_overshoot", "New Overshoot", "",
+                        "Create a new experimental setup overshoot configuration file",
+                        auto_toolbar=False,)
+        self.add_action("modify_overshoot", "Modify Overshoot", "",
+                        "Modify an existing experimental setup overshoot configuration file",
+                        auto_toolbar=False,)
 
         for ind_file, file in enumerate(
             config_mod_pymodaq.get_set_overshoot_path().iterdir()
@@ -700,6 +655,7 @@ class DashBoard(CustomApp):
                     file.stem,
                     auto_toolbar=False,
                 )
+        self.toolbar.addSeparator()
 
         self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
         self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False)
@@ -727,22 +683,15 @@ class DashBoard(CustomApp):
                     "",
                     auto_toolbar=False,
                 )
-        self.add_action(
-            "activate_overshoot",
-            "Activate overshoot",
-            "Error",
-            tip="if activated, apply an overshoot if one is configured",
-            checkable=True,
-            enabled=False,
-        )
+        self.add_action("activate_overshoot", "Activate overshoot", "Error",
+                        tip="if activated, apply an overshoot if one is configured",
+                        checkable=True, enabled=False,)
+
         self.toolbar.addSeparator()
-        self.add_action(
-            "do_scan",
-            "Do Scans",
-            "surfacePlot",
-            tip="Open the DAQ Scan extension to acquire data as a function of "
-            "one or more parameter",
-        )
+
+        self.add_action("do_scan", "Do Scans", "surfacePlot",
+                        tip="Open the DAQ Scan extension to acquire data as a function of "
+                            "one or more parameter",)
         self.toolbar.addSeparator()
         self.add_action("do_log", "Log data", "", auto_toolbar=False)
         self.add_action("do_pid", "PID module", auto_toolbar=False)
@@ -761,7 +710,7 @@ class DashBoard(CustomApp):
 
     def update_preset_action_list(self):
         presets = []
-        self.get_action("preset_list").clear()
+        self.get_action(PresetActions.List).clear()
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == ".xml":
                 filestem = file.stem
@@ -777,32 +726,37 @@ class DashBoard(CustomApp):
                     )
                 presets.append(filestem)
 
-        self.get_action("preset_list").addItems(presets)
+        self.get_action(PresetActions.List).addItems(presets)
 
     def update_preset_action(self, preset_name: str):
-        self.get_action("load_preset").setToolTip(
+        self.get_action(PresetActions.Load).setToolTip(
             f"Load the {preset_name}.xml preset file!"
         )
 
     def update_configuration_action_list(self):
         configurations = []
         self.get_action("configuration_list").clear()
-        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-            if file.suffix == ".xml":
-                filestem = file.stem
-                if not self.has_action(
-                        self.get_action_from_file(file, ManagerEnums.configuration)
-                ):
-                    self.add_action(
-                        self.get_action_from_file(file, ManagerEnums.configuration),
-                        filestem,
-                        "",
-                        f"Load the {filestem}.xml preset",
-                        auto_toolbar=False,
-                    )
-                configurations.append(filestem)
+        if self.preset_file is not None:
+            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+                if file.suffix == ".config":
+                    filestem = file.stem
+                    if not self.has_action(
+                            self.get_action_from_file(file, ManagerEnums.configuration)
+                    ):
+                        self.add_action(
+                            self.get_action_from_file(file, ManagerEnums.configuration),
+                            filestem,
+                            "",
+                            f"Load the {filestem} configuration",
+                            auto_toolbar=False,
+                        )
+                    configurations.append(filestem)
 
-        self.get_action("configuration_list").addItems(configurations)
+            self.get_action("configuration_list").addItems(configurations)
+            if len(configurations) > 0:
+                self.set_action_visible("configuration_label", True)
+                self.set_action_visible("configuration_list", True)
+                self.set_action_visible("")
 
     def update_configuration_action(self, config_name: str):
         self.get_action("load_configuration").setToolTip(
@@ -820,8 +774,8 @@ class DashBoard(CustomApp):
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("log_window", self.logger_dock.setVisible)
-        self.connect_action("new_preset", self.create_preset)
-        self.connect_action("modify_preset", self.modify_preset)
+        self.connect_action(PresetActions.New, self.create_preset)
+        self.connect_action(PresetActions.Modify, self.modify_preset)
 
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == ".xml":
@@ -830,7 +784,7 @@ class DashBoard(CustomApp):
                     self.create_menu_slot(self.preset_path.joinpath(file)),
                 )
         self.connect_action(
-            "load_preset",
+            PresetActions.Load,
             lambda: self.set_preset_mode(
                 self.preset_path.joinpath(
                     f"{self.get_action('preset_list').currentText()}.xml"
@@ -840,20 +794,21 @@ class DashBoard(CustomApp):
         self.connect_action("new_configuration", self.create_experimental_configuration)
         self.connect_action("modify_configuration", self.modify_experimental_configuration)
 
-        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.configuration),
-                    self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
-                )
-        self.connect_action(
-            "load_configuration",
-            lambda: self.set_experimental_configuration(
-                get_set_configurator_path(self.preset_file.stem).joinpath(
-                    f"{self.get_action('configuration_list').currentText()}.xml"
-                )
-            ),
-        )
+        if self.preset_file is not None:
+            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+                if file.suffix == ".xml":
+                    self.connect_action(
+                        self.get_action_from_file(file, ManagerEnums.configuration),
+                        self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
+                    )
+            self.connect_action(
+                "load_configuration",
+                lambda: self.set_experimental_configuration(
+                    get_set_configurator_path(self.preset_file.stem).joinpath(
+                        f"{self.get_action('configuration_list').currentText()}.xml"
+                    )
+                ),
+            )
         self.connect_action("new_overshoot", self.create_overshoot)
         self.connect_action("modify_overshoot", self.modify_overshoot)
         self.connect_action("activate_overshoot", self.activate_overshoot)
@@ -935,11 +890,10 @@ class DashBoard(CustomApp):
         docked_menu.addAction(self.get_action("log_window"))
 
         self.preset_menu = menubar.addMenu("Preset Modes")
-        self.preset_menu.addAction(self.get_action("new_preset"))
-        self.preset_menu.addAction(self.get_action("modify_preset"))
+        self.preset_menu.addAction(self.get_action(PresetActions.New))
+        self.preset_menu.addAction(self.get_action(PresetActions.Modify))
         self.preset_menu.addSeparator()
         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
-
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == ".xml":
                 self.load_preset_menu.addAction(
@@ -947,6 +901,22 @@ class DashBoard(CustomApp):
                         self.get_action_from_file(file, ManagerEnums.preset)
                     )
                 )
+
+        self.configuration_menu = menubar.addMenu("Configuration Manager")
+        self.configuration_menu.addAction(self.get_action("new_configuration"))
+        self.configuration_menu.addAction(self.get_action("modify_configuration"))
+        self.configuration_menu.addSeparator()
+        self.load_configuration_menu = self.configuration_menu.addMenu("Load Configurations")
+
+        if self.preset_file is not None:
+            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+                if file.suffix == ".config":
+                    if self.has_action(self.get_action_from_file(file, ManagerEnums.configuration)):
+                        self.load_configuration_menu.addAction(
+                            self.get_action(
+                                self.get_action_from_file(file, ManagerEnums.configuration)
+                            )
+                        )
 
         self.overshoot_menu = menubar.addMenu("Overshoot Modes")
         self.overshoot_menu.addAction(self.get_action("new_overshoot"))
@@ -1028,6 +998,8 @@ class DashBoard(CustomApp):
         self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(status)
+        self.configuration_menu.setEnabled(not status)
+
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()
@@ -1128,6 +1100,7 @@ class DashBoard(CustomApp):
         self.configurator = Configurator()
         self.configurator.populate_from_settings(self.get_settings_all())
         self.configurator.create_modify_configurator(self.preset_file.stem)
+        self.setup_menu(self.menubar)
 
     def modify_experimental_configuration(self):
         self.configurator = Configurator()
@@ -2055,7 +2028,7 @@ class DashBoard(CustomApp):
             if not isinstance(filename, Path):
                 filename = Path(filename)
 
-            self.get_action("preset_list").setCurrentText(filename.stem)
+            self.get_action(PresetActions.List).setCurrentText(filename.stem)
 
             self.mainwindow.setVisible(False)
             for area in self.dockarea.tempAreas:
@@ -2147,17 +2120,23 @@ class DashBoard(CustomApp):
                     self.pid_window.show()
 
                 self.load_preset_menu.setEnabled(False)
-                self.set_action_enabled("load_preset", False)
-                self.set_action_enabled("preset_list", False)
+                self.set_action_enabled(PresetActions.Load, False)
+                self.set_action_enabled(PresetActions.List, False)
                 self.overshoot_menu.setEnabled(True)
                 self.roi_menu.setEnabled(True)
                 self.remote_menu.setEnabled(True)
                 self.extensions_menu.setEnabled(True)
+                self.configuration_menu.setEnabled(True)
                 self.file_menu.setEnabled(True)
                 self.settings_menu.setEnabled(True)
+                self.set_action_enabled("configuration_list", True)
+                self.set_action_enabled("load_configuration", True)
                 self.update_init_tree()
 
                 self.preset_loaded_signal.emit(True)
+                self.setup_menu(self.menubar)
+                self.update_configuration_action_list()
+
 
             logger.info(f"Preset file: {filename} has been loaded")
 
