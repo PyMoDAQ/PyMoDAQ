@@ -105,8 +105,7 @@ class ConfiguratorEntry:
         parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(bytes_str, False)
         module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        module_type = ModuleType(module_type)
-        return ConfiguratorEntry(module_name, module_type, parameter_with_path), remaining_bytes
+        return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
 def parameter_with_path_from_file(fname: str) -> list[ParameterWithPath]:

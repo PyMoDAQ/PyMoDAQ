@@ -1098,8 +1098,8 @@ class DashBoard(CustomApp):
     def create_experimental_configuration(self):
         self.configurator.populate_from_settings(self.get_settings_all())
         self.configurator.create_modify_configurator(self.preset_file.stem)
-        self.setup_menu(self.menubar)
         self.update_configuration_action_list()
+        self.setup_menu(self.menubar)
 
     def modify_experimental_configuration(self):
         self.configurator.populate_from_settings(self.get_settings_all())
@@ -1196,8 +1196,8 @@ class DashBoard(CustomApp):
             title="Control Modules Settings",
             name="control_modules_settings",
             type="group",
-            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator, 'type': 'group'},
-                      {'title': 'Detectors:', 'name': ModuleType.Detector, 'type': 'group'},],
+            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group'},
+                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
         )
 
         for ind_act, actuator in enumerate(self.actuators_modules):
