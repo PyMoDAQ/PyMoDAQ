@@ -11,6 +11,7 @@ from qtpy.QtCore import QMimeData, Qt, QVariant
 from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog, QStyle
 
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_path
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
@@ -28,6 +29,14 @@ from pymodaq.utils.config import get_set_configurator_path
 
 logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
+
+
+class ConfiguratorActions(StrEnum):
+    New = "new_configuration"
+    Modify = "modify_configuration"
+    Label = "configuration_label"
+    List = "configuration_list"
+    Load = "load_configuration"
 
 
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
