@@ -41,7 +41,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
@@ -237,6 +237,7 @@ class DashBoard(CustomApp):
         self.database_module = None
         self.extensions = dict([])
         self.extension_windows = []
+        self.configurator = Configurator()
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
@@ -258,7 +259,6 @@ class DashBoard(CustomApp):
         self.preset_file = None
         self.actuators_modules: Iterable[DAQ_Move] = []
         self.detector_modules: Iterable[DAQ_Viewer] = []
-        self.configurator: Configurator = None
 
         self.compact_actuator_dock: Dock = None
 
@@ -751,12 +751,25 @@ class DashBoard(CustomApp):
                             f"Load the {filestem} configuration",
                             auto_toolbar=False,
                         )
+                        self.connect_action(
+                            self.get_action_from_file(file, ManagerEnums.configuration),
+                            self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
+                        )
                     configurations.append(filestem)
-
+            self.connect_action(
+                ConfiguratorActions.Load,
+                lambda: self.set_experimental_configuration(
+                    get_set_configurator_path(self.preset_file.stem).joinpath(
+                        f"{self.get_action(ConfiguratorActions.List).currentText()}.config"
+                    )
+                ),
+            )
             self.get_action(ConfiguratorActions.List).addItems(configurations)
             if len(configurations) > 0:
-                self.set_action_visible(ConfiguratorActions.Label, True)
-                self.set_action_visible(ConfiguratorActions.List, True)
+                self.set_action_visible(
+                    (ConfiguratorActions.Label,
+                     ConfiguratorActions.List,
+                     ConfiguratorActions.Load), True)
                 self.set_action_visible("")
 
     def update_configuration_action(self, config_name: str):
@@ -795,21 +808,6 @@ class DashBoard(CustomApp):
         self.connect_action(ConfiguratorActions.New, self.create_experimental_configuration)
         self.connect_action(ConfiguratorActions.Modify, self.modify_experimental_configuration)
 
-        if self.preset_file is not None:
-            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-                if file.suffix == ".xml":
-                    self.connect_action(
-                        self.get_action_from_file(file, ManagerEnums.configuration),
-                        self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
-                    )
-            self.connect_action(
-                ConfiguratorActions.Load,
-                lambda: self.set_experimental_configuration(
-                    get_set_configurator_path(self.preset_file.stem).joinpath(
-                        f"{self.get_action('configuration_list').currentText()}.xml"
-                    )
-                ),
-            )
         self.connect_action("new_overshoot", self.create_overshoot)
         self.connect_action("modify_overshoot", self.modify_overshoot)
         self.connect_action("activate_overshoot", self.activate_overshoot)
@@ -1098,18 +1096,18 @@ class DashBoard(CustomApp):
             logger.exception(str(e))
 
     def create_experimental_configuration(self):
-        self.configurator = Configurator()
         self.configurator.populate_from_settings(self.get_settings_all())
         self.configurator.create_modify_configurator(self.preset_file.stem)
         self.setup_menu(self.menubar)
+        self.update_configuration_action_list()
 
     def modify_experimental_configuration(self):
-        self.configurator = Configurator()
         self.configurator.populate_from_settings(self.get_settings_all())
         self.configurator.create_modify_configurator(self.preset_file.stem, modify=True)
 
     def set_experimental_configuration(self, configuration_file_path: Path):
-        pass
+        pwp_list = self.configurator.parameter_with_path_from_file(configuration_file_path)
+        self.configurator.check_parameters(pwp_list, self.get_settings_all())
 
 
     @staticmethod
@@ -1198,32 +1196,32 @@ class DashBoard(CustomApp):
             title="Control Modules Settings",
             name="control_modules_settings",
             type="group",
-            children=[{'title': 'Actuators:', 'name': 'actuators', 'type': 'group'},
-                      {'title': 'Detectors:', 'name': 'detectors', 'type': 'group'},],
+            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator, 'type': 'group'},
+                      {'title': 'Detectors:', 'name': ModuleType.Detector, 'type': 'group'},],
         )
 
         for ind_act, actuator in enumerate(self.actuators_modules):
             actuator_settings = Parameter.create(name='settings', type='group', children=[])
             actuator_settings.restoreState(actuator.settings.saveState())
 
-            settings.child('actuators').addChild(
-                {'title': actuator.title, 'name': f'actuator_{ind_act:03.0f}', 'type': 'group',
+            settings.child(ModuleType.Actuator).addChild(
+                {'title': actuator.title, 'name': f'{ModuleType.Actuator}_{ind_act:03.0f}', 'type': 'group',
                  'children': [
                      {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': actuator.title}
                  ]},
             )
-            settings.child('actuators', f'actuator_{ind_act:03.0f}').addChildren(actuator_settings.children())
+            settings.child(ModuleType.Actuator, f'{ModuleType.Actuator}_{ind_act:03.0f}').addChildren(actuator_settings.children())
         for ind_det, detector in enumerate(self.detector_modules):
             detector_settings = Parameter.create(name='settings', type='group', children=[])
             detector_settings.restoreState(detector.settings.saveState())
 
-            settings.child('detectors').addChild(
-                    {'title': detector.title, 'name': f'detector_{ind_det:03.0f}', 'type': 'group',
+            settings.child(ModuleType.Detector).addChild(
+                    {'title': detector.title, 'name': f'{ModuleType.Detector}_{ind_det:03.0f}', 'type': 'group',
                      'children': [
                          {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': detector.title}
                      ]},
                      )
-            settings.child('detectors', f'detector_{ind_det:03.0f}').addChildren(detector_settings.children())
+            settings.child(ModuleType.Detector, f'{ModuleType.Detector}_{ind_det:03.0f}').addChildren(detector_settings.children())
 
         return settings
 

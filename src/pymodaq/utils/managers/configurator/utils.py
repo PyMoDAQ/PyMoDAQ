@@ -24,7 +24,7 @@ from pymodaq_gui import utils as gutils
 from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
 
 from pymodaq.utils.config import get_set_configurator_path
-
+from pymodaq.utils.managers.modules_manager import ModuleType
 
 
 logger = set_logger(get_module_name(__file__))
@@ -55,23 +55,29 @@ def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
     return len(param.path) - index
 
 
-def get_module_from_param(param: ParameterWithPath) -> Union[str, None]:
+def get_module_from_param(param: ParameterWithPath) -> Union[tuple[str, ModuleType], None]:
     index = get_module_index_from_param(param)
     if index is None:
         return None
-
+    if 'actuators' in param.path or 'Moves' in param.path:
+        module_type = ModuleType.Actuator
+    elif 'Detectors' in param.path or 'detectors' in param.path:
+        module_type = ModuleType.Detector
+    else:
+        return None
     index = len(param.path) - index
     param_module = param.parameter
     for _ in range(index-1):
         param_module = param_module.parent()
     module = param_module.child('name').value()
-    return module
+    return module, module_type
 
 
 @SerializableFactory.register_decorator()
 @dataclass
 class ConfiguratorEntry:
     module_name: str
+    module_type: ModuleType
     setting: ParameterWithPath
 
     @staticmethod
@@ -82,6 +88,7 @@ class ConfiguratorEntry:
         bytes_string = b''
         bytes_string += ser_factory.get_apply_serializer(entry.setting)
         bytes_string += ser_factory.get_apply_serializer(entry.module_name)
+        bytes_string += ser_factory.get_apply_serializer(entry.module_type.value)
         return bytes_string
 
     @classmethod
@@ -97,11 +104,27 @@ class ConfiguratorEntry:
         """
         parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(bytes_str, False)
         module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        return ConfiguratorEntry(module_name, parameter_with_path), remaining_bytes
+        module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
+        module_type = ModuleType(module_type)
+        return ConfiguratorEntry(module_name, module_type, parameter_with_path), remaining_bytes
+
+
+def parameter_with_path_from_file(fname: str) -> list[ParameterWithPath]:
+    with open(fname, 'rb') as file:
+        lines = file.readlines()
+    all_lines = b''
+    for line in lines:
+        all_lines += line
+    data = []
+    while len(all_lines) > 0:
+        entry, all_lines = ConfiguratorEntry.deserialize(all_lines)
+        data.append(entry)
+    return data
 
 
 mock_list = ['elt1', 'elt2', 'elt3']
 mock_entry = ConfiguratorEntry('Photodiode',
+                               ModuleType.Detector,
                                ParameterWithPath(
                                    parameter=Parameter.create(title='mytitle', name='myname',
                                                               type='list', value=mock_list[0],
@@ -252,16 +275,8 @@ class ConfiguratorModel(TableModel):
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
+            data = parameter_with_path_from_file(fname)
 
-            with open(fname, 'rb') as file:
-                lines = file.readlines()
-            all_lines = b''
-            for line in lines:
-                all_lines += line
-            data = []
-            while len(all_lines) > 0:
-                entry, all_lines = ConfiguratorEntry.deserialize(all_lines)
-                data.append(entry)
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
 
@@ -352,9 +367,9 @@ class ConfiguratorParameterTree(ParameterTree):
     def mimeData(self, items):
         data = QMimeData()
         param_with_path = ParameterWithPath(items[0].param)
-        module = get_module_from_param(param_with_path)
+        module, module_type = get_module_from_param(param_with_path)
         if module is not None:
-            entry = ConfiguratorEntry(module, param_with_path)
+            entry = ConfiguratorEntry(module, module_type, param_with_path)
             data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
         return data
 

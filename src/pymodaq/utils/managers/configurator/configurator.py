@@ -1,4 +1,4 @@
-
+from typing import Union, Optional
 from pathlib import Path
 import sys
 
@@ -10,10 +10,12 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.messenger import dialog, messagebox
+from pymodaq_gui.utils.file_io import select_file
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
-                                                       get_module_from_param, )
+                                                       get_module_from_param, parameter_with_path_from_file)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
+
 from pymodaq.utils.config import get_set_configurator_path
 
 logger = set_logger(get_module_name(__file__))
@@ -25,6 +27,19 @@ class Configurator:
     def __init__(self):
         self._actuators: list[str] = None
         self.control_modules_settings: Parameter = None
+
+    @staticmethod
+    def parameter_with_path_from_file(filename: str) -> list[ParameterWithPath]:
+        return parameter_with_path_from_file(filename)
+
+    @staticmethod
+    def check_parameters(parameters: list[ParameterWithPath], settings: Parameter):
+        """Check if the extracted parameters are compatible with the given settings
+        in terms of path"""
+        incompatible_index = []
+        for pwp in parameters:
+            pass
+
 
     def populate_from_settings(self, settings: Parameter):
         self.control_modules_settings = settings
@@ -43,7 +58,7 @@ class Configurator:
             param.child('name').value() for param in self.control_modules_settings.child('Moves').children()]
         self.create_modify_configurator()
 
-    def make_widget(self) -> QtWidgets.QWidget:
+    def make_widget(self, config_file_path: Optional[Union[str, Path]] = None) -> QtWidgets.QWidget:
         main_widget = QtWidgets.QWidget()
 
         self.parameter_manager = ParameterManager(tree=ConfiguratorParameterTree())
@@ -74,6 +89,10 @@ class Configurator:
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
         self.table_out.load_data_signal.connect(self.config_model.load)
         self.table_out.save_data_signal.connect(self.config_model.save)
+
+        if config_file_path is not None:
+            self.config_model.load(config_file_path)
+            self.filename_edit.setText(config_file_path.stem)
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -116,11 +135,20 @@ class Configurator:
     def create_modify_configurator(self,
                                    preset_name: str = 'apreset',
                                    modify=False):
+        path = None
+        if modify:
+            path = select_file(start_path=get_set_configurator_path(preset_name), save=False, ext="config")
+            if path == "":
+                return
+
         self.dialog = QDialog()
         vlayout = QtWidgets.QVBoxLayout()
 
-        configurator_widget = self.make_widget()
+        configurator_widget = self.make_widget(config_file_path=path)
+
         self.preset_filename.setText(preset_name)
+
+
 
         buttonBox = QDialogButtonBox(parent=self.dialog)
         buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
@@ -134,15 +162,6 @@ class Configurator:
         self.dialog.setWindowTitle("Configurator Manager")
 
         res = self.dialog.open()
-        #
-        # if res == QDialog.DialogCode.Accepted:
-        #     path = get_set_configurator_path(preset_name)
-        #     if not path.exists():
-        #         path.mkdir(parents=True)
-        #     filename_without_extension = self.filename_edit.text()
-        #     self.config_model.save(path.joinpath(f'{filename_without_extension}.config'))
-        #
-        # return res == QDialog.DialogCode.Accepted
 
     def dialog_check(self):
         if self.config_model.rowCount() == 0:
@@ -178,11 +197,10 @@ class Configurator:
         for child in param.children():
             self.set_drag_mode_recursive(child, movable, drop_enabled)
 
-
     def add_setting(self):
         current_setting = self.tree_in.currentItem().param
-        module = get_module_from_param(ParameterWithPath(current_setting))
-        entry = ConfiguratorEntry(module, ParameterWithPath(current_setting))
+        module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+        entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
         self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def remove_setting(self):
