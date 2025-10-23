@@ -58,6 +58,7 @@ from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
 from pymodaq.utils.config import Config as ControlModulesConfig, get_set_configurator_path
 from pymodaq.utils.managers import Configurator
+from pymodaq.utils.managers.configurator.utils import ConfiguratorActions
 
 
 logger = set_logger(get_module_name(__file__))
@@ -92,7 +93,7 @@ class ManagerEnums(BaseEnum):
 class PresetActions(StrEnum):
     New = "new_preset"
     Modify = "modify_preset"
-    Label = "label"
+    Label = "preset_label"
     List = "preset_list"
     Load = "load_preset"
 
@@ -616,7 +617,7 @@ class DashBoard(CustomApp):
         self.add_action(PresetActions.Modify, "Modify Preset", "",
                         'Modify an existing experimental setup configuration file: a "preset"',
                         auto_toolbar=False,)
-        self.add_widget("preset_label", QtWidgets.QLabel('Preset:'), toolbar=self.toolbar)
+        self.add_widget(PresetActions.Label, QtWidgets.QLabel('Preset:'), toolbar=self.toolbar)
         self.add_widget(PresetActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
                         signal_str="currentTextChanged", slot=self.update_preset_action,)
         self.add_action(PresetActions.Load, "LOAD", "Open", tip="Load the selected Preset: ")
@@ -624,19 +625,19 @@ class DashBoard(CustomApp):
 
         self.toolbar.addSeparator()
 
-        self.add_action("new_configuration", "New Configuration", "",
+        self.add_action(ConfiguratorActions.New, "New Configuration", "",
                         'Create a new particular experimental configuration',
                         auto_toolbar=False,)
-        self.add_action("modify_configuration", "Modify Configuration", "",
+        self.add_action(ConfiguratorActions.Modify, "Modify Configuration", "",
                         'Modify an existing experimental configuration',
                         auto_toolbar=False,)
-        self.add_widget("configuration_label", QtWidgets.QLabel('Configuration:'),
+        self.add_widget(ConfiguratorActions.Label, QtWidgets.QLabel('Configuration:'),
                         toolbar=self.toolbar, visible=False)
-        self.add_widget("configuration_list", QtWidgets.QComboBox, toolbar=self.toolbar,
+        self.add_widget(ConfiguratorActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
                         signal_str="currentTextChanged",
                         slot=self.update_configuration_action,
                         enabled=False, visible=False)
-        self.add_action("load_configuration", "LOAD", "Open", tip="Load the selected configuration",
+        self.add_action(ConfiguratorActions.Load, "LOAD", "Open", tip="Load the selected configuration",
                         enabled=False, visible=False)
 
         self.add_action("new_overshoot", "New Overshoot", "",
@@ -735,7 +736,7 @@ class DashBoard(CustomApp):
 
     def update_configuration_action_list(self):
         configurations = []
-        self.get_action("configuration_list").clear()
+        self.get_action(ConfiguratorActions.List).clear()
         if self.preset_file is not None:
             for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
                 if file.suffix == ".config":
@@ -752,14 +753,14 @@ class DashBoard(CustomApp):
                         )
                     configurations.append(filestem)
 
-            self.get_action("configuration_list").addItems(configurations)
+            self.get_action(ConfiguratorActions.List).addItems(configurations)
             if len(configurations) > 0:
-                self.set_action_visible("configuration_label", True)
-                self.set_action_visible("configuration_list", True)
+                self.set_action_visible(ConfiguratorActions.Label, True)
+                self.set_action_visible(ConfiguratorActions.List, True)
                 self.set_action_visible("")
 
     def update_configuration_action(self, config_name: str):
-        self.get_action("load_configuration").setToolTip(
+        self.get_action(ConfiguratorActions.Load).setToolTip(
             f"Load the {config_name}.xml configuration file!"
         )
 
@@ -791,8 +792,8 @@ class DashBoard(CustomApp):
                 )
             ),
         )
-        self.connect_action("new_configuration", self.create_experimental_configuration)
-        self.connect_action("modify_configuration", self.modify_experimental_configuration)
+        self.connect_action(ConfiguratorActions.New, self.create_experimental_configuration)
+        self.connect_action(ConfiguratorActions.Modify, self.modify_experimental_configuration)
 
         if self.preset_file is not None:
             for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
@@ -802,7 +803,7 @@ class DashBoard(CustomApp):
                         self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
                     )
             self.connect_action(
-                "load_configuration",
+                ConfiguratorActions.Load,
                 lambda: self.set_experimental_configuration(
                     get_set_configurator_path(self.preset_file.stem).joinpath(
                         f"{self.get_action('configuration_list').currentText()}.xml"
@@ -903,8 +904,8 @@ class DashBoard(CustomApp):
                 )
 
         self.configuration_menu = menubar.addMenu("Configuration Manager")
-        self.configuration_menu.addAction(self.get_action("new_configuration"))
-        self.configuration_menu.addAction(self.get_action("modify_configuration"))
+        self.configuration_menu.addAction(self.get_action(ConfiguratorActions.New))
+        self.configuration_menu.addAction(self.get_action(ConfiguratorActions.Modify))
         self.configuration_menu.addSeparator()
         self.load_configuration_menu = self.configuration_menu.addMenu("Load Configurations")
 
@@ -2129,8 +2130,8 @@ class DashBoard(CustomApp):
                 self.configuration_menu.setEnabled(True)
                 self.file_menu.setEnabled(True)
                 self.settings_menu.setEnabled(True)
-                self.set_action_enabled("configuration_list", True)
-                self.set_action_enabled("load_configuration", True)
+                self.set_action_enabled(ConfiguratorActions.List, True)
+                self.set_action_enabled(ConfiguratorActions.Load, True)
                 self.update_init_tree()
 
                 self.preset_loaded_signal.emit(True)
