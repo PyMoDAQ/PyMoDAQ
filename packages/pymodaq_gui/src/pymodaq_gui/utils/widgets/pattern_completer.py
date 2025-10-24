@@ -256,37 +256,66 @@ class PatternCompleter:
             self.setCursorPosition(min(cursor_pos, len(text)))
 
     def _find_active_trigger(self, text, cursor_pos):
-        """Find which trigger pattern is currently active (optimized)"""
+        """
+        Find which trigger pattern is currently active.
+
+        Handles overlapping patterns (e.g., : and ::) by prioritizing:
+        1. Patterns that appear later in the text
+        2. Longer patterns over shorter ones at the same position
+        """
+        # Sort patterns by length (longest first) to check longer patterns first
+        sorted_patterns = sorted(self.completers.keys(), key=len, reverse=True)
+
         active_pattern = None
-        last_trigger_pos = -1
+        trigger_pos = -1
+        trigger_end = -1
 
-        search_text: str = text[:cursor_pos]
+        search_text = text[:cursor_pos]
 
-        for pattern in self.completers.keys():
-            # Search backwards from cursor for efficiency
+        for pattern in sorted_patterns:
             pos = search_text.rfind(pattern)
 
             while pos >= 0:
                 end_pos = pos + len(pattern)
 
-                # Validate end_pos
+                # Validate end_pos doesn't exceed text length
                 if end_pos > len(text):
                     pos = search_text.rfind(pattern, 0, pos)
                     continue
 
                 text_after = text[end_pos:cursor_pos]
 
-                # Check if there's no space or newline after trigger
+                # Only consider if no space/newline after trigger
                 if " " not in text_after and "\n" not in text_after:
-                    if pos > last_trigger_pos:
-                        last_trigger_pos = pos
+                    # Skip if this pattern overlaps with an already found longer pattern
+                    # E.g., skip : at pos 1 if we already found :: at pos 0
+                    if trigger_pos >= 0 and pos >= trigger_pos and pos < trigger_end:
+                        pos = search_text.rfind(pattern, 0, pos)
+                        continue
+
+                    # Skip if a longer pattern exists at the same position
+                    # E.g., skip : at pos 0 if :: also exists at pos 0
+                    longer_exists = any(
+                        len(other) > len(pattern)
+                        and search_text[pos:].startswith(other)
+                        and pos + len(other) <= cursor_pos
+                        for other in sorted_patterns
+                    )
+
+                    if longer_exists:
+                        pos = search_text.rfind(pattern, 0, pos)
+                        continue
+
+                    # Accept this pattern (later position or same position but longer)
+                    if pos > trigger_pos or (pos == trigger_pos and len(pattern) > len(active_pattern)):
+                        trigger_pos = pos
+                        trigger_end = end_pos
                         active_pattern = pattern
                     break
 
-                # Search for earlier occurrence
                 pos = search_text.rfind(pattern, 0, pos)
 
-        return active_pattern, last_trigger_pos
+        return active_pattern, trigger_pos
 
     def _apply_visual_indicator(self, active):
         """Apply visual styling"""
@@ -317,6 +346,16 @@ class PatternCompleter:
         active_pattern, trigger_pos = self._find_active_trigger(text, cursor_pos)
 
         if active_pattern and trigger_pos >= 0:
+            # If pattern changed, hide popups from other patterns
+            if self.active_pattern != active_pattern:
+                for pattern, pattern_config in self.completers.items():
+                    if pattern != active_pattern:
+                        try:
+                            if pattern_config["completer"].popup().isVisible():
+                                pattern_config["completer"].popup().hide()
+                        except (RuntimeError, AttributeError):
+                            pass
+
             self.active_pattern = active_pattern
             self.trigger_start_pos = trigger_pos
 
@@ -400,7 +439,6 @@ class PatternCompleter:
 
             # Replace with just the completion (without the pattern prefix)
             new_text = text[: self.trigger_start_pos] + completion + text[cursor_pos:]
-
             new_cursor_pos = self.trigger_start_pos + len(completion)
             self._set_text_with_cursor(new_text, new_cursor_pos)
 
@@ -428,13 +466,10 @@ class PatternCompleter:
         Returns:
             bool: True if event was handled (don't call super), False otherwise
         """
-        # Check for active completer
-        completer_visible = False
-        active_completer: QCompleter = None
-
+        # Find the active completer with a visible popup
+        active_completer:QCompleter = None
         for pattern, pattern_config in self.completers.items():
             if pattern_config["completer"].popup().isVisible():
-                completer_visible = True
                 if pattern == self.active_pattern:
                     active_completer = pattern_config["completer"]
                 break
