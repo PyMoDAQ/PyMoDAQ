@@ -39,6 +39,27 @@ class ConfiguratorActions(StrEnum): # used in the DashBoard
     Load = "load_configuration"
 
 
+class ParameterDelegate(QtWidgets.QStyledItemDelegate):
+
+    def __init__(self,  *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def createEditor(self, parent, option, index):
+        parameter: Parameter = index.model().get_data(index.row()).setting.parameter
+        widget: QtWidgets.QWidget =  parameter.itemClass(parameter, depth=0).makeWidget()
+        widget.setParent(parent)
+        return widget
+
+    def setEditorData(self, editor, index):
+        try:
+            editor.setValue(index.data())
+        except:
+            super().setEditorData(editor, index)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
+
+
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
     if ModuleType.Actuator in param.path or 'Moves' in param.path:
         try:
@@ -108,7 +129,10 @@ class ConfiguratorEntry:
         return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
-def config_entry_from_path(fname: str) -> list[ParameterWithPath]:
+def config_entry_from_path(fname: Union[str, Path]) -> list[ParameterWithPath]:
+    fname = Path(fname)
+    if not fname.exists():
+        return []
     with open(fname, 'rb') as file:
         lines = file.readlines()
     all_lines = b''
@@ -132,6 +156,9 @@ mock_entry = ConfiguratorEntry('Photodiode',
 
 
 class ConfiguratorModel(TableModel):
+
+    update_delegate = QtCore.Signal()
+
     def __init__(self, data: list[ConfiguratorEntry]=None,
                  header=('Module Name', 'Setting Title', 'Value'),
                  actuators: list[str] = None
@@ -140,7 +167,7 @@ class ConfiguratorModel(TableModel):
         self.actuators = actuators
         if data is None:
             data = []
-        super().__init__(data, header, editable=[False, False, False])
+        super().__init__(data, header, editable=[False, False, True])
         pass
 
     def columnCount(self, parent):
@@ -160,7 +187,7 @@ class ConfiguratorModel(TableModel):
 
     def data(self, index, role):
         if index.isValid():
-            if role == Qt.DisplayRole or role == Qt.EditRole:
+            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 entry: ConfiguratorEntry = self._data[index.row()]
                 if index.column() == 0:
                     dat = entry.module_name
@@ -171,13 +198,20 @@ class ConfiguratorModel(TableModel):
                 else:
                     dat = ''
                 return dat
-            elif role == Qt.CheckStateRole and index.column() == 0 and self._show_checkbox:
+            elif role == Qt.ItemDataRole.CheckStateRole and index.column() == 0 and self._show_checkbox:
                 if self._checked[index.row()]:
                     return Qt.CheckState.Checked
                 else:
                     return Qt.CheckState.Unchecked
         return QVariant()
 
+    def setData(self, index, value, role):
+        if index.isValid():
+            if role == Qt.ItemDataRole.EditRole:
+                self._data[index.row()].setting.parameter.setValue(value)
+                self.dataChanged.emit(index, index, [role])
+                return True
+        return False
 
     def dropMimeData(self, data: QMimeData, action, row, column, parent):
         if row == -1:
@@ -187,7 +221,9 @@ class ConfiguratorModel(TableModel):
         else:
             entry = mock_entry
         self.data_tmp = entry
+        #self.moveRow(parent, row, parent, )
         self.insertRows(row, 1, parent)
+        self.update_delegate.emit()
         return True
 
     def clear(self):
@@ -227,6 +263,7 @@ class ConfiguratorModel(TableModel):
 
         if data is not None:
             self.insert_data(row, data)
+            self.update_delegate.emit()
 
     def get_data_from_value_widget(self) -> ConfiguratorEntry:
         suffix = ''
@@ -269,8 +306,9 @@ class ConfiguratorModel(TableModel):
 
     def remove_data(self, row):
         self.remove_row(row)
+        self.update_delegate.emit()
 
-    def load(self, fname: str = None):
+    def load(self, fname: Union[str, Path] = None):
         if fname is None:
             fname = gutils.select_file(start_path=get_set_configurator_path(), save=False, ext='*')
         if fname is not None and fname != '':
@@ -280,6 +318,7 @@ class ConfiguratorModel(TableModel):
 
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
+        self.update_delegate.emit()
 
     def save(self, fname: str = None):
         if fname is None:
@@ -303,7 +342,7 @@ class ConfiguratorTableView(QtWidgets.QTableView):
     def __init__(self, menu=False):
         super().__init__()
         self.setmenu(menu)
-        self.doubleClicked.connect(self.edit_row)
+        #self.doubleClicked.connect(self.edit_row)
 
     def edit_row(self):
         index = self.currentIndex()
