@@ -345,6 +345,10 @@ class PatternCompleter:
                 # QLineEdit - default positioning is fine
                 completer.complete()
 
+            # Auto-select first item to indicate it will be chosen
+            if completer.completionCount() > 0:
+                popup.setCurrentIndex(completer.completionModel().index(0, 0))
+
             # Auto-resize popup width to fit content using font metrics
             if config.get("auto_resize", True) and completer.completionCount() > 0:
                 # Get font metrics from the popup
@@ -435,9 +439,14 @@ class PatternCompleter:
                     active_completer = pattern_config["completer"]
                 break
 
-        if completer_visible and active_completer:
-            if event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return):
+        if active_completer:
+            if event.key() in (Qt.Key.Key_Enter, Qt.Key.Key_Return, Qt.Key.Key_Tab):
+                # Get current index, or use first item if none selected
                 index = active_completer.popup().currentIndex()
+                if not index.isValid():
+                    # Auto-select first item if nothing selected
+                    index = active_completer.completionModel().index(0, 0)
+
                 if index.isValid():
                     completion = active_completer.completionModel().data(index)
                     self._pattern_insert_completion(completion)
