@@ -73,15 +73,24 @@ def create_multiple_patterns_example():
     tags = ["python", "pyqt6", "programming", "development", "tutorial"]
     text_edit.add_completer("#", tags)
 
-    # :: for emojis
-    emojis = ["smile 😊", "heart ❤️", "thumbsup 👍", "fire 🔥", "rocket 🚀"]
-    text_edit.add_completer("::", emojis)
+    # :: for simple symbols
+    # Using only simple single-character symbols to avoid cursor positioning issues
+    symbols = [
+        "check ✓",
+        "cross ✗",
+        "star ★",
+        "arrow →",
+        "bullet •",
+        "circle ○",
+        "square ■",
+        "plus ✚",
+    ]
+    text_edit.add_completer("::", symbols)
 
     text_edit.setPlaceholderText(
-        "Try typing:\n  @ for mentions\n  # for hashtags\n  :: for emojis"
+        "Try typing:\n  @ for mentions\n  # for hashtags\n  :: for symbols"
     )
     layout.addWidget(text_edit)
-
     return widget
 
 
@@ -155,34 +164,32 @@ def create_per_pattern_config_example():
 
 
 # ============================================================================
-# EXAMPLE 5: Word Wrap Example
+# EXAMPLE 5: Word Wrap Example - Side by Side Comparison
 # ============================================================================
 def create_word_wrap_example():
     """
-    Demonstrates word wrap feature for long completion items
+    Demonstrates word wrap feature for long completion items with side-by-side comparison
     """
     widget = QWidget()
     layout = QVBoxLayout(widget)
 
-    layout.addWidget(QLabel("<b>Example 5: Word Wrap</b>"))
+    layout.addWidget(QLabel("<b>Example 5: Word Wrap - Side by Side Comparison</b>"))
 
     info_label = QLabel(
         "<b>What is Word Wrap?</b><br>"
-        "• <b>word_wrap=False</b> (default): Long items are truncated or need scrolling<br>"
-        "• <b>word_wrap=True</b>: Long items wrap to multiple lines in popup<br><br>"
-        "Click buttons below to toggle word wrap and see the difference!"
+        "• <b>word_wrap=False</b> (left): Long items are truncated or need scrolling<br>"
+        "• <b>word_wrap=True</b> (right): Long items wrap to multiple lines in popup<br><br>"
+        "Type @ in either field to see the difference. First item is auto-selected (highlighted)!"
     )
     layout.addWidget(info_label)
 
-    # Button controls
-    button_layout = QHBoxLayout()
-    btn_no_wrap = QPushButton("Without Word Wrap")
-    btn_with_wrap = QPushButton("With Word Wrap")
-    button_layout.addWidget(btn_no_wrap)
-    button_layout.addWidget(btn_with_wrap)
-    layout.addLayout(button_layout)
+    # Create side-by-side layout
+    compare_layout = QHBoxLayout()
 
-    line_edit = PatternLineEdit()
+    # Left side - WITHOUT word wrap
+    left_layout = QVBoxLayout()
+    left_layout.addWidget(QLabel("<b>WITHOUT Word Wrap</b>"))
+    line_edit_no_wrap = PatternLineEdit()
 
     # Long completion items that benefit from word wrap
     long_items = [
@@ -190,26 +197,51 @@ def create_word_wrap_example():
         "Bob Smith - Product Manager with 10 years experience",
         "Charlie Brown - UX Designer specializing in mobile applications",
         "Diana Prince - Data Scientist working on machine learning projects",
+        "Eve Martinez - Full Stack Engineer with cloud expertise",
     ]
 
-    # Start without word wrap
-    line_edit.add_completer("@", long_items, word_wrap=False, max_width=300)
+    line_edit_no_wrap.add_completer("@", long_items, word_wrap=False, max_width=300)
+    line_edit_no_wrap.setPlaceholderText("Type @ - items truncated")
+    left_layout.addWidget(line_edit_no_wrap)
 
-    def set_no_wrap():
-        line_edit.update_completer_config("@", word_wrap=False)
-        line_edit.setPlaceholderText("Type @ - items are truncated (word_wrap=False)")
+    # Right side - WITH word wrap
+    right_layout = QVBoxLayout()
+    right_layout.addWidget(QLabel("<b>WITH Word Wrap</b>"))
+    line_edit_with_wrap = PatternLineEdit()
+    line_edit_with_wrap.add_completer("@", long_items, word_wrap=True, max_width=300)
+    line_edit_with_wrap.setPlaceholderText("Type @ - items wrap")
+    right_layout.addWidget(line_edit_with_wrap)
 
-    def set_with_wrap():
-        line_edit.update_completer_config("@", word_wrap=True)
-        line_edit.setPlaceholderText(
-            "Type @ - items wrap to multiple lines (word_wrap=True)"
-        )
+    # Mirror the text between both fields
+    def sync_left_to_right(text):
+        if line_edit_with_wrap.text() != text:
+            line_edit_with_wrap.setText(text)
+            line_edit_with_wrap.setCursorPosition(line_edit_no_wrap.cursorPosition())
+            line_edit_no_wrap.setFocus()
 
-    btn_no_wrap.clicked.connect(set_no_wrap)
-    btn_with_wrap.clicked.connect(set_with_wrap)
+    def sync_right_to_left(text):
+        if line_edit_no_wrap.text() != text:
+            line_edit_no_wrap.setText(text)
+            line_edit_no_wrap.setCursorPosition(line_edit_with_wrap.cursorPosition())
+            line_edit_with_wrap.setFocus()
 
-    line_edit.setPlaceholderText("Type @ - items are truncated (word_wrap=False)")
-    layout.addWidget(line_edit)
+    line_edit_no_wrap.textChanged.connect(sync_left_to_right)
+    line_edit_with_wrap.textChanged.connect(sync_right_to_left)
+
+    # Add both to compare layout
+    compare_layout.addLayout(left_layout)
+    compare_layout.addLayout(right_layout)
+    layout.addLayout(compare_layout)
+
+
+    # Add instruction label
+    instruction_label = QLabel(
+        "<i>Notice: The first item is automatically highlighted (selected) in both popups.<br>"
+        "Press Tab or Enter to accept the highlighted suggestion!</i>"
+    )
+    instruction_label.setWordWrap(True)
+    layout.addWidget(instruction_label)
+
     layout.addStretch()
 
     return widget
@@ -359,7 +391,7 @@ class PatternCompleterDemo(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PatternCompleter Examples - Interactive Demo")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 600)
 
         # Create tab widget
         tabs = QTabWidget()
@@ -372,7 +404,7 @@ class PatternCompleterDemo(QMainWindow):
         tabs.addTab(create_word_wrap_example(), "5. Word Wrap")
         tabs.addTab(create_dynamic_updates_example(), "6. Dynamic Updates")
         tabs.addTab(create_table_delegate_example(), "7. Table Delegate")
-        # tabs.addTab(create_code_editor_example(), "8. Code Editor") #Not working currently
+        tabs.addTab(create_code_editor_example(), "8. Code Editor") #Not working currently
 
         self.setCentralWidget(tabs)
 
