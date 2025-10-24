@@ -5,6 +5,7 @@ import sys
 from dataclasses import dataclass
 from typing import Union, Tuple
 
+from numba.cuda.simulator.kernelapi import andlock
 from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QVariant
@@ -100,6 +101,11 @@ class ConfiguratorEntry:
     module_name: str
     module_type: ModuleType
     setting: ParameterWithPath
+
+    def __eq__(self, other: 'ConfiguratorEntry'):
+        return (self.module_name == other.module_name and
+                self.module_type == other.module_type and
+                self.setting == other.setting)
 
     @staticmethod
     def serialize(entry: 'ConfiguratorEntry') -> bytes:
@@ -221,8 +227,11 @@ class ConfiguratorModel(TableModel):
         else:
             entry = mock_entry
         self.data_tmp = entry
-        #self.moveRow(parent, row, parent, )
-        self.insertRows(row, 1, parent)
+        if action == QtCore.Qt.DropAction.MoveAction:
+            #todo implement moveRow
+            self.moveRow(parent, row, parent, row)
+        elif action == QtCore.Qt.DropAction.CopyAction:
+            self.insertRows(row, 1, parent)
         self.update_delegate.emit()
         return True
 
