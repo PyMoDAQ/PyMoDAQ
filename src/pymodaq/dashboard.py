@@ -238,6 +238,7 @@ class DashBoard(CustomApp):
         self.extensions = dict([])
         self.extension_windows = []
         self.configurator = Configurator()
+        self.configurator.new_file.connect(self.update_configuration_action_list)
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
@@ -770,7 +771,7 @@ class DashBoard(CustomApp):
                     (ConfiguratorActions.Label,
                      ConfiguratorActions.List,
                      ConfiguratorActions.Load), True)
-                self.set_action_visible("")
+        self.setup_menu(self.menubar)
 
     def update_configuration_action(self, config_name: str):
         self.get_action(ConfiguratorActions.Load).setToolTip(
@@ -1096,18 +1097,16 @@ class DashBoard(CustomApp):
             logger.exception(str(e))
 
     def create_experimental_configuration(self):
-        self.configurator.populate_from_settings(self.get_settings_all())
+        self.configurator.populate_from_settings(self.modules_manager.get_settings_all())
         self.configurator.create_modify_configurator(self.preset_file.stem)
-        self.update_configuration_action_list()
-        self.setup_menu(self.menubar)
 
     def modify_experimental_configuration(self):
-        self.configurator.populate_from_settings(self.get_settings_all())
-        self.configurator.create_modify_configurator(self.preset_file.stem, modify=True)
+        self.configurator.populate_from_settings(self.modules_manager.get_settings_all())
+        self.configurator.create_modify_configurator(self.preset_file.stem)
 
     def set_experimental_configuration(self, configuration_file_path: Path):
         pwp_list = self.configurator.config_entry_from_path(configuration_file_path)
-        self.configurator.check_parameters(pwp_list, self.get_settings_all())
+        self.configurator.check_parameters(pwp_list, self.modules_manager.get_settings_all())
 
 
     @staticmethod
@@ -1189,42 +1188,6 @@ class DashBoard(CustomApp):
             missing_ok=True
         )
         config_mod_pymodaq.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
-
-    def get_settings_all(self):
-        """Retrieve settings from all control modules and return it as a grouped Parameter"""
-        settings = Parameter.create(
-            title="Control Modules Settings",
-            name="control_modules_settings",
-            type="group",
-            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group'},
-                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
-        )
-
-        for ind_act, actuator in enumerate(self.actuators_modules):
-            actuator_settings = Parameter.create(name='settings', type='group', children=[])
-            actuator_settings.restoreState(actuator.settings.saveState())
-
-            settings.child(ModuleType.Actuator).addChild(
-                {'title': actuator.title, 'name': f'{ModuleType.Actuator}_{ind_act:03.0f}', 'type': 'group',
-                 'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': actuator.title}
-                 ]},
-            )
-            settings.child(ModuleType.Actuator, f'{ModuleType.Actuator}_{ind_act:03.0f}').addChildren(actuator_settings.children())
-        for ind_det, detector in enumerate(self.detector_modules):
-            detector_settings = Parameter.create(name='settings', type='group', children=[])
-            detector_settings.restoreState(detector.settings.saveState())
-
-            settings.child(ModuleType.Detector).addChild(
-                    {'title': detector.title, 'name': f'{ModuleType.Detector}_{ind_det:03.0f}', 'type': 'group',
-                     'children': [
-                         {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': detector.title}
-                     ]},
-                     )
-            settings.child(ModuleType.Detector, f'{ModuleType.Detector}_{ind_det:03.0f}').addChildren(detector_settings.children())
-
-        return settings
-
 
     def quit_fun(self):
         """

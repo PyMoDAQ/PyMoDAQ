@@ -12,7 +12,7 @@ from pymodaq_utils.enums import StrEnum
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
@@ -281,6 +281,43 @@ class ModulesManager(QObject, ParameterManager):
 
         elif param.name() == 'actuators':
             self.actuators_changed.emit(param.value()['selected'])
+
+    def get_settings_all(self) -> Parameter:
+        """Retrieve settings from all control modules and return it as a grouped Parameter"""
+        settings = Parameter.create(
+            title="Control Modules Settings",
+            name="control_modules_settings",
+            type="group",
+            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group'},
+                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
+        )
+
+        for ind_act, actuator in enumerate(self.actuators_all):
+            actuator_settings = Parameter.create(name='settings', type='group', children=[])
+            actuator_settings.restoreState(actuator.settings.saveState())
+
+            settings.child(ModuleType.Actuator).addChild(
+                {'title': actuator.title, 'name': f'{ModuleType.Actuator}_{ind_act:03.0f}', 'type': 'group',
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': actuator.title}
+                 ]},
+            )
+            settings.child(ModuleType.Actuator,
+                           f'{ModuleType.Actuator}_{ind_act:03.0f}').addChildren(actuator_settings.children())
+        for ind_det, detector in enumerate(self.detectors_all):
+            detector_settings = Parameter.create(name='settings', type='group', children=[])
+            detector_settings.restoreState(detector.settings.saveState())
+
+            settings.child(ModuleType.Detector).addChild(
+                {'title': detector.title, 'name': f'{ModuleType.Detector}_{ind_det:03.0f}', 'type': 'group',
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': detector.title}
+                 ]},
+            )
+            settings.child(ModuleType.Detector,
+                           f'{ModuleType.Detector}_{ind_det:03.0f}').addChildren(detector_settings.children())
+
+        return settings
 
     def get_det_data_list(self) -> DataToExport:
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
