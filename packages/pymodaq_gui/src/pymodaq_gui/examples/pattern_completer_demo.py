@@ -179,7 +179,8 @@ def create_word_wrap_example():
         "<b>What is Word Wrap?</b><br>"
         "• <b>word_wrap=False</b> (left): Long items are truncated or need scrolling<br>"
         "• <b>word_wrap=True</b> (right): Long items wrap to multiple lines in popup<br><br>"
-        "Type @ in either field to see the difference. First item is auto-selected (highlighted)!"
+        "Type @ in either field to see the difference side-by-side!<br>"
+        "Both popups will appear simultaneously for comparison."
     )
     layout.addWidget(info_label)
 
