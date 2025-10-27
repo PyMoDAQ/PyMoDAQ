@@ -6,6 +6,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QStyle
 from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
+from pymodaq.utils.data import DataActuator
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_from_name
@@ -16,10 +17,13 @@ from pymodaq_gui.parameter.pymodaq_ptypes.list import Combo_pb
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, config_entry_from_path,
-                                                       ModuleType, ParameterDelegate)
+                                                       ModuleType, ParameterDelegate, SpinBox)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter.utils import compareParameters
 
 from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -96,16 +100,42 @@ class Configurator(QtCore.QObject):
         self.control_modules_settings: Parameter = None
 
     @staticmethod
-    def config_entry_from_path(filename: str) -> list[ConfiguratorEntry]:
+    def config_entry_from_path(filename: Union[str, Path]) -> list[ConfiguratorEntry]:
         return config_entry_from_path(filename)
+
+    def apply_configuration(self, modules_manager: ModulesManager, configuration_path: Path):
+        pwp_list = self.config_entry_from_path(configuration_path)
+        incompatible_index = self.check_parameters(pwp_list, modules_manager.get_settings_all())
+        for index, entry in enumerate(pwp_list):
+            if index not in incompatible_index:
+                mod = modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
+                if 'actuator_value' in entry.setting.path:
+                    mod.move_abs(DataActuator(entry.module_name, data=entry.setting.parameter.value(),
+                                              units=entry.setting.parameter.opts.get('suffix', mod.units)))
+                else:
+                    mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
 
     @staticmethod
     def check_parameters(entries: list[ConfiguratorEntry], settings: Parameter):
         """Check if the extracted Config entries are compatible with the given settings
         in terms of path"""
         incompatible_index = []
-        for entry in entries:
-            settings.child(entry.module_type.value).children()
+        for index, entry in enumerate(entries):
+            if 'actuator_value' in entry.setting.path:
+                if entry.module_name not in [group.child('name').value() for
+                                             group in settings.child(ModuleType.Actuator).children()]:
+                    incompatible_index.append(index)
+
+            else:
+                settings.child(*entry.setting.path[1:])
+                if not compareParameters(settings.child(*entry.setting.path[1:]), entry.setting.parameter):
+                    incompatible_index.append(index)
+        if len(incompatible_index) > 0:
+            messagebox('Warning', f'The configuration entries with index: {incompatible_index} are no more compatible'
+                                  f'with the current state of your Dashboard, Ignoring them in the applied '
+                                  f'configuration')
+        return incompatible_index
+
 
     def populate_from_settings(self, settings: Parameter):
         self.control_modules_settings = settings
@@ -122,6 +152,61 @@ class Configurator(QtCore.QObject):
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
         self._actuators = [
             param.child('name').value() for param in self.control_modules_settings.child('Moves').children()]
+
+    def get_units_from_module_name(self, actuator_name: str):
+        mods_settings = [group.child('name').value() for
+                        group in self.control_modules_settings.child(ModuleType.Actuator).children()]
+        actuator_settings = self.control_modules_settings.child(ModuleType.Actuator).children()[
+            mods_settings.index(actuator_name)]
+
+        return actuator_settings.child('move_settings', 'units').value()
+
+    def update_suffix_in_dialog(self, actuator_name: str):
+        self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
+
+    def get_actuator_value_from_widget(self) -> ConfiguratorEntry:
+
+        self.actuator_dialog = QDialog()
+        vlayout = QtWidgets.QVBoxLayout()
+        widget = QtWidgets.QWidget()
+        widget.setLayout(QtWidgets.QHBoxLayout())
+        self.actuator_cb = QtWidgets.QComboBox()
+        self.actuator_cb.addItems(self._actuators)
+
+        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self._actuators[0]), siPrefix= True)
+        self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
+
+        widget.layout().addWidget(self.actuator_cb)
+        widget.layout().addWidget(self.value_sb)
+
+        vlayout.addWidget(widget)
+        self.actuator_dialog.setLayout(vlayout)
+        buttonBox = QDialogButtonBox(parent=self.actuator_dialog)
+
+        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.accepted.connect(self.actuator_value_set)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.rejected.connect(self.actuator_dialog.reject)
+
+        vlayout.addWidget(buttonBox)
+        self.actuator_dialog.setWindowTitle("Fill in information about this actuator target value")
+
+        self.actuator_dialog.open()
+
+    def actuator_value_set(self):
+        self.actuator_dialog.accept()
+        self.config_model.add_data(self.config_model.rowCount(),
+                                   ConfiguratorEntry(self.actuator_cb.currentText(),
+                                                     module_type=ModuleType.Actuator,
+                                                     setting=
+                                                     ParameterWithPath(
+                                                         parameter=
+                                                         Parameter.create(title= 'Actuator Value',
+                                                                          name='actuator_value',
+                                                                          type='float',
+                                                                          value=self.value_sb.value(),
+                                                                          suffix=self.value_sb.opts['suffix']))))
+
 
     def make_widget(self, config_file_path: Optional[Union[str, Path]] = None) -> QtWidgets.QWidget:
         config_file_path = Path(config_file_path)
@@ -148,7 +233,7 @@ class Configurator(QtCore.QObject):
 
         self.config_model = ConfiguratorModel(actuators=self._actuators)
         self.table_out.setModel(self.config_model)
-        self.table_out.add_data_signal[int].connect(self.config_model.add_data)
+        self.table_out.add_data_signal[int].connect(self.get_actuator_value_from_widget)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
         self.table_out.load_data_signal.connect(self.config_model.load)
         self.table_out.save_data_signal.connect(self.config_model.save)

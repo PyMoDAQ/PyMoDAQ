@@ -1105,8 +1105,7 @@ class DashBoard(CustomApp):
         self.configurator.create_modify_configurator(self.preset_file.stem)
 
     def set_experimental_configuration(self, configuration_file_path: Path):
-        pwp_list = self.configurator.config_entry_from_path(configuration_file_path)
-        self.configurator.check_parameters(pwp_list, self.modules_manager.get_settings_all())
+        self.configurator.apply_configuration(self.modules_manager, configuration_file_path)
 
 
     @staticmethod
