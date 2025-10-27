@@ -178,9 +178,23 @@ class Configurator(QtCore.QObject):
         remove_button.setIcon(icon)
         remove_button.clicked.connect(self.remove_setting)
 
+        up_button = QtWidgets.QPushButton('Move Up')
+        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowUp')
+        icon = widget_buttons.style().standardIcon(pixmapi)
+        up_button.setIcon(icon)
+        up_button.clicked.connect(self.move_up_setting)
+
+        down_button = QtWidgets.QPushButton('Move Down')
+        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowDown')
+        icon = widget_buttons.style().standardIcon(pixmapi)
+        down_button.setIcon(icon)
+        down_button.clicked.connect(self.move_down_setting)
+
         widget_buttons.layout().addStretch()
         widget_buttons.layout().addWidget(add_button)
         widget_buttons.layout().addWidget(remove_button)
+        widget_buttons.layout().addWidget(up_button)
+        widget_buttons.layout().addWidget(down_button)
         widget_buttons.layout().addStretch()
 
         layout_header = QtWidgets.QHBoxLayout()
@@ -279,15 +293,28 @@ class Configurator(QtCore.QObject):
             self.set_drag_mode_recursive(child, movable, drop_enabled)
 
     def add_setting(self):
-        current_setting = self.tree_in.currentItem().param
-        module, module_type = get_module_from_param(ParameterWithPath(current_setting))
-        entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
-        self.config_model.add_data(self.config_model.rowCount(), entry)
+        if self.tree_in.currentItem() is not None:
+            current_setting = self.tree_in.currentItem().param
+            module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+            entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
+            self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def remove_setting(self):
         current_index = self.table_out.currentIndex()
-        self.config_model.remove_data(current_index.row())
+        if current_index.row() != -1:
+            self.config_model.remove_data(current_index.row())
 
+    def move_up_setting(self):
+        current_index = self.table_out.currentIndex()
+        if current_index.row() != -1:  # means no selected row
+            self.config_model.moveRow(current_index.parent(), current_index.row(),
+                                      current_index.parent(), current_index.row()-1)
+
+    def move_down_setting(self):
+        current_index = self.table_out.currentIndex()
+        if current_index.row() != -1:  # means no selected row
+            self.config_model.moveRow(current_index.parent(), current_index.row(),
+                                      current_index.parent(), current_index.row()+2)
 
 if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp

@@ -237,6 +237,9 @@ class ConfiguratorModel(TableModel):
 
     def moveRow(self, sourceParent: QModelIndex, sourceRow: int,
                 destinationParent: QModelIndex, destinationChild: int) -> bool:
+        if (destinationChild > self.rowCount() or
+                destinationChild < 0):
+            return False
         self.beginMoveRows(sourceParent, sourceRow, sourceRow,
                            destinationParent, destinationChild)
         entry_to_be_moved = self._data.pop(sourceRow)
