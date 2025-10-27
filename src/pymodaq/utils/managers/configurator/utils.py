@@ -8,7 +8,7 @@ from typing import Union, Tuple
 from numba.cuda.simulator.kernelapi import andlock
 from qtpy import QtWidgets, QtCore
 
-from qtpy.QtCore import QMimeData, Qt, QVariant
+from qtpy.QtCore import QMimeData, Qt, QVariant, QModelIndex
 from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog, QStyle
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -45,19 +45,19 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self,  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def createEditor(self, parent, option, index):
+    def createEditor(self, parent, option, index: QModelIndex):
         parameter: Parameter = index.model().get_data(index.row()).setting.parameter
         widget: QtWidgets.QWidget =  parameter.itemClass(parameter, depth=0).makeWidget()
         widget.setParent(parent)
         return widget
 
-    def setEditorData(self, editor, index):
+    def setEditorData(self, editor, index: QModelIndex):
         try:
             editor.setValue(index.data())
         except:
             super().setEditorData(editor, index)
 
-    def setModelData(self, editor, model, index):
+    def setModelData(self, editor, model, index: QModelIndex):
         model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
 
 
@@ -191,7 +191,7 @@ class ConfiguratorModel(TableModel):
         data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
         return data
 
-    def data(self, index, role):
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole):
         if index.isValid():
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 entry: ConfiguratorEntry = self._data[index.row()]
@@ -211,7 +211,7 @@ class ConfiguratorModel(TableModel):
                     return Qt.CheckState.Unchecked
         return QVariant()
 
-    def setData(self, index, value, role):
+    def setData(self, index: QModelIndex, value, role: Qt.ItemDataRole):
         if index.isValid():
             if role == Qt.ItemDataRole.EditRole:
                 self._data[index.row()].setting.parameter.setValue(value)
@@ -219,7 +219,7 @@ class ConfiguratorModel(TableModel):
                 return True
         return False
 
-    def dropMimeData(self, data: QMimeData, action, row, column, parent):
+    def dropMimeData(self, data: QMimeData, action: Qt.DropAction, row: int, column: int, parent: QModelIndex):
         if row == -1:
             row = self.rowCount(parent)
         if data.hasFormat('pymodaq/configurator_entry'):
@@ -228,11 +228,21 @@ class ConfiguratorModel(TableModel):
             entry = mock_entry
         self.data_tmp = entry
         if action == QtCore.Qt.DropAction.MoveAction:
-            #todo implement moveRow
-            self.moveRow(parent, row, parent, row)
+            start_row = self._data.index(entry)
+            self.moveRow(parent, start_row, parent, row)
         elif action == QtCore.Qt.DropAction.CopyAction:
             self.insertRows(row, 1, parent)
         self.update_delegate.emit()
+        return True
+
+    def moveRow(self, sourceParent: QModelIndex, sourceRow: int,
+                destinationParent: QModelIndex, destinationChild: int) -> bool:
+        self.beginMoveRows(sourceParent, sourceRow, sourceRow,
+                           destinationParent, destinationChild)
+        entry_to_be_moved = self._data.pop(sourceRow)
+        self._data.insert(destinationChild if destinationChild < sourceRow else destinationChild -1,
+                          entry_to_be_moved)
+        self.endMoveRows()
         return True
 
     def clear(self):
