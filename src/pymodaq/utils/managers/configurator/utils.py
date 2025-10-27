@@ -135,7 +135,7 @@ class ConfiguratorEntry:
         return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
-def config_entry_from_path(fname: Union[str, Path]) -> list[ParameterWithPath]:
+def config_entry_from_path(fname: Union[str, Path]) -> list[ConfiguratorEntry]:
     fname = Path(fname)
     if not fname.exists():
         return []
@@ -200,7 +200,7 @@ class ConfiguratorModel(TableModel):
                 elif index.column() == 1:
                     dat = entry.setting.parameter.name()
                 elif index.column() == 2:
-                    dat = entry.setting.parameter.value()
+                    dat = f"{entry.setting.parameter.value()} {entry.setting.parameter.opts.get('suffix', '')}"
                 else:
                     dat = ''
                 return dat
@@ -278,53 +278,10 @@ class ConfiguratorModel(TableModel):
         if res:
             entry.setting.parameter.setValue(setting.children()[0].value())
 
-
-    def add_data(self, row, data: ConfiguratorEntry = None):
-        if data is None:
-            data = self.get_data_from_value_widget()
-
+    def add_data(self, row, data: ConfiguratorEntry):
         if data is not None:
             self.insert_data(row, data)
             self.update_delegate.emit()
-
-    def get_data_from_value_widget(self) -> ConfiguratorEntry:
-        suffix = ''
-
-        dialog = QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        widget = QtWidgets.QWidget()
-        widget.setLayout(QtWidgets.QHBoxLayout())
-        actuator_cb = QtWidgets.QComboBox()
-        actuator_cb.addItems(self.actuators)
-
-        value_sb = SpinBox(suffix=suffix, siPrefix= True)
-        widget.layout().addWidget(actuator_cb)
-        widget.layout().addWidget(value_sb)
-
-        vlayout.addWidget(widget)
-        dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=dialog)
-
-        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(dialog.reject)
-
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle("Fill in information about this actuator target value")
-        res = dialog.exec()
-
-        if res:
-            return ConfiguratorEntry(actuator_cb.currentText(),
-                                     module_type=ModuleType.Actuator,
-                                     setting=
-                                     ParameterWithPath(
-                                         parameter=
-                                         Parameter.create(title= 'Actuator Value',
-                                                          name='actuator_value',
-                                                          type='float',
-                                                          value=value_sb.value(),
-                                                          suffix=suffix)))
 
     def remove_data(self, row):
         self.remove_row(row)
