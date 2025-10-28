@@ -32,70 +32,19 @@ from pymodaq_gui.utils.custom_app import CustomApp
 logger = set_logger(get_module_name(__file__))
 
 
-
-class Combo_pb(QtWidgets.QWidget):
-
-    delete_config = QtCore.Signal(str)
-
-    def __init__(self, items: list[str] = None):
-        super(Combo_pb, self).__init__()
-        if items is None:
-            items = []
-        self.make_widget(items)
-        self.add_action.triggered.connect(self.add_an_item)
-        self.delete_action.triggered.connect(self.remove_an_item)
-
-    @property
-    def count(self):
-        return self.combo.count()
-
-    def make_widget(self, items: list[str]):
-        """
-            Init the User Interface.
-        """
-        self.hor_layout = QtWidgets.QHBoxLayout()
-
-        self.combo = QtWidgets.QComboBox()
-        self.combo.addItems(items)
-        self.toolbar = QtWidgets.QToolBar()
-
-        self.add_action = addaction('Add Config', 'Add2', tip='Create a new configuration',
-                                    toolbar=self.toolbar)
-        self.delete_action = addaction('Remove Config', 'remove', tip='Delete an existing configuration',
-                                       toolbar=self.toolbar)
-        self.hor_layout.addWidget(self.combo)
-        self.hor_layout.addWidget(self.toolbar)
-
-        self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.hor_layout)
-
-        self.currentText = self.combo.currentText
-        self.currentTextChanged = self.combo.currentTextChanged
-        self.setCurrentIndex = self.combo.setCurrentIndex
-        self.clear = self.combo.clear
-        self.addItem = self.combo.addItem
-        self.addItems = self.combo.addItems
-        self.findText = self.combo.findText
-
-    def add_an_item(self):
-        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
-                                                  "Config name:", QtWidgets.QLineEdit.Normal)
-        if ok and text != '':
-            self.addItem(text)
-            self.combo.setCurrentText(text)
-
-    def remove_an_item(self):
-        config = self.combo.currentText()
-        user_agreed = dialog('Removing a Configuration',
-                             message=f"You're going to delete the {config} file\nAre you sure?")
-        if user_agreed:
-            self.combo.removeItem(self.combo.currentIndex())
-            self.delete_config.emit(config)
-
-
-
 class Configurator(CustomApp):
+    """
+    Main class managing the configuration of control modules from a Dashboard in terms
+    of their settings and actuator's value.
+
+    This class provides a GUI to create, modify and save configurations for different presets (DashBoard state)
+    controlling various modules (actuators, detectors...).
+
+    Parameters
+    ----------
+    preset_filename : str, optional
+        Name of the preset file to load at startup
+    """
 
     new_file = QtCore.Signal()
 
@@ -128,6 +77,17 @@ class Configurator(CustomApp):
         return config_entry_from_path(filename)
 
     def apply_configuration(self, modules_manager: ModulesManager, configuration_path: Path):
+        """
+        Apply a saved configuration to the modules.
+
+        Parameters
+        ----------
+        modules_manager : ModulesManager
+            Manager containing all active modules
+        configuration_path : Path
+            Path to the configuration file to apply
+
+        """
         pwp_list = self.config_entry_from_path(configuration_path)
         incompatible_index = self.check_parameters(pwp_list, modules_manager.get_settings_all())
         for index, entry in enumerate(pwp_list):
@@ -141,8 +101,21 @@ class Configurator(CustomApp):
 
     @staticmethod
     def check_parameters(entries: list[ConfiguratorEntry], settings: Parameter):
-        """Check if the extracted Config entries are compatible with the given settings
-        in terms of path"""
+        """
+        Check compatibility between configuration entries and current settings.
+
+        Parameters
+        ----------
+        entries : list[ConfiguratorEntry]
+            List of configuration entries to check
+        settings : Parameter
+            Current settings to compare against
+
+        Returns
+        -------
+        list
+            Indices of incompatible entries
+        """
         incompatible_index = []
         for index, entry in enumerate(entries):
             if 'actuator_value' in entry.setting.path:
@@ -162,6 +135,14 @@ class Configurator(CustomApp):
 
 
     def populate_from_settings(self, settings: Parameter):
+        """
+        Initialize the configurator from a Parameter settings.
+
+        Parameters
+        ----------
+        settings : Parameter
+            Settings containing all modules configuration
+        """
         self.control_modules_settings = settings
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
         self._actuators = [
@@ -256,7 +237,7 @@ class Configurator(CustomApp):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        self.configurations_toolbar = QtWidgets.QToolBar()
+        self.add_toolbar('configurations')
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -267,9 +248,9 @@ class Configurator(CustomApp):
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
         widget_buttons.layout().addStretch()
-        self.move_toolbar = QtWidgets.QToolBar()
-        self.move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        widget_buttons.layout().addWidget(self.move_toolbar)
+        move_toolbar = self.add_toolbar('move')
+        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        widget_buttons.layout().addWidget(move_toolbar)
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
@@ -277,7 +258,7 @@ class Configurator(CustomApp):
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
-        vlayout_right.addWidget(self.configurations_toolbar)
+        vlayout_right.addWidget(self.get_toolbar('configurations'))
         vlayout_right.addWidget(self.table_out)
 
         self.main_widget.setLayout(vlayout)
@@ -289,25 +270,25 @@ class Configurator(CustomApp):
                         kwargs={'setReadOnly': True})
         self.get_action('preset_filename').addItems([path.stem for path in get_set_preset_path().iterdir()])
 
-        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar=self.move_toolbar)
-        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar=self.move_toolbar)
-        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar=self.move_toolbar)
-        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar=self.move_toolbar)
+        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
+        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move')
+        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
+        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
 
         self.add_widget('configurations', QtWidgets.QComboBox(),
                         tip='List of available configurations',
-                        toolbar=self.configurations_toolbar)
+                        toolbar='configurations')
         self.add_action(ConfigurationAction.NEW, 'New Configuration', 'Add2',
-                        toolbar=self.configurations_toolbar,
+                        toolbar='configurations',
                         tip='Create a new configuration file')
         self.add_action(ConfigurationAction.DELETE, 'Delete Configuration', 'remove',
-                        toolbar=self.configurations_toolbar,
+                        toolbar='configurations',
                         tip='Delete the current configuration file')
         self.add_action(ConfigurationAction.SAVE, 'Save Configuration', 'Save',
-                        toolbar=self.configurations_toolbar,
+                        toolbar='configurations',
                         tip='Save/Update the current configuration')
         self.add_action(ConfigurationAction.RELOAD, 'Reload Configuration', 'Refresh',
-                        toolbar=self.configurations_toolbar,
+                        toolbar='configurations',
                         tip='Reload the current configuration file')
 
 
@@ -346,7 +327,7 @@ class Configurator(CustomApp):
         for file in get_set_configurator_path(preset_name).iterdir():
             if '.config' in file.suffix:
                 configs.append(file.stem)
-        if 'default' in configs:
+        if 'default' in configs:  #  make sure the default is the first one shown
             default = configs.pop(configs.index('default'))
             configs.insert(0, default)
         return configs
@@ -383,6 +364,18 @@ class Configurator(CustomApp):
 
     def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None,
                                    single_preset=False):
+        """
+        Create or modify a configuration for a given preset.
+
+        Parameters
+        ----------
+        preset_name : str
+            Name of the preset to configure
+        settings : Union[Parameter, Path], optional
+            Settings to load, by default None
+        single_preset : bool, optional
+            If True, locks the preset selection, by default False
+        """
         if settings is None:
             settings = preset_name
         self.preset_filename = preset_name
@@ -392,6 +385,14 @@ class Configurator(CustomApp):
         self.mainwindow.show()
 
     def save_check(self):
+        """
+        Check if current configuration can be saved and save it.
+
+        Verifies that:
+        - Configuration has entries
+        - A filename is specified
+        - Handles file overwrite confirmation
+        """
         if self.config_model.rowCount() == 0:
             messagebox(
                 title="Saving issue",
