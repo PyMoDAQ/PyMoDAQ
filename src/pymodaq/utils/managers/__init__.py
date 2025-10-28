@@ -1,5 +1,5 @@
 from .configurator.configurator import Configurator
 from .batchscan_manager import BatchManager
 from .modules_manager import ModulesManager
-from .preset_manager import PresetManager
+from .preset.preset_manager import PresetManager
 from .remote_manager import RemoteManager
