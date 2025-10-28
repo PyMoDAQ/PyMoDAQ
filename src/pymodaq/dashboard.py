@@ -1355,16 +1355,20 @@ class DashBoard(CustomApp):
             The created module
         """
         if module_type == 'move':
+            # Pop ui_identifier to avoid passing it twice
+            ui_identifier = kwargs.pop('ui_identifier', None)
             module = self.add_move(
                 name, None, instrument_name, [], [], [],
-                ui_identifier=kwargs.get('ui_identifier'),
+                ui_identifier=ui_identifier,
                 **kwargs
             )
             modules_list = self.actuators_modules
         elif module_type == 'det':
+            # Pop daq_type to avoid passing it twice
+            daq_type = kwargs.pop('daq_type', None)
             module = self.add_det(
                 name, None, [], [], [],
-                plug_type=kwargs.get('daq_type'),
+                plug_type=daq_type,
                 plug_subtype=instrument_name
             )
             modules_list = self.detector_modules
