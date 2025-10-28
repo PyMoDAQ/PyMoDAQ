@@ -1,8 +1,9 @@
 import random
 
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-
+from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
@@ -21,6 +22,14 @@ DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 # Fixed names that will sort the plugin in remote/mock
 REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
 MOCK_ITEMS = {}
+
+
+class PresetAction(StrEnum):
+    NEW = 'create_new_preset'
+    DELETE = 'delete_preset'
+    SAVE = 'save_preset'
+    RELOAD = 'reload_preset'
+
 
 def iterative_show_pb(params):
     for param in params:
@@ -87,42 +96,32 @@ def add_category_layers(dimension_dict, remote_items=None, mock_items=None):
     return result
 
 
-def make_move_params(typ):
-    params = daq_move_params
-    iterative_show_pb(params)
+def make_slave_params():
+    params = [
+        {'title': 'Slave/Master:', 'name': 'slave_stuff', 'type': 'group', 'children': [
+            {'title': 'Is Master?:', 'name': 'is_master', 'type': 'bool', 'value': True},
+            {'title': 'Master Controller ID:', 'name': 'master_controller_id', 'type': 'int',
+             'value': random.randint(0, 9999)},
+        ]}
+    ]
+    return params
 
+
+def make_move_params(typ: str) -> dict:
     parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', typ)
     class_ = getattr(getattr(parent_module['module'], 'daq_move_' + typ),
                         'DAQ_Move_' + typ)
     params_hardware = getattr(class_, 'params')
     iterative_show_pb(params_hardware)
-
-    for main_child in params:
-        if main_child['name'] == 'move_settings':
-            main_child['children'] = params_hardware
-            controller_dict = get_param_dict_from_name(params_hardware, 'controller_ID')
-            controller_dict['value'] = random.randint(0, 9999)
-
-        elif main_child['name'] == 'main_settings':
-            typ_dict = get_param_dict_from_name(main_child['children'], 'move_type')
-            typ_dict['value'] = typ
-
-    return params
+    multiaxes_dict = get_param_dict_from_name(params_hardware, 'multiaxes')
+    multiaxes_dict['expanded'] = False
+    controller_dict = get_param_dict_from_name(multiaxes_dict['children'], 'controller_ID')
+    controller_dict['value'] = random.randint(0, 9999)
+    return multiaxes_dict
 
 
 def make_viewer_params(typ):
         params = daq_viewer_params
-        iterative_show_pb(params)
-
-        for main_child in params:
-            if main_child['name'] == 'main_settings':
-                for child in main_child['children']:
-                    if child['name'] == 'DAQ_type':
-                        child['value'] = typ[0:5]
-                    if child['name'] == 'detector_type':
-                        child['value'] = typ[6:]
-                    if child['name'] == 'controller_status':
-                        child['visible'] = True
 
         if '0D' in typ:
             parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', typ[6:])
@@ -136,42 +135,21 @@ def make_viewer_params(typ):
         elif 'ND' in typ:
             parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + typ[6:]), 'DAQ_NDViewer_' + typ[6:])
-        for main_child in params:
-            if main_child['name'] == 'main_settings':
-                for child in main_child['children']:
-                    if child['name'] == 'axes':
-                        child['visible'] = True
 
         params_hardware = getattr(class_, 'params')
         iterative_show_pb(params_hardware)
 
-        for main_child in params:
-            # Was this condition useful? 
-            # if main_child['name'] == 'detector_settings':
-            #     while len(main_child['children']) > 0:
-            #         for child in main_child['children']:
-            #             main_child['children'].remove(child)
-
-            #     main_child['children'].extend(params_hardware)
-            if main_child['name'] == 'detector_settings':
-                main_child['children'] = params_hardware
-        controller_dict = get_param_dict_from_name(main_child['children'], 'controller_ID')
-        controller_dict['value'] = random.randint(0, 9999)
-
+        controller_status = get_param_dict_from_name(params_hardware, 'controller_status')
+        controller_id = get_param_dict_from_name(params_hardware, 'controller_ID')
+        controller_id['value'] = random.randint(0, 9999)
+        params = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
+            controller_status,
+            controller_id,
+        ]}
         return params
     
 class PresetScalableGroupMove(GroupParameter):
     """
-        |
-
-        ================ =============
-        **Attributes**    **Type**
-        *opts*            dictionnary
-        ================ =============
-
-        See Also
-        --------
-        hardware.DAQ_Move_Stage_type
     """
 
     def __init__(self, **opts):
@@ -180,28 +158,20 @@ class PresetScalableGroupMove(GroupParameter):
         opts['addMenu'] = categorize_items([mov['name'] for mov in DAQ_Move_Stage_type])
         super().__init__(**opts)
 
-    def addNew(self, typ:tuple):
+    def addNew(self, typ: tuple):
         """
-            Add a child.
-
-            =============== ===========
-            **Parameters**   **Type**
-            *typ*            string
-            =============== ===========
         """
-        name_prefix = 'move'
+        name_prefix = ModuleType.Actuator.value
         typ = typ[-1] #Only need last entry here
         new_index = find_last_index(self.children(), name_prefix, format_string='02.0f')
-        params = make_move_params(typ)
+        slave_param = make_move_params(typ)
         child = {'title': f'Actuator {new_index}',
             'name': f'{name_prefix}{new_index}',
             'type': 'group',
-            'removable': True, 'renamable': False,
             'children': [
-                {'title': 'Name:', 'name': 'name', 'type': 'str',
-                'value': f'Move {new_index}'},
+                {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Actuator {new_index}'},
                 {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
+                slave_param,
             ]}
         self.addChild(child)
 
@@ -242,21 +212,19 @@ class PresetScalableGroupDet(GroupParameter):
             *typ*             string     the viewer name
             =============== ===========  ================
         """
-        try:
-            name_prefix = 'det'
-            typ = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
-            new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
-            params = make_viewer_params(typ)
-            child = {'title': f'Det {new_index}', 'name': f'{name_prefix}{new_index}',
-                        'type': 'group', 'children': [
+
+        name_prefix = Mod
+        typ = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
+        new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
+        param = make_viewer_params(typ)
+        child = {'title': f'Detector {new_index}', 'name': f'{name_prefix}{new_index}',
+                    'type': 'group', 'children': [
                 {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Det {new_index}'},
                 {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
-            ], 'removable': True, 'renamable': False}            
+                param
+            ]}
 
-            self.addChild(child)
-        except Exception as e:
-            print(str(e))
+        self.addChild(child)
 
 
 registerParameterType('groupdet', PresetScalableGroupDet, override=True)

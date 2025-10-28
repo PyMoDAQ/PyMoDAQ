@@ -41,8 +41,8 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
-from pymodaq.utils.managers.preset_manager import PresetManager
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
