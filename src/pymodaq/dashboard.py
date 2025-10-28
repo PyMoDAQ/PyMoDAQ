@@ -1236,6 +1236,29 @@ class DashBoard(CustomApp):
             path = layout_path.joinpath(self.preset_file.stem + ".dock")
             self.save_layout_state(path)
 
+    def _apply_plugin_settings(self, module, plug_settings, plug_type_name):
+        """Apply plugin settings with error handling
+
+        Parameters
+        ----------
+        module : DAQ_Move or DAQ_Viewer
+            The module to apply settings to
+        plug_settings : Parameter
+            The settings parameter to apply
+        plug_type_name : str
+            The plugin type name for error messages
+        """
+        if plug_settings is not None:
+            try:
+                putils.set_param_from_param(module.settings, plug_settings)
+            except KeyError as e:
+                mssg = (
+                    f"Could not set this setting: {str(e)}\n"
+                    f"The Preset is no more compatible with the plugin {plug_type_name}"
+                )
+                logger.warning(mssg)
+                self.splash_sc.showMessage(mssg)
+
     def add_move(
             self,
             plug_name: str = None,
@@ -1294,16 +1317,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
         mov_mod_tmp.manage_ui_actions("quit", "setEnabled", False)
 
-        if plug_settings is not None:
-            try:
-                putils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
-            except KeyError as e:
-                mssg = (
-                    f"Could not set this setting: {str(e)}\n"
-                    f"The Preset is no more compatible with the plugin {plug_type}"
-                )
-                logger.warning(mssg)
-                self.splash_sc.showMessage(mssg)
+        self._apply_plugin_settings(mov_mod_tmp, plug_settings, plug_type)
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
@@ -1311,6 +1325,64 @@ class DashBoard(CustomApp):
 
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
+
+    def _add_module_from_extension(
+        self,
+        module_type: str,
+        name: str,
+        instrument_name: str,
+        instrument_controller: Any,
+        **kwargs
+    ) -> Union[DAQ_Move, DAQ_Viewer]:
+        """Generic method to add a module (actuator or detector) from an extension
+
+        Parameters
+        ----------
+        module_type : str
+            Either 'move' or 'det' to specify the type of module
+        name : str
+            The name to print on the UI title
+        instrument_name : str
+            The name of the instrument class
+        instrument_controller : object
+            Whatever object is used to communicate between the instrument module and the extension
+        kwargs : dict
+            Additional arguments to pass to add_move or add_det
+
+        Returns
+        -------
+        Union[DAQ_Move, DAQ_Viewer]
+            The created module
+        """
+        if module_type == 'move':
+            module = self.add_move(
+                name, None, instrument_name, [], [], [],
+                ui_identifier=kwargs.get('ui_identifier'),
+                **kwargs
+            )
+            modules_list = self.actuators_modules
+        elif module_type == 'det':
+            module = self.add_det(
+                name, None, [], [], [],
+                plug_type=kwargs.get('daq_type'),
+                plug_subtype=instrument_name
+            )
+            modules_list = self.detector_modules
+        else:
+            raise ValueError(f"module_type must be 'move' or 'det', got '{module_type}'")
+
+        module.controller = instrument_controller
+        module.master = False
+        module.init_hardware_ui()
+        QtWidgets.QApplication.processEvents()
+        self.poll_init(module)
+        QtWidgets.QApplication.processEvents()
+
+        # Update modules list and module manager
+        modules_list.append(module)
+        self.update_module_manager()
+
+        return module
 
     def add_move_from_extension(
         self, name: str, instrument_name: str, instrument_controller: Any,
@@ -1337,19 +1409,10 @@ class DashBoard(CustomApp):
             One of the possible registered UI
         kwargs: named arguments to be passed to add_move
         """
-        actuator = self.add_move(name, None, instrument_name, [], [], [],
-                                 ui_identifier=ui_identifier,
-                                 **kwargs)
-        actuator.controller = instrument_controller
-        actuator.master = False
-        actuator.init_hardware_ui()
-        QtWidgets.QApplication.processEvents()
-        self.poll_init(actuator)
-        QtWidgets.QApplication.processEvents()
-
-        # Update actuators modules and module manager
-        self.actuators_modules.append(actuator)
-        self.update_module_manager()
+        return self._add_module_from_extension(
+            'move', name, instrument_name, instrument_controller,
+            ui_identifier=ui_identifier, **kwargs
+        )
 
     def add_det(
         self,
@@ -1387,16 +1450,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
         det_mod_tmp.manage_ui_actions("quit", "setEnabled", False)
 
-        if plug_settings is not None:
-            try:
-                putils.set_param_from_param(det_mod_tmp.settings, plug_settings)
-            except KeyError as e:
-                mssg = (
-                    f"Could not set this setting: {str(e)}\n"
-                    f"The Preset is no more compatible with the plugin {plug_subtype}"
-                )
-                logger.warning(mssg)
-                self.splash_sc.showMessage(mssg)
+        self._apply_plugin_settings(det_mod_tmp, plug_settings, plug_subtype)
 
         detector_modules.append(det_mod_tmp)
         return det_mod_tmp
@@ -1442,19 +1496,10 @@ class DashBoard(CustomApp):
             whatever object is used to communicate between the instrument module and the extension
             which created it
         """
-        detector = self.add_det(
-            name, None, [], [], [], plug_type=daq_type, plug_subtype=instrument_name
+        return self._add_module_from_extension(
+            'det', name, instrument_name, instrument_controller,
+            daq_type=daq_type
         )
-        detector.controller = instrument_controller
-        detector.master = False
-        detector.init_hardware_ui()
-        QtWidgets.QApplication.processEvents()
-        self.poll_init(detector)
-        QtWidgets.QApplication.processEvents()
-
-        # Update actuators modules and module manager
-        self.detector_modules.append(detector)
-        self.update_module_manager()
 
     def update_module_manager(self):
         if self.modules_manager is None:
