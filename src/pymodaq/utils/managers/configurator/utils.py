@@ -40,6 +40,20 @@ class ConfiguratorActions(StrEnum): # used in the DashBoard
     Load = "load_configuration"
 
 
+class EntryActions(StrEnum):
+    ADD = 'add_entry'
+    REMOVE = 'remove_entry'
+    UP = 'move_entry_up'
+    DOWN = 'move_entry_down'
+
+
+class ConfigurationAction(StrEnum):
+    NEW = 'create_new_configuration'
+    DELETE = 'delete_configuration'
+    SAVE = 'save_configuration'
+    RELOAD = 'reload configuration'
+
+
 class ParameterDelegate(QtWidgets.QStyledItemDelegate):
 
     def __init__(self,  *args, **kwargs):

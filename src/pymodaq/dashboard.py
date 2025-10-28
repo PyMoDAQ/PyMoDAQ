@@ -754,7 +754,8 @@ class DashBoard(CustomApp):
                         )
                         self.connect_action(
                             self.get_action_from_file(file, ManagerEnums.configuration),
-                            self.create_menu_slot(get_set_configurator_path(self.preset_file.stem).joinpath(file)),
+                            self.create_menu_slot_configurations(
+                                get_set_configurator_path(self.preset_file.stem).joinpath(file)),
                         )
                     configurations.append(filestem)
             self.connect_action(
@@ -858,7 +859,6 @@ class DashBoard(CustomApp):
         self.connect_action("bayesian", lambda: self.load_bayesian())
         self.connect_action("adaptive", lambda: self.load_adaptive())
         self.connect_action("datamixer", lambda: self.load_datamixer())
-        self.connect_action("configurator", lambda: self.load_configurator())
 
         self.connect_action("about", self.show_about)
         self.connect_action("help", self.show_help)
@@ -1014,6 +1014,9 @@ class DashBoard(CustomApp):
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
 
+    def create_menu_slot_configurations(self, filename: Path):
+        return lambda: self.configurator.apply_configuration(self.modules_manager, filename)
+
     def create_menu_slot_ext(self, ext):
         return lambda: self.load_extensions_module(ext)
 
@@ -1097,8 +1100,8 @@ class DashBoard(CustomApp):
             logger.exception(str(e))
 
     def create_experimental_configuration(self):
-        self.configurator.populate_from_settings(self.modules_manager.get_settings_all())
-        self.configurator.create_modify_configurator(self.preset_file.stem)
+        self.configurator.create_modify_configurator(self.preset_file.stem, self.modules_manager.get_settings_all(),
+                                                     single_preset=True)
 
     def modify_experimental_configuration(self):
         self.configurator.populate_from_settings(self.modules_manager.get_settings_all())
@@ -1106,7 +1109,6 @@ class DashBoard(CustomApp):
 
     def set_experimental_configuration(self, configuration_file_path: Path):
         self.configurator.apply_configuration(self.modules_manager, configuration_file_path)
-
 
     @staticmethod
     def get_action_from_file(file: Path, manager: ManagerEnums):
