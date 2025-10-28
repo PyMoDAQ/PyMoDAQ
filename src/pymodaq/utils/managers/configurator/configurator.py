@@ -8,6 +8,8 @@ from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
 from pymodaq.utils.data import DataActuator
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq.utils.config import get_set_preset_path
+
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_from_name
 from pymodaq_gui.messenger import dialog, messagebox
@@ -17,15 +19,18 @@ from pymodaq_gui.parameter.pymodaq_ptypes.list import Combo_pb
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, config_entry_from_path,
-                                                       ModuleType, ParameterDelegate, SpinBox)
+                                                       ModuleType, ParameterDelegate, SpinBox, EntryActions,
+                                                       ConfigurationAction)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter.utils import compareParameters
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
+from pymodaq_gui.utils.custom_app import CustomApp
 
 
 logger = set_logger(get_module_name(__file__))
+
 
 
 class Combo_pb(QtWidgets.QWidget):
@@ -90,14 +95,33 @@ class Combo_pb(QtWidgets.QWidget):
 
 
 
-class Configurator(QtCore.QObject):
+class Configurator(CustomApp):
 
     new_file = QtCore.Signal()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, preset_filename: str = ''):
+        super().__init__(parent=QtWidgets.QMainWindow())
+
+        self.preset_filename = preset_filename
         self._actuators: list[str] = None
         self.control_modules_settings: Parameter = None
+
+        self.main_widget = QtWidgets.QWidget()
+        self.mainwindow.setCentralWidget(self.main_widget)
+
+        self.setup_ui()
+
+    @property
+    def preset_filename(self) -> str:
+        return self.get_action('preset_filename').currentText()
+
+    @preset_filename.setter
+    def preset_filename(self, preset_filename: str):
+        if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
+            self.get_action('configurations').clear()
+            self.get_action('preset_filename').setCurrentText(preset_filename)
+            self.get_action('configurations').addItems(
+                self.get_configurations(get_set_configurator_path(preset_filename)))
 
     @staticmethod
     def config_entry_from_path(filename: Union[str, Path]) -> list[ConfiguratorEntry]:
@@ -207,21 +231,13 @@ class Configurator(QtCore.QObject):
                                                                           value=self.value_sb.value(),
                                                                           suffix=self.value_sb.opts['suffix']))))
 
-
-    def make_widget(self, config_file_path: Optional[Union[str, Path]] = None) -> QtWidgets.QWidget:
-        config_file_path = Path(config_file_path)
-        main_widget = QtWidgets.QWidget()
+    def setup_docks(self):
 
         self.parameter_manager = ParameterManager(tree=ConfiguratorParameterTree())
         self.tree_in = self.parameter_manager.tree
-        self.parameter_manager.settings = self.control_modules_settings
         self.tree_in.setDragEnabled(True)
         self.tree_in.setAcceptDrops(False)
         self.tree_in.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
-
-        self.preset_filename = QtWidgets.QLineEdit()
-        self.preset_filename.setToolTip('Name of the current preset')
-        self.preset_filename.setReadOnly(True)
 
         self.table_out = ConfiguratorTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -240,7 +256,7 @@ class Configurator(QtCore.QObject):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        self.configurations_cb = Combo_pb()
+        self.configurations_toolbar = QtWidgets.QToolBar()
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -250,106 +266,139 @@ class Configurator(QtCore.QObject):
 
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
-
-        add_button = QtWidgets.QPushButton('Add')
-        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowRight')
-        icon = widget_buttons.style().standardIcon(pixmapi)
-        add_button.setIcon(icon)
-        add_button.clicked.connect(self.add_setting)
-
-        remove_button = QtWidgets.QPushButton('Remove')
-        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowLeft')
-        icon = widget_buttons.style().standardIcon(pixmapi)
-        remove_button.setIcon(icon)
-        remove_button.clicked.connect(self.remove_setting)
-
-        up_button = QtWidgets.QPushButton('Move Up')
-        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowUp')
-        icon = widget_buttons.style().standardIcon(pixmapi)
-        up_button.setIcon(icon)
-        up_button.clicked.connect(self.move_up_setting)
-
-        down_button = QtWidgets.QPushButton('Move Down')
-        pixmapi = getattr(QStyle.StandardPixmap, 'SP_ArrowDown')
-        icon = widget_buttons.style().standardIcon(pixmapi)
-        down_button.setIcon(icon)
-        down_button.clicked.connect(self.move_down_setting)
-
         widget_buttons.layout().addStretch()
-        widget_buttons.layout().addWidget(add_button)
-        widget_buttons.layout().addWidget(remove_button)
-        widget_buttons.layout().addWidget(up_button)
-        widget_buttons.layout().addWidget(down_button)
+        self.move_toolbar = QtWidgets.QToolBar()
+        self.move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        widget_buttons.layout().addWidget(self.move_toolbar)
         widget_buttons.layout().addStretch()
 
-        layout_header = QtWidgets.QHBoxLayout()
-
-        layout_header.addWidget(QtWidgets.QLabel('Configuration from Preset: '))
-        layout_header.addWidget(self.preset_filename)
-        vlayout.addLayout(layout_header)
         vlayout.addWidget(hwidget)
         hlayout.addWidget(self.parameter_manager.settings_tree)
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
-        vlayout_right.addWidget(self.configurations_cb)
+        vlayout_right.addWidget(self.configurations_toolbar)
         vlayout_right.addWidget(self.table_out)
 
-        main_widget.setLayout(vlayout)
+        self.main_widget.setLayout(vlayout)
 
-        return main_widget
+    def setup_actions(self):
+
+        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
+        self.add_widget('preset_filename', QtWidgets.QComboBox(), tip='Name of the current preset',
+                        kwargs={'setReadOnly': True})
+        self.get_action('preset_filename').addItems([path.stem for path in get_set_preset_path().iterdir()])
+
+        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar=self.move_toolbar)
+        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar=self.move_toolbar)
+        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar=self.move_toolbar)
+        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar=self.move_toolbar)
+
+        self.add_widget('configurations', QtWidgets.QComboBox(),
+                        tip='List of available configurations',
+                        toolbar=self.configurations_toolbar)
+        self.add_action(ConfigurationAction.NEW, 'New Configuration', 'Add2',
+                        toolbar=self.configurations_toolbar,
+                        tip='Create a new configuration file')
+        self.add_action(ConfigurationAction.DELETE, 'Delete Configuration', 'remove',
+                        toolbar=self.configurations_toolbar,
+                        tip='Delete the current configuration file')
+        self.add_action(ConfigurationAction.SAVE, 'Save Configuration', 'Save',
+                        toolbar=self.configurations_toolbar,
+                        tip='Save/Update the current configuration')
+        self.add_action(ConfigurationAction.RELOAD, 'Reload Configuration', 'Refresh',
+                        toolbar=self.configurations_toolbar,
+                        tip='Reload the current configuration file')
+
+
+    def connect_things(self):
+        self.connect_action(EntryActions.ADD, self.add_setting)
+        self.connect_action(EntryActions.REMOVE, self.remove_setting)
+        self.connect_action(EntryActions.UP, self.move_up_setting)
+        self.connect_action(EntryActions.DOWN, self.move_down_setting)
+
+        self.connect_action(ConfigurationAction.NEW, self.create_configuration)
+        self.connect_action(ConfigurationAction.DELETE, self.delete_configuration)
+        self.connect_action(ConfigurationAction.SAVE, self.save_check)
+        self.connect_action(ConfigurationAction.RELOAD, self.load_configuration)
+
+        self.connect_action('configurations', self.get_action(ConfigurationAction.RELOAD).trigger,
+                            signal_name='currentTextChanged')
+        self.connect_action('preset_filename', self.update_preset,
+                            signal_name='currentTextChanged')
+
+    def load_configuration(self):
+        preset_name = self.get_action('preset_filename').currentText()
+        config_name = self.get_action('configurations').currentText()
+        self.config_model.load(get_set_configurator_path(preset_name).joinpath(f'{config_name}.config'))
+
 
     @staticmethod
     def get_configurations(preset_name: str) -> list[str]:
         """ Get all existing configuration files within a preset name """
         configs = []
+        configuration_path = get_set_configurator_path(preset_name)
+        if not configuration_path.exists():
+            configuration_path.mkdir(parents=True)
+        if not configuration_path.joinpath(f'default.config').exists():
+            configuration_path.joinpath(f'default.config').touch()
+
         for file in get_set_configurator_path(preset_name).iterdir():
             if '.config' in file.suffix:
                 configs.append(file.stem)
+        if 'default' in configs:
+            default = configs.pop(configs.index('default'))
+            configs.insert(0, default)
         return configs
 
-    @staticmethod
-    def delete_configuration(preset_name: str, config_name: str):
-        get_set_configurator_path(preset_name).joinpath(f'{config_name}.config').unlink(missing_ok=True)
+    def create_configuration(self):
+        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
+                                                  "Config name:", QtWidgets.QLineEdit.Normal)
+        if ok and text != '':
+            self.get_action('configurations').addItem(text)
+            self.get_action('configurations').setCurrentText(text)
 
-    def create_modify_configurator(self,
-                                   preset_name: str = 'apreset',
-                                   ):
+    def delete_configuration(self, preset_name: Optional[str] = None, config_name: Optional[str] = None):
+        if preset_name is None:
+            preset_name = self.get_action('preset_filename').currentText()
+        if config_name is None:
+            config_name = self.get_action('configurations').currentText()
+        user_agreed = dialog('Removing a Configuration',
+                             message=f"You're going to delete the {config_name} file\nAre you sure?")
+        if user_agreed:
+            get_set_configurator_path(preset_name).joinpath(f'{config_name}.config').unlink(missing_ok=True)
+            self.get_action('configurations').removeItem(self.get_action('configurations').currentIndex())
 
-        self.dialog = QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
+    def update_preset(self, settings: Union[Parameter, Path, str] = None):
+        if isinstance(settings, str):
+            settings = get_set_preset_path().joinpath(f'{settings}.xml')
+        if isinstance(settings, Parameter):
+            self.populate_from_settings(settings)
+        elif isinstance(settings, Path):
+            self.populate_from_preset_file(settings)
+            self.preset_filename = settings.stem
+        else:
+            raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
+        self.parameter_manager.settings = self.control_modules_settings
 
-        configurator_widget = self.make_widget(config_file_path=get_set_configurator_path(preset_name))
-        self.configurations_cb.currentTextChanged.connect(
-        lambda config_name: self.config_model.load(
-            get_set_configurator_path(preset_name).joinpath(f'{config_name}.config')))
-        self.configurations_cb.addItems(self.get_configurations(get_set_configurator_path(preset_name)))
-        self.configurations_cb.delete_config.connect(
-            lambda config_name: self.delete_configuration(preset_name, config_name))
+    def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None,
+                                   single_preset=False):
+        if settings is None:
+            settings = preset_name
+        self.preset_filename = preset_name
+        self.update_preset(settings)
+        if single_preset:
+            self.get_action('preset_filename').setEnabled(False)
+        self.mainwindow.show()
 
-        self.preset_filename.setText(preset_name)
-
-        buttonBox = QDialogButtonBox(parent=self.dialog)
-        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(self.dialog_check)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(self.dialog.reject)
-
-        vlayout.addWidget(configurator_widget)
-        vlayout.addWidget(buttonBox)
-        self.dialog.setLayout(vlayout)
-        self.dialog.setWindowTitle("Configurator Manager")
-
-        res = self.dialog.open()
-
-    def dialog_check(self):
+    def save_check(self):
         if self.config_model.rowCount() == 0:
             messagebox(
                 title="Saving issue",
                 text="You didn't specify any configuration entry to be saved",
             )
             return
-        if self.configurations_cb.currentText == '':
+        if self.get_action('configurations').currentText() == '':
             messagebox(
                 title="Saving issue",
                 text="You didn't specify a file name for this configuration",
@@ -357,8 +406,8 @@ class Configurator(QtCore.QObject):
             return
 
         else:
-            file_path = get_set_configurator_path(self.preset_filename.text()).joinpath(
-                f'{self.configurations_cb.currentText()}.config')
+            file_path = get_set_configurator_path(self.get_action('preset_filename').currentText()).joinpath(
+                f"{self.get_action('configurations').currentText()}.config")
             if file_path.exists():
                 user_agreed = dialog(
                     title="Overwrite confirmation",
@@ -369,7 +418,6 @@ class Configurator(QtCore.QObject):
             if not file_path.parent.exists():
                 file_path.parent.mkdir(parents=True)
             self.config_model.save(file_path)
-            self.dialog.accept()
             self.new_file.emit()
 
     def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
@@ -405,12 +453,9 @@ if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp
     app = mkQApp('Configurator')
 
-    from pymodaq.utils.config import get_set_preset_path
 
-    preset_path = get_set_preset_path().joinpath('preset_default.xml')
 
     prog = Configurator()
-    prog.populate_from_preset_file(preset_path)
     prog.create_modify_configurator('beam_steering')
 
     sys.exit(app.exec_())
