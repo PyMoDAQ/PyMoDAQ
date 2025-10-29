@@ -50,7 +50,8 @@ class PresetManager(CustomApp):
         self.add_widget('presets', QtWidgets.QComboBox(), tip='Name of the current preset',
                         kwargs={'setReadOnly': True})
         self.get_action('presets').addItems([
-            path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml'])
+            path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml'] + ['...'])
+
 
         self.add_action(PresetAction.NEW, 'New Preset', 'Add2',
                         tip='Create a new preset file')
@@ -72,6 +73,10 @@ class PresetManager(CustomApp):
         self.get_action('presets').setCurrentText('preset_default')
 
     def update_preset(self, preset_file: Union[Path, str] = None):
+        if preset_file == '...':
+            self.create_preset()
+            return
+
         if preset_file is None:
             preset_file = get_set_preset_path().joinpath(
                 f"{self.get_action('presets').currentText()}.xml"
@@ -93,8 +98,16 @@ class PresetManager(CustomApp):
         text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
                                                   'Preset name:', QtWidgets.QLineEdit.Normal)
         if ok and text != '':
-            self.get_action('presets').addItem(text)
+            presets = [self.get_action('presets').itemText(ind).lower() for
+                       ind in range(self.get_action('presets').count())]
+            if text.lower() not in presets:
+                presets.append(text.lower())
+                presets.sort()
+                index = presets.index(text.lower())
+                self.get_action('presets').insertItem(index-1, text)
+
             self.get_action('presets').setCurrentText(text)
+            self.save_check()
 
     def delete_preset(self):
         current_preset = self.get_action('presets').currentText()

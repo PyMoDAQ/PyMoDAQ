@@ -70,7 +70,7 @@ class Configurator(CustomApp):
             self.get_action('configurations').clear()
             self.get_action('preset_filename').setCurrentText(preset_filename)
             self.get_action('configurations').addItems(
-                self.get_configurations(get_set_configurator_path(preset_filename)))
+                self.get_configurations(get_set_configurator_path(preset_filename)) + ['...'])
 
     @staticmethod
     def config_entry_from_path(filename: Union[str, Path]) -> list[ConfiguratorEntry]:
@@ -311,6 +311,9 @@ class Configurator(CustomApp):
     def load_configuration(self):
         preset_name = self.get_action('preset_filename').currentText()
         config_name = self.get_action('configurations').currentText()
+        if config_name == '...':
+            self.create_configuration()
+            return
         self.config_model.load(get_set_configurator_path(preset_name).joinpath(f'{config_name}.config'))
 
 
@@ -327,6 +330,7 @@ class Configurator(CustomApp):
         for file in get_set_configurator_path(preset_name).iterdir():
             if '.config' in file.suffix:
                 configs.append(file.stem)
+        configs.sort()
         if 'default' in configs:  #  make sure the default is the first one shown
             default = configs.pop(configs.index('default'))
             configs.insert(0, default)
@@ -336,8 +340,15 @@ class Configurator(CustomApp):
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
                                                   "Config name:", QtWidgets.QLineEdit.Normal)
         if ok and text != '':
-            self.get_action('configurations').addItem(text)
+            configurations = [self.get_action('configurations').itemText(ind).lower() for
+                       ind in range(self.get_action('configurations').count())]
+            if text.lower() not in configurations:
+                configurations.append(text.lower())
+                configurations.sort()
+                index = configurations.index(text.lower())
+                self.get_action('configurations').insertItem(index-1, text)
             self.get_action('configurations').setCurrentText(text)
+
 
     def delete_configuration(self, preset_name: Optional[str] = None, config_name: Optional[str] = None):
         if preset_name is None:
@@ -393,12 +404,6 @@ class Configurator(CustomApp):
         - A filename is specified
         - Handles file overwrite confirmation
         """
-        if self.config_model.rowCount() == 0:
-            messagebox(
-                title="Saving issue",
-                text="You didn't specify any configuration entry to be saved",
-            )
-            return
         if self.get_action('configurations').currentText() == '':
             messagebox(
                 title="Saving issue",
