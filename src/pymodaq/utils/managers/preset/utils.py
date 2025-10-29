@@ -9,7 +9,10 @@ from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
+from pymodaq.control_modules.utils import controller_status_param
+
 from pymodaq.utils.daq_utils import get_plugins
+from pymodaq_utils.utils import find_dict_in_list_from_key_val
 
 logger = set_logger(get_module_name(__file__))
 
@@ -96,24 +99,13 @@ def add_category_layers(dimension_dict, remote_items=None, mock_items=None):
     return result
 
 
-def make_slave_params():
-    params = [
-        {'title': 'Slave/Master:', 'name': 'slave_stuff', 'type': 'group', 'children': [
-            {'title': 'Is Master?:', 'name': 'is_master', 'type': 'bool', 'value': True},
-            {'title': 'Master Controller ID:', 'name': 'master_controller_id', 'type': 'int',
-             'value': random.randint(0, 9999)},
-        ]}
-    ]
-    return params
-
-
 def make_move_params(typ: str) -> dict:
     parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', typ)
     class_ = getattr(getattr(parent_module['module'], 'daq_move_' + typ),
                         'DAQ_Move_' + typ)
     params_hardware = getattr(class_, 'params')
     iterative_show_pb(params_hardware)
-    multiaxes_dict = get_param_dict_from_name(params_hardware, 'multiaxes')
+    multiaxes_dict = get_param_dict_from_name(params_hardware, 'controller')
     multiaxes_dict['expanded'] = False
     controller_dict = get_param_dict_from_name(multiaxes_dict['children'], 'controller_ID')
     controller_dict['value'] = random.randint(0, 9999)
