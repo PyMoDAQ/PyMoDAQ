@@ -7,17 +7,10 @@ from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
-from pymodaq.control_modules.utils import DET_TYPES
-
+from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES
 
 
 logger = set_logger(get_module_name(__file__))
-
-DAQ_Move_Stage_type = get_plugins('daq_move')
-DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
-DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
-DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
-DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 # Fixed names that will sort the plugin in remote/mock
 REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
@@ -97,7 +90,7 @@ def add_category_layers(dimension_dict, remote_items=None, mock_items=None):
 
 
 def make_move_params(typ: str) -> dict:
-    parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', typ)
+    parent_module = utils.find_dict_in_list_from_key_val(ACTUATOR_TYPES, 'name', typ)
     class_ = getattr(getattr(parent_module['module'], 'daq_move_' + typ),
                         'DAQ_Move_' + typ)
     params_hardware = getattr(class_, 'params')
@@ -109,16 +102,16 @@ def make_move_params(typ: str) -> dict:
 
 def make_viewer_params(typ):
         if '0D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', typ[6:])
+            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ0D'], 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + typ[6:]), 'DAQ_0DViewer_' + typ[6:])
         elif '1D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', typ[6:])
+            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ1D'], 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + typ[6:]), 'DAQ_1DViewer_' + typ[6:])
         elif '2D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', typ[6:])
+            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ2D'], 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + typ[6:]), 'DAQ_2DViewer_' + typ[6:])
         elif 'ND' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', typ[6:])
+            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQND'], 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + typ[6:]), 'DAQ_NDViewer_' + typ[6:])
 
         params_hardware = getattr(class_, 'params')
@@ -135,7 +128,7 @@ class PresetScalableGroupMove(GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
-        opts['addMenu'] = categorize_items([mov['name'] for mov in DAQ_Move_Stage_type])
+        opts['addMenu'] = categorize_items(ACTUATOR_NAMES)
         super().__init__(**opts)
 
     def addNew(self, typ: tuple):
@@ -175,10 +168,10 @@ class PresetScalableGroupDet(GroupParameter):
         opts['type'] = 'groupdet'
         opts['addText'] = "Add"
         options = {
-        'DAQ0D': [name for name in [plugin['name'] for plugin in DAQ_0DViewer_Det_types]],
-        'DAQ1D': [name for name in [plugin['name'] for plugin in DAQ_1DViewer_Det_types]],
-        'DAQ2D': [name for name in [plugin['name'] for plugin in DAQ_2DViewer_Det_types]],
-        'DAQND': [name for name in [plugin['name'] for plugin in DAQ_NDViewer_Det_types]],
+        'DAQ0D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ0D']]],
+        'DAQ1D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ1D']]],
+        'DAQ2D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ2D']]],
+        'DAQND': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
          }
         opts['addMenu'] = add_category_layers(options)
 
