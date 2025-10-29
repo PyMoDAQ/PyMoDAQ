@@ -1,20 +1,24 @@
 import numbers
-
 from abc import abstractmethod
 from time import perf_counter
 from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
-from numbers import Number
-from collections.abc import Iterable
+
 
 from easydict import EasyDict as edict
 import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from pint.errors import OffsetUnitCalculusError
+
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
-
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.serialize.mysocket import Socket
+from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+
+from pymodaq_data.data import DataUnitError, Q_, Unit
 
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
@@ -22,18 +26,8 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
-
-from pymodaq_data.data import DataUnitError, Q_
-
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
-from pymodaq_utils.enums import BaseEnum, enum_checker
-
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq import Unit
-from pint.errors import OffsetUnitCalculusError
-
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory

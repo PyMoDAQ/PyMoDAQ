@@ -7,8 +7,8 @@ from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
+from pymodaq.control_modules.utils import DET_TYPES
 
-from pymodaq.utils.daq_utils import get_plugins
 
 
 logger = set_logger(get_module_name(__file__))

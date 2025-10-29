@@ -20,19 +20,13 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 logger = set_logger(get_module_name(__file__))
 
 
-DAQ_Move_Stage_type = get_plugins('daq_move')
-DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
-DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
-DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
-DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
-
-
 
 class DataToActuatorPID(DataToActuators):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         deprecation_msg('DataToActuatorPID object is deprecated use: pymodaq.utils.data:DataToActuators')
+
 
 class PIDModelGeneric:
     limits = dict(max=dict(state=False, value=1),

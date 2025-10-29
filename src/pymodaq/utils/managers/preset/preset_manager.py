@@ -4,14 +4,11 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets
-from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
-
-import pymodaq_utils.config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_gui.messenger import dialog, messagebox
+from pymodaq_gui.messenger import dialog
 
-from pymodaq_gui.utils.file_io import select_file
-from pymodaq_gui.parameter import ParameterTree, Parameter
+
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.messenger import dialog as dialogbox
 from pymodaq_gui.utils.custom_app import CustomApp
