@@ -3,7 +3,7 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog
 
@@ -35,6 +35,8 @@ layout_path = config_mod_pymodaq.get_set_layout_path()
 
 
 class PresetManager(CustomApp):
+
+    new_file = QtCore.Signal()
 
     def __init__(self ):
         super().__init__(parent=QtWidgets.QMainWindow())
@@ -185,11 +187,8 @@ class PresetManager(CustomApp):
         )
 
         # check if overshoot configuration and layout configuration with same name exists => delete them if yes
-        over_shoot_file = overshoot_path.joinpath(f'{current_preset.stem}.xml')
-        over_shoot_file.unlink(missing_ok=True)
-
-        layout_file = layout_path.joinpath(f'{current_preset.stem}.dock')
-        layout_file.unlink(missing_ok=True)
+        self.remove_preset_related_files(self.preset)
+        self.new_file.emit()
 
     def apply_preset_to_dashboard(self, preset: Union[str, Path], dashboard: 'DashBoard')\
             -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:

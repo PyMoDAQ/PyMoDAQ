@@ -68,7 +68,7 @@ class Configurator(CustomApp):
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
             self.get_action('configurations').clear()
-            self.get_action('preset_filename').setCurrentText(preset_filename)
+            self.get_action('preset_filename').setText(preset_filename)
             self.get_action('configurations').addItems(
                 self.get_configurations(get_set_configurator_path(preset_filename)) + ['...'])
 
@@ -266,9 +266,7 @@ class Configurator(CustomApp):
     def setup_actions(self):
 
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
-        self.add_widget('preset_filename', QtWidgets.QComboBox(), tip='Name of the current preset',
-                        kwargs={'setReadOnly': True})
-        self.get_action('preset_filename').addItems([path.stem for path in get_set_preset_path().iterdir()])
+        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move')
@@ -305,11 +303,9 @@ class Configurator(CustomApp):
 
         self.connect_action('configurations', self.get_action(ConfigurationAction.RELOAD).trigger,
                             signal_name='currentTextChanged')
-        self.connect_action('preset_filename', self.update_preset,
-                            signal_name='currentTextChanged')
 
     def load_configuration(self):
-        preset_name = self.get_action('preset_filename').currentText()
+        preset_name = self.get_action('preset_filename').text()
         config_name = self.get_action('configurations').currentText()
         if config_name == '...':
             self.create_configuration()
@@ -352,7 +348,7 @@ class Configurator(CustomApp):
 
     def delete_configuration(self, preset_name: Optional[str] = None, config_name: Optional[str] = None):
         if preset_name is None:
-            preset_name = self.get_action('preset_filename').currentText()
+            preset_name = self.get_action('preset_filename').text()
         if config_name is None:
             config_name = self.get_action('configurations').currentText()
         user_agreed = dialog('Removing a Configuration',
@@ -373,8 +369,7 @@ class Configurator(CustomApp):
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
         self.parameter_manager.settings = self.control_modules_settings
 
-    def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None,
-                                   single_preset=False):
+    def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None):
         """
         Create or modify a configuration for a given preset.
 
@@ -391,8 +386,6 @@ class Configurator(CustomApp):
             settings = preset_name
         self.preset_filename = preset_name
         self.update_preset(settings)
-        if single_preset:
-            self.get_action('preset_filename').setEnabled(False)
         self.mainwindow.show()
 
     def save_check(self):
@@ -412,7 +405,7 @@ class Configurator(CustomApp):
             return
 
         else:
-            file_path = get_set_configurator_path(self.get_action('preset_filename').currentText()).joinpath(
+            file_path = get_set_configurator_path(self.get_action('preset_filename').text()).joinpath(
                 f"{self.get_action('configurations').currentText()}.config")
             if file_path.exists():
                 user_agreed = dialog(
