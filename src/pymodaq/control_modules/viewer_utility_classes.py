@@ -207,7 +207,7 @@ class DAQ_Viewer_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['controller_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == 'Master'
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
@@ -256,7 +256,7 @@ class DAQ_Viewer_base(QObject):
         if old_controller is None and slave_controller is not None:
             old_controller = slave_controller
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['controller_status'] == "Slave":
+        if self.settings['controller', 'controller_status'] == "Slave":
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
