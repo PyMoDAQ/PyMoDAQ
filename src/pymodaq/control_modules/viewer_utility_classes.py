@@ -20,14 +20,10 @@ from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
+from pymodaq.control_modules.utils import get_controller_param
 from pymodaq_gui.utils.utils import mkQApp
 
-comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
-                     'value': 'Master',
-                     'limits': ['Master', 'Slave']},
-                    {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0,
-                     'default': 0, 'readonly': False},
-                    ]
+
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -39,6 +35,8 @@ if local_path.joinpath('camera_calibrations').is_dir():
 
 
 config = Config()
+
+comon_parameters = [get_controller_param()]  #
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
@@ -454,7 +452,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                     "Infos",
                     "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
-    params = comon_parameters + tcp_parameters
+    params = [get_controller_param()] + tcp_parameters
 
     def __init__(self, parent=None, params_state=None, grabber_type='2D'):
         """

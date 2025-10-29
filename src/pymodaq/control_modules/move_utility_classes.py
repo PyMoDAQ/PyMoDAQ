@@ -38,6 +38,7 @@ from pint.errors import OffsetUnitCalculusError
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.utils import get_controller_param
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -168,17 +169,13 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
     else:
         raise ValueError('axis_names should be either a list of string or a dict with strings '
                          'as keys')
-    params = [
-                 {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group',
-                  'visible': True, 'children': [
-                     {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0,
-                      'default': 0},
-                     {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
-                      'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
-                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names.copy(),
-                      'value': axis_name},
-                 ]},
-             ] + comon_parameters(epsilon)
+
+    controller_status_param = get_controller_param()
+    controller_status_param['children'].append({'title': 'Axis:', 'name': 'axis', 'type': 'list',
+                                                'limits': axis_names.copy(),
+                                                'value': axis_name},)
+
+    params = [controller_status_param] + comon_parameters(epsilon)
     return params
 
 
@@ -242,6 +239,32 @@ def main(plugin_file, init=True, title='test'):
         prog.init_hardware_ui()
 
     sys.exit(app.exec_())
+
+
+##########################
+# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
+
+from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
+
+class GroupParameterPatch(GroupParameter):
+
+    def __getitem__(self, names: Union[str, tuple[str,]]):
+        if isinstance(names, str):
+            names = (names)
+        if 'multiaxes' in names:
+            names = list(names)
+            names[names.index('multiaxes')] = 'controller'
+            names = tuple(names)
+        if 'multi_status' in names:
+            names = list(names)
+            names[names.index('multi_status')] = 'controller_status'
+            names = tuple(names)
+        return super().__getitem__(names)
+
+
+registerParameterType('group', GroupParameterPatch, override=True)
+###########################################
+
 
 
 class DAQ_Move_base(QObject):
@@ -448,22 +471,22 @@ class DAQ_Move_base(QObject):
     @property
     def axis_name(self) -> Union[str]:
         """Get/Set the current axis using its string identifier"""
-        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('controller', 'axis').opts['limits']
         if isinstance(limits, list):
-            return self.settings['multiaxes', 'axis']
+            return self.settings['controller', 'axis']
         elif isinstance(limits, dict):
-            return find_keys_from_val(limits, val=self.settings['multiaxes', 'axis'])[0]
+            return find_keys_from_val(limits, val=self.settings['controller', 'axis'])[0]
         else:
             return ''
 
     @axis_name.setter
     def axis_name(self, name: str):
-        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
-                self.settings.child('multiaxes', 'axis').setValue(name)
+                self.settings.child('controller', 'axis').setValue(name)
             elif isinstance(limits, dict):
-                self.settings.child('multiaxes', 'axis').setValue(limits[name])
+                self.settings.child('controller', 'axis').setValue(limits[name])
             QtWidgets.QApplication.processEvents()
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
@@ -478,11 +501,11 @@ class DAQ_Move_base(QObject):
         -------
         List of string or dictionary mapping names to integers
         """
-        return self.settings.child('multiaxes', 'axis').opts['limits']
+        return self.settings.child('controller', 'axis').opts['limits']
 
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
-        self.settings.child('multiaxes', 'axis').setLimits(names)
+        self.settings.child('controller', 'axis').setLimits(names)
         QtWidgets.QApplication.processEvents()
 
     @property
@@ -614,7 +637,7 @@ class DAQ_Move_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['multiaxes', 'multi_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == 'Master'
 
     @property
     def ispolling(self):

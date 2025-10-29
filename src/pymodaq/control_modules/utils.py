@@ -29,6 +29,16 @@ from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommand
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.utils.config import Config as ControlModulesConfig
+import random
+
+
+def get_controller_param():
+    return {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
+        {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
+         'value': 'Master', 'limits': ['Master', 'Slave']},
+        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': random.randint(0, 9999),
+         'default': 0, 'readonly': False},
+    ]}
 
 
 class DAQTypesEnum(BaseEnum):

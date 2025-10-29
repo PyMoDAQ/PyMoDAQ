@@ -239,16 +239,14 @@ class DAQ_Move(ParameterControlModule):
     def master(self) -> bool:
         """Get/Set programmatically the Master/Slave status of an actuator"""
         if self.initialized_state:
-            return (
-                self.settings["move_settings", "multiaxes", "multi_status"] == "Master"
-            )
+            return self.settings["move_settings", "controller", "multi_status"] == "Master"
         else:
             return True
 
     @master.setter
     def master(self, is_master: bool):
         if self.initialized_state:
-            self.settings.child("move_settings", "multiaxes", "multi_status").setValue(
+            self.settings.child("move_settings", "controller", "multi_status").setValue(
                 "Master" if is_master else "Slave"
             )
 
@@ -747,52 +745,33 @@ class DAQ_Move(ParameterControlModule):
     @property
     def axis_names(self) -> Union[List, Dict]:
         """ Get the names of all possible axis"""
-        return self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        return self.settings.child('move_settings', 'controller', 'axis').opts['limits']
 
     @property
     def axis_name(self) -> str:
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
+        val = self.settings['move_settings', 'controller', 'axis']
         if isinstance(limits, list):
-            return self.settings['move_settings', 'multiaxes', 'axis']
+            return val
         elif isinstance(limits, dict):
-            return find_keys_from_val(limits,
-                                      val=self.settings['move_settings', 'multiaxes', 'axis'])[0]
+            return find_keys_from_val(limits, val=val)[0]
+        else:
+            TypeError('Unknown limits type')
+
 
     @axis_name.setter
     def axis_name(self, name: str):
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(name)
+                value = name
             elif isinstance(limits, dict):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(limits[name])
-
-    @property
-    def axis_names(self) -> Union[List, Dict]:
-        """ Get the names of all possible axis"""
-        return self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-
-    @property
-    def axis_name(self) -> str:
-        """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-        if isinstance(limits, list):
-            return self.settings['move_settings', 'multiaxes', 'axis']
-        elif isinstance(limits, dict):
-            return find_keys_from_val(limits,
-                                      val=self.settings['move_settings', 'multiaxes', 'axis'])[0]
-
-    @axis_name.setter
-    def axis_name(self, name: str):
-        """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-        if name in limits:
-            if isinstance(limits, list):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(name)
-            elif isinstance(limits, dict):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(limits[name])
+                value = limits[name]
+            else:
+                return
+            self.settings.child('move_settings', 'controller', 'axis').setValue(value)
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
