@@ -105,7 +105,7 @@ def main():
     dash = DashBoard(area)
     file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
     if file.exists():
-        dash.set_preset_mode(file)
+        dash.apply_preset_to_dashboard(file)
         dash.load_scan_module()
 
 

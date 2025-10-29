@@ -244,7 +244,7 @@ class DashBoard(CustomApp):
         self.title = ""
 
         self.overshoot_manager: OvershootManager = None
-        self.preset_manager: PresetManager = None
+        self.preset_manager = PresetManager()
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer()
@@ -256,7 +256,6 @@ class DashBoard(CustomApp):
         self.modules_manager: ModulesManager = None
 
         self.overshoot = False
-        self.preset_file = None
         self.actuators_modules: Iterable[DAQ_Move] = []
         self.detector_modules: Iterable[DAQ_Viewer] = []
 
@@ -800,7 +799,7 @@ class DashBoard(CustomApp):
                 )
         self.connect_action(
             PresetActions.Load,
-            lambda: self.set_preset_mode(
+            lambda: self.apply_preset_to_dashboard(
                 self.preset_path.joinpath(
                     f"{self.get_action('preset_list').currentText()}.xml"
                 )
@@ -1010,8 +1009,8 @@ class DashBoard(CustomApp):
         self.plugin_manager.restart_signal.connect(self.restart_fun)
         self.win_plug_manager.show()
 
-    def create_menu_slot(self, filename):
-        return lambda: self.set_preset_mode(filename)
+    def create_menu_slot(self, filename: Path):
+        return lambda: self.apply_preset_to_dashboard(filename)
 
     def create_menu_slot_configurations(self, filename: Path):
         return lambda: self.configurator.apply_configuration(self.modules_manager, filename)
@@ -1301,16 +1300,16 @@ class DashBoard(CustomApp):
             plug_name: str = None,
             plug_settings: Parameter = None,
             plug_type: str = None,
-            move_docks: list[Dock] = None,
-            move_forms: list[QtWidgets.QWidget] = None,
+            actuator_docks: list[Dock] = None,
+            actuator_widgets: list[QtWidgets.QWidget] = None,
             actuators_modules: list[DAQ_Move] = None,
             ui_identifier: str = None,
             **kwargs
     ) -> DAQ_Move:        
-        if move_docks is None:
-            move_docks = []
-        if move_forms is None:
-            move_forms = []
+        if actuator_docks is None:
+            actuator_docks = []
+        if actuator_widgets is None:
+            actuator_widgets = []
         if actuators_modules is None:
             actuators_modules = []      
 
@@ -1340,15 +1339,15 @@ class DashBoard(CustomApp):
             self.logger_dock.area.addDock(dock, "bottom")
         else:
             dock = Dock(plug_name, size=(150, 250))
-            move_docks.append(dock)
+            actuator_docks.append(dock)
 
-            if len(move_docks) == 1:
+            if len(actuator_docks) == 1:
                 self.dockarea.addDock(dock, "right", self.logger_dock)
             else:
-                self.dockarea.addDock(dock, "above", move_docks[-2])
+                self.dockarea.addDock(dock, "above", actuator_docks[-2])
 
-        move_forms.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name, ui_identifier=ui_identifier)
+        actuator_widgets.append(QtWidgets.QWidget())
+        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -1367,7 +1366,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        dock.addWidget(move_forms[-1])
+        dock.addWidget(actuator_widgets[-1])
 
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
@@ -1411,36 +1410,28 @@ class DashBoard(CustomApp):
         self.actuators_modules.append(actuator)
         self.update_module_manager()
 
-    def add_det(
-        self,
-        plug_name,
-        plug_settings,
-        det_docks_settings,
-        det_docks_viewer,
-        detector_modules,
-        plug_type: str = None,
-        plug_subtype: str = None,
-    ) -> DAQ_Viewer:
+    def add_det(self, plug_name, plug_settings, detector_docks_settings, detector_docks_viewer,
+                detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
             plug_subtype = plug_settings.child("main_settings", "detector_type").value()
-        det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-        det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
+        detector_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
+        detector_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
         if len(detector_modules) == 0:
-            self.logger_dock.area.addDock(det_docks_settings[-1], "bottom")
+            self.logger_dock.area.addDock(detector_docks_settings[-1], "bottom")
             # dockarea of the logger dock
         else:
             self.dockarea.addDock(
-                det_docks_settings[-1], "right", detector_modules[-1].viewer_docks[-1]
+                detector_docks_settings[-1], "right", detector_modules[-1].viewer_docks[-1]
             )
-        self.dockarea.addDock(det_docks_viewer[-1], "right", det_docks_settings[-1])
+        self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_settings[-1])
         det_mod_tmp = DAQ_Viewer(
             self.dockarea,
             title=plug_name,
             daq_type=plug_type,
-            dock_settings=det_docks_settings[-1],
-            dock_viewer=det_docks_viewer[-1],
+            dock_settings=detector_docks_settings[-1],
+            dock_viewer=detector_docks_viewer[-1],
         )
         QtWidgets.QApplication.processEvents()
         det_mod_tmp.detector = plug_subtype
@@ -1524,168 +1515,6 @@ class DashBoard(CustomApp):
         else:
             self.modules_manager.actuators_all = self.actuators_modules
             self.modules_manager.detectors_all = self.detector_modules
-
-    def set_file_preset(self, filename) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
-        """
-        Load a preset file and create corresponding Control Modules in the Dashboard
-
-        """
-        actuators_modules = []
-        detector_modules = []
-        if not isinstance(filename, Path):
-            filename = Path(filename)
-
-        if filename.suffix == ".xml":
-            self.preset_file = filename
-            self.preset_manager.update_preset(filename)
-            move_docks = []
-            det_docks_settings = []
-            det_docks_viewer = []
-            move_forms = []
-
-            # ################################################################
-            # ##### sort plugins by IDs and within the same IDs by Master and Slave status
-            plugins = []
-            plugins += [
-                {"type": ModuleType.Actuator, "value": child}
-                for child in self.preset_manager.settings.child(ModuleType.Actuator.value).children()
-            ]
-            plugins += [
-                {"type": ModuleType.Detector, "value": child}
-                for child in self.preset_manager.settings.child(ModuleType.Detector.value).children()
-            ]
-            for plug in plugins:
-                plug["ID"] = plug["value"].child("controller", "controller_ID").value()
-                plug["status"] = plug["value"].child("controller", "controller_status").value()
-
-            IDs = list(set([plug["ID"] for plug in plugins]))
-            # %%
-            plugins_sorted = []
-            for id in IDs:
-                plug_Ids = []
-                for plug in plugins:
-                    if plug["ID"] == id:
-                        plug_Ids.append(plug)
-                plug_Ids.sort(key=lambda status: status["status"])
-                plugins_sorted.append(plug_Ids)
-            #################################################################
-            #######################
-
-            ind_det = -1
-            for plug_IDs in plugins_sorted:
-                for ind_plugin, plugin in enumerate(plug_IDs):
-                    plug_name = plugin["value"].child("name").value()
-                    plug_init = plugin["value"].child("init").value()
-
-                    self.splash_sc.showMessage(
-                        "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
-                    )
-
-                    if plugin["type"] == ModuleType.Actuator:
-
-                        self.add_move(
-                            plug_name,
-                            None,
-                            plug_type,
-                            move_docks,
-                            move_forms,
-                            actuators_modules,
-                        )
-
-                        if ind_plugin == 0:  # should be a master type plugin
-                            if plugin["status"] != "Master":
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} should"
-                                    f" be defined as Master"
-                                )
-                            if plug_init:
-                                actuators_modules[-1].init_hardware_ui()
-                                QtWidgets.QApplication.processEvents()
-                                self.poll_init(actuators_modules[-1])
-                                QtWidgets.QApplication.processEvents()
-                                master_controller = actuators_modules[-1].controller
-                            elif plugin["status"] == "Master" and len(plug_IDs) > 1:
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} defined as Master has to be "
-                                    f"initialized (init checked in the preset) in order to init "
-                                    f"its associated slave instrument"
-                                )
-                        else:
-                            if plugin["status"] != "Slave":
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} should"
-                                    f" be defined as slave"
-                                )
-                            if plug_init:
-                                actuators_modules[-1].controller = master_controller
-                                actuators_modules[-1].init_hardware_ui()
-                                QtWidgets.QApplication.processEvents()
-                                self.poll_init(actuators_modules[-1])
-                                QtWidgets.QApplication.processEvents()
-                    else:
-                        ind_det += 1
-                        self.add_det(
-                            plug_name,
-                            plug_settings,
-                            det_docks_settings,
-                            det_docks_viewer,
-                            detector_modules,
-                        )
-                        QtWidgets.QApplication.processEvents()
-
-                        if ind_plugin == 0:  # should be a master type plugin
-                            if plugin["status"] != "Master":
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} should"
-                                    f" be defined as Master"
-                                )
-                            if plug_init:
-                                detector_modules[-1].init_hardware_ui()
-                                QtWidgets.QApplication.processEvents()
-                                self.poll_init(detector_modules[-1])
-                                QtWidgets.QApplication.processEvents()
-                                master_controller = detector_modules[-1].controller
-                            elif plugin["status"] == "Master" and len(plug_IDs) > 1:
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} defined as Master has to be "
-                                    f"initialized (init checked in the preset) in order to init "
-                                    f"its associated slave instrument"
-                                )
-                        else:
-                            if plugin["status"] != "Slave":
-                                raise MasterSlaveError(
-                                    f"The instrument {plug_name} should"
-                                    f" be defined as Slave"
-                                )
-                            if plug_init:
-                                detector_modules[-1].controller = master_controller
-                                detector_modules[-1].init_hardware_ui()
-                                QtWidgets.QApplication.processEvents()
-                                self.poll_init(detector_modules[-1])
-                                QtWidgets.QApplication.processEvents()
-
-                        detector_modules[-1].settings.child(
-                            "main_settings", "overshoot"
-                        ).show()
-                        detector_modules[-1].overshoot_signal[bool].connect(
-                            self.stop_moves_from_overshoot
-                        )
-
-            QtWidgets.QApplication.processEvents()
-            # restore dock state if saved
-
-            self.title = self.preset_file.stem
-            path = layout_path.joinpath(self.title + ".dock")
-            if path.is_file():
-                self.load_layout_state(path)
-
-            self.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.title}")
-            if self.pid_module is not None:
-                self.pid_module.set_module_manager(detector_modules, actuators_modules)
-            return actuators_modules, detector_modules
-        else:
-            logger.error("Invalid file selected")
-            return actuators_modules, detector_modules
 
     def poll_init(self, module):
         is_init = False
@@ -1928,13 +1757,156 @@ class DashBoard(CustomApp):
         """
         return self.actuators_modules
 
-    def set_preset_mode(self, filename):
+    @property
+    def preset_file(self) -> Path:
+        return self.preset_manager.preset_filename
+
+    def create_control_modules_from_preset(self, preset_file: Path) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
+        """
+        Load a preset file and create corresponding Control Modules in the Dashboard
+
+        """
+        actuators_modules = []
+        detector_modules = []
+
+        self.preset_manager.update_preset(preset_file)
+
+        actuator_docks = []
+        detector_docks_settings = []
+        detector_docks_viewer = []
+        actuator_widgets = []
+
+        # ################################################################
+        # ##### sort plugins by IDs and within the same IDs by Master and Slave status
+        plugins = []
+        plugins += [
+            {"type": ModuleType.Actuator, "value": child}
+            for child in self.preset_manager.settings.child(ModuleType.Actuator.value).children()
+        ]
+        plugins += [
+            {"type": ModuleType.Detector, "value": child}
+            for child in self.preset_manager.settings.child(ModuleType.Detector.value).children()
+        ]
+        for plug in plugins:
+            plug["ID"] = plug["value"].child("controller", "controller_ID").value()
+            plug["status"] = plug["value"].child("controller", "controller_status").value()
+
+        IDs = list(set([plug["ID"] for plug in plugins]))
+        # %%
+        plugins_sorted = []
+        for id in IDs:
+            plug_Ids = []
+            for plug in plugins:
+                if plug["ID"] == id:
+                    plug_Ids.append(plug)
+            plug_Ids.sort(key=lambda status: status["status"])
+            plugins_sorted.append(plug_Ids)
+
+        # Add Control Modules to the Dashboard
+        ind_det = -1
+        for plug_IDs in plugins_sorted:
+            for ind_plugin, plugin in enumerate(plug_IDs):
+                plug_name = plugin["value"].child("name").value()
+                plug_type = plugin["value"].child("type").value()
+                plug_init = plugin["value"].child("init").value()
+
+                self.splash_sc.showMessage(
+                    "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
+                )
+
+                if plugin["type"] == ModuleType.Actuator:
+
+                    self.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets, actuators_modules)
+
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != "Master":
+                            raise MasterSlaveError(f"The instrument {plug_name} should"
+                                                   f" be defined as Master")
+                        if plug_init:
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = actuators_modules[-1].controller
+
+                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the preset) in order to init "
+                                f"its associated slave instrument"
+                            )
+                    else:
+                        if plugin["status"] != "Slave":
+                            raise MasterSlaveError(f"The instrument {plug_name} should"
+                                                   f" be defined as slave")
+                        if plug_init:
+                            actuators_modules[-1].controller = master_controller
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                else:
+                    ind_det += 1
+                    plug_dim = plugin["value"].child("dim").value()
+                    self.add_det(plug_name, None,
+                                 detector_docks_settings, detector_docks_viewer, detector_modules,
+                                 plug_dim, plug_type)
+                    QtWidgets.QApplication.processEvents()
+
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != "Master":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Master"
+                            )
+                        if plug_init:
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = detector_modules[-1].controller
+                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the preset) in order to init "
+                                f"its associated slave instrument"
+                            )
+                    else:
+                        if plugin["status"] != "Slave":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Slave"
+                            )
+                        if plug_init:
+                            detector_modules[-1].controller = master_controller
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+
+                    detector_modules[-1].settings.child(
+                        "main_settings", "overshoot"
+                    ).show()
+                    detector_modules[-1].overshoot_signal[bool].connect(
+                        self.stop_moves_from_overshoot
+                    )
+
+        QtWidgets.QApplication.processEvents()
+        # restore dock state if saved
+
+        self.title = self.preset_file.stem
+        path = layout_path.joinpath(self.title + ".dock")
+        if path.is_file():
+            self.load_layout_state(path)
+
+        self.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.title}")
+
+        return actuators_modules, detector_modules
+
+    def apply_preset_to_dashboard(self, filename: Path):
         """ Apply the selected preset file to the dashboard and adds Control Modules specified in it
         """
         try:
-            if not isinstance(filename, Path):
-                filename = Path(filename)
-
             self.get_action(PresetActions.List).setCurrentText(filename.stem)
 
             self.mainwindow.setVisible(False)
@@ -1952,7 +1924,8 @@ class DashBoard(CustomApp):
             logger.info(f"Loading Preset file: {filename}")
 
             try:
-                actuators_modules, detector_modules = self.set_file_preset(filename)
+                actuators_modules, detector_modules = self.create_control_modules_from_preset(filename)
+
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.splash_sc.close()
                 self.mainwindow.setVisible(True)
@@ -2132,7 +2105,7 @@ class DashBoard(CustomApp):
         self.logger_dock.setVisible(True)
 
         self.remote_dock.setVisible(False)
-        self.preset_manager = PresetManager()
+
 
     @property
     def menubar(self):

@@ -45,7 +45,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     file = Path(get_set_preset_path()).joinpath(f"{preset_name}.xml")
 
     if file is not None and file.exists():
-        dashboard.set_preset_mode(file)
+        dashboard.apply_preset_to_dashboard(file)
 
         if extension_name:
             if extension_name == 'DAQScan':
