@@ -47,6 +47,9 @@ class PresetManager(CustomApp):
 
         self.setup_ui()
 
+    def show(self):
+        self.mainwindow.show()
+
     def setup_docks(self):
         vlayout = QtWidgets.QVBoxLayout()
         vlayout.addWidget(self.settings_tree)
@@ -67,12 +70,21 @@ class PresetManager(CustomApp):
     def preset(self, preset_name: str):
         self.update_preset(preset_name)
 
+    @property
+    def presets(self) -> list[str]:
+        """ Get/Set the name of all existing presets """
+        return [path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml']
+
+    @property
+    def presets_filename(self) -> list[Path]:
+        """ Get the full path of the current preset file """
+        return [path for path in get_set_preset_path().iterdir() if path.suffix == '.xml']
+
     def setup_actions(self):
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('presets', QtWidgets.QComboBox(), tip='Name of the current preset',
                         kwargs={'setReadOnly': True})
-        self.get_action('presets').addItems([
-            path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml'] + ['...'])
+        self.get_action('presets').addItems(self.presets + ['...'])
 
 
         self.add_action(PresetAction.NEW, 'New Preset', 'Add2',
@@ -145,6 +157,14 @@ class PresetManager(CustomApp):
             self.get_action('presets').removeItem(
                 self.get_action('presets').currentIndex()
             )
+            self.remove_preset_related_files(self.preset)
+
+    @staticmethod
+    def remove_preset_related_files(preset_name: str):
+        config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
     def save_check(self):
         current_preset = self.preset_filename
