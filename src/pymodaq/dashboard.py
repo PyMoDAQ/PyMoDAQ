@@ -278,17 +278,6 @@ class DashBoard(CustomApp):
             self._splash_sc = get_splash_sc()
         return self._splash_sc
 
-    # def set_preset_path(self, path):
-    #     self.preset_path = path
-    #     self.set_extra_preset_params(self.extra_params)
-    #     self.create_menu(self.menubar)
-    #
-    # def set_extra_preset_params(self, params, param_options=[]):
-    #     self.extra_params = params
-    #     self.preset_manager = PresetManager(
-    #         path=self.preset_path, extra_params=params, param_options=param_options
-    #     )
-
     def add_status(self, txt):
         """
         Add the QListWisgetItem initialized with txt informations to the User Interface
@@ -622,11 +611,8 @@ class DashBoard(CustomApp):
 
         self.toolbar.addSeparator()
 
-        self.add_action(ConfiguratorActions.New, "New Configuration", "",
-                        'Create a new particular experimental configuration',
-                        auto_toolbar=False,)
-        self.add_action(ConfiguratorActions.Modify, "Modify Configuration", "",
-                        'Modify an existing experimental configuration',
+        self.add_action(ConfiguratorActions.Open, "Configurator", "",
+                        'Show the Configurator (Configuration Manager)',
                         auto_toolbar=False,)
         self.add_widget(ConfiguratorActions.Label, QtWidgets.QLabel('Configuration:'),
                         toolbar=self.toolbar, visible=False)
@@ -636,6 +622,7 @@ class DashBoard(CustomApp):
                         enabled=False, visible=False)
         self.add_action(ConfiguratorActions.Load, "LOAD", "Open", tip="Load the selected configuration",
                         enabled=False, visible=False)
+        self.update_configuration_action_list()
 
         self.add_action("new_overshoot", "New Overshoot", "",
                         "Create a new experimental setup overshoot configuration file",
@@ -709,22 +696,33 @@ class DashBoard(CustomApp):
     def update_preset_action_list(self):
         presets = []
         self.get_action(PresetActions.List).clear()
-        for ind_file, file in enumerate(self.preset_path.iterdir()):
-            if file.suffix == ".xml":
-                filestem = file.stem
-                if not self.has_action(
-                    self.get_action_from_file(file, ManagerEnums.preset)
-                ):
-                    self.add_action(
-                        self.get_action_from_file(file, ManagerEnums.preset),
-                        filestem,
-                        "",
-                        f"Load the {filestem}.xml preset",
-                        auto_toolbar=False,
-                    )
-                presets.append(filestem)
+        for ind_file, file in enumerate(self.preset_manager.presets_filename):
 
+            if not self.has_action(
+                self.get_action_from_file(file, ManagerEnums.preset)
+            ):
+                self.add_action(
+                    self.get_action_from_file(file, ManagerEnums.preset),
+                    file.stem,
+                    "",
+                    f"Load the {file.stem}.xml preset",
+                    auto_toolbar=False,
+                )
+            presets.append(file.stem)
         self.get_action(PresetActions.List).addItems(presets)
+        self.update_preset_actions_connection()
+        self.update_preset_menu()
+
+    def update_preset_actions_connection(self):
+        for ind_file, file in enumerate(self.preset_manager.presets_filename):
+            self.connect_action(
+                self.get_action_from_file(file, ManagerEnums.preset),
+                connect=False)
+
+            self.connect_action(
+                self.get_action_from_file(file, ManagerEnums.preset),
+                self.create_menu_slot(self.preset_path.joinpath(file)),
+            )
 
     def update_preset_action(self, preset_name: str):
         self.get_action(PresetActions.Load).setToolTip(
@@ -734,41 +732,53 @@ class DashBoard(CustomApp):
     def update_configuration_action_list(self):
         configurations = []
         self.get_action(ConfiguratorActions.List).clear()
-        if self.preset_file is not None:
-            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-                if file.suffix == ".config":
-                    filestem = file.stem
-                    if not self.has_action(
-                            self.get_action_from_file(file, ManagerEnums.configuration)
-                    ):
-                        self.add_action(
-                            self.get_action_from_file(file, ManagerEnums.configuration),
-                            filestem,
-                            "",
-                            f"Load the {filestem} configuration",
-                            auto_toolbar=False,
-                        )
-                        self.connect_action(
-                            self.get_action_from_file(file, ManagerEnums.configuration),
-                            self.create_menu_slot_configurations(
-                                get_set_configurator_path(self.preset_file.stem).joinpath(file)),
-                        )
-                    configurations.append(filestem)
-            self.connect_action(
-                ConfiguratorActions.Load,
-                lambda: self.set_experimental_configuration(
-                    get_set_configurator_path(self.preset_file.stem).joinpath(
-                        f"{self.get_action(ConfiguratorActions.List).currentText()}.config"
+
+        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+            if file.suffix == ".config":
+                filestem = file.stem
+                if not self.has_action(
+                        self.get_action_from_file(file, ManagerEnums.configuration)
+                ):
+                    self.add_action(
+                        self.get_action_from_file(file, ManagerEnums.configuration),
+                        filestem,
+                        "",
+                        f"Load the {filestem} configuration",
+                        auto_toolbar=False,
                     )
-                ),
-            )
-            self.get_action(ConfiguratorActions.List).addItems(configurations)
-            if len(configurations) > 0:
-                self.set_action_visible(
-                    (ConfiguratorActions.Label,
-                     ConfiguratorActions.List,
-                     ConfiguratorActions.Load), True)
-        self.setup_menu(self.menubar)
+                configurations.append(filestem)
+
+        self.get_action(ConfiguratorActions.List).addItems(configurations)
+        if len(configurations) > 0:
+            self.set_action_visible(
+                (ConfiguratorActions.Label,
+                 ConfiguratorActions.List,
+                 ConfiguratorActions.Load), True)
+
+        self.update_configuration_actions_connection()
+        self.update_configuration_menu()
+
+    def update_configuration_actions_connection(self):
+        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+            if file.suffix == ".config":
+                self.connect_action(
+                    self.get_action_from_file(file, ManagerEnums.configuration),
+                    connect=False)
+
+                self.connect_action(
+                    self.get_action_from_file(file, ManagerEnums.configuration),
+                    self.create_menu_slot_configurations(
+                        get_set_configurator_path(self.preset_file.stem).joinpath(file.stem)),
+                )
+        self.connect_action(ConfiguratorActions.Load, connect=False)
+        self.connect_action(
+            ConfiguratorActions.Load,
+            lambda: self.set_experimental_configuration(
+                get_set_configurator_path(self.preset_file.stem).joinpath(
+                    f"{self.get_action(ConfiguratorActions.List).currentText()}.config"
+                )
+            ),
+        )
 
     def update_configuration_action(self, config_name: str):
         self.get_action(ConfiguratorActions.Load).setToolTip(
@@ -788,13 +798,8 @@ class DashBoard(CustomApp):
         self.connect_action("log_window", self.logger_dock.setVisible)
 
         self.connect_action(PresetActions.Open, self.preset_manager.show)
-
-        for ind_file, file in enumerate(self.preset_path.iterdir()):
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.preset),
-                    self.create_menu_slot(self.preset_path.joinpath(file)),
-                )
+        self.preset_manager.new_file.connect(self.update_preset_action_list)
+        self.update_preset_actions_connection()
         self.connect_action(
             PresetActions.Load,
             lambda: self.apply_preset_to_dashboard(
@@ -803,8 +808,8 @@ class DashBoard(CustomApp):
                 )
             ),
         )
-        self.connect_action(ConfiguratorActions.New, self.create_experimental_configuration)
-        self.connect_action(ConfiguratorActions.Modify, self.modify_experimental_configuration)
+
+        self.connect_action(ConfiguratorActions.Open, self.create_experimental_configuration)
 
         self.connect_action("new_overshoot", self.create_overshoot)
         self.connect_action("modify_overshoot", self.modify_overshoot)
@@ -861,6 +866,7 @@ class DashBoard(CustomApp):
         self.connect_action("check_update", lambda: self.check_update(True))
         self.connect_action("plugin_manager", self.start_plugin_manager)
 
+
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
         Create the menubar object looking like :
@@ -886,76 +892,19 @@ class DashBoard(CustomApp):
         docked_menu.addAction(self.get_action("log_window"))
 
         self.preset_menu = menubar.addMenu("Preset Modes")
-        self.preset_menu.addAction(self.get_action(PresetActions.Open))
-        self.preset_menu.addSeparator()
-        self.load_preset_menu = self.preset_menu.addMenu("Load presets")
-        for ind_file, file in enumerate(self.preset_manager.presets_filename):
-            self.load_preset_menu.addAction(
-                self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
-            )
+        self.update_preset_menu()
 
         self.configuration_menu = menubar.addMenu("Configuration Manager")
-        self.configuration_menu.addAction(self.get_action(ConfiguratorActions.New))
-        self.configuration_menu.addAction(self.get_action(ConfiguratorActions.Modify))
-        self.configuration_menu.addSeparator()
-        self.load_configuration_menu = self.configuration_menu.addMenu("Load Configurations")
-
-        if self.preset_file is not None:
-            for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-                if file.suffix == ".config":
-                    if self.has_action(self.get_action_from_file(file, ManagerEnums.configuration)):
-                        self.load_configuration_menu.addAction(
-                            self.get_action(
-                                self.get_action_from_file(file, ManagerEnums.configuration)
-                            )
-                        )
+        self.update_configuration_menu()
 
         self.overshoot_menu = menubar.addMenu("Overshoot Modes")
-        self.overshoot_menu.addAction(self.get_action("new_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("modify_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("activate_overshoot"))
-        self.overshoot_menu.addSeparator()
-        load_overshoot_menu = self.overshoot_menu.addMenu("Load Overshoots")
-
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                load_overshoot_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.overshoot)
-                    )
-                )
+        self.update_overshoot_menu()
 
         self.roi_menu = menubar.addMenu("ROI Modes")
-        self.roi_menu.addAction(self.get_action("save_roi"))
-        self.roi_menu.addAction(self.get_action("modify_roi"))
-        self.roi_menu.addSeparator()
-        load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                load_roi_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-                )
+        self.update_roi_menu()
 
         self.remote_menu = menubar.addMenu("Remote/Shortcuts Control")
-        self.remote_menu.addAction("New remote config.", self.create_remote)
-        self.remote_menu.addAction("Modify remote config.", self.modify_remote)
-        self.remote_menu.addSeparator()
-        load_remote_menu = self.remote_menu.addMenu("Load remote config.")
-
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                load_remote_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.remote)
-                    )
-                )
+        self.update_remote_menu()
 
         # extensions menu
         self.extensions_menu = menubar.addMenu("Extensions")
@@ -992,6 +941,87 @@ class DashBoard(CustomApp):
         self.preset_menu.setEnabled(status)
         self.configuration_menu.setEnabled(not status)
 
+    def update_preset_menu(self):
+        try:
+            self.preset_menu.clear()
+            self.preset_menu.addAction(self.get_action(PresetActions.Open))
+            self.preset_menu.addSeparator()
+            self.load_preset_menu = self.preset_menu.addMenu("Load presets")
+            for ind_file, file in enumerate(self.preset_manager.presets_filename):
+                self.load_preset_menu.addAction(
+                    self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
+                )
+        except AttributeError:  # means self.preset_menu is not yet defined
+            pass
+
+    def update_configuration_menu(self):
+        try:
+            self.configuration_menu.clear()
+            self.configuration_menu.addAction(self.get_action(ConfiguratorActions.Open))
+            self.configuration_menu.addSeparator()
+            self.load_configuration_menu = self.configuration_menu.addMenu("Load Configurations")
+
+            if self.preset_file is not None:
+                for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+                    if file.suffix == ".config":
+                        if self.has_action(self.get_action_from_file(file, ManagerEnums.configuration)):
+                            self.load_configuration_menu.addAction(
+                                self.get_action(
+                                    self.get_action_from_file(file, ManagerEnums.configuration)
+                                )
+                            )
+        except AttributeError:  # means self.configuration_menu is not yet defined
+            pass
+
+    def update_roi_menu(self):
+        self.roi_menu.clear()
+        self.roi_menu.addAction(self.get_action("save_roi"))
+        self.roi_menu.addAction(self.get_action("modify_roi"))
+        self.roi_menu.addSeparator()
+        load_roi_menu = self.roi_menu.addMenu("Load roi configs")
+
+        for ind_file, file in enumerate(
+                config_mod_pymodaq.get_set_roi_path().iterdir()
+        ):
+            if file.suffix == ".xml":
+                load_roi_menu.addAction(
+                    self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
+                )
+
+    def update_remote_menu(self):
+        self.remote_menu.clear()
+        self.remote_menu.addAction("New remote config.", self.create_remote)
+        self.remote_menu.addAction("Modify remote config.", self.modify_remote)
+        self.remote_menu.addSeparator()
+        load_remote_menu = self.remote_menu.addMenu("Load remote config.")
+
+        for ind_file, file in enumerate(
+                config_mod_pymodaq.get_set_remote_path().iterdir()
+        ):
+            if file.suffix == ".xml":
+                load_remote_menu.addAction(
+                    self.get_action(
+                        self.get_action_from_file(file, ManagerEnums.remote)
+                    )
+                )
+
+    def update_overshoot_menu(self):
+        self.overshoot_menu.clear()
+        self.overshoot_menu.addAction(self.get_action("new_overshoot"))
+        self.overshoot_menu.addAction(self.get_action("modify_overshoot"))
+        self.overshoot_menu.addAction(self.get_action("activate_overshoot"))
+        self.overshoot_menu.addSeparator()
+        load_overshoot_menu = self.overshoot_menu.addMenu("Load Overshoots")
+
+        for ind_file, file in enumerate(
+                config_mod_pymodaq.get_set_overshoot_path().iterdir()
+        ):
+            if file.suffix == ".xml":
+                load_overshoot_menu.addAction(
+                    self.get_action(
+                        self.get_action_from_file(file, ManagerEnums.overshoot)
+                    )
+                )
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()
@@ -1082,8 +1112,7 @@ class DashBoard(CustomApp):
             logger.exception(str(e))
 
     def create_experimental_configuration(self):
-        self.configurator.create_modify_configurator(self.preset_file.stem, self.modules_manager.get_settings_all(),
-                                                     single_preset=True)
+        self.configurator.create_modify_configurator(self.preset_file.stem, self.modules_manager.get_settings_all())
 
     def modify_experimental_configuration(self):
         self.configurator.populate_from_settings(self.modules_manager.get_settings_all())

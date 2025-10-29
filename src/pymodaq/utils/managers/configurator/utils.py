@@ -33,6 +33,7 @@ ser_factory = SerializableFactory()
 
 
 class ConfiguratorActions(StrEnum): # used in the DashBoard
+    Open = "open_configuration"
     New = "new_configuration"
     Modify = "modify_configuration"
     Label = "configuration_label"
