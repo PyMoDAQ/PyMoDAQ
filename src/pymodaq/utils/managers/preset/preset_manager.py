@@ -1,4 +1,5 @@
 import os
+from typing import Union
 from pathlib import Path
 import sys
 
@@ -7,15 +8,18 @@ from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
 
 import pymodaq_utils.config as config_mod
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_gui.messenger import dialog, messagebox
 
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.messenger import dialog as dialogbox
+from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq.utils import config as config_mod_pymodaq
-from pymodaq.extensions import get_models
 
-import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
+from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.managers.preset.utils  import PresetAction  # Also to register move and det types
+from pymodaq.utils.managers.modules_manager import ModuleType
 
 logger = set_logger(get_module_name(__file__))
 
@@ -25,205 +29,120 @@ overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
 layout_path = config_mod_pymodaq.get_set_layout_path()
 
 
-class PresetManager:
-    def __init__(self, msgbox=False, path=None, extra_params=[], param_options=[]):
-        if path is None:
-            path = preset_path
-        else:
-            assert isinstance(path, Path)
+class PresetManager(CustomApp):
 
-        self.extra_params = extra_params
-        self.param_options = param_options
-        self.preset_path = path
+    def __init__(self ):
+        super().__init__(parent=QtWidgets.QMainWindow())
+
+        self.preset_path: Path = None
         self.preset_params: Parameter = None
 
-        if msgbox:
-            msgBox = QMessageBox()
-            msgBox.setText("Preset Manager?")
-            msgBox.setInformativeText("What do you want to do?")
-            cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
-            new_button = msgBox.addButton(
-                "New", QMessageBox.ButtonRole.ActionRole
-            )
-            modify_button = msgBox.addButton(
-                "Modify", QMessageBox.ButtonRole.AcceptRole
-            )
-            msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            ret = msgBox.exec()
+        self.main_widget = QtWidgets.QWidget()
+        self.mainwindow.setCentralWidget(self.main_widget)
 
-            if msgBox.clickedButton() == new_button:
-                self.set_new_preset()
+        self.setup_ui()
 
-            elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path=self.preset_path, save=False, ext="xml")
-                if path != "":
-                    self.set_file_preset(str(path))
-            else:  # cancel
-                pass
-
-    @property
-    def filename(self) -> str:
-        try:
-            return self.preset_params["filename"]
-        except:
-            return None
-
-    def set_file_preset(self, filename, show=True):
-        """ """
-        status = False
-        children = ioxml.XML_file_to_parameter(filename)
-        self.preset_params = Parameter.create(
-            title="Preset", name="Preset", type="group", children=children
-        )
-        if show:
-            status = self.show_preset()
-        return status
-
-    def set_new_preset(self):
-        param = [
-            {
-                "title": "Filename:",
-                "name": "filename",
-                "type": "str",
-                "value": "preset_default",
-            },
-            {
-                "title": "Model Settings:",
-                "name": "model_settings",
-                "type": "group",
-                "visible": False,
-                "children": [],
-            },
-        ]
-        params_move = [
-            {"title": "Moves:", "name": "Moves", "type": "groupmove"}
-        ]  # PresetScalableGroupMove(name="Moves")]
-        params_det = [
-            {"title": "Detectors:", "name": "Detectors", "type": "groupdet"}
-        ]  # [PresetScalableGroupDet(name="Detectors")]
-        self.preset_params = Parameter.create(
-            title="Preset",
-            name="Preset",
-            type="group",
-            children=param + self.extra_params + params_move + params_det,
-        )
-        try:
-            for option in self.param_options:
-                if "path" in option and "options_dict" in option:
-                    self.preset_params.child(option["path"]).setOpts(
-                        **option["options_dict"]
-                    )
-        except Exception as e:
-            logger.exception(str(e))
-
-        self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-        status = self.show_preset()
-        return status
-
-    def parameter_tree_changed(self, param, changes):
-        """
-        Check for changes in the given (parameter,change,information) tuple list.
-        In case of value changed, update the DAQscan_settings tree consequently.
-
-        =============== ============================================ ==============================
-        **Parameters**    **Type**                                     **Description**
-        *param*           instance of pyqtgraph parameter              the parameter to be checked
-        *changes*         (parameter,change,information) tuple list    the current changes state
-        =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.preset_params.childPath(param)
-            if change == "childAdded":
-                if len(data) > 1:
-                    if "params" in data[0].children():
-                        data[0].child(
-                            "params", "main_settings", "module_name"
-                        ).setValue(data[0].child("name").value())
-
-            elif change == "value":
-                if param.name() == "name":
-                    param.parent().child(
-                        "params", "main_settings", "module_name"
-                    ).setValue(param.value())
-
-            elif change == "parent":
-                pass
-
-    def show_preset(self):
-        """ """
-        dialog = QDialog()
+    def setup_docks(self):
         vlayout = QtWidgets.QVBoxLayout()
-        tree = ParameterTree()
-        # tree.setMinimumWidth(400)
-        # tree.setMinimumHeight(500)
-        tree.setParameters(self.preset_params, showTop=False)
-        tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        vlayout.addWidget(self.settings_tree)
+        self.tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.main_widget.setLayout(vlayout)
 
-        vlayout.addWidget(tree)
-        dialog.setLayout(vlayout)
+    def setup_actions(self):
+        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
+        self.add_widget('presets', QtWidgets.QComboBox(), tip='Name of the current preset',
+                        kwargs={'setReadOnly': True})
+        self.get_action('presets').addItems([
+            path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml'])
 
-        buttonBox = QDialogButtonBox(parent=dialog)
-        buttonBox.addButton("Save", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(dialog.reject)
+        self.add_action(PresetAction.NEW, 'New Preset', 'Add2',
+                        tip='Create a new preset file')
+        self.add_action(PresetAction.DELETE, 'Delete Preset', 'remove',
+                        tip='Delete the current preset file')
+        self.add_action(PresetAction.SAVE, 'Save Preset', 'Save',
+                        tip='Save/Update the current configuration')
+        self.add_action(PresetAction.RELOAD, 'Reload Preset', 'Refresh',
+                        tip='Reload the current preset file')
 
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle("Fill in information about this manager")
-        res = dialog.exec()
+    def connect_things(self):
+        self.connect_action('presets', self.update_preset,
+                            signal_name='currentTextChanged')
+        self.connect_action(PresetAction.NEW, self.create_preset)
+        self.connect_action(PresetAction.DELETE, self.delete_preset)
+        self.connect_action(PresetAction.SAVE, self.save_check)
+        self.connect_action(PresetAction.RELOAD, lambda: self.update_preset())
 
-        path = self.preset_path
-        file = None
+        self.get_action('presets').setCurrentText('preset_default')
 
-        if res == QDialog.DialogCode.Accepted:
-            # save managers parameters in a xml file
-            # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
-            # start = os.path.join("..",'daq_scan')
-            filename_without_extension = self.filename
+    def update_preset(self, preset_file: Union[Path, str] = None):
+        if preset_file is None:
+            preset_file = get_set_preset_path().joinpath(
+                f"{self.get_action('presets').currentText()}.xml"
+            )
+        if isinstance(preset_file, str):
+            preset_file = get_set_preset_path().joinpath(f'{preset_file}.xml')
+        if preset_file.exists():
+            self.settings = preset_file
+        else:
+            params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
+            # PresetScalableGroupMove(name='Moves')]
+            params_det = [
+                {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}
+            ]  # [PresetScalableGroupDet(name='Detectors')]
+            self.settings = Parameter.create(title='Preset', name='Preset', type='group',
+                                             children=params_act + params_det,)
 
-            try:
-                ioxml.parameter_to_xml_file(
-                    self.preset_params,
-                    path.joinpath(filename_without_extension),
-                    overwrite=False,
-                )
-            except FileExistsError as currenterror:
-                # logger.warning(str(currenterror)+"File " + filename_without_extension + ".xml exists")
-                logger.warning(
-                    f"{currenterror} File {filename_without_extension}.xml exists"
-                )
-                user_agreed = dialogbox(
-                    title="Overwrite confirmation",
-                    message="File exist do you want to overwrite it ?",
-                )
-                if user_agreed:
-                    ioxml.parameter_to_xml_file(
-                        self.preset_params, path.joinpath(filename_without_extension)
-                    )
-                    logger.warning(
-                        f"File {filename_without_extension}.xml overwriten at user request"
-                    )
-                else:
-                    logger.warning(
-                        f"File {filename_without_extension}.xml wasn't saved at user request"
-                    )
-                    # emit status signal to dashboard to write : did not save ?
-                pass
+    def create_preset(self):
+        text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
+                                                  'Preset name:', QtWidgets.QLineEdit.Normal)
+        if ok and text != '':
+            self.get_action('presets').addItem(text)
+            self.get_action('presets').setCurrentText(text)
 
-            # check if overshoot configuration and layout configuration with same name exists => delete them if yes
-            over_shoot_file = overshoot_path.joinpath(self.filename + ".xml")
-            over_shoot_file.unlink(missing_ok=True)
+    def delete_preset(self):
+        current_preset = self.get_action('presets').currentText()
+        user_agreed = dialogbox(
+            title='Delete confirmation',
+            message=f'Are you sure you want to delete the preset {current_preset} ?',
+        )
+        if user_agreed:
+            preset_file = get_set_preset_path().joinpath(f'{current_preset}.xml')
 
-            layout_file = layout_path.joinpath(self.filename + ".dock")
-            layout_file.unlink(missing_ok=True)
+            preset_file.unlink(missing_ok=True)
+            logger.info(f'Preset file {preset_file} deleted')
+            self.get_action('presets').removeItem(
+                self.get_action('presets').currentIndex()
+            )
 
-        return res == QDialog.DialogCode.Accepted
+    def save_check(self):
+        current_preset = get_set_preset_path().joinpath(f"{self.get_action('presets').currentText()}.xml")
+        if current_preset.exists():
+            user_agreed = dialog(
+                title='Overwrite confirmation',
+                message='File exist do you want to overwrite it ?',
+            )
+            if not user_agreed:
+                return
+        ioxml.parameter_to_xml_file(
+            self.settings,
+            current_preset,
+            overwrite=True,
+        )
+        logger.warning(
+            f'File {current_preset} overwriten at user request'
+        )
+
+        # check if overshoot configuration and layout configuration with same name exists => delete them if yes
+        over_shoot_file = overshoot_path.joinpath(f'{current_preset.stem}.xml')
+        over_shoot_file.unlink(missing_ok=True)
+
+        layout_file = layout_path.joinpath(f'{current_preset.stem}.dock')
+        layout_file.unlink(missing_ok=True)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    # prog = PresetManager(True)
-    prog = PresetManager(True)
+    prog = PresetManager()
+    prog.mainwindow.show()
 
     sys.exit(app.exec_())
