@@ -90,6 +90,7 @@ class ManagerEnums(BaseEnum):
     
     
 class PresetActions(StrEnum):
+    Open = "open_preset"
     New = "new_preset"
     Modify = "modify_preset"
     Label = "preset_label"
@@ -610,11 +611,8 @@ class DashBoard(CustomApp):
         self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
 
 
-        self.add_action(PresetActions.New, "New Preset", "",
-                        'Create a new experimental setup configuration file: a "preset"',
-                        auto_toolbar=False,)
-        self.add_action(PresetActions.Modify, "Modify Preset", "",
-                        'Modify an existing experimental setup configuration file: a "preset"',
+        self.add_action(PresetActions.Open, "Preset Manager", "",
+                        'Open the Preset Manager to create/modify experimental setup configuration files: "presets"',
                         auto_toolbar=False,)
         self.add_widget(PresetActions.Label, QtWidgets.QLabel('Preset:'), toolbar=self.toolbar)
         self.add_widget(PresetActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
@@ -788,8 +786,8 @@ class DashBoard(CustomApp):
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("log_window", self.logger_dock.setVisible)
-        self.connect_action(PresetActions.New, self.create_preset)
-        self.connect_action(PresetActions.Modify, self.modify_preset)
+
+        self.connect_action(PresetActions.Open, self.preset_manager.show)
 
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == ".xml":
@@ -888,17 +886,13 @@ class DashBoard(CustomApp):
         docked_menu.addAction(self.get_action("log_window"))
 
         self.preset_menu = menubar.addMenu("Preset Modes")
-        self.preset_menu.addAction(self.get_action(PresetActions.New))
-        self.preset_menu.addAction(self.get_action(PresetActions.Modify))
+        self.preset_menu.addAction(self.get_action(PresetActions.Open))
         self.preset_menu.addSeparator()
         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
-        for ind_file, file in enumerate(self.preset_path.iterdir()):
-            if file.suffix == ".xml":
-                self.load_preset_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.preset)
-                    )
-                )
+        for ind_file, file in enumerate(self.preset_manager.presets_filename):
+            self.load_preset_menu.addAction(
+                self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
+            )
 
         self.configuration_menu = menubar.addMenu("Configuration Manager")
         self.configuration_menu.addAction(self.get_action(ConfiguratorActions.New))
@@ -987,7 +981,7 @@ class DashBoard(CustomApp):
         help_menu.addAction(self.get_action("check_update"))
         help_menu.addAction(self.get_action("plugin_manager"))
 
-        status = self.preset_file is None
+        status = True
 
         self.overshoot_menu.setEnabled(not status)
         self.roi_menu.setEnabled(not status)
@@ -1087,16 +1081,6 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def create_preset(self):
-        try:
-            status = self.preset_manager.set_new_preset()
-            if status:
-                self.update_preset_action_list()
-                self.setup_menu(self.menubar)
-                self.new_preset_created.emit()
-        except Exception as e:
-            logger.exception(str(e))
-
     def create_experimental_configuration(self):
         self.configurator.create_modify_configurator(self.preset_file.stem, self.modules_manager.get_settings_all(),
                                                      single_preset=True)
@@ -1154,39 +1138,6 @@ class DashBoard(CustomApp):
                 pass
         except Exception as e:
             logger.exception(str(e))
-
-    def modify_preset(self):
-        try:
-            path = select_file(start_path=self.preset_path, save=False, ext="xml")
-            if path != "":
-                modified = self.preset_manager.update_preset(path)
-
-                if modified:
-                    self.remove_preset_related_files(path.name)
-                    if self.detector_modules:
-                        mssg = QMessageBox()
-                        mssg.setText(
-                            "You have to restart the application to take the modifications"
-                            " into account!\n\n"
-                            "The related files: ROI, Layout, Overshoot and Remote will be"
-                            " deleted if existing!\n\n"
-                            "Quitting the application..."
-                        )
-                        mssg.exec()
-                        self.restart_fun()
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
-
-    def remove_preset_related_files(self, name):
-        config_mod_pymodaq.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_overshoot_path().joinpath(name).unlink(
-            missing_ok=True
-        )
-        config_mod_pymodaq.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
 
     def quit_fun(self):
         """
@@ -2014,7 +1965,7 @@ class DashBoard(CustomApp):
                 self.update_init_tree()
 
                 self.preset_loaded_signal.emit(True)
-                self.setup_menu(self.menubar)
+                #self.setup_menu(self.menubar)
                 self.update_configuration_action_list()
 
 
