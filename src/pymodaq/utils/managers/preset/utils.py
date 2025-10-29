@@ -7,12 +7,9 @@ from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
-from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
-from pymodaq.control_modules.utils import controller_status_param
 
 from pymodaq.utils.daq_utils import get_plugins
-from pymodaq_utils.utils import find_dict_in_list_from_key_val
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -105,16 +102,12 @@ def make_move_params(typ: str) -> dict:
                         'DAQ_Move_' + typ)
     params_hardware = getattr(class_, 'params')
     iterative_show_pb(params_hardware)
-    multiaxes_dict = get_param_dict_from_name(params_hardware, 'controller')
-    multiaxes_dict['expanded'] = False
-    controller_dict = get_param_dict_from_name(multiaxes_dict['children'], 'controller_ID')
-    controller_dict['value'] = random.randint(0, 9999)
-    return multiaxes_dict
+    controller_dict = get_param_dict_from_name(params_hardware, 'controller')
+    controller_dict['expanded'] = False
+    return controller_dict
 
 
 def make_viewer_params(typ):
-        params = daq_viewer_params
-
         if '0D' in typ:
             parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', typ[6:])
             class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + typ[6:]), 'DAQ_0DViewer_' + typ[6:])
@@ -130,15 +123,10 @@ def make_viewer_params(typ):
 
         params_hardware = getattr(class_, 'params')
         iterative_show_pb(params_hardware)
+        controller_dict = get_param_dict_from_name(params_hardware, 'controller')
+        controller_dict['expanded'] = False
 
-        controller_status = get_param_dict_from_name(params_hardware, 'controller_status')
-        controller_id = get_param_dict_from_name(params_hardware, 'controller_ID')
-        controller_id['value'] = random.randint(0, 9999)
-        params = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
-            controller_status,
-            controller_id,
-        ]}
-        return params
+        return controller_dict
     
 class PresetScalableGroupMove(GroupParameter):
     """
@@ -158,13 +146,14 @@ class PresetScalableGroupMove(GroupParameter):
         new_index = find_last_index(self.children(), name_prefix, format_string='02.0f')
         slave_param = make_move_params(typ)
         child = {'title': f'Actuator {new_index}',
-            'name': f'{name_prefix}{new_index}',
-            'type': 'group',
-            'children': [
-                {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Actuator {new_index}'},
-                {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                slave_param,
-            ]}
+                 'name': f'{name_prefix}{new_index}',
+                 'type': 'group',
+                 'removable': True,
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Actuator {new_index}'},
+                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+                     slave_param,
+                 ]}
         self.addChild(child)
 
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
@@ -205,16 +194,17 @@ class PresetScalableGroupDet(GroupParameter):
             =============== ===========  ================
         """
 
-        name_prefix = Mod
+        name_prefix = ModuleType.Detector.value
         typ = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
         new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
         param = make_viewer_params(typ)
         child = {'title': f'Detector {new_index}', 'name': f'{name_prefix}{new_index}',
-                    'type': 'group', 'children': [
-                {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Det {new_index}'},
-                {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                param
-            ]}
+                 'type': 'group', 'removable': True,
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Det {new_index}'},
+                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+                     param
+                 ]}
 
         self.addChild(child)
 

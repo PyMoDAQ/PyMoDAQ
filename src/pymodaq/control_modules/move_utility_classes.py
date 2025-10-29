@@ -13,8 +13,7 @@ from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.enums import BaseEnum, enum_checker
+
 from pymodaq_utils.logger import set_logger, get_module_name
 
 import pymodaq_gui.parameter.utils as putils
