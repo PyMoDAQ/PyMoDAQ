@@ -35,31 +35,18 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.control_modules.instruments import ACTUATOR_TYPES, DAQ_Move_Actuators
 from pymodaq.control_modules.utils import ParameterControlModule
-from pymodaq.control_modules.thread_commands import (
-    ThreadStatus,
-    ThreadStatusMove,
-    ControlToHardwareMove,
-    UiToMainMove,
-)
 
-
-from pymodaq.control_modules.move_utility_classes import (
-    ThreadCommand,
-    MoveCommand,
-    DAQ_Move_base,
-    DataActuatorType,
-    check_units,
-    DataUnitError,
-)
+from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
+                                                     UiToMainMove,
+                                                     )
+from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
+                                                           check_units, DataUnitError)
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.utils.leco.pymodaq_listener import (
-    MoveActorListener,
-    LECOMoveCommands,
-    LECOCommands,
-)
+from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
 
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq import Q_, Unit
@@ -79,13 +66,6 @@ config_utils = config_mod.Config()
 config = ControlModulesConfig()
 
 HardwareController = TypeVar("HardwareController")
-
-HardwareController = TypeVar("HardwareController")
-
-DAQ_Move_Actuators = get_plugins("daq_move")
-ACTUATOR_TYPES = [mov["name"] for mov in DAQ_Move_Actuators]
-if len(ACTUATOR_TYPES) == 0:
-    raise ActuatorError("No installed Actuator")
 
 
 STATUS_WAIT_TIME = 1000
