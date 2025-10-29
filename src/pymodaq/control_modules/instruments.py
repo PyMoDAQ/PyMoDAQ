@@ -17,8 +17,8 @@ DET_TYPES = {'DAQ0D': find_dicts_in_list_from_key_val(CONTROL_MODULES, 'type', '
 if len(DET_TYPES['DAQ0D']) == 0:
     raise DetectorError('No installed Detector')
 
-DAQ_Move_Actuators = find_dicts_in_list_from_key_val(CONTROL_MODULES, 'type', 'daq_move')
-ACTUATOR_TYPES = [mov["name"] for mov in DAQ_Move_Actuators]
+ACTUATOR_TYPES = find_dicts_in_list_from_key_val(CONTROL_MODULES, 'type', 'daq_move')
+ACTUATOR_NAMES = [mov["name"] for mov in ACTUATOR_TYPES]
 if len(ACTUATOR_TYPES) == 0:
     raise ActuatorError("No installed Actuator")
 

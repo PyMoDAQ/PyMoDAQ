@@ -35,7 +35,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.control_modules.instruments import ACTUATOR_TYPES, DAQ_Move_Actuators
+from pymodaq.control_modules.instruments import ACTUATOR_TYPES, ACTUATOR_NAMES
 from pymodaq.control_modules.utils import ParameterControlModule
 
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
@@ -137,14 +137,14 @@ class DAQ_Move(ParameterControlModule):
             self.ui = None
 
         if self.ui is not None:
-            self.ui.actuators = ACTUATOR_TYPES
+            self.ui.actuators = ACTUATOR_NAMES
             self.ui.set_settings_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
         self._title = title
-        if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
-            self.actuator = kwargs.get("actuator", ACTUATOR_TYPES[0])
+        if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
+            self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 
         self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
 
@@ -682,7 +682,7 @@ class DAQ_Move(ParameterControlModule):
 
     @actuator.setter
     def actuator(self, act_type):
-        if act_type in ACTUATOR_TYPES:
+        if act_type in ACTUATOR_NAMES:
             self._actuator_type = act_type
             self.update_plugin_config()
             if self.ui is not None:
@@ -690,17 +690,17 @@ class DAQ_Move(ParameterControlModule):
             self.update_settings()
         else:
             raise ActuatorError(
-                f"{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}"
+                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
 
     @property
     def actuators(self) -> List[str]:
         """Get the list of possible actuators"""
-        return ACTUATOR_TYPES
+        return ACTUATOR_NAMES
 
     def update_plugin_config(self):
         parent_module = utils.find_dict_in_list_from_key_val(
-            DAQ_Move_Actuators, "name", self.actuator
+            ACTUATOR_TYPES, "name", self.actuator
         )
         mod = import_module(parent_module["module"].__package__.split(".")[0])
         if hasattr(mod, "config"):
@@ -787,7 +787,7 @@ class DAQ_Move(ParameterControlModule):
             for child in self.settings.child("move_settings").children():
                 child.remove()
             parent_module = utils.find_dict_in_list_from_key_val(
-                DAQ_Move_Actuators, "name", self._actuator_type
+                ACTUATOR_TYPES, "name", self._actuator_type
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self._actuator_type),
@@ -916,7 +916,7 @@ class DAQ_Move_Hardware(QObject):
         status = edict(initialized=False, info="")
         try:
             parent_module = utils.find_dict_in_list_from_key_val(
-                DAQ_Move_Actuators, "name", self.actuator_type
+                ACTUATOR_TYPES, "name", self.actuator_type
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self.actuator_type),
