@@ -144,7 +144,9 @@ class PresetScalableGroupMove(GroupParameter):
                  'removable': True,
                  'children': [
                      {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Actuator {new_index}'},
+                     {'title': 'Type:', 'name': 'type', 'type': 'str', 'value': typ, 'readonly': True},
                      {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+
                      slave_param,
                  ]}
         self.addChild(child)
@@ -188,13 +190,15 @@ class PresetScalableGroupDet(GroupParameter):
         """
 
         name_prefix = ModuleType.Detector.value
-        typ = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
+        typ_full = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
         new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
-        param = make_viewer_params(typ)
+        param = make_viewer_params(typ_full)
         child = {'title': f'Detector {new_index}', 'name': f'{name_prefix}{new_index}',
                  'type': 'group', 'removable': True,
                  'children': [
                      {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Det {new_index}'},
+                     {'title': 'Type:', 'name': 'type', 'type': 'str', 'value': typ[-1], 'readonly': True},
+                     {'title': 'Dim:', 'name': 'dim', 'type': 'str', 'value': typ[0], 'readonly': True},
                      {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
                      param
                  ]}
