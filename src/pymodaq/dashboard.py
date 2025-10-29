@@ -11,7 +11,6 @@ from packaging import version as version_mod
 from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
 import argparse
 
-
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QThread, Signal, QSize
 from qtpy.QtWidgets import (
@@ -41,7 +40,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
@@ -244,8 +243,8 @@ class DashBoard(CustomApp):
 
         self.title = ""
 
-        self.overshoot_manager = None
-        self.preset_manager = None
+        self.overshoot_manager: OvershootManager = None
+        self.preset_manager: PresetManager = None
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer()
@@ -279,16 +278,16 @@ class DashBoard(CustomApp):
             self._splash_sc = get_splash_sc()
         return self._splash_sc
 
-    def set_preset_path(self, path):
-        self.preset_path = path
-        self.set_extra_preset_params(self.extra_params)
-        self.create_menu(self.menubar)
-
-    def set_extra_preset_params(self, params, param_options=[]):
-        self.extra_params = params
-        self.preset_manager = PresetManager(
-            path=self.preset_path, extra_params=params, param_options=param_options
-        )
+    # def set_preset_path(self, path):
+    #     self.preset_path = path
+    #     self.set_extra_preset_params(self.extra_params)
+    #     self.create_menu(self.menubar)
+    #
+    # def set_extra_preset_params(self, params, param_options=[]):
+    #     self.extra_params = params
+    #     self.preset_manager = PresetManager(
+    #         path=self.preset_path, extra_params=params, param_options=param_options
+    #     )
 
     def add_status(self, txt):
         """
@@ -1161,7 +1160,7 @@ class DashBoard(CustomApp):
         try:
             path = select_file(start_path=self.preset_path, save=False, ext="xml")
             if path != "":
-                modified = self.preset_manager.set_file_preset(path)
+                modified = self.preset_manager.update_preset(path)
 
                 if modified:
                     self.remove_preset_related_files(path.name)
@@ -1528,18 +1527,7 @@ class DashBoard(CustomApp):
 
     def set_file_preset(self, filename) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
         """
-        Set a file managers from the converted xml file given by the filename parameter.
-
-
-        =============== =========== ===================================================
-        **Parameters**    **Type**    **Description**
-        *filename*        string      the name of the xml file to be converted/treated
-        =============== =========== ===================================================
-
-        Returns
-        -------
-        (Object list, Object list) tuple
-            The updated (Move modules list, Detector modules list).
+        Load a preset file and create corresponding Control Modules in the Dashboard
 
         """
         actuators_modules = []
@@ -1549,7 +1537,7 @@ class DashBoard(CustomApp):
 
         if filename.suffix == ".xml":
             self.preset_file = filename
-            self.preset_manager.set_file_preset(filename, show=False)
+            self.preset_manager.update_preset(filename)
             move_docks = []
             det_docks_settings = []
             det_docks_viewer = []
@@ -1559,36 +1547,16 @@ class DashBoard(CustomApp):
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
             plugins += [
-                {"type": "move", "value": child}
-                for child in self.preset_manager.preset_params.child("Moves").children()
+                {"type": ModuleType.Actuator, "value": child}
+                for child in self.preset_manager.settings.child(ModuleType.Actuator.value).children()
             ]
             plugins += [
-                {"type": "det", "value": child}
-                for child in self.preset_manager.preset_params.child(
-                    "Detectors"
-                ).children()
+                {"type": ModuleType.Detector, "value": child}
+                for child in self.preset_manager.settings.child(ModuleType.Detector.value).children()
             ]
             for plug in plugins:
-                if plug["type"] == "det":
-                    try:
-                        plug["ID"] = plug["value"][
-                            "params", "detector_settings", "controller_ID"
-                        ]
-                        plug["status"] = plug["value"][
-                            "params", "detector_settings", "controller_status"
-                        ]
-                    except KeyError as e:
-                        raise DetectorError
-                else:
-                    try:
-                        plug["ID"] = plug["value"][
-                            "params", "move_settings", "multiaxes", "controller_ID"
-                        ]
-                        plug["status"] = plug["value"][
-                            "params", "move_settings", "multiaxes", "multi_status"
-                        ]
-                    except KeyError as e:
-                        raise ActuatorError
+                plug["ID"] = plug["value"].child("controller", "controller_ID").value()
+                plug["status"] = plug["value"].child("controller", "controller_status").value()
 
             IDs = list(set([plug["ID"] for plug in plugins]))
             # %%
@@ -1608,18 +1576,16 @@ class DashBoard(CustomApp):
                 for ind_plugin, plugin in enumerate(plug_IDs):
                     plug_name = plugin["value"].child("name").value()
                     plug_init = plugin["value"].child("init").value()
-                    plug_settings = plugin["value"].child("params")
+
                     self.splash_sc.showMessage(
                         "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
                     )
 
-                    if plugin["type"] == "move":
-                        plug_type = plug_settings.child(
-                            "main_settings", "move_type"
-                        ).value()
+                    if plugin["type"] == ModuleType.Actuator:
+
                         self.add_move(
                             plug_name,
-                            plug_settings,
+                            None,
                             plug_type,
                             move_docks,
                             move_forms,
@@ -1963,29 +1929,7 @@ class DashBoard(CustomApp):
         return self.actuators_modules
 
     def set_preset_mode(self, filename):
-        """
-        | Set the managers mode from the given filename.
-        |
-        | In case of "mock" or "canon" move, set the corresponding managers calling
-        set_(*)_preset procedure.
-        |
-        | Else set the managers file using set_file_preset function.
-        | Once done connect the move and detector modules to logger to recipe/transmit
-        informations.
-
-        Finally update DAQ_scan_settings tree with :
-            * Detectors
-            * Move
-            * plot_form.
-
-        =============== =========== =============================================
-        **Parameters**    **Type**    **Description**
-        *filename*        string      the name of the managers file to be treated
-        =============== =========== =============================================
-
-        See Also
-        --------
-        set_Mock_preset, set_canon_preset, set_file_preset, add_status, update_status
+        """ Apply the selected preset file to the dashboard and adds Control Modules specified in it
         """
         try:
             if not isinstance(filename, Path):
@@ -2188,9 +2132,7 @@ class DashBoard(CustomApp):
         self.logger_dock.setVisible(True)
 
         self.remote_dock.setVisible(False)
-        self.preset_manager = PresetManager(
-            path=self.preset_path, extra_params=self.extra_params
-        )
+        self.preset_manager = PresetManager()
 
     @property
     def menubar(self):
