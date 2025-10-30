@@ -47,6 +47,7 @@ from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
                                            DetectorError, get_viewer_plugins)
+from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardwareViewer,
                                                      UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
@@ -289,7 +290,7 @@ class DAQ_Viewer(ParameterControlModule):
     def master(self) -> bool:
         """ Get/Set programmatically the Master/Slave status of a detector"""
         if self.initialized_state:
-            return self.settings['detector_settings', 'controller_status'] == 'Master'
+            return self.settings['detector_settings', 'controller_status'] == ControllerStatus.MASTER
         else:
             return True
 
@@ -297,7 +298,7 @@ class DAQ_Viewer(ParameterControlModule):
     def master(self, is_master: bool):
         if self.initialized_state:
             self.settings.child('detector_settings', 'controller_status').setValue(
-                'Master' if is_master else 'Slave')
+                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
 
     def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
         """ Apply changes from the selection of a different DAQTypesEnum in the UI

@@ -20,7 +20,7 @@ from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.control_modules.utils import get_controller_param
+from pymodaq.control_modules.utils import get_controller_param, ControllerStatus
 from pymodaq_gui.utils.utils import mkQApp
 
 
@@ -207,7 +207,7 @@ class DAQ_Viewer_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['controller', 'controller_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):

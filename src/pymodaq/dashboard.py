@@ -53,6 +53,7 @@ from pymodaq.utils.gui_utils.widgets.window import make_window
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
 from pymodaq.utils.config import Config as ControlModulesConfig, get_set_configurator_path
@@ -1746,15 +1747,15 @@ class DashBoard(CustomApp):
         Load a preset file and create corresponding Control Modules in the Dashboard
 
         """
-        actuators_modules = []
-        detector_modules = []
+        actuators_modules: list[DAQ_Move] = []
+        detector_modules: list[DAQ_Viewer] = []
 
         self.preset_manager.update_preset(preset_file)
 
-        actuator_docks = []
-        detector_docks_settings = []
-        detector_docks_viewer = []
-        actuator_widgets = []
+        actuator_docks: list[Dock] = []
+        detector_docks_settings: list[Dock] = []
+        detector_docks_viewer: list[Dock] = []
+        actuator_widgets: list[QtWidgets.QWidget] = []
 
         # ################################################################
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -1799,24 +1800,25 @@ class DashBoard(CustomApp):
                     self.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets, actuators_modules)
 
                     if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != "Master":
+                        if plugin["status"] != ControllerStatus.MASTER:
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as Master")
                         if plug_init:
                             actuators_modules[-1].init_hardware_ui()
+                            actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = actuators_modules[-1].controller
 
-                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the preset) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
-                        if plugin["status"] != "Slave":
+                        if plugin["status"] != ControllerStatus.SLAVE:
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as slave")
                         if plug_init:
@@ -1834,7 +1836,7 @@ class DashBoard(CustomApp):
                     QtWidgets.QApplication.processEvents()
 
                     if ind_plugin == 0:  # should be a master type plugin
-                        if plugin["status"] != "Master":
+                        if plugin["status"] != ControllerStatus.MASTER:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
                                 f" be defined as Master"
@@ -1845,14 +1847,14 @@ class DashBoard(CustomApp):
                             self.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = detector_modules[-1].controller
-                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the preset) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
-                        if plugin["status"] != "Slave":
+                        if plugin["status"] != ControllerStatus.SLAVE:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
                                 f" be defined as Slave"
