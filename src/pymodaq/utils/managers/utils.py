@@ -104,10 +104,10 @@ class ManagerActions(ActionManager):
     def get_action_list(self) -> QtWidgets.QComboBox:
         return self.get_action(Actions.List)
 
-    def update_action_list(self):
+    def update_action_list(self, **kwargs_to_entry_folder):
         entries = []
         self.get_action_list().clear()
-        for ind_file, file in enumerate(self.manager.list_managed_entries_path()):
+        for ind_file, file in enumerate(self.manager.list_managed_entries_path(**kwargs_to_entry_folder)):
             if not self.has_action(self.get_action_from_file(file)):
                 self.add_action(
                     self.get_action_from_file(file),
@@ -118,8 +118,8 @@ class ManagerActions(ActionManager):
                 )
             entries.append(file.stem)
         self.get_action_list().addItems(entries)
-        self.update_actions_connection()
-        self.update_menu()
+        self.update_actions_connection(**kwargs_to_entry_folder)
+        self.update_menu(**kwargs_to_entry_folder)
 
     def update_actions_connection(self, **kwargs_to_entry_folder):
         for ind_file, file in enumerate(self.manager.list_managed_entries_path()):

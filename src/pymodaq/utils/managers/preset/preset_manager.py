@@ -135,6 +135,7 @@ class PresetManager(CustomExt, ManagerMixin):
             self.settings = Parameter.create(title='Preset', name='Preset', type='group',
                                              children=params_act + params_det,)
         self.get_action('presets').setCurrentText(preset_file.stem)
+        self.action_manager.update_action_list()
 
     def create_preset(self):
         text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
@@ -239,26 +240,21 @@ class PresetManager(CustomExt, ManagerMixin):
                     return
 
             self.dashboard.mainwindow.setVisible(False)
-            for area in self.dockarea.tempAreas:
+            for area in self.dashboard.dockarea.tempAreas:
                 area.window().setVisible(False)
 
             self.dashboard.splash_sc.show()
             QtWidgets.QApplication.processEvents()
             self.dashboard.splash_sc.raise_()
             self.dashboard.splash_sc.showMessage("Loading Modules, please wait")
-            QtWidgets.QApplication.processEvents()
-            self.dashboard.clear_move_det_controllers()
-            QtWidgets.QApplication.processEvents()
-
             logger.info(f"Loading Preset file: {file_path}")
 
             try:
                 actuators_modules, detector_modules = self.create_control_modules_from_preset(file_path)
-
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
-                for area in self.dockarea.tempAreas:
+                for area in self.dashboard.dockarea.tempAreas:
                     area.window().setVisible(True)
                 messagebox(
                     severity="critical",
@@ -314,8 +310,6 @@ class PresetManager(CustomExt, ManagerMixin):
         """
         actuators_modules: list[DAQ_Move] = []
         detector_modules: list[DAQ_Viewer] = []
-
-        self.update_preset(preset_file)
 
         actuator_docks: list[Dock] = []
         detector_docks_settings: list[Dock] = []
