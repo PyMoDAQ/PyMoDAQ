@@ -152,67 +152,21 @@ class DashBoard(CustomApp):
     settings_name = "dashboard_settings"
     _splash_sc = None
 
-    params = [        {
-            "title": "Log level",
-            "name": "log_level",
-            "type": "list",
-            "value": config_utils("general", "debug_levels")[0],
-            "limits": config_utils("general", "debug_levels"),
-        },
-        {
-            "title": "Loaded presets",
-            "name": "loaded_files",
-            "type": "group",
-            "children": [
-                {
-                    "title": "Preset file",
-                    "name": "preset_file",
-                    "type": "str",
-                    "value": "",
-                    "readonly": True,
-                },
-                {
-                    "title": "Overshoot file",
-                    "name": "overshoot_file",
-                    "type": "str",
-                    "value": "",
-                    "readonly": True,
-                },
-                {
-                    "title": "Layout file",
-                    "name": "layout_file",
-                    "type": "str",
-                    "value": "",
-                    "readonly": True,
-                },
-                {
-                    "title": "ROI file",
-                    "name": "roi_file",
-                    "type": "str",
-                    "value": "",
-                    "readonly": True,
-                },
-                {
-                    "title": "Remote file",
-                    "name": "remote_file",
-                    "type": "str",
-                    "value": "",
-                    "readonly": True,
-                },
-            ],
-        },
-        {
-            "title": "Actuators Init.",
-            "name": "actuators",
-            "type": "group",
-            "children": [],
-        },
-        {
-            "title": "Detectors Init.",
-            "name": "detectors",
-            "type": "group",
-            "children": [],
-        },
+    params = [
+        {"title": "Log level", "name": "log_level", "type": "list",
+         "value": config_utils("general", "debug_levels")[0],
+         "limits": config_utils("general", "debug_levels"),},
+        {"title": "Loaded presets", "name": "loaded_files", "type": "group",
+         "children": [
+             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True,},
+         ],
+         },
+        {"title": "Actuators Init.", "name": "actuators", "type": "group","children": [],},
+        {"title": "Detectors Init.", "name": "detectors", "type": "group", "children": [],},
     ]
 
     def __init__(self, dockarea):
@@ -237,15 +191,14 @@ class DashBoard(CustomApp):
         self.database_module = None
         self.extensions = dict([])
         self.extension_windows = []
-        self.configurator = Configurator()
-        self.configurator.new_file.connect(self.update_configuration_action_list)
+        self.configurator: Configurator = None
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
 
         self.overshoot_manager: OvershootManager = None
-        self.preset_manager = PresetManager()
+        self.preset_manager: PresetManager = None  # instanciation in setup_docks
         self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer()
@@ -271,6 +224,14 @@ class DashBoard(CustomApp):
         if config_utils("general", "check_version"):
             if self.check_update(show=False):
                 sys.exit(0)
+
+    def do_things_after_ui_setup(self):
+        self.preset_manager = PresetManager(dashboard=self,
+                                            menu=self.get_menu("preset"),
+                                            toolbar = self.get_toolbar("preset"))
+        self.preset_manager.update_preset()
+        self.configurator = Configurator()
+        self.configurator.new_file.connect(self.update_configuration_action_list)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -421,30 +382,6 @@ class DashBoard(CustomApp):
                 self.detector_modules is not None
             ):  # Remove detectors
                 self.remove_detectors(detector_modules)
-        except Exception as e:
-            logger.exception(str(e))
-
-    def clear_move_det_controllers(self):
-        """
-        Remove all docks containing Moves or Viewers.
-
-        See Also
-        --------
-        quit_fun, update_status
-        """
-        try:
-            # remove all docks containing Moves or Viewers
-            if hasattr(self, "actuators_modules") & (
-                self.actuators_modules is not None
-            ):
-                for module in self.actuators_modules:
-                    module.quit_fun()
-                self.actuators_modules = []
-
-            if hasattr(self, "detector_modules") & (self.detector_modules is not None):
-                for module in self.detector_modules:
-                    module.quit_fun()
-                self.detector_modules = []
         except Exception as e:
             logger.exception(str(e))
 
@@ -599,15 +536,8 @@ class DashBoard(CustomApp):
                         auto_toolbar=False,)
         self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
 
-
-        self.add_action(PresetActions.Open, "Preset Manager", "",
-                        'Open the Preset Manager to create/modify experimental setup configuration files: "presets"',
-                        auto_toolbar=False,)
-        self.add_widget(PresetActions.Label, QtWidgets.QLabel('Preset:'), toolbar=self.toolbar)
-        self.add_widget(PresetActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
-                        signal_str="currentTextChanged", slot=self.update_preset_action,)
-        self.add_action(PresetActions.Load, "LOAD", "Open", tip="Load the selected Preset: ")
-        self.update_preset_action_list()
+        preset_toolbar = self.add_toolbar('preset', 'Preset Toolbar', parent=None)
+        self.mainwindow.addToolBar(preset_toolbar)
 
         self.toolbar.addSeparator()
 
@@ -622,7 +552,7 @@ class DashBoard(CustomApp):
                         enabled=False, visible=False)
         self.add_action(ConfiguratorActions.Load, "LOAD", "Open", tip="Load the selected configuration",
                         enabled=False, visible=False)
-        self.update_configuration_action_list()
+        # self.update_configuration_action_list()
 
         self.add_action("new_overshoot", "New Overshoot", "",
                         "Create a new experimental setup overshoot configuration file",
@@ -733,7 +663,7 @@ class DashBoard(CustomApp):
         configurations = []
         self.get_action(ConfiguratorActions.List).clear()
 
-        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
+        for ind_file, file in enumerate(get_set_configurator_path(self.preset_manager.preset).iterdir()):
             if file.suffix == ".config":
                 filestem = file.stem
                 if not self.has_action(
@@ -797,17 +727,17 @@ class DashBoard(CustomApp):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("log_window", self.logger_dock.setVisible)
 
-        self.connect_action(PresetActions.Open, self.preset_manager.show)
-        self.preset_manager.new_file.connect(self.update_preset_action_list)
-        self.update_preset_actions_connection()
-        self.connect_action(
-            PresetActions.Load,
-            lambda: self.apply_preset_to_dashboard(
-                self.preset_path.joinpath(
-                    f"{self.get_action('preset_list').currentText()}.xml"
-                )
-            ),
-        )
+        # self.connect_action(PresetActions.Open, self.preset_manager.show)
+        # self.preset_manager.new_file.connect(self.update_preset_action_list)
+        # self.update_preset_actions_connection()
+        # self.connect_action(
+        #     PresetActions.Load,
+        #     lambda: self.apply_preset_to_dashboard(
+        #         self.preset_path.joinpath(
+        #             f"{self.get_action('preset_list').currentText()}.xml"
+        #         )
+        #     ),
+        # )
 
         self.connect_action(ConfiguratorActions.Open, self.create_experimental_configuration)
 
@@ -891,8 +821,7 @@ class DashBoard(CustomApp):
         docked_menu.addSeparator()
         docked_menu.addAction(self.get_action("log_window"))
 
-        self.preset_menu = menubar.addMenu("Preset Modes")
-        self.update_preset_menu()
+        self.add_menu('preset', 'Preset', menubar)
 
         self.configuration_menu = menubar.addMenu("Configuration Manager")
         self.update_configuration_menu()
@@ -938,21 +867,21 @@ class DashBoard(CustomApp):
         self.extensions_menu.setEnabled(not status)
         self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
-        self.preset_menu.setEnabled(status)
+        self.get_menu('preset').setEnabled(status)
         self.configuration_menu.setEnabled(not status)
 
-    def update_preset_menu(self):
-        try:
-            self.preset_menu.clear()
-            self.preset_menu.addAction(self.get_action(PresetActions.Open))
-            self.preset_menu.addSeparator()
-            self.load_preset_menu = self.preset_menu.addMenu("Load presets")
-            for ind_file, file in enumerate(self.preset_manager.presets_filename):
-                self.load_preset_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
-                )
-        except AttributeError:  # means self.preset_menu is not yet defined
-            pass
+    # def update_preset_menu(self):
+    #     try:
+    #         self.preset_menu.clear()
+    #         self.preset_menu.addAction(self.get_action(PresetActions.Open))
+    #         self.preset_menu.addSeparator()
+    #         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
+    #         for ind_file, file in enumerate(self.preset_manager.presets_filename):
+    #             self.load_preset_menu.addAction(
+    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
+    #             )
+    #     except AttributeError:  # means self.preset_menu is not yet defined
+    #         pass
 
     def update_configuration_menu(self):
         try:
