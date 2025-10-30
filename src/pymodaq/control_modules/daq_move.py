@@ -47,8 +47,7 @@ from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCom
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
-
-from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq import Q_, Unit
 
 
@@ -219,16 +218,17 @@ class DAQ_Move(ParameterControlModule):
     def master(self) -> bool:
         """Get/Set programmatically the Master/Slave status of an actuator"""
         if self.initialized_state:
-            return self.settings["move_settings", "controller", "multi_status"] == "Master"
+            return self.settings["move_settings", "controller", "controller_status"] == ControllerStatus.MASTER
         else:
             return True
 
     @master.setter
     def master(self, is_master: bool):
         if self.initialized_state:
-            self.settings.child("move_settings", "controller", "multi_status").setValue(
-                "Master" if is_master else "Slave"
+            self.settings.child("move_settings", "controller", "controller_status").setValue(
+                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE
             )
+
 
     def append_data(
         self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None

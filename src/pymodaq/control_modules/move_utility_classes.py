@@ -31,7 +31,7 @@ from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.utils import get_controller_param
+from pymodaq.control_modules.utils import get_controller_param, ControllerStatus
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -630,7 +630,7 @@ class DAQ_Move_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['controller', 'controller_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     @property
     def ispolling(self):

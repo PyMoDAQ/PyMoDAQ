@@ -13,6 +13,7 @@ from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import Config
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
+from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -26,10 +27,16 @@ from pymodaq.utils.config import Config as ControlModulesConfig
 
 from pymodaq.control_modules.thread_commands import ThreadStatus
 
+
+class ControllerStatus(StrEnum):
+    MASTER = 'Master'
+    SLAVE = 'Slave'
+
+
 def get_controller_param():
     return {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
         {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
-         'value': 'Master', 'limits': ['Master', 'Slave']},
+         'value': ControllerStatus.MASTER, 'limits': [ControllerStatus.MASTER, ControllerStatus.SLAVE]},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': randint(0, 9999),
          'default': 0, 'readonly': False},
     ]}
@@ -365,6 +372,27 @@ class ParameterControlModule(ParameterManager, ControlModule):
     def __init__(self, **kwargs):
         ParameterManager.__init__(self, action_list=('save', 'update'))
         ControlModule.__init__(self)
+
+    def apply_controller_parameters(self, controller_param: Parameter):
+        """Apply controller parameters (Master/Slave, ID, eventually axes) from a given Parameter object
+
+        Parameters
+        ----------
+        controller_param: Parameter
+            Parameter object containing the controller parameters
+        """
+        try:
+            controller_status = controller_param.child('controller_status').value()
+            controller_ID = controller_param.child('controller_ID').value()
+            if hasattr(self.controller, 'is_master'):
+                if controller_status == 'Master':
+                    self.controller.is_master = True
+                else:
+                    self.controller.is_master = False
+            if hasattr(self.controller, 'controller_ID'):
+                self.controller.controller_ID = controller_ID
+        except Exception as e:
+            logger.exception(f'Error applying controller parameters: {str(e)}')
 
     def value_changed(self, param: Parameter) -> Optional[Parameter]:
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
