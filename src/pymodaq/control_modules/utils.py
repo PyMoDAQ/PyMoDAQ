@@ -41,7 +41,8 @@ class ControllerStatus(StrEnum):
 def get_controller_param():
     return {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
         {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
-         'value': ControllerStatus.MASTER, 'limits': [ControllerStatus.MASTER, ControllerStatus.SLAVE]},
+         'value': ControllerStatus.MASTER.value,
+         'limits': [ControllerStatus.MASTER.value, ControllerStatus.SLAVE.value]},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': randint(0, 9999),
          'default': 0, 'readonly': False},
     ]}
