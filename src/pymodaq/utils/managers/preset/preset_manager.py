@@ -192,6 +192,9 @@ class PresetManager(CustomExt, ManagerMixin):
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
+        for file in config_mod_pymodaq.get_set_configurator_path(preset_name).iterdir():
+            file.unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_configurator_path(preset_name).rmdir()
         config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
         config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
         config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
