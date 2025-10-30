@@ -13,6 +13,8 @@ class ManagerMixin:
         self.entry_type = entry_type
         self.entry_extension = entry_extension
 
+        self.mainwindow: QtWidgets.QMainWindow = None  # to be defined outside the Mixin
+
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
         raise NotImplementedError
@@ -41,6 +43,9 @@ class ManagerMixin:
         """
         raise NotImplementedError
 
+    def show(self):
+        self.mainwindow.show()
+
 
 class Actions(StrEnum):
     Open = "open"
@@ -61,6 +66,12 @@ class ManagerActions(ActionManager):
         self.manager_name = manager.__class__
         if toolbar is not None:
             self.set_toolbar(toolbar)
+            self.hide_widget = False
+        else:
+            if hasattr(self.manager, 'toolbar'):
+                self.set_toolbar(self.manager.toolbar)
+                self.hide_widget = True
+
         if menu is not None:
             self.set_menu(menu)
         self.load_menu: QtWidgets.QMenu = None
@@ -78,6 +89,11 @@ class ManagerActions(ActionManager):
         self.add_action(Actions.Load, "LOAD", "Open",
                         tip=f"Load the selected {self.manager.entry_type}: ",
                         auto_toolbar=True, auto_menu=False)
+
+        if self.hide_widget:
+            self.get_action(Actions.Label).setVisible(False)
+            self.get_action(Actions.List).setVisible(False)
+            self.get_action(Actions.Load).setVisible(False)
 
     def update_load_action_tooltip(self, entry: str):
         self.get_action(Actions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
