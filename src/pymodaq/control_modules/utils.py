@@ -28,6 +28,11 @@ from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.thread_commands import ThreadStatus
 
 
+class ControleModuleType(StrEnum):
+    DAQ_MOVE = 'DAQ_Move'
+    DAQ_VIEWER = 'DAQ_Viewer'
+
+
 class ControllerStatus(StrEnum):
     MASTER = 'Master'
     SLAVE = 'Slave'
@@ -240,9 +245,9 @@ class ControlModule(QObject):
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
     @property
-    def module_type(self):
-        """str: Get the module type, either DAQ_Move or DAQ_viewer"""
-        return type(self).__name__
+    def module_type(self) -> ControleModuleType:
+        """Get the module type, either DAQ_Move or DAQ_viewer"""
+        return ControleModuleType(type(self).__name__)
 
     @property
     def initialized_state(self):
@@ -374,7 +379,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
         ControlModule.__init__(self)
 
     def apply_controller_parameters(self, controller_param: Parameter):
-        """Apply controller parameters (Master/Slave, ID, eventually axes) from a given Parameter object
+        """Apply controller parameters (Master/Slave, ID, eventually axes) to the ControlModule instance
 
         Parameters
         ----------
@@ -382,15 +387,14 @@ class ParameterControlModule(ParameterManager, ControlModule):
             Parameter object containing the controller parameters
         """
         try:
-            controller_status = controller_param.child('controller_status').value()
-            controller_ID = controller_param.child('controller_ID').value()
-            if hasattr(self.controller, 'is_master'):
-                if controller_status == 'Master':
-                    self.controller.is_master = True
-                else:
-                    self.controller.is_master = False
-            if hasattr(self.controller, 'controller_ID'):
-                self.controller.controller_ID = controller_ID
+            if self.module_type == ControleModuleType.DAQ_VIEWER:
+                controller_settings = self.settings.child('detector_settings', 'controller')
+            elif self.module_type == ControleModuleType.DAQ_MOVE:
+                controller_settings = self.settings.child('move_settings', 'controller')
+            else:
+                raise TypeError('Unknown ControlModuleType')
+            controller_settings.restoreState(controller_param.saveState())
+
         except Exception as e:
             logger.exception(f'Error applying controller parameters: {str(e)}')
 

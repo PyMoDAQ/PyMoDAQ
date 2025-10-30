@@ -1804,6 +1804,7 @@ class DashBoard(CustomApp):
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as Master")
                         if plug_init:
+                            actuators_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
                             actuators_modules[-1].init_hardware_ui()
                             actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
@@ -1822,6 +1823,7 @@ class DashBoard(CustomApp):
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as slave")
                         if plug_init:
+                            actuators_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
@@ -1842,6 +1844,7 @@ class DashBoard(CustomApp):
                                 f" be defined as Master"
                             )
                         if plug_init:
+                            detector_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(detector_modules[-1])
@@ -1861,6 +1864,7 @@ class DashBoard(CustomApp):
                             )
                         if plug_init:
                             detector_modules[-1].controller = master_controller
+                            detector_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(detector_modules[-1])
