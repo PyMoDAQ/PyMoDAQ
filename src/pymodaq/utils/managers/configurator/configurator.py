@@ -11,15 +11,14 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
-from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_from_name
+from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.messenger import dialog, messagebox
-from pymodaq_gui.managers.action_manager import addaction
-from pymodaq_gui.utils.file_io import select_file
-from pymodaq_gui.parameter.pymodaq_ptypes.list import Combo_pb
+
+from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, config_entry_from_path,
-                                                       ModuleType, ParameterDelegate, SpinBox, EntryActions,
+                                                       ModuleType, ParameterDelegate, EntryActions,
                                                        ConfigurationAction)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter.utils import compareParameters

@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from typing import Union, Tuple
 
-from numba.cuda.simulator.kernelapi import andlock
+
 from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QVariant, QModelIndex
@@ -13,12 +13,12 @@ from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog, QStyle
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
-from pymodaq_gui.parameter.utils import ParameterWithPath, get_param_path
+from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTreeWidget
-from pymodaq_gui.utils.widgets.table import TableView, TableModel
-from pymodaq_gui.utils.widgets.spinbox import SpinBox
+
+from pymodaq_gui.utils.widgets.table import TableModel
+
 
 from pymodaq_gui import utils as gutils
 
