@@ -38,14 +38,20 @@ class ControllerStatus(StrEnum):
     SLAVE = 'Slave'
 
 
-def get_controller_param():
-    return {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
+def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
+    controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
         {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
          'value': ControllerStatus.MASTER.value,
          'limits': [ControllerStatus.MASTER.value, ControllerStatus.SLAVE.value]},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': randint(0, 9999),
          'default': 0, 'readonly': False},
+
     ]}
+    if axis_names is not None and axis_name is not None:
+        controller_param['children'].append({'title': 'Axis:', 'name': 'axis', 'type': 'list',
+                                             'limits': axis_names.copy(),
+                                             'value': axis_name})
+    return controller_param
 
 
 config_utils = Config()

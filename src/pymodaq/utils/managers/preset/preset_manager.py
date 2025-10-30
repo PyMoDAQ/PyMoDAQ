@@ -55,7 +55,6 @@ class PresetManager(CustomApp):
     def setup_docks(self):
         vlayout = QtWidgets.QVBoxLayout()
         vlayout.addWidget(self.settings_tree)
-        self.tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.main_widget.setLayout(vlayout)
 
     @property

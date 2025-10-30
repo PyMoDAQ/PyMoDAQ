@@ -8,8 +8,11 @@ from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupPar
 from pymodaq_gui.parameter.utils import get_param_dict_from_name
 
 from pymodaq.control_modules.instruments import DET_TYPES, ACTUATOR_TYPES, ACTUATOR_NAMES
+from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.utils import create_controller_param
+from pymodaq.utils.config import Config
 
-
+config = Config()
 logger = set_logger(get_module_name(__file__))
 
 # Fixed names that will sort the plugin in remote/mock
@@ -89,37 +92,52 @@ def add_category_layers(dimension_dict, remote_items=None, mock_items=None):
     return result
 
 
-def make_move_params(typ: str) -> dict:
+def make_actuator_controller_param(typ: str) -> dict:
     parent_module = utils.find_dict_in_list_from_key_val(ACTUATOR_TYPES, 'name', typ)
     class_ = getattr(getattr(parent_module['module'], 'daq_move_' + typ),
                         'DAQ_Move_' + typ)
     params_hardware = getattr(class_, 'params')
-    iterative_show_pb(params_hardware)
+
     controller_dict = get_param_dict_from_name(params_hardware, 'controller')
+    axis_dict = get_param_dict_from_name(controller_dict['children'], 'axis')
+    axis_names = axis_dict['limits']
+    axis_name = axis_dict['value']
+    controller_dict = create_controller_param(axis_name=axis_name, axis_names=axis_names)
     controller_dict['expanded'] = False
     return controller_dict
 
 
-def make_viewer_params(typ):
-        if '0D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ0D'], 'name', typ[6:])
-            class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + typ[6:]), 'DAQ_0DViewer_' + typ[6:])
-        elif '1D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ1D'], 'name', typ[6:])
-            class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + typ[6:]), 'DAQ_1DViewer_' + typ[6:])
-        elif '2D' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQ2D'], 'name', typ[6:])
-            class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + typ[6:]), 'DAQ_2DViewer_' + typ[6:])
-        elif 'ND' in typ:
-            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES['DAQND'], 'name', typ[6:])
-            class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + typ[6:]), 'DAQ_NDViewer_' + typ[6:])
-
-        params_hardware = getattr(class_, 'params')
-        iterative_show_pb(params_hardware)
-        controller_dict = get_param_dict_from_name(params_hardware, 'controller')
+def make_detector_controller_param():
+        controller_dict = create_controller_param()
         controller_dict['expanded'] = False
-
         return controller_dict
+
+
+def create_info_param(module_type: ModuleType,
+                      module_class_name: str,
+                      dim: str = None) -> dict:
+    """ Create a generic info parameter dictionary for a ControlModule in a Preset. """
+
+    if module_type == ModuleType.Actuator:
+        ui = ActuatorUIFactory.keys()
+        ui_default = config('actuator', 'ui')
+    else:
+        ui = []
+        ui_default = None
+
+    info_param = \
+        {'title': 'Info:', 'name': 'info', 'type': 'group', 'expanded': False, 'children': [
+            {'title': 'Type:', 'name': 'type', 'type': 'str', 'value': module_class_name, 'readonly': True},
+        ]}
+    if dim is not None:
+        info_param['children'].append(
+            {'title': 'Dim:', 'name': 'dim', 'type': 'str', 'value': dim, 'readonly': True})
+    if len(ui) > 0:
+        info_param['children'].append(
+            {'title': 'ui:', 'name': 'ui', 'type': 'list', 'value': ui_default, 'limits': ui})
+    info_param['children'].append({'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True})
+    return info_param
+
     
 class PresetScalableGroupMove(GroupParameter):
     """
@@ -137,17 +155,14 @@ class PresetScalableGroupMove(GroupParameter):
         name_prefix = ModuleType.Actuator.value
         typ = typ[-1] #Only need last entry here
         new_index = find_last_index(self.children(), name_prefix, format_string='02.0f')
-        slave_param = make_move_params(typ)
         child = {'title': f'Actuator {new_index}',
                  'name': f'{name_prefix}{new_index}',
                  'type': 'group',
                  'removable': True,
                  'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Actuator {new_index}'},
-                     {'title': 'Type:', 'name': 'type', 'type': 'str', 'value': typ, 'readonly': True},
-                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-
-                     slave_param,
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'{name_prefix} {new_index}'},
+                     create_info_param(ModuleType.Actuator, typ),
+                     make_actuator_controller_param(typ),
                  ]}
         self.addChild(child)
 
@@ -192,15 +207,12 @@ class PresetScalableGroupDet(GroupParameter):
         name_prefix = ModuleType.Detector.value
         typ_full = "/".join((typ[0],typ[-1])) #Only need first and last element to retrieve associated plugin
         new_index = find_last_index(list_children=self.children(), name_prefix=name_prefix, format_string='02.0f')
-        param = make_viewer_params(typ_full)
         child = {'title': f'Detector {new_index}', 'name': f'{name_prefix}{new_index}',
                  'type': 'group', 'removable': True,
                  'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'Det {new_index}'},
-                     {'title': 'Type:', 'name': 'type', 'type': 'str', 'value': typ[-1], 'readonly': True},
-                     {'title': 'Dim:', 'name': 'dim', 'type': 'str', 'value': typ[0], 'readonly': True},
-                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
-                     param
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': f'{name_prefix} {new_index}'},
+                     create_info_param(ModuleType.Detector, typ[-1], dim=typ[0]),
+                     make_detector_controller_param()
                  ]}
 
         self.addChild(child)

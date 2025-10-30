@@ -31,7 +31,7 @@ from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.utils import get_controller_param, ControllerStatus
+from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -163,10 +163,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
         raise ValueError('axis_names should be either a list of string or a dict with strings '
                          'as keys')
 
-    controller_status_param = get_controller_param()
-    controller_status_param['children'].append({'title': 'Axis:', 'name': 'axis', 'type': 'list',
-                                                'limits': axis_names.copy(),
-                                                'value': axis_name},)
+    controller_status_param = create_controller_param(axis_name, axis_names.copy())
 
     params = [controller_status_param] + comon_parameters(epsilon)
     return params
