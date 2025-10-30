@@ -147,19 +147,24 @@ class PresetManager(CustomApp):
 
     def delete_preset(self):
         current_preset = self.preset
+        if current_preset == '...':
+            return
         user_agreed = dialogbox(
             title='Delete confirmation',
             message=f'Are you sure you want to delete the preset {current_preset} ?',
         )
         if user_agreed:
+            self.connect_action('presets', signal_name='currentTextChanged', connect=False)
             preset_file = get_set_preset_path().joinpath(f'{current_preset}.xml')
 
             preset_file.unlink(missing_ok=True)
+            self.remove_preset_related_files(current_preset)
+
             logger.info(f'Preset file {preset_file} deleted')
             self.get_action('presets').removeItem(
                 self.get_action('presets').currentIndex()
             )
-            self.remove_preset_related_files(self.preset)
+            self.connect_action('presets', self.update_preset, signal_name='currentTextChanged')
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
