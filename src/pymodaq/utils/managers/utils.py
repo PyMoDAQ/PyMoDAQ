@@ -77,6 +77,7 @@ class ManagerActions(ActionManager):
         self.load_menu: QtWidgets.QMenu = None
 
         self.setup_actions()
+        self.connect_things()
 
     def setup_actions(self):
         self.add_action(Actions.Open, f"{self.manager.entry_type.capitalize()} Manager", "",
@@ -94,6 +95,9 @@ class ManagerActions(ActionManager):
             self.get_action(Actions.Label).setVisible(False)
             self.get_action(Actions.List).setVisible(False)
             self.get_action(Actions.Load).setVisible(False)
+
+    def connect_things(self):
+        self.connect_action(Actions.Open, lambda: self.manager.show())
 
     def update_load_action_tooltip(self, entry: str):
         self.get_action(Actions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
@@ -122,6 +126,7 @@ class ManagerActions(ActionManager):
         self.update_menu(**kwargs_to_entry_folder)
 
     def update_actions_connection(self, **kwargs_to_entry_folder):
+
         for ind_file, file in enumerate(self.manager.list_managed_entries_path()):
             self.connect_action(self.get_action_from_file(file), connect=False)
 

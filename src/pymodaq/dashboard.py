@@ -623,42 +623,6 @@ class DashBoard(CustomApp):
         self.toolbar.addSeparator()
         self.add_action("plugin_manager", "Plugin Manager", "")
 
-    def update_preset_action_list(self):
-        presets = []
-        self.get_action(PresetActions.List).clear()
-        for ind_file, file in enumerate(self.preset_manager.presets_filename):
-
-            if not self.has_action(
-                self.get_action_from_file(file, ManagerEnums.preset)
-            ):
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.preset),
-                    file.stem,
-                    "",
-                    f"Load the {file.stem}.xml preset",
-                    auto_toolbar=False,
-                )
-            presets.append(file.stem)
-        self.get_action(PresetActions.List).addItems(presets)
-        self.update_preset_actions_connection()
-        self.update_preset_menu()
-
-    def update_preset_actions_connection(self):
-        for ind_file, file in enumerate(self.preset_manager.presets_filename):
-            self.connect_action(
-                self.get_action_from_file(file, ManagerEnums.preset),
-                connect=False)
-
-            self.connect_action(
-                self.get_action_from_file(file, ManagerEnums.preset),
-                self.create_menu_slot(self.preset_path.joinpath(file)),
-            )
-
-    def update_preset_action(self, preset_name: str):
-        self.get_action(PresetActions.Load).setToolTip(
-            f"Load the {preset_name}.xml preset file!"
-        )
-
     def update_configuration_action_list(self):
         configurations = []
         self.get_action(ConfiguratorActions.List).clear()
@@ -869,19 +833,6 @@ class DashBoard(CustomApp):
         self.settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
         self.configuration_menu.setEnabled(not status)
-
-    # def update_preset_menu(self):
-    #     try:
-    #         self.preset_menu.clear()
-    #         self.preset_menu.addAction(self.get_action(PresetActions.Open))
-    #         self.preset_menu.addSeparator()
-    #         self.load_preset_menu = self.preset_menu.addMenu("Load presets")
-    #         for ind_file, file in enumerate(self.preset_manager.presets_filename):
-    #             self.load_preset_menu.addAction(
-    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.preset))
-    #             )
-    #     except AttributeError:  # means self.preset_menu is not yet defined
-    #         pass
 
     def update_configuration_menu(self):
         try:
@@ -1099,7 +1050,7 @@ class DashBoard(CustomApp):
 
     def quit_fun(self):
         """
-        Quit the current instance of DAQ_scan and close on cascade move and detector modules.
+        Quit the current instance of DashBoard and close on cascade move and detector modules.
 
         See Also
         --------
@@ -1139,6 +1090,9 @@ class DashBoard(CustomApp):
                     QtWidgets.QApplication.processEvents()
                 except Exception:
                     pass
+
+            self.preset_manager.quit_fun()
+
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
@@ -1669,281 +1623,6 @@ class DashBoard(CustomApp):
     @property
     def preset_file(self) -> Path:
         return self.preset_manager.preset_filename
-
-    # def create_control_modules_from_preset(self, preset_file: Path) -> Tuple[List[DAQ_Move], List[DAQ_Viewer]]:
-    #     """
-    #     Load a preset file and create corresponding Control Modules in the Dashboard
-    #
-    #     """
-    #     actuators_modules: list[DAQ_Move] = []
-    #     detector_modules: list[DAQ_Viewer] = []
-    #
-    #     self.preset_manager.update_preset(preset_file)
-    #
-    #     actuator_docks: list[Dock] = []
-    #     detector_docks_settings: list[Dock] = []
-    #     detector_docks_viewer: list[Dock] = []
-    #     actuator_widgets: list[QtWidgets.QWidget] = []
-    #
-    #     # ################################################################
-    #     # ##### sort plugins by IDs and within the same IDs by Master and Slave status
-    #     plugins = []
-    #     plugins += [
-    #         {"type": ModuleType.Actuator,
-    #          "settings": child}
-    #         for child in self.preset_manager.settings.child(ModuleType.Actuator.value).children()
-    #     ]
-    #     plugins += [
-    #         {"type": ModuleType.Detector, "settings": child}
-    #         for child in self.preset_manager.settings.child(ModuleType.Detector.value).children()
-    #     ]
-    #     for plug in plugins:
-    #         plug["ID"] = plug["settings"].child("controller", "controller_ID").value()
-    #         plug["status"] = plug["settings"].child("controller", "controller_status").value()
-    #
-    #     IDs = list(set([plug["ID"] for plug in plugins]))
-    #     # %%
-    #     plugins_sorted = []
-    #     for id in IDs:
-    #         plug_Ids = []
-    #         for plug in plugins:
-    #             if plug["ID"] == id:
-    #                 plug_Ids.append(plug)
-    #         plug_Ids.sort(key=lambda status: status["status"])
-    #         plugins_sorted.append(plug_Ids)
-    #
-    #     # Add Control Modules to the Dashboard
-    #     ind_det = -1
-    #     for plug_IDs in plugins_sorted:
-    #         for ind_plugin, plugin in enumerate(plug_IDs):
-    #             plug_name = plugin["settings"].child("name").value()
-    #             plug_type = plugin["settings"].child("info", "type").value()
-    #             plug_init = plugin["settings"].child("info", "init").value()
-    #
-    #             self.splash_sc.showMessage(
-    #                 "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
-    #             )
-    #
-    #             if plugin["type"] == ModuleType.Actuator:
-    #
-    #                 self.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets, actuators_modules,
-    #                               ui_identifier=plugin["settings"].child("info", "ui").value())
-    #
-    #                 if ind_plugin == 0:  # should be a master type plugin
-    #                     if plugin["status"] != ControllerStatus.MASTER:
-    #                         raise MasterSlaveError(f"The instrument {plug_name} should"
-    #                                                f" be defined as Master")
-    #                     if plug_init:
-    #                         actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-    #                         actuators_modules[-1].init_hardware_ui()
-    #                         actuators_modules[-1].master = True
-    #                         QtWidgets.QApplication.processEvents()
-    #                         self.poll_init(actuators_modules[-1])
-    #                         QtWidgets.QApplication.processEvents()
-    #                         master_controller = actuators_modules[-1].controller
-    #
-    #                     elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
-    #                         raise MasterSlaveError(
-    #                             f"The instrument {plug_name} defined as Master has to be "
-    #                             f"initialized (init checked in the preset) in order to init "
-    #                             f"its associated slave instrument"
-    #                         )
-    #                 else:
-    #                     if plugin["status"] != ControllerStatus.SLAVE:
-    #                         raise MasterSlaveError(f"The instrument {plug_name} should"
-    #                                                f" be defined as slave")
-    #                     if plug_init:
-    #                         actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-    #                         actuators_modules[-1].controller = master_controller
-    #                         actuators_modules[-1].init_hardware_ui()
-    #                         QtWidgets.QApplication.processEvents()
-    #                         self.poll_init(actuators_modules[-1])
-    #                         QtWidgets.QApplication.processEvents()
-    #             else:
-    #                 ind_det += 1
-    #                 plug_dim = plugin["settings"].child("info", "dim").value()
-    #                 self.add_det(plug_name, None,
-    #                              detector_docks_settings, detector_docks_viewer, detector_modules,
-    #                              plug_dim, plug_type)
-    #                 QtWidgets.QApplication.processEvents()
-    #
-    #                 if ind_plugin == 0:  # should be a master type plugin
-    #                     if plugin["status"] != ControllerStatus.MASTER:
-    #                         raise MasterSlaveError(
-    #                             f"The instrument {plug_name} should"
-    #                             f" be defined as Master"
-    #                         )
-    #                     if plug_init:
-    #                         detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-    #                         detector_modules[-1].init_hardware_ui()
-    #                         QtWidgets.QApplication.processEvents()
-    #                         self.poll_init(detector_modules[-1])
-    #                         QtWidgets.QApplication.processEvents()
-    #                         master_controller = detector_modules[-1].controller
-    #                     elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
-    #                         raise MasterSlaveError(
-    #                             f"The instrument {plug_name} defined as Master has to be "
-    #                             f"initialized (init checked in the preset) in order to init "
-    #                             f"its associated slave instrument"
-    #                         )
-    #                 else:
-    #                     if plugin["status"] != ControllerStatus.SLAVE:
-    #                         raise MasterSlaveError(
-    #                             f"The instrument {plug_name} should"
-    #                             f" be defined as Slave"
-    #                         )
-    #                     if plug_init:
-    #                         detector_modules[-1].controller = master_controller
-    #                         detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
-    #                         detector_modules[-1].init_hardware_ui()
-    #                         QtWidgets.QApplication.processEvents()
-    #                         self.poll_init(detector_modules[-1])
-    #                         QtWidgets.QApplication.processEvents()
-    #
-    #                 detector_modules[-1].settings.child(
-    #                     "main_settings", "overshoot"
-    #                 ).show()
-    #                 detector_modules[-1].overshoot_signal[bool].connect(
-    #                     self.stop_moves_from_overshoot
-    #                 )
-    #
-    #     QtWidgets.QApplication.processEvents()
-    #     # restore dock state if saved
-    #
-    #     self.title = self.preset_file.stem
-    #     path = layout_path.joinpath(self.title + ".dock")
-    #     if path.is_file():
-    #         self.load_layout_state(path)
-    #
-    #     self.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.title}")
-    #
-    #     return actuators_modules, detector_modules
-
-    # def apply_preset_to_dashboard(self, filename: Path):
-    #     """ Apply the selected preset file to the dashboard and adds Control Modules specified in it
-    #     """
-    #     try:
-    #
-    #         if len(self.actuators_modules) != 0 or len(self.detector_modules) != 0:
-    #             ret = dialog('Warning!', 'Are you sure you want to load a new preset? \n')
-    #             if ret:
-    #                 self.remove_actuators(self.actuators_modules)
-    #                 self.remove_detectors(self.detector_modules)
-    #             else:
-    #                 return
-    #
-    #         self.get_action(PresetActions.List).setCurrentText(filename.stem)
-    #
-    #         self.mainwindow.setVisible(False)
-    #         for area in self.dockarea.tempAreas:
-    #             area.window().setVisible(False)
-    #
-    #         self.splash_sc.show()
-    #         QtWidgets.QApplication.processEvents()
-    #         self.splash_sc.raise_()
-    #         self.splash_sc.showMessage("Loading Modules, please wait")
-    #         QtWidgets.QApplication.processEvents()
-    #         self.clear_move_det_controllers()
-    #         QtWidgets.QApplication.processEvents()
-    #
-    #         logger.info(f"Loading Preset file: {filename}")
-    #
-    #         try:
-    #             actuators_modules, detector_modules = self.create_control_modules_from_preset(filename)
-    #
-    #         except (ActuatorError, DetectorError, MasterSlaveError) as error:
-    #             self.splash_sc.close()
-    #             self.mainwindow.setVisible(True)
-    #             for area in self.dockarea.tempAreas:
-    #                 area.window().setVisible(True)
-    #             messagebox(
-    #                 severity="critical",
-    #                 title="Preset loading error",
-    #                 text=f"""
-    #                         <p>{error}</p>
-    #                         <p>This error may be related to:</p>
-    #                         <p>Saved preset file is not compatible anymore.</p>
-    #                         <p>Please recreate the preset at <b>{filename}</b>.</p>
-    #              """,
-    #             )
-    #             logger.exception(str(error))
-    #
-    #             self.quit_fun()
-    #             return
-    #
-    #         if not (not actuators_modules and not detector_modules):
-    #             self.update_status(
-    #                 "Preset mode ({}) has been loaded".format(filename.name),
-    #                 log_type="log",
-    #             )
-    #             self.settings.child("loaded_files", "preset_file").setValue(
-    #                 filename.name
-    #             )
-    #             self.actuators_modules = actuators_modules
-    #             self.detector_modules = detector_modules
-    #
-    #             self.update_module_manager()
-    #
-    #             #####################################################
-    #             self.overshoot_manager = OvershootManager(
-    #                 det_modules=[det.title for det in detector_modules],
-    #                 actuators_modules=[move.title for move in actuators_modules],
-    #             )
-    #             # load overshoot if present
-    #             file = filename.name
-    #             path = overshoot_path.joinpath(file)
-    #             if path.is_file():
-    #                 self.set_overshoot_configuration(path)
-    #
-    #             self.remote_manager = RemoteManager(
-    #                 actuators=[move.title for move in actuators_modules],
-    #                 detectors=[det.title for det in detector_modules],
-    #             )
-    #             # load remote file if present
-    #             file = filename.name
-    #             path = remote_path.joinpath(file)
-    #             if path.is_file():
-    #                 self.set_remote_configuration(path)
-    #
-    #             self.roi_saver = ROISaver(det_modules=detector_modules)
-    #             # load roi saver if present
-    #             path = roi_path.joinpath(file)
-    #             if path.is_file():
-    #                 self.set_roi_configuration(path)
-    #
-    #             # connecting to logger
-    #             for mov in actuators_modules:
-    #                 mov.init_signal.connect(self.update_init_tree)
-    #             for det in detector_modules:
-    #                 det.init_signal.connect(self.update_init_tree)
-    #
-    #             self.splash_sc.close()
-    #             self.mainwindow.setVisible(True)
-    #             for area in self.dockarea.tempAreas:
-    #                 area.window().setVisible(True)
-    #             if self.pid_window is not None:
-    #                 self.pid_window.show()
-    #
-    #             self.overshoot_menu.setEnabled(True)
-    #             self.roi_menu.setEnabled(True)
-    #             self.remote_menu.setEnabled(True)
-    #             self.extensions_menu.setEnabled(True)
-    #             self.configuration_menu.setEnabled(True)
-    #             self.file_menu.setEnabled(True)
-    #             self.settings_menu.setEnabled(True)
-    #             self.set_action_enabled(ConfiguratorActions.List, True)
-    #             self.set_action_enabled(ConfiguratorActions.Load, True)
-    #             self.update_init_tree()
-    #
-    #             self.preset_loaded_signal.emit(True)
-    #             #self.setup_menu(self.menubar)
-    #             self.update_configuration_action_list()
-    #
-    #
-    #         logger.info(f"Preset file: {filename} has been loaded")
-    #
-    #     except Exception as e:
-    #         logger.exception(str(e))
 
     def update_init_tree(self):
         for act in self.actuators_modules:
