@@ -35,7 +35,7 @@ from pymodaq_utils.enums import BaseEnum, StrEnum
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
-from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.messenger import messagebox, dialog
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
@@ -258,8 +258,8 @@ class DashBoard(CustomApp):
         self.modules_manager: ModulesManager = None
 
         self.overshoot = False
-        self.actuators_modules: Iterable[DAQ_Move] = []
-        self.detector_modules: Iterable[DAQ_Viewer] = []
+        self.actuators_modules: list[DAQ_Move] = []
+        self.detector_modules: list[DAQ_Viewer] = []
 
         self.compact_actuator_dock: Dock = None
 
@@ -1317,7 +1317,7 @@ class DashBoard(CustomApp):
                 self.compact_actuator_dock.layout.setContentsMargins(0, 0, 0, 0)
 
             dock = self.compact_actuator_dock
-            self.logger_dock.area.addDock(dock, "bottom")
+            self.dockarea.addDock(dock, "top")
         else:
             dock = Dock(plug_name, size=(150, 250))
             actuator_docks.append(dock)
@@ -1326,6 +1326,7 @@ class DashBoard(CustomApp):
                 self.dockarea.addDock(dock, "right", self.logger_dock)
             else:
                 self.dockarea.addDock(dock, "above", actuator_docks[-2])
+        QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
         mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
@@ -1401,12 +1402,11 @@ class DashBoard(CustomApp):
         detector_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
         if len(detector_modules) == 0:
             self.logger_dock.area.addDock(detector_docks_settings[-1], "bottom")
-            # dockarea of the logger dock
+            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_settings[-1])
         else:
-            self.dockarea.addDock(
-                detector_docks_settings[-1], "right", detector_modules[-1].viewer_docks[-1]
-            )
-        self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_settings[-1])
+            self.dockarea.addDock(detector_docks_settings[-1], "bottom", detector_docks_settings[-2])
+            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
+
         det_mod_tmp = DAQ_Viewer(
             self.dockarea,
             title=plug_name,
@@ -1895,6 +1895,15 @@ class DashBoard(CustomApp):
         """ Apply the selected preset file to the dashboard and adds Control Modules specified in it
         """
         try:
+
+            if len(self.actuators_modules) != 0 or len(self.detector_modules) != 0:
+                ret = dialog('Warning!', 'Are you sure you want to load a new preset? \n')
+                if ret:
+                    self.remove_actuators(self.actuators_modules)
+                    self.remove_detectors(self.detector_modules)
+                else:
+                    return
+
             self.get_action(PresetActions.List).setCurrentText(filename.stem)
 
             self.mainwindow.setVisible(False)
@@ -1987,9 +1996,6 @@ class DashBoard(CustomApp):
                 if self.pid_window is not None:
                     self.pid_window.show()
 
-                self.load_preset_menu.setEnabled(False)
-                self.set_action_enabled(PresetActions.Load, False)
-                self.set_action_enabled(PresetActions.List, False)
                 self.overshoot_menu.setEnabled(True)
                 self.roi_menu.setEnabled(True)
                 self.remote_menu.setEnabled(True)
