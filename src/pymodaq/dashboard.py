@@ -1789,8 +1789,8 @@ class DashBoard(CustomApp):
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
                 plug_name = plugin["settings"].child("name").value()
-                plug_type = plugin["settings"].child("type").value()
-                plug_init = plugin["settings"].child("init").value()
+                plug_type = plugin["settings"].child("info", "type").value()
+                plug_init = plugin["settings"].child("info", "init").value()
 
                 self.splash_sc.showMessage(
                     "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
@@ -1798,7 +1798,8 @@ class DashBoard(CustomApp):
 
                 if plugin["type"] == ModuleType.Actuator:
 
-                    self.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets, actuators_modules)
+                    self.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets, actuators_modules,
+                                  ui_identifier=plugin["settings"].child("info", "ui").value())
 
                     if ind_plugin == 0:  # should be a master type plugin
                         if plugin["status"] != ControllerStatus.MASTER:
@@ -1832,7 +1833,7 @@ class DashBoard(CustomApp):
                             QtWidgets.QApplication.processEvents()
                 else:
                     ind_det += 1
-                    plug_dim = plugin["settings"].child("dim").value()
+                    plug_dim = plugin["settings"].child("info", "dim").value()
                     self.add_det(plug_name, None,
                                  detector_docks_settings, detector_docks_viewer, detector_modules,
                                  plug_dim, plug_type)
