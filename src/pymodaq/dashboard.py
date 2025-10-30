@@ -1761,16 +1761,17 @@ class DashBoard(CustomApp):
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
         plugins = []
         plugins += [
-            {"type": ModuleType.Actuator, "value": child}
+            {"type": ModuleType.Actuator,
+             "settings": child}
             for child in self.preset_manager.settings.child(ModuleType.Actuator.value).children()
         ]
         plugins += [
-            {"type": ModuleType.Detector, "value": child}
+            {"type": ModuleType.Detector, "settings": child}
             for child in self.preset_manager.settings.child(ModuleType.Detector.value).children()
         ]
         for plug in plugins:
-            plug["ID"] = plug["value"].child("controller", "controller_ID").value()
-            plug["status"] = plug["value"].child("controller", "controller_status").value()
+            plug["ID"] = plug["settings"].child("controller", "controller_ID").value()
+            plug["status"] = plug["settings"].child("controller", "controller_status").value()
 
         IDs = list(set([plug["ID"] for plug in plugins]))
         # %%
@@ -1787,9 +1788,9 @@ class DashBoard(CustomApp):
         ind_det = -1
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
-                plug_name = plugin["value"].child("name").value()
-                plug_type = plugin["value"].child("type").value()
-                plug_init = plugin["value"].child("init").value()
+                plug_name = plugin["settings"].child("name").value()
+                plug_type = plugin["settings"].child("type").value()
+                plug_init = plugin["settings"].child("init").value()
 
                 self.splash_sc.showMessage(
                     "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
@@ -1804,7 +1805,7 @@ class DashBoard(CustomApp):
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as Master")
                         if plug_init:
-                            actuators_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
+                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             actuators_modules[-1].init_hardware_ui()
                             actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
@@ -1823,7 +1824,7 @@ class DashBoard(CustomApp):
                             raise MasterSlaveError(f"The instrument {plug_name} should"
                                                    f" be defined as slave")
                         if plug_init:
-                            actuators_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
+                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
@@ -1831,7 +1832,7 @@ class DashBoard(CustomApp):
                             QtWidgets.QApplication.processEvents()
                 else:
                     ind_det += 1
-                    plug_dim = plugin["value"].child("dim").value()
+                    plug_dim = plugin["settings"].child("dim").value()
                     self.add_det(plug_name, None,
                                  detector_docks_settings, detector_docks_viewer, detector_modules,
                                  plug_dim, plug_type)
@@ -1844,7 +1845,7 @@ class DashBoard(CustomApp):
                                 f" be defined as Master"
                             )
                         if plug_init:
-                            detector_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
+                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(detector_modules[-1])
@@ -1864,7 +1865,7 @@ class DashBoard(CustomApp):
                             )
                         if plug_init:
                             detector_modules[-1].controller = master_controller
-                            detector_modules[-1].apply_controller_parameters(plugin["value"].child("controller"))
+                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
                             self.poll_init(detector_modules[-1])
