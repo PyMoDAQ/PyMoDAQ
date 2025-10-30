@@ -164,6 +164,7 @@ class PresetManager(CustomApp):
                 self.get_action('presets').currentIndex()
             )
             self.connect_action('presets', self.update_preset, signal_name='currentTextChanged')
+            self.new_file.emit()  # notify that a preset has been deleted
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
