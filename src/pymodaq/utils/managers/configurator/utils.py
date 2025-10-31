@@ -8,13 +8,13 @@ from typing import Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 
-from qtpy.QtCore import QMimeData, Qt, QVariant, QModelIndex
+from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog, QStyle
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.parameter.utils import ParameterWithPath
-
+from pymodaq_gui.qvariant import QVariant
 from pymodaq_gui.parameter import ParameterTree, Parameter
 
 from pymodaq_gui.utils.widgets.table import TableModel
@@ -241,14 +241,31 @@ class ConfiguratorModel(TableModel):
             entry = ConfiguratorEntry.deserialize(data.data('pymodaq/configurator_entry').data())[0]
         else:
             entry = mock_entry
-        self.data_tmp = entry
+
         if action == QtCore.Qt.DropAction.MoveAction:
+            self.data_tmp = entry
             start_row = self._data.index(entry)
             self.moveRow(parent, start_row, parent, row)
         elif action == QtCore.Qt.DropAction.CopyAction:
-            self.insertRows(row, 1, parent)
+            self.data_tmp = self.split_entry(entry)
+            self.insertRows(row, len(self.data_tmp), parent)
         self.update_delegate.emit()
         return True
+
+    def split_entry(self, entry: ConfiguratorEntry,
+                    entries: list[ConfiguratorEntry] = None) -> list[ConfiguratorEntry]:
+        """ Split A ConfiguratorEntry into multiple entries if its underlying parameter has children"""
+        if entries is None:
+            entries = []
+        if not entry.setting.parameter.hasChildren():
+            entries.append(entry)
+        else:
+            for child in entry.setting.parameter.children():
+                if not child.readonly():
+                    pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
+                    config_entry = ConfiguratorEntry(entry.module_name, entry.module_type, pwp)
+                    self.split_entry(config_entry, entries)
+        return entries
 
     def moveRow(self, sourceParent: QModelIndex, sourceRow: int,
                 destinationParent: QModelIndex, destinationChild: int) -> bool:
