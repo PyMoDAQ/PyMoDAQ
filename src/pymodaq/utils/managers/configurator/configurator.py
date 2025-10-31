@@ -250,7 +250,7 @@ class Configurator(CustomApp):
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
-        hlayout.addWidget(self.parameter_manager.settings_tree)
+        hlayout.addWidget(self.settings_tree)
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
@@ -263,7 +263,8 @@ class Configurator(CustomApp):
 
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
-        self.add_action('save_dashboard_content', 'Save Dashboard Content', 'Save',)
+        self.add_action('save_settings', 'Save Settings', 'Save',
+                        tip='Save the displayed settings as an XML file',)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
@@ -289,7 +290,7 @@ class Configurator(CustomApp):
 
 
     def connect_things(self):
-        self.connect_action('save_dashboard_content', self.save_dashboard_modules_settings)
+        self.connect_action('save_dashboard_content', self.save_settings_slot)
 
         self.connect_action(EntryActions.ADD, self.add_setting)
         self.connect_action(EntryActions.REMOVE, self.remove_setting)
