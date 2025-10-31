@@ -192,7 +192,7 @@ class PresetManager(CustomApp):
 
     def save_check(self, preset_name: str = None):
         if preset_name is not None:
-            current_preset = preset_name
+            current_preset = get_set_preset_path().joinpath(preset_name+'.xml')
         else:
             current_preset = self.preset_filename
         if current_preset.exists():
@@ -211,8 +211,7 @@ class PresetManager(CustomApp):
             f'File {current_preset} overwriten at user request'
         )
 
-        # check if overshoot configuration and layout configuration with same name exists => delete them if yes
-        self.remove_preset_related_files(current_preset)
+        self.remove_preset_related_files(current_preset.stem)
         self.new_file.emit()
 
     def apply_preset_to_dashboard(self, preset: Union[str, Path], dashboard: 'DashBoard')\
