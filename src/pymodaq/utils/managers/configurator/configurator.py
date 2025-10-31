@@ -154,8 +154,8 @@ class Configurator(CustomApp):
             title="Control Modules:", name="control_modules", type="group", children=children
         )
         self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
-        self._actuators = [
-            param.child('name').value() for param in self.control_modules_settings.child('Moves').children()]
+        self._actuators = [param.child('name').value() for param in
+                           self.control_modules_settings.child(ModuleType.Actuator.value).children()]
 
     def get_units_from_module_name(self, actuator_name: str):
         mods_settings = [group.child('name').value() for
@@ -168,7 +168,7 @@ class Configurator(CustomApp):
     def update_suffix_in_dialog(self, actuator_name: str):
         self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
 
-    def get_actuator_value_from_widget(self) -> ConfiguratorEntry:
+    def get_actuator_value_from_widget(self):
 
         self.actuator_dialog = QDialog()
         vlayout = QtWidgets.QVBoxLayout()
@@ -268,7 +268,8 @@ class Configurator(CustomApp):
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
-        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move')
+        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
+                        shortcut=QtCore.Qt.Key.Key_Delete)
         self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
 
@@ -454,6 +455,6 @@ if __name__ == "__main__":
 
 
     prog = Configurator()
-    prog.create_modify_configurator('beam_steering')
+    prog.create_modify_configurator('preset_default')
 
     sys.exit(app.exec_())
