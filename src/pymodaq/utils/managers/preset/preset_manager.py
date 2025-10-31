@@ -87,22 +87,23 @@ class PresetManager(CustomApp):
                         kwargs={'setReadOnly': True})
         self.get_action('presets').addItems(self.presets + ['...'])
 
-
-        self.add_action(PresetAction.NEW, 'New Preset', 'Add2',
+        self.add_action(PresetAction.COPY, 'Copy Preset', 'EditCopy')
+        self.add_action(PresetAction.NEW, 'New Preset', 'ListAdd',
                         tip='Create a new preset file')
-        self.add_action(PresetAction.DELETE, 'Delete Preset', 'remove',
+        self.add_action(PresetAction.DELETE, 'Delete Preset', 'ListRemove',
                         tip='Delete the current preset file')
-        self.add_action(PresetAction.SAVE, 'Save Preset', 'Save',
+        self.add_action(PresetAction.SAVE, 'Save Preset', 'DocumentSave',
                         tip='Save/Update the current configuration')
-        self.add_action(PresetAction.RELOAD, 'Reload Preset', 'Refresh',
+        self.add_action(PresetAction.RELOAD, 'Reload Preset', 'ViewRefresh',
                         tip='Reload the current preset file')
 
     def connect_things(self):
         self.connect_action('presets', self.update_preset,
                             signal_name='currentTextChanged')
+        self.connect_action(PresetAction.COPY, self.copy_preset)
         self.connect_action(PresetAction.NEW, self.create_preset)
         self.connect_action(PresetAction.DELETE, self.delete_preset)
-        self.connect_action(PresetAction.SAVE, self.save_check)
+        self.connect_action(PresetAction.SAVE, lambda: self.save_check())
         self.connect_action(PresetAction.RELOAD, lambda: self.update_preset())
 
         self.get_action('presets').setCurrentText('preset_default')
@@ -144,6 +145,22 @@ class PresetManager(CustomApp):
             self.get_action('presets').setCurrentText(text)
             self.save_check()
 
+    def copy_preset(self):
+        text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
+                                                  'Preset name:', QtWidgets.QLineEdit.Normal)
+        if ok and text != '':
+            self.save_check(text)
+            presets = [self.get_action('presets').itemText(ind).lower() for
+                       ind in range(self.get_action('presets').count())]
+            if text.lower() not in presets:
+                presets.append(text.lower())
+                presets.sort()
+                index = presets.index(text.lower())
+                self.get_action('presets').insertItem(index-1, text)
+
+            self.get_action('presets').setCurrentText(text)
+
+
     def delete_preset(self):
         current_preset = self.preset
         if current_preset == '...':
@@ -173,8 +190,11 @@ class PresetManager(CustomApp):
         config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
-    def save_check(self):
-        current_preset = self.preset_filename
+    def save_check(self, preset_name: str = None):
+        if preset_name is not None:
+            current_preset = preset_name
+        else:
+            current_preset = self.preset_filename
         if current_preset.exists():
             user_agreed = dialog(
                 title='Overwrite confirmation',
@@ -192,7 +212,7 @@ class PresetManager(CustomApp):
         )
 
         # check if overshoot configuration and layout configuration with same name exists => delete them if yes
-        self.remove_preset_related_files(self.preset)
+        self.remove_preset_related_files(current_preset)
         self.new_file.emit()
 
     def apply_preset_to_dashboard(self, preset: Union[str, Path], dashboard: 'DashBoard')\
