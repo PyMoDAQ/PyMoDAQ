@@ -120,6 +120,11 @@ class ConfiguratorEntry:
                 self.module_type == other.module_type and
                 self.setting == other.setting)
 
+    def __repr__(self):
+        return (f"ConfiguratorEntry({self.module_type.capitalize()}: {self.module_name}, "
+                f"setting={self.setting.parameter.name()}, "
+                f"path={self.setting.path})")
+
     @staticmethod
     def serialize(entry: 'ConfiguratorEntry') -> bytes:
         """
@@ -222,6 +227,9 @@ class ConfiguratorModel(TableModel):
                     return Qt.CheckState.Checked
                 else:
                     return Qt.CheckState.Unchecked
+            elif role == Qt.ItemDataRole.ToolTipRole:
+                entry: ConfiguratorEntry = self._data[index.row()]
+                return repr(entry)
         return QVariant()
 
 
