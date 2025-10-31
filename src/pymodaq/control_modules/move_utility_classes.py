@@ -32,6 +32,7 @@ from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMo
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -171,13 +172,14 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True,},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
          'value': config('actuator', 'ui') if config('actuator', 'ui') in ActuatorUIFactory.keys() else
          ActuatorUIFactory.keys()[0],
          'limits': ActuatorUIFactory.keys()},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
+         VALID_FOR_CONFIGURATION: False,},
 
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('actuator', 'refresh_timeout_ms')},
@@ -185,7 +187,8 @@ params = [
          'children': [
              {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
               'value': config_utils('network', 'tcp-server', 'ip')},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'tcp-server', 'port')},
@@ -194,7 +197,8 @@ params = [
          'children': [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
              {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"),
               "default": "localhost"},

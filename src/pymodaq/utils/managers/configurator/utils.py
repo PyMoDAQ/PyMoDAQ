@@ -1,7 +1,4 @@
-
-import os
 from pathlib import Path
-import sys
 from dataclasses import dataclass
 from typing import Union, Tuple
 
@@ -9,11 +6,12 @@ from typing import Union, Tuple
 from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
-from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog, QStyle
+from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.parameter.utils import ParameterWithPath
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.qvariant import QVariant
 from pymodaq_gui.parameter import ParameterTree, Parameter
 
@@ -22,7 +20,7 @@ from pymodaq_gui.utils.widgets.table import TableModel
 
 from pymodaq_gui import utils as gutils
 
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+from pymodaq_utils.serialize.factory import SerializableFactory
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules_manager import ModuleType
@@ -213,7 +211,7 @@ class ConfiguratorModel(TableModel):
                 if index.column() == 0:
                     dat = entry.module_name
                 elif index.column() == 1:
-                    dat = entry.setting.parameter.name()
+                    dat = entry.setting.parameter.title()
                 elif index.column() == 2:
                     dat = f"{entry.setting.parameter.value()} {entry.setting.parameter.opts.get('suffix', '')}"
                 else:
@@ -226,13 +224,6 @@ class ConfiguratorModel(TableModel):
                     return Qt.CheckState.Unchecked
         return QVariant()
 
-    def setData(self, index: QModelIndex, value, role: Qt.ItemDataRole):
-        if index.isValid():
-            if role == Qt.ItemDataRole.EditRole:
-                self._data[index.row()].setting.parameter.setValue(value)
-                self.dataChanged.emit(index, index, [role])
-                return True
-        return False
 
     def dropMimeData(self, data: QMimeData, action: Qt.DropAction, row: int, column: int, parent: QModelIndex):
         if row == -1:
@@ -261,10 +252,12 @@ class ConfiguratorModel(TableModel):
         if entries is None:
             entries = []
         if not entry.setting.parameter.hasChildren():
-            entries.append(entry)
+            if (not entry.setting.parameter.readonly() and
+                    entry.setting.parameter.opts.get(VALID_FOR_CONFIGURATION, True)):  # only add non readonly children and the ones specifying they are not configurable
+                entries.append(entry)
         else:
             for child in entry.setting.parameter.children():
-                if not child.readonly() :  # only add non readonly children and the ones specifying they are not configurable
+                if not child.readonly() or child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add non readonly children and the ones specifying they are not configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
                     config_entry = ConfiguratorEntry(entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
@@ -284,7 +277,8 @@ class ConfiguratorModel(TableModel):
         return True
 
     def clear(self):
-        self._data = []
+        while self.rowCount() > 0:
+            self.remove_row(0)
 
     def edit_data(self, index):
         entry = self._data[index.row()]
