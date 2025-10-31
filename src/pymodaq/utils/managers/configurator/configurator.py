@@ -48,11 +48,11 @@ class Configurator(CustomApp):
     new_file = QtCore.Signal()
 
     def __init__(self, preset_filename: str = ''):
-        super().__init__(parent=QtWidgets.QMainWindow())
+        super().__init__(parent=QtWidgets.QMainWindow(),
+                         tree=ConfiguratorParameterTree())
 
         self.preset_filename = preset_filename
         self._actuators: list[str] = None
-        self.control_modules_settings: Parameter = None
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
@@ -142,25 +142,25 @@ class Configurator(CustomApp):
         settings : Parameter
             Settings containing all modules configuration
         """
-        self.control_modules_settings = settings
-        self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
+        self.settings = settings
+        self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
         self._actuators = [
-            param.opts['title'] for param in self.control_modules_settings.child(ModuleType.Actuator).children()]
+            param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
 
-    def populate_from_preset_file(self, file_path: Path):
+    def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
         children = ioxml.XML_file_to_parameter(file_path)
-        self.control_modules_settings = Parameter.create(
+        self.settings = Parameter.create(
             title="Control Modules:", name="control_modules", type="group", children=children
         )
-        self.set_drag_mode_recursive(self.control_modules_settings, movable=True, drop_enabled=True)
+        self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
         self._actuators = [param.child('name').value() for param in
-                           self.control_modules_settings.child(ModuleType.Actuator.value).children()]
+                           self.settings.child(ModuleType.Actuator.value).children()]
 
     def get_units_from_module_name(self, actuator_name: str):
         mods_settings = [group.child('name').value() for
-                        group in self.control_modules_settings.child(ModuleType.Actuator).children()]
-        actuator_settings = self.control_modules_settings.child(ModuleType.Actuator).children()[
+                        group in self.settings.child(ModuleType.Actuator).children()]
+        actuator_settings = self.settings.child(ModuleType.Actuator).children()[
             mods_settings.index(actuator_name)]
 
         return actuator_settings.child('move_settings', 'units').value()
@@ -177,7 +177,7 @@ class Configurator(CustomApp):
         self.actuator_cb = QtWidgets.QComboBox()
         self.actuator_cb.addItems(self._actuators)
 
-        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self._actuators[0]), siPrefix= True)
+        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self._actuators[0]), siPrefix= False)
         self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
 
         widget.layout().addWidget(self.actuator_cb)
@@ -212,12 +212,9 @@ class Configurator(CustomApp):
                                                                           suffix=self.value_sb.opts['suffix']))))
 
     def setup_docks(self):
-
-        self.parameter_manager = ParameterManager(tree=ConfiguratorParameterTree())
-        self.tree_in = self.parameter_manager.tree
-        self.tree_in.setDragEnabled(True)
-        self.tree_in.setAcceptDrops(False)
-        self.tree_in.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
+        self.tree.setDragEnabled(True)
+        self.tree.setAcceptDrops(False)
+        self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
 
         self.table_out = ConfiguratorTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -266,6 +263,7 @@ class Configurator(CustomApp):
 
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
+        self.add_action('save_dashboard_content', 'Save Dashboard Content', 'Save',)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
@@ -291,6 +289,8 @@ class Configurator(CustomApp):
 
 
     def connect_things(self):
+        self.connect_action('save_dashboard_content', self.save_dashboard_modules_settings)
+
         self.connect_action(EntryActions.ADD, self.add_setting)
         self.connect_action(EntryActions.REMOVE, self.remove_setting)
         self.connect_action(EntryActions.UP, self.move_up_setting)
@@ -363,11 +363,10 @@ class Configurator(CustomApp):
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
         elif isinstance(settings, Path):
-            self.populate_from_preset_file(settings)
+            self.populate_from_file(settings)
             self.preset_filename = settings.stem
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
-        self.parameter_manager.settings = self.control_modules_settings
 
     def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None):
         """
@@ -420,13 +419,14 @@ class Configurator(CustomApp):
             self.new_file.emit()
 
     def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
-        param.setOpts(movable=movable, dropEnabled=drop_enabled)
+        if not param.readonly():
+            param.setOpts(movable=movable, dropEnabled=drop_enabled)
         for child in param.children():
             self.set_drag_mode_recursive(child, movable, drop_enabled)
 
     def add_setting(self):
-        if self.tree_in.currentItem() is not None:
-            current_setting = self.tree_in.currentItem().param
+        if self.tree.currentItem() is not None:
+            current_setting = self.tree.currentItem().param
             module, module_type = get_module_from_param(ParameterWithPath(current_setting))
             entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
             self.config_model.add_data(self.config_model.rowCount(), entry)
