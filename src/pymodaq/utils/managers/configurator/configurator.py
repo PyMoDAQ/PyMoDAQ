@@ -263,8 +263,6 @@ class Configurator(CustomApp):
 
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
-        self.add_action('save_settings', 'Save Settings', 'Save',
-                        tip='Save the displayed settings as an XML file',)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
@@ -290,8 +288,6 @@ class Configurator(CustomApp):
 
 
     def connect_things(self):
-        self.connect_action('save_dashboard_content', self.save_settings_slot)
-
         self.connect_action(EntryActions.ADD, self.add_setting)
         self.connect_action(EntryActions.REMOVE, self.remove_setting)
         self.connect_action(EntryActions.UP, self.move_up_setting)
@@ -358,7 +354,11 @@ class Configurator(CustomApp):
             get_set_configurator_path(preset_name).joinpath(f'{config_name}.config').unlink(missing_ok=True)
             self.get_action('configurations').removeItem(self.get_action('configurations').currentIndex())
 
-    def update_preset(self, settings: Union[Parameter, Path, str] = None):
+    def update_settings(self, settings: Union[Parameter, Path, str] = None):
+        if settings is None:
+            settings = self._get_settings_from_file()
+            if settings == '':
+                return
         if isinstance(settings, str):
             settings = get_set_preset_path().joinpath(f'{settings}.xml')
         if isinstance(settings, Parameter):
@@ -385,7 +385,7 @@ class Configurator(CustomApp):
         if settings is None:
             settings = preset_name
         self.preset_filename = preset_name
-        self.update_preset(settings)
+        self.update_settings(settings)
         self.mainwindow.show()
 
     def save_check(self):
@@ -453,9 +453,8 @@ if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp
     app = mkQApp('Configurator')
 
-
-
     prog = Configurator()
-    prog.create_modify_configurator('preset_default')
+    prog.update_settings()
+    prog.mainwindow.show()
 
     sys.exit(app.exec_())
