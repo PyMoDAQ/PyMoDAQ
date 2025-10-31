@@ -247,7 +247,10 @@ class ConfiguratorModel(TableModel):
             start_row = self._data.index(entry)
             self.moveRow(parent, start_row, parent, row)
         elif action == QtCore.Qt.DropAction.CopyAction:
-            self.data_tmp = self.split_entry(entry)
+            self.data_tmp = self.split_entry(entry)  # in case the entry has children parameters
+            for entry in self.data_tmp:  #make sure there is no duplicate
+                if entry in self._data:
+                    self.data_tmp.remove(entry)
             self.insertRows(row, len(self.data_tmp), parent)
         self.update_delegate.emit()
         return True
@@ -261,7 +264,7 @@ class ConfiguratorModel(TableModel):
             entries.append(entry)
         else:
             for child in entry.setting.parameter.children():
-                if not child.readonly():
+                if not child.readonly() :  # only add non readonly children and the ones specifying they are not configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
                     config_entry = ConfiguratorEntry(entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
