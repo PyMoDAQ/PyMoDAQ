@@ -47,6 +47,7 @@ class EntryActions(StrEnum):
 
 
 class ConfigurationAction(StrEnum):
+    COPY = 'copy_configuration'
     NEW = 'create_new_configuration'
     DELETE = 'delete_configuration'
     SAVE = 'save_configuration'

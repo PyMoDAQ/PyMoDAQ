@@ -264,6 +264,7 @@ class Configurator(CustomApp):
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
 
+
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
                         shortcut=QtCore.Qt.Key.Key_Delete)
@@ -273,16 +274,17 @@ class Configurator(CustomApp):
         self.add_widget('configurations', QtWidgets.QComboBox(),
                         tip='List of available configurations',
                         toolbar='configurations')
-        self.add_action(ConfigurationAction.NEW, 'New Configuration', 'Add2',
+        self.add_action(ConfigurationAction.COPY, 'Copy Configuration', 'EditCopy', toolbar='configurations')
+        self.add_action(ConfigurationAction.NEW, 'New Configuration', 'ListAdd',
                         toolbar='configurations',
                         tip='Create a new configuration file')
-        self.add_action(ConfigurationAction.DELETE, 'Delete Configuration', 'remove',
+        self.add_action(ConfigurationAction.DELETE, 'Delete Configuration', 'ListRemove',
                         toolbar='configurations',
                         tip='Delete the current configuration file')
-        self.add_action(ConfigurationAction.SAVE, 'Save Configuration', 'Save',
+        self.add_action(ConfigurationAction.SAVE, 'Save Configuration', 'DocumentSave',
                         toolbar='configurations',
                         tip='Save/Update the current configuration')
-        self.add_action(ConfigurationAction.RELOAD, 'Reload Configuration', 'Refresh',
+        self.add_action(ConfigurationAction.RELOAD, 'Reload Configuration', 'ViewRefresh',
                         toolbar='configurations',
                         tip='Reload the current configuration file')
 
@@ -293,9 +295,10 @@ class Configurator(CustomApp):
         self.connect_action(EntryActions.UP, self.move_up_setting)
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
 
+        self.connect_action(ConfigurationAction.COPY, self.copy_configuration)
         self.connect_action(ConfigurationAction.NEW, self.create_configuration)
         self.connect_action(ConfigurationAction.DELETE, self.delete_configuration)
-        self.connect_action(ConfigurationAction.SAVE, self.save_check)
+        self.connect_action(ConfigurationAction.SAVE, lambda: self.save_check())
         self.connect_action(ConfigurationAction.RELOAD, self.load_configuration)
 
         self.connect_action('configurations', self.get_action(ConfigurationAction.RELOAD).trigger,
@@ -335,6 +338,20 @@ class Configurator(CustomApp):
         if ok and text != '':
             configurations = [self.get_action('configurations').itemText(ind).lower() for
                        ind in range(self.get_action('configurations').count())]
+            if text.lower() not in configurations:
+                configurations.append(text.lower())
+                configurations.sort()
+                index = configurations.index(text.lower())
+                self.get_action('configurations').insertItem(index-1, text)
+            self.get_action('configurations').setCurrentText(text)
+
+    def copy_configuration(self):
+        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
+                                                  "Config name:", QtWidgets.QLineEdit.Normal)
+        if ok and text != '':
+            self.save_check(text)
+            configurations = [self.get_action('configurations').itemText(ind).lower() for
+                              ind in range(self.get_action('configurations').count())]
             if text.lower() not in configurations:
                 configurations.append(text.lower())
                 configurations.sort()
@@ -388,7 +405,7 @@ class Configurator(CustomApp):
         self.update_settings(settings)
         self.mainwindow.show()
 
-    def save_check(self):
+    def save_check(self, configuration_name: str = None):
         """
         Check if current configuration can be saved and save it.
 
@@ -397,7 +414,7 @@ class Configurator(CustomApp):
         - A filename is specified
         - Handles file overwrite confirmation
         """
-        if self.get_action('configurations').currentText() == '':
+        if self.get_action('configurations').currentText() == '' and configuration_name is None:
             messagebox(
                 title="Saving issue",
                 text="You didn't specify a file name for this configuration",
@@ -405,8 +422,10 @@ class Configurator(CustomApp):
             return
 
         else:
+            if configuration_name is None:
+                configuration_name = self.get_action('configurations').currentText()
             file_path = get_set_configurator_path(self.get_action('preset_filename').text()).joinpath(
-                f"{self.get_action('configurations').currentText()}.config")
+                f"{configuration_name}.config")
             if file_path.exists():
                 user_agreed = dialog(
                     title="Overwrite confirmation",
