@@ -21,6 +21,7 @@ MOCK_ITEMS = {}
 
 
 class PresetAction(StrEnum):
+    COPY = 'copy_preset'
     NEW = 'create_new_preset'
     DELETE = 'delete_preset'
     SAVE = 'save_preset'
