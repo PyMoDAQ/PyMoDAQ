@@ -22,8 +22,7 @@ from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
 from pymodaq_gui.utils.utils import mkQApp
-
-
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -44,7 +43,8 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
+         VALID_FOR_CONFIGURATION: False,},
 
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
@@ -59,7 +59,8 @@ params = [
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
              'value': False},
-            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
+             VALID_FOR_CONFIGURATION: False},
             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
              'value': config('network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
@@ -68,7 +69,8 @@ params = [
          'children': [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
              {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},

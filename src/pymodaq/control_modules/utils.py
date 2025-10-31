@@ -17,6 +17,7 @@ from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.h5modules.saving import H5Saver
 
@@ -50,7 +51,8 @@ def create_controller_param(axis_name: str = None, axis_names: Optional[list[str
     if axis_names is not None and axis_name is not None:
         controller_param['children'].append({'title': 'Axis:', 'name': 'axis', 'type': 'list',
                                              'limits': axis_names.copy(),
-                                             'value': axis_name})
+                                             'value': axis_name,
+                                             VALID_FOR_CONFIGURATION: False})
     return controller_param
 
 
