@@ -15,8 +15,7 @@ from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.utils.config import get_set_preset_path
-from pymodaq.utils.managers.preset.utils  import PresetAction  # Also to register move and det types
-from pymodaq.utils.managers.utils import ManagerMixin, ManagerActions
+from pymodaq.utils.managers.utils import ManagerBase, ManagerActions
 from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq.extensions.utils import CustomExt
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
@@ -37,19 +36,16 @@ layout_path = config_mod_pymodaq.get_set_layout_path()
 
 
 
-class PresetManager(CustomExt, ManagerMixin):
+class PresetManager(ManagerBase):
+    entry_type='preset'
+    entry_extension='.xml'
 
-    new_file = QtCore.Signal()
-    applied_preset = QtCore.Signal(Path)
+    def __init__(self,
+                 dashboard: 'DashBoard' = None,
+                 menu: QtWidgets.QMenu = None,
+                 toolbar: QtWidgets.QToolBar = None):
 
-    def __init__(self, dashboard: 'DashBoard' = None, menu: QtWidgets.QMenu = None, toolbar: QtWidgets.QToolBar = None):
-
-        ManagerMixin.__init__(self, entry_type='preset', entry_extension='.xml')
-        CustomExt.__init__(self, parent=QtWidgets.QMainWindow(), dashboard=dashboard)
-
-
-        self.preset_path: Path = None
-        self.preset_params: Parameter = None
+        super().__init__(self, parent=QtWidgets.QMainWindow(), dashboard=dashboard)
 
         self.action_manager = ManagerActions(self, menu=menu, toolbar=toolbar)
 
@@ -58,137 +54,12 @@ class PresetManager(CustomExt, ManagerMixin):
 
         self.setup_ui()
 
-    def setup_docks(self):
-        vlayout = QtWidgets.QVBoxLayout()
-        vlayout.addWidget(self.settings_tree)
-        self.main_widget.setLayout(vlayout)
-
-    @property
-    def preset_filename(self) -> Path:
-        """ Get the full path of the current preset file """
-        return get_set_preset_path().joinpath(self.preset + '.xml')
-
-    @property
-    def preset(self) -> str:
-        """ Get/Set the name of the current preset """
-        return self.get_action('presets').currentText()
-
-    @preset.setter
-    def preset(self, preset_name: str):
-        self.update_preset(preset_name)
-
-    @property
-    def presets(self) -> list[str]:
-        """ Get/Set the name of all existing presets """
-        return [path.stem for path in get_set_preset_path().iterdir() if path.suffix == '.xml']
-
-    @property
-    def presets_filename(self) -> list[Path]:
-        """ Get the full path of the current preset file """
-        return [path for path in get_set_preset_path().iterdir() if path.suffix == '.xml']
-
     def setup_actions(self):
-        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
-        self.add_widget('presets', QtWidgets.QComboBox(), tip='Name of the current preset',
-                        kwargs={'setReadOnly': True})
-        self.get_action('presets').addItems(self.presets + ['...'])
-
-        self.add_action(PresetAction.COPY, 'Copy Preset', 'EditCopy')
-        self.add_action(PresetAction.NEW, 'New Preset', 'ListAdd',
-                        tip='Create a new preset file')
-        self.add_action(PresetAction.DELETE, 'Delete Preset', 'ListRemove',
-                        tip='Delete the current preset file')
-        self.add_action(PresetAction.SAVE, 'Save Preset', 'DocumentSave',
-                        tip='Save/Update the current configuration')
-        self.add_action(PresetAction.RELOAD, 'Reload Preset', 'ViewRefresh',
-                        tip='Reload the current preset file')
+        #nothing more than the base actions from the base class
+        pass
 
     def connect_things(self):
-        self.connect_action('presets', self.update_preset,
-                            signal_name='currentTextChanged')
-        self.connect_action(PresetAction.COPY, self.copy_preset)
-        self.connect_action(PresetAction.NEW, self.create_preset)
-        self.connect_action(PresetAction.DELETE, self.delete_preset)
-        self.connect_action(PresetAction.SAVE, lambda: self.save_check())
-        self.connect_action(PresetAction.RELOAD, lambda: self.update_preset())
-
-        self.get_action('presets').setCurrentText('preset_default')
-
-    def update_preset(self, preset_file: Union[Path, str] = None):
-        if preset_file == '...':
-            self.create_preset()
-            return
-
-        if preset_file is None:
-            preset_file = self.preset_filename
-
-        if isinstance(preset_file, str):
-            preset_file = get_set_preset_path().joinpath(f'{preset_file}.xml')
-        if preset_file.exists():
-            self.settings = preset_file
-        else:
-            params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
-            # PresetScalableGroupMove(name='Moves')]
-            params_det = [
-                {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}
-            ]  # [PresetScalableGroupDet(name='Detectors')]
-            self.settings = Parameter.create(title='Preset', name='Preset', type='group',
-                                             children=params_act + params_det,)
-        self.get_action('presets').setCurrentText(preset_file.stem)
-        self.action_manager.update_action_list()
-
-    def create_preset(self):
-        text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
-                                                  'Preset name:', QtWidgets.QLineEdit.EchoMode.Normal)
-        if ok and text != '':
-            presets = [self.get_action('presets').itemText(ind).lower() for
-                       ind in range(self.get_action('presets').count())]
-            if text.lower() not in presets:
-                presets.append(text.lower())
-                presets.sort()
-                index = presets.index(text.lower())
-                self.get_action('presets').insertItem(index-1, text)
-
-            self.get_action('presets').setCurrentText(text)
-            self.save_check()
-
-    def copy_preset(self):
-        text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
-                                                  'Preset name:', QtWidgets.QLineEdit.EchoMode.Normal)
-        if ok and text != '':
-            self.save_check(text)
-            presets = [self.get_action('presets').itemText(ind).lower() for
-                       ind in range(self.get_action('presets').count())]
-            if text.lower() not in presets:
-                presets.append(text.lower())
-                presets.sort()
-                index = presets.index(text.lower())
-                self.get_action('presets').insertItem(index-1, text)
-
-            self.get_action('presets').setCurrentText(text)
-
-
-    def delete_preset(self):
-        current_preset = self.preset
-        if current_preset == '...':
-            return
-        user_agreed = dialogbox(
-            title='Delete confirmation',
-            message=f'Are you sure you want to delete the preset {current_preset} ?',
-        )
-        if user_agreed:
-            self.connect_action('presets', signal_name='currentTextChanged', connect=False)
-            preset_file = get_set_preset_path().joinpath(f'{current_preset}.xml')
-
-            preset_file.unlink(missing_ok=True)
-            self.remove_preset_related_files(current_preset)
-
-            logger.info(f'Preset file {preset_file} deleted')
-            self.get_action('presets').removeItem(
-                self.get_action('presets').currentIndex()
-            )
-            self.connect_action('presets', self.update_preset, signal_name='currentTextChanged')
-            self.new_file.emit()  # notify that a preset has been deleted
+        self.new
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
@@ -202,9 +73,9 @@ class PresetManager(CustomExt, ManagerMixin):
 
     def save_check(self, preset_name: str = None):
         if preset_name is not None:
-            current_preset = get_set_preset_path().joinpath(preset_name+'.xml')
+            current_preset = self.get_entry_folder().joinpath(preset_name+self.entry_extension)
         else:
-            current_preset = self.preset_filename
+            current_preset = self.entry_filename
         if current_preset.exists():
             user_agreed = dialog(
                 title='Overwrite confirmation',
@@ -227,15 +98,17 @@ class PresetManager(CustomExt, ManagerMixin):
     ### from ManagerMixin ####################################################
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_preset_path()
+        return self.get_entry_folder()
 
-    def apply_entry(self, file_path: Path):
-        """ Apply the selected preset file to the dashboard and adds Control Modules specified in it
+    def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
+        """ Apply the selected entry file to the dashboard and adds Control Modules specified in it
         """
         try:
 
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
-                ret = dialog('Warning!', 'Are you sure you want to load a new preset? \n')
+                ret = dialog(f'Warning!',
+                             f'Are you sure you want '
+                             f'to load a new {self.entry_type.capitalize()}? \n')
                 if ret:
                     self.dashboard.remove_actuators(self.dashboard.actuators_modules)
                     self.dashboard.remove_detectors(self.dashboard.detector_modules)
@@ -250,10 +123,10 @@ class PresetManager(CustomExt, ManagerMixin):
             QtWidgets.QApplication.processEvents()
             self.dashboard.splash_sc.raise_()
             self.dashboard.splash_sc.showMessage("Loading Modules, please wait")
-            logger.info(f"Loading Preset file: {file_path}")
+            logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             try:
-                actuators_modules, detector_modules = self.create_control_modules_from_preset(file_path)
+                actuators_modules, detector_modules = self.create_control_modules_from_preset(entry)
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
@@ -261,12 +134,12 @@ class PresetManager(CustomExt, ManagerMixin):
                     area.window().setVisible(True)
                 messagebox(
                     severity="critical",
-                    title="Preset loading error",
+                    title="{self.entry_type.capitalize()} loading error",
                     text=f"""
                                 <p>{error}</p>
                                 <p>This error may be related to:</p>
-                                <p>Saved preset file is not compatible anymore.</p>
-                                <p>Please recreate the preset at <b>{file_path}</b>.</p>
+                                <p>Saved {self.entry_type.capitalize()} file is not compatible anymore.</p>
+                                <p>Please recreate the {self.entry_type.capitalize()} at <b>{entry}</b>.</p>
                      """,
                 )
                 logger.exception(str(error))
@@ -276,11 +149,11 @@ class PresetManager(CustomExt, ManagerMixin):
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
-                    "Preset mode ({}) has been loaded".format(file_path.name),
+                    f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
                     log_type="log",
                 )
                 self.dashboard.settings.child("loaded_files", "preset_file").setValue(
-                    file_path.name
+                    entry.name
                 )
                 self.dashboard.actuators_modules = actuators_modules
                 self.dashboard.detector_modules = detector_modules
@@ -299,12 +172,36 @@ class PresetManager(CustomExt, ManagerMixin):
 
                 self.dashboard.update_init_tree()
 
-                self.applied_preset.emit(file_path)
+                self.applied_entry.emit(entry)
 
-            logger.info(f"Preset file: {file_path} has been loaded")
+            logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
 
         except Exception as e:
             logger.exception(str(e))
+
+    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        if entry == '...':
+            self.create_entry()
+            return
+
+        if entry is None:
+            entry = self.entry_filename
+
+        if isinstance(entry, str):
+            entry = self.get_entry_folder().joinpath(f'{entry}.xml')
+        if entry.exists():
+            self.settings = entry
+        else:
+            params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
+            # PresetScalableGroupMove(name='Moves')]
+            params_det = [
+                {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}
+            ]  # [PresetScalableGroupDet(name='Detectors')]
+            self.settings = Parameter.create(title='Preset', name='Preset', type='group',
+                                             children=params_act + params_det,)
+        self.get_action('entries').setCurrentText(entry.stem)
+        self.action_manager.update_action_list()
+
 
     def create_control_modules_from_preset(self, preset_file: Path) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """

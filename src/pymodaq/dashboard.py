@@ -1622,7 +1622,7 @@ class DashBoard(CustomApp):
 
     @property
     def preset_file(self) -> Path:
-        return self.preset_manager.preset_filename
+        return self.preset_manager.entry_filename
 
     def update_init_tree(self):
         for act in self.actuators_modules:
