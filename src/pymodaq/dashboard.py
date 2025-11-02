@@ -229,7 +229,7 @@ class DashBoard(CustomApp):
         self.preset_manager = PresetManager(dashboard=self,
                                             menu=self.get_menu("preset"),
                                             toolbar = self.get_toolbar("preset"))
-        self.preset_manager.update_preset()
+        self.preset_manager.update_entry_base()
         self.configurator = Configurator()
         self.configurator.new_file.connect(self.update_configuration_action_list)
 
