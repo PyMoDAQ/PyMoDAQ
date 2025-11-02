@@ -34,15 +34,25 @@ layout_path = config_mod_pymodaq.get_set_layout_path()
 
 
 class PresetManager(ManagerBase):
+
+    params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
+    # PresetScalableGroupMove(name='Moves')]
+    params_det = [{'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}]
+    # [PresetScalableGroupDet(name='Detectors')][]
+
+    params = params_act + params_det
+
     entry_type='preset'
     entry_extension='.xml'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 toolbar: QtWidgets.QToolBar = None,
+                 debug_hide_toolbar_and_menu = True):
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
+        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
+                         debug_hide_toolbar_and_menu = debug_hide_toolbar_and_menu)
 
     ### Reimplemented Methods ####################################################
     def save_entries(self):
@@ -144,13 +154,9 @@ class PresetManager(ManagerBase):
         if entry.exists():
             self.settings = entry
         else:
-            params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
-            # PresetScalableGroupMove(name='Moves')]
-            params_det = [
-                {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}
-            ]  # [PresetScalableGroupDet(name='Detectors')]
+
             self.settings = Parameter.create(title='Preset', name='Preset', type='group',
-                                             children=params_act + params_det,)
+                                             children=self.params)
 
     def setup_actions(self):
         #  nothing more than the base actions from the base class
@@ -311,7 +317,7 @@ class PresetManager(ManagerBase):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    prog = PresetManager()
+    prog = PresetManager(debug_hide_toolbar_and_menu=False)
     prog.update_entry_base()
     prog.mainwindow.show()
     sys.exit(app.exec_())

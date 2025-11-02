@@ -41,15 +41,25 @@ class ManagerBase(CustomExt):
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 toolbar: QtWidgets.QToolBar = None,
+                 debug_hide_toolbar_and_menu = True):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard)
-        self.action_manager = ManagerActions(self, menu=menu, toolbar=toolbar)
+        self.action_manager = ManagerActions(self, menu=menu, toolbar=toolbar,
+                                             debug_hide_toolbar_and_menu=debug_hide_toolbar_and_menu)
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
         self.setup_ui()
+
+    def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
+        """Get the folder path where the managed entries are stored."""
+        raise NotImplementedError
+
+    def update_entry(self, entry_path: Path):
+        """ Particular implementation to update entries for this inherited Manager """
+        raise NotImplementedError
 
     def setup_ui(self):
         self.setup_docks()
@@ -65,10 +75,6 @@ class ManagerBase(CustomExt):
         self.connect_things()
 
         self.do_things_after_ui_setup()
-
-    def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
-        """Get the folder path where the managed entries are stored."""
-        raise NotImplementedError
 
     @property
     def entry(self) -> str:
@@ -112,7 +118,7 @@ class ManagerBase(CustomExt):
     def setup_docks(self):
         """Sets up the widgets for the manager.
 
-        Eventually, this can be overridden in subclasses to add more/different widgets/docks...
+        Eventually, this can be reimplemented in subclasses to add more/different widgets/docks...
         """
         vlayout = QtWidgets.QVBoxLayout()
         vlayout.addWidget(self.settings_tree)
@@ -150,6 +156,8 @@ class ManagerBase(CustomExt):
         self.connect_action(InternalActions.RELOAD, lambda: self.update_entry_base())
 
         self.get_action('entries').setCurrentText('default')
+        self.new_entry.connect(self.action_manager.update_action_list)
+        self.updated_entry.connect(self.action_manager.update_action_list)
 
     def create_entry(self):
         entry, ok = QtWidgets.QInputDialog.getText(
@@ -255,9 +263,6 @@ class ManagerBase(CustomExt):
     def show(self):
         self.mainwindow.show()
 
-    def update_entry(self, entry_path: Path):
-        """ Particular implementation to update entries for this inherited Manager """
-        raise NotImplementedError
 
 
 class ManagerActions(ActionManager):
@@ -266,8 +271,12 @@ class ManagerActions(ActionManager):
     Inherits from ActionManager and initializes with a specific manager instance.
     """
 
-    def __init__(self, manager: ManagerBase, menu: QtWidgets.QMenu = None, toolbar: QtWidgets.QToolBar = None):
+    def __init__(self, manager: ManagerBase,
+                 menu: QtWidgets.QMenu = None,
+                 toolbar: QtWidgets.QToolBar = None,
+                 debug_hide_toolbar_and_menu = True):
         super().__init__()
+
         self.manager = manager
         self.manager_name = manager.__class__
         if toolbar is not None:
@@ -276,10 +285,14 @@ class ManagerActions(ActionManager):
         else:
             if hasattr(self.manager, 'toolbar'):
                 self.set_toolbar(self.manager.toolbar)
-                self.hide_widget = True
+                self.hide_widget = debug_hide_toolbar_and_menu
 
         if menu is not None:
             self.set_menu(menu)
+        else:
+            if hasattr(self.manager, 'menu'):
+                self.set_menu(self.manager.menu)
+
         self.load_menu: QtWidgets.QMenu = None
 
         self.setup_actions()
