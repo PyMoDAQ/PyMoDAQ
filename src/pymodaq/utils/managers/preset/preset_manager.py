@@ -1,25 +1,24 @@
-import os
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.dock import Dock
 
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq_gui.messenger import dialog as dialogbox
-from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.utils.config import get_set_preset_path
 from pymodaq.utils.managers.utils import ManagerBase, ManagerActions
 from pymodaq.utils.managers.modules_manager import ModuleType
-from pymodaq.extensions.utils import CustomExt
+
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
+
+from pymodaq.utils.managers.preset import utils  #  necessary to register preset parameter types
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -34,8 +33,6 @@ overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
 layout_path = config_mod_pymodaq.get_set_layout_path()
 
 
-
-
 class PresetManager(ManagerBase):
     entry_type='preset'
     entry_extension='.xml'
@@ -45,65 +42,28 @@ class PresetManager(ManagerBase):
                  menu: QtWidgets.QMenu = None,
                  toolbar: QtWidgets.QToolBar = None):
 
-        super().__init__(self, parent=QtWidgets.QMainWindow(), dashboard=dashboard)
+        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
 
-        self.action_manager = ManagerActions(self, menu=menu, toolbar=toolbar)
-
-        self.main_widget = QtWidgets.QWidget()
-        self.mainwindow.setCentralWidget(self.main_widget)
-
-        self.setup_ui()
-
-    def setup_actions(self):
-        #nothing more than the base actions from the base class
-        pass
-
-    def connect_things(self):
-        self.new
-
-    @staticmethod
-    def remove_preset_related_files(preset_name: str):
-        for file in config_mod_pymodaq.get_set_configurator_path(preset_name).iterdir():
-            file.unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_configurator_path(preset_name).rmdir()
-        config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
-
-    def save_check(self, preset_name: str = None):
-        if preset_name is not None:
-            current_preset = self.get_entry_folder().joinpath(preset_name+self.entry_extension)
-        else:
-            current_preset = self.entry_filename
-        if current_preset.exists():
-            user_agreed = dialog(
-                title='Overwrite confirmation',
-                message='File exist do you want to overwrite it ?',
-            )
-            if not user_agreed:
-                return
+    ### Reimplemented Methods ####################################################
+    def save_entries(self):
+        """ Particular implementation to save entries for this inherited Manager """
         ioxml.parameter_to_xml_file(
             self.settings,
-            current_preset,
+            self.entry_filename,
             overwrite=True,
         )
-        logger.warning(
-            f'File {current_preset} overwriten at user request'
-        )
 
-        self.remove_preset_related_files(current_preset.stem)
-        self.new_file.emit()
-
-    ### from ManagerMixin ####################################################
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return self.get_entry_folder()
+        return get_set_preset_path()
 
     def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Apply the selected entry file to the dashboard and adds Control Modules specified in it
         """
         try:
+
+            if isinstance(entry, str):
+                entry = self.get_entry_folder().joinpath(f'{entry}.xml')
 
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
                 ret = dialog(f'Warning!',
@@ -134,7 +94,7 @@ class PresetManager(ManagerBase):
                     area.window().setVisible(True)
                 messagebox(
                     severity="critical",
-                    title="{self.entry_type.capitalize()} loading error",
+                    title=f"{self.entry_type.capitalize()} loading error",
                     text=f"""
                                 <p>{error}</p>
                                 <p>This error may be related to:</p>
@@ -172,7 +132,7 @@ class PresetManager(ManagerBase):
 
                 self.dashboard.update_init_tree()
 
-                self.applied_entry.emit(entry)
+                self.applied_entry.emit(entry.stem)
 
             logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
 
@@ -180,15 +140,7 @@ class PresetManager(ManagerBase):
             logger.exception(str(e))
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        if entry == '...':
-            self.create_entry()
-            return
-
-        if entry is None:
-            entry = self.entry_filename
-
-        if isinstance(entry, str):
-            entry = self.get_entry_folder().joinpath(f'{entry}.xml')
+        """ Update the Manager UI after a given entry as been selected/updated """
         if entry.exists():
             self.settings = entry
         else:
@@ -199,9 +151,24 @@ class PresetManager(ManagerBase):
             ]  # [PresetScalableGroupDet(name='Detectors')]
             self.settings = Parameter.create(title='Preset', name='Preset', type='group',
                                              children=params_act + params_det,)
-        self.get_action('entries').setCurrentText(entry.stem)
-        self.action_manager.update_action_list()
 
+    def setup_actions(self):
+        #  nothing more than the base actions from the base class
+        pass
+
+    def connect_things(self):
+        self.new_entry.connect(self.remove_preset_related_files)
+        self.deleted_entry.connect(self.remove_preset_related_files)
+
+    @staticmethod
+    def remove_preset_related_files(preset_name: str):
+        for file in config_mod_pymodaq.get_set_configurator_path(preset_name).iterdir():
+            file.unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_configurator_path(preset_name).rmdir()
+        config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
+        config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
     def create_control_modules_from_preset(self, preset_file: Path) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """
@@ -335,7 +302,7 @@ class PresetManager(ManagerBase):
         QtWidgets.QApplication.processEvents()
         # restore dock state if saved
 
-        self.dashboard.title = self.preset
+        self.dashboard.title = self.entry
 
         self.dashboard.mainwindow.setWindowTitle(f"PyMoDAQ Dashboard: {self.dashboard.title}")
 
@@ -345,6 +312,6 @@ class PresetManager(ManagerBase):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     prog = PresetManager()
-    prog.update_preset()
+    prog.update_entry_base()
     prog.mainwindow.show()
     sys.exit(app.exec_())

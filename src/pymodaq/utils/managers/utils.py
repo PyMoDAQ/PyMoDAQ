@@ -2,10 +2,15 @@ from pathlib import Path
 from typing import Any, Union
 from qtpy import QtWidgets, QtCore
 
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.managers.action_manager import ActionManager
+from pymodaq_gui.messenger import dialog
+
+
+logger = set_logger(get_module_name(__file__))
 
 
 class ExternalActions(StrEnum):
@@ -25,8 +30,11 @@ class InternalActions(StrEnum):
 
 class ManagerBase(CustomExt):
 
-    new_file = QtCore.Signal()
-    applied_entry = QtCore.Signal(Path)
+    new_entry = QtCore.Signal(str)
+    applied_entry = QtCore.Signal(str)
+    deleted_entry = QtCore.Signal(str)
+    updated_entry = QtCore.Signal(str)
+
     entry_type: str
     entry_extension: str
 
@@ -69,7 +77,7 @@ class ManagerBase(CustomExt):
 
     @entry.setter
     def entry(self, preset_name: str):
-        self.update_entry(preset_name)
+        self.update_entry_base(preset_name)
 
     @property
     def entry_filename(self) -> Path:
@@ -133,32 +141,52 @@ class ManagerBase(CustomExt):
                         tip=f'Reload the current {self.entry_type} file')
 
     def connect_things_base(self):
-        self.connect_action('entries', self.update_entry,
+        self.connect_action('entries', self.update_entry_base,
                             signal_name='currentTextChanged')
         self.connect_action(InternalActions.COPY, self.copy_entry)
-        self.connect_action(InternalActions.NEW, self.create_preset)
+        self.connect_action(InternalActions.NEW, self.create_entry)
         self.connect_action(InternalActions.DELETE, self.delete_entry)
         self.connect_action(InternalActions.SAVE, lambda: self.save_check())
-        self.connect_action(InternalActions.RELOAD, lambda: self.update_entry())
+        self.connect_action(InternalActions.RELOAD, lambda: self.update_entry_base())
 
         self.get_action('entries').setCurrentText('default')
 
     def create_entry(self):
-        text, ok = QtWidgets.QInputDialog.getText(
+        entry, ok = QtWidgets.QInputDialog.getText(
             None,
             f'Enter a NEW {self.entry_type.capitalize()} name',
             f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
-        if ok and text != '':
+        if ok and entry != '':
             entries = [self.get_action('entries').itemText(ind).lower() for
                        ind in range(self.get_action('entries').count())]
-            if text.lower() not in entries:
-                entries.append(text.lower())
+            if entry.lower() not in entries:
+                entries.append(entry.lower())
                 entries.sort()
-                index = entries.index(text.lower())
-                self.get_action('entries').insertItem(index-1, text)
+                index = entries.index(entry.lower())
+                self.get_action('entries').insertItem(index-1, entry)
 
-            self.get_action('entries').setCurrentText(text)
+            self.get_action('entries').setCurrentText(entry)
             self.save_check()
+            self.new_entry.emit(entry)
+
+    def save_check(self, entry: str = None):
+        if entry is not None:
+            entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
+        else:
+            entry_path = self.entry_filename
+        if entry_path.exists():
+            user_agreed = dialog(
+                title='Overwrite confirmation',
+                message='File exist do you want to overwrite it ?',
+            )
+            if not user_agreed:
+                return
+        self.save_entries()
+
+    def save_entries(self):
+        """ Particular implementation to save entries for this inherited Manager """
+        raise NotImplementedError
+
 
     def copy_entry(self):
         text, ok = QtWidgets.QInputDialog.getText(
@@ -177,27 +205,24 @@ class ManagerBase(CustomExt):
             self.get_action('entries').setCurrentText(text)
 
     def delete_entry(self):
-        current_preset = self.entry
-        if current_preset == '...':
+        entry = self.entry
+        if entry == '...':
             return
-        user_agreed = dialogbox(
+        user_agreed = dialog(
             title='Delete confirmation',
             message=f'Are you sure you want to delete the {self.entry_type.capitalize()}'
-                    f' {current_preset} ?',
+                    f' {entry} ?',
         )
         if user_agreed:
             self.connect_action('entries', signal_name='currentTextChanged', connect=False)
-            preset_file = self.get_entry_folder().joinpath(f'{current_preset}.xml')
+            self.entry_filename.unlink(missing_ok=True)
 
-            preset_file.unlink(missing_ok=True)
-            self.remove_preset_related_files(current_preset)
-
-            logger.info(f'{self.entry_type.capitalize()} file {preset_file} deleted')
+            logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
             self.get_action('entries').removeItem(
                 self.get_action('entries').currentIndex()
             )
-            self.connect_action('entries', self.update_entry, signal_name='currentTextChanged')
-            self.new_file.emit()  # notify that an antry has been deleted
+            self.connect_action('entries', self.update_entry_base, signal_name='currentTextChanged')
+            self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
 
     def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
@@ -210,31 +235,38 @@ class ManagerBase(CustomExt):
         """
         raise NotImplementedError
 
-    def delete_entry(self):
-        """Deletes the current entry in the manager."""
-        raise NotImplementedError
+    def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
+        if entry == '...':
+            self.create_entry()
+            return
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        """Updates the current entry with the one from the given file in the manager.
+        if entry is None:
+            entry = self.entry_filename
 
-        Parameters:
-        -----------
-        file : Path
-            The path to the configuration file to be updated.
-        """
-        raise NotImplementedError
+        if isinstance(entry, str):
+            entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
+
+        self.update_entry(entry)
+
+        self.get_action('entries').setCurrentText(entry.stem)
+        self.action_manager.update_action_list()
+        self.updated_entry.emit(entry.stem)
 
     def show(self):
         self.mainwindow.show()
 
+    def update_entry(self, entry_path: Path):
+        """ Particular implementation to update entries for this inherited Manager """
+        raise NotImplementedError
+
 
 class ManagerActions(ActionManager):
-    """Class to manage actions for a specific manager in PyMoDAQ.
+    """Class to manage external actions of PyMoDAQ managers
 
-    Inherits from ActionManager and initializes with a specific manager name.
+    Inherits from ActionManager and initializes with a specific manager instance.
     """
 
-    def __init__(self, manager: ManagerMixin, menu: QtWidgets.QMenu = None, toolbar: QtWidgets.QToolBar = None):
+    def __init__(self, manager: ManagerBase, menu: QtWidgets.QMenu = None, toolbar: QtWidgets.QToolBar = None):
         super().__init__()
         self.manager = manager
         self.manager_name = manager.__class__
