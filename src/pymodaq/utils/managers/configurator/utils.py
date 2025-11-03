@@ -255,6 +255,22 @@ class ConfiguratorModel(TableModel):
         self.update_delegate.emit()
         return True
 
+    def setData(self, index, value, role):
+        if index.isValid():
+            if role == Qt.ItemDataRole.EditRole:
+                if self.validate_data(index.row(), index.column(), value):
+                    self._data[index.row()].setting.parameter.setValue(value)
+                    self.dataChanged.emit(index, index, [role])
+                    return True
+
+                else:
+                    return False
+            elif role == Qt.ItemDataRole.CheckStateRole:
+                self._checked[index.row()] = True if value == Qt.CheckState.Checked else False
+                self.dataChanged.emit(index, index, [role])
+                return True
+        return False
+
     def split_entry(self, entry: ConfiguratorEntry,
                     entries: list[ConfiguratorEntry] = None) -> list[ConfiguratorEntry]:
         """ Split A ConfiguratorEntry into multiple entries if its underlying parameter has children"""
