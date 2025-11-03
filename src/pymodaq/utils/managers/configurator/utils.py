@@ -361,13 +361,17 @@ class ConfiguratorModel(TableModel):
             file.writelines([ConfiguratorEntry.serialize(entry) for entry in self._data])
 
 
+class SpecialConfiguratorEntry(StrEnum):
+    ACTUATOR_VALUE = 'actuator_value'
+    MODULE_INIT = 'control_module_init'
+
 
 class ConfiguratorTableView(QtWidgets.QTableView):
     """
     """
 
     valueChanged = QtCore.Signal(list)
-    add_data_signal = QtCore.Signal(int)
+    add_data_signal = QtCore.Signal(SpecialConfiguratorEntry)
     remove_row_signal = QtCore.Signal(int)
     load_data_signal = QtCore.Signal()
     save_data_signal = QtCore.Signal()
@@ -384,7 +388,10 @@ class ConfiguratorTableView(QtWidgets.QTableView):
     def setmenu(self, status):
         if status:
             self.menu = QtWidgets.QMenu()
-            self.menu.addAction('Add Actuator Value', self.add)
+            self.menu.addAction('Add Actuator Value',
+                                lambda: self.add(SpecialConfiguratorEntry.ACTUATOR_VALUE))
+            self.menu.addAction('Add Control Module Init Value',
+                                lambda: self.add(SpecialConfiguratorEntry.MODULE_INIT))
             self.menu.addAction('Remove selected row', self.remove)
             self.menu.addAction('Clear all', self.clear)
             self.menu.addSeparator()
@@ -400,8 +407,8 @@ class ConfiguratorTableView(QtWidgets.QTableView):
     def clear(self):
         self.model().clear()
 
-    def add(self):
-        self.add_data_signal.emit(self.currentIndex().row())
+    def add(self, add_type: SpecialConfiguratorEntry):
+        self.add_data_signal.emit(add_type)
 
     def remove(self):
         self.remove_row_signal.emit(self.currentIndex().row())
