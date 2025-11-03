@@ -17,7 +17,7 @@ from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
-                                                       get_module_from_param, config_entry_from_path,
+                                                       get_module_from_param, config_entries_from_path,
                                                        ModuleType, ParameterDelegate, EntryActions,
                                                        ConfigurationAction, SpecialConfiguratorEntry)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
@@ -25,13 +25,13 @@ from pymodaq_gui.parameter.utils import compareParameters
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
-from pymodaq_gui.utils.custom_app import CustomApp
 
+from pymodaq.utils.managers.utils import ManagerBase
 
 logger = set_logger(get_module_name(__file__))
 
 
-class Configurator(CustomApp):
+class Configurator(ManagerBase):
     """
     Main class managing the configuration of control modules from a Dashboard in terms
     of their settings and actuator's value.
@@ -45,36 +45,38 @@ class Configurator(CustomApp):
         Name of the preset file to load at startup
     """
 
-    new_file = QtCore.Signal()
+    entry_type = 'configurator'
+    entry_extension ='.config'
 
-    def __init__(self, preset_filename: str = ''):
-        super().__init__(parent=QtWidgets.QMainWindow(),
+    def __init__(self,
+                 dashboard: 'DashBoard' = None,
+                 menu: QtWidgets.QMenu = None,
+                 toolbar: QtWidgets.QToolBar = None,
+                 preset_filename: str = ''):
+
+        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
 
         self.preset_filename = preset_filename
-        self._actuators: list[str] = None
-        self._detectors: list[str] = None
 
-        self.main_widget = QtWidgets.QWidget()
-        self.mainwindow.setCentralWidget(self.main_widget)
-
-        self.setup_ui()
+    def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
+        """Get the folder path where the managed entries are stored."""
+        return get_set_configurator_path(self.preset_filename)
 
     @property
     def preset_filename(self) -> str:
-        return self.get_action('preset_filename').currentText()
+        return self.get_action('preset_filename').text()
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
-            self.get_action('configurations').clear()
+            self.get_action('entries').clear()
             self.get_action('preset_filename').setText(preset_filename)
-            self.get_action('configurations').addItems(
-                self.get_configurations(get_set_configurator_path(preset_filename)) + ['...'])
+            self.get_action('entries').addItems(self.entries + ['...'])
 
     @staticmethod
     def config_entry_from_path(filename: Union[str, Path]) -> list[ConfiguratorEntry]:
-        return config_entry_from_path(filename)
+        return config_entries_from_path(filename)
 
     def apply_configuration(self, modules_manager: ModulesManager, configuration_path: Path):
         """
@@ -139,7 +141,6 @@ class Configurator(CustomApp):
                                   f'with the current state of your Dashboard, Ignoring them in the applied '
                                   f'configuration')
         return incompatible_index
-
 
     def populate_from_settings(self, settings: Parameter):
         """
@@ -324,29 +325,11 @@ class Configurator(CustomApp):
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
 
-
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
                         shortcut=QtCore.Qt.Key.Key_Delete)
         self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
-
-        self.add_widget('configurations', QtWidgets.QComboBox(),
-                        tip='List of available configurations',
-                        toolbar='configurations')
-        self.add_action(ConfigurationAction.COPY, 'Copy Configuration', 'EditCopy', toolbar='configurations')
-        self.add_action(ConfigurationAction.NEW, 'New Configuration', 'ListAdd',
-                        toolbar='configurations',
-                        tip='Create a new configuration file')
-        self.add_action(ConfigurationAction.DELETE, 'Delete Configuration', 'ListRemove',
-                        toolbar='configurations',
-                        tip='Delete the current configuration file')
-        self.add_action(ConfigurationAction.SAVE, 'Save Configuration', 'DocumentSave',
-                        toolbar='configurations',
-                        tip='Save/Update the current configuration')
-        self.add_action(ConfigurationAction.RELOAD, 'Reload Configuration', 'ViewRefresh',
-                        toolbar='configurations',
-                        tip='Reload the current configuration file')
 
 
     def connect_things(self):
@@ -355,23 +338,9 @@ class Configurator(CustomApp):
         self.connect_action(EntryActions.UP, self.move_up_setting)
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
 
-        self.connect_action(ConfigurationAction.COPY, self.copy_configuration)
-        self.connect_action(ConfigurationAction.NEW, self.create_configuration)
-        self.connect_action(ConfigurationAction.DELETE, self.delete_configuration)
-        self.connect_action(ConfigurationAction.SAVE, lambda: self.save_check())
-        self.connect_action(ConfigurationAction.RELOAD, self.load_configuration)
 
-        self.connect_action('configurations', self.get_action(ConfigurationAction.RELOAD).trigger,
-                            signal_name='currentTextChanged')
-
-    def load_configuration(self):
-        preset_name = self.get_action('preset_filename').text()
-        config_name = self.get_action('configurations').currentText()
-        if config_name == '...':
-            self.create_configuration()
-            return
-        self.config_model.load(get_set_configurator_path(preset_name).joinpath(f'{config_name}.config'))
-
+    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        self.config_model.load(self.entry_filename)
 
     @staticmethod
     def get_configurations(preset_name: str) -> list[str]:

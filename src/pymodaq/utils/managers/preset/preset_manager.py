@@ -12,7 +12,7 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.utils.config import get_set_preset_path
-from pymodaq.utils.managers.utils import ManagerBase, ManagerExternalActions
+from pymodaq.utils.managers.utils import ManagerBase
 from pymodaq.utils.managers.modules_manager import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError

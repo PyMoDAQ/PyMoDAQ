@@ -75,8 +75,8 @@ def get_extensions():
 class CustomExt(CustomApp):
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
-                 dashboard: 'DashBoard'):
-        super().__init__(parent)
+                 dashboard: 'DashBoard', **kwargs):
+        super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
         self.runner_thread : QtCore.QThread = None

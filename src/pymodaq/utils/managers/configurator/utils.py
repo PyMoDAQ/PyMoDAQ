@@ -154,7 +154,7 @@ class ConfiguratorEntry:
         return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
-def config_entry_from_path(fname: Union[str, Path]) -> list[ConfiguratorEntry]:
+def config_entries_from_path(fname: Union[str, Path]) -> list[ConfiguratorEntry]:
     fname = Path(fname)
     if not fname.exists():
         return []
@@ -347,7 +347,7 @@ class ConfiguratorModel(TableModel):
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
-            data = config_entry_from_path(fname)
+            data = config_entries_from_path(fname)
 
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)

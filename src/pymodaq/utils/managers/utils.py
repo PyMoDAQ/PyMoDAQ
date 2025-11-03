@@ -41,9 +41,10 @@ class ManagerBase(CustomExt):
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 toolbar: QtWidgets.QToolBar = None,
+                 **kwargs):
 
-        super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard)
+        super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
         self.action_manager = ManagerExternalActions(self, menu=menu, toolbar=toolbar)
 
         self.main_widget = QtWidgets.QWidget()
@@ -100,8 +101,12 @@ class ManagerBase(CustomExt):
         return self.list_managed_entries_path()
 
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
-        """Returns a list of names of managed entries."""
-        return [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
+        """Returns a list of names of managed entries with 'default' as first """
+        entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
+        if 'default' in entries:  #  make sure the default is the first one shown
+            default = entries.pop(entries.index('default'))
+            entries.insert(0, default)
+        return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
         """Should return a list of Path objects representing managed entries.
