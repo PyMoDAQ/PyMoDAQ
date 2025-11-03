@@ -304,6 +304,7 @@ class DashBoard(CustomApp):
                 dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
                     dock.close()
+            self.compact_actuator_dock.close()
             self.update_module_manager()
         except Exception as e:
             logger.exception(str(e))
