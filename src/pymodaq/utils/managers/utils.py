@@ -176,7 +176,7 @@ class ManagerBase(CustomExt):
                 self.get_action('entries').insertItem(index-1, entry)
 
             self.get_action('entries').setCurrentText(entry)
-            self.save_check()
+            self.save_check(bypass_dialog=bypass_dialog)
             self.new_entry.emit(entry)
 
     def save_check(self, entry: str = None, bypass_dialog=False):

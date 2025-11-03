@@ -111,7 +111,7 @@ class TestPresetManager:
 
         new_entry = 'anewentry'
 
-        preset_manager.create_entry(new_entry)
+        preset_manager.create_entry(new_entry, bypass_dialog=True)
 
         assert new_entry in preset_manager.list_managed_entries()
 
