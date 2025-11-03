@@ -158,11 +158,14 @@ class ManagerBase(CustomExt):
         self.updated_entry.connect(self.action_manager.update_action_list)
         self.deleted_entry.connect(self.action_manager.update_action_list)
 
-    def create_entry(self):
-        entry, ok = QtWidgets.QInputDialog.getText(
-            None,
-            f'Enter a NEW {self.entry_type.capitalize()} name',
-            f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
+    def create_entry(self, entry: str = None, bypass_dialog=False):
+        if entry is not None:
+            ok = True
+        else:
+            entry, ok = QtWidgets.QInputDialog.getText(
+                None,
+                f'Enter a NEW {self.entry_type.capitalize()} name',
+                f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
             entries = [self.get_action('entries').itemText(ind).lower() for
                        ind in range(self.get_action('entries').count())]
@@ -176,52 +179,61 @@ class ManagerBase(CustomExt):
             self.save_check()
             self.new_entry.emit(entry)
 
-    def save_check(self, entry: str = None):
+    def save_check(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
             entry_path = self.entry_filename
         if entry_path.exists():
-            user_agreed = dialog(
-                title='Overwrite confirmation',
-                message='File exist do you want to overwrite it ?',
-            )
-            if not user_agreed:
-                return
-        self.save_entries()
+            if not bypass_dialog:
+                user_agreed = dialog(
+                    title='Overwrite confirmation',
+                    message='File exist do you want to overwrite it ?',
+                )
+                if not user_agreed:
+                    return
+        self.save_entries(entry_path)
 
-    def save_entries(self):
+    def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
         raise NotImplementedError
 
+    def copy_entry(self, entry: str = None, bypass_dialog=False):
+        if entry is None:
+            entry, ok = QtWidgets.QInputDialog.getText(
+                None, f'Enter a NEW {self.entry_type.capitalize()} name',
+                f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
+            if not ok or entry == '':
+                return
 
-    def copy_entry(self):
-        text, ok = QtWidgets.QInputDialog.getText(
-            None, f'Enter a NEW {self.entry_type.capitalize()} name',
-            f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
-        if ok and text != '':
+        self.save_check(entry, bypass_dialog=bypass_dialog)
+        entries = [self.get_action('entries').itemText(ind).lower() for
+                   ind in range(self.get_action('entries').count())]
+        if entry.lower() not in entries:
+            entries.append(entry.lower())
+            entries.sort()
+            index = entries.index(entry.lower())
+            self.get_action('entries').insertItem(index-1, entry)
 
-            entries = [self.get_action('entries').itemText(ind).lower() for
-                       ind in range(self.get_action('entries').count())]
-            if text.lower() not in entries:
-                entries.append(text.lower())
-                entries.sort()
-                index = entries.index(text.lower())
-                self.get_action('entries').insertItem(index-1, text)
+        self.get_action('entries').setCurrentText(entry)
 
-            self.get_action('entries').setCurrentText(text)
-            self.save_check(text)
-            self.new_entry.emit(text)
+        self.new_entry.emit(entry)
 
-    def delete_entry(self):
-        entry = self.entry
+    def delete_entry(self, entry: str = None, bypass_dialog=False):
+        if entry is None:
+            entry = self.entry
+        else:
+            self.entry = entry
         if entry == '...':
             return
-        user_agreed = dialog(
-            title='Delete confirmation',
-            message=f'Are you sure you want to delete the {self.entry_type.capitalize()}'
-                    f' {entry} ?',
-        )
+        if bypass_dialog:
+            user_agreed = True
+        else:
+            user_agreed = dialog(
+                title='Delete confirmation',
+                message=f'Are you sure you want to delete the {self.entry_type.capitalize()}'
+                        f' {entry} ?',
+            )
         if user_agreed:
             self.connect_action('entries', signal_name='currentTextChanged', connect=False)
             self.entry_filename.unlink(missing_ok=True)
@@ -232,7 +244,6 @@ class ManagerBase(CustomExt):
             )
             self.connect_action('entries', self.update_entry_base, signal_name='currentTextChanged')
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
-
 
     def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
         """Applies the entry from the given file in the manager.

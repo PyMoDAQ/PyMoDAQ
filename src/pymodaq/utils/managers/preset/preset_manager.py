@@ -42,8 +42,8 @@ class PresetManager(ManagerBase):
 
     params = params_act + params_det
 
-    entry_type='preset'
-    entry_extension='.xml'
+    entry_type = 'preset'
+    entry_extension ='.xml'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
@@ -53,11 +53,15 @@ class PresetManager(ManagerBase):
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
 
     ### Reimplemented Methods ####################################################
-    def save_entries(self):
+    def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
+
+        if entry_path is None:
+            entry_path = self.entry_filename
+
         ioxml.parameter_to_xml_file(
             self.settings,
-            self.entry_filename,
+            entry_path,
             overwrite=True,
         )
 
