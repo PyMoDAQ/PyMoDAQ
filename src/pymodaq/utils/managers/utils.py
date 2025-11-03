@@ -358,7 +358,7 @@ class ManagerExternalActions(ActionManager):
             self.connect_action(ExternalActions.Load,
                                 lambda: self.manager.apply_entry(
                                     self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-                                        f"{self.get_action_list().currentText()}.{self.manager.entry_extension}"
+                                        f"{self.get_action_list().currentText()}{self.manager.entry_extension}"
                                     )),
                                 )
 

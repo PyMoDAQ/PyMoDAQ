@@ -76,7 +76,7 @@ class PresetManager(ManagerBase):
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
                 ret = dialog(f'Warning!',
                              f'Are you sure you want '
-                             f'to load a new {self.entry_type.capitalize()}? \n')
+                             f'to load a new {self.entry_type.capitalize()}: {entry}? \n')
                 if ret:
                     self.dashboard.remove_actuators(self.dashboard.actuators_modules)
                     self.dashboard.remove_detectors(self.dashboard.detector_modules)

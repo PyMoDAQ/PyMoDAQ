@@ -26,7 +26,7 @@ config = Config()
 
 
 def copy_preset():                          # pragma: no cover
-    path = get_set_preset_path().joinpath('preset_default.xml')
+    path = get_set_preset_path().joinpath('default.xml')
     if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
         with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
             path.write_text(file.read())

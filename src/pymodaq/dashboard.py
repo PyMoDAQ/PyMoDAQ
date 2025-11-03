@@ -227,8 +227,8 @@ class DashBoard(CustomApp):
 
     def do_things_after_ui_setup(self):
         self.preset_manager = PresetManager(dashboard=self,
-                                            menu=self.get_menu("preset"),
-                                            toolbar = self.get_toolbar("preset"))
+                                            menu=self.get_menu('preset'),
+                                            toolbar = self.get_toolbar('preset'))
         self.preset_manager.update_entry_base()
         self.configurator = Configurator()
         self.configurator.new_file.connect(self.update_configuration_action_list)
@@ -270,7 +270,7 @@ class DashBoard(CustomApp):
         if detector_modules is None:
             detector_modules = []
         try:
-            for detector_module in detector_modules:
+            for detector_module in detector_modules[:]:
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
                 detector_module.quit_fun()
@@ -297,7 +297,7 @@ class DashBoard(CustomApp):
         if actuator_modules is None:
             actuator_modules = []
         try:
-            for actuator_module in actuator_modules:
+            for actuator_module in actuator_modules[:]:
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
                 actuator_module.quit_fun()
@@ -787,7 +787,7 @@ class DashBoard(CustomApp):
 
         self.add_menu('preset', 'Preset', menubar)
 
-        self.configuration_menu = menubar.addMenu("Configuration Manager")
+        self.configuration_menu = menubar.addMenu("Configurations")
         self.update_configuration_menu()
 
         self.overshoot_menu = menubar.addMenu("Overshoot Modes")
