@@ -132,7 +132,7 @@ class PresetManager(CustomApp):
 
     def create_preset(self):
         text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
-                                                  'Preset name:', QtWidgets.QLineEdit.Normal)
+                                                  'Preset name:', QtWidgets.QLineEdit.EchoMode.Normal)
         if ok and text != '':
             presets = [self.get_action('presets').itemText(ind).lower() for
                        ind in range(self.get_action('presets').count())]
@@ -147,7 +147,7 @@ class PresetManager(CustomApp):
 
     def copy_preset(self):
         text, ok = QtWidgets.QInputDialog.getText(None, 'Enter a NEW Preset name',
-                                                  'Preset name:', QtWidgets.QLineEdit.Normal)
+                                                  'Preset name:', QtWidgets.QLineEdit.EchoMode.Normal)
         if ok and text != '':
             self.save_check(text)
             presets = [self.get_action('presets').itemText(ind).lower() for

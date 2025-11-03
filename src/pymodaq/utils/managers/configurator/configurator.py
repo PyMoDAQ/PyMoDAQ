@@ -394,7 +394,7 @@ class Configurator(CustomApp):
 
     def create_configuration(self):
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
-                                                  "Config name:", QtWidgets.QLineEdit.Normal)
+                                                  "Config name:", QtWidgets.QLineEdit.EchoMode.Normal)
         if ok and text != '':
             configurations = [self.get_action('configurations').itemText(ind).lower() for
                        ind in range(self.get_action('configurations').count())]
@@ -407,7 +407,7 @@ class Configurator(CustomApp):
 
     def copy_configuration(self):
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
-                                                  "Config name:", QtWidgets.QLineEdit.Normal)
+                                                  "Config name:", QtWidgets.QLineEdit.EchoMode.Normal)
         if ok and text != '':
             self.save_check(text)
             configurations = [self.get_action('configurations').itemText(ind).lower() for
