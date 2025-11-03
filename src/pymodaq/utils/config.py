@@ -16,6 +16,17 @@ def get_set_preset_path():
     return get_set_config_dir('preset_configs')
 
 
+def get_set_configurator_path(subfolder: str = None):
+    """ creates and return the config folder path for managers files
+    """
+    if subfolder:
+        target_path = get_set_config_dir('configurator_configs').joinpath(subfolder)
+        if not target_path.exists():
+            target_path.mkdir(parents=True, exist_ok=True)
+        return target_path
+    else:
+        return get_set_config_dir('configurator_configs')
+
 def get_set_batch_path():
     """ creates and return the config folder path for managers files
     """

@@ -1,21 +1,24 @@
 import numbers
-
 from abc import abstractmethod
 from time import perf_counter
 from typing import Union, List, Dict, TYPE_CHECKING, Optional, TypeVar
-from numbers import Number
-from collections.abc import Iterable
+
 
 from easydict import EasyDict as edict
 import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QTimer
+from pint.errors import OffsetUnitCalculusError
+
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
 from pymodaq_utils import config as configmod
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq_utils.enums import BaseEnum, enum_checker
+from pymodaq_utils.serialize.mysocket import Socket
+from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+
+from pymodaq_data.data import DataUnitError, Q_, Unit
 
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
@@ -23,21 +26,13 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
-
-from pymodaq_data.data import DataUnitError, Q_
-
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
-from pymodaq_utils.enums import BaseEnum, enum_checker
-
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq import Unit
-from pint.errors import OffsetUnitCalculusError
-
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
@@ -168,29 +163,23 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
     else:
         raise ValueError('axis_names should be either a list of string or a dict with strings '
                          'as keys')
-    params = [
-                 {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group',
-                  'visible': True, 'children': [
-                     {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0,
-                      'default': 0},
-                     {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
-                      'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
-                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axis_names.copy(),
-                      'value': axis_name},
-                 ]},
-             ] + comon_parameters(epsilon)
+
+    controller_status_param = create_controller_param(axis_name, axis_names.copy())
+
+    params = [controller_status_param] + comon_parameters(epsilon)
     return params
 
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True,},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
          'value': config('actuator', 'ui') if config('actuator', 'ui') in ActuatorUIFactory.keys() else
          ActuatorUIFactory.keys()[0],
          'limits': ActuatorUIFactory.keys()},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
+         VALID_FOR_CONFIGURATION: False,},
 
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('actuator', 'refresh_timeout_ms')},
@@ -198,7 +187,8 @@ params = [
          'children': [
              {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
               'value': config_utils('network', 'tcp-server', 'ip')},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'tcp-server', 'port')},
@@ -207,7 +197,8 @@ params = [
          'children': [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
              {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"),
               "default": "localhost"},
@@ -242,6 +233,32 @@ def main(plugin_file, init=True, title='test'):
         prog.init_hardware_ui()
 
     sys.exit(app.exec_())
+
+
+##########################
+# this below is a patch to the Parameter class to enable the use of back-compatible 'multiaxes' Parameter name
+
+from pyqtgraph.parametertree.parameterTypes import GroupParameter, registerParameterType
+
+class GroupParameterPatch(GroupParameter):
+
+    def __getitem__(self, names: Union[str, tuple[str,]]):
+        if isinstance(names, str):
+            names = (names)
+        if 'multiaxes' in names:
+            names = list(names)
+            names[names.index('multiaxes')] = 'controller'
+            names = tuple(names)
+        if 'multi_status' in names:
+            names = list(names)
+            names[names.index('multi_status')] = 'controller_status'
+            names = tuple(names)
+        return super().__getitem__(names)
+
+
+registerParameterType('group', GroupParameterPatch, override=True)
+###########################################
+
 
 
 class DAQ_Move_base(QObject):
@@ -448,22 +465,22 @@ class DAQ_Move_base(QObject):
     @property
     def axis_name(self) -> Union[str]:
         """Get/Set the current axis using its string identifier"""
-        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('controller', 'axis').opts['limits']
         if isinstance(limits, list):
-            return self.settings['multiaxes', 'axis']
+            return self.settings['controller', 'axis']
         elif isinstance(limits, dict):
-            return find_keys_from_val(limits, val=self.settings['multiaxes', 'axis'])[0]
+            return find_keys_from_val(limits, val=self.settings['controller', 'axis'])[0]
         else:
             return ''
 
     @axis_name.setter
     def axis_name(self, name: str):
-        limits = self.settings.child('multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
-                self.settings.child('multiaxes', 'axis').setValue(name)
+                self.settings.child('controller', 'axis').setValue(name)
             elif isinstance(limits, dict):
-                self.settings.child('multiaxes', 'axis').setValue(limits[name])
+                self.settings.child('controller', 'axis').setValue(limits[name])
             QtWidgets.QApplication.processEvents()
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
@@ -478,11 +495,11 @@ class DAQ_Move_base(QObject):
         -------
         List of string or dictionary mapping names to integers
         """
-        return self.settings.child('multiaxes', 'axis').opts['limits']
+        return self.settings.child('controller', 'axis').opts['limits']
 
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
-        self.settings.child('multiaxes', 'axis').setLimits(names)
+        self.settings.child('controller', 'axis').setLimits(names)
         QtWidgets.QApplication.processEvents()
 
     @property
@@ -614,7 +631,7 @@ class DAQ_Move_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['multiaxes', 'multi_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     @property
     def ispolling(self):

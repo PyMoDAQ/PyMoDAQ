@@ -20,14 +20,9 @@ from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
+from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
 from pymodaq_gui.utils.utils import mkQApp
-
-comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
-                     'value': 'Master',
-                     'limits': ['Master', 'Slave']},
-                    {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0,
-                     'default': 0, 'readonly': False},
-                    ]
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -40,13 +35,16 @@ if local_path.joinpath('camera_calibrations').is_dir():
 
 config = Config()
 
+comon_parameters = [create_controller_param()]  #
+
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
         {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
+         VALID_FOR_CONFIGURATION: False,},
 
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
@@ -61,7 +59,8 @@ params = [
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
              'value': False},
-            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
+             VALID_FOR_CONFIGURATION: False},
             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
              'value': config('network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
@@ -70,7 +69,8 @@ params = [
          'children': [
              {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
               'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False},
+             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
+              VALID_FOR_CONFIGURATION: False},
              {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
              {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
@@ -209,7 +209,7 @@ class DAQ_Viewer_base(QObject):
 
         new in version 4.3.0
         """
-        return self.settings['controller_status'] == 'Master'
+        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
@@ -258,7 +258,7 @@ class DAQ_Viewer_base(QObject):
         if old_controller is None and slave_controller is not None:
             old_controller = slave_controller
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['controller_status'] == "Slave":
+        if self.settings['controller', 'controller_status'] == "Slave":
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
@@ -454,7 +454,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                     "Infos",
                     "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
-    params = comon_parameters + tcp_parameters
+    params = [create_controller_param()] + tcp_parameters
 
     def __init__(self, parent=None, params_state=None, grabber_type='2D'):
         """

@@ -35,33 +35,19 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.control_modules.instruments import ACTUATOR_TYPES, ACTUATOR_NAMES
 from pymodaq.control_modules.utils import ParameterControlModule
-from pymodaq.control_modules.thread_commands import (
-    ThreadStatus,
-    ThreadStatusMove,
-    ControlToHardwareMove,
-    UiToMainMove,
-)
 
-
-from pymodaq.control_modules.move_utility_classes import (
-    ThreadCommand,
-    MoveCommand,
-    DAQ_Move_base,
-    DataActuatorType,
-    check_units,
-    DataUnitError,
-)
+from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardwareMove,
+                                                     UiToMainMove,
+                                                     )
+from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
+                                                           check_units, DataUnitError)
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.utils.leco.pymodaq_listener import (
-    MoveActorListener,
-    LECOMoveCommands,
-    LECOCommands,
-)
-
-from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
+from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq import Q_, Unit
 
 
@@ -79,13 +65,6 @@ config_utils = config_mod.Config()
 config = ControlModulesConfig()
 
 HardwareController = TypeVar("HardwareController")
-
-HardwareController = TypeVar("HardwareController")
-
-DAQ_Move_Actuators = get_plugins("daq_move")
-ACTUATOR_TYPES = [mov["name"] for mov in DAQ_Move_Actuators]
-if len(ACTUATOR_TYPES) == 0:
-    raise ActuatorError("No installed Actuator")
 
 
 STATUS_WAIT_TIME = 1000
@@ -157,14 +136,14 @@ class DAQ_Move(ParameterControlModule):
             self.ui = None
 
         if self.ui is not None:
-            self.ui.actuators = ACTUATOR_TYPES
+            self.ui.actuators = ACTUATOR_NAMES
             self.ui.set_settings_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
         self._title = title
-        if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
-            self.actuator = kwargs.get("actuator", ACTUATOR_TYPES[0])
+        if len(ACTUATOR_NAMES) > 0:  # will be 0 if no valid plugins are installed
+            self.actuator = kwargs.get("actuator", ACTUATOR_NAMES[0])
 
         self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
 
@@ -239,18 +218,17 @@ class DAQ_Move(ParameterControlModule):
     def master(self) -> bool:
         """Get/Set programmatically the Master/Slave status of an actuator"""
         if self.initialized_state:
-            return (
-                self.settings["move_settings", "multiaxes", "multi_status"] == "Master"
-            )
+            return self.settings["move_settings", "controller", "controller_status"] == ControllerStatus.MASTER
         else:
             return True
 
     @master.setter
     def master(self, is_master: bool):
         if self.initialized_state:
-            self.settings.child("move_settings", "multiaxes", "multi_status").setValue(
-                "Master" if is_master else "Slave"
+            self.settings.child("move_settings", "controller", "controller_status").setValue(
+                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE
             )
+
 
     def append_data(
         self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None
@@ -704,7 +682,7 @@ class DAQ_Move(ParameterControlModule):
 
     @actuator.setter
     def actuator(self, act_type):
-        if act_type in ACTUATOR_TYPES:
+        if act_type in ACTUATOR_NAMES:
             self._actuator_type = act_type
             self.update_plugin_config()
             if self.ui is not None:
@@ -712,17 +690,17 @@ class DAQ_Move(ParameterControlModule):
             self.update_settings()
         else:
             raise ActuatorError(
-                f"{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}"
+                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
             )
 
     @property
     def actuators(self) -> List[str]:
         """Get the list of possible actuators"""
-        return ACTUATOR_TYPES
+        return ACTUATOR_NAMES
 
     def update_plugin_config(self):
         parent_module = utils.find_dict_in_list_from_key_val(
-            DAQ_Move_Actuators, "name", self.actuator
+            ACTUATOR_TYPES, "name", self.actuator
         )
         mod = import_module(parent_module["module"].__package__.split(".")[0])
         if hasattr(mod, "config"):
@@ -747,52 +725,33 @@ class DAQ_Move(ParameterControlModule):
     @property
     def axis_names(self) -> Union[List, Dict]:
         """ Get the names of all possible axis"""
-        return self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        return self.settings.child('move_settings', 'controller', 'axis').opts['limits']
 
     @property
     def axis_name(self) -> str:
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
+        val = self.settings['move_settings', 'controller', 'axis']
         if isinstance(limits, list):
-            return self.settings['move_settings', 'multiaxes', 'axis']
+            return val
         elif isinstance(limits, dict):
-            return find_keys_from_val(limits,
-                                      val=self.settings['move_settings', 'multiaxes', 'axis'])[0]
+            return find_keys_from_val(limits, val=val)[0]
+        else:
+            TypeError('Unknown limits type')
+
 
     @axis_name.setter
     def axis_name(self, name: str):
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
+        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(name)
+                value = name
             elif isinstance(limits, dict):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(limits[name])
-
-    @property
-    def axis_names(self) -> Union[List, Dict]:
-        """ Get the names of all possible axis"""
-        return self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-
-    @property
-    def axis_name(self) -> str:
-        """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-        if isinstance(limits, list):
-            return self.settings['move_settings', 'multiaxes', 'axis']
-        elif isinstance(limits, dict):
-            return find_keys_from_val(limits,
-                                      val=self.settings['move_settings', 'multiaxes', 'axis'])[0]
-
-    @axis_name.setter
-    def axis_name(self, name: str):
-        """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'multiaxes', 'axis').opts['limits']
-        if name in limits:
-            if isinstance(limits, list):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(name)
-            elif isinstance(limits, dict):
-                self.settings.child('move_settings', 'multiaxes', 'axis').setValue(limits[name])
+                value = limits[name]
+            else:
+                return
+            self.settings.child('move_settings', 'controller', 'axis').setValue(value)
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
@@ -828,7 +787,7 @@ class DAQ_Move(ParameterControlModule):
             for child in self.settings.child("move_settings").children():
                 child.remove()
             parent_module = utils.find_dict_in_list_from_key_val(
-                DAQ_Move_Actuators, "name", self._actuator_type
+                ACTUATOR_TYPES, "name", self._actuator_type
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self._actuator_type),
@@ -957,7 +916,7 @@ class DAQ_Move_Hardware(QObject):
         status = edict(initialized=False, info="")
         try:
             parent_module = utils.find_dict_in_list_from_key_val(
-                DAQ_Move_Actuators, "name", self.actuator_type
+                ACTUATOR_TYPES, "name", self.actuator_type
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self.actuator_type),

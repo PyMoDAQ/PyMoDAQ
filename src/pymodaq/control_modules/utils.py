@@ -10,93 +10,55 @@ from easydict import EasyDict as edict
 
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
-from pymodaq.control_modules.thread_commands import ThreadStatus
-from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import Config
-from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
+from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.parameter_manager import ParameterManager
-from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
-from pymodaq.utils.exceptions import DetectorError
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
-
-from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.utils.config import Config as ControlModulesConfig
 
-
-class DAQTypesEnum(BaseEnum):
-    """enum relating a given DAQType and a viewer type
-    See Also
-    --------
-    pymodaq.utils.plotting.data_viewers.viewer.ViewersEnum
-    """
-    DAQ0D = 'Viewer0D'
-    DAQ1D = 'Viewer1D'
-    DAQ2D = 'Viewer2D'
-    DAQND = 'ViewerND'
-
-    def to_data_type(self):
-        return ViewersEnum[self.value].value
-
-    def to_viewer_type(self):
-        return self.value
-
-    def to_daq_type(self):
-        return self.name
-
-    def increase_dim(self, ndim: int):
-        dim = self.get_dim()
-        if dim != 'N':
-            dim_as_int = int(dim) + ndim
-            if dim_as_int > 2:
-                dim = 'N'
-            else:
-                dim = str(dim_as_int)
-        else:
-            dim = 'N'
-        return DAQTypesEnum(f'Viewer{dim}D')
-
-    def get_dim(self):
-        return self.value.split('Viewer')[1].split('D')[0]
+from pymodaq.control_modules.thread_commands import ThreadStatus
 
 
-DAQ_TYPES = DAQTypesEnum
+class ControleModuleType(StrEnum):
+    DAQ_MOVE = 'DAQ_Move'
+    DAQ_VIEWER = 'DAQ_Viewer'
 
-DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
-             'DAQ1D': get_plugins('daq_1Dviewer'),
-             'DAQ2D': get_plugins('daq_2Dviewer'),
-             'DAQND': get_plugins('daq_NDviewer'),
-             }
 
-if len(DET_TYPES['DAQ0D']) == 0:
-    raise DetectorError('No installed Detector')
+class ControllerStatus(StrEnum):
+    MASTER = 'Master'
+    SLAVE = 'Slave'
+
+
+def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
+    controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
+        {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
+         'value': ControllerStatus.MASTER.value,
+         'limits': [ControllerStatus.MASTER.value, ControllerStatus.SLAVE.value]},
+        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': randint(0, 9999),
+         'default': 0, 'readonly': False},
+
+    ]}
+    if axis_names is not None and axis_name is not None:
+        controller_param['children'].append({'title': 'Axis:', 'name': 'axis', 'type': 'list',
+                                             'limits': axis_names.copy(),
+                                             'value': axis_name,
+                                             VALID_FOR_CONFIGURATION: False})
+    return controller_param
 
 
 config_utils = Config()
 config = ControlModulesConfig()
 logger = set_logger(get_module_name(__file__))
-
-
-class ViewerError(Exception):
-    pass
-
-
-def get_viewer_plugins(daq_type, det_name):
-    parent_module = find_dict_in_list_from_key_val(DET_TYPES[daq_type], 'name', det_name)
-    match_name = daq_type.lower()
-    match_name = f'{match_name[0:3]}_{match_name[3:].upper()}viewer_'
-    obj = getattr(getattr(parent_module['module'], match_name + det_name),
-                  f'{match_name[0:7].upper()}{match_name[7:]}{det_name}')
-    params = getattr(obj, 'params')
-    det_params = Parameter.create(name='Det Settings', type='group', children=params)
-    return det_params, obj
 
 
 class ControlModule(QObject):
@@ -292,9 +254,9 @@ class ControlModule(QObject):
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
     @property
-    def module_type(self):
-        """str: Get the module type, either DAQ_Move or DAQ_viewer"""
-        return type(self).__name__
+    def module_type(self) -> ControleModuleType:
+        """Get the module type, either DAQ_Move or DAQ_viewer"""
+        return ControleModuleType(type(self).__name__)
 
     @property
     def initialized_state(self):
@@ -424,6 +386,26 @@ class ParameterControlModule(ParameterManager, ControlModule):
     def __init__(self, **kwargs):
         ParameterManager.__init__(self, action_list=('save', 'update'))
         ControlModule.__init__(self)
+
+    def apply_controller_parameters(self, controller_param: Parameter):
+        """Apply controller parameters (Master/Slave, ID, eventually axes) to the ControlModule instance
+
+        Parameters
+        ----------
+        controller_param: Parameter
+            Parameter object containing the controller parameters
+        """
+        try:
+            if self.module_type == ControleModuleType.DAQ_VIEWER:
+                controller_settings = self.settings.child('detector_settings', 'controller')
+            elif self.module_type == ControleModuleType.DAQ_MOVE:
+                controller_settings = self.settings.child('move_settings', 'controller')
+            else:
+                raise TypeError('Unknown ControlModuleType')
+            controller_settings.restoreState(controller_param.saveState())
+
+        except Exception as e:
+            logger.exception(f'Error applying controller parameters: {str(e)}')
 
     def value_changed(self, param: Parameter) -> Optional[Parameter]:
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings

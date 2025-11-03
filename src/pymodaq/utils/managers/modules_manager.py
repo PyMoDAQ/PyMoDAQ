@@ -8,10 +8,11 @@ import time
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.config import Config
+from pymodaq_utils.enums import StrEnum
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
@@ -21,10 +22,15 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 
-logger = set_logger(get_module_name(__file__))
 
+logger = set_logger(get_module_name(__file__))
 config_utils = Config()
 config = ControlModulesConfig()
+
+
+class ModuleType(StrEnum):
+    Actuator = "actuator"
+    Detector = "detector"
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -140,14 +146,14 @@ class ModulesManager(QObject, ParameterManager):
             modules = [modules]
         return [mod.title for mod in modules]
 
-    def get_mods_from_names(self, names, mod='det') -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
+    def get_mods_from_names(self, names, mod=ModuleType.Detector) -> List[Union['DAQ_Move', 'DAQ_Viewer']]:
         """Getter of a list of given modules from their name (title)
 
         Parameters
         ----------
         names: list of str
         mod: str
-            either 'det' for DAQ_Viewer modules or 'act' for DAQ_Move modules
+            either ModuleType.Detector for DAQ_Viewer modules or ModuleType.Actuator for DAQ_Move modules
         """
         mods = []
         for name in names:
@@ -156,16 +162,16 @@ class ModulesManager(QObject, ParameterManager):
                 mods.append(d)
         return mods
 
-    def get_mod_from_name(self, name, mod='det') -> Union['DAQ_Move', 'DAQ_Viewer']:
+    def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
         """Getter of a given module from its name (title)
 
         Parameters
         ----------
         name: str
         mod: str
-            either 'det' for DAQ_Viewer modules or 'act' for DAQ_Move modules
+            either ModuleType.Detector for DAQ_Viewer modules or ModuleType.Actuator for DAQ_Move modules
         """
-        if mod == 'det':
+        if mod == ModuleType.Detector or mod == 'det':  #backcompat when comparing to 'det'
             modules = self._detectors
         else:
             modules = self._actuators
@@ -206,7 +212,7 @@ class ModulesManager(QObject, ParameterManager):
     @property
     def actuators(self) -> List['DAQ_Move']:
         """Get the list of selected actuators"""
-        return self.get_mods_from_names(self.selected_actuators_name, mod='act')
+        return self.get_mods_from_names(self.selected_actuators_name, mod=ModuleType.Actuator)
 
     @property
     def actuators_all(self):
@@ -276,6 +282,36 @@ class ModulesManager(QObject, ParameterManager):
         elif param.name() == 'actuators':
             self.actuators_changed.emit(param.value()['selected'])
 
+    def add_settings_from_modules(self, settings: Parameter, module_type: ModuleType):
+
+        for ind, module in enumerate(self.actuators_all if module_type==ModuleType.Actuator else self.detectors_all):
+            module_settings = Parameter.create(name='settings', type='group', children=[])
+            module_settings.restoreState(module.settings.saveState())
+
+            settings.child(module_type).addChild(
+                {'title': module.title, 'name': f'{module_type}_{ind:03.0f}', 'type': 'group',
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title}
+                 ]},
+            )
+            settings.child(module_type,
+                           f'{module_type}_{ind:03.0f}').addChildren(module_settings.children())
+
+    def get_settings_all(self) -> Parameter:
+        """Retrieve settings from all control modules and return it as a grouped Parameter"""
+        settings = Parameter.create(
+            title="Control Modules Settings",
+            name="control_modules_settings",
+            type="group",
+            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group'},
+                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
+        )
+
+        self.add_settings_from_modules(settings, ModuleType.Actuator)
+        self.add_settings_from_modules(settings, ModuleType.Detector)
+
+        return settings
+
     def get_det_data_list(self) -> DataToExport:
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
@@ -329,7 +365,7 @@ class ModulesManager(QObject, ParameterManager):
         
         if 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
-                'DataMixer', 'det').settings.child(
+                'DataMixer', ModuleType.Detector).settings.child(
                 'detector_settings', 'overridden_detectors').opts['limits']
         else:
             overridden_detectors = []
@@ -477,7 +513,7 @@ class ModulesManager(QObject, ParameterManager):
 
         if len(dte_act) == self.Nactuators:
             for dact in dte_act:
-                act = self.get_mod_from_name(dact.name, 'act')
+                act = self.get_mod_from_name(dact.name, ModuleType.Actuator)
                 if act is not None:
                     act.command_hardware.emit(
                         utils.ThreadCommand(command=command, attribute=[dact, polling]))

@@ -72,7 +72,7 @@ try:
         logger.info('*************************************************************************')
         logger.info(f"Getting the list of instrument plugins...")
         logger.info('')
-        get_instrument_plugins()
+        CONTROL_MODULES = get_instrument_plugins()
         logger.info('*************************************************************************')
 
         logger.info('')
