@@ -19,7 +19,7 @@ from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, config_entry_from_path,
                                                        ModuleType, ParameterDelegate, EntryActions,
-                                                       ConfigurationAction)
+                                                       ConfigurationAction, SpecialConfiguratorEntry)
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter.utils import compareParameters
 
@@ -53,6 +53,7 @@ class Configurator(CustomApp):
 
         self.preset_filename = preset_filename
         self._actuators: list[str] = None
+        self._detectors: list[str] = None
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
@@ -92,9 +93,14 @@ class Configurator(CustomApp):
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:
                 mod = modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
-                if 'actuator_value' in entry.setting.path:
+                if SpecialConfiguratorEntry.ACTUATOR_VALUE in entry.setting.path:
                     mod.move_abs(DataActuator(entry.module_name, data=entry.setting.parameter.value(),
                                               units=entry.setting.parameter.opts.get('suffix', mod.units)))
+                elif SpecialConfiguratorEntry.MODULE_INIT in entry.setting.path:
+                    if entry.setting.parameter.value():
+                        mod.init_hardware_ui(True)
+                        #todo call the line below in new Manager implementation that has dashboard as an argument
+                        #self.dashboard.poll_init()
                 else:
                     mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
 
@@ -117,13 +123,15 @@ class Configurator(CustomApp):
         """
         incompatible_index = []
         for index, entry in enumerate(entries):
-            if 'actuator_value' in entry.setting.path:
+            if SpecialConfiguratorEntry.ACTUATOR_VALUE in entry.setting.path:
                 if entry.module_name not in [group.child('name').value() for
                                              group in settings.child(ModuleType.Actuator).children()]:
                     incompatible_index.append(index)
-
+            elif SpecialConfiguratorEntry.MODULE_INIT in entry.setting.path:
+                if entry.module_name not in [group.child('name').value() for
+                                             group in settings.child(entry.module_type).children()]:
+                    incompatible_index.append(index)
             else:
-                settings.child(*entry.setting.path[1:])
                 if not compareParameters(settings.child(*entry.setting.path[1:]), entry.setting.parameter):
                     incompatible_index.append(index)
         if len(incompatible_index) > 0:
@@ -146,16 +154,16 @@ class Configurator(CustomApp):
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
         self._actuators = [
             param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
+        self._detectors = [
+            param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
         children = ioxml.XML_file_to_parameter(file_path)
-        self.settings = Parameter.create(
+        settings = Parameter.create(
             title="Control Modules:", name="control_modules", type="group", children=children
         )
-        self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
-        self._actuators = [param.child('name').value() for param in
-                           self.settings.child(ModuleType.Actuator.value).children()]
+        self.populate_from_settings(settings)
 
     def get_units_from_module_name(self, actuator_name: str):
         mods_settings = [group.child('name').value() for
@@ -168,8 +176,13 @@ class Configurator(CustomApp):
     def update_suffix_in_dialog(self, actuator_name: str):
         self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
 
-    def get_actuator_value_from_widget(self):
+    def add_special_entry(self, add_type: SpecialConfiguratorEntry):
+        if add_type == SpecialConfiguratorEntry.ACTUATOR_VALUE:
+            self.get_actuator_value_from_widget()
+        elif add_type == SpecialConfiguratorEntry.MODULE_INIT:
+            self.get_control_module_init_from_widget()
 
+    def get_actuator_value_from_widget(self):
         self.actuator_dialog = QDialog()
         vlayout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
@@ -199,17 +212,64 @@ class Configurator(CustomApp):
 
     def actuator_value_set(self):
         self.actuator_dialog.accept()
-        self.config_model.add_data(self.config_model.rowCount(),
-                                   ConfiguratorEntry(self.actuator_cb.currentText(),
-                                                     module_type=ModuleType.Actuator,
-                                                     setting=
-                                                     ParameterWithPath(
-                                                         parameter=
-                                                         Parameter.create(title= 'Actuator Value',
-                                                                          name='actuator_value',
-                                                                          type='float',
-                                                                          value=self.value_sb.value(),
-                                                                          suffix=self.value_sb.opts['suffix']))))
+        self.config_model.add_data(
+            self.config_model.rowCount(),
+            ConfiguratorEntry(self.actuator_cb.currentText(),
+                              module_type=ModuleType.Actuator,
+                              setting=
+                              ParameterWithPath(
+                                  parameter=
+                                  Parameter.create(title= 'Actuator Value',
+                                                   name=SpecialConfiguratorEntry.ACTUATOR_VALUE.value,
+                                                   type='float',
+                                                   value=self.value_sb.value(),
+                                                   suffix=self.value_sb.opts['suffix']))))
+
+    def get_control_module_init_from_widget(self):
+        self.init_module_dialog = QDialog()
+        vlayout = QtWidgets.QVBoxLayout()
+        widget = QtWidgets.QWidget()
+        widget.setLayout(QtWidgets.QHBoxLayout())
+        self.control_module_cb = QtWidgets.QComboBox()
+
+
+        self.control_module_cb.addItems(self._actuators + self._detectors)
+
+        self.init_cb = QtWidgets.QCheckBox()
+
+        widget.layout().addWidget(self.control_module_cb)
+        widget.layout().addWidget(self.init_cb)
+
+        vlayout.addWidget(widget)
+        self.init_module_dialog.setLayout(vlayout)
+        buttonBox = QDialogButtonBox(parent=self.init_module_dialog)
+
+        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
+        buttonBox.accepted.connect(self.control_module_init_set)
+        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+        buttonBox.rejected.connect(self.init_module_dialog.reject)
+
+        vlayout.addWidget(buttonBox)
+        self.init_module_dialog.setWindowTitle("Fill in information about this Control Module initialized value")
+        self.init_module_dialog.open()
+
+    def control_module_init_set(self):
+        self.init_module_dialog.accept()
+        module_name = self.control_module_cb.currentText()
+        module_type = ModuleType.Actuator if module_name in self._actuators else ModuleType.Detector
+        self.config_model.add_data(
+            self.config_model.rowCount(),
+            ConfiguratorEntry(module_name,
+                              module_type=module_type,
+                              setting=
+                              ParameterWithPath(
+                                  parameter=
+                                  Parameter.create(title= 'Control Module Init Value',
+                                                   name=SpecialConfiguratorEntry.MODULE_INIT.value,
+                                                   type='bool',
+                                                   value=True if self.init_cb.checkState() ==
+                                                                 QtCore.Qt.CheckState.Checked else False,
+                                                                          ))))
 
     def setup_docks(self):
         self.tree.setDragEnabled(True)
@@ -226,7 +286,7 @@ class Configurator(CustomApp):
 
         self.config_model = ConfiguratorModel(actuators=self._actuators)
         self.table_out.setModel(self.config_model)
-        self.table_out.add_data_signal[int].connect(self.get_actuator_value_from_widget)
+        self.table_out.add_data_signal[SpecialConfiguratorEntry].connect(self.add_special_entry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
         self.table_out.load_data_signal.connect(self.config_model.load)
         self.table_out.save_data_signal.connect(self.config_model.save)
