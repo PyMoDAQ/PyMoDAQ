@@ -76,13 +76,13 @@ class PresetManager(ManagerBase):
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
                 ret = dialog(f'Warning!',
                              f'Are you sure you want '
-                             f'to load a new {self.entry_type.capitalize()}: {entry}? \n')
+                             f'to load a new {self.entry_type.capitalize()}: {entry.stem}? \n')
                 if ret:
                     self.dashboard.remove_actuators(self.dashboard.actuators_modules)
                     self.dashboard.remove_detectors(self.dashboard.detector_modules)
                 else:
                     return
-
+            self.update_entry(entry)
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
                 area.window().setVisible(False)
@@ -94,7 +94,8 @@ class PresetManager(ManagerBase):
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             try:
-                actuators_modules, detector_modules = self.create_control_modules_from_preset(entry)
+
+                actuators_modules, detector_modules = self.create_control_modules_from_preset()
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
@@ -174,7 +175,7 @@ class PresetManager(ManagerBase):
         config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
-    def create_control_modules_from_preset(self, preset_file: Path) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+    def create_control_modules_from_preset(self) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """
         Load a preset file and create corresponding Control Modules in the Dashboard
 

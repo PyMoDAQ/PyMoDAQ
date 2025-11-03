@@ -278,7 +278,7 @@ class ManagerExternalActions(ActionManager):
         super().__init__()
 
         self.manager = manager
-        self.manager_name = manager.__class__
+        self.manager_name = manager.__class__.__name__
         if toolbar is not None:
             self.set_toolbar(toolbar)
             self.hide_widget = False
@@ -318,8 +318,7 @@ class ManagerExternalActions(ActionManager):
     def connect_things(self):
         self.connect_action(ExternalActions.Open, lambda: self.manager.show())
 
-    def update_load_action_tooltip(self, entry: str):
-        self.get_action(ExternalActions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
+
 
     def get_action_from_file(self, file: Path):
         return f"{file.stem}_{self.manager_name}"
@@ -352,15 +351,18 @@ class ManagerExternalActions(ActionManager):
             self.connect_action(
                 self.get_action_from_file(file),
                 self.create_slot_from_file(
-                    self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(file.stem)),
+                    self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(file.stem + self.manager.entry_extension)),
             )
-            self.connect_action(ExternalActions.Load, connect=False)
-            self.connect_action(ExternalActions.Load,
-                                lambda: self.manager.apply_entry(
-                                    self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-                                        f"{self.get_action_list().currentText()}{self.manager.entry_extension}"
-                                    )),
-                                )
+        self.connect_action(ExternalActions.Load, connect=False)
+        self.connect_action(ExternalActions.Load,
+                            lambda: self.manager.apply_entry(
+                                self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(
+                                    f"{self.get_action_list().currentText()}{self.manager.entry_extension}"
+                                )),
+                            )
+
+    def update_load_action_tooltip(self, entry: str):
+        self.get_action(ExternalActions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
 
     def create_slot_from_file(self, filename: Path):
         return lambda: self.manager.apply_entry(filename)
