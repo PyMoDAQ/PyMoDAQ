@@ -12,7 +12,7 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.utils.config import get_set_preset_path
-from pymodaq.utils.managers.utils import ManagerBase, ManagerActions
+from pymodaq.utils.managers.utils import ManagerBase, ManagerExternalActions
 from pymodaq.utils.managers.modules_manager import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
@@ -48,11 +48,9 @@ class PresetManager(ManagerBase):
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
-                 debug_hide_toolbar_and_menu = True):
+                 toolbar: QtWidgets.QToolBar = None):
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
-                         debug_hide_toolbar_and_menu = debug_hide_toolbar_and_menu)
+        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
 
     ### Reimplemented Methods ####################################################
     def save_entries(self):
@@ -316,8 +314,17 @@ class PresetManager(ManagerBase):
 
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    prog = PresetManager(debug_hide_toolbar_and_menu=False)
+    from pymodaq_gui.utils.utils import mkQApp
+    app = mkQApp('PresetManager')
+
+    external_ui = QtWidgets.QMainWindow()
+    toolbar = QtWidgets.QToolBar()
+    menu = QtWidgets.QMenu('Preset Manager Menu')
+    external_ui.addToolBar(toolbar)
+    external_ui.menuBar().addMenu(menu)
+
+    prog = PresetManager(menu=menu, toolbar=toolbar)
     prog.update_entry_base()
     prog.mainwindow.show()
+    external_ui.show()
     sys.exit(app.exec_())

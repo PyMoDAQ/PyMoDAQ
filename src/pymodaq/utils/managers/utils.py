@@ -41,12 +41,10 @@ class ManagerBase(CustomExt):
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
-                 debug_hide_toolbar_and_menu = True):
+                 toolbar: QtWidgets.QToolBar = None):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard)
-        self.action_manager = ManagerActions(self, menu=menu, toolbar=toolbar,
-                                             debug_hide_toolbar_and_menu=debug_hide_toolbar_and_menu)
+        self.action_manager = ManagerExternalActions(self, menu=menu, toolbar=toolbar)
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
@@ -158,6 +156,7 @@ class ManagerBase(CustomExt):
         self.get_action('entries').setCurrentText('default')
         self.new_entry.connect(self.action_manager.update_action_list)
         self.updated_entry.connect(self.action_manager.update_action_list)
+        self.deleted_entry.connect(self.action_manager.update_action_list)
 
     def create_entry(self):
         entry, ok = QtWidgets.QInputDialog.getText(
@@ -201,7 +200,7 @@ class ManagerBase(CustomExt):
             None, f'Enter a NEW {self.entry_type.capitalize()} name',
             f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and text != '':
-            self.save_check(text)
+
             entries = [self.get_action('entries').itemText(ind).lower() for
                        ind in range(self.get_action('entries').count())]
             if text.lower() not in entries:
@@ -211,6 +210,8 @@ class ManagerBase(CustomExt):
                 self.get_action('entries').insertItem(index-1, text)
 
             self.get_action('entries').setCurrentText(text)
+            self.save_check(text)
+            self.new_entry.emit(text)
 
     def delete_entry(self):
         entry = self.entry
@@ -265,7 +266,7 @@ class ManagerBase(CustomExt):
 
 
 
-class ManagerActions(ActionManager):
+class ManagerExternalActions(ActionManager):
     """Class to manage external actions of PyMoDAQ managers
 
     Inherits from ActionManager and initializes with a specific manager instance.
@@ -273,8 +274,7 @@ class ManagerActions(ActionManager):
 
     def __init__(self, manager: ManagerBase,
                  menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
-                 debug_hide_toolbar_and_menu = True):
+                 toolbar: QtWidgets.QToolBar = None):
         super().__init__()
 
         self.manager = manager
@@ -283,9 +283,9 @@ class ManagerActions(ActionManager):
             self.set_toolbar(toolbar)
             self.hide_widget = False
         else:
-            if hasattr(self.manager, 'toolbar'):
+            if hasattr(self.manager, 'toolbar'):  # meant to store (and hide) the unused widgets meant to be in an external UI
                 self.set_toolbar(self.manager.toolbar)
-                self.hide_widget = debug_hide_toolbar_and_menu
+                self.hide_widget = True
 
         if menu is not None:
             self.set_menu(menu)
