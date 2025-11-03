@@ -282,6 +282,21 @@ class ModulesManager(QObject, ParameterManager):
         elif param.name() == 'actuators':
             self.actuators_changed.emit(param.value()['selected'])
 
+    def add_settings_from_modules(self, settings: Parameter, module_type: ModuleType):
+
+        for ind, module in enumerate(self.actuators_all if module_type==ModuleType.Actuator else self.detectors_all):
+            module_settings = Parameter.create(name='settings', type='group', children=[])
+            module_settings.restoreState(module.settings.saveState())
+
+            settings.child(module_type).addChild(
+                {'title': module.title, 'name': f'{module_type}_{ind:03.0f}', 'type': 'group',
+                 'children': [
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title}
+                 ]},
+            )
+            settings.child(module_type,
+                           f'{module_type}_{ind:03.0f}').addChildren(module_settings.children())
+
     def get_settings_all(self) -> Parameter:
         """Retrieve settings from all control modules and return it as a grouped Parameter"""
         settings = Parameter.create(
@@ -292,30 +307,8 @@ class ModulesManager(QObject, ParameterManager):
                       {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
         )
 
-        for ind_act, actuator in enumerate(self.actuators_all):
-            actuator_settings = Parameter.create(name='settings', type='group', children=[])
-            actuator_settings.restoreState(actuator.settings.saveState())
-
-            settings.child(ModuleType.Actuator).addChild(
-                {'title': actuator.title, 'name': f'{ModuleType.Actuator}_{ind_act:03.0f}', 'type': 'group',
-                 'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': actuator.title}
-                 ]},
-            )
-            settings.child(ModuleType.Actuator,
-                           f'{ModuleType.Actuator}_{ind_act:03.0f}').addChildren(actuator_settings.children())
-        for ind_det, detector in enumerate(self.detectors_all):
-            detector_settings = Parameter.create(name='settings', type='group', children=[])
-            detector_settings.restoreState(detector.settings.saveState())
-
-            settings.child(ModuleType.Detector).addChild(
-                {'title': detector.title, 'name': f'{ModuleType.Detector}_{ind_det:03.0f}', 'type': 'group',
-                 'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': detector.title}
-                 ]},
-            )
-            settings.child(ModuleType.Detector,
-                           f'{ModuleType.Detector}_{ind_det:03.0f}').addChildren(detector_settings.children())
+        self.add_settings_from_modules(settings, ModuleType.Actuator)
+        self.add_settings_from_modules(settings, ModuleType.Detector)
 
         return settings
 
