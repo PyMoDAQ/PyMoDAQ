@@ -101,9 +101,7 @@ class Configurator(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
-        if isinstance(entry, str):
-            entry = self.get_entry_folder().joinpath(f'{entry}{self.entry_extension}')
-        pwp_list = config_entries_from_path(entry)
+        pwp_list = config_entries_from_path(entry_path)
         incompatible_index = self.check_parameters(pwp_list, self.dashboard.modules_manager.get_settings_all())
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:

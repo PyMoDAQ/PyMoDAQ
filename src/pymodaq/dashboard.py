@@ -230,15 +230,20 @@ class DashBoard(CustomApp):
                                             menu=self.get_menu('preset'),
                                             toolbar = self.get_toolbar('preset'))
         self.preset_manager.update_entry_base()
+        self.preset_manager.entry = 'default'
         self.preset_manager.applied_entry.connect(self.update_after_preset)
         self.configurator = Configurator(dashboard=self,
                                          menu=self.get_menu('configurator'),
                                          toolbar=self.get_toolbar('configurator'),
                                          preset_filename=self.preset_manager.entry)
+        self.get_toolbar('configurator').setEnabled(False)
 
     def update_after_preset(self, preset_name: str):
         self.configurator.preset_filename = preset_name
+        self.configurator.entry = 'default'
         self.get_menu('configurator').setEnabled(True)
+        self.get_toolbar('configurator').setEnabled(True)
+        self.configurator.apply_entry(self.configurator.entry_filename)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:

@@ -26,6 +26,7 @@ class InternalActions(StrEnum):
     DELETE = 'delete_entry'
     SAVE = 'save_entry'
     RELOAD = 'reload_entry'
+    APPLY = 'apply_entry'
 
 
 class ManagerBase(CustomExt):
@@ -51,6 +52,7 @@ class ManagerBase(CustomExt):
         self.mainwindow.setCentralWidget(self.main_widget)
 
         self.setup_ui()
+        self.action_manager.update_action_list()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -152,6 +154,10 @@ class ManagerBase(CustomExt):
         self.add_action(InternalActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
                         tip=f'Reload the current {self.entry_type} file')
+        self.add_action(InternalActions.APPLY,
+                        f'Apply {self.entry_type.capitalize()}', 'MailSend',
+                        tip=f'Reload the current {self.entry_type} file')
+        self.action_manager.toolbar.addAction(self.get_action(InternalActions.APPLY))
 
     def connect_things_base(self):
         self.connect_action('entries', self.update_entry_base,
@@ -161,11 +167,11 @@ class ManagerBase(CustomExt):
         self.connect_action(InternalActions.DELETE, self.delete_entry)
         self.connect_action(InternalActions.SAVE, lambda: self.save_check())
         self.connect_action(InternalActions.RELOAD, lambda: self.update_entry_base())
+        self.connect_action(InternalActions.APPLY, lambda: self.apply_entry_base())
+
+        self.action_manager.get_action_list().currentTextChanged.connect(self.get_action('entries').setCurrentText)
 
         self.get_action('entries').setCurrentText('default')
-        self.new_entry.connect(self.action_manager.update_action_list)
-        self.updated_entry.connect(self.action_manager.update_action_list)
-        self.deleted_entry.connect(self.action_manager.update_action_list)
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -186,6 +192,7 @@ class ManagerBase(CustomExt):
 
             self.get_action('entries').setCurrentText(entry)
             self.save_check(bypass_dialog=bypass_dialog)
+            self.action_manager.update_action_list()
             self.new_entry.emit(entry)
 
     def save_check(self, entry: str = None, bypass_dialog=False):
@@ -252,9 +259,17 @@ class ManagerBase(CustomExt):
                 self.get_action('entries').currentIndex()
             )
             self.connect_action('entries', self.update_entry_base, signal_name='currentTextChanged')
+            self.action_manager.update_action_list()
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
     def apply_entry_base(self, entry_path: Path = None, **kwargs):
+        if entry_path is None:
+            entry_path = self.entry_filename
+
+        if self.dashboard is None:
+            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
+            return
+
         self.apply_entry(entry_path, **kwargs)
         self.applied_entry.emit(entry_path.stem)
 
@@ -282,7 +297,8 @@ class ManagerBase(CustomExt):
         self.update_entry(entry)
 
         self.get_action('entries').setCurrentText(entry.stem)
-        self.action_manager.update_action_list()
+        # self.action_manager.update_action_list()
+        self.action_manager.get_action_list().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
     def show(self):
@@ -342,8 +358,6 @@ class ManagerExternalActions(ActionManager):
     def connect_things(self):
         self.connect_action(ExternalActions.Open, lambda: self.manager.show())
 
-
-
     def get_action_from_file(self, file: Path):
         return f"{file.stem}_{self.manager_name}"
 
@@ -351,21 +365,23 @@ class ManagerExternalActions(ActionManager):
         return self.get_action(ExternalActions.List)
 
     def update_action_list(self, **kwargs_to_entry_folder):
-        entries = []
-        self.get_action_list().clear()
-        for ind_file, file in enumerate(self.manager.list_managed_entries_path(**kwargs_to_entry_folder)):
-            if not self.has_action(self.get_action_from_file(file)):
-                self.add_action(
-                    self.get_action_from_file(file),
-                    file.stem,
-                    "",
-                    f"Load the {file.stem} entry",
-                    auto_toolbar=False,
-                )
-            entries.append(file.stem)
-        self.get_action_list().addItems(entries)
-        self.update_actions_connection(**kwargs_to_entry_folder)
-        self.update_menu(**kwargs_to_entry_folder)
+        with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
+            with QtCore.QSignalBlocker(self.manager.get_action('entries')):
+                entries = []
+                self.get_action_list().clear()
+                for ind_file, file in enumerate(self.manager.list_managed_entries_path(**kwargs_to_entry_folder)):
+                    if not self.has_action(self.get_action_from_file(file)):
+                        self.add_action(
+                            self.get_action_from_file(file),
+                            file.stem,
+                            "",
+                            f"Load the {file.stem} entry",
+                            auto_toolbar=False,
+                        )
+                    entries.append(file.stem)
+                self.get_action_list().addItems(entries)
+                self.update_actions_connection(**kwargs_to_entry_folder)
+                self.update_menu(**kwargs_to_entry_folder)
 
     def update_actions_connection(self, **kwargs_to_entry_folder):
 
