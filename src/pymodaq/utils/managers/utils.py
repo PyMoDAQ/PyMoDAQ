@@ -115,8 +115,12 @@ class ManagerBase(CustomExt):
         --------
         [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
         """
-        return [path for path in self.get_entry_folder(**kwargs_to_entry_folder).iterdir()
-                if path.suffix == self.entry_extension]
+        entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
+        if not entry_path.exists():
+            entry_path.mkdir(parents=True)
+        if not entry_path.joinpath(f'default{self.entry_extension}').exists():
+            self.create_entry('default', bypass_dialog=True)
+        return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
     def setup_docks(self):
         """Sets up the widgets for the manager.
