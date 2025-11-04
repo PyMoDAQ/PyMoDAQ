@@ -69,14 +69,10 @@ class PresetManager(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_preset_path()
 
-    def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def apply_entry(self, entry: Path = None, **kwargs):
         """ Apply the selected entry file to the dashboard and adds Control Modules specified in it
         """
         try:
-
-            if isinstance(entry, str):
-                entry = self.get_entry_folder().joinpath(f'{entry}.xml')
-
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
                 ret = dialog(f'Warning!',
                              f'Are you sure you want '

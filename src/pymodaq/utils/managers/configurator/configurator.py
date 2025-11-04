@@ -58,8 +58,12 @@ class Configurator(ManagerBase):
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
+
         self.preset_filename = preset_filename
 
+    def show(self):
+        self.update_settings(self.dashboard.modules_manager.get_settings_all())
+        self.mainwindow.show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -89,7 +93,7 @@ class Configurator(ManagerBase):
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
 
-    def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def apply_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
         Parameters:

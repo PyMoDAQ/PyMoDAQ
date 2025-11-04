@@ -254,7 +254,11 @@ class ManagerBase(CustomExt):
             self.connect_action('entries', self.update_entry_base, signal_name='currentTextChanged')
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
-    def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def apply_entry_base(self, entry_path: Path = None, **kwargs):
+        self.apply_entry(entry_path, **kwargs)
+        self.applied_entry.emit(entry_path.stem)
+
+    def apply_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -375,7 +379,7 @@ class ManagerExternalActions(ActionManager):
             )
         self.connect_action(ExternalActions.Load, connect=False)
         self.connect_action(ExternalActions.Load,
-                            lambda: self.manager.apply_entry(
+                            lambda: self.manager.apply_entry_base(
                                 self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(
                                     f"{self.get_action_list().currentText()}{self.manager.entry_extension}"
                                 )),
@@ -385,7 +389,7 @@ class ManagerExternalActions(ActionManager):
         self.get_action(ExternalActions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.manager.apply_entry(filename)
+        return lambda: self.manager.apply_entry_base(filename)
 
     def update_menu(self, **kwargs_to_entry_folder):
         try:
