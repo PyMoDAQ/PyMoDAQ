@@ -230,10 +230,15 @@ class DashBoard(CustomApp):
                                             menu=self.get_menu('preset'),
                                             toolbar = self.get_toolbar('preset'))
         self.preset_manager.update_entry_base()
+        self.preset_manager.applied_entry.connect(self.update_after_preset)
         self.configurator = Configurator(dashboard=self,
                                          menu=self.get_menu('configurator'),
                                          toolbar=self.get_toolbar('configurator'),
                                          preset_filename=self.preset_manager.entry)
+
+    def update_after_preset(self, preset_name: str):
+        self.configurator.preset_filename = preset_name
+        self.get_menu('configurator').setEnabled(True)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -708,6 +713,7 @@ class DashBoard(CustomApp):
 
         self.add_menu('preset', 'Preset', menubar)
         self.add_menu('configurator', 'Configurator', menubar)
+        self.get_menu('configurator').setEnabled(False)
 
         self.overshoot_menu = menubar.addMenu("Overshoot Modes")
         self.update_overshoot_menu()
@@ -751,6 +757,7 @@ class DashBoard(CustomApp):
         self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
+
 
     def update_roi_menu(self):
         self.roi_menu.clear()
