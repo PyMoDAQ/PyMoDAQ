@@ -230,8 +230,10 @@ class DashBoard(CustomApp):
                                             menu=self.get_menu('preset'),
                                             toolbar = self.get_toolbar('preset'))
         self.preset_manager.update_entry_base()
-        self.configurator = Configurator()
-        self.configurator.new_file.connect(self.update_configuration_action_list)
+        self.configurator = Configurator(dashboard=self,
+                                         menu=self.get_menu('configurator'),
+                                         toolbar=self.get_toolbar('configurator'),
+                                         preset_filename=self.preset_manager.entry)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -538,22 +540,11 @@ class DashBoard(CustomApp):
         self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
 
         preset_toolbar = self.add_toolbar('preset', 'Preset Toolbar', parent=None)
+        config_toolbar = self.add_toolbar('configurator', 'Configurator Toolbar', parent=None)
         self.mainwindow.addToolBar(preset_toolbar)
+        self.mainwindow.addToolBar(config_toolbar)
 
         self.toolbar.addSeparator()
-
-        self.add_action(ConfiguratorActions.Open, "Configurator", "",
-                        'Show the Configurator (Configuration Manager)',
-                        auto_toolbar=False,)
-        self.add_widget(ConfiguratorActions.Label, QtWidgets.QLabel('Configuration:'),
-                        toolbar=self.toolbar, visible=False)
-        self.add_widget(ConfiguratorActions.List, QtWidgets.QComboBox, toolbar=self.toolbar,
-                        signal_str="currentTextChanged",
-                        slot=self.update_configuration_action,
-                        enabled=False, visible=False)
-        self.add_action(ConfiguratorActions.Load, "LOAD", "Open", tip="Load the selected configuration",
-                        enabled=False, visible=False)
-        # self.update_configuration_action_list()
 
         self.add_action("new_overshoot", "New Overshoot", "",
                         "Create a new experimental setup overshoot configuration file",
@@ -624,62 +615,6 @@ class DashBoard(CustomApp):
         self.toolbar.addSeparator()
         self.add_action("plugin_manager", "Plugin Manager", "")
 
-    def update_configuration_action_list(self):
-        configurations = []
-        self.get_action(ConfiguratorActions.List).clear()
-
-        for ind_file, file in enumerate(get_set_configurator_path(self.preset_manager.preset).iterdir()):
-            if file.suffix == ".config":
-                filestem = file.stem
-                if not self.has_action(
-                        self.get_action_from_file(file, ManagerEnums.configuration)
-                ):
-                    self.add_action(
-                        self.get_action_from_file(file, ManagerEnums.configuration),
-                        filestem,
-                        "",
-                        f"Load the {filestem} configuration",
-                        auto_toolbar=False,
-                    )
-                configurations.append(filestem)
-
-        self.get_action(ConfiguratorActions.List).addItems(configurations)
-        if len(configurations) > 0:
-            self.set_action_visible(
-                (ConfiguratorActions.Label,
-                 ConfiguratorActions.List,
-                 ConfiguratorActions.Load), True)
-
-        self.update_configuration_actions_connection()
-        self.update_configuration_menu()
-
-    def update_configuration_actions_connection(self):
-        for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-            if file.suffix == ".config":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.configuration),
-                    connect=False)
-
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.configuration),
-                    self.create_menu_slot_configurations(
-                        get_set_configurator_path(self.preset_file.stem).joinpath(file.stem)),
-                )
-        self.connect_action(ConfiguratorActions.Load, connect=False)
-        self.connect_action(
-            ConfiguratorActions.Load,
-            lambda: self.set_experimental_configuration(
-                get_set_configurator_path(self.preset_file.stem).joinpath(
-                    f"{self.get_action(ConfiguratorActions.List).currentText()}.config"
-                )
-            ),
-        )
-
-    def update_configuration_action(self, config_name: str):
-        self.get_action(ConfiguratorActions.Load).setToolTip(
-            f"Load the {config_name}.xml configuration file!"
-        )
-
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
         self.connect_action("log", self.show_log)
@@ -691,20 +626,6 @@ class DashBoard(CustomApp):
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("log_window", self.logger_dock.setVisible)
-
-        # self.connect_action(PresetActions.Open, self.preset_manager.show)
-        # self.preset_manager.new_file.connect(self.update_preset_action_list)
-        # self.update_preset_actions_connection()
-        # self.connect_action(
-        #     PresetActions.Load,
-        #     lambda: self.apply_preset_to_dashboard(
-        #         self.preset_path.joinpath(
-        #             f"{self.get_action('preset_list').currentText()}.xml"
-        #         )
-        #     ),
-        # )
-
-        self.connect_action(ConfiguratorActions.Open, self.create_experimental_configuration)
 
         self.connect_action("new_overshoot", self.create_overshoot)
         self.connect_action("modify_overshoot", self.modify_overshoot)
@@ -761,7 +682,6 @@ class DashBoard(CustomApp):
         self.connect_action("check_update", lambda: self.check_update(True))
         self.connect_action("plugin_manager", self.start_plugin_manager)
 
-
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
         Create the menubar object looking like :
@@ -787,9 +707,7 @@ class DashBoard(CustomApp):
         docked_menu.addAction(self.get_action("log_window"))
 
         self.add_menu('preset', 'Preset', menubar)
-
-        self.configuration_menu = menubar.addMenu("Configurations")
-        self.update_configuration_menu()
+        self.add_menu('configurator', 'Configurator', menubar)
 
         self.overshoot_menu = menubar.addMenu("Overshoot Modes")
         self.update_overshoot_menu()
@@ -833,26 +751,6 @@ class DashBoard(CustomApp):
         self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
-        self.configuration_menu.setEnabled(not status)
-
-    def update_configuration_menu(self):
-        try:
-            self.configuration_menu.clear()
-            self.configuration_menu.addAction(self.get_action(ConfiguratorActions.Open))
-            self.configuration_menu.addSeparator()
-            self.load_configuration_menu = self.configuration_menu.addMenu("Load Configurations")
-
-            if self.preset_file is not None:
-                for ind_file, file in enumerate(get_set_configurator_path(self.preset_file.stem).iterdir()):
-                    if file.suffix == ".config":
-                        if self.has_action(self.get_action_from_file(file, ManagerEnums.configuration)):
-                            self.load_configuration_menu.addAction(
-                                self.get_action(
-                                    self.get_action_from_file(file, ManagerEnums.configuration)
-                                )
-                            )
-        except AttributeError:  # means self.configuration_menu is not yet defined
-            pass
 
     def update_roi_menu(self):
         self.roi_menu.clear()
@@ -913,12 +811,6 @@ class DashBoard(CustomApp):
         self.plugin_manager.quit_signal.connect(self.quit_fun)
         self.plugin_manager.restart_signal.connect(self.restart_fun)
         self.win_plug_manager.show()
-
-    def create_menu_slot(self, filename: Path):
-        return lambda: self.apply_preset_to_dashboard(filename)
-
-    def create_menu_slot_configurations(self, filename: Path):
-        return lambda: self.configurator.apply_configuration(self.modules_manager, filename)
 
     def create_menu_slot_ext(self, ext):
         return lambda: self.load_extensions_module(ext)
@@ -991,16 +883,6 @@ class DashBoard(CustomApp):
                 )
         except Exception as e:
             logger.exception(str(e))
-
-    def create_experimental_configuration(self):
-        self.configurator.create_modify_configurator(self.preset_file.stem, self.modules_manager.get_settings_all())
-
-    def modify_experimental_configuration(self):
-        self.configurator.populate_from_settings(self.modules_manager.get_settings_all())
-        self.configurator.create_modify_configurator(self.preset_file.stem)
-
-    def set_experimental_configuration(self, configuration_file_path: Path):
-        self.configurator.apply_configuration(self.modules_manager, configuration_file_path)
 
     @staticmethod
     def get_action_from_file(file: Path, manager: ManagerEnums):
