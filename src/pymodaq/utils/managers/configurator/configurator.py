@@ -70,15 +70,24 @@ class Configurator(ManagerBase):
 
     @property
     def preset_filename(self) -> str:
-        return self.get_action('preset_filename').text()
+        if 'preset_filename' not in self.actions_names:
+            return self._preset_ini  # fallback at startup
+        else:
+            return self.get_action('preset_filename').text()
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
-            self.get_action('preset_filename').setText(preset_filename)
-            self.get_action('entries').clear()
-            self.get_action('entries').addItems(self.entries + ['...'])
+            self._preset_ini = preset_filename
+            try:
+                self.get_action('preset_filename').setText(preset_filename)
+                self.get_action('entries').clear()
+                self.get_action('entries').addItems(self.entries + ['...'])
+            except KeyError as e:
+                pass
 
+    def save_entries(self, entry_path: Path = None):
+        self.config_model.save(entry_path)
 
     def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
         """Applies the entry from the given file in the manager.
@@ -293,7 +302,7 @@ class Configurator(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        self.add_toolbar('configurations')
+        self.set_toolbar(self.add_toolbar('configurations'))
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -320,6 +329,10 @@ class Configurator(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
+        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset: '),
+                        toolbar=self.get_toolbar('main'))
+        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
+                        toolbar=self.get_toolbar('main'))
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
