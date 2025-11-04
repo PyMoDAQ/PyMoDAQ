@@ -52,16 +52,21 @@ class Configurator(ManagerBase):
                  dashboard: 'DashBoard' = None,
                  menu: QtWidgets.QMenu = None,
                  toolbar: QtWidgets.QToolBar = None,
-                 preset_filename: str = ''):
+                 preset_filename: str = 'default'):
+
+        self._preset_ini = preset_filename
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
-
         self.preset_filename = preset_filename
+
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_configurator_path(self.preset_filename)
+        try:
+            return get_set_configurator_path(self.preset_filename)
+        except KeyError as e:
+            return get_set_configurator_path(self._preset_ini)
 
     @property
     def preset_filename(self) -> str:
@@ -70,39 +75,33 @@ class Configurator(ManagerBase):
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
-            self.get_action('entries').clear()
             self.get_action('preset_filename').setText(preset_filename)
+            self.get_action('entries').clear()
             self.get_action('entries').addItems(self.entries + ['...'])
 
-    @staticmethod
-    def config_entry_from_path(filename: Union[str, Path]) -> list[ConfiguratorEntry]:
-        return config_entries_from_path(filename)
 
-    def apply_configuration(self, modules_manager: ModulesManager, configuration_path: Path):
+    def apply_entry(self, entry: Union[str, Path] = None, **kwargs):
+        """Applies the entry from the given file in the manager.
+
+        Parameters:
+        -----------
+        file : Path
+            The path to the configuration file to be applied.
         """
-        Apply a saved configuration to the modules.
-
-        Parameters
-        ----------
-        modules_manager : ModulesManager
-            Manager containing all active modules
-        configuration_path : Path
-            Path to the configuration file to apply
-
-        """
-        pwp_list = self.config_entry_from_path(configuration_path)
-        incompatible_index = self.check_parameters(pwp_list, modules_manager.get_settings_all())
+        if isinstance(entry, str):
+            entry = self.get_entry_folder().joinpath(f'{entry}{self.entry_extension}')
+        pwp_list = config_entries_from_path(entry)
+        incompatible_index = self.check_parameters(pwp_list, self.dashboard.modules_manager.get_settings_all())
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:
-                mod = modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
+                mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
                 if SpecialConfiguratorEntry.ACTUATOR_VALUE in entry.setting.path:
                     mod.move_abs(DataActuator(entry.module_name, data=entry.setting.parameter.value(),
                                               units=entry.setting.parameter.opts.get('suffix', mod.units)))
                 elif SpecialConfiguratorEntry.MODULE_INIT in entry.setting.path:
                     if entry.setting.parameter.value():
                         mod.init_hardware_ui(True)
-                        #todo call the line below in new Manager implementation that has dashboard as an argument
-                        #self.dashboard.poll_init()
+                        self.dashboard.poll_init(mod)
                 else:
                     mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
 
@@ -285,7 +284,7 @@ class Configurator(ManagerBase):
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
-        self.config_model = ConfiguratorModel(actuators=self._actuators)
+        self.config_model = ConfiguratorModel()
         self.table_out.setModel(self.config_model)
         self.table_out.add_data_signal[SpecialConfiguratorEntry].connect(self.add_special_entry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
@@ -322,9 +321,6 @@ class Configurator(ManagerBase):
 
     def setup_actions(self):
 
-        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset:'))
-        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset')
-
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
                         shortcut=QtCore.Qt.Key.Key_Delete)
@@ -342,64 +338,6 @@ class Configurator(ManagerBase):
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         self.config_model.load(self.entry_filename)
 
-    @staticmethod
-    def get_configurations(preset_name: str) -> list[str]:
-        """ Get all existing configuration files within a preset name """
-        configs = []
-        configuration_path = get_set_configurator_path(preset_name)
-        if not configuration_path.exists():
-            configuration_path.mkdir(parents=True)
-        if not configuration_path.joinpath(f'default.config').exists():
-            configuration_path.joinpath(f'default.config').touch()
-
-        for file in get_set_configurator_path(preset_name).iterdir():
-            if '.config' in file.suffix:
-                configs.append(file.stem)
-        configs.sort()
-        if 'default' in configs:  #  make sure the default is the first one shown
-            default = configs.pop(configs.index('default'))
-            configs.insert(0, default)
-        return configs
-
-    def create_configuration(self):
-        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
-                                                  "Config name:", QtWidgets.QLineEdit.EchoMode.Normal)
-        if ok and text != '':
-            configurations = [self.get_action('configurations').itemText(ind).lower() for
-                       ind in range(self.get_action('configurations').count())]
-            if text.lower() not in configurations:
-                configurations.append(text.lower())
-                configurations.sort()
-                index = configurations.index(text.lower())
-                self.get_action('configurations').insertItem(index-1, text)
-            self.get_action('configurations').setCurrentText(text)
-
-    def copy_configuration(self):
-        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a NEW configuration name",
-                                                  "Config name:", QtWidgets.QLineEdit.EchoMode.Normal)
-        if ok and text != '':
-            self.save_check(text)
-            configurations = [self.get_action('configurations').itemText(ind).lower() for
-                              ind in range(self.get_action('configurations').count())]
-            if text.lower() not in configurations:
-                configurations.append(text.lower())
-                configurations.sort()
-                index = configurations.index(text.lower())
-                self.get_action('configurations').insertItem(index-1, text)
-            self.get_action('configurations').setCurrentText(text)
-
-
-    def delete_configuration(self, preset_name: Optional[str] = None, config_name: Optional[str] = None):
-        if preset_name is None:
-            preset_name = self.get_action('preset_filename').text()
-        if config_name is None:
-            config_name = self.get_action('configurations').currentText()
-        user_agreed = dialog('Removing a Configuration',
-                             message=f"You're going to delete the {config_name} file\nAre you sure?")
-        if user_agreed:
-            get_set_configurator_path(preset_name).joinpath(f'{config_name}.config').unlink(missing_ok=True)
-            self.get_action('configurations').removeItem(self.get_action('configurations').currentIndex())
-
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
         if settings is None:
             settings = self._get_settings_from_file()
@@ -414,58 +352,6 @@ class Configurator(ManagerBase):
             self.preset_filename = settings.stem
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
-
-    def create_modify_configurator(self, preset_name: str, settings: Union[Parameter, Path] = None):
-        """
-        Create or modify a configuration for a given preset.
-
-        Parameters
-        ----------
-        preset_name : str
-            Name of the preset to configure
-        settings : Union[Parameter, Path], optional
-            Settings to load, by default None
-        single_preset : bool, optional
-            If True, locks the preset selection, by default False
-        """
-        if settings is None:
-            settings = preset_name
-        self.preset_filename = preset_name
-        self.update_settings(settings)
-        self.mainwindow.show()
-
-    def save_check(self, configuration_name: str = None):
-        """
-        Check if current configuration can be saved and save it.
-
-        Verifies that:
-        - Configuration has entries
-        - A filename is specified
-        - Handles file overwrite confirmation
-        """
-        if self.get_action('configurations').currentText() == '' and configuration_name is None:
-            messagebox(
-                title="Saving issue",
-                text="You didn't specify a file name for this configuration",
-            )
-            return
-
-        else:
-            if configuration_name is None:
-                configuration_name = self.get_action('configurations').currentText()
-            file_path = get_set_configurator_path(self.get_action('preset_filename').text()).joinpath(
-                f"{configuration_name}.config")
-            if file_path.exists():
-                user_agreed = dialog(
-                    title="Overwrite confirmation",
-                    message="File exist do you want to overwrite it ?",
-                )
-                if not user_agreed:
-                    return
-            if not file_path.parent.exists():
-                file_path.parent.mkdir(parents=True)
-            self.config_model.save(file_path)
-            self.new_file.emit()
 
     def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
         if not param.readonly():
