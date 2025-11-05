@@ -29,7 +29,7 @@ def ini_configurator(init_qt):
     external_ui.menuBar().addMenu(menu)
 
     configurator = Configurator(menu=menu, toolbar=toolbar)
-    configurator.settings = Path('./settings.xml')
+    configurator.settings = Path(__file__).parent.joinpath('settings.xml')
     configurator.update_entry_base()
     qtbot.addWidget(configurator.mainwindow)
     configurator.mainwindow.show()

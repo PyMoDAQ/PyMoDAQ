@@ -123,6 +123,7 @@ venv.bak/
 .tox
 *.h5
 !data.h5
+!settings.xml
 
 *yacctab.py
 *lextab.py
