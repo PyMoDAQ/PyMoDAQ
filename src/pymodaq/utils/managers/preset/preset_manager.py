@@ -320,7 +320,7 @@ if __name__ == '__main__':
 
     external_ui = QtWidgets.QMainWindow()
     toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset Manager Menu')
+    menu = QtWidgets.QMenu('Preset')
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
 

@@ -6,27 +6,32 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.enums import StrEnum
 
-from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.messenger import dialog
 
 
 logger = set_logger(get_module_name(__file__))
 
 
-class ExternalActions(StrEnum):
-    Open = "open"
-    Label = "label"
-    List = "list"
-    Load = "load"
-
-
-class InternalActions(StrEnum):
+class ManagerActions(StrEnum):
+    OPEN = 'open_manager'
     COPY = 'copy_entry'
     NEW = 'create_new_entry'
     DELETE = 'delete_entry'
     SAVE = 'save_entry'
     RELOAD = 'reload_entry'
     APPLY = 'apply_entry'
+    LIST = 'list_entries'
+    LIST_EXTERNAL = 'list_entries_external'
+
+
+class Toolbar(StrEnum):
+    MAIN = 'main'
+    EXTERNAL = 'external'
+
+
+class Menu(StrEnum):
+    MAIN = 'main'
+    EXTERNAL = 'external'
 
 
 class ManagerBase(CustomExt):
@@ -46,13 +51,22 @@ class ManagerBase(CustomExt):
                  **kwargs):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
-        self.action_manager = ManagerExternalActions(self, menu=menu, toolbar=toolbar)
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
+        if toolbar is not None:
+            self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
+        if menu is not None:
+            self.reference_menu(Menu.EXTERNAL, menu)
+
         self.setup_ui()
-        self.action_manager.update_action_list()
+
+        self.update_action_list()
+
+    @property
+    def manager_name(self) -> str:
+        return self.__class__.__name__
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -80,7 +94,7 @@ class ManagerBase(CustomExt):
     @property
     def entry(self) -> str:
         """ Get/Set the name of the current entry """
-        return self.get_action('entries').currentText()
+        return self.get_action_list().currentText()
 
     @entry.setter
     def entry(self, preset_name: str):
@@ -90,12 +104,14 @@ class ManagerBase(CustomExt):
     def entry_filename(self) -> Path:
         """ Get the full path of the current entry file """
         kwargs_to_entry_folder = {}  # reimplement if needed
-        return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(self.entry + self.entry_extension)
+        return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
+            self.entry + self.entry_extension)
 
     @property
     def entries(self) -> list[str]:
         """ Get/Set the name of all existing entries """
-        return [path.stem for path in self.get_entry_folder().iterdir() if path.suffix == self.entry_extension]
+        return [path.stem for path in self.get_entry_folder().iterdir()
+                if path.suffix == self.entry_extension]
 
     @property
     def entries_filename(self) -> list[Path]:
@@ -133,45 +149,73 @@ class ManagerBase(CustomExt):
         vlayout.addWidget(self.settings_tree)
         self.main_widget.setLayout(vlayout)
 
+    def get_action_list(self) -> QtWidgets.QComboBox:
+        """ Convenience method to get right return type """
+        return self.get_action(ManagerActions.LIST)
+
+    def get_action_list_external(self) -> QtWidgets.QComboBox:
+        """ Convenience method to get right return type """
+        return self.get_action(ManagerActions.LIST_EXTERNAL)
+
+    def get_action_from_file(self, file: Path) -> str:
+        """ Get an action name given a file and the manager name"""
+        return f"{file.stem}_{self.manager_name}"
+
     def setup_actions_base(self):
+
+        # ACTIONS in Manager
         self.add_widget('entry_label', QtWidgets.QLabel(
             f'Configuration from {self.entry_type.capitalize()}:'))
-        self.add_widget('entries', QtWidgets.QComboBox(),
+        self.add_widget(ManagerActions.LIST, QtWidgets.QComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
-        self.get_action('entries').addItems(self.entries + ['...'])
+        self.get_action_list().addItems(self.entries + ['...'])
 
-        self.add_action(InternalActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
-        self.add_action(InternalActions.NEW,
+        self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
+        self.add_action(ManagerActions.NEW,
                         f'New {self.entry_type.capitalize()}', 'ListAdd',
                         tip=f'Create a new {self.entry_type} file')
-        self.add_action(InternalActions.DELETE,
+        self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'ListRemove',
                         tip=f'Delete the current {self.entry_type} file')
-        self.add_action(InternalActions.SAVE,
+        self.add_action(ManagerActions.SAVE,
                         f'Save {self.entry_type.capitalize()}', 'DocumentSave',
                         tip=f'Save/Update the current {self.entry_type.capitalize()}')
-        self.add_action(InternalActions.RELOAD,
+        self.add_action(ManagerActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
                         tip=f'Reload the current {self.entry_type} file')
-        self.add_action(InternalActions.APPLY,
+        self.add_action(ManagerActions.APPLY,
                         f'Apply {self.entry_type.capitalize()}', 'MailSend',
                         tip=f'Reload the current {self.entry_type} file')
-        self.action_manager.toolbar.addAction(self.get_action(InternalActions.APPLY))
+
+
+        # ACTIONS external: Dashboard, ...
+
+        self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager", "DocumentProperties",
+                        f'Open the {self.entry_type.capitalize()} Manager',
+                        toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
+
+        self.add_widget('external_label', QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+                        toolbar=Toolbar.EXTERNAL)
+        self.add_widget(ManagerActions.LIST_EXTERNAL, QtWidgets.QComboBox,
+                        toolbar=Toolbar.EXTERNAL)
+        self.affect_to(ManagerActions.APPLY, self.get_toolbar(Toolbar.EXTERNAL))
 
     def connect_things_base(self):
-        self.connect_action('entries', self.update_entry_base,
+        self.connect_action(ManagerActions.LIST, self.update_entry_base,
                             signal_name='currentTextChanged')
-        self.connect_action(InternalActions.COPY, self.copy_entry)
-        self.connect_action(InternalActions.NEW, self.create_entry)
-        self.connect_action(InternalActions.DELETE, self.delete_entry)
-        self.connect_action(InternalActions.SAVE, lambda: self.save_check())
-        self.connect_action(InternalActions.RELOAD, lambda: self.update_entry_base())
-        self.connect_action(InternalActions.APPLY, lambda: self.apply_entry_base())
+        self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
+        self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
+        self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
+        self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
+        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry_base())
+        self.connect_action(ManagerActions.APPLY, lambda: self.apply_entry_base())
 
-        self.action_manager.get_action_list().currentTextChanged.connect(self.get_action('entries').setCurrentText)
+        self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        self.get_action('entries').setCurrentText('default')
+        self.get_action_list_external().currentTextChanged.connect(self.get_action_list().setCurrentText)
+
+        self.get_action_list().setCurrentText('default')
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -182,17 +226,17 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
-            entries = [self.get_action('entries').itemText(ind).lower() for
-                       ind in range(self.get_action('entries').count())]
+            entries = [self.get_action_list().itemText(ind).lower() for
+                       ind in range(self.get_action_list().count())]
             if entry.lower() not in entries:
                 entries.append(entry.lower())
                 entries.sort()
                 index = entries.index(entry.lower())
-                self.get_action('entries').insertItem(index-1, entry)
+                self.get_action_list().insertItem(index-1, entry)
 
-            self.get_action('entries').setCurrentText(entry)
+            self.get_action_list().setCurrentText(entry)
             self.save_check(bypass_dialog=bypass_dialog)
-            self.action_manager.update_action_list()
+            self.update_action_list()
             self.new_entry.emit(entry)
 
     def save_check(self, entry: str = None, bypass_dialog=False):
@@ -223,15 +267,15 @@ class ManagerBase(CustomExt):
                 return
 
         self.save_check(entry, bypass_dialog=bypass_dialog)
-        entries = [self.get_action('entries').itemText(ind).lower() for
-                   ind in range(self.get_action('entries').count())]
+        entries = [self.get_action_list().itemText(ind).lower() for
+                   ind in range(self.get_action_list().count())]
         if entry.lower() not in entries:
             entries.append(entry.lower())
             entries.sort()
             index = entries.index(entry.lower())
-            self.get_action('entries').insertItem(index-1, entry)
+            self.get_action_list().insertItem(index-1, entry)
 
-        self.get_action('entries').setCurrentText(entry)
+        self.get_action_list().setCurrentText(entry)
 
         self.new_entry.emit(entry)
 
@@ -251,15 +295,15 @@ class ManagerBase(CustomExt):
                         f' {entry} ?',
             )
         if user_agreed:
-            self.connect_action('entries', signal_name='currentTextChanged', connect=False)
+            self.connect_action(ManagerActions.LIST, signal_name='currentTextChanged', connect=False)
             self.entry_filename.unlink(missing_ok=True)
 
             logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
-            self.get_action('entries').removeItem(
-                self.get_action('entries').currentIndex()
+            self.get_action_list().removeItem(
+                self.get_action_list().currentIndex()
             )
-            self.connect_action('entries', self.update_entry_base, signal_name='currentTextChanged')
-            self.action_manager.update_action_list()
+            self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
+            # self.update_action_list()
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
     def apply_entry_base(self, entry_path: Path = None, **kwargs):
@@ -296,80 +340,20 @@ class ManagerBase(CustomExt):
 
         self.update_entry(entry)
 
-        self.get_action('entries').setCurrentText(entry.stem)
-        # self.action_manager.update_action_list()
-        self.action_manager.get_action_list().setCurrentText(entry.stem)
+        self.get_action_list().setCurrentText(entry.stem)
+        self.update_apply_action_tooltip(entry.stem)
+        self.get_action_list_external().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
     def show(self):
         self.mainwindow.show()
 
-
-
-class ManagerExternalActions(ActionManager):
-    """Class to manage external actions of PyMoDAQ managers
-
-    Inherits from ActionManager and initializes with a specific manager instance.
-    """
-
-    def __init__(self, manager: ManagerBase,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
-        super().__init__()
-
-        self.manager = manager
-        self.manager_name = manager.__class__.__name__
-        if toolbar is not None:
-            self.set_toolbar(toolbar)
-            self.hide_widget = False
-        else:
-            if hasattr(self.manager, 'toolbar'):  # meant to store (and hide) the unused widgets meant to be in an external UI
-                self.set_toolbar(self.manager.toolbar)
-                self.hide_widget = True
-
-        if menu is not None:
-            self.set_menu(menu)
-        else:
-            if hasattr(self.manager, 'menu'):
-                self.set_menu(self.manager.menu)
-
-        self.load_menu: QtWidgets.QMenu = None
-
-        self.setup_actions()
-        self.connect_things()
-
-    def setup_actions(self):
-        self.add_action(ExternalActions.Open, f"{self.manager.entry_type.capitalize()} Manager", "",
-                        'Open the Preset Manager to create/modify experimental setup configuration files: "presets"',
-                        auto_toolbar=False, auto_menu=True)
-        self.add_widget(ExternalActions.Label, QtWidgets.QLabel(f'{self.manager.entry_type.capitalize()}:'), auto_toolbar=True)
-        self.add_widget(ExternalActions.List, QtWidgets.QComboBox, signal_str="currentTextChanged",
-                        slot=self.update_load_action_tooltip,
-                        auto_toolbar=True)
-        self.add_action(ExternalActions.Load, "LOAD", "Open",
-                        tip=f"Load the selected {self.manager.entry_type}: ",
-                        auto_toolbar=True, auto_menu=False)
-
-        if self.hide_widget:
-            self.get_action(ExternalActions.Label).setVisible(False)
-            self.get_action(ExternalActions.List).setVisible(False)
-            self.get_action(ExternalActions.Load).setVisible(False)
-
-    def connect_things(self):
-        self.connect_action(ExternalActions.Open, lambda: self.manager.show())
-
-    def get_action_from_file(self, file: Path):
-        return f"{file.stem}_{self.manager_name}"
-
-    def get_action_list(self) -> QtWidgets.QComboBox:
-        return self.get_action(ExternalActions.List)
-
-    def update_action_list(self, **kwargs_to_entry_folder):
+    def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
-            with QtCore.QSignalBlocker(self.manager.get_action('entries')):
+            with QtCore.QSignalBlocker(self.get_action(ManagerActions.LIST)):
                 entries = []
-                self.get_action_list().clear()
-                for ind_file, file in enumerate(self.manager.list_managed_entries_path(**kwargs_to_entry_folder)):
+                self.get_action_list_external().clear()
+                for ind_file, file in enumerate(self.list_managed_entries_path()):
                     if not self.has_action(self.get_action_from_file(file)):
                         self.add_action(
                             self.get_action_from_file(file),
@@ -379,46 +363,41 @@ class ManagerExternalActions(ActionManager):
                             auto_toolbar=False,
                         )
                     entries.append(file.stem)
-                self.get_action_list().addItems(entries)
-                self.update_actions_connection(**kwargs_to_entry_folder)
-                self.update_menu(**kwargs_to_entry_folder)
+                self.get_action_list_external().addItems(entries)
+                self.update_actions_connection()
+                self.update_menu()
 
-    def update_actions_connection(self, **kwargs_to_entry_folder):
+    def update_actions_connection(self):
 
-        for ind_file, file in enumerate(self.manager.list_managed_entries_path()):
+        for ind_file, file in enumerate(self.list_managed_entries_path()):
             self.connect_action(self.get_action_from_file(file), connect=False)
 
             self.connect_action(
                 self.get_action_from_file(file),
                 self.create_slot_from_file(
-                    self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(file.stem + self.manager.entry_extension)),
+                    self.get_entry_folder().joinpath(file.stem + self.entry_extension)),
             )
-        self.connect_action(ExternalActions.Load, connect=False)
-        self.connect_action(ExternalActions.Load,
-                            lambda: self.manager.apply_entry_base(
-                                self.manager.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-                                    f"{self.get_action_list().currentText()}{self.manager.entry_extension}"
-                                )),
-                            )
 
-    def update_load_action_tooltip(self, entry: str):
-        self.get_action(ExternalActions.Load).setToolTip(f"Load the selected {self.manager.entry_type}: {entry}")
+    def update_apply_action_tooltip(self, entry: str):
+        self.get_action(ManagerActions.APPLY).setToolTip(
+            f"Load the selected {self.entry_type}: {entry}")
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.manager.apply_entry_base(filename)
+        return lambda: self.apply_entry_base(filename)
 
-    def update_menu(self, **kwargs_to_entry_folder):
+    def update_menu(self):
         try:
-            self.menu.clear()
-            self.menu.addAction(self.get_action(ExternalActions.Open))
-            self.menu.addSeparator()
-            self.load_menu = self.menu.addMenu(f"Load {self.manager.entry_type.capitalize()}s")
+            menu = self.get_menu(Menu.EXTERNAL)
+            menu.clear()
+            menu.addAction(self.get_action(ManagerActions.OPEN))
+            menu.addSeparator()
+            load_menu = menu.addMenu(f"Load {self.entry_type.capitalize()}s")
 
-            for ind_file, file in enumerate(self.manager.list_managed_entries_path(**kwargs_to_entry_folder)):
+            for ind_file, file in enumerate(self.list_managed_entries_path()):
                 if self.has_action(self.get_action_from_file(file)):
-                    self.load_menu.addAction(self.get_action(
+                    load_menu.addAction(self.get_action(
                         self.get_action_from_file(file)
-                        )
+                    )
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass
