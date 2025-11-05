@@ -56,9 +56,8 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
-from pymodaq.utils.config import Config as ControlModulesConfig, get_set_configurator_path
+from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.utils.managers import Configurator
-from pymodaq.utils.managers.configurator.utils import ConfiguratorActions
 
 
 logger = set_logger(get_module_name(__file__))
