@@ -4,10 +4,7 @@ Created the 07/11/2023
 
 @author: Sebastien Weber
 """
-from typing import Any
-from collections import OrderedDict
 import pytest
-from pyqtgraph.examples.glow import children
 
 from qtpy import QtWidgets
 from pymodaq.utils.managers import PresetManager
@@ -84,8 +81,8 @@ class TestPresetManager:
         assert default_state == copy_state
 
         assert copy_name in [
-            preset_manager.action_manager.get_action_list().itemText(ind) for ind in
-            range(preset_manager.action_manager.get_action_list().count())]
+            preset_manager.get_action_list().itemText(ind) for ind in
+            range(preset_manager.get_action_list().count())]
 
     def test_delete(self, ini_preset):
         default_entry = 'default'
@@ -98,9 +95,13 @@ class TestPresetManager:
         assert copy_name in preset_manager.list_managed_entries()
         assert default_entry in preset_manager.list_managed_entries()
 
-        preset_manager.delete_entry(default_entry, bypass_dialog=True)
-        assert copy_name in preset_manager.list_managed_entries()
-        assert default_entry not in preset_manager.list_managed_entries()
+        preset_manager.delete_entry(copy_name, bypass_dialog=True)
+        assert copy_name not in preset_manager.entries
+        assert copy_name not in preset_manager.list_managed_entries() # should be the same as above
+        assert default_entry in preset_manager.list_managed_entries()
+
+        preset_manager.delete_entry(default_entry)
+        assert default_entry in preset_manager.entries  #the default entry is always recreated!
 
 
     def test_create(self, ini_preset):

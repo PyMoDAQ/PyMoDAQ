@@ -17,7 +17,7 @@ from pymodaq.utils.managers.modules_manager import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
-
+from pymodaq.utils.daq_utils import copy_preset
 from pymodaq.utils.managers.preset import utils  #  necessary to register preset parameter types
 
 if TYPE_CHECKING:
@@ -53,6 +53,21 @@ class PresetManager(ManagerBase):
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
 
     ### Reimplemented Methods ####################################################
+    def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
+        """Should return a list of Path objects representing managed entries.
+
+        Example:
+        --------
+        [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
+        """
+        entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
+        if not entry_path.exists():
+            entry_path.mkdir(parents=True)
+        if not entry_path.joinpath(f'default{self.entry_extension}').exists():
+            copy_preset()
+            self.update_entry_base()
+        return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
+
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
 

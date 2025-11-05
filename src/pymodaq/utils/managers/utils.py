@@ -109,9 +109,8 @@ class ManagerBase(CustomExt):
 
     @property
     def entries(self) -> list[str]:
-        """ Get/Set the name of all existing entries """
-        return [path.stem for path in self.get_entry_folder().iterdir()
-                if path.suffix == self.entry_extension]
+        """ Get the name of all existing entries """
+        return self.list_managed_entries()
 
     @property
     def entries_filename(self) -> list[Path]:
