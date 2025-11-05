@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Union, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -10,6 +10,10 @@ from pymodaq_gui.messenger import dialog
 
 
 logger = set_logger(get_module_name(__file__))
+
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
 
 
 class ManagerActions(StrEnum):
