@@ -9,8 +9,8 @@ import pytest
 from qtpy import QtWidgets
 from pymodaq.utils.managers import PresetManager
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter.utils import compareParameters
-from pymodaq_gui.parameter.ioxml import XML_file_to_parameter
+from pymodaq_gui.parameter import utils as putils
+from pymodaq_gui.parameter import ioxml
 
 @pytest.fixture
 def init_qt(qtbot):
@@ -57,10 +57,9 @@ class TestPresetManager:
         preset_manager.entry = 'default'
 
         path = preset_manager.get_entry_folder().joinpath('default.xml')
-        param_list = XML_file_to_parameter(path)
-        pobject = Parameter.create(name='settings', type='group',
-                                   children=param_list)
-        assert compareParameters(pobject, preset_manager.settings)
+        param_dict = ioxml.xml_file_to_parameter_dict(path)
+        pobject = Parameter.create(**param_dict)
+        assert putils.compareParameters(pobject, preset_manager.settings, with_self=False)
 
     def test_copy(self, ini_preset):
         preset_manager, qtbot = ini_preset
