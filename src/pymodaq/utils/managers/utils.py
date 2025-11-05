@@ -355,22 +355,24 @@ class ManagerBase(CustomExt):
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
             with QtCore.QSignalBlocker(self.get_action(ManagerActions.LIST)):
-                entries = []
-                self.get_action_list_external().clear()
-                for ind_file, file in enumerate(self.list_managed_entries_path()):
-                    if not self.has_action(self.get_action_from_file(file)):
-                        self.add_action(
-                            self.get_action_from_file(file),
-                            file.stem,
-                            "",
-                            f"Load the {file.stem} entry",
-                            auto_toolbar=False,
-                        )
-                    entries.append(file.stem)
-                self.get_action_list_external().addItems(entries)
-                self.update_actions_connection()
-                self.update_menu()
-
+                try:
+                    entries = []
+                    self.get_action_list_external().clear()
+                    for ind_file, file in enumerate(self.list_managed_entries_path()):
+                        if not self.has_action(self.get_action_from_file(file)):
+                            self.add_action(
+                                self.get_action_from_file(file),
+                                file.stem,
+                                "",
+                                f"Load the {file.stem} entry",
+                                auto_toolbar=False,
+                            )
+                        entries.append(file.stem)
+                    self.get_action_list_external().addItems(entries)
+                    self.update_actions_connection()
+                    self.update_menu()
+                except KeyError as e:
+                    pass
     def update_actions_connection(self):
 
         for ind_file, file in enumerate(self.list_managed_entries_path()):
