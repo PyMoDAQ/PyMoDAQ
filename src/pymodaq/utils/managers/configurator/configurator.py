@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
@@ -22,9 +22,11 @@ from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree
 from pymodaq_gui.parameter.utils import compareParameters
 
 from pymodaq.utils.config import get_set_configurator_path
-
-
 from pymodaq.utils.managers.utils import ManagerBase
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
+
 
 logger = set_logger(get_module_name(__file__))
 
