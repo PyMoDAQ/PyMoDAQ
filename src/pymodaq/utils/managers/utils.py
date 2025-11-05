@@ -63,6 +63,7 @@ class ManagerBase(CustomExt):
         self.setup_ui()
 
         self.update_action_list()
+        self.update_apply_action_tooltip(self.entry)
 
     @property
     def manager_name(self) -> str:
@@ -185,7 +186,7 @@ class ManagerBase(CustomExt):
                         tip=f'Reload the current {self.entry_type} file')
         self.add_action(ManagerActions.APPLY,
                         f'Apply {self.entry_type.capitalize()}', 'MailSend',
-                        tip=f'Reload the current {self.entry_type} file')
+                        tip=f'Apply the current {self.entry_type} file')
 
 
         # ACTIONS external: Dashboard, ...

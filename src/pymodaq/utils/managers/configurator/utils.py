@@ -30,28 +30,11 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
-class ConfiguratorActions(StrEnum): # used in the DashBoard
-    Open = "open_configuration"
-    New = "new_configuration"
-    Modify = "modify_configuration"
-    Label = "configuration_label"
-    List = "configuration_list"
-    Load = "load_configuration"
-
-
 class EntryActions(StrEnum):
     ADD = 'add_entry'
     REMOVE = 'remove_entry'
     UP = 'move_entry_up'
     DOWN = 'move_entry_down'
-
-
-class ConfigurationAction(StrEnum):
-    COPY = 'copy_configuration'
-    NEW = 'create_new_configuration'
-    DELETE = 'delete_configuration'
-    SAVE = 'save_configuration'
-    RELOAD = 'reload configuration'
 
 
 class ParameterDelegate(QtWidgets.QStyledItemDelegate):

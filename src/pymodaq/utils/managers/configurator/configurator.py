@@ -3,8 +3,7 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets, QtCore
-from qtpy.QtWidgets import QStyle
-from qtpy.QtWidgets import QMessageBox, QDialogButtonBox, QDialog
+from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 from pymodaq.utils.data import DataActuator
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -18,13 +17,12 @@ from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
                                                        ConfiguratorEntry, ConfiguratorTableView,
                                                        get_module_from_param, config_entries_from_path,
-                                                       ModuleType, ParameterDelegate, EntryActions,
-                                                       ConfigurationAction, SpecialConfiguratorEntry)
-from pymodaq_gui.managers.parameter_manager import ParameterManager
+                                                       ParameterDelegate, EntryActions,
+                                                       SpecialConfiguratorEntry, ModuleType)
 from pymodaq_gui.parameter.utils import compareParameters
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
+
 
 from pymodaq.utils.managers.utils import ManagerBase
 
@@ -69,7 +67,7 @@ class Configurator(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         try:
             return get_set_configurator_path(self.preset_filename)
-        except KeyError as e:
+        except KeyError as e: #fallback to preset ini
             return get_set_configurator_path(self._preset_ini)
 
     @property
@@ -400,10 +398,17 @@ class Configurator(ManagerBase):
 
 if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp
-    app = mkQApp('Configurator')
+    app = mkQApp('PresetManager')
 
-    prog = Configurator()
+    external_ui = QtWidgets.QMainWindow()
+    toolbar = QtWidgets.QToolBar()
+    menu = QtWidgets.QMenu('Configurator')
+    external_ui.addToolBar(toolbar)
+    external_ui.menuBar().addMenu(menu)
+
+    prog = Configurator(menu=menu, toolbar=toolbar)
     prog.update_settings()
     prog.mainwindow.show()
 
+    external_ui.show()
     sys.exit(app.exec_())
