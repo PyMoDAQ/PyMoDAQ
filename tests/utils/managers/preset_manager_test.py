@@ -100,7 +100,7 @@ class TestPresetManager:
         assert copy_name not in preset_manager.list_managed_entries() # should be the same as above
         assert default_entry in preset_manager.list_managed_entries()
 
-        preset_manager.delete_entry(default_entry)
+        preset_manager.delete_entry(default_entry, bypass_dialog=True)
         assert default_entry in preset_manager.entries  #the default entry is always recreated!
 
 
