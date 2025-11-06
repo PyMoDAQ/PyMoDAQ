@@ -92,6 +92,7 @@ jobs:
 
       - name: Tests with ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.qt-backend}}
         id: tests
+        shell: bash
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             mkdir ${{ github.workspace }}/coverage
