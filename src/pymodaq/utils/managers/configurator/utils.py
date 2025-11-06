@@ -30,28 +30,11 @@ logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
 
 
-class ConfiguratorActions(StrEnum): # used in the DashBoard
-    Open = "open_configuration"
-    New = "new_configuration"
-    Modify = "modify_configuration"
-    Label = "configuration_label"
-    List = "configuration_list"
-    Load = "load_configuration"
-
-
 class EntryActions(StrEnum):
     ADD = 'add_entry'
     REMOVE = 'remove_entry'
     UP = 'move_entry_up'
     DOWN = 'move_entry_down'
-
-
-class ConfigurationAction(StrEnum):
-    COPY = 'copy_configuration'
-    NEW = 'create_new_configuration'
-    DELETE = 'delete_configuration'
-    SAVE = 'save_configuration'
-    RELOAD = 'reload configuration'
 
 
 class ParameterDelegate(QtWidgets.QStyledItemDelegate):
@@ -154,8 +137,7 @@ class ConfiguratorEntry:
         return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
-def config_entry_from_path(fname: Union[str, Path]) -> list[ConfiguratorEntry]:
-    fname = Path(fname)
+def config_entries_from_path(fname: Path) -> list[ConfiguratorEntry]:
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:
@@ -186,10 +168,8 @@ class ConfiguratorModel(TableModel):
 
     def __init__(self, data: list[ConfiguratorEntry]=None,
                  header=('Module Name', 'Setting Title', 'Value'),
-                 actuators: list[str] = None
                  ):
         self._data: list[ConfiguratorEntry] = None
-        self.actuators = actuators
         if data is None:
             data = []
         super().__init__(data, header, editable=[False, False, True])
@@ -301,6 +281,15 @@ class ConfiguratorModel(TableModel):
         self.endMoveRows()
         return True
 
+    def insertRows(self, row, count, parent):
+        self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
+        for ind in range(count):
+            self._data.insert(row + ind, self.data_tmp[ind] if
+            (hasattr(self.data_tmp, '__len__') and len(self.data_tmp) == count) else self.data_tmp)
+            self._checked.insert(row + ind, False)
+        self.endInsertRows()
+        return True
+
     def clear(self):
         while self.rowCount() > 0:
             self.remove_row(0)
@@ -347,7 +336,7 @@ class ConfiguratorModel(TableModel):
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
-            data = config_entry_from_path(fname)
+            data = config_entries_from_path(Path(fname))
 
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)

@@ -20,14 +20,6 @@ REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
 MOCK_ITEMS = {}
 
 
-class PresetAction(StrEnum):
-    COPY = 'copy_preset'
-    NEW = 'create_new_preset'
-    DELETE = 'delete_preset'
-    SAVE = 'save_preset'
-    RELOAD = 'reload_preset'
-
-
 def iterative_show_pb(params):
     for param in params:
         if param['type'] == 'itemselect' or param['type'] == 'list':
