@@ -65,27 +65,22 @@ dev = [
 
 ]
 
-
 [project.scripts]
 h5browser = "pymodaq_gui.h5modules.h5browser:main"
 parameter_example = "pymodaq_gui.examples.parameter_ex:main"
-
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
 Source = "https://github.com/PyMoDAQ/pymodaq_gui"
 Tracker = "https://github.com/PyMoDAQ/pymodaq_gui/issues"
 
-
 [tool.hatch.version.raw-options]
 search_parent_directories = true
 fallback_version = "5.1.0"
 git_describe_command = '''sh -c '(git describe --contains --tags $(git rev-list -1 HEAD -- packages/pymodaq_gui) || git describe --tags $(git rev-list -1 HEAD -- packages/pymodaq_gui)) | cut -d"~" -f1 ' '''
 
-
 [tool.hatch.version]
 source = "vcs"
-
 
 [tool.hatch.build.targets.sdist]
 include = [
