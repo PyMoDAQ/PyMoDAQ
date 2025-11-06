@@ -30,7 +30,7 @@ jobs:
         HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
         HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        git fetch --unshallow --tags #Should be taken care of by checkout action with fetch-depth: 0
+        git fetch --tags 
         last_tag=$(git tag --sort=-creatordate | head -n 1) 
         for package in pymodaq_utils pymodaq_data pymodaq_gui pymodaq; do
           cd packages/${package}
