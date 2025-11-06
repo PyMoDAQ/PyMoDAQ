@@ -13,26 +13,31 @@ jobs:
     runs-on: ubuntu-latest
           
     steps:
-    - uses: actions/checkout@v4.2.2
+    - name: Checkout repo
+      uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
     - name: Set up Python
       uses: actions/setup-python@v5.4.0
       with:
-        python-version: '3.11'
+        python-version: '3.12'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install hatch hatchling
-    - name: Get history and tags for SCM versioning to work
-      run: |
-        git branch
-        git fetch --prune --unshallow
-        git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-        hatch version
-    - name: Build
-      run: hatch build
-    - name: publish
+    - name: Build and publish
       env:
         HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
         HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        hatch publish
+        git fetch --unshallow --tags #Should be taken care of by checkout action with fetch-depth: 0
+        last_tag=$(git tag --sort=-creatordate | head -n 1) 
+        for package in pymodaq_utils pymodaq_data pymodaq_gui pymodaq; do
+          cd packages/${package}
+          current_version=$(hatch version)
+          if [[ "${current_version}" == "${last_tag}" ]]; then
+            hatch build && hatch publish || true # Continue even if one build/publish fails
+          fi;
+          cd ../../
+        done

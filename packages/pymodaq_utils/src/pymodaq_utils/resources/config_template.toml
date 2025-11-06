@@ -1,0 +1,70 @@
+#this is the configuration file of PyMoDAQ
+[style]
+darkstyle = true
+syntax_highlighting = 'github-dark'
+language = "English"
+country = "UnitedStates"
+
+[qtbackend]
+backends = [ "pyqt5", "pyqt6", "pyside2", "pyside6",]
+backend = "pyqt6"
+
+
+[data_saving]
+    [data_saving.h5file]
+    save_path = "C:\\Data"  #base path where data are automatically saved
+    compression_level = 5  # for hdf5 files between 0(min) and 9 (max)
+
+    [data_saving.hsds] #hsds connection option (https://www.hdfgroup.org/solutions/highly-scalable-data-service-hsds/)
+    #to save data in pymodaq using hpyd backend towards distant server or cloud (mimicking hdf5 files)
+    root_url = "http://hsds.sebastienweber.fr"
+    username = "pymodaq_user"
+    pwd = "pymodaq"
+
+    [data_saving.data_type]
+    dynamic = 'float64' # choose from below. This will force the datatype to be saved to
+    dynamics =  ['uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64', 'float64']
+
+
+[general]
+debug_level = "INFO" #either "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+debug_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+check_version = false  # automatically check version at startup (or not if False)
+message_status_persistence = 1000  # ms
+
+hdf5_backend = 'tables'  # could be among ['tables', 'h5py', 'h5pyd'], mostly tested with tables
+
+[user]
+name = "User name"  # default name used as author in the hdf5 saving files
+
+
+[plotting]
+backend = 'matplotlib'  # either 'matplotlib' or 'qt' or any other custom backend
+plot_colors = [[255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255], [14, 207, 189], [207, 14, 166], [207, 204, 14]]
+process_roi = true  # if True subdata is extracted from the ROI in the data viewers
+
+
+[network]
+    [network.logging]
+        [network.logging.user]
+        username = "pymodaq_user"
+        pwd = "pymodaq"
+
+        [network.logging.sql] #location of the postgresql database server and options where the DAQ_Logger will log data
+        ip = "10.47.3.22"
+        port = 5432
+
+    [network.tcp-server]
+    ip = "10.47.0.39"
+    port = 6341
+
+    [network.leco-server]
+    run_coordinator_at_startup = false
+    host = "localhost"
+    port = 12300  # pyleco default Coordinator port
+    heartbeat-timeout = 1000  # int, in milliseconds
+
+[backup]
+keep_backup = true
+folder = "environments"
+limit = 25

@@ -1,0 +1,4 @@
+graft src
+include README.rst
+include LICENSE
+
