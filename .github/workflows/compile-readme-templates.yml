@@ -37,7 +37,7 @@ jobs:
           WARNING=$(cat <<'EOF'
           .. ############################################################
           ..  WARNING: This file is AUTO-GENERATED from README.rst.tpl.
-          ..                     DO NOT EDIT MANUALLY
+          ..                  ⚠️ DO NOT EDIT MANUALLY ⚠️
           .. ############################################################
 
 
@@ -48,6 +48,7 @@ jobs:
             readme="${template%.tpl}"
             {
               echo "$WARNING"
+              echo "\n"
               sed "s/{{BRANCH_NAME}}/${{ steps.extract_branch.outputs.BRANCH_NAME }}/g" "${template}"
             } > "${readme}"
           done
