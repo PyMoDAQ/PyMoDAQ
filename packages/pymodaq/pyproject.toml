@@ -78,12 +78,10 @@ daq_scan = "pymodaq.extensions.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 
-
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
 Source = "https://github.com/PyMoDAQ/PyMoDAQ"
 Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
-
 
 [tool.hatch.version.raw-options]
 search_parent_directories = true
