@@ -54,7 +54,6 @@ dependencies = [
     "adaptive",
 ]
 
-
 [project.optional-dependencies]
 dev = [
     "hatch",
@@ -70,7 +69,6 @@ dev = [
     "pytest-qt",
     "pytest-xvfb",
 ]
-
 
 [project.scripts]
 pymodaq_updater = "pymodaq.updater:main"
