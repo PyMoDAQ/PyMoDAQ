@@ -1,0 +1,62 @@
+name: Generate README.rst from templates
+
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches:
+    - '*'
+    - '!badges' # to exclude execution if someone PR on this branch (shouldn't happen)
+  push:
+    branches:
+    - '*'
+    - '!badges' # to exclude execution if someone pushes on this branch (shouldn't happen)
+
+jobs:
+  generate-readmes:
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Extract branch name
+        shell: bash
+        id: extract_branch
+        run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> "${GITHUB_OUTPUT}"
+
+      - name: Generate README.rst
+        run: |
+          WARNING=$(cat <<'EOF'
+          .. ############################################################
+          ..  WARNING: This file is AUTO-GENERATED from README.rst.tpl.
+          ..                  ⚠️ DO NOT EDIT MANUALLY ⚠️
+          .. ############################################################
+
+
+          EOF
+          )
+          
+          find . -type f -name "README.rst.tpl" | while read template; do
+            readme="${template%.tpl}"
+            {
+              echo "$WARNING"
+              sed "s/{{BRANCH_NAME}}/${{ steps.extract_branch.outputs.BRANCH_NAME }}/g" "${template}"
+            } > "${readme}"
+          done
+          
+
+      - name: Commit and push README changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          find . -type f -name "README.rst" -exec git add {} \;
+          git diff --cached --quiet || git commit -m "Automatic README(s) update for branch ${{ steps.extract_branch.outputs.BRANCH_NAME }}"
+          git push
