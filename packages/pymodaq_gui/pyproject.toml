@@ -32,31 +32,20 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "easydict",
-    "importlib_metadata; python_version<\"3.8\"",
-    "multipledispatch",
-    "numpy < 2.0.0",
-    "packaging",
-    "pint",
-    "pyqtgraph>=0.12",
-    "python-dateutil",
-    "qtpy",
-    "scipy",
-    "setuptools>=60",
-    "toml",
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
+    "pyqtgraph>=0.12",
+    "qtpy",
+    "easydict",
 ]
 
 [project.optional-dependencies]
 dev = [
     "hatch", 
     "flake8",
-    "h5py",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
-    
     "pyqt5",
     "pyqt6",
     "pyside6",
