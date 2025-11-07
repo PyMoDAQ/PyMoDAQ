@@ -54,8 +54,8 @@ dev = [
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
-Source = "https://github.com/PyMoDAQ/pymodaq_utils"
-Tracker = "https://github.com/PyMoDAQ/pymodaq_utils/issues"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version.raw-options]
 search_parent_directories = true

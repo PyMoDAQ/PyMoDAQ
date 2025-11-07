@@ -69,8 +69,8 @@ parameter_example = "pymodaq_gui.examples.parameter_ex:main"
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
-Source = "https://github.com/PyMoDAQ/pymodaq_gui"
-Tracker = "https://github.com/PyMoDAQ/pymodaq_gui/issues"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version.raw-options]
 search_parent_directories = true
