@@ -4,9 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pymodaq_gui"
-dynamic = [
-    "version",
-]
+version = "5.1.2"
 description = "User Interface components for PyMoDAQ"
 readme = "README.rst"
 license = { file="LICENSE" }
