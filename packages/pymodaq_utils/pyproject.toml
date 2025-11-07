@@ -36,8 +36,6 @@ dependencies = [
     "packaging",
     "pint",
     "python-dateutil",
-    "scipy",
-    "setuptools>=60",
     "toml",
     "strenum; python_version<\"3.11\"",
 ]
@@ -46,10 +44,8 @@ dependencies = [
 dev = [
     "hatch", 
     "flake8",
-    "h5py",
     "pytest",
     "pytest-cov",
-    "pytest-xdist",
 ]
 
 [project.scripts]
