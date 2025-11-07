@@ -4,9 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pymodaq_utils"
-dynamic = [
-    "version",
-]
+version = "5.1.2"
 description = "Modular Data Acquisition with Python"
 readme = "README.rst"
 license = { file="LICENSE" }
