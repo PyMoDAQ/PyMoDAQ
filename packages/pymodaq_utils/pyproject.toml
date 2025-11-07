@@ -30,7 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "multipledispatch",
-    "numpy < 2.0.0",
+    "numpy",
     "packaging",
     "pint",
     "python-dateutil",
@@ -44,6 +44,7 @@ dev = [
     "flake8",
     "pytest",
     "pytest-cov",
+    "pytest-xdist",
 ]
 
 [project.scripts]
