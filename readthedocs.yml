@@ -35,6 +35,7 @@ build:
       #      - sudo mkdir -p /etc/.pymodaq # cannot use sudo command in readthedoc...
 #      - sudo chmod uo+rw /etc/.pymodaq
       - python docs/automodule.py || true
+      - python install-packages.py 
 
 
 # Build documentation in the docs/ directory with Sphinx
@@ -51,5 +52,3 @@ python:
     - requirements: docs/requirements.txt
     - method: pip
       path: .
-  post_install:
-    - python install-packages.py
