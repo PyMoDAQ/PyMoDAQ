@@ -50,7 +50,7 @@ jobs:
               echo "$WARNING"
               echo ""
               echo ""
-              sed "s/{{BRANCH_NAME}}/${{ steps.extract_branch.outputs.BRANCH_NAME }}/g" "${template}"
+              sed "s|{{BRANCH_NAME}}|${{ steps.extract_branch.outputs.BRANCH_NAME }}|g" "${template}"
             } > "${readme}"
           done
           
