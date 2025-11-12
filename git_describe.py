@@ -28,6 +28,7 @@ try:
 
     # Remove "~1" or similar suffix
     version = version.split("~")[0]
+    version = version.split("^")[0]
 except Exception:
     version = FALLBACK_VERSION
 
