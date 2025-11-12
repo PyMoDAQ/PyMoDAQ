@@ -8,7 +8,7 @@ pyqt5
 numpydoc
 sphinx-datatables
 
--e ../packages/pymodaq_utils
--e ../packages/pymodaq_data
--e ../packages/pymodaq_gui
+# -e ../packages/pymodaq_utils
+# -e ../packages/pymodaq_data
+# -e ../packages/pymodaq_gui
 # -e ../packages/pymodaq # uncomment for test purpose
