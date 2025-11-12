@@ -32,12 +32,10 @@ classifiers = [
 ]
 dependencies = [
     "multipledispatch",
-    "numpy < 2.0.0",
+    "numpy",
     "packaging",
     "pint",
     "python-dateutil",
-    "scipy",
-    "setuptools>=60",
     "toml",
     "strenum; python_version<\"3.11\"",
 ]
@@ -46,7 +44,6 @@ dependencies = [
 dev = [
     "hatch", 
     "flake8",
-    "h5py",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
@@ -56,8 +53,8 @@ dev = [
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
-Source = "https://github.com/PyMoDAQ/pymodaq_utils"
-Tracker = "https://github.com/PyMoDAQ/pymodaq_utils/issues"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version.raw-options]
 search_parent_directories = true

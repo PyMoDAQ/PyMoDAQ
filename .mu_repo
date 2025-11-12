@@ -1,5 +1,0 @@
-repo=.
-repo=../pymodaq_data
-repo=../pymodaq_gui
-repo=../pymodaq_utils
-serial=True
