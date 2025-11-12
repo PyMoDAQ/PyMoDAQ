@@ -20,9 +20,9 @@ actuator hardware to go straight to the data acquisition of interest. It provide
        allowfullscreen></iframe>
    </div>
 
-French version `here`__
+French version `here`_
 
-__ https://youtu.be/TrRy6HL3h3c
+.. _here: https://youtu.be/TrRy6HL3h3c
 
 
 .. figure:: /image/JT_Pymodaq_2025.png
@@ -46,14 +46,12 @@ Training sessions and gathering of the community are organized every year.
    Training sessions announcement and PyMoDAQ's days
 
 .. note::
-   * Training session in Gif sur Yvette, France, 1-5 december 2025, `CNRS Formation Entreprise`__
-   * Training session in Gif sur Yvette, France, 3-7 march 2026, `CNRS Formation Entreprise`__
+   * Training session in Gif sur Yvette, France, 1-5 december 2025, `CNRS Formation Entreprise`_
+   * Training session in Gif sur Yvette, France, 3-7 march 2026, `CNRS Formation Entreprise`_
    * Training session in Bordeaux, France, 15-18 June 2026, Action Nationale de Formation CNRS
    * Fifth edition of the PyMoDAQ's Days: Orsay 7-9 October 2026.
 
-
-
-__ https://cnrsformation.cnrs.fr/liste-stages-mc-PyMoDAq.html
+.. _CNRS Formation Entreprise: https://cnrsformation.cnrs.fr/liste-stages-mc-PyMoDAq.html
 
 Overview
 --------
