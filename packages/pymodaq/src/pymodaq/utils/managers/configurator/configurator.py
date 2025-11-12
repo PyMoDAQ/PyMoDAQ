@@ -19,7 +19,7 @@ from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree
                                                        get_module_from_param, config_entries_from_path,
                                                        ParameterDelegate, EntryActions,
                                                        SpecialConfiguratorEntry, ModuleType)
-from pymodaq_gui.parameter.utils import compareParameters
+from pymodaq_gui.parameter.utils import compareStructureParameter
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.utils import ManagerBase
@@ -144,7 +144,9 @@ class Configurator(ManagerBase):
                                              group in settings.child(entry.module_type).children()]:
                     incompatible_index.append(index)
             else:
-                if not compareParameters(settings.child(*entry.setting.path[1:]), entry.setting.parameter):
+                try:
+                    settings.child(*entry.setting.path[1:])
+                except KeyError:
                     incompatible_index.append(index)
         if len(incompatible_index) > 0:
             messagebox('Warning', f'The configuration entries with index: {incompatible_index} are no more compatible'
