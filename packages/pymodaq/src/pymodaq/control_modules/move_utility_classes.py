@@ -245,15 +245,18 @@ class GroupParameterPatch(GroupParameter):
     def __getitem__(self, names: Union[str, tuple[str,]]):
         if isinstance(names, str):
             names = (names)
-        if 'multiaxes' in names:
-            names = list(names)
-            names[names.index('multiaxes')] = 'controller'
-            names = tuple(names)
-        if 'multi_status' in names:
-            names = list(names)
-            names[names.index('multi_status')] = 'controller_status'
-            names = tuple(names)
-        return super().__getitem__(names)
+        try:
+            return super().__getitem__(names)
+        except KeyError:
+            if 'multiaxes' in names:
+                names = list(names)
+                names[names.index('multiaxes')] = 'controller'
+                names = tuple(names)
+            if 'multi_status' in names:
+                names = list(names)
+                names[names.index('multi_status')] = 'controller_status'
+                names = tuple(names)
+            return super().__getitem__(names)
 
 
 registerParameterType('group', GroupParameterPatch, override=True)
