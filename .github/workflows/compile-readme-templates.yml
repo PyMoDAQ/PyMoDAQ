@@ -50,12 +50,13 @@ jobs:
               echo "$WARNING"
               echo ""
               echo ""
-              sed "s/{{BRANCH_NAME}}/${{ steps.extract_branch.outputs.BRANCH_NAME }}/g" "${template}"
+              sed "s|{{BRANCH_NAME}}|${{ steps.extract_branch.outputs.BRANCH_NAME }}|g" "${template}"
             } > "${readme}"
           done
           
 
       - name: Commit and push README changes
+        if: github.event_name != 'pull_request'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
