@@ -57,8 +57,10 @@ jobs:
 
       - name: Commit and push README changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          find . -type f -name "README.rst" -exec git add -f {} \;
-          git diff --cached --quiet || git commit -m "Automatic README(s) update for branch ${{ steps.extract_branch.outputs.BRANCH_NAME }}"
-          git push
+          if [ -z "$GITHUB_HEAD_REF" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            find . -type f -name "README.rst" -exec git add -f {} \;
+            git diff --cached --quiet || git commit -m "Automatic README(s) update for branch ${{ steps.extract_branch.outputs.BRANCH_NAME }}"
+            git push
+          fi
