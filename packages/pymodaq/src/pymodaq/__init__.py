@@ -33,7 +33,7 @@ try:
         # issue on windows when using .NET code within multithreads, this below allows it but requires
         # the pywin32 (pythoncom) package
         try:
-            if importlib.util.find_spec('clr') is not None:
+            if 'win' in sys.platform and importlib.util.find_spec('clr') is not None:
                 try:
                     import pythoncom
                     pythoncom.CoInitialize()
