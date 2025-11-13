@@ -726,8 +726,8 @@ class DAQScan(QObject, ParameterManager):
                 self.ui.set_action_enabled('start', True)
 
                 # reactivate module controls using remote_control
-                if hasattr(self.dashboard, 'remote_manager'):
-                    remote_manager = getattr(self.dashboard, 'remote_manager')
+                remote_manager = getattr(self.dashboard, 'remote_manager', None)
+                if remote_manager is not None:
                     remote_manager.activate_all(True)
                 if self.navigator is not None:
                     self.navigator.list_2D_scans()
@@ -909,8 +909,9 @@ class DAQScan(QObject, ParameterManager):
         res = self.set_scan()
         if res:
             # deactivate module controls using remote_control
-            if hasattr(self.dashboard, 'remote_manager'):
-                remote_manager = getattr(self.dashboard, 'remote_manager')
+
+            remote_manager = getattr(self.dashboard, 'remote_manager', None)
+            if remote_manager is not None:
                 remote_manager.activate_all(False)
 
             new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
