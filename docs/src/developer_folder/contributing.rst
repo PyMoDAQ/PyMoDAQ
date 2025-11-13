@@ -19,7 +19,7 @@ If you're willing to help, there are several ways to do it:
 For the last point, here are some pointers:
 
 You should `fork and clone <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#forking-a-repository/>`_
-the up-to-date GitHub repo: https://github.com/PyMoDAQ using git command line or GitHub Desktop
+the up-to-date GitHub repo: https://github.com/PyMoDAQ/PyMoDAQ using git command line or GitHub Desktop
 (the latter is recommended for newcomers, just make sure to uncheck "Copy the ... branch only").
 Then create a dedicated branch name from the change you want to work on
 (using git).
@@ -29,10 +29,10 @@ Finally it is advised to create a dedicated virtual environment for this and ins
 - ``mamba create -n dev_env``
 - ``mamba activate dev_env``
 - ``cd`` to the location of the folder where you downloaded or cloned the repository.
-- install the package as a developer with test tools using the command ``pip install -e ".[dev]"``.
+- install the package as a developer with test tools using the command either by using the provided script ``python install-packages.py -d``.
+    - it calls `pip install -e` on each pymodaq package (pymodaq_utils, pymodaq_data, pymodaq_gui and pymodaq) in the package folder.
     - the `-e` option tells pip to install the package in editable mode, meaning that any change done to the source will be reported to the installed package.
-    - the `".[dev]"` argument indicate to install the current folder as a package alongside its optional dependancies, declared as `dev` in the `pyproject.toml` file.
-    - the quotes around `[dev]` just allow to escape the sequence in order to not be interpreted by the shell.
+    - the `-d` option activates `[dev]` in the package names transmitted to `pip install` (e.g. `pymodaq_utils[dev]`). It indicate to install the package alongside its optional dependancies, declared as `dev` in the `pyproject.toml` file.
 
 
 Then any change on the code will be *seen* by python interpreter so that you can see and test your modifications. Think about
@@ -53,9 +53,9 @@ define here. PyMoDAQ versioning follows usual practice, as described `in this li
     :width: 150
     :align: center
 
-Starting from January 2024, the following structure was agreed upon by the contributors. At any given time,
-there is a **stable** version of PyMoDAQ - at the time of writing it is 4.1.0 - which is not to be modified except for
-bugfixes, and a **development** version (currently, 4.2.0), onto which new features may be added.
+Starting from November 2025, the following structure was agreed upon by the contributors. At any given time,
+there is a **stable** version of PyMoDAQ - at the time of writing it is 5.1.0 - which is not to be modified except for
+bugfixes, and a **development** version (he next **minor** version), onto which new features may be added.
 
 The release cycle is illustrated in this figure:
 
@@ -65,18 +65,19 @@ This cycle makes use of several types of branches:
 
 **Code flow branches:**
 
-* **the stable branch, eg: '4.1.x'** This is the branch representing the stable version of PyMoDAQ. No change should be
+* **the stable branch, eg: '5.1.x'** This is the branch representing the stable version of PyMoDAQ. No change should be
   made on this branch except bugfixes and hotfixes (see below). This is the branch from which the official releases are
-  created, for instance version 4.1.0, 4.1.1, 4.1.2, etc.
+  created, for instance version *5.1.0*, *5.1.1*, *5.1.2*, etc. Only packages with modifications will be part of a bugfix release.
+  For example, if the current version is *5.1.0*, all packaged are at version *5.1.0*. Then, pymodaq_data and pymodaq_utils are
+  modified and a new bugfix version is released, then pymodaq_utils and pymodaq_data *5.1.1* will be released and pymodaq_gui
+  and pymodaq will stay at *5.1.0*.
 
-* **the development branch, eg: '4.2.x_dev** Note that the branch name differs from the stable branch by one increment
-  on the minor revision number (2 instead of 1), and the '_dev' suffix is added for clarity.
+* **the development branch: 'dev** Note that the branch name will **always** be dev.
   This is the development branch. It is *ahead* of the main branch, in the sense that it contains more
   recent commits than the main branch. It is thus the future state of the code. This is where the last developments
   of the code of PyMoDAQ are pushed. When the developers are happy with the state of this branch, typically when they
-  finished to develop a new functionality and they tested it, this will lead to a new *release* of PyMoDAQ (4.1.x -> 4.2.0 in our example).
-  In practice, the branch will simply be renamed from *4.2.x_dev* to *4.2.x*, and a new branch *4.3.x_dev* will be created
-  to continue the cycle.
+  finished to develop a new functionality and they tested it, this will lead to a new *release* of all four packages (5.1.x -> 5.2.0 in our example).
+  In practice, the branch will stay *dev* but a *5.2.x* branch  will be created based on the last state of *dev*
 
 **Temporary branches:**
 
@@ -89,7 +90,7 @@ This cycle makes use of several types of branches:
   all branches, if applicable (see note below).
 
 * **Hotfix, eg: 'hotfix/fix_huge_bug'**: This is similar to a bugfix, but for more important bugs. More precisely, hotfixes
-  are important enough that when applied, they will trigger an immediate new release (e.g. *4.1.1* -> *4.1.2*) that incorporate the fix.
+  are important enough that when applied, they will trigger an immediate new release (e.g. *5.1.1* -> *5.1.2*) that incorporate the fix.
   At the contrary bugfixes can wait for a future release.
 
 .. note::

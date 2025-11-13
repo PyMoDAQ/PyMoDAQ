@@ -27,20 +27,20 @@ suggested to delete/remake the folder (or empty its content) when setting up a n
 version.
 
 
-.. _qt5backend:
+.. _qtbackend:
 
-Qt5 backend
+Qt backend
 -----------
 
 PyMoDAQ source code uses a python package called `qtpy`__ that add an abstraction layer between PyMoDAQ's code
-and the actual Qt5 python implementation (either PyQt5 or PySide2, and soon PyQt6 and PySide6). Qtpy will look on what
+and the actual Qt python implementation (either PyQt6 or PySide6, but also PyQt5). Qtpy will look on what
 is installed on your environment and load PyQt5 by default (see the :ref:`configfile` to change this default behaviour).
 This means you have to install one of these backends on your environment using either:
 
+
+* ``pip install pyqt6`` 
+* ``pip install pyside6``
 * ``pip install pyqt5``
-* ``pip install pyside2`` (still some issues with some parts of pymodaq's code. If you want to help fix them, please, don't be shy!)
-* ``pip install pyqt6`` (not tested yet)
-* ``pip install pyside6`` (not tested yet)
 
 
 __ https://pypi.org/project/QtPy/
