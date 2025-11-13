@@ -145,7 +145,6 @@ class DashBoard(CustomApp):
     Main class initializing a DashBoard interface to display det and move modules and logger"""
 
     status_signal = Signal(str)
-    preset_loaded_signal = Signal(bool)
     new_preset_created = Signal()
 
     settings_name = "dashboard_settings"
@@ -243,6 +242,8 @@ class DashBoard(CustomApp):
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
         self.configurator.apply_entry(self.configurator.entry_filename)
+        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+            menu.setEnabled(True)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -754,10 +755,8 @@ class DashBoard(CustomApp):
 
         status = True
 
-        self.overshoot_menu.setEnabled(not status)
-        self.roi_menu.setEnabled(not status)
-        self.remote_menu.setEnabled(not status)
-        self.extensions_menu.setEnabled(not status)
+        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+            menu.setEnabled(not status)
         self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
