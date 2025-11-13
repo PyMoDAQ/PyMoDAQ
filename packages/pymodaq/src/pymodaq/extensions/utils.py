@@ -84,6 +84,8 @@ class CustomExt(CustomApp):
             self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
                                                    actuators=self.dashboard.actuators_modules,
                                                    parent_name=self.__class__.__name__)
+        else:
+            self._modules_manager = None
 
     @property
     def splash(self):
