@@ -74,15 +74,18 @@ def get_extensions():
 
 class CustomExt(CustomApp):
 
-    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard: 'DashBoard'):
-        super().__init__(parent)
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
+                 dashboard: 'DashBoard', **kwargs):
+        super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
         self.runner_thread : QtCore.QThread = None
-
-        self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
-                                               actuators=self.dashboard.actuators_modules,
-                                               parent_name=self.__class__.__name__)
+        if dashboard is not None:
+            self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
+                                                   actuators=self.dashboard.actuators_modules,
+                                                   parent_name=self.__class__.__name__)
+        else:
+            self._modules_manager = None
 
     @property
     def splash(self):
