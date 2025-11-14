@@ -27,12 +27,12 @@ jobs:
     steps:
 
       - name: Set up GitHub CLI 
-      run: sudo apt-get install gh -y
+        run: sudo apt-get install gh -y
 
       - name: Set up Python
-      uses: actions/setup-python@v5.4.0
-      with:
-        python-version: '3.12'
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: '3.12'
 
       - name: Trigger missing test workflows per package
         run: |
@@ -56,7 +56,7 @@ jobs:
             fi
           done
 
-       - name: Download merged coverage artifacts
+      - name: Download merged coverage artifacts
         uses: actions/download-artifact@v5.0.0
         with:
           pattern: "merged-coverage-*"
