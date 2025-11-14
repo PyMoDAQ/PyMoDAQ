@@ -5,11 +5,11 @@ PyMoDAQ
    :target: https://pypi.org/project/pymodaq/
    :alt: Latest Version
 
-.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=latest
-   :target: https://pymodaq.readthedocs.io/en/stable/?badge=latest
+.. image:: https://readthedocs.org/projects/pymodaq/badge/?version={{BRANCH_NAME}}
+   :target: https://pymodaq.readthedocs.io/en/stable/?badge={{BRANCH_NAME}}
    :alt: Documentation Status
 
-.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/graph/badge.svg?token=IQNJRCQDM2
+.. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/{{BRANCH_NAME}}/graph/badge.svg?token=IQNJRCQDM2 
  :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
 

@@ -1,0 +1,77 @@
+name: Coverage upload
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Test for pymodaq"
+      - "Test for pymodaq_utils"
+      - "Test for pymodaq_gui"
+      - "Test for pymodaq_data"
+    types:
+      - completed
+
+concurrency:
+  # github.workflow: name of the workflow
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  cancel-in-progress: true
+  
+jobs:
+  merge:
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+    runs-on: "ubuntu-latest"
+    steps:
+
+      - name: Set up GitHub CLI 
+      run: sudo apt-get install gh -y
+
+      - name: Set up Python
+      uses: actions/setup-python@v5.4.0
+      with:
+        python-version: '3.12'
+
+      - name: Trigger missing test workflows per package
+        run: |
+          set -e
+          workflows=("Test for pymodaq" "Test for pymodaq_utils" "Test for pymodaq_gui" "Test for pymodaq_data")
+          for wf in "${workflows[@]}"; do
+            pkg=$(echo "$wf" | sed 's/Test for //')
+      
+            # Try to download artifact to check if workflow already ran
+            if ! gh run download --workflow "$wf" --name "coverage-$pkg" -D ./coverage 2>/dev/null; then
+              gh workflow run "$wf" -f ref="${GITHUB_SHA}"
+
+              # Wait for workflow to complete
+              while true; do
+                sleep 60
+                status=$(gh run list --workflow "$wf" --branch "${GITHUB_REF##*/}" --limit 1 --json status,conclusion -q '.[0]')
+                if [[ "$status" == *"completed"* ]]; then
+                  break
+                fi
+              done
+            fi
+          done
+
+       - name: Download merged coverage artifacts
+        uses: actions/download-artifact@v5.0.0
+        with:
+          pattern: "merged-coverage-*"
+          path: artifacts
+          merge-multiple: true
+
+
+  
+      - name: Merge coverage files and convert to xml
+          python -m pip install coverage
+          coverage combine ./merged_coverage_*
+          coverage xml -i
+
+      - name: Upload combined coverage report to Codecov
+        uses: codecov/codecov-action@v5.5.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
