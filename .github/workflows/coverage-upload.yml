@@ -63,9 +63,8 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-
-  
       - name: Merge coverage files and convert to xml
+        run: |
           python -m pip install coverage
           coverage combine ./merged_coverage_*
           coverage xml -i
