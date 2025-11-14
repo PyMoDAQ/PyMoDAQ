@@ -59,7 +59,7 @@ bugfixes, and a **development** version (he next **minor** version), onto which 
 
 The release cycle is illustrated in this figure:
 
-.. figure:: /image/tutorial_contribute_to_pymodaq_code/release_cycle_pymodaq3.png
+.. figure:: /image/tutorial_contribute_to_pymodaq_code/release_cycle_pymodaq.svg
 
 This cycle makes use of several types of branches:
 
