@@ -31,6 +31,9 @@ config = ControlModulesConfig()
 class ModuleType(StrEnum):
     Actuator = "actuator"
     Detector = "detector"
+    Other = 'other'
+    NONE = 'None'
+
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -480,6 +483,19 @@ class ModulesManager(QObject, ParameterManager):
                                                             selected=[]))
 
         self.connect_actuators(False)
+
+
+    def connect_and_move_actuators(self, dte_act: DataToExport, mode='abs', polling=True,
+                                   slot=None, signal='move_done') -> DataToExport:
+        """ Connect Actuators specified in the dte object and move them either absolute or relative to the
+        given value
+        """
+        self.selected_actuators_name = [dwa.name for dwa in dte_act]
+        self.connect_actuators(True, slot=slot, signal=signal)
+
+        dte = self.move_actuators(dte_act, mode=mode, polling=polling)
+        self.connect_actuators(False)
+        return dte
 
     def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be

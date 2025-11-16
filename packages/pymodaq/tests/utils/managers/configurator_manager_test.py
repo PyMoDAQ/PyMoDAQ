@@ -8,9 +8,11 @@ import pytest
 from pathlib import Path
 from qtpy import QtWidgets
 from pymodaq.utils.managers import Configurator
-from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import ioxml
+from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory
+
+
+factory = SpecialEntryFactory()
+
 
 @pytest.fixture
 def init_qt(qtbot):
@@ -51,3 +53,13 @@ class TestConfigurator:
 
         assert configurator.entry_type == 'configurator'
         assert configurator.entry_extension == '.config'
+
+
+class TestSpecialEntryFactory:
+
+    def test_registered_entries(self):
+        for entry in ['actuator_value',
+                      'control_module_init',
+                      'wait_time']:
+
+            assert entry in factory.short_entries

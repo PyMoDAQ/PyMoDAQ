@@ -2,24 +2,29 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets, QtCore
+from PyQt6.QtCore import QModelIndex
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
-from pymodaq.utils.data import DataActuator
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.messenger import dialog, messagebox
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
+from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
+from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntry
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
-                                                       ConfiguratorEntry, ConfiguratorTableView,
+                                                       ConfiguratorTableView,
                                                        get_module_from_param, config_entries_from_path,
                                                        ParameterDelegate, EntryActions,
-                                                       SpecialConfiguratorEntry, ModuleType)
-from pymodaq_gui.parameter.utils import compareStructureParameter
+                                                       ModuleType)
+
+
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.utils import ManagerBase
@@ -29,6 +34,8 @@ if TYPE_CHECKING:
 
 
 logger = set_logger(get_module_name(__file__))
+
+special_entry_factory = SpecialEntryFactory()
 
 
 class Configurator(ManagerBase):
@@ -55,11 +62,13 @@ class Configurator(ManagerBase):
                  preset_filename: str = 'default'):
 
         self._preset_ini = preset_filename
+        self.special_entry: SpecialEntry = None
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
 
         self.preset_filename = preset_filename
+
 
     def show(self):
         self.update_settings(self.dashboard.modules_manager.get_settings_all())
@@ -86,7 +95,7 @@ class Configurator(ManagerBase):
             try:
                 self.get_action('preset_filename').setText(preset_filename)
                 self.get_action('entries').clear()
-                self.get_action('entries').addItems(self.entries + ['...'])
+                self.get_action('entries').addItems(self.entries)
             except KeyError as e:
                 pass
 
@@ -102,22 +111,23 @@ class Configurator(ManagerBase):
             The path to the configuration file to be applied.
         """
         pwp_list = config_entries_from_path(entry_path)
-        incompatible_index = self.check_parameters(pwp_list, self.dashboard.modules_manager.get_settings_all())
+        settings_all = self.dashboard.modules_manager.get_settings_all()
+        incompatible_index = self.check_parameters(pwp_list, settings_all)
+        self.dashboard.splash_sc.setVisible(True)
+        self.dashboard.splash_sc.showMessage(f'Applying Configuration: {entry_path.stem}')
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:
                 mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
-                if SpecialConfiguratorEntry.ACTUATOR_VALUE in entry.setting.path:
-                    mod.move_abs(DataActuator(entry.module_name, data=entry.setting.parameter.value(),
-                                              units=entry.setting.parameter.opts.get('suffix', mod.units)))
-                elif SpecialConfiguratorEntry.MODULE_INIT in entry.setting.path:
-                    if entry.setting.parameter.value():
-                        mod.init_hardware_ui(True)
-                        self.dashboard.poll_init(mod)
-                else:
+                try:
+                    special_entry = special_entry_factory.get_entry_from_long_name(entry.setting.path[-1])(
+                        self.config_model, settings_all, self.actuators, self.detectors)
+                    special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
+                    QtWidgets.QApplication.processEvents()
+                except KeyError:
                     mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
+        self.dashboard.splash_sc.setVisible(False)
 
-    @staticmethod
-    def check_parameters(entries: list[ConfiguratorEntry], settings: Parameter):
+    def check_parameters(self, entries: list[ConfiguratorEntry], settings: Parameter):
         """
         Check compatibility between configuration entries and current settings.
 
@@ -135,19 +145,18 @@ class Configurator(ManagerBase):
         """
         incompatible_index = []
         for index, entry in enumerate(entries):
-            if SpecialConfiguratorEntry.ACTUATOR_VALUE in entry.setting.path:
-                if entry.module_name not in [group.child('name').value() for
-                                             group in settings.child(ModuleType.Actuator).children()]:
+            try:
+                special_entry = special_entry_factory.get_entry_from_long_name(entry.setting.path[-1])(
+                    self.config_model, settings, self.actuators, self.detectors)
+                if not special_entry.is_valid(entry):
                     incompatible_index.append(index)
-            elif SpecialConfiguratorEntry.MODULE_INIT in entry.setting.path:
-                if entry.module_name not in [group.child('name').value() for
-                                             group in settings.child(entry.module_type).children()]:
-                    incompatible_index.append(index)
-            else:
+            except KeyError:
                 try:
                     settings.child(*entry.setting.path[1:])
                 except KeyError:
                     incompatible_index.append(index)
+
+
         if len(incompatible_index) > 0:
             messagebox('Warning', f'The configuration entries with index: {incompatible_index} are no more compatible'
                                   f'with the current state of your Dashboard, Ignoring them in the applied '
@@ -164,11 +173,23 @@ class Configurator(ManagerBase):
             Settings containing all modules configuration
         """
         self.settings = settings
+        self.set_readonly_setting(self.settings)
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
-        self._actuators = [
-            param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
-        self._detectors = [
-            param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
+
+    @property
+    def actuators(self):
+        if self.dashboard is not None:
+            return self.dashboard.modules_manager.actuators_name
+        else:
+            return [param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
+
+    @property
+    def detectors(self):
+        if self.dashboard is not None:
+            return self.dashboard.modules_manager.detectors_name
+        else:
+            return [param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
+
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
@@ -178,128 +199,28 @@ class Configurator(ManagerBase):
         )
         self.populate_from_settings(settings)
 
-    def get_units_from_module_name(self, actuator_name: str):
-        mods_settings = [group.child('name').value() for
-                        group in self.settings.child(ModuleType.Actuator).children()]
-        actuator_settings = self.settings.child(ModuleType.Actuator).children()[
-            mods_settings.index(actuator_name)]
-
-        return actuator_settings.child('move_settings', 'units').value()
-
-    def update_suffix_in_dialog(self, actuator_name: str):
-        self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
-
-    def add_special_entry(self, add_type: SpecialConfiguratorEntry):
-        if add_type == SpecialConfiguratorEntry.ACTUATOR_VALUE:
-            self.get_actuator_value_from_widget()
-        elif add_type == SpecialConfiguratorEntry.MODULE_INIT:
-            self.get_control_module_init_from_widget()
-
-    def get_actuator_value_from_widget(self):
-        self.actuator_dialog = QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        widget = QtWidgets.QWidget()
-        widget.setLayout(QtWidgets.QHBoxLayout())
-        self.actuator_cb = QtWidgets.QComboBox()
-        self.actuator_cb.addItems(self._actuators)
-
-        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self._actuators[0]), siPrefix= False)
-        self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
-
-        widget.layout().addWidget(self.actuator_cb)
-        widget.layout().addWidget(self.value_sb)
-
-        vlayout.addWidget(widget)
-        self.actuator_dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=self.actuator_dialog)
-
-        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(self.actuator_value_set)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(self.actuator_dialog.reject)
-
-        vlayout.addWidget(buttonBox)
-        self.actuator_dialog.setWindowTitle("Fill in information about this actuator target value")
-
-        self.actuator_dialog.open()
-
-    def actuator_value_set(self):
-        self.actuator_dialog.accept()
-        self.config_model.add_data(
-            self.config_model.rowCount(),
-            ConfiguratorEntry(self.actuator_cb.currentText(),
-                              module_type=ModuleType.Actuator,
-                              setting=
-                              ParameterWithPath(
-                                  parameter=
-                                  Parameter.create(title= 'Actuator Value',
-                                                   name=SpecialConfiguratorEntry.ACTUATOR_VALUE.value,
-                                                   type='float',
-                                                   value=self.value_sb.value(),
-                                                   suffix=self.value_sb.opts['suffix']))))
-
-    def get_control_module_init_from_widget(self):
-        self.init_module_dialog = QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        widget = QtWidgets.QWidget()
-        widget.setLayout(QtWidgets.QHBoxLayout())
-        self.control_module_cb = QtWidgets.QComboBox()
-
-
-        self.control_module_cb.addItems(self._actuators + self._detectors)
-
-        self.init_cb = QtWidgets.QCheckBox()
-
-        widget.layout().addWidget(self.control_module_cb)
-        widget.layout().addWidget(self.init_cb)
-
-        vlayout.addWidget(widget)
-        self.init_module_dialog.setLayout(vlayout)
-        buttonBox = QDialogButtonBox(parent=self.init_module_dialog)
-
-        buttonBox.addButton("Ok", QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(self.control_module_init_set)
-        buttonBox.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(self.init_module_dialog.reject)
-
-        vlayout.addWidget(buttonBox)
-        self.init_module_dialog.setWindowTitle("Fill in information about this Control Module initialized value")
-        self.init_module_dialog.open()
-
-    def control_module_init_set(self):
-        self.init_module_dialog.accept()
-        module_name = self.control_module_cb.currentText()
-        module_type = ModuleType.Actuator if module_name in self._actuators else ModuleType.Detector
-        self.config_model.add_data(
-            self.config_model.rowCount(),
-            ConfiguratorEntry(module_name,
-                              module_type=module_type,
-                              setting=
-                              ParameterWithPath(
-                                  parameter=
-                                  Parameter.create(title= 'Control Module Init Value',
-                                                   name=SpecialConfiguratorEntry.MODULE_INIT.value,
-                                                   type='bool',
-                                                   value=True if self.init_cb.checkState() ==
-                                                                 QtCore.Qt.CheckState.Checked else False,
-                                                                          ))))
+    def add_special_entry(self, special_entry_name: str):
+        self.special_entry = special_entry_factory.get_entry(special_entry_name)(
+            self.config_model, self.settings, self.actuators, self.detectors)
+        self.special_entry.show_dialog()
 
     def setup_docks(self):
         self.tree.setDragEnabled(True)
         self.tree.setAcceptDrops(False)
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
+        self.tree.doubleClicked.connect(self.add_setting)
 
         self.table_out = ConfiguratorTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_out.horizontalHeader().setStretchLastSection(True)
         self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-        self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        #self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
         self.config_model = ConfiguratorModel()
         self.table_out.setModel(self.config_model)
-        self.table_out.add_data_signal[SpecialConfiguratorEntry].connect(self.add_special_entry)
+        self.table_out.add_data_signal[str].connect(self.add_special_entry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
         self.table_out.load_data_signal.connect(self.config_model.load)
         self.table_out.save_data_signal.connect(self.config_model.save)
@@ -313,6 +234,7 @@ class Configurator(ManagerBase):
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
         vlayout_right = QtWidgets.QVBoxLayout()
+        valyout_left = QtWidgets.QVBoxLayout()
 
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
@@ -323,10 +245,13 @@ class Configurator(ManagerBase):
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
-        hlayout.addWidget(self.settings_tree)
+        hlayout.addLayout(valyout_left)
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
+        valyout_left.addWidget(self.settings_tree)
+        valyout_left.addWidget(QtWidgets.QLabel('Control Modules Settings from Dashboard.\n'
+                                                'In green, settings that can be configured!'))
         vlayout_right.addWidget(self.get_toolbar('configurations'))
         vlayout_right.addWidget(self.table_out)
 
@@ -370,8 +295,36 @@ class Configurator(ManagerBase):
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
-    def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
+    def set_readonly_setting(self, param: Parameter):
+        """ Set all settings as readonly but configure the VALID_FOR_CONFIGURATION option:
+
+        if initially readonly: VALID_FOR_CONFIGURATION is set to its value (if existing otherwise True if not specified)
+        else: VALID_FOR_CONFIGURATION is set to False
+
+        See Also
+        --------
+        pymodaq_gui.parameter.ioxml.VALID_FOR_CONFIGURATION
+        pymodaq.control_modules.move_utility_classes.params
+        pymodaq.control_modules.viewer_utility_classes.params
+
+        """
         if not param.readonly():
+            param.setOpts(**{'readonly':True,
+                             VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
+        else:
+            param.setOpts(**{VALID_FOR_CONFIGURATION: False})
+
+        if param.opts[VALID_FOR_CONFIGURATION]:
+            brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
+            for item in param.items:
+                for ind_col in range(item.columnCount()):
+                    item.setForeground(ind_col, brush)
+
+        for child in param.children():
+            self.set_readonly_setting(child)
+
+    def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
+        if param.opts.get(VALID_FOR_CONFIGURATION, True):
             param.setOpts(movable=movable, dropEnabled=drop_enabled)
         for child in param.children():
             self.set_drag_mode_recursive(child, movable, drop_enabled)
@@ -381,24 +334,41 @@ class Configurator(ManagerBase):
             current_setting = self.tree.currentItem().param
             module, module_type = get_module_from_param(ParameterWithPath(current_setting))
             entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
-            self.config_model.add_data(self.config_model.rowCount(), entry)
+            entries = self.config_model.split_entry(entry)
+            for entry in entries:
+                self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def remove_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:
-            self.config_model.remove_data(current_index.row())
+        index_0 = self.table_out.selectedIndexes()[0]
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        for index in indexes[::-1]:  #start with the highest row
+            if index != -1:
+                self.config_model.remove_data(index)
+        self.table_out.setCurrentIndex(index_0)
 
     def move_up_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:  # means no selected row
-            self.config_model.moveRow(current_index.parent(), current_index.row(),
-                                      current_index.parent(), current_index.row()-1)
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        if indexes[0] == 0:
+            return
+        else:
+            for index in indexes:  #start with the lowest row
+                if index != -1:  # means no selected row
+                    self.config_model.moveRow(QModelIndex(), index,
+                                              QModelIndex(), index-1)
 
     def move_down_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:  # means no selected row
-            self.config_model.moveRow(current_index.parent(), current_index.row(),
-                                      current_index.parent(), current_index.row()+2)
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        if indexes[-1] + 1 == self.config_model.rowCount():
+            return
+        else:
+            for index in indexes[::-1]:  #start with the highest row
+                if index != -1:  # means no selected row
+                    self.config_model.moveRow(QModelIndex(), index,
+                                              QModelIndex(), index+2)
+
 
 if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp

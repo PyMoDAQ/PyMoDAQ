@@ -1,15 +1,16 @@
 from pathlib import Path
-from dataclasses import dataclass
-from typing import Union, Tuple
-
+from typing import Union
 
 from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
-
+from pymodaq_utils.serialize.serializer import ListSerializeDeserialize
+from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
+from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.array_manipulation import are_elements_contiguous
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.qvariant import QVariant
@@ -28,6 +29,7 @@ from pymodaq.utils.managers.modules_manager import ModuleType
 
 logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
+special_entry_factory = SpecialEntryFactory()
 
 
 class EntryActions(StrEnum):
@@ -46,7 +48,43 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
         parameter: Parameter = index.model().get_data(index.row()).setting.parameter
         widget: QtWidgets.QWidget =  parameter.itemClass(parameter, depth=0).makeWidget()
         widget.setParent(parent)
+        widget.setAutoFillBackground(True)
+
+        # Set size policy to fill the cell
+        widget.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding
+        )
+
+        # Force widget to fill cell height
+        available_height = option.rect.height()
+        widget.setMinimumHeight(available_height)
+        widget.setMaximumHeight(available_height)
+
+        # Remove layout margins if present
+        if widget.layout() is not None:
+            widget.layout().setContentsMargins(0, 0, 0, 0)
+            widget.layout().setSpacing(0)
+
+        # Connect signals for auto-commit on value change or focus loss
+        self._connect_editor_signals(widget)
+
         return widget
+
+    def _connect_editor_signals(self, widget):
+        """Connect widget signals to auto-commit data changes"""
+        # Try common value changed signals
+        if hasattr(widget, 'valueChanged'):
+            widget.valueChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'currentIndexChanged'):  # For comboboxes
+            widget.currentIndexChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'textChanged'):
+            widget.textChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'stateChanged'):  # For checkboxes
+            widget.stateChanged.connect(lambda: self.commitData.emit(widget))
+
+        # Install event filter to catch focus loss
+        widget.installEventFilter(self)
 
     def setEditorData(self, editor, index: QModelIndex):
         try:
@@ -57,6 +95,21 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
     def setModelData(self, editor, model, index: QModelIndex):
         model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
 
+    def updateEditorGeometry(self, editor, option, index):
+        """Ensure editor fills the cell completely"""
+        rect = QtCore.QRect(option.rect)
+        available_height = rect.height()
+        editor.setMinimumHeight(available_height)
+        editor.setMaximumHeight(available_height)
+        editor.setGeometry(rect)
+
+    def sizeHint(self, option, index):
+        """Provide size hint for cells with widgets"""
+        if index.column() == 2:
+            hint = super().sizeHint(option, index)
+            hint.setHeight(max(hint.height(), 40))
+            return hint
+        return super().sizeHint(option, index)
 
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
     if ModuleType.Actuator in param.path or 'Moves' in param.path:
@@ -90,51 +143,6 @@ def get_module_from_param(param: ParameterWithPath) -> Union[tuple[str, ModuleTy
         param_module = param_module.parent()
     module = param_module.child('name').value()
     return module, module_type
-
-
-@SerializableFactory.register_decorator()
-@dataclass
-class ConfiguratorEntry:
-    module_name: str
-    module_type: ModuleType
-    setting: ParameterWithPath
-
-    def __eq__(self, other: 'ConfiguratorEntry'):
-        return (self.module_name == other.module_name and
-                self.module_type == other.module_type and
-                self.setting == other.setting)
-
-    def __repr__(self):
-        return (f"ConfiguratorEntry({self.module_type.capitalize()}: {self.module_name}, "
-                f"setting={self.setting.parameter.name()}, "
-                f"path={self.setting.path})")
-
-    @staticmethod
-    def serialize(entry: 'ConfiguratorEntry') -> bytes:
-        """
-
-        """
-        bytes_string = b''
-        bytes_string += ser_factory.get_apply_serializer(entry.setting)
-        bytes_string += ser_factory.get_apply_serializer(entry.module_name)
-        bytes_string += ser_factory.get_apply_serializer(entry.module_type.value)
-        return bytes_string
-
-    @classmethod
-    def deserialize(cls,
-                    bytes_str: bytes) -> Union['ConfiguratorEntry',
-    Tuple['ConfiguratorEntry', bytes]]:
-        """Convert bytes into a ParameterWithPath object
-
-        Returns
-        -------
-        ParameterWithPath: the decoded object
-        bytes: the remaining bytes string if any
-        """
-        parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(bytes_str, False)
-        module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        return ConfiguratorEntry(module_name, ModuleType(module_type), parameter_with_path), remaining_bytes
 
 
 def config_entries_from_path(fname: Path) -> list[ConfiguratorEntry]:
@@ -186,8 +194,11 @@ class ConfiguratorModel(TableModel):
 
     def mimeData(self, items):
         data = QMimeData()
-        entry = self._data[items[0].row()]
-        data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
+        rows = list(set([item.row() for item in items]))
+        if are_elements_contiguous(rows):
+            entries = [self._data[raw] for raw in rows]
+            list_serializer = ListSerializeDeserialize()
+            data.setData('pymodaq/configurator_entry', list_serializer.serialize(entries))
         return data
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
@@ -218,16 +229,20 @@ class ConfiguratorModel(TableModel):
         if row == -1:
             row = self.rowCount(parent)
         if data.hasFormat('pymodaq/configurator_entry'):
-            entry = ConfiguratorEntry.deserialize(data.data('pymodaq/configurator_entry').data())[0]
+            entries: list[ConfiguratorEntry] = (
+                ListSerializeDeserialize().deserialize(
+                    data.data('pymodaq/configurator_entry').data())[0])
         else:
-            entry = mock_entry
+            entries = [mock_entry]
 
-        if action == QtCore.Qt.DropAction.MoveAction:
-            self.data_tmp = entry
-            start_row = self._data.index(entry)
-            self.moveRow(parent, start_row, parent, row)
-        elif action == QtCore.Qt.DropAction.CopyAction:
-            self.data_tmp = self.split_entry(entry)  # in case the entry has children parameters
+        if action == QtCore.Qt.DropAction.MoveAction: # handle potential multiple entries
+            for ind, entry in enumerate(entries):
+                self.data_tmp = entry
+                start_row = self._data.index(entry)
+                #self.moveRows(start_row, len(entries))
+                self.moveRow(parent, start_row, parent, row)
+        elif action == QtCore.Qt.DropAction.CopyAction:  #but only one item in the list in Copy mode
+            self.data_tmp = self.split_entry(entries[0])  # in case the entry has children parameters
             for entry in self.data_tmp:  #make sure there is no duplicate
                 if entry in self._data:
                     self.data_tmp.remove(entry)
@@ -257,12 +272,11 @@ class ConfiguratorModel(TableModel):
         if entries is None:
             entries = []
         if not entry.setting.parameter.hasChildren():
-            if (not entry.setting.parameter.readonly() and
-                    entry.setting.parameter.opts.get(VALID_FOR_CONFIGURATION, True)):  # only add non readonly children and the ones specifying they are not configurable
+            if entry.setting.parameter.opts.get(VALID_FOR_CONFIGURATION, True):  # only add the ones specifying they are configurable
                 entries.append(entry)
         else:
             for child in entry.setting.parameter.children():
-                if not child.readonly() or child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add non readonly children and the ones specifying they are not configurable
+                if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
                     config_entry = ConfiguratorEntry(entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
@@ -280,6 +294,10 @@ class ConfiguratorModel(TableModel):
                           entry_to_be_moved)
         self.endMoveRows()
         return True
+
+    def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int,
+                 destinationParent: QModelIndex, destinationChild: int) -> bool:
+        ...
 
     def insertRows(self, row, count, parent):
         self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
@@ -350,17 +368,12 @@ class ConfiguratorModel(TableModel):
             file.writelines([ConfiguratorEntry.serialize(entry) for entry in self._data])
 
 
-class SpecialConfiguratorEntry(StrEnum):
-    ACTUATOR_VALUE = 'actuator_value'
-    MODULE_INIT = 'control_module_init'
-
-
 class ConfiguratorTableView(QtWidgets.QTableView):
     """
     """
 
     valueChanged = QtCore.Signal(list)
-    add_data_signal = QtCore.Signal(SpecialConfiguratorEntry)
+    add_data_signal = QtCore.Signal(str)
     remove_row_signal = QtCore.Signal(int)
     load_data_signal = QtCore.Signal()
     save_data_signal = QtCore.Signal()
@@ -377,10 +390,14 @@ class ConfiguratorTableView(QtWidgets.QTableView):
     def setmenu(self, status):
         if status:
             self.menu = QtWidgets.QMenu()
-            self.menu.addAction('Add Actuator Value',
-                                lambda: self.add(SpecialConfiguratorEntry.ACTUATOR_VALUE))
-            self.menu.addAction('Add Control Module Init Value',
-                                lambda: self.add(SpecialConfiguratorEntry.MODULE_INIT))
+            special_menu = self.menu.addMenu('Add Special Configuration')
+
+            for entry in special_entry_factory.short_entries:
+                special_entry = special_entry_factory.get_entry(entry)
+                special_menu.addAction(special_entry.nice_descriptor,
+                                       self.create_menu_slot_special_entry(entry))
+
+            self.menu.addSeparator()
             self.menu.addAction('Remove selected row', self.remove)
             self.menu.addAction('Clear all', self.clear)
             self.menu.addSeparator()
@@ -389,6 +406,9 @@ class ConfiguratorTableView(QtWidgets.QTableView):
         else:
             self.menu = None
 
+    def create_menu_slot_special_entry(self, entry: str):
+        return lambda: self.add(entry)
+
     def contextMenuEvent(self, event):
         if self.menu is not None:
             self.menu.exec(event.globalPos())
@@ -396,8 +416,8 @@ class ConfiguratorTableView(QtWidgets.QTableView):
     def clear(self):
         self.model().clear()
 
-    def add(self, add_type: SpecialConfiguratorEntry):
-        self.add_data_signal.emit(add_type)
+    def add(self, special_entry: str):
+        self.add_data_signal.emit(special_entry)
 
     def remove(self):
         self.remove_row_signal.emit(self.currentIndex().row())
@@ -439,7 +459,8 @@ class ConfiguratorParameterTree(ParameterTree):
         module, module_type = get_module_from_param(param_with_path)
         if module is not None:
             entry = ConfiguratorEntry(module, module_type, param_with_path)
-            data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
+            data.setData('pymodaq/configurator_entry',
+                         ListSerializeDeserialize().serialize([entry]))
         return data
 
 
