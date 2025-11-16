@@ -310,6 +310,7 @@ class ManagerBase(CustomExt):
 
     def apply_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
+            self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filename
 
         if self.dashboard is None:
