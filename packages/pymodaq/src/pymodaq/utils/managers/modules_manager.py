@@ -31,6 +31,9 @@ config = ControlModulesConfig()
 class ModuleType(StrEnum):
     Actuator = "actuator"
     Detector = "detector"
+    Other = 'other'
+    NONE = 'None'
+
 
 
 class ModulesManager(QObject, ParameterManager):
