@@ -173,7 +173,7 @@ class ManagerBase(CustomExt):
         self.add_widget(ManagerActions.LIST, QtWidgets.QComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
-        self.get_action_list().addItems(self.entries + ['...'])
+        self.get_action_list().addItems(self.entries)
 
         self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
         self.add_action(ManagerActions.NEW,
@@ -288,8 +288,6 @@ class ManagerBase(CustomExt):
             entry = self.entry
         else:
             self.entry = entry
-        if entry == '...':
-            return
         if bypass_dialog:
             user_agreed = True
         else:
@@ -332,10 +330,6 @@ class ManagerBase(CustomExt):
         raise NotImplementedError
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
-        if entry == '...':
-            self.create_entry()
-            return
-
         if entry is None:
             entry = self.entry_filename
 
