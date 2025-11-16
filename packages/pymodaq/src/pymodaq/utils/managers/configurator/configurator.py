@@ -12,6 +12,7 @@ from pymodaq.utils.config import get_set_preset_path
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.messenger import dialog, messagebox
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
@@ -164,11 +165,14 @@ class Configurator(ManagerBase):
             Settings containing all modules configuration
         """
         self.settings = settings
+        self.set_readonly_setting(self.settings)
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
+
         self._actuators = [
             param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
         self._detectors = [
             param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
+
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
@@ -370,8 +374,29 @@ class Configurator(ManagerBase):
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
-    def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
+    def set_readonly_setting(self, param: Parameter):
+        """ Set all settings as readonly but configure the VALID_FOR_CONFIGURATION option:
+
+        if initially readonly: VALID_FOR_CONFIGURATION is set to its value (if existing otherwise True if not specified)
+        else: VALID_FOR_CONFIGURATION is set to False
+
+        See Also
+        --------
+        pymodaq_gui.parameter.ioxml.VALID_FOR_CONFIGURATION
+        pymodaq.control_modules.move_utility_classes.params
+        pymodaq.control_modules.viewer_utility_classes.params
+
+        """
         if not param.readonly():
+            param.setOpts(**{'readonly':True,
+                             VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
+        else:
+            param.setOpts(**{VALID_FOR_CONFIGURATION: False})
+        for child in param.children():
+            self.set_readonly_setting(child)
+
+    def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
+        if param.opts.get(VALID_FOR_CONFIGURATION, True):
             param.setOpts(movable=movable, dropEnabled=drop_enabled)
         for child in param.children():
             self.set_drag_mode_recursive(child, movable, drop_enabled)

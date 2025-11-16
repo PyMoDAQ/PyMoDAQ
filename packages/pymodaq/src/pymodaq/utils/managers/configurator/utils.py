@@ -257,12 +257,11 @@ class ConfiguratorModel(TableModel):
         if entries is None:
             entries = []
         if not entry.setting.parameter.hasChildren():
-            if (not entry.setting.parameter.readonly() and
-                    entry.setting.parameter.opts.get(VALID_FOR_CONFIGURATION, True)):  # only add non readonly children and the ones specifying they are not configurable
+            if entry.setting.parameter.opts.get(VALID_FOR_CONFIGURATION, True):  # only add the ones specifying they are configurable
                 entries.append(entry)
         else:
             for child in entry.setting.parameter.children():
-                if not child.readonly() or child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add non readonly children and the ones specifying they are not configurable
+                if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
                     config_entry = ConfiguratorEntry(entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
