@@ -345,16 +345,27 @@ class Configurator(ManagerBase):
         self.table_out.setCurrentIndex(index_0)
 
     def move_up_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:  # means no selected row
-            self.config_model.moveRow(current_index.parent(), current_index.row(),
-                                      current_index.parent(), current_index.row()-1)
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        if indexes[0] == 0:
+            return
+        else:
+            for index in indexes:  #start with the lowest row
+                if index != -1:  # means no selected row
+                    self.config_model.moveRow(QModelIndex(), index,
+                                              QModelIndex(), index-1)
 
     def move_down_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:  # means no selected row
-            self.config_model.moveRow(current_index.parent(), current_index.row(),
-                                      current_index.parent(), current_index.row()+2)
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        if indexes[-1] + 1 == self.config_model.rowCount():
+            return
+        else:
+            for index in indexes[::-1]:  #start with the highest row
+                if index != -1:  # means no selected row
+                    self.config_model.moveRow(QModelIndex(), index,
+                                              QModelIndex(), index+2)
+
 
 if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp
