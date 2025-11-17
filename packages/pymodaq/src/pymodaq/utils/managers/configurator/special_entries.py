@@ -205,11 +205,11 @@ class ActuatorValueSpecialEntry(SpecialEntry):
                     module: 'DAQ_Move',
                     dashboard: 'DashBoard'):
         """ Apply the given special entry """
-        dashboard.modules_manager.selected_actuators_name = [entry.module_name]
-        dashboard.modules_manager.move_actuators(
-            DataToExport('actuators', data=[
-                DataActuator(entry.module_name, data=entry.setting.parameter.value(),
-                             units=entry.setting.parameter.opts.get('suffix', module.units))]))
+        dte_actuators = DataToExport('actuators', data=[
+            DataActuator(entry.module_name, data=entry.setting.parameter.value(),
+                         units=entry.setting.parameter.opts.get('suffix', module.units))])
+
+        dashboard.modules_manager.connect_and_move_actuators(dte_actuators)
 
 
 @SpecialEntryFactory.register_entry()

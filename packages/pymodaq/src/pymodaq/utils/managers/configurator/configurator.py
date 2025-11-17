@@ -112,6 +112,8 @@ class Configurator(ManagerBase):
         pwp_list = config_entries_from_path(entry_path)
         settings_all = self.dashboard.modules_manager.get_settings_all()
         incompatible_index = self.check_parameters(pwp_list, settings_all)
+        self.dashboard.splash_sc.setVisible(True)
+        self.dashboard.splash_sc.showMessage(f'Applying Configuration: {entry_path.stem}')
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:
                 mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
@@ -122,7 +124,7 @@ class Configurator(ManagerBase):
                     QtWidgets.QApplication.processEvents()
                 except KeyError:
                     mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
-
+        self.dashboard.splash_sc.setVisible(False)
 
     def check_parameters(self, entries: list[ConfiguratorEntry], settings: Parameter):
         """
