@@ -562,9 +562,23 @@ def xml_string_to_parameter_dict(xml_string) -> dict:
     return param_dict
 
 def xml_string_to_parameter(xml_string) -> Parameter:
+    """
+    Convert an XML string into a Parameter object.
+
+    Parameters
+    ----------
+    xml_string: (str) string representation of a Parameter object.
+    """
     return Parameter.create(**xml_string_to_parameter_dict(xml_string))
 
 def xml_file_to_parameter(xml_file) -> Parameter:
+    """
+    Convert an XML file into a Parameter object.
+
+    Parameters
+    ----------
+    xml_file: (str or Path) path to an XML file representing a Parameter object.
+    """
     return Parameter.create(**xml_file_to_parameter_dict(xml_file))
 
 
@@ -572,7 +586,8 @@ def XML_string_to_pobject(xml_string) -> Parameter:
     """
     return a Parameter object from its deserialized version from a XML string
 
-    Deprecated as not symetric with parameter_to_xml_string
+    Deprecated as not symetric with parameter_to_xml_string.
+    Use xml_string_to_parameter instead.
 
     Parameters
     ----------
