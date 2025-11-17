@@ -2,6 +2,7 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
+from PyQt6.QtCore import QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
@@ -212,7 +213,7 @@ class Configurator(ManagerBase):
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_out.horizontalHeader().setStretchLastSection(True)
         self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-        self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        #self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
@@ -246,7 +247,7 @@ class Configurator(ManagerBase):
         hlayout.addLayout(valyout_left)
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
-        
+
         valyout_left.addWidget(self.settings_tree)
         valyout_left.addWidget(QtWidgets.QLabel('Control Modules Settings from Dashboard.\n'
                                                 'In green, settings that can be configured!'))
@@ -335,9 +336,13 @@ class Configurator(ManagerBase):
             self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def remove_setting(self):
-        current_index = self.table_out.currentIndex()
-        if current_index.row() != -1:
-            self.config_model.remove_data(current_index.row())
+        index_0 = self.table_out.selectedIndexes()[0]
+        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
+        indexes.sort()
+        for index in indexes[::-1]:  #start with the highest row
+            if index != -1:
+                self.config_model.remove_data(index)
+        self.table_out.setCurrentIndex(index_0)
 
     def move_up_setting(self):
         current_index = self.table_out.currentIndex()

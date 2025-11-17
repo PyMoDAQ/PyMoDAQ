@@ -5,11 +5,12 @@ from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
-
+from pymodaq_utils.serialize.serializer import ListSerializeDeserialize
 from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
 from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.array_manipulation import are_elements_contiguous
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.qvariant import QVariant
@@ -142,8 +143,11 @@ class ConfiguratorModel(TableModel):
 
     def mimeData(self, items):
         data = QMimeData()
-        entry = self._data[items[0].row()]
-        data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
+        rows = list(set([item.row() for item in items]))
+        if are_elements_contiguous(rows):
+            entries = [self._data[raw] for raw in rows]
+            list_serializer = ListSerializeDeserialize()
+            data.setData('pymodaq/configurator_entry', list_serializer.serialize(entries))
         return data
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
@@ -174,16 +178,20 @@ class ConfiguratorModel(TableModel):
         if row == -1:
             row = self.rowCount(parent)
         if data.hasFormat('pymodaq/configurator_entry'):
-            entry = ConfiguratorEntry.deserialize(data.data('pymodaq/configurator_entry').data())[0]
+            entries: list[ConfiguratorEntry] = (
+                ListSerializeDeserialize().deserialize(
+                    data.data('pymodaq/configurator_entry').data())[0])
         else:
-            entry = mock_entry
+            entries = [mock_entry]
 
-        if action == QtCore.Qt.DropAction.MoveAction:
-            self.data_tmp = entry
-            start_row = self._data.index(entry)
-            self.moveRow(parent, start_row, parent, row)
-        elif action == QtCore.Qt.DropAction.CopyAction:
-            self.data_tmp = self.split_entry(entry)  # in case the entry has children parameters
+        if action == QtCore.Qt.DropAction.MoveAction: # handle potential multiple entries
+            for ind, entry in enumerate(entries):
+                self.data_tmp = entry
+                start_row = self._data.index(entry)
+                #self.moveRows(start_row, len(entries))
+                self.moveRow(parent, start_row, parent, row)
+        elif action == QtCore.Qt.DropAction.CopyAction:  #but only one item in the list in Copy mode
+            self.data_tmp = self.split_entry(entries[0])  # in case the entry has children parameters
             for entry in self.data_tmp:  #make sure there is no duplicate
                 if entry in self._data:
                     self.data_tmp.remove(entry)
@@ -235,6 +243,10 @@ class ConfiguratorModel(TableModel):
                           entry_to_be_moved)
         self.endMoveRows()
         return True
+
+    def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int,
+                 destinationParent: QModelIndex, destinationChild: int) -> bool:
+        ...
 
     def insertRows(self, row, count, parent):
         self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
@@ -396,7 +408,8 @@ class ConfiguratorParameterTree(ParameterTree):
         module, module_type = get_module_from_param(param_with_path)
         if module is not None:
             entry = ConfiguratorEntry(module, module_type, param_with_path)
-            data.setData('pymodaq/configurator_entry', ConfiguratorEntry.serialize(entry))
+            data.setData('pymodaq/configurator_entry',
+                         ListSerializeDeserialize().serialize([entry]))
         return data
 
 

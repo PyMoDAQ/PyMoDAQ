@@ -3,7 +3,27 @@
 Created on Mon March 03 2021
 author: Sebastien Weber
 """
+from typing import Iterable
+
 import numpy as np
+
+
+def are_elements_contiguous(elts: Iterable[int]):
+    """ Check if integer elements in an Iterable object are contiguous or not """
+    # Declaring and Initialising the set simultaneously
+    s = set(elts)
+
+    # Finding the size of the set
+    set_size = len(s)
+
+    # Find maximum and minimum elements.
+    maxi = max(elts)
+    mini = min(elts)
+
+    result = maxi - mini + 1
+    if result != set_size:
+        return False
+    return True
 
 
 def random_step(start, stop, step):
