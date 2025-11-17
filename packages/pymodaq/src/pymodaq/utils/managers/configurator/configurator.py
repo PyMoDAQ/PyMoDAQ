@@ -2,7 +2,7 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 
 
@@ -232,6 +232,7 @@ class Configurator(ManagerBase):
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
         vlayout_right = QtWidgets.QVBoxLayout()
+        valyout_left = QtWidgets.QVBoxLayout()
 
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
@@ -242,10 +243,13 @@ class Configurator(ManagerBase):
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
-        hlayout.addWidget(self.settings_tree)
+        hlayout.addLayout(valyout_left)
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
-
+        
+        valyout_left.addWidget(self.settings_tree)
+        valyout_left.addWidget(QtWidgets.QLabel('Control Modules Settings from Dashboard.\n'
+                                                'In green, settings that can be configured!'))
         vlayout_right.addWidget(self.get_toolbar('configurations'))
         vlayout_right.addWidget(self.table_out)
 
@@ -307,6 +311,13 @@ class Configurator(ManagerBase):
                              VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
         else:
             param.setOpts(**{VALID_FOR_CONFIGURATION: False})
+
+        if param.opts[VALID_FOR_CONFIGURATION]:
+            brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
+            for item in param.items:
+                for ind_col in range(item.columnCount()):
+                    item.setForeground(ind_col, brush)
+
         for child in param.children():
             self.set_readonly_setting(child)
 
