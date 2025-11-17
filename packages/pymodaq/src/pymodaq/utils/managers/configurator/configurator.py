@@ -208,6 +208,7 @@ class Configurator(ManagerBase):
         self.tree.setDragEnabled(True)
         self.tree.setAcceptDrops(False)
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
+        self.tree.doubleClicked.connect(self.add_setting)
 
         self.table_out = ConfiguratorTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -333,7 +334,9 @@ class Configurator(ManagerBase):
             current_setting = self.tree.currentItem().param
             module, module_type = get_module_from_param(ParameterWithPath(current_setting))
             entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
-            self.config_model.add_data(self.config_model.rowCount(), entry)
+            entries = self.config_model.split_entry(entry)
+            for entry in entries:
+                self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def remove_setting(self):
         index_0 = self.table_out.selectedIndexes()[0]
