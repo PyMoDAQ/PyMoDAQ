@@ -564,6 +564,9 @@ def xml_string_to_parameter_dict(xml_string) -> dict:
 def xml_string_to_parameter(xml_string) -> Parameter:
     return Parameter.create(**xml_string_to_parameter_dict(xml_string))
 
+def xml_file_to_parameter(xml_file) -> Parameter:
+    return Parameter.create(**xml_file_to_parameter_dict(xml_file))
+
 
 def XML_string_to_pobject(xml_string) -> Parameter:
     """
