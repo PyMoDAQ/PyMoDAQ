@@ -87,7 +87,6 @@ class DAQScan(QObject, ParameterManager):
             {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int',
              'value': 0,
              'tip': 'Wait time in ms between move and grab processes'},
-            {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int',
@@ -218,7 +217,6 @@ class DAQScan(QObject, ParameterManager):
     def set_config(self):
         self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
         self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])
-        self.settings.child('time_flow', 'timeout').setValue(config['scan']['timeflow']['timeout'])
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
 

@@ -47,7 +47,6 @@ sort1D = true
 [scan.timeflow]
 wait_time = 0
 wait_time_between = 0
-timeout = 10000  # in millisecond
 
 [optimizer]
     n_iter = 100
