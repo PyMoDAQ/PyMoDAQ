@@ -48,7 +48,43 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
         parameter: Parameter = index.model().get_data(index.row()).setting.parameter
         widget: QtWidgets.QWidget =  parameter.itemClass(parameter, depth=0).makeWidget()
         widget.setParent(parent)
+        widget.setAutoFillBackground(True)
+
+        # Set size policy to fill the cell
+        widget.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding
+        )
+
+        # Force widget to fill cell height
+        available_height = option.rect.height()
+        widget.setMinimumHeight(available_height)
+        widget.setMaximumHeight(available_height)
+
+        # Remove layout margins if present
+        if widget.layout() is not None:
+            widget.layout().setContentsMargins(0, 0, 0, 0)
+            widget.layout().setSpacing(0)
+
+        # Connect signals for auto-commit on value change or focus loss
+        self._connect_editor_signals(widget)
+
         return widget
+
+    def _connect_editor_signals(self, widget):
+        """Connect widget signals to auto-commit data changes"""
+        # Try common value changed signals
+        if hasattr(widget, 'valueChanged'):
+            widget.valueChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'currentIndexChanged'):  # For comboboxes
+            widget.currentIndexChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'textChanged'):
+            widget.textChanged.connect(lambda: self.commitData.emit(widget))
+        elif hasattr(widget, 'stateChanged'):  # For checkboxes
+            widget.stateChanged.connect(lambda: self.commitData.emit(widget))
+
+        # Install event filter to catch focus loss
+        widget.installEventFilter(self)
 
     def setEditorData(self, editor, index: QModelIndex):
         try:
@@ -59,6 +95,21 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
     def setModelData(self, editor, model, index: QModelIndex):
         model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
 
+    def updateEditorGeometry(self, editor, option, index):
+        """Ensure editor fills the cell completely"""
+        rect = QtCore.QRect(option.rect)
+        available_height = rect.height()
+        editor.setMinimumHeight(available_height)
+        editor.setMaximumHeight(available_height)
+        editor.setGeometry(rect)
+
+    def sizeHint(self, option, index):
+        """Provide size hint for cells with widgets"""
+        if index.column() == 2:
+            hint = super().sizeHint(option, index)
+            hint.setHeight(max(hint.height(), 40))
+            return hint
+        return super().sizeHint(option, index)
 
 def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
     if ModuleType.Actuator in param.path or 'Moves' in param.path:
