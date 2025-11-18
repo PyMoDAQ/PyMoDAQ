@@ -531,6 +531,7 @@ def XML_file_to_parameter(file_name: Union[str, Path]) -> list:
     return params
 
 def xml_file_to_parameter_dict(file_name: Union[str, Path]) -> dict:
+    """ Return a dictionnary to create a Parameter from """
     tree = ET.parse(str(file_name))
     root = tree.getroot()
     param_dict = set_dict_from_el(root)
@@ -548,36 +549,43 @@ def XML_string_to_parameter(xml_string):
     return params
 
 
-def xml_string_to_parameter_dict(xml_string) -> dict:
-    """
-        Convert a xml string into a dict to initialize pyqtgraph parameter object.
-    """
+def xml_string_to_parameter_dict(xml_string: bytes) -> dict:
+    """ Convert a xml bynary string into a dict to initialize pyqtgraph parameter object. """
     root = ET.fromstring(xml_string)
     tree = ET.ElementTree(root)
 
     param_dict = set_dict_from_el(root)
     if len(root) > 0:
         param_dict['children'] = walk_xml_to_parameter(params=[], XML_elt=root)
-
     return param_dict
 
-def xml_string_to_parameter(xml_string) -> Parameter:
+def xml_string_to_parameter(xml_string: bytes) -> Parameter:
     """
     Convert an XML string into a Parameter object.
 
     Parameters
     ----------
-    xml_string: (str) string representation of a Parameter object.
+    xml_string: (bytes) 
+        binary string representation of a Parameter object.
+
+    See Also:
+    ---------
+    parameter_to_xml_string
     """
     return Parameter.create(**xml_string_to_parameter_dict(xml_string))
 
-def xml_file_to_parameter(xml_file) -> Parameter:
+def xml_file_to_parameter(xml_file: Union[str, Path]) -> Parameter:
     """
     Convert an XML file into a Parameter object.
 
     Parameters
     ----------
-    xml_file: (str or Path) path to an XML file representing a Parameter object.
+    xml_file: str or Path
+        path to an XML file representing a Parameter object.
+
+    See Also:
+    ---------
+    parameter_to_xml_file
     """
     return Parameter.create(**xml_file_to_parameter_dict(xml_file))
 
