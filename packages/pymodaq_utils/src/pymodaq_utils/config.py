@@ -256,7 +256,17 @@ class ConfigError(Exception):
     pass
 
 
-class BaseConfig:
+class Singleton(type):
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class BaseConfig(metaclass=Singleton):
     """Base class to manage configuration files
 
     Should be subclassed with proper class attributes for each configuration file you need with pymodaq
@@ -273,6 +283,9 @@ class BaseConfig:
     config_name: str = abstractproperty()
 
     def __init__(self):
+        self.load()
+
+    def load(self):
         self._config = self.load_config(self.config_name, self.config_template_path)
 
     def __repr__(self):
