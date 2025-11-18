@@ -377,8 +377,9 @@ class BaseConfig(metaclass=Singleton):
         return get_config_file(self.config_name, user=False)
 
     def save(self):
-        """Save the current Config object into the user toml file"""
+        """Save the current Config object into the user toml file and reload it """
         self.config_path.write_text(toml.dumps(self.to_dict()))
+        self.load()
 
     def get_children(self, *path: IterableType[str]):
         """ Get the list of config entries at a given path within the configulation toml file
