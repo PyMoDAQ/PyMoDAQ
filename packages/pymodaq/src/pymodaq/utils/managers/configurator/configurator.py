@@ -268,6 +268,9 @@ class Configurator(ManagerBase):
                         shortcut=QtCore.Qt.Key.Key_Delete)
         self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
+        self.add_action('show_all_settings', 'Show All Settings', 'FormatJustifyLeft',
+                        checkable=True,
+                        tip='Show all settings or only configurables ones')
 
 
     def connect_things(self):
@@ -275,6 +278,8 @@ class Configurator(ManagerBase):
         self.connect_action(EntryActions.REMOVE, self.remove_setting)
         self.connect_action(EntryActions.UP, self.move_up_setting)
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
+
+        self.connect_action('show_all_settings', self.set_readonly_setting)
 
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
@@ -295,7 +300,7 @@ class Configurator(ManagerBase):
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
-    def set_readonly_setting(self, param: Parameter):
+    def set_readonly_setting(self, param: Parameter = None):
         """ Set all settings as readonly but configure the VALID_FOR_CONFIGURATION option:
 
         if initially readonly: VALID_FOR_CONFIGURATION is set to its value (if existing otherwise True if not specified)
@@ -308,17 +313,25 @@ class Configurator(ManagerBase):
         pymodaq.control_modules.viewer_utility_classes.params
 
         """
+        if param is None:
+            param = self.settings
+
+        hide_unvalid = not self.is_action_checked('show_all_settings')
+
         if not param.readonly():
             param.setOpts(**{'readonly':True,
                              VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
         else:
             param.setOpts(**{VALID_FOR_CONFIGURATION: False})
 
-        if param.opts[VALID_FOR_CONFIGURATION]:
+        if param.opts[VALID_FOR_CONFIGURATION] and not hide_unvalid:
             brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
             for item in param.items:
                 for ind_col in range(item.columnCount()):
                     item.setForeground(ind_col, brush)
+        elif not param.opts[VALID_FOR_CONFIGURATION]:
+            param.setOpts(visible=False)
+
 
         for child in param.children():
             self.set_readonly_setting(child)
@@ -373,7 +386,7 @@ class Configurator(ManagerBase):
 if __name__ == "__main__":
     from pymodaq_gui.utils.utils import mkQApp
     app = mkQApp('PresetManager')
-
+    settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()
     toolbar = QtWidgets.QToolBar()
     menu = QtWidgets.QMenu('Configurator')
@@ -381,7 +394,7 @@ if __name__ == "__main__":
     external_ui.menuBar().addMenu(menu)
 
     prog = Configurator(menu=menu, toolbar=toolbar)
-    prog.update_settings()
+    prog.update_settings(settings_path)
     prog.mainwindow.show()
 
     external_ui.show()
