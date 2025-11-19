@@ -2,9 +2,8 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from PyQt6.QtCore import QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtWidgets import QDialogButtonBox, QDialog
+from qtpy.QtCore import QModelIndex
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
