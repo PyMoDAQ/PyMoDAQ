@@ -71,7 +71,7 @@ class Configurator(ManagerBase):
 
     def show(self):
         self.update_settings(self.dashboard.modules_manager.get_settings_all())
-        self.mainwindow.show()
+        super().show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
@@ -116,7 +116,7 @@ class Configurator(ManagerBase):
         self.dashboard.splash_sc.showMessage(f'Applying Configuration: {entry_path.stem}')
         for index, entry in enumerate(pwp_list):
             if index not in incompatible_index:
-                mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
+                mod = None if entry.module_name == 'None' else self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
                 try:
                     special_entry = special_entry_factory.get_entry_from_long_name(entry.setting.path[-1])(
                         self.config_model, settings_all, self.actuators, self.detectors)
@@ -149,7 +149,7 @@ class Configurator(ManagerBase):
                     self.config_model, settings, self.actuators, self.detectors)
                 if not special_entry.is_valid(entry):
                     incompatible_index.append(index)
-            except KeyError:
+            except KeyError:  # if KeyError => the entry is not a special one!
                 try:
                     settings.child(*entry.setting.path[1:])
                 except KeyError:

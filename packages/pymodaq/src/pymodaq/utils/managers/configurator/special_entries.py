@@ -144,7 +144,7 @@ class SpecialEntryFactory:
         """
 
         if special_entry_name_long not in cls.entries_registry:
-            raise ValueError(f".{special_entry_name_long} is not a supported entry.")
+            raise KeyError(f".{special_entry_name_long} is not a supported entry.")
 
         return cls.entries_registry[special_entry_name_long]
 
@@ -291,7 +291,7 @@ class WaitSpecialEntry(SpecialEntry):
                     module: Union['DAQ_Move', 'DAQ_Viewer'],
                     dashboard: 'DashBoard'):
         """ Apply the given special entry """
-        QtCore.QThread.msleep(entry.setting.value() * 1000)
+        QtCore.QThread.msleep(int(entry.setting.value() * 1000))
 
 
 if __name__ == '__main__':
