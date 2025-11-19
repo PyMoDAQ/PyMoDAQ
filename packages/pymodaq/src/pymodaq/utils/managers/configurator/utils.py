@@ -420,7 +420,11 @@ class ConfiguratorTableView(QtWidgets.QTableView):
         self.add_data_signal.emit(special_entry)
 
     def remove(self):
-        self.remove_row_signal.emit(self.currentIndex().row())
+        """ Remove selected rows, starting from the last one (to not mess with indexing)"""
+        rows = list(set([index.row() for index in self.selectedIndexes()]))
+        rows.sort(key=lambda row: -row)
+        for row in rows:
+            self.remove_row_signal.emit(row)
 
     def data_has_changed(self, topleft, bottomright, roles):
         self.valueChanged.emit([topleft, bottomright, roles])
