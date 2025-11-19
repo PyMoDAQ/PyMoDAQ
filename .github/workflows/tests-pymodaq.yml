@@ -64,7 +64,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest pytest-cov pytest-qt pytest-xvfb pytest-xdist setuptools wheel numpy h5py ${{ matrix.qt-backend }}
           # pip install -e .  
-          python '../install-packages.py'
+          python '.../install-packages.py'
 
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder + Setup additional dependencies (Linux)
