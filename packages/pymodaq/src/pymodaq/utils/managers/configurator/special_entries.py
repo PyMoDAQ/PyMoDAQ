@@ -88,13 +88,6 @@ class SpecialEntry(QtCore.QObject):
         To be reimplemented """
         raise NotImplementedError
 
-    def is_valid(self, entry: ConfiguratorEntry) -> bool:
-        """ Check that the given entry is valid for the SpecialEntry
-
-        To be reimplemented
-        """
-        raise NotImplementedError
-
     def apply_entry(self, entry: ConfiguratorEntry,
                     module:Union['DAQ_Move', 'DAQ_Viewer'],
                     dashboard: 'DashBoard'):
@@ -149,15 +142,6 @@ class SettingsEntry(SpecialEntry):
     special_entry_name = SpecialEntryBaseTypes.SETTINGS.value
     use_dialog = False
 
-    def is_valid(self, entry: ConfiguratorEntry) -> bool:
-        """ Check that the given entry is valid for the SpecialEntry
-        """
-        try:
-            test = self.settings[*entry.setting.path[1:]]
-        except KeyError:
-            return False
-        return True
-
     def apply_entry(self, entry: ConfiguratorEntry,
                     module: 'DAQ_Move',
                     dashboard: 'DashBoard'):
@@ -205,11 +189,6 @@ class ActuatorValueSpecialEntry(SpecialEntry):
                     suffix=self.value_sb.opts['suffix']),
             path=()),)
 
-    def is_valid(self, entry: ConfiguratorEntry) -> bool:
-        """ Check that the given entry is valid for the SpecialEntry
-        """
-        return entry.module_name in self.actuators
-
     def apply_entry(self, entry: ConfiguratorEntry,
                     module: 'DAQ_Move',
                     dashboard: 'DashBoard'):
@@ -249,12 +228,6 @@ class InitSpecialEntry(SpecialEntry):
                                                          QtCore.Qt.CheckState.Checked else False,
                                                    )))
 
-    def is_valid(self, entry: ConfiguratorEntry) -> bool:
-        """ Check that the given entry is valid for the SpecialEntry
-        """
-        return entry.module_name in [group.child('name').value() for
-                                     group in self.settings.child(entry.module_type).children()]
-
     def apply_entry(self, entry: ConfiguratorEntry,
                     module: Union['DAQ_Move', 'DAQ_Viewer'],
                     dashboard: 'DashBoard'):
@@ -290,11 +263,6 @@ class WaitSpecialEntry(SpecialEntry):
                                            suffix='s',
                                            siPrefix=True,
                                            )))
-
-    def is_valid(self, entry: ConfiguratorEntry) -> bool:
-        """ Check that the given entry is valid for the SpecialEntry
-        """
-        return True
 
     def apply_entry(self, entry: ConfiguratorEntry,
                     module: Union['DAQ_Move', 'DAQ_Viewer'],

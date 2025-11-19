@@ -18,7 +18,7 @@ from pymodaq_gui.utils.widgets.spinbox import SpinBox
 from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
 from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntry
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
-                                                       ConfiguratorTableView,
+                                                       ConfiguratorTableView, ConfigEntriesListModel,
                                                        get_module_from_param, config_entries_from_path,
                                                        ParameterDelegate, EntryActions,
                                                        ModuleType)
@@ -109,15 +109,35 @@ class Configurator(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
-        pwp_list = config_entries_from_path(entry_path)
-        for entry in pwp_list:
+        config_entries = config_entries_from_path(entry_path)
+
+        self.show_config_entries(config_entries)
+
+        for ind, entry in enumerate(config_entries):
             special_entry = special_entry_factory.get_entry(entry.entry_type)(
                 self.config_model, self.settings, self.actuators, self.detectors)
-            if special_entry.is_valid(entry):
+            try:
                 mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name,
                                                                        entry.module_type)
                 special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
+                self.config_entries_model.set_color(QtCore.Qt.GlobalColor.darkGreen, ind)
                 QtWidgets.QApplication.processEvents()
+                QtCore.QThread.msleep(100)
+            except Exception as e:
+                logger.exception(str(e))
+                self.config_entries_model.set_color(QtCore.Qt.GlobalColor.darkRed, ind)
+
+    def show_config_entries(self, entries: list[ConfiguratorEntry]):
+        self.config_entries_widget = QtWidgets.QWidget()
+        self.config_entries_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.list_view = QtWidgets.QListView(self.config_entries_widget)
+        self.list_view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.config_entries_model = ConfigEntriesListModel(entries)
+        self.config_entries_widget.layout().addWidget(self.list_view)
+        self.list_view.setModel(self.config_entries_model)
+
+        self.config_entries_widget.show()
+        self.config_entries_widget.raise_()
 
     def populate_from_settings(self, settings: Parameter):
         """
