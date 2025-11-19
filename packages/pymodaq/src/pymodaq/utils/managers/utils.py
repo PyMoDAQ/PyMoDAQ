@@ -307,6 +307,7 @@ class ManagerBase(CustomExt):
             self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
             # self.update_action_list()
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
+            self.update_entry_base(self.get_action_list().currentText())
 
     def apply_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
