@@ -95,6 +95,8 @@ class PresetManager(ManagerBase):
                 if ret:
                     self.dashboard.remove_actuators(self.dashboard.actuators_modules)
                     self.dashboard.remove_detectors(self.dashboard.detector_modules)
+                    for area in self.dashboard.dockarea.tempAreas:
+                        area.window().close()
                 else:
                     return
             self.update_entry(entry)

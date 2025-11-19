@@ -313,10 +313,13 @@ class DashBoard(CustomApp):
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
                 actuator_module.quit_fun()
+                QtWidgets.QApplication.processEvents()
                 dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
+                    dock.removeWidgets()
                     dock.close()
-            self.compact_actuator_dock.close()
+            if len(self.compact_actuator_dock.widgets) == 0:
+                self.compact_actuator_dock.close()
             self.update_module_manager()
         except Exception as e:
             logger.exception(str(e))
