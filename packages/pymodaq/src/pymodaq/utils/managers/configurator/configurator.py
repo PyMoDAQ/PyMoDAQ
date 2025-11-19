@@ -110,11 +110,9 @@ class Configurator(ManagerBase):
             The path to the configuration file to be applied.
         """
         pwp_list = config_entries_from_path(entry_path)
-        settings_all = self.dashboard.modules_manager.get_settings_all()
-
         for entry in pwp_list:
             special_entry = special_entry_factory.get_entry(entry.entry_type)(
-                self.config_model, settings_all, self.actuators, self.detectors)
+                self.config_model, self.settings, self.actuators, self.detectors)
             if special_entry.is_valid(entry):
                 mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name,
                                                                        entry.module_type)

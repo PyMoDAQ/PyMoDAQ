@@ -181,11 +181,11 @@ class ConfiguratorModel(TableModel):
         self._data: list[ConfiguratorEntry] = None
         if data is None:
             data = []
-        super().__init__(data, header, editable=[False, False, True])
+        super().__init__(data, header, editable=[False, False, False, True])
         pass
 
     def columnCount(self, parent):
-        return 3
+        return 4
 
     def mimeTypes(self):
         types = super().mimeTypes()
@@ -198,8 +198,7 @@ class ConfiguratorModel(TableModel):
         rows = list(set([item.row() for item in items]))
         if are_elements_contiguous(rows):
             entries = [self._data[raw] for raw in rows]
-            list_serializer = ListSerializeDeserialize()
-            data.setData('pymodaq/configurator_entry', list_serializer.serialize(entries))
+            data.setData('pymodaq/configurator_entry', ser_factory.get_apply_serializer(entries))
         return data
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
@@ -233,8 +232,8 @@ class ConfiguratorModel(TableModel):
             row = self.rowCount(parent)
         if data.hasFormat('pymodaq/configurator_entry'):
             entries: list[ConfiguratorEntry] = (
-                ListSerializeDeserialize().deserialize(
-                    data.data('pymodaq/configurator_entry').data())[0])
+                ser_factory.get_apply_deserializer(
+                    data.data('pymodaq/configurator_entry').data()))
         else:
             entries = [mock_entry]
 
@@ -469,7 +468,7 @@ class ConfiguratorParameterTree(ParameterTree):
             entry = ConfiguratorEntry(SpecialEntryBaseTypes.SETTINGS.value,
                                       module, module_type, param_with_path)
             data.setData('pymodaq/configurator_entry',
-                         ListSerializeDeserialize().serialize([entry]))
+                         ser_factory.get_apply_serializer([entry]))
         return data
 
 

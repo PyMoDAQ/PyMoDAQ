@@ -153,7 +153,7 @@ class SettingsEntry(SpecialEntry):
         """ Check that the given entry is valid for the SpecialEntry
         """
         try:
-            test = self.settings[*entry.setting.parameter.path]
+            test = self.settings[*entry.setting.path[1:]]
         except KeyError:
             return False
         return True
@@ -162,7 +162,7 @@ class SettingsEntry(SpecialEntry):
                     module: 'DAQ_Move',
                     dashboard: 'DashBoard'):
         """ Apply the given special entry """
-        module.settings.child(*entry.setting.parameter.path).setValue(entry.setting.value())
+        module.settings.child(*entry.setting.path[3:]).setValue(entry.setting.value())
 
 
 @SpecialEntryFactory.register_entry()
@@ -193,15 +193,17 @@ class ActuatorValueSpecialEntry(SpecialEntry):
 
     def get_entry_from_dialog(self) -> ConfiguratorEntry:
         return ConfiguratorEntry(
+            self.special_entry_name,
             self.actuator_cb.currentText(),
             module_type=ModuleType.Actuator,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
                     title= 'Actuator Value',
-                    name=self.special_entry_name,
+                    name=''.join(self.special_entry_name.split(' ')),
                     type='float',
                     value=self.value_sb.value(),
-                    suffix=self.value_sb.opts['suffix'])))
+                    suffix=self.value_sb.opts['suffix']),
+            path=()),)
 
     def is_valid(self, entry: ConfiguratorEntry) -> bool:
         """ Check that the given entry is valid for the SpecialEntry
@@ -236,11 +238,12 @@ class InitSpecialEntry(SpecialEntry):
         module_name = self.control_module_cb.currentText()
         module_type = ModuleType.Actuator if module_name in self.actuators else ModuleType.Detector
         return ConfiguratorEntry(
+            self.special_entry_name,
             module_name,
             module_type=module_type,
             setting=ParameterWithPath(
                 parameter=Parameter.create(title= 'Control Module Init Value',
-                                           name=self.special_entry_name,
+                                           name=''.join(self.special_entry_name.split(' ')),
                                            type='bool',
                                            value=True if self.init_cb.checkState() ==
                                                          QtCore.Qt.CheckState.Checked else False,
@@ -276,11 +279,12 @@ class WaitSpecialEntry(SpecialEntry):
     def get_entry_from_dialog(self) -> ConfiguratorEntry:
 
         return ConfiguratorEntry(
+            self.special_entry_name,
             'None',
             module_type=ModuleType.NONE,
             setting=ParameterWithPath(
                 parameter=Parameter.create(title='Waiting Time',
-                                           name=SpecialEntryFactory.get_entry(self.special_entry_name),
+                                           name=''.join(self.special_entry_name.split(' ')),
                                            type='float',
                                            value=self.wait_time_sb.value(),
                                            suffix='s',
