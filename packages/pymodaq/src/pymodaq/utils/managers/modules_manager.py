@@ -168,6 +168,8 @@ class ModulesManager(QObject, ParameterManager):
     def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
         """Getter of a given module from its name (title)
 
+        Returns None is no control module with this name exists
+
         Parameters
         ----------
         name: str

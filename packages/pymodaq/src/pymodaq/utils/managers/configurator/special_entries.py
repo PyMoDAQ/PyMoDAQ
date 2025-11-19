@@ -11,6 +11,7 @@ from pymodaq_utils.abstract import abstract_attribute
 from pymodaq.utils.data import DataActuator, DataToActuators
 
 from pymodaq.utils.managers.modules_manager import ModuleType
+from pymodaq_utils.enums import StrEnum
 
 if TYPE_CHECKING:
     from pymodaq.utils.managers.configurator.utils import ConfiguratorModel
@@ -19,12 +20,18 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
 
+class SpecialEntryBaseTypes(StrEnum):
+    SETTINGS = 'Settings'
+    ACTUATOR_VALUE = 'Actuator Value'
+    INIT = 'Init. Module'
+    WAIT = 'Waiting Time'
+
 
 class SpecialEntry(QtCore.QObject):
     new_entry = QtCore.Signal(ConfiguratorEntry)
 
     special_entry_name: str = abstract_attribute()  # to reimplement in real dialogs
-    nice_descriptor: str = abstract_attribute()  # to reimplement in real dialogs
+    use_dialog = True
 
     def __init__(self,
                  model: 'ConfiguratorModel',
@@ -100,8 +107,6 @@ class SpecialEntryFactory:
 
     entries_registry = {}
 
-    prefix = 'special_entry'
-
     @classmethod
     def register_entry(cls) -> Callable:
         """Class decorator method to register SpecialEntries class to the internal registry.
@@ -111,7 +116,7 @@ class SpecialEntryFactory:
         """
 
         def inner_wrapper(wrapped_class: SpecialEntry) -> Callable:
-            special_entry_name = cls.get_full_name(wrapped_class.special_entry_name)
+            special_entry_name = wrapped_class.special_entry_name
 
             if special_entry_name not in cls.entries_registry:
                 cls.entries_registry[special_entry_name] = wrapped_class
@@ -122,47 +127,48 @@ class SpecialEntryFactory:
         return inner_wrapper
 
     @classmethod
-    def get_full_name(cls, special_entry: str) -> str:
-        return f'{cls.prefix}_{special_entry}'
-
-    @classmethod
-    def get_short_name(cls, special_entry_long: str) -> str:
-        return special_entry_long.split(cls.prefix + '_')[1]
-
-    @classmethod
     def get_entry(cls, special_entry_name: str) -> type[SpecialEntry]:
         """Factory command to get registered SpecialEntries Dialog and related Configurator entries.
 
         This method gets the appropriate executor class from the registry
         """
-        return cls.get_entry_from_long_name(cls.get_full_name(special_entry_name))
 
-    @classmethod
-    def get_entry_from_long_name(cls, special_entry_name_long: str) -> type[SpecialEntry]:
-        """Factory command to get registered SpecialEntries Dialog and related Configurator entries.
+        if special_entry_name not in cls.entries_registry:
+            raise KeyError(f".{special_entry_name} is not a supported entry.")
 
-        This method gets the appropriate executor class from the registry
-        """
-
-        if special_entry_name_long not in cls.entries_registry:
-            raise KeyError(f".{special_entry_name_long} is not a supported entry.")
-
-        return cls.entries_registry[special_entry_name_long]
+        return cls.entries_registry[special_entry_name]
 
     @property
-    def entries(self):
+    def entries(self) -> list[str]:
         return [entry for entry in self.entries_registry.keys()]
 
-    @property
-    def short_entries(self):
-        return [entry.split(self.prefix + '_')[1] for entry in self.entries]
+
+@SpecialEntryFactory.register_entry()
+class SettingsEntry(SpecialEntry):
+
+    special_entry_name = SpecialEntryBaseTypes.SETTINGS.value
+    use_dialog = False
+
+    def is_valid(self, entry: ConfiguratorEntry) -> bool:
+        """ Check that the given entry is valid for the SpecialEntry
+        """
+        try:
+            test = self.settings[*entry.setting.parameter.path]
+        except KeyError:
+            return False
+        return True
+
+    def apply_entry(self, entry: ConfiguratorEntry,
+                    module: 'DAQ_Move',
+                    dashboard: 'DashBoard'):
+        """ Apply the given special entry """
+        module.settings.child(*entry.setting.parameter.path).setValue(entry.setting.value())
 
 
 @SpecialEntryFactory.register_entry()
 class ActuatorValueSpecialEntry(SpecialEntry):
 
-    special_entry_name = 'actuator_value'
-    nice_descriptor = 'Actuator Value'
+    special_entry_name = SpecialEntryBaseTypes.ACTUATOR_VALUE.value
 
     def setup_widgets(self):
         self.actuator_cb = QtWidgets.QComboBox()
@@ -192,7 +198,7 @@ class ActuatorValueSpecialEntry(SpecialEntry):
             setting=ParameterWithPath(
                 parameter=Parameter.create(
                     title= 'Actuator Value',
-                    name=SpecialEntryFactory.get_full_name(self.special_entry_name),
+                    name=self.special_entry_name,
                     type='float',
                     value=self.value_sb.value(),
                     suffix=self.value_sb.opts['suffix'])))
@@ -215,8 +221,7 @@ class ActuatorValueSpecialEntry(SpecialEntry):
 
 @SpecialEntryFactory.register_entry()
 class InitSpecialEntry(SpecialEntry):
-    special_entry_name = 'control_module_init'
-    nice_descriptor = 'Init Control Module'
+    special_entry_name = SpecialEntryBaseTypes.INIT.value
 
     def setup_widgets(self):
         self.control_module_cb = QtWidgets.QComboBox()
@@ -235,7 +240,7 @@ class InitSpecialEntry(SpecialEntry):
             module_type=module_type,
             setting=ParameterWithPath(
                 parameter=Parameter.create(title= 'Control Module Init Value',
-                                           name=SpecialEntryFactory.get_full_name(self.special_entry_name),
+                                           name=self.special_entry_name,
                                            type='bool',
                                            value=True if self.init_cb.checkState() ==
                                                          QtCore.Qt.CheckState.Checked else False,
@@ -258,8 +263,7 @@ class InitSpecialEntry(SpecialEntry):
 
 @SpecialEntryFactory.register_entry()
 class WaitSpecialEntry(SpecialEntry):
-    special_entry_name = 'wait_time'
-    nice_descriptor = 'Waiting Time'
+    special_entry_name = SpecialEntryBaseTypes.WAIT.value
 
     def setup_widgets(self):
         label = QtWidgets.QLabel('Waiting Time:')
@@ -276,7 +280,7 @@ class WaitSpecialEntry(SpecialEntry):
             module_type=ModuleType.NONE,
             setting=ParameterWithPath(
                 parameter=Parameter.create(title='Waiting Time',
-                                           name=SpecialEntryFactory.get_full_name(self.special_entry_name),
+                                           name=SpecialEntryFactory.get_entry(self.special_entry_name),
                                            type='float',
                                            value=self.wait_time_sb.value(),
                                            suffix='s',

@@ -111,56 +111,15 @@ class Configurator(ManagerBase):
         """
         pwp_list = config_entries_from_path(entry_path)
         settings_all = self.dashboard.modules_manager.get_settings_all()
-        incompatible_index = self.check_parameters(pwp_list, settings_all)
-        self.dashboard.splash_sc.setVisible(True)
-        self.dashboard.splash_sc.showMessage(f'Applying Configuration: {entry_path.stem}')
-        for index, entry in enumerate(pwp_list):
-            if index not in incompatible_index:
-                mod = None if entry.module_name == 'None' else self.dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
-                try:
-                    special_entry = special_entry_factory.get_entry_from_long_name(entry.setting.path[-1])(
-                        self.config_model, settings_all, self.actuators, self.detectors)
-                    special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
-                    QtWidgets.QApplication.processEvents()
-                except KeyError:
-                    mod.settings.child(*entry.setting.path[3:]).setValue(entry.setting.parameter.value())
-        self.dashboard.splash_sc.setVisible(False)
 
-    def check_parameters(self, entries: list[ConfiguratorEntry], settings: Parameter):
-        """
-        Check compatibility between configuration entries and current settings.
-
-        Parameters
-        ----------
-        entries : list[ConfiguratorEntry]
-            List of configuration entries to check
-        settings : Parameter
-            Current settings to compare against
-
-        Returns
-        -------
-        list
-            Indices of incompatible entries
-        """
-        incompatible_index = []
-        for index, entry in enumerate(entries):
-            try:
-                special_entry = special_entry_factory.get_entry_from_long_name(entry.setting.path[-1])(
-                    self.config_model, settings, self.actuators, self.detectors)
-                if not special_entry.is_valid(entry):
-                    incompatible_index.append(index)
-            except KeyError:  # if KeyError => the entry is not a special one!
-                try:
-                    settings.child(*entry.setting.path[1:])
-                except KeyError:
-                    incompatible_index.append(index)
-
-
-        if len(incompatible_index) > 0:
-            messagebox('Warning', f'The configuration entries with index: {incompatible_index} are no more compatible'
-                                  f'with the current state of your Dashboard, Ignoring them in the applied '
-                                  f'configuration')
-        return incompatible_index
+        for entry in pwp_list:
+            special_entry = special_entry_factory.get_entry(entry.entry_type)(
+                self.config_model, settings_all, self.actuators, self.detectors)
+            if special_entry.is_valid(entry):
+                mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name,
+                                                                       entry.module_type)
+                special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
+                QtWidgets.QApplication.processEvents()
 
     def populate_from_settings(self, settings: Parameter):
         """
