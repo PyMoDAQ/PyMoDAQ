@@ -174,6 +174,8 @@ class Configurator(ManagerBase):
         """
         self.settings = settings
         self.set_readonly_setting(self.settings)
+        self.display_settings(display_all=False,
+                              param=self.settings)
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
 
     @property
@@ -250,8 +252,6 @@ class Configurator(ManagerBase):
         hlayout.addLayout(vlayout_right)
 
         valyout_left.addWidget(self.settings_tree)
-        valyout_left.addWidget(QtWidgets.QLabel('Control Modules Settings from Dashboard.\n'
-                                                'In green, settings that can be configured!'))
         vlayout_right.addWidget(self.get_toolbar('configurations'))
         vlayout_right.addWidget(self.table_out)
 
@@ -269,9 +269,9 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
         self.add_action('show_all_settings', 'Show All Settings', 'FormatJustifyLeft',
-                        checkable=True,
-                        tip='Show all settings or only configurables ones')
-
+                        checkable=True, toolbar=self.get_toolbar('main'),
+                        tip='If Checked: display all settings (in green, settings that can be configured)'
+                            ' otherwise only configurables ones')
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
@@ -279,7 +279,7 @@ class Configurator(ManagerBase):
         self.connect_action(EntryActions.UP, self.move_up_setting)
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
 
-        self.connect_action('show_all_settings', self.set_readonly_setting)
+        self.connect_action('show_all_settings', self.display_settings)
 
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
@@ -313,28 +313,38 @@ class Configurator(ManagerBase):
         pymodaq.control_modules.viewer_utility_classes.params
 
         """
-        if param is None:
-            param = self.settings
 
-        hide_unvalid = not self.is_action_checked('show_all_settings')
 
         if not param.readonly():
-            param.setOpts(**{'readonly':True,
+            param.setOpts(**{'readonly': True,
                              VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
         else:
             param.setOpts(**{VALID_FOR_CONFIGURATION: False})
 
-        if param.opts[VALID_FOR_CONFIGURATION] and not hide_unvalid:
-            brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
-            for item in param.items:
-                for ind_col in range(item.columnCount()):
-                    item.setForeground(ind_col, brush)
-        elif not param.opts[VALID_FOR_CONFIGURATION]:
-            param.setOpts(visible=False)
-
-
         for child in param.children():
             self.set_readonly_setting(child)
+
+    def display_settings(self, display_all: bool = True, param: Parameter = None):
+        if param is None:
+            param = self.settings
+
+        if display_all:
+            param.setOpts(visible=True)
+            if param.opts[VALID_FOR_CONFIGURATION]:
+                brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
+                for item in param.items:
+                    for ind_col in range(item.columnCount()):
+                        item.setForeground(ind_col, brush)
+        else:
+            param.setOpts(visible=param.opts[VALID_FOR_CONFIGURATION])
+            if param.opts[VALID_FOR_CONFIGURATION]:
+                brush = QtGui.QBrush(QtCore.Qt.GlobalColor.white)
+                for item in param.items:
+                    for ind_col in range(item.columnCount()):
+                        item.setForeground(ind_col, brush)
+
+        for child in param.children():
+            self.display_settings(display_all, child)
 
     def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
         if param.opts.get(VALID_FOR_CONFIGURATION, True):
