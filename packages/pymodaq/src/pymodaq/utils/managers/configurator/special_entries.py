@@ -1,3 +1,4 @@
+import time
 from typing import Callable, TYPE_CHECKING, Union
 
 from qtpy import QtWidgets, QtCore
@@ -250,8 +251,8 @@ class InitSpecialEntry(SpecialEntry):
                     module: Union['DAQ_Move', 'DAQ_Viewer'],
                     dashboard: 'DashBoard'):
         """ Apply the given special entry """
-        if entry.setting.parameter.value():
-            module.init_hardware_ui(True)
+        module.init_hardware_ui(entry.setting.value())
+        if entry.setting.value():
             dashboard.poll_init(module)
 
 
@@ -291,7 +292,11 @@ class WaitSpecialEntry(SpecialEntry):
                     module: Union['DAQ_Move', 'DAQ_Viewer'],
                     dashboard: 'DashBoard'):
         """ Apply the given special entry """
-        QtCore.QThread.msleep(int(entry.setting.value() * 1000))
+        start = time.perf_counter()
+
+        while abs(time.perf_counter() - start) < entry.setting.value():
+            QtWidgets.QApplication.processEvents()
+
 
 
 if __name__ == '__main__':
