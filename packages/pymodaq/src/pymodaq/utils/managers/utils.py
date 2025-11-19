@@ -346,6 +346,7 @@ class ManagerBase(CustomExt):
 
     def show(self):
         self.mainwindow.show()
+        self.mainwindow.raise_()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
