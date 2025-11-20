@@ -100,6 +100,15 @@ class PresetManager(ManagerBase):
                 else:
                     return
             self.update_entry(entry)
+
+            if ('Moves' in [child.name() for child in self.settings.children()] or
+                    'Detectors' in [child.name() for child in self.settings.children()]):
+                plugins_sorted, plugin_list_message = self.list_control_modules_from_old_preset()
+            else:
+                plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
+
+            self.show_entry_sublist(plugin_list_message)
+
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
                 area.window().setVisible(False)
@@ -111,11 +120,12 @@ class PresetManager(ManagerBase):
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             try:
-                if ('Moves' in [child.name() for child in self.settings.children()] or
-                        'Detectors' in [child.name() for child in self.settings.children()]):
-                    actuators_modules, detector_modules = self.create_control_modules_from_old_preset()
-                else:
-                    actuators_modules, detector_modules = self.create_control_modules_from_preset()
+                # if ('Moves' in [child.name() for child in self.settings.children()] or
+                #         'Detectors' in [child.name() for child in self.settings.children()]):
+                #     actuators_modules, detector_modules = self.create_control_modules_from_old_preset()
+                # else:
+                actuators_modules, detector_modules = (
+                    self.create_control_modules_from_preset(plugins_sorted))
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
                 self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
@@ -161,8 +171,6 @@ class PresetManager(ManagerBase):
 
                 self.dashboard.update_init_tree()
 
-                self.applied_entry.emit(entry.stem)
-
             logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
 
         except Exception as e:
@@ -195,7 +203,7 @@ class PresetManager(ManagerBase):
         config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
-    def create_control_modules_from_old_preset(self) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+    def create_control_modules_from_old_preset(self, plugins_sorted) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """ allows to use old style presets to create control modules """
 
         actuators_modules: list[DAQ_Move] = []
@@ -205,53 +213,6 @@ class PresetManager(ManagerBase):
         detector_docks_settings: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
-
-
-        # ################################################################
-        # ##### sort plugins by IDs and within the same IDs by Master and Slave status
-        plugins = []
-        plugins += [
-            {"type": "move", "value": child}
-            for child in self.settings.child("Moves").children()
-        ]
-        plugins += [
-            {"type": "det", "value": child}
-            for child in self.settings.child("Detectors").children()
-        ]
-        for plug in plugins:
-            if plug["type"] == "det":
-                try:
-                    plug["ID"] = plug["value"][
-                        "params", "detector_settings", "controller_ID"
-                    ]
-                    plug["status"] = plug["value"][
-                        "params", "detector_settings", "controller_status"
-                    ]
-                except KeyError as e:
-                    raise DetectorError
-            else:
-                try:
-                    plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID"
-                    ]
-                    plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status"
-                    ]
-                except KeyError as e:
-                    raise ActuatorError
-
-        IDs = list(set([plug["ID"] for plug in plugins]))
-        # %%
-        plugins_sorted = []
-        for id in IDs:
-            plug_Ids = []
-            for plug in plugins:
-                if plug["ID"] == id:
-                    plug_Ids.append(plug)
-            plug_Ids.sort(key=lambda status: status["status"])
-            plugins_sorted.append(plug_Ids)
-        #################################################################
-        #######################
 
         ind_det = -1
         for plug_IDs in plugins_sorted:
@@ -354,19 +315,7 @@ class PresetManager(ManagerBase):
 
         return actuators_modules, detector_modules
 
-    def create_control_modules_from_preset(self) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
-        """
-        Load a preset file and create corresponding Control Modules in the Dashboard
-
-        """
-        actuators_modules: list[DAQ_Move] = []
-        detector_modules: list[DAQ_Viewer] = []
-
-        actuator_docks: list[Dock] = []
-        detector_docks_settings: list[Dock] = []
-        detector_docks_viewer: list[Dock] = []
-        actuator_widgets: list[QtWidgets.QWidget] = []
-
+    def list_control_modules_from_preset(self):
         # ################################################################
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
         plugins = []
@@ -394,10 +343,86 @@ class PresetManager(ManagerBase):
             plug_Ids.sort(key=lambda status: status["status"])
             plugins_sorted.append(plug_Ids)
 
+        plugin_list_message = []
+        for plug_id in plugins_sorted:
+            for plugin in plug_id:
+                plugin_list_message.append(
+                    f"Initializing {plugin['settings']['info', 'type']} {plugin['type'].value.capitalize()}:"
+                    f" {plugin['settings']['name']}")
+
+        return plugins_sorted, plugin_list_message
+
+    def list_control_modules_from_old_preset(self):
+        plugins = []
+        plugins += [
+            {"type": "move", "value": child}
+            for child in self.settings.child("Moves").children()
+        ]
+        plugins += [
+            {"type": "det", "value": child}
+            for child in self.settings.child("Detectors").children()
+        ]
+        for plug in plugins:
+            if plug["type"] == "det":
+                try:
+                    plug["ID"] = plug["value"][
+                        "params", "detector_settings", "controller_ID"
+                    ]
+                    plug["status"] = plug["value"][
+                        "params", "detector_settings", "controller_status"
+                    ]
+                except KeyError as e:
+                    raise DetectorError
+            else:
+                try:
+                    plug["ID"] = plug["value"][
+                        "params", "move_settings", "multiaxes", "controller_ID"
+                    ]
+                    plug["status"] = plug["value"][
+                        "params", "move_settings", "multiaxes", "multi_status"
+                    ]
+                except KeyError as e:
+                    raise ActuatorError
+
+        IDs = list(set([plug["ID"] for plug in plugins]))
+        # %%
+        plugins_sorted = []
+        for id in IDs:
+            plug_Ids = []
+            for plug in plugins:
+                if plug["ID"] == id:
+                    plug_Ids.append(plug)
+            plug_Ids.sort(key=lambda status: status["status"])
+            plugins_sorted.append(plug_Ids)
+
+        plugin_list_message = []
+        for plug_id in plugins_sorted:
+            for plugin in plug_id:
+                plugin_list_message.append(
+                    f"Initializing {plugin['settings']['info', 'type']} {plugin['type'].value.capitalize()}:"
+                    f" {plugin['settings']['name']}")
+
+        return plugins_sorted, plugin_list_message
+
+    def create_control_modules_from_preset(self, plugins_sorted) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
+        """
+        Load a preset file and create corresponding Control Modules in the Dashboard
+
+        """
+        actuators_modules: list[DAQ_Move] = []
+        detector_modules: list[DAQ_Viewer] = []
+
+        actuator_docks: list[Dock] = []
+        detector_docks_settings: list[Dock] = []
+        detector_docks_viewer: list[Dock] = []
+        actuator_widgets: list[QtWidgets.QWidget] = []
+
         # Add Control Modules to the Dashboard
+        ind_module = -1
         ind_det = -1
         for plug_IDs in plugins_sorted:
             for ind_plugin, plugin in enumerate(plug_IDs):
+                ind_module += 1
                 plug_name = plugin["settings"].child("name").value()
                 plug_type = plugin["settings"].child("info", "type").value()
                 plug_init = plugin["settings"].child("info", "init").value()
@@ -406,7 +431,7 @@ class PresetManager(ManagerBase):
                     "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
                 )
 
-                if plugin["type"] == ModuleType.Actuator:
+                if plugin["type"] == ModuleType.Actuator or plugin["type"] == 'move':
 
                     self.dashboard.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets,
                                             actuators_modules,
@@ -442,6 +467,9 @@ class PresetManager(ManagerBase):
                             QtWidgets.QApplication.processEvents()
                             self.dashboard.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
+
+                    self.entry_sublist_model.set_status(ind_module, True)
+
                 else:
                     ind_det += 1
                     plug_dim = plugin["settings"].child("info", "dim").value()
@@ -482,6 +510,8 @@ class PresetManager(ManagerBase):
                             QtWidgets.QApplication.processEvents()
                             self.dashboard.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
+
+                    self.entry_sublist_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
         # restore dock state if saved
