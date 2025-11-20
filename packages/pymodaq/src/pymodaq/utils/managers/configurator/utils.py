@@ -1,12 +1,13 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, Any
 
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
 from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntryBaseTypes
+from pymodaq.utils.managers.utils import ManagerEntrySubListModel
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous
@@ -469,30 +470,3 @@ class ConfiguratorParameterTree(ParameterTree):
             data.setData('pymodaq/configurator_entry',
                          ser_factory.get_apply_serializer([entry]))
         return data
-
-
-class ConfigEntriesListModel(QtCore.QAbstractListModel):
-
-    def __init__(self, entries: list[ConfiguratorEntry]):
-        super().__init__()
-        self._data = entries
-        self.colors = [QtCore.Qt.GlobalColor.darkGray for _ in range(len(self._data))]
-
-    def set_color(self, color: QtGui.QColor, index: int):
-        self.colors[index] = color
-        model_index = self.index(index, 0)
-        self.dataChanged.emit(model_index, model_index,
-                              [Qt.ItemDataRole.DecorationRole,
-                              Qt.ItemDataRole.BackgroundColorRole])
-
-    def rowCount(self, *args, **kwargs) -> int:
-        return len(self._data)
-
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole):
-        if index.isValid():
-            if role == Qt.ItemDataRole.DisplayRole:
-                return str(self._data[index.row()])
-            elif role == Qt.ItemDataRole.DecorationRole:
-               return self.colors[index.row()]
-            elif role == Qt.ItemDataRole.BackgroundColorRole:
-                return QtGui.QBrush(self.colors[index.row()])

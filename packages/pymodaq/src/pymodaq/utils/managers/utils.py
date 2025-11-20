@@ -1,6 +1,10 @@
 from pathlib import Path
-from typing import Any, Union, TYPE_CHECKING
-from qtpy import QtWidgets, QtCore
+from typing import Any, Union, TYPE_CHECKING, Optional
+
+from qtpy.QtCore import Qt, QModelIndex
+from qtpy import QtWidgets, QtCore, QtGui
+
+from pymodaq_gui.managers.action_manager import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
@@ -38,6 +42,51 @@ class Menu(StrEnum):
     EXTERNAL = 'external'
 
 
+class ManagerEntrySubListModel(QtCore.QAbstractListModel):
+
+    def __init__(self, entries: list[str]):
+        super().__init__()
+        self._data = entries
+        self.colors: list[QtCore.Qt.GlobalColor] = [QtCore.Qt.GlobalColor.darkGray for _ in range(len(self._data))]
+        self.status: list[Union[bool, None]] = [None for _ in range(len(self._data))]
+
+    def set_status(self, index: int, status: bool):
+        self.status[index] = status
+        if status:
+            self.colors[index] = QtCore.Qt.GlobalColor.darkGreen
+        else:
+            self.colors[index] = QtCore.Qt.GlobalColor.darkRed
+        model_index = self.index(index, 0)
+        self.dataChanged.emit(model_index, model_index,
+                              [Qt.ItemDataRole.DecorationRole,
+                              Qt.ItemDataRole.BackgroundColorRole])
+
+    def rowCount(self, *args, **kwargs) -> int:
+        return len(self._data)
+
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole):
+        if index.isValid():
+            if role == Qt.ItemDataRole.DisplayRole:
+                return str(self._data[index.row()])
+            elif role == Qt.ItemDataRole.DecorationRole:
+                if self.status[index.row()] is None:
+                    return create_icon('yellow_light')
+                elif self.status[index.row()]:
+                    return create_icon('greenLight2')
+                else:
+                    return create_icon('red_light')
+            elif role == Qt.ItemDataRole.FontRole:
+                return QtGui.QFont('Arial', 12)
+            elif role == Qt.ItemDataRole.ForegroundRole:
+                if self.status[index.row()] is None:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGray)
+                elif self.status[index.row()]:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGreen)
+                else:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkRed)
+
+
+
 class ManagerBase(CustomExt):
 
     new_entry = QtCore.Signal(str)
@@ -59,6 +108,9 @@ class ManagerBase(CustomExt):
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
+        self.list_view: Optional[ListView] = None
+        self.entry_sublist_model: Optional[ManagerEntrySubListModel] = None
+
         if toolbar is not None:
             self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
         if menu is not None:
@@ -68,6 +120,21 @@ class ManagerBase(CustomExt):
 
         self.update_action_list()
         self.update_apply_action_tooltip(self.entry)
+
+    @staticmethod
+    def format_entry_sublist(entries: list[Any]):
+        """ Should be reimplemented for better display than the repr one """
+        return [str(entry) for entry in entries]
+
+    def show_entry_sublist(self, entries: list[Any]):
+        self.list_view = ListView()
+        self.entry_sublist_model = ManagerEntrySubListModel(self.format_entry_sublist(entries))
+        self.list_view.setModel(self.entry_sublist_model)
+        self.list_view.show()
+        self.list_view.raise_()
+
+    def close_entry_sublist(self, after_ms=1000):
+        QtCore.QTimer.singleShot(after_ms, self.list_view.close)
 
     @property
     def manager_name(self) -> str:
@@ -404,3 +471,15 @@ class ManagerBase(CustomExt):
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass
+
+
+
+
+class ListView(QtWidgets.QListView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.setAlternatingRowColors(True)

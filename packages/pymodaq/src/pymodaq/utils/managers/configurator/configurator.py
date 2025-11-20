@@ -11,15 +11,14 @@ from pymodaq.utils.config import get_set_preset_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
-from pymodaq_gui.messenger import dialog, messagebox
+
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
-from pymodaq_gui.utils.widgets.spinbox import SpinBox
+
 from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
 from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntry
 from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
-                                                       ConfiguratorTableView, ConfigEntriesListModel,
-                                                       get_module_from_param, config_entries_from_path,
+                                                       ConfiguratorTableView, get_module_from_param, config_entries_from_path,
                                                        ParameterDelegate, EntryActions,
                                                        ModuleType)
 
@@ -101,6 +100,13 @@ class Configurator(ManagerBase):
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
 
+    @staticmethod
+    def format_entry_sublist(entries: list[ConfiguratorEntry]):
+        return [(f'{entry.entry_type.capitalize()} for'
+                 f'{entry.module_name} - '
+                 f'{entry.setting.parameter.title()} '
+                 f'{entry.setting.value()}') for entry in entries]
+
     def apply_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
@@ -111,7 +117,8 @@ class Configurator(ManagerBase):
         """
         config_entries = config_entries_from_path(entry_path)
 
-        self.show_config_entries(config_entries)
+        if len(config_entries) > 0:
+            self.show_entry_sublist(config_entries)
 
         for ind, entry in enumerate(config_entries):
             special_entry = special_entry_factory.get_entry(entry.entry_type)(
@@ -120,24 +127,14 @@ class Configurator(ManagerBase):
                 mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name,
                                                                        entry.module_type)
                 special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
-                self.config_entries_model.set_color(QtCore.Qt.GlobalColor.darkGreen, ind)
+                self.entry_sublist_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(100)
+                QtCore.QThread.msleep(200)
             except Exception as e:
                 logger.exception(str(e))
-                self.config_entries_model.set_color(QtCore.Qt.GlobalColor.darkRed, ind)
+                self.entry_sublist_model.set_status(ind, False)
 
-    def show_config_entries(self, entries: list[ConfiguratorEntry]):
-        self.config_entries_widget = QtWidgets.QWidget()
-        self.config_entries_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.list_view = QtWidgets.QListView(self.config_entries_widget)
-        self.list_view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.config_entries_model = ConfigEntriesListModel(entries)
-        self.config_entries_widget.layout().addWidget(self.list_view)
-        self.list_view.setModel(self.config_entries_model)
-
-        self.config_entries_widget.show()
-        self.config_entries_widget.raise_()
+        self.close_entry_sublist(1000)
 
     def populate_from_settings(self, settings: Parameter):
         """
