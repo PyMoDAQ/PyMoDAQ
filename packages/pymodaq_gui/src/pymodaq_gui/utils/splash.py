@@ -2,13 +2,13 @@ from pathlib import Path
 
 from qtpy import QtWidgets, QtGui, QtCore
 from qtpy.QtCore import Qt
-
+here = Path(__file__)
 
 class MySplash(QtWidgets.QSplashScreen):
 
     def __init__(self, *args, **kwargs):
-        here = Path(__file__)
-        pixmap = QtGui.QPixmap(str(here.parent.parent.joinpath('splash.png')))
+
+        pixmap = get_pymodaq_pixmap()
         super().__init__(pixmap, Qt.WindowStaysOnTopHint, *args, **kwargs)
         font = self.font()
         font.setPixelSize(18)
@@ -21,3 +21,7 @@ class MySplash(QtWidgets.QSplashScreen):
 
 def get_splash_sc() -> MySplash:
     return MySplash()
+
+
+def get_pymodaq_pixmap() -> QtGui.QPixmap:
+    return QtGui.QPixmap(str(here.parent.parent.joinpath('splash.png')))

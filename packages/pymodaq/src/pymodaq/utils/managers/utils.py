@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import Any, Union, TYPE_CHECKING, Optional
 
@@ -11,7 +12,8 @@ from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
-
+from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
+from pymodaq_gui.utils.splash import get_pymodaq_pixmap
 
 logger = set_logger(get_module_name(__file__))
 
@@ -84,6 +86,8 @@ class ManagerEntrySubListModel(QtCore.QAbstractListModel):
                     return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGreen)
                 else:
                     return QtGui.QBrush(QtCore.Qt.GlobalColor.darkRed)
+            elif role == Qt.ItemDataRole.BackgroundColorRole:
+                return Qt.BrushStyle.NoBrush
 
 
 
@@ -108,7 +112,7 @@ class ManagerBase(CustomExt):
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
-        self.list_view: Optional[ListView] = None
+        self.splash_list: Optional[ListView] = None
         self.entry_sublist_model: Optional[ManagerEntrySubListModel] = None
 
         if toolbar is not None:
@@ -127,14 +131,13 @@ class ManagerBase(CustomExt):
         return [str(entry) for entry in entries]
 
     def show_entry_sublist(self, entries: list[Any]):
-        self.list_view = ListView()
+        self.splash_list = EntrySubListSplash()
         self.entry_sublist_model = ManagerEntrySubListModel(self.format_entry_sublist(entries))
-        self.list_view.setModel(self.entry_sublist_model)
-        self.list_view.show()
-        self.list_view.raise_()
+        self.splash_list.setModel(self.entry_sublist_model)
+        self.splash_list.show_splash()
 
     def close_entry_sublist(self, after_ms=1000):
-        QtCore.QTimer.singleShot(after_ms, self.list_view.close)
+        QtCore.QTimer.singleShot(after_ms, self.splash_list.close)
 
     @property
     def manager_name(self) -> str:
@@ -473,8 +476,6 @@ class ManagerBase(CustomExt):
             pass
 
 
-
-
 class ListView(QtWidgets.QListView):
 
     def __init__(self, parent=None):
@@ -482,4 +483,65 @@ class ListView(QtWidgets.QListView):
 
         self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
-        self.setAlternatingRowColors(True)
+
+
+class EntrySubListSplash(QtWidgets.QLabel):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.list_view = ListView()
+
+    def mousePressEvent(self, event):
+        self.close()
+
+    def setModel(self, model):
+        self.list_view.setModel(model)
+
+    def show_splash(self):
+
+        self.setPixmap(get_pymodaq_pixmap())
+
+        self.list_view.viewport().setAutoFillBackground(False)
+        self.list_view.setStyleSheet("QListView { outline: none; }")
+        self.list_view.clearFocus()
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
+
+        vlayout = QtWidgets.QVBoxLayout()
+        hlayout = QtWidgets.QHBoxLayout()
+        self.setLayout(hlayout)
+        hlayout.addStretch(10)
+        hlayout.addLayout(vlayout)
+        vlayout.addWidget(self.list_view)
+        vlayout.addStretch(10)
+
+        center_widget_on_screen_and_show(self)
+        self.raise_()
+
+
+if __name__ == '__main__':
+    from pymodaq_gui.utils.utils import mkQApp
+    import numpy as np
+
+
+    # Create application and main window
+    app = mkQApp('Dashboard')
+
+    entries = [f'Module {ind:03.0f} si about to do something incredible' for ind in range(10)]
+
+    widget = EntrySubListSplash()
+
+    entry_sublist_model = ManagerEntrySubListModel(entries)
+    widget.setModel(entry_sublist_model)
+
+
+    def apply_entries(sublist: list[str]):
+        for ind in range(len(sublist)):
+            entry_sublist_model.set_status(ind, bool(np.random.randint(2)))
+            QtWidgets.QApplication.processEvents()
+            QtCore.QThread.msleep(200)
+        QtCore.QThread.msleep(2000)
+        #widget.close()
+
+    widget.show_splash()
+    apply_entries(entries)
+    app.exec()

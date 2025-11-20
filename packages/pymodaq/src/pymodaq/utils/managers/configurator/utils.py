@@ -7,7 +7,6 @@ from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
 from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
 from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntryBaseTypes
-from pymodaq.utils.managers.utils import ManagerEntrySubListModel
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous

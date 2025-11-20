@@ -113,10 +113,7 @@ class PresetManager(ManagerBase):
             for area in self.dashboard.dockarea.tempAreas:
                 area.window().setVisible(False)
 
-            self.dashboard.splash_sc.show()
             QtWidgets.QApplication.processEvents()
-            self.dashboard.splash_sc.raise_()
-            self.dashboard.splash_sc.showMessage("Loading Modules, please wait")
             logger.info(f"Loading {self.entry_type.capitalize()} file: {entry}")
 
             try:
@@ -127,7 +124,6 @@ class PresetManager(ManagerBase):
                 actuators_modules, detector_modules = (
                     self.create_control_modules_from_preset(plugins_sorted))
             except (ActuatorError, DetectorError, MasterSlaveError) as error:
-                self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
                 for area in self.dashboard.dockarea.tempAreas:
                     area.window().setVisible(True)
@@ -164,7 +160,6 @@ class PresetManager(ManagerBase):
                 for det in detector_modules:
                     det.init_signal.connect(self.dashboard.update_init_tree)
 
-                self.dashboard.splash_sc.close()
                 self.dashboard.mainwindow.setVisible(True)
                 for area in self.dashboard.dockarea.tempAreas:
                     area.window().setVisible(True)
@@ -220,9 +215,6 @@ class PresetManager(ManagerBase):
                 plug_name = plugin["value"].child("name").value()
                 plug_init = plugin["value"].child("init").value()
                 plug_settings = plugin["value"].child("params")
-                self.dashboard.splash_sc.showMessage(
-                    "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
-                )
 
                 if plugin["type"] == "move":
                     plug_type = plug_settings.child(
@@ -427,10 +419,6 @@ class PresetManager(ManagerBase):
                 plug_type = plugin["settings"].child("info", "type").value()
                 plug_init = plugin["settings"].child("info", "init").value()
 
-                self.dashboard.splash_sc.showMessage(
-                    "Loading {:s} module: {:s}".format(plugin["type"], plug_name)
-                )
-
                 if plugin["type"] == ModuleType.Actuator or plugin["type"] == 'move':
 
                     self.dashboard.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets,
@@ -514,6 +502,7 @@ class PresetManager(ManagerBase):
                     self.entry_sublist_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
+        self.close_entry_sublist()
         # restore dock state if saved
 
         self.dashboard.title = self.entry
