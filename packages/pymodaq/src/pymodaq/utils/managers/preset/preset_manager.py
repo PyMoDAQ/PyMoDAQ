@@ -89,9 +89,9 @@ class PresetManager(ManagerBase):
         """
         try:
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
-                ret = dialog(f'Warning!',
-                             f'Are you sure you want '
-                             f'to load a new {self.entry_type.capitalize()}: {entry.stem}? \n')
+                ret = dialog(title=f'Warning!',
+                             message=f'Are you sure you want '
+                                     f'to load a new {self.entry_type.capitalize()}: {entry.stem}? \n')
                 if ret:
                     self.dashboard.remove_actuators(self.dashboard.actuators_modules)
                     self.dashboard.remove_detectors(self.dashboard.detector_modules)
@@ -154,8 +154,6 @@ class PresetManager(ManagerBase):
                 )
                 self.dashboard.actuators_modules = actuators_modules
                 self.dashboard.detector_modules = detector_modules
-
-                self.dashboard.update_module_manager()
 
                 for mov in actuators_modules:
                     mov.init_signal.connect(self.dashboard.update_init_tree)

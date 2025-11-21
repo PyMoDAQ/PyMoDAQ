@@ -205,7 +205,7 @@ class DashBoard(CustomApp):
         self.joysticks = dict([])
         self.ispygame_init = False
 
-        self.modules_manager: ModulesManager = None
+        self.modules_manager = ModulesManager()
 
         self.overshoot = False
         self.actuators_modules: list[DAQ_Move] = []
@@ -222,6 +222,22 @@ class DashBoard(CustomApp):
         if config_utils("general", "check_version"):
             if self.check_update(show=False):
                 sys.exit(0)
+
+    @property
+    def actuators_modules(self) -> list[DAQ_Move]:
+        return self.modules_manager.actuators_all
+
+    @actuators_modules.setter
+    def actuators_modules(self, modules: list[DAQ_Move]):
+        self.modules_manager.actuators_all = modules
+
+    @property
+    def detector_modules(self) -> list[DAQ_Viewer]:
+        return self.modules_manager.detectors_all
+
+    @detector_modules.setter
+    def detector_modules(self, modules: list[DAQ_Viewer]):
+        self.modules_manager.detectors_all = modules
 
     def do_things_after_ui_setup(self):
         self.preset_manager = PresetManager(dashboard=self,
@@ -294,7 +310,6 @@ class DashBoard(CustomApp):
                 dock = self.dockarea.docks.get(f"{detector_module.title} viewer", None)
                 if dock:
                     dock.close()
-            self.update_module_manager()
         except Exception as e:
             logger.exception(str(e))
 
@@ -320,7 +335,6 @@ class DashBoard(CustomApp):
                     dock.close()
             if len(self.compact_actuator_dock.widgets) == 0:
                 self.compact_actuator_dock.close()
-            self.update_module_manager()
         except Exception as e:
             logger.exception(str(e))
 
@@ -363,32 +377,16 @@ class DashBoard(CustomApp):
             actuators_modules = []
             detector_modules = []
             for module in modules:
-                if isinstance(
-                    module, DAQ_Move
-                ):  # Test if module is an instance of DAQ_Move
+                if isinstance(module, DAQ_Move):  # Test if module is an instance of DAQ_Move
                     actuators_modules.append(module)
-                elif isinstance(
-                    module, DAQ_Viewer
-                ):  # Test if module is an instance of DAQ_Viewer
+                elif isinstance(module, DAQ_Viewer):  # Test if module is an instance of DAQ_Viewer
                     detector_modules.append(module)
-                if isinstance(
-                    module, str
-                ):  # Test if module is a string (name of the module)
+                if isinstance(module, str):  # Test if module is a string (name of the module)
                     actuators_modules.extend(
-                        self.modules_manager.get_mods_from_names(
-                            [
-                                module,
-                            ],
-                            "act",
-                        )  # For actuators
-                    )
+                        self.modules_manager.get_mods_from_names([module,], "act",))  # For actuators
+
                     detector_modules.extend(
-                        self.modules_manager.get_mods_from_names(
-                            [
-                                module,
-                            ],
-                            "det",
-                        )  # For detectors
+                        self.modules_manager.get_mods_from_names([module,], "det",)  # For detectors
                     )
             if (hasattr(self, "actuators_modules")) & (
                 self.actuators_modules is not None
@@ -1168,7 +1166,6 @@ class DashBoard(CustomApp):
 
         # Update actuators modules and module manager
         self.actuators_modules.append(actuator)
-        self.update_module_manager()
 
     def add_det(self, plug_name, plug_settings, detector_docks_settings, detector_docks_viewer,
                 detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
@@ -1264,16 +1261,6 @@ class DashBoard(CustomApp):
 
         # Update actuators modules and module manager
         self.detector_modules.append(detector)
-        self.update_module_manager()
-
-    def update_module_manager(self):
-        if self.modules_manager is None:
-            self.modules_manager = ModulesManager(
-                self.detector_modules, self.actuators_modules, parent_name="Dashboard"
-            )
-        else:
-            self.modules_manager.actuators_all = self.actuators_modules
-            self.modules_manager.detectors_all = self.detector_modules
 
     def poll_init(self, module):
         is_init = False
