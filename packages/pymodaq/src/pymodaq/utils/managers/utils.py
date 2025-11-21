@@ -78,7 +78,7 @@ class ManagerEntrySubListModel(QtCore.QAbstractListModel):
                 else:
                     return create_icon('red_light')
             elif role == Qt.ItemDataRole.FontRole:
-                return QtGui.QFont('Arial', 12)
+                return QtGui.QFont('Arial', 10)
             elif role == Qt.ItemDataRole.ForegroundRole:
                 if self.status[index.row()] is None:
                     return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGray)
@@ -112,7 +112,7 @@ class ManagerBase(CustomExt):
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
-        self.splash_list: Optional[ListView] = None
+        self.splash_list: Optional[EntrySubListSplash] = None
         self.entry_sublist_model: Optional[ManagerEntrySubListModel] = None
 
         if toolbar is not None:
@@ -130,14 +130,15 @@ class ManagerBase(CustomExt):
         """ Should be reimplemented for better display than the repr one """
         return [str(entry) for entry in entries]
 
-    def show_entry_sublist(self, entries: list[Any]):
-        self.splash_list = EntrySubListSplash()
+    def show_entry_sublist(self, entries: list[Any], title=''):
+        self.splash_list = EntrySubListSplash(title=title)
         self.entry_sublist_model = ManagerEntrySubListModel(self.format_entry_sublist(entries))
         self.splash_list.setModel(self.entry_sublist_model)
         self.splash_list.show_splash()
 
     def close_entry_sublist(self, after_ms=1000):
-        QtCore.QTimer.singleShot(after_ms, self.splash_list.close)
+        if self.splash_list is not None:
+            QtCore.QTimer.singleShot(after_ms, self.splash_list.close)
 
     @property
     def manager_name(self) -> str:
@@ -487,9 +488,10 @@ class ListView(QtWidgets.QListView):
 
 class EntrySubListSplash(QtWidgets.QLabel):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, title=''):
         super().__init__(parent)
         self.list_view = ListView()
+        self.title_label = QtWidgets.QLabel(title)
 
     def mousePressEvent(self, event):
         self.close()
@@ -504,6 +506,8 @@ class EntrySubListSplash(QtWidgets.QLabel):
         self.list_view.viewport().setAutoFillBackground(False)
         self.list_view.setStyleSheet("QListView { outline: none; }")
         self.list_view.clearFocus()
+
+        self.title_label.setFont(QtGui.QFont("Arial", 12))
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
 
         vlayout = QtWidgets.QVBoxLayout()
@@ -511,6 +515,7 @@ class EntrySubListSplash(QtWidgets.QLabel):
         self.setLayout(hlayout)
         hlayout.addStretch(10)
         hlayout.addLayout(vlayout)
+        vlayout.addWidget(self.title_label)
         vlayout.addWidget(self.list_view)
         vlayout.addStretch(10)
 

@@ -102,7 +102,7 @@ class Configurator(ManagerBase):
 
     @staticmethod
     def format_entry_sublist(entries: list[ConfiguratorEntry]):
-        return [(f'{entry.entry_type.capitalize()} for'
+        return [(f'{entry.entry_type.capitalize()} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
@@ -118,7 +118,7 @@ class Configurator(ManagerBase):
         config_entries = config_entries_from_path(entry_path)
 
         if len(config_entries) > 0:
-            self.show_entry_sublist(config_entries)
+            self.show_entry_sublist(config_entries, f'Loading Configuration: {self.entry}')
 
         for ind, entry in enumerate(config_entries):
             special_entry = special_entry_factory.get_entry(entry.entry_type)(
