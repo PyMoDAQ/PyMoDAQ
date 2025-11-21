@@ -3,6 +3,8 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
 
@@ -236,11 +238,18 @@ class Configurator(ManagerBase):
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
                         toolbar=self.get_toolbar('main'))
 
-        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move')
+        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
+                        tip='Add the current Parameter item',
+                        )
         self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
-                        shortcut=QtCore.Qt.Key.Key_Delete)
-        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move')
-        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move')
+                        tip='Delete the current Configuration item ("Del")',
+                        shortcut=Qt.Key.Key_Delete)
+        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move',
+                        tip='Move UP the current Configuration item ("Ctrl+Up")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
+        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
+                        tip='Move Down the current Configuration item ("Ctrl+Down")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.add_action('show_all_settings', 'Show All Settings', 'FormatJustifyLeft',
                         checkable=True, toolbar=self.get_toolbar('main'),
                         tip='If Checked: display all settings (in green, settings that can be configured)'

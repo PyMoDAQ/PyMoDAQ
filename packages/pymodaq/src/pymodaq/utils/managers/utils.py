@@ -4,6 +4,7 @@ from typing import Any, Union, TYPE_CHECKING, Optional
 
 from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtGui import QKeySequence
 
 from pymodaq_gui.managers.action_manager import create_icon
 
@@ -252,16 +253,20 @@ class ManagerBase(CustomExt):
                         tip=f'Create a new {self.entry_type} file')
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'ListRemove',
-                        tip=f'Delete the current {self.entry_type} file')
+                        tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
         self.add_action(ManagerActions.SAVE,
                         f'Save {self.entry_type.capitalize()}', 'DocumentSave',
-                        tip=f'Save/Update the current {self.entry_type.capitalize()}')
+                        tip=f'Save/Update the current {self.entry_type.capitalize()} ("Ctrl+S")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action(ManagerActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
-                        tip=f'Reload the current {self.entry_type} file')
+                        tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
         self.add_action(ManagerActions.APPLY,
                         f'Apply {self.entry_type.capitalize()}', 'MailSend',
-                        tip=f'Apply the current {self.entry_type} file')
+                        tip=f'Apply the current {self.entry_type} file ("Ctrl+A")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A))
 
 
         # ACTIONS external: Dashboard, ...
@@ -454,7 +459,7 @@ class ManagerBase(CustomExt):
 
     def update_apply_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.APPLY).setToolTip(
-            f"Load the selected {self.entry_type}: {entry}")
+            f'Apply the selected {self.entry_type}: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
         return lambda: self.apply_entry_base(filename)

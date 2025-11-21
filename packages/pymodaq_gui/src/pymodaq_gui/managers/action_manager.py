@@ -61,7 +61,7 @@ class QAction(QtQAction):
 
 def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip='', checkable=False, checked=False,
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
-              menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key]=None,
+              menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
               enabled=True):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -87,8 +87,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         a menu where action should be added.
     visible: bool
         display or not the action in the toolbar/menu
-    shortcut: str or Qt.Key
-        a string defining a shortcut for this action
+    shortcut: str, QKey or QKeySequence
+        Using this shortcut will trigger the action
     enabled: bool
         set the enabled state
     """
@@ -268,7 +268,8 @@ class ActionManager:
                    checkable=False,
                    checked=False, toolbar: Union[str, QtWidgets.QToolBar, None]=None,
                    menu: Union[str, QtWidgets.QMenu, None] = None,
-                   visible=True, shortcut: Union[str, QtCore.Qt.Key]=None, auto_toolbar=True, auto_menu=True,
+                   visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
+                   auto_toolbar=True, auto_menu=True,
                    enabled=True):
         """Create a new action and add it to toolbar and menu
 
@@ -302,6 +303,8 @@ class ActionManager:
             Actions can also be added later see *affect_to*
         visible: bool
             display or not the action in the toolbar/menu
+        shortcut: str, QKey or QKeySequence
+            Using this shortcut will trigger the action
         auto_toolbar: bool
             if True add this action to the defined toolbar
         auto_menu: bool
