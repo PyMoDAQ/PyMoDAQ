@@ -138,7 +138,7 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('actuators_positions').show(not show)
 
     @classmethod
-    def get_names(cls, modules):
+    def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
         """Get the titles of a list of Control Modules
 
         Parameters
@@ -187,13 +187,13 @@ class ModulesManager(QObject, ParameterManager):
             logger.warning(f'No detector with this name: {name}')
             return None
 
-    def set_actuators(self, actuators, selected_actuators):
+    def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child('modules', 'actuators').setValue(dict(all_items=self.get_names(actuators),
                                                                   selected=self.get_names(selected_actuators)))
 
-    def set_detectors(self, detectors, selected_detectors):
+    def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
         self.settings.child('modules', 'detectors').setValue(dict(all_items=self.get_names(detectors),
@@ -211,8 +211,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @detectors_all.setter
     def detectors_all(self, detectors: List['DAQ_Viewer']):
-        self._detectors = detectors
-
+        self.set_detectors(detectors, [])
 
     @property
     def actuators(self) -> List['DAQ_Move']:
@@ -226,7 +225,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @actuators_all.setter
     def actuators_all(self, actuators: List['DAQ_Move']):
-        self._actuators = actuators
+        self.set_actuators(actuators, [])
 
     @property
     def modules(self):
