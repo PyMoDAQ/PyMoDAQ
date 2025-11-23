@@ -86,6 +86,23 @@ download and install all the dependencies in our new environment.
 
 ``pip install pymodaq pyqt6``
 
+One also needs to make sure
+that the Qt environment can be used. Running the following command should be sufficient to start with:
+
+``sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils  libgl1 libegl1``
+
+It is also necessary to give some reading and writing permission access to some specific folders. In particular,
+PyMoDAQ creates two folders that are used to store configurations files, one assigned to the system in /etc/.pymodaq/
+and one assigned to the user ~/.pymodaq/. We need to give reading/writing permission acess to the system folder.
+One should then run before/after installing pymodaq:
+
+* ``sudo mkdir /etc/.pymodaq/``
+* ``sudo chmod uo+rw /etc/.pymodaq``
+
+As a side note, these files are shared between different pymodaq's versions (going from 3 to 4 for example). It is
+suggested to delete/remake the folder (or empty its content) when setting up a new environment with a different pymodaq
+version.
+
 Check the installation
 ----------------------
 
@@ -131,70 +148,14 @@ We can access it from the *Supported instruments* link on the left menu of this 
 Install the software of the supplier
 ++++++++++++++++++++++++++++++++++++
 
-To illustrate concretely the procedure, we suppose that we want to control a *Thorlabs Zelux* camera.
+To illustrate concretely the procedure, we suppose that we want to control a *Basler* camera.
 
-.. figure:: /image/quick_start/zelux_camera.png
+.. figure:: /image/quick_start/basler.png
    :width: 200
 
-   A Thorlabs Zelux camera.
+   A Basler camera.
 
-This camera is controlled with the
-`ThorCam software <https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=ThorCam>`_ that is provided by
-Thorlabs. Let’s download and install it.
-
-.. figure:: /image/quick_start/thorcam.png
-
-   The webpage to download Thorcam.
-
-Once it is installed, connect the camera and check that it is working.
-
-.. warning::
-   It is crucial to first check that your instrument can be controlled with the supplier’s software before trying with
-   PyMoDAQ.
-
-The Plugin Manager
-++++++++++++++++++
-
-Once we have checked that our camera is working, we know that the supplier’s drivers, if any, are installed, and that
-the communication between our camera and our computer is working. It is now time to control it with PyMoDAQ.
-
-We have seen that the *Thorlabs* plugin manages this type of camera.
-
-.. figure:: /image/quick_start/supported_instruments_list_thorlabs.png
-
-   The Zelux camera is supported by the Thorlabs plugin.
-
-In this case, we just have to install the Thorlabs plugin in our environment. To do so, we will use the Plugin Manager
-by executing the following command in our terminal
-
-``plugin_manager``
-
-A window is displayed to easily install the plugin.
-
-.. figure:: /image/quick_start/plugin_manager.png
-   :width: 400
-
-   The Plugin Manager interface.
-
-.. note::
-   We can skip the use of the Plugin Manager interface by using directly in the terminal
-   *pip install pymodaq_plugins_thorlabs*.
-
-After the plugin installation, we launch a :ref:`DAQ_Viewer_module` with the following command
-
-``daq_viewer``
-
-.. warning::
-   Let’s not forget to disconnect the camera from ThorCam or any other program before trying to communicate with it.
-
-We then have to select the correct *DAQ type* (here 2D because the detector outputs a matrix of pixels) (1), the
-corresponding plugin (2), the specific camera through its serial number (3), initialize the communication with the
-camera (4), and get a snapshot (5).
-
-.. figure:: /image/quick_start/quick_start_image_thorlabs.png
-   :width: 800
-
-   Snapshot from a Thorlabs camera equipped with an objective, in a DAQ Viewer.
+Let's follow the lab story :ref:`Read a Basler camera <basler>` for detailed instructions.
 
 What if our instrument is not already supported?
 ++++++++++++++++++++++++++++++++++++++++++++++++
@@ -226,7 +187,8 @@ difficult task is behind us.
 
 We can now group them in a :ref:`Dashboard <dashboard_module>`, and enjoy all the features available through
 the Dashboard Extensions. A group of control modules in a dashboard can be saved in a :ref:`preset <preset_manager>`.
-A dashboard can be started with command line arguments, as explained on the :ref:`dashboard page <dashboard_cli_arguments_note>`
+A dashboard can be started with command line arguments, as explained on the
+:ref:`dashboard page <dashboard_cli_arguments_note>`
 
 The :ref:`DAQ Scan <daq_scan_module>` extension is the first one to consider, as it meets the needs of any experiment
 that consists in scanning automatically one or several parameters and save the detector’s output.
