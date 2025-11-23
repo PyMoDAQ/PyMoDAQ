@@ -145,6 +145,11 @@ Numerous plugins are already available for common scientific equipment suppliers
 
 We can access it from the *Supported instruments* link on the left menu of this website.
 
+.. warning::
+   * Be careful that those plugins are mostly compatible with Windows, and not necessarily for Ubuntu.
+   * As a general rule, if possible, we should be careful that our instrument supplier provides Linux drivers and
+     a Python wrapper before purchasing the instrument.
+
 Install the software of the supplier
 ++++++++++++++++++++++++++++++++++++
 
