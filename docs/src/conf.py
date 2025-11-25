@@ -59,14 +59,20 @@ release = get_version()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_qt_documentation",
+    "sphinx_design",
+    "sphinx_favicon",
+    "sphinxext.rediraffe",
+    "sphinxcontrib.images",
+    "sphinx_autodoc_typehints",
     'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
-    'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
@@ -76,6 +82,25 @@ extensions = [
 ]
 
 qt_documentation = "PyQt6"
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None)
+}
+
+nitpick_ignore_regex = [
+    ("py:class", r"re\.Pattern"),  # doesn't seem to be a good ref in python docs
+]
+
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    "callable": ":class:`collections.abc.Callable`",
+    "np.ndarray": ":class:`numpy.ndarray`",
+    'array_like': ':term:`array_like`',
+    'color_like': ':func:`pyqtgraph.mkColor`',
+    # 'ColorMapSpecifier': ':class:`str`, (:class:`str`, :class:`str`), or :class:`~pyqtgraph.ColorMap`',
+}
+
 
 # -- Custom Pygments lexer -----------------------------------------------------
 from sphinx.highlighting import lexers
@@ -89,6 +114,9 @@ numfig = True
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
 autosummary_generate = []
+
+autodoc_inherit_docstrings = False
+
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
 
@@ -123,6 +151,18 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+
+autodoc_inherit_docstrings = False
+autodoc_mock_imports = [
+    "scipy",
+    "h5py",
+    "matplotlib",
+    "qtpy",
+    "pyqtgraph",
+    "qtpy.QtCore",
+    "qtpy.QtGui",
+    "qtpy.QtWidgets"
+]
 
 
 # -- Options for HTML output -------------------------------------------------
