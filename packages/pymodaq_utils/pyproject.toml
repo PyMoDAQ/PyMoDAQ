@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling>=1.9.0", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pymodaq_utils"
+dynamic = [
+    "version",
+]
+description = "Modular Data Acquisition with Python"
+readme = "README.rst"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+dependencies = [
+    "multipledispatch",
+    "numpy",
+    "packaging",
+    "pint",
+    "python-dateutil",
+    "toml",
+    "strenum; python_version<\"3.11\"",
+]
+
+[project.optional-dependencies]
+dev = [
+    "hatch", 
+    "flake8",
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+]
+
+[project.scripts]
+
+[project.urls]
+Homepage = "http://pymodaq.cnrs.fr"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+fallback_version = "5.1.0"
+git_describe_command = "python git_describe.py packages/pymodaq_utils"
+
+[tool.hatch.version]
+source = "vcs"
+
+
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/resources/*"
+]

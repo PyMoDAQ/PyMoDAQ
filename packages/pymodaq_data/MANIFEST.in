@@ -1,0 +1,7 @@
+graft src
+include README.rst
+include LICENSE
+include src/pymodaq/ressources/VERSION
+recursive-include src/pymodaq/ressources *.toml *.xml
+recursive-include src/pymodaq *.png *.ico
+recursive-exclude src/pymodaq *.pyc

@@ -1,0 +1,95 @@
+[build-system]
+requires = ["hatchling>=1.9.0", "hatch-vcs", "toml"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pymodaq"
+dynamic = [
+    "version",
+]
+description = "Modular Data Acquisition with Python"
+readme = "README.rst"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+dependencies = [
+    "pymodaq_utils>=1.0.11",
+    "pymodaq_gui>=5.0.32",
+    "pymodaq_data>=5.0.21",
+    "pymodaq_plugin_manager>=0.0.17",
+    "pymodaq_plugins_mock>=5.0.5",
+    "simple_pid",
+    "qtconsole",
+    "pyleco>0.3; python_version>=\"3.8\"",
+    "bayesian-optimization>=2.0",
+    "adaptive",
+]
+
+[project.optional-dependencies]
+dev = [
+    "hatch",
+    "flake8",
+    "h5py",
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+
+    "pyqt5",
+    "pyqt6",
+    "pyside6",
+    "pytest-qt",
+    "pytest-xvfb",
+]
+
+[project.scripts]
+pymodaq_updater = "pymodaq.updater:main"
+daq_logger = "pymodaq.extensions.daq_logger:main"
+daq_move = "pymodaq.control_modules.daq_move:main"
+daq_scan = "pymodaq.extensions.daq_scan:main"
+daq_viewer = "pymodaq.control_modules.daq_viewer:main"
+dashboard = "pymodaq.dashboard:main"
+
+[project.urls]
+Homepage = "http://pymodaq.cnrs.fr"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+fallback_version = "5.1.0"
+git_describe_command = "python git_describe.py packages/pymodaq"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/examples/*",
+    "*/resources/*"
+]
+
+[tool.ruff]
+line-length = 120

@@ -118,6 +118,14 @@ What they think of PyMoDAQ?
   If you wish to communicate with users of PyMoDAQ, a mailing list exists:
   `pymodaq@services.cnrs.fr <mailto:pymodaq@services.cnrs.fr>`_
 
+Funny Video on PyMoDAQ from Montpellier University Students
+
+.. raw:: html
+
+   <div style="text-align: center">
+       <iframe width="560" height="315" src="https://www.youtube.com/embed/jNVHdBoLcrs?si=fqE0VVWe49hLL_1e" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+   </div>
+
 
 Some Scientific publication on/using PyMoDAQ
 ********************************************
