@@ -13,7 +13,7 @@ from pymodaq_data.data import (DataRaw, DataWithAxes, DataToExport, DataCalculat
                                   # registration
 
 
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+from serializall import SerializableFactory, SerializableBase
 
 ser_factory = SerializableFactory()
 

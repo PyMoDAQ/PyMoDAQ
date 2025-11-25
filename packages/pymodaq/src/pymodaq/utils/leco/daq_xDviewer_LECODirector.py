@@ -5,7 +5,7 @@ from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, como
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.utils.data import DataFromPlugins, Axis
 from pymodaq_data import DataToExport
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
 from pymodaq.utils import data  # for serialization factory registration  # noqa: F401
