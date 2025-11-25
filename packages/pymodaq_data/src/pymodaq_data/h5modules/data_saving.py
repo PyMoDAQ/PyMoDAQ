@@ -1106,8 +1106,9 @@ class DataLoader:
         data.create_missing_axes()
         return data
 
-    def load_all(self, where: GROUP, data: DataToExport, with_bkg=False) -> DataToExport:
-
+    def load_all(self, where: GROUP, data: DataToExport = None, with_bkg=False) -> DataToExport:
+        if data is None:
+            data = DataToExport('Loaded data')
         where = self._h5saver.get_node(where)
         children_dict = where.children()
         data_list = []
@@ -1122,3 +1123,4 @@ class DataLoader:
                 break
         data_tmp = DataToExport(name=where.name, data=data_list)
         data.append(data_tmp)
+        return data
