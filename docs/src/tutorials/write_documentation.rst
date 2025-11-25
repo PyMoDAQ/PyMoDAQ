@@ -118,7 +118,7 @@ We will now create a new branch from *pymodaq-dev* so that we can isolate our ch
 
 Finally, install our local repository in edition mode in our Python environment
 
-``(pmd_dev) >pip install -e .``
+``(pmd_dev) >python install-packages.py``
 
 We can now safely modify our local repository.
 

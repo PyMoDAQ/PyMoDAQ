@@ -128,3 +128,6 @@ venv.bak/
 *lextab.py
 
 .mu_repo
+
+
+**/README.rst
