@@ -8,7 +8,7 @@ from pymodaq_utils.serialize.serializer import (StringSerializeDeserialize as SS
                                                 NdArraySerializeDeserialize as NdSD,
                                                 ListSerializeDeserialize as LSD,
                                                 TupleSerializeDeserialize as TSD,
-                                                NoneSerializeDesieralize as NSD,
+                                                NoneSerializeDeserialize as NSD,
                                                 DictSerializeDeserialize as DSD,
                                                 )
 
