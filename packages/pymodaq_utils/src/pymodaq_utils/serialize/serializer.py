@@ -16,7 +16,7 @@ from ..serialize.factory import SerializableFactory, SERIALIZABLE, SerializableB
 ser_factory = SerializableFactory()
 
 
-class NoneSerializeDesieralize(SerializableBase):
+class NoneSerializeDeserialize(SerializableBase):
     @staticmethod
     def serialize(obj: None) -> bytes:  # type: ignore[override]
         return b""
@@ -353,7 +353,7 @@ class DictSerializeDeserialize(SerializableBase):
 
 
 ser_factory.register_from_type(
-    type(None), NoneSerializeDesieralize.serialize, NoneSerializeDesieralize.deserialize
+    type(None), NoneSerializeDeserialize.serialize, NoneSerializeDeserialize.deserialize
 )
 ser_factory.register_from_type(bytes,
                                        BytesSerializeDeserialize.serialize,
