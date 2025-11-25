@@ -60,13 +60,13 @@ release = get_version()
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
@@ -76,6 +76,7 @@ extensions = [
 ]
 
 qt_documentation = "PyQt6"
+
 
 # -- Custom Pygments lexer -----------------------------------------------------
 from sphinx.highlighting import lexers
@@ -89,6 +90,9 @@ numfig = True
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
 autosummary_generate = []
+
+autodoc_inherit_docstrings = False
+
 numpydoc_show_inherited_class_members = False
 numpydoc_class_members_toctree = False
 
