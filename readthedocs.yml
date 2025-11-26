@@ -54,10 +54,6 @@ build:
     - libxi-dev
     - libxkbcommon-dev
     - libxkbcommon-x11-dev
-  environment:
-    QT_QPA_PLATFORM: offscreen
-
-
 
   jobs:
     post_checkout:
@@ -65,10 +61,11 @@ build:
       - git fetch --prune --unshallow
       - git fetch --tags
     pre_build:
-      #      - sudo mkdir -p /etc/.pymodaq # cannot use sudo command in readthedoc...
-#      - sudo chmod uo+rw /etc/.pymodaq
+      - export QT_QPA_PLATFORM=offscreen
+      # - Xvfb :99 -screen 0 1024x768x24 &
+      - sleep 2  # give Xvfb a moment to start
       - python docs/automodule.py || true
-      - python install-packages.py 
+      - python install-packages.py
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
