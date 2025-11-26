@@ -54,6 +54,8 @@ build:
     - libxi-dev
     - libxkbcommon-dev
     - libxkbcommon-x11-dev
+  environment:
+    QT_QPA_PLATFORM: offscreen
 
 
 
