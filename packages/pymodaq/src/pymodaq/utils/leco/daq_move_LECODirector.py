@@ -17,7 +17,7 @@ from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMo
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.leco.leco_director import (LECODirector, leco_parameters, DirectorCommands,

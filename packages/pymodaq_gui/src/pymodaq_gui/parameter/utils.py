@@ -3,7 +3,7 @@ from typing import List, Tuple, Union
 import numpy as np
 from collections import OrderedDict
 from pymodaq_utils.utils import find_keys_from_val
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+from serializall import SerializableFactory, SerializableBase
 from pymodaq_gui.parameter import ioxml
 
 from pymodaq_gui.parameter import Parameter
