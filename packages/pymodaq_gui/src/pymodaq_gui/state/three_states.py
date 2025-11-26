@@ -10,6 +10,14 @@ from qtpy.QtWidgets import QWidget, QLabel, QPushButton
 from qtpy.QtStateMachine import QStateMachine, QState, QFinalState
 
 
+class QStatePrint(QState):
+
+    def onEntry(self, event, /):
+        print("I'm entering S3")
+
+    def onExit(self, event, /):
+        print("I'm exiting S3")
+
 
 class App(QObject):
 
@@ -18,34 +26,52 @@ class App(QObject):
 
         self.setup_ui()
         self.setup_machine()
+        self.connect_things()
 
     def setup_ui(self):
         self.widget = QWidget()
         self.label = QLabel()
         self.push = QPushButton('Push Me')
+        self.quit = QPushButton('Quit Me')
 
         self.widget.setLayout(QtWidgets.QVBoxLayout())
         self.widget.layout().addWidget(self.label)
-        self.widget.layout().addWidget(self.push)
+        button_layout = QtWidgets.QHBoxLayout()
+        self.widget.layout().addLayout(button_layout)
+
+        button_layout.addWidget(self.push)
+        button_layout.addWidget(self.quit)
+
 
     def setup_machine(self):
         self.machine = QStateMachine()
-        state_1 = QState()
-        state_2 = QState()
-        state_3 = QState()
+        self.grouped_state = QState()
+        self.state_1 = QState(self.grouped_state)
+        self.state_2 = QState(self.grouped_state)
+        self.state_3 = QStatePrint(self.grouped_state)
+        self.grouped_state.setInitialState(self.state_1)
 
-        state_1.addTransition(self.push.clicked, state_2)
-        state_2.addTransition(self.push.clicked, state_3)
-        state_3.addTransition(self.push.clicked, state_1)
+        self.final_state = QFinalState()
 
-        state_1.assignProperty(self.label, 'text', "I'm in State 1")
-        state_2.assignProperty(self.label, 'text', "I'm in State 2")
-        state_3.assignProperty(self.label, 'text', "I'm in State 3")
+        self.state_1.addTransition(self.push.clicked, self.state_2)
+        self.state_2.addTransition(self.push.clicked, self.state_3)
+        self.state_3.addTransition(self.push.clicked, self.state_1)
 
-        self.machine.addState(state_1)
-        self.machine.addState(state_2)
-        self.machine.addState(state_3)
-        self.machine.setInitialState(state_1)
+        self.grouped_state.addTransition(self.quit.clicked, self.final_state)
+
+        self.state_1.assignProperty(self.label, 'text', "I'm in State 1")
+        self.state_2.assignProperty(self.label, 'text', "I'm in State 2")
+        self.state_3.assignProperty(self.label, 'text', "I'm in State 3")
+
+        self.machine.addState(self.grouped_state)
+        self.machine.addState(self.final_state)
+        self.machine.setInitialState(self.grouped_state)
+
+    def connect_things(self):
+        self.state_3.entered.connect(self.push.showMaximized)
+        self.state_3.exited.connect(self.push.showMinimized)
+
+        self.machine.finished.connect(QtWidgets.QApplication.instance().quit)
 
     def start(self):
         self.machine.start()
