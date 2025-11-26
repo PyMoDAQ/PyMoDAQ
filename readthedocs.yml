@@ -12,6 +12,47 @@ build:
   apt_packages:
     - libopengl0
     - libxcb-cursor-dev
+    - libxcb-composite0-dev
+    - libxcb-cursor-dev
+    - libxcb-damage0-dev
+    - libxcb-dpms0-dev
+    - libxcb-dri2-0-dev
+    - libxcb-dri3-dev
+    - libxcb-ewmh-dev
+    - libxcb-glx0-dev
+    - libxcb-icccm4-dev
+    - libxcb-image0-dev
+    - libxcb-imdkit-dev
+    - libxcb-keysyms1-dev
+    - libxcb-present-dev
+    - libxcb-randr0-dev
+    - libxcb-record0-dev
+    - libxcb-render-util0-dev
+    - libxcb-render0-dev
+    - libxcb-res0-dev
+    - libxcb-screensaver0-dev
+    - libxcb-shape0-dev
+    - libxcb-shm0-dev
+    - libxcb-sync-dev
+    - libxcb-util-dev
+    - libxcb-util0-dev
+    - libxcb-xf86dri0-dev
+    - libxcb-xfixes0-dev
+    - libxcb-xinerama0-dev
+    - libxcb-xinput-dev
+    - libxcb-xkb-dev
+    - libxcb-xrm-dev
+    - libxcb-xtest0-dev
+    - libxcb-xv0-dev
+    - libxcb-xvmc0-dev
+    - libxcb1-dev
+    - libx11-xcb-dev
+    - libglu1-mesa-dev
+    - libxrender-dev
+    - libxi-dev
+    - libxkbcommon-dev
+    - libxkbcommon-x11-dev
+
 
 
   jobs:
