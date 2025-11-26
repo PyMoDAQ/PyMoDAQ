@@ -61,9 +61,7 @@ build:
       - git fetch --prune --unshallow
       - git fetch --tags
     pre_build:
-      - export QT_QPA_PLATFORM=offscreen
-      # - Xvfb :99 -screen 0 1024x768x24 &
-      - sleep 2  # give Xvfb a moment to start
+      - Xvfb :99 -screen 0 1024x768x24 &
       - python docs/automodule.py || true
       - python install-packages.py
 
