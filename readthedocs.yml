@@ -23,6 +23,8 @@ build:
     - x11-utils
     - libgl1
     - libegl1
+    - libopengl0
+
 
   jobs:
     post_checkout:
