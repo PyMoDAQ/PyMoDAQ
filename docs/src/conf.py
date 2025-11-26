@@ -59,14 +59,20 @@ release = get_version()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_qt_documentation",
+    "sphinx_design",
+    "sphinx_favicon",
+    "sphinxext.rediraffe",
+    "sphinxcontrib.images",
+    "sphinx_autodoc_typehints"
     'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
-    'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
@@ -76,6 +82,24 @@ extensions = [
 ]
 
 qt_documentation = "PyQt6"
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None)
+}
+
+nitpick_ignore_regex = [
+    ("py:class", r"re\.Pattern"),  # doesn't seem to be a good ref in python docs
+]
+
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    "callable": ":class:`collections.abc.Callable`",
+    "np.ndarray": ":class:`numpy.ndarray`",
+    'array_like': ':term:`array_like`',
+    'color_like': ':func:`pyqtgraph.mkColor`',
+    # 'ColorMapSpecifier': ':class:`str`, (:class:`str`, :class:`str`), or :class:`~pyqtgraph.ColorMap`',
+}
 
 
 # -- Custom Pygments lexer -----------------------------------------------------
@@ -127,6 +151,13 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+
+autodoc_inherit_docstrings = False
+autodoc_mock_imports = [
+    "scipy",
+    "h5py",
+    "matplotlib",
+]
 
 
 # -- Options for HTML output -------------------------------------------------
