@@ -12,7 +12,7 @@ build:
   apt_packages:
     - libopengl0
     - libxcb-cursor0
-    - libxcb-cursor0-dev
+    - libxcb-cursor0
     - libxcb-cursor-dev
     - libxcb-composite0-dev
     - libxcb-cursor-dev
