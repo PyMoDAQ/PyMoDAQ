@@ -68,7 +68,7 @@ extensions = [
     "sphinx_favicon",
     "sphinxext.rediraffe",
     "sphinxcontrib.images",
-    "sphinx_autodoc_typehints"
+    "sphinx_autodoc_typehints",
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
