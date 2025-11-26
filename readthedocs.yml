@@ -62,6 +62,7 @@ build:
       - git fetch --tags
     pre_build:
       - Xvfb :99 -screen 0 1024x768x24 &
+      - sleep 10
       - python docs/automodule.py || true
       - python install-packages.py
 
