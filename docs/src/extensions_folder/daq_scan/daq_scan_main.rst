@@ -242,7 +242,6 @@ The General Settings are comprised of:
     rough timing if needed
   * **Wait time between**: extra time the application wait before starting a detector's grab after the actuators
     reached their final value.
-  * **timeout**: raise a timeout if one of the scan step (moving or detecting) is taking a longer time than timeout to respond
 
 * **Scan options** :
 
