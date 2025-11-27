@@ -81,7 +81,7 @@ extensions = [
     "sphinx_datatables",
 ]
 
-qt_documentation = "PyQt5"
+qt_documentation = "PyQt6"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
