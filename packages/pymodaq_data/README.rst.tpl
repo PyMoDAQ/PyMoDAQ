@@ -28,28 +28,28 @@ PyMoDAQ Data
 
 
 .. |39-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Linux_3.9.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |310-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Linux_3.10.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |311-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Linux_3.11.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |312-linux| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Linux_3.12.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |39-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Windows_3.9.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |310-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Windows_3.10.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |311-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Windows_3.11.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 .. |312-windows| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_data/{{BRANCH_NAME}}/tests_Windows_3.12.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_data/actions/workflows/tests-data.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-data.yml
 
 
 

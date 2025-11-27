@@ -28,40 +28,40 @@ PyMoDAQ GUI
 
 
 .. |39-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.9_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |39-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.9_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |39-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.9_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.10_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.10_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.10_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.11_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.11_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.11_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-linux-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.12_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-linux-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.12_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-linux-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Linux_3.12_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 
 +-------------+---------------------+--------------------+-----------------------+
@@ -77,40 +77,40 @@ PyMoDAQ GUI
 +-------------+---------------------+--------------------+-----------------------+
 
 .. |39-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.9_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |39-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.9_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |39-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.9_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.10_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.10_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |310-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.10_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.11_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.11_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |311-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.11_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-windows-pyqt5| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.12_pyqt5.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-windows-pyqt6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.12_pyqt6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 .. |312-windows-pyside6| image:: https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/badges/pymodaq_gui/{{BRANCH_NAME}}/tests_Windows_3.12_pyside6.svg
-    :target: https://github.com/PyMoDAQ/pymodaq_gui/actions/workflows/tests-gui.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/tests-gui.yml
 
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
