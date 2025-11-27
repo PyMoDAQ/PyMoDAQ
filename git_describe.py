@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 FALLBACK_VERSION = "5.1.0"
+SEPARATORS = ['~', '^', '-']
 
 try:
     package_path = Path(sys.argv[1])
@@ -26,8 +27,10 @@ try:
             stderr=subprocess.DEVNULL
         ).decode().strip()
 
-    # Remove "~1" or similar suffix
-    version = version.split("~")[0]
+    # Remove "~1" or similar suffixes
+    for separator in SEPARATORS:
+	    version = version.split(separator)[0]
+    	
 except Exception:
     version = FALLBACK_VERSION
 
