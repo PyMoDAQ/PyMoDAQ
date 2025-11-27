@@ -37,10 +37,10 @@ class Icons():
         self.widget.layout().addLayout(layout_style)
         self.widget.layout().addLayout(layout_theme)
 
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
 
-app = QApplication(sys.argv)
+    w = Icons(QWidget())
+    w.widget.show()
 
-w = Icons(QWidget())
-w.widget.show()
-
-app.exec()
+    app.exec()
