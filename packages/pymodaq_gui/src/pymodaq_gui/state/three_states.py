@@ -1,9 +1,8 @@
-from hatch.cli import self
 from os import environ
 environ['QT_API'] = 'pyside6'
 
 from pymodaq_gui.utils.utils import mkQApp
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
 
 from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QWidget, QLabel, QPushButton
@@ -62,6 +61,10 @@ class App(QObject):
         self.state_1.assignProperty(self.label, 'text', "I'm in State 1")
         self.state_2.assignProperty(self.label, 'text', "I'm in State 2")
         self.state_3.assignProperty(self.label, 'text', "I'm in State 3")
+
+        self.state_1.assignProperty(self.label, "font", QtGui.QFont('Arial', pointSize=12))
+        self.state_2.assignProperty(self.label, "font", QtGui.QFont('Calibri', pointSize=22))
+        self.state_3.assignProperty(self.label, "font", QtGui.QFont('Comic Sans MS', pointSize=62))
 
         self.machine.addState(self.grouped_state)
         self.machine.addState(self.final_state)
