@@ -91,7 +91,15 @@ intersphinx_mapping = {
 nitpick_ignore_regex = [
     ("py:class", r"re\.Pattern"),  # doesn't seem to be a good ref in python docs
 ]
+
 napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    "callable": ":class:`collections.abc.Callable`",
+    "np.ndarray": ":class:`numpy.ndarray`",
+    'array_like': ':term:`array_like`',
+    'color_like': ':func:`pyqtgraph.mkColor`',
+    # 'ColorMapSpecifier': ':class:`str`, (:class:`str`, :class:`str`), or :class:`~pyqtgraph.ColorMap`',
+}
 
 
 # -- Custom Pygments lexer -----------------------------------------------------
@@ -143,6 +151,19 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+
+autodoc_inherit_docstrings = False
+autodoc_mock_imports = [
+    "scipy",
+    "h5py",
+    "matplotlib",
+    "qtpy",
+    "pyqtgraph",
+    "qtpy.QtCore",
+    "qtpy.QtGui",
+    "qtpy.QtWidgets"
+]
+
 
 # -- Options for HTML output -------------------------------------------------
 
