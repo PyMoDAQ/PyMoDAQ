@@ -81,7 +81,7 @@ extensions = [
     "sphinx_datatables",
 ]
 
-qt_documentation = "PyQt6"
+qt_documentation = "PyQt5"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
@@ -157,11 +157,11 @@ autodoc_mock_imports = [
     "scipy",
     "h5py",
     "matplotlib",
-    "PyQt6",
+    "qtpy",
     "pyqtgraph",
-    "PyQt6.QtCore",
-    "PyQt6.QtGui",
-    "PyQt6.QtWidgets"
+    "qtpy.QtCore",
+    "qtpy.QtGui",
+    "qtpy.QtWidgets"
 ]
 
 
