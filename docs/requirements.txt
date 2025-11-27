@@ -7,14 +7,6 @@ toml
 numpydoc
 sphinx-datatables
 pyqt6
-sphinx-design==0.5.0
-sphinxcontrib-images==0.9.4
-sphinx-favicon==1.0.1
-sphinx-autodoc-typehints
-sphinx-qt-documentation
-sphinxext-rediraffe
-numpy
-pyopengl
 
 # -e ../packages/pymodaq_utils
 # -e ../packages/pymodaq_data
