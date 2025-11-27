@@ -52,9 +52,9 @@ class App(QObject):
 
         self.final_state = QFinalState()
 
-        self.state_1.addTransition(self.push.clicked, self.state_2)
-        self.state_2.addTransition(self.push.clicked, self.state_3)
-        self.state_3.addTransition(self.push.clicked, self.state_1)
+        trans_s12 = self.state_1.addTransition(self.push.clicked, self.state_2)
+        trans_s23 = self.state_2.addTransition(self.push.clicked, self.state_3)
+        trans_s31 = self.state_3.addTransition(self.push.clicked, self.state_1)
 
         self.grouped_state.addTransition(self.quit.clicked, self.final_state)
 
@@ -62,9 +62,15 @@ class App(QObject):
         self.state_2.assignProperty(self.label, 'text', "I'm in State 2")
         self.state_3.assignProperty(self.label, 'text', "I'm in State 3")
 
-        self.state_1.assignProperty(self.label, "font", QtGui.QFont('Arial', pointSize=12))
+        self.state_1.assignProperty(self.label, "font", QtGui.QFont('Arial', pointSize=22))
         self.state_2.assignProperty(self.label, "font", QtGui.QFont('Calibri', pointSize=22))
-        self.state_3.assignProperty(self.label, "font", QtGui.QFont('Comic Sans MS', pointSize=62))
+        self.state_3.assignProperty(self.label, "font", QtGui.QFont('Comic Sans MS', pointSize=22))
+
+        self.state_1.assignProperty(self.push, "geometry", QtCore.QRectF(0, 0, 200, 200))
+        self.state_2.assignProperty(self.push, "geometry", QtCore.QRectF(0, 0, 100, 100))
+        self.state_3.assignProperty(self.push, "geometry", QtCore.QRectF(0, 0, 300, 300))
+
+        trans_s12.addAnimation(QtCore.QPropertyAnimation(self.push, b'geometry'))
 
         self.machine.addState(self.grouped_state)
         self.machine.addState(self.final_state)
