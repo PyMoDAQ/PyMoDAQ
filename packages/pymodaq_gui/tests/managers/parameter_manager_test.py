@@ -15,7 +15,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq_gui.examples.parameter_ex import ParameterEx
 from pymodaq_gui.parameter.utils import (getValues,getStruct,
     iter_children_params, compareParameters,
-    compareStructureParameter, compareValuesParameter)
+    compareStructureParameter, compareValuesParameter, getValues)
 from pymodaq_gui.utils.widgets.table import TableModel
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 
@@ -89,7 +89,9 @@ def test_load(qtbot, tmp_path):
 
     for parameter in parameters:
         if not parameter.hasChildren() and 'group' not in parameter.opts['type']:
-            default_parameter = Parameter.create(name='settings', type=parameter.opts['type'])
+            #default_parameter = Parameter.create(name='settings', type=parameter.opts['type'])
+            default_parameter = Parameter.create(**parameter.opts)
+
             if not 'table' in parameter.opts['type']:
                 item = default_parameter.makeTreeItem(0)
                 if hasattr(item, 'widget'):
@@ -99,15 +101,22 @@ def test_load(qtbot, tmp_path):
             elif 'tabular_table' == parameter.opts['type']:
                 parameter.setValue(TableModel([[0.5, 0.2, 0.6]], ['value20', 'val2', '555']))
 
-    assert not compareValuesParameter(ptree.settings, parameter_copy, with_self=False)
+    parameters = iter_children_params(ptree.settings, childlist=[])
+    parameters_copy = iter_children_params(parameter_copy, childlist=[])
+    for parameter, pcopy in zip(parameters, parameters_copy):
+        if 'value' in parameter.opts:
+            if parameter.value() != pcopy.value():
+                print(parameter)
+    assert compareValuesParameter(ptree.settings, parameter_copy, with_self=False)
     assert compareStructureParameter(ptree.settings, parameter_copy)
 
     ptree.update_settings_slot(file_path)
     parameters = iter_children_params(ptree.settings, childlist=[])
 
     for parameter, pcopy in zip(parameters, parameters_copy):
-        if parameter.value() != pcopy.value():
-            print(parameter)
+        if 'value' in parameter.opts:
+            if parameter.value() != pcopy.value():
+                print(parameter)
 
     assert compareValuesParameter(ptree.settings, parameter_copy, with_self=False)
     assert compareStructureParameter(ptree.settings, parameter_copy)

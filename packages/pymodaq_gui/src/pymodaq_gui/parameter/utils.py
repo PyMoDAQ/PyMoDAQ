@@ -135,7 +135,8 @@ def getStruct(param:Parameter,) -> OrderedDict:
         vals[ch.name()] = (None, getStruct(ch))
     return vals 
 
-def getValues(param:Parameter,) -> OrderedDict:
+
+def getValues(param:Parameter) -> OrderedDict:
     """Return an OrderedDict with tree structures of all values for all children of this parameter
         Parameters
         ----------
@@ -143,8 +144,14 @@ def getValues(param:Parameter,) -> OrderedDict:
         Returns
         -------
         OrderedDict    
-    """    
-    return param.getValues()
+    """
+    values = OrderedDict()
+    for ch in param:
+        if 'value' in ch.opts:
+            values[ch.name()] = (ch.value(), getValues(ch))
+        else:
+            values[ch.name()] = (None, getValues(ch))
+    return values
 
 
 def compareParameters(param1:Parameter, param2:Parameter, with_self: bool = True)-> bool:
@@ -329,10 +336,11 @@ def set_param_from_param(param_old, param_new):
                 # (limits are usually set at initialization) but carefull as such paramater limits can be a list or a
                 # dict object
                 if isinstance(child_old.opts['limits'], list):
-                    if child_new.value() not in child_old.opts['limits']:
-                        new_limits = child_old.opts['limits'].copy()
-                        new_limits.append(child_new.value())
-                        child_old.setLimits(new_limits)
+                    if 'value' in child_new.opts:
+                        if child_new.value() not in child_old.opts['limits']:
+                            new_limits = child_old.opts['limits'].copy()
+                            new_limits.append(child_new.value())
+                            child_old.setLimits(new_limits)
                         
                 elif isinstance(child_old.opts['limits'], dict):
                     if child_new.value() not in child_old.opts['limits'].values():
@@ -340,8 +348,8 @@ def set_param_from_param(param_old, param_new):
                         new_limits = child_old.opts['limits'].copy()
                         new_limits.update({child_new_key: child_new.value()})
                         child_old.setLimits(new_limits)
-
-                child_old.setValue(child_new.value())
+                if 'value' in child_new.opts:
+                    child_old.setValue(child_new.value())
             elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
                 if child_new.value() != "":  # to make sure one doesnt overwrite something
                     child_old.setValue(child_new.value())

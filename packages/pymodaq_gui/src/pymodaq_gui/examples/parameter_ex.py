@@ -89,9 +89,9 @@ class ParameterEx(ParameterManager):
              },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
-            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': '', 'filetype': True,
+            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': 'D:\Data', 'filetype': True,
              'tip': 'If filetype is True select a file otherwise a directory'},
-            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': '', 'filetype': False,
+            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': 'D:\Databis', 'filetype': False,
              'tip': 'If filetype is True select a file otherwise a directory'},
 
         ]},

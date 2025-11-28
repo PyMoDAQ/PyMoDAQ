@@ -118,11 +118,15 @@ class FileDirParameterItem(WidgetParameterItem):
             self.filetype = self.param.opts['filetype']
         else:
             self.filetype = True
-
-        self.w = FileDirWidget(self.param.value(), file_type=self.filetype)
-
+        if 'value' in self.param.opts:
+            self.w = FileDirWidget(init_path=self.param.opts['value'],
+                               file_type=self.filetype)
+        else:
+            self.w = FileDirWidget(file_type=self.filetype)
+            self.param.opts['value'] = self.w.path
         # if 'tip' in self.param.opts:
         #     self.w.setToolTip(self.param.opts['tip'])
+
 
         self.w.base_path_edit.setReadOnly(self.param.opts['readonly'])
         self.w.value = self.w.get_value
