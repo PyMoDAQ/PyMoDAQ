@@ -3,7 +3,7 @@ from pathlib import Path
 from qtpy import QtWidgets, QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 
 
 class PlainTextWidget(QtWidgets.QWidget):

@@ -22,7 +22,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.config import BaseConfig
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import Parameter
+from pymodaq_gui.parameter import Parameter
 
 
 from pymodaq_data.data import (DataToExport, DataCalculated,

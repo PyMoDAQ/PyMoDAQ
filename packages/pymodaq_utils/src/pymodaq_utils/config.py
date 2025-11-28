@@ -11,7 +11,7 @@ from typing import Iterable as IterableType
 import toml
 import logging
 if TYPE_CHECKING:
-    from pyqtgraph import Parameter
+    from pymodaq_gui.parameter import Parameter
 
 
 try:

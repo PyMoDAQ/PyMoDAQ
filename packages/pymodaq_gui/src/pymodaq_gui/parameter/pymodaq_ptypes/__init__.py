@@ -13,7 +13,8 @@ from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
 from .numeric import NumericParameter
 from .group import GroupParameter
-from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType, Parameter
+from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
+
 
 registerParameterType('float', NumericParameter, override=True)
 registerParameterType('int',   NumericParameter, override=True)
