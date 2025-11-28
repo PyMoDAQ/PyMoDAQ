@@ -34,7 +34,7 @@ classifiers = [
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
-    "pyqtgraph>=0.12 , <0.14.0",
+    "pyqtgraph>=0.12",
     "qtpy",
     "easydict",
 ]
