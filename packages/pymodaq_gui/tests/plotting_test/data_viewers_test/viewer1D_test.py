@@ -1,4 +1,4 @@
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 import pyqtgraph as pg
 import numpy as np
 import pytest

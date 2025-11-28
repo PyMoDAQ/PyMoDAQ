@@ -1,7 +1,8 @@
 from qtpy import QtWidgets, QtCore
 from pyqtgraph import functions as fn
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
-from pyqtgraph.parametertree import Parameter, ParameterItem
+from pyqtgraph.parametertree import ParameterItem
+from pymodaq_gui.parameter import Parameter
 import numpy as np
 
 

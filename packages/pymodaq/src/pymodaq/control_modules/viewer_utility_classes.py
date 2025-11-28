@@ -5,7 +5,6 @@ from qtpy.QtCore import QObject, Slot, Signal
 
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
-from pymodaq.utils.parameter import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
@@ -22,7 +21,9 @@ from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
 from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+
 
 local_path = get_set_local_dir()
 # look for eventual calibration files

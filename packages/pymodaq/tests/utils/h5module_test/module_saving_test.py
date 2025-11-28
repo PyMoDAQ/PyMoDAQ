@@ -11,7 +11,7 @@ import pytest
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType
 
-from pymodaq.utils.parameter import Parameter
+from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.mocks import MockScan, MockDAQMove, MockDAQViewer
 
 @pytest.fixture()

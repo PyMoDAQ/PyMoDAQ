@@ -10,7 +10,7 @@ import pytest
 from qtpy import QtWidgets
 
 
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 
 from pymodaq_gui.examples.parameter_ex import ParameterEx
 from pymodaq_gui.parameter.utils import (getValues,getStruct,

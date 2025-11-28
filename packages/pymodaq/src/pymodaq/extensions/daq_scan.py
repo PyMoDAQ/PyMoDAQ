@@ -26,9 +26,9 @@ from pymodaq_utils import utils
 from pymodaq_data import data as data_mod
 from pymodaq_data.h5modules import data_saving
 
-from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTree
 from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
