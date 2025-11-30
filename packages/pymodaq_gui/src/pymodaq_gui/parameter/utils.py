@@ -17,7 +17,7 @@ class ParameterWithPath(SerializableBase):
 
     To be used when communicating between TCPIP to reconstruct properly the Parameter
 
-    Parameters
+    Attributes
     ----------
     parameter: Parameter
         a Parameter object
@@ -50,9 +50,7 @@ class ParameterWithPath(SerializableBase):
 
     @staticmethod
     def serialize(param: 'ParameterWithPath') -> bytes:
-        """
-
-        """
+        """ """
         bytes_string = b''
         path = param.path
         param_as_xml = ioxml.parameter_to_xml_string(param.parameter)
@@ -109,23 +107,27 @@ def get_param_path(param: Parameter) -> List[str]:
 
 def getOpts(param:Parameter,) -> OrderedDict:
     """Return an OrderedDict with tree structures of all opts for all children of this parameter
+
         Parameters
         ----------
         param: Parameter
+
         Returns
         -------
         OrderedDict
     """
-    vals = OrderedDict()    
-    for ch in param:      
+    vals = OrderedDict()
+    for ch in param:
         vals[ch.name()] = (ch.opts, getOpts(ch))
     return vals
 
 def getStruct(param:Parameter,) -> OrderedDict:
     """Return an OrderedDict with tree structures of all children of this parameter
+
         Parameters
         ----------
         param: Parameter
+
         Returns
         -------
         OrderedDict    
@@ -137,9 +139,11 @@ def getStruct(param:Parameter,) -> OrderedDict:
 
 def getValues(param:Parameter,) -> OrderedDict:
     """Return an OrderedDict with tree structures of all values for all children of this parameter
+
         Parameters
         ----------
         param: Parameter
+
         Returns
         -------
         OrderedDict    
@@ -149,25 +153,27 @@ def getValues(param:Parameter,) -> OrderedDict:
 
 def compareParameters(param1:Parameter, param2:Parameter, with_self: bool = True)-> bool:
     """Compare the structure and the opts of two parameters with their children,
-     return True if structure and all opts are identical.
-     If with_self is False, only the children opts are compared.
+        return True if structure and all opts are identical.
+        If with_self is False, only the children opts are compared.
+
         Parameters
         ----------
         param1: Parameter
-        param2: Parameter   
+        param2: Parameter
         with_self: bool
-        
+
         Returns
         -------
-        Bool    
+        Bool
     """
     is_same = getOpts(param1) == getOpts(param2)
-    if with_self:        
-        is_same = is_same and (param1.opts == param2.opts)        
+    if with_self:
+        is_same = is_same and (param1.opts == param2.opts)
     return is_same
     
 def compareStructureParameter(param1:Parameter, param2: Parameter,)-> bool:
     """Compare the structure of two parameters with their children, return True if structure is identical
+
         Parameters
         ----------
         param1: Parameter
@@ -181,18 +187,20 @@ def compareStructureParameter(param1:Parameter, param2: Parameter,)-> bool:
 
 
 def compareValuesParameter(param1:Parameter, param2: Parameter, with_self: bool = True)-> bool:
-    """Compare the structure and the values of two parameters with their children, return True if structures and values are identical
-        Parameters
+    """Compare the structure and the values of two parameters with their children, return True if structures and values
+        are identical.
         If with_self is False, only the children opts are compared.
+
+        Parameters
         ----------
         param1: Parameter
-        param2: Parameter   
+        param2: Parameter
         with_self: bool
-        
+
         Returns
         -------
-        Bool    
-    """    
+        Bool
+    """
     is_same = getValues(param1) == getValues(param2)
     if with_self:        
         is_same = is_same and (param1.value == param2.value)        
@@ -200,8 +208,6 @@ def compareValuesParameter(param1:Parameter, param2: Parameter, with_self: bool 
 
 
 def iter_children(param, childlist: list = [], filter_type=(), filter_name=(), select_filter=False)-> list:
-
-
     """
     Get a list of parameters' name under a given Parameter (see iter_children_params)
 
@@ -422,14 +428,16 @@ def change_visibility_all_descendants(param: Parameter, visible: bool = True):
 def scroll_log(scroll_val, min_val, max_val):
     """
     Convert a scroll value [0-100] to a log scale between min_val and max_val
+
     Parameters
     ----------
     scroll
     min_val
     max_val
+
     Returns
     -------
-
+    the scaled value
     """
     assert scroll_val >= 0
     assert scroll_val <= 100
@@ -440,14 +448,16 @@ def scroll_log(scroll_val, min_val, max_val):
 def scroll_linear(scroll_val, min_val, max_val):
     """
     Convert a scroll value [0-100] to a linear scale between min_val and max_val
+
     Parameters
     ----------
     scroll
     min_val
     max_val
+
     Returns
     -------
-
+    the scaled value
     """
     assert scroll_val >= 0
     assert scroll_val <= 100
