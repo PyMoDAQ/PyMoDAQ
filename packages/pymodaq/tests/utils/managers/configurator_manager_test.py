@@ -59,6 +59,5 @@ class TestConfigurator:
 class TestSpecialEntryFactory:
 
     def test_registered_entries(self):
-        for entry in SubEntryHandlerTypes.names():
-
+        for entry in SubEntryHandlerTypes.values():
             assert entry in factory.entries
