@@ -19,7 +19,7 @@ from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
 from pymodaq.utils.managers.configurator.entries import ConfiguratorSubEntry
-from pymodaq.utils.managers.configurator.special_entries import (
+from pymodaq.utils.managers.configurator.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError)
 from pymodaq.utils.managers.configurator.utils import (
     ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
