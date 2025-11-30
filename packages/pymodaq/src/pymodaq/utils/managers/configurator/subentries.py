@@ -271,7 +271,7 @@ class WaitSubEntryHandler(SubEntryHandler):
 
         return ConfiguratorSubEntry(
             self.handler_name,
-            'None',
+            str(ModuleType.NONE),
             module_type=ModuleType.NONE,
             setting=ParameterWithPath(
                 parameter=Parameter.create(title='Waiting Time',

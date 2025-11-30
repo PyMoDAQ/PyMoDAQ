@@ -127,7 +127,7 @@ class Configurator(ManagerBase):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
                 self.config_model, self.settings, self.actuators, self.detectors)
             try:
-                if entry.module_name is 'None':
+                if entry.module_name == ModuleType.NONE:
                     mod = None
                 else:
                     mod = self.dashboard.modules_manager.get_mod_from_name(
