@@ -257,7 +257,7 @@ class DashBoard(CustomApp):
         self.configurator.entry = 'default'
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
-        self.configurator.apply_entry(self.configurator.entry_filename)
+        self.configurator.execute_entry(self.configurator.entry_filename)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
@@ -328,10 +328,13 @@ class DashBoard(CustomApp):
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
                 actuator_module.quit_fun()
+                QtWidgets.QApplication.processEvents()
                 dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
+                    dock.removeWidgets()
                     dock.close()
-            self.compact_actuator_dock.close()
+            if len(self.compact_actuator_dock.widgets) == 0:
+                self.compact_actuator_dock.close()
         except Exception as e:
             logger.exception(str(e))
 

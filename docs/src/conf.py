@@ -15,13 +15,12 @@
 import os
 import sys
 import datetime
-
 sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('./src'))
-sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions'))
-sys.path.insert(0, os.path.abspath('./src/pymodaq/extensions/bayesian'))
-sys.path.insert(0, os.path.abspath('./src/pymodaq/utils.plotting.data_viewers'))
-sys.path.insert(0, os.path.abspath('./src/pymodaq.utils.data'))
+sys.path.insert(0, os.path.abspath('.../packages/pymodaq_utils/src'))
+sys.path.insert(0, os.path.abspath('.../packages/pymodaq_data/src'))
+sys.path.insert(0, os.path.abspath('.../packages/pymodaq_gui/src'))
+sys.path.insert(0, os.path.abspath('.../packages/pymodaq/src'))
+
 
 # -- Project information -----------------------------------------------------
 # General information about the project.

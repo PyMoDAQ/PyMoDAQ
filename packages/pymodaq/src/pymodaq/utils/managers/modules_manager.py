@@ -31,6 +31,9 @@ config = ControlModulesConfig()
 class ModuleType(StrEnum):
     Actuator = "actuator"
     Detector = "detector"
+    Other = 'other'
+    NONE = 'None'
+
 
 
 class ModulesManager(QObject, ParameterManager):
@@ -135,7 +138,7 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('actuators_positions').show(not show)
 
     @classmethod
-    def get_names(cls, modules):
+    def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
         """Get the titles of a list of Control Modules
 
         Parameters
@@ -165,6 +168,8 @@ class ModulesManager(QObject, ParameterManager):
     def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
         """Getter of a given module from its name (title)
 
+        Returns None is no control module with this name exists
+
         Parameters
         ----------
         name: str
@@ -182,13 +187,13 @@ class ModulesManager(QObject, ParameterManager):
             logger.warning(f'No detector with this name: {name}')
             return None
 
-    def set_actuators(self, actuators, selected_actuators):
+    def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child('modules', 'actuators').setValue(dict(all_items=self.get_names(actuators),
                                                                   selected=self.get_names(selected_actuators)))
 
-    def set_detectors(self, detectors, selected_detectors):
+    def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
         self.settings.child('modules', 'detectors').setValue(dict(all_items=self.get_names(detectors),
@@ -206,8 +211,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @detectors_all.setter
     def detectors_all(self, detectors: List['DAQ_Viewer']):
-        self._detectors = detectors
-
+        self.set_detectors(detectors, [])
 
     @property
     def actuators(self) -> List['DAQ_Move']:
@@ -221,7 +225,7 @@ class ModulesManager(QObject, ParameterManager):
 
     @actuators_all.setter
     def actuators_all(self, actuators: List['DAQ_Move']):
-        self._actuators = actuators
+        self.set_actuators(actuators, [])
 
     @property
     def modules(self):
@@ -480,6 +484,19 @@ class ModulesManager(QObject, ParameterManager):
                                                             selected=[]))
 
         self.connect_actuators(False)
+
+
+    def connect_and_move_actuators(self, dte_act: DataToExport, mode='abs', polling=True,
+                                   slot=None, signal='move_done') -> DataToExport:
+        """ Connect Actuators specified in the dte object and move them either absolute or relative to the
+        given value
+        """
+        self.selected_actuators_name = [dwa.name for dwa in dte_act]
+        self.connect_actuators(True, slot=slot, signal=signal)
+
+        dte = self.move_actuators(dte_act, mode=mode, polling=polling)
+        self.connect_actuators(False)
+        return dte
 
     def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be

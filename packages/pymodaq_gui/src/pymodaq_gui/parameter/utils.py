@@ -35,7 +35,7 @@ class ParameterWithPath(SerializableBase):
 
     def __eq__(self, other: 'ParameterWithPath'):
         return (self.path == other.path and
-                compareParameters(self.parameter, other.parameter))
+                compareStructureParameter(self.parameter, other.parameter))
 
     @property
     def parameter(self) -> Parameter:

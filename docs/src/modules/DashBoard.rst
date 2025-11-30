@@ -13,6 +13,7 @@ This module is the heart of PyMoDAQ, it will:
 The flow of this module is as follow:
 
 * At startup you have to define/load/modify a preset (see :ref:`preset_manager`) representing an ensemble of actuators and detectors
+* Define/load/modify a Configuration (see :ref:`configurator`) representing a state of the control modules settings and some other special configuration subentries
 * Define/load/modify eventual overshoots (see :ref:`overshoot_manager`)
 * Define/load/modify eventual ROI (Region of interests) selections (see :ref:`roi_manager`)
 * Use the actuators and detectors manually to drive your experiment
@@ -35,15 +36,15 @@ Introduction
 ------------
 
 This module has one main window,
-the dashboard (:numref:`daq_scan_dashboard`) where a log and all declared actuators and detectors
+the dashboard (:numref:`dashboard`) where a log and all declared actuators and detectors
 will be loaded as instances of DAQ_Move and DAQ_Viewer.
 The dashboard gives you full control for manual adjustments
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move on to
 different actions.
 
-  .. _daq_scan_dashboard:
+  .. _dashboard:
 
-.. figure:: /image/dashboard.PNG
+.. figure:: /image/dashboard.png
    :alt: dashboard
 
    Dashboard user interface containing all declared control modules (actuators/detectors) and some initialization info.
@@ -89,6 +90,12 @@ The **Settings** menu is allowing the user to save/load layouts of docked window
 The **Preset Modes** menu enables to create or modify (using the :ref:`preset_manager`) *presets* that are XML
 files defining a set of actuators and detectors used for a given experiment. Each experiment has therefore a corresponding
 preset file. At startup, the program checks for existing preset files and create a menu entry for each of them.
+
+The **Configurator Modes** menu, new from version 5.2.x, enables to create or modify (using the :ref:`configurator`)
+*configurations* that are binary files defining a set of status for the settings of all actuators and detectors
+declared in the DashBoard (from the loaded preset). One can therefore easily switch between different configurations, hence
+different settings for the control modules. Special *actions* are also available such as the initialization of control
+modules (could be interesting if some settings have to be set before initialization) or defining a value for an actuator.
 
 The **Overshoot Modes** menu is used to configure actions like stoping the acquisition orseting hte value of a given
 actuator when a detected value (from a running detector module) gets
