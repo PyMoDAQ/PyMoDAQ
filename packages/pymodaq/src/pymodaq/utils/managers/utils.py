@@ -30,7 +30,7 @@ class ManagerActions(StrEnum):
     DELETE = 'delete_entry'
     SAVE = 'save_entry'
     RELOAD = 'reload_entry'
-    APPLY = 'apply_entry'
+    EXECUTE = 'execute_entry'
     LIST = 'list_entries'
     LIST_EXTERNAL = 'list_entries_external'
 
@@ -124,7 +124,7 @@ class ManagerBase(CustomExt):
         self.setup_ui()
 
         self.update_action_list()
-        self.update_apply_action_tooltip(self.entry)
+        self.update_execute_action_tooltip(self.entry)
 
     @staticmethod
     def format_subentries(entries: list[Any]):
@@ -250,7 +250,8 @@ class ManagerBase(CustomExt):
         self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
         self.add_action(ManagerActions.NEW,
                         f'New {self.entry_type.capitalize()}', 'ListAdd',
-                        tip=f'Create a new {self.entry_type} file')
+                        tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'ListRemove',
                         tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
@@ -263,10 +264,10 @@ class ManagerBase(CustomExt):
                         f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
                         tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
-        self.add_action(ManagerActions.APPLY,
-                        f'Apply {self.entry_type.capitalize()}', 'MailSend',
-                        tip=f'Apply the current {self.entry_type} file ("Ctrl+A")',
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A))
+        self.add_action(ManagerActions.EXECUTE,
+                        f'Execute {self.entry_type.capitalize()}', 'MailSend',
+                        tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
 
 
         # ACTIONS external: Dashboard, ...
@@ -279,7 +280,7 @@ class ManagerBase(CustomExt):
                         toolbar=Toolbar.EXTERNAL)
         self.add_widget(ManagerActions.LIST_EXTERNAL, QtWidgets.QComboBox,
                         toolbar=Toolbar.EXTERNAL)
-        self.affect_to(ManagerActions.APPLY, self.get_toolbar(Toolbar.EXTERNAL))
+        self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
 
     def connect_things_base(self):
         self.connect_action(ManagerActions.LIST, self.update_entry_base,
@@ -289,7 +290,7 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
         self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry_base())
-        self.connect_action(ManagerActions.APPLY, lambda: self.apply_entry_base())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry_base())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
@@ -385,7 +386,7 @@ class ManagerBase(CustomExt):
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
             self.update_entry_base(self.get_action_list().currentText())
 
-    def apply_entry_base(self, entry_path: Path = None, **kwargs):
+    def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
             self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filename
@@ -394,10 +395,10 @@ class ManagerBase(CustomExt):
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.apply_entry(entry_path, **kwargs)
+        self.execute_entry(entry_path, **kwargs)
         self.applied_entry.emit(entry_path.stem)
 
-    def apply_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -417,7 +418,7 @@ class ManagerBase(CustomExt):
         self.update_entry(entry)
 
         self.get_action_list().setCurrentText(entry.stem)
-        self.update_apply_action_tooltip(entry.stem)
+        self.update_execute_action_tooltip(entry.stem)
         self.get_action_list_external().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
@@ -457,12 +458,12 @@ class ManagerBase(CustomExt):
                     self.get_entry_folder().joinpath(file.stem + self.entry_extension)),
             )
 
-    def update_apply_action_tooltip(self, entry: str):
-        self.get_action(ManagerActions.APPLY).setToolTip(
-            f'Apply the selected {self.entry_type}: {entry} ("Ctrl+A")')
+    def update_execute_action_tooltip(self, entry: str):
+        self.get_action(ManagerActions.EXECUTE).setToolTip(
+            f'Execute the selected {self.entry_type}: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.apply_entry_base(filename)
+        return lambda: self.execute_entry_base(filename)
 
     def update_menu(self):
         try:
@@ -544,7 +545,7 @@ if __name__ == '__main__':
     widget.setModel(entry_sublist_model)
 
 
-    def apply_entries(sublist: list[str]):
+    def execute_entries(sublist: list[str]):
         for ind in range(len(sublist)):
             entry_sublist_model.set_status(ind, bool(np.random.randint(2)))
             QtWidgets.QApplication.processEvents()
@@ -553,5 +554,5 @@ if __name__ == '__main__':
         #widget.close()
 
     widget.show_splash()
-    apply_entries(entries)
+    execute_entries(entries)
     app.exec()

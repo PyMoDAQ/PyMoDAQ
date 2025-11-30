@@ -92,10 +92,10 @@ class SubEntryHandler(QtCore.QObject):
         To be reimplemented """
         raise NotImplementedError
 
-    def apply_subentry(self, entry: ConfiguratorSubEntry,
-                       module:Union['DAQ_Move', 'DAQ_Viewer'],
-                       dashboard: 'DashBoard'):
-        """ Apply the given subentry """
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module:Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
         raise NotImplementedError
 
 
@@ -147,10 +147,10 @@ class SettingsEntryHandler(SubEntryHandler):
     handler_name = SubEntryHandlerTypes.SETTINGS.value
     use_dialog = False
 
-    def apply_subentry(self, entry: ConfiguratorSubEntry,
-                       module: 'DAQ_Move',
-                       dashboard: 'DashBoard'):
-        """ Apply the given special entry """
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: 'DAQ_Move',
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
         module.settings.child(*entry.setting.path[3:]).setValue(entry.setting.value())
 
 
@@ -194,10 +194,10 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
                     suffix=self.value_sb.opts['suffix']),
             path=()),)
 
-    def apply_subentry(self, entry: ConfiguratorSubEntry,
-                       module: 'DAQ_Move',
-                       dashboard: 'DashBoard'):
-        """ Apply the given special entry """
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: 'DAQ_Move',
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
         if not module.initialized_state:
             raise SubEntryError('Could not move an actuator that is not initialized')
         try:
@@ -237,10 +237,10 @@ class InitSubEntryHandler(SubEntryHandler):
                                                          QtCore.Qt.CheckState.Checked else False,
                                                    )))
 
-    def apply_subentry(self, entry: ConfiguratorSubEntry,
-                       module: Union['DAQ_Move', 'DAQ_Viewer'],
-                       dashboard: 'DashBoard'):
-        """ Apply the given special entry """
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
         if module.initialized_state == entry.setting.value():
             raise SubEntryError(
                 f'The {entry.module_name} module is already '
@@ -282,10 +282,10 @@ class WaitSubEntryHandler(SubEntryHandler):
                                            siPrefix=True,
                                            )))
 
-    def apply_subentry(self, entry: ConfiguratorSubEntry,
-                       module: Union['DAQ_Move', 'DAQ_Viewer'],
-                       dashboard: 'DashBoard'):
-        """ Apply the given special entry """
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
         start = time.perf_counter()
 
         while abs(time.perf_counter() - start) < entry.setting.value():

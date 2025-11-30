@@ -110,7 +110,7 @@ class Configurator(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def apply_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -132,7 +132,7 @@ class Configurator(ManagerBase):
                 else:
                     mod = self.dashboard.modules_manager.get_mod_from_name(
                         entry.module_name, entry.module_type)
-                subentry_handler.apply_subentry(entry, module=mod, dashboard=self.dashboard)
+                subentry_handler.execute_subentry(entry, module=mod, dashboard=self.dashboard)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
                 QtCore.QThread.msleep(200)

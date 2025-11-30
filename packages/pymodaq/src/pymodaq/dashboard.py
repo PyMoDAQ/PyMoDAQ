@@ -257,7 +257,7 @@ class DashBoard(CustomApp):
         self.configurator.entry = 'default'
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
-        self.configurator.apply_entry(self.configurator.entry_filename)
+        self.configurator.execute_entry(self.configurator.entry_filename)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
