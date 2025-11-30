@@ -236,12 +236,16 @@ class ConfiguratorModel(TableModel):
         else:
             entries = [mock_entry]
 
-        if action == QtCore.Qt.DropAction.MoveAction: # handle potential multiple entries
-            for ind, entry in enumerate(entries):
-                self.data_tmp = entry
-                start_row = self._data.index(entry)
-                #self.moveRows(start_row, len(entries))
-                self.moveRow(parent, start_row, parent, row)
+        if action == QtCore.Qt.DropAction.MoveAction:
+            pass
+            # this is strange if I move things around using drag/drop
+            # sometimes the MoveRows is called immediately without calling drop???
+            # the code below is therefore not needed (but is still called in case of a drop!!)
+            # for ind, entry in enumerate(entries):
+            #     self.data_tmp = entry
+            #     start_row = self._data.index(entry)
+            #     #self.moveRows(start_row, len(entries))
+            #     self.moveRow(parent, start_row, parent, row)
         elif action == QtCore.Qt.DropAction.CopyAction:  #but only one item in the list in Copy mode
             self.data_tmp = self.split_entry(entries[0])  # in case the entry has children parameters
             for entry in self.data_tmp:  #make sure there is no duplicate
@@ -298,7 +302,11 @@ class ConfiguratorModel(TableModel):
 
     def moveRows(self, sourceParent: QModelIndex, sourceRow: int, count: int,
                  destinationParent: QModelIndex, destinationChild: int) -> bool:
-        ...
+        if count == 1:
+            self.moveRow(sourceParent, sourceRow, destinationParent, destinationChild)
+        else:
+            super().moveRows(sourceParent, sourceRow, count,
+                             destinationParent, destinationChild)
 
     def insertRows(self, row, count, parent):
         self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
@@ -342,6 +350,8 @@ class ConfiguratorModel(TableModel):
 
     def add_data(self, row, data: ConfiguratorSubEntry):
         if data is not None:
+            if data in self._data:
+                return
             self.insert_data(row, data)
             self.update_delegate.emit()
 
