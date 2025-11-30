@@ -73,16 +73,16 @@ DashBoard Managers
 
 API of the various managers, special classes easing the experimental orchestration in the DashBoard.
 
-.. currentmodule:: pymodaq.utils.managers.modules_manager
+.. currentmodule:: pymodaq.utils.managers
 
 .. autosummary::
-    preset_manager.ModulesManager
-    configurator.Configurator
+    preset.preset_manager::PresetManager
+    configurator.configurator::Configurator
 
 .. currentmodule:: pymodaq.utils.managers.preset.preset_manager
 
 .. autoclass:: PresetManager
 
-.. currentmodule:: pymodaq.utils.configurator.Configurator
+.. py:currentmodule:: pymodaq.utils.managers.configurator.configurator
 
 .. autoclass:: Configurator
