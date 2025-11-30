@@ -8,7 +8,8 @@ import pytest
 from pathlib import Path
 from qtpy import QtWidgets
 from pymodaq.utils.managers import Configurator
-from pymodaq.utils.managers.configurator.subentries import SubEntryHandlerFactory
+from pymodaq.utils.managers.configurator.subentries import (
+    SubEntryHandlerFactory, SubEntryHandlerTypes)
 
 
 factory = SubEntryHandlerFactory()
@@ -58,8 +59,6 @@ class TestConfigurator:
 class TestSpecialEntryFactory:
 
     def test_registered_entries(self):
-        for entry in ['actuator_value',
-                      'control_module_init',
-                      'wait_time']:
+        for entry in SubEntryHandlerTypes.names():
 
-            assert entry in factory.short_entries
+            assert entry in factory.entries

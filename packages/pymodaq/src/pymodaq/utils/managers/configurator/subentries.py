@@ -1,17 +1,22 @@
+from dataclasses import dataclass
+
 import time
-from typing import Callable, TYPE_CHECKING, Union
+from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 
 from pymodaq_data import DataToExport
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
-from pymodaq.utils.managers.configurator.entries import ConfiguratorSubEntry
 from pymodaq_utils.abstract import abstract_attribute
 from pymodaq.utils.data import DataActuator, DataToActuators
 
 from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq_utils.enums import StrEnum
+from serializall import SerializableFactory
+
+ser_factory = SerializableFactory()
+
 
 if TYPE_CHECKING:
     from pymodaq.utils.managers.configurator.utils import ConfiguratorModel
@@ -29,6 +34,59 @@ class SubEntryHandlerTypes(StrEnum):
     ACTUATOR_VALUE = 'Actuator Value'
     INIT = 'Init. Module'
     WAIT = 'Waiting Time'
+
+
+
+@SerializableFactory.register_decorator()
+@dataclass
+class ConfiguratorSubEntry:
+    entry_type: SubEntryHandlerTypes
+    module_name: str
+    module_type: ModuleType
+    setting: ParameterWithPath
+
+    def __eq__(self, other: 'ConfiguratorSubEntry'):
+        return (self.entry_type == other.entry_type and
+                self.module_name == other.module_name and
+                self.module_type == other.module_type and
+                self.setting == other.setting)
+
+    def __repr__(self):
+        return f"ConfiguratorSubEntry({self.entry_type} for {self.module_type} module {self.module_name}:"\
+               f" {self.setting.value()}"
+
+    @staticmethod
+    def serialize(entry: 'ConfiguratorSubEntry') -> bytes:
+        """
+
+        """
+        bytes_string = b''
+        bytes_string += ser_factory.get_apply_serializer(entry.entry_type.value)
+        bytes_string += ser_factory.get_apply_serializer(entry.setting)
+        bytes_string += ser_factory.get_apply_serializer(entry.module_name)
+        bytes_string += ser_factory.get_apply_serializer(entry.module_type.value)
+        return bytes_string
+
+    @classmethod
+    def deserialize(cls,
+                    bytes_str: bytes) -> Union['ConfiguratorSubEntry',
+    Tuple['ConfiguratorSubEntry', bytes]]:
+        """Convert bytes into a ParameterWithPath object
+
+        Returns
+        -------
+        ParameterWithPath: the decoded object
+        bytes: the remaining bytes string if any
+        """
+        entry_type , remaining_bytes = ser_factory.get_apply_deserializer(bytes_str, False)
+        entry_type = SubEntryHandlerTypes(entry_type)
+        parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
+        module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
+        module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
+        return ConfiguratorSubEntry(entry_type,
+                                    module_name,
+                                    ModuleType(module_type),
+                                    parameter_with_path), remaining_bytes
 
 
 class SubEntryHandler(QtCore.QObject):
@@ -144,7 +202,7 @@ class SubEntryHandlerFactory:
 @SubEntryHandlerFactory.register_handler()
 class SettingsEntryHandler(SubEntryHandler):
 
-    handler_name = SubEntryHandlerTypes.SETTINGS.value
+    handler_name = SubEntryHandlerTypes.SETTINGS
     use_dialog = False
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
@@ -157,7 +215,7 @@ class SettingsEntryHandler(SubEntryHandler):
 @SubEntryHandlerFactory.register_handler()
 class ActuatorValueSubEntryHandler(SubEntryHandler):
 
-    handler_name = SubEntryHandlerTypes.ACTUATOR_VALUE.value
+    handler_name = SubEntryHandlerTypes.ACTUATOR_VALUE
 
     def setup_widgets(self):
         self.actuator_cb = QtWidgets.QComboBox()
@@ -211,7 +269,7 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
 
 @SubEntryHandlerFactory.register_handler()
 class InitSubEntryHandler(SubEntryHandler):
-    handler_name = SubEntryHandlerTypes.INIT.value
+    handler_name = SubEntryHandlerTypes.INIT
 
     def setup_widgets(self):
         self.control_module_cb = QtWidgets.QComboBox()
@@ -257,7 +315,7 @@ class InitSubEntryHandler(SubEntryHandler):
 
 @SubEntryHandlerFactory.register_handler()
 class WaitSubEntryHandler(SubEntryHandler):
-    handler_name = SubEntryHandlerTypes.WAIT.value
+    handler_name = SubEntryHandlerTypes.WAIT
 
     def setup_widgets(self):
         label = QtWidgets.QLabel('Waiting Time:')
@@ -313,3 +371,5 @@ if __name__ == '__main__':
 
     # Run application
     app.exec()
+
+
