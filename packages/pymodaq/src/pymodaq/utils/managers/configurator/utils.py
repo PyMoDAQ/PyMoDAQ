@@ -20,7 +20,7 @@ from pymodaq_gui.utils.widgets.table import TableModel
 
 from pymodaq_gui import utils as gutils
 
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules_manager import ModuleType

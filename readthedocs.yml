@@ -9,33 +9,14 @@ build:
   os: "ubuntu-24.04"
   tools:
     python: "3.12"
-  apt_packages:
-    - libxkbcommon-x11-0
-    - libxcb-icccm4
-    - libxcb-image0
-    - libxcb-keysyms1
-    - libxcb-cursor0
-    - libxcb-cursor-dev
-    - libxcb-randr0
-    - libxcb-render-util0
-    - libxcb-xinerama0
-    - libxcb-xfixes0
-    - x11-utils
-    - libgl1
-    - libegl1
 
   jobs:
     post_checkout:
-      - git branch
       - git fetch --prune --unshallow
-      - git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - git fetch --tags
     pre_build:
-      - export QT_DEBUG_PLUGINS=1
-      - export QT_QPA_PLATFORM=offscreen
-      #      - sudo mkdir -p /etc/.pymodaq # cannot use sudo command in readthedoc...
-#      - sudo chmod uo+rw /etc/.pymodaq
-      - python docs/automodule.py || true
-      - python install-packages.py 
+      - python docs/automodule.py
+      - python install-packages.py
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -43,7 +24,7 @@ sphinx:
 
 
 # Optionally build your docs in additional formats such as PDF and ePub
-formats: all
+# formats: all
 
 # Optionally set the version of Python and requirements required to build your docs
 python:

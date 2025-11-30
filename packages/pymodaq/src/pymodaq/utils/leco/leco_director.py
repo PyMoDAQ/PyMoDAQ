@@ -18,7 +18,7 @@ from qtpy.QtCore import QTimer
 from pymodaq.utils.leco.director_utils import GenericDirector
 from pymodaq.utils.leco.pymodaq_listener import PymodaqListener
 from pymodaq.utils.leco.rpc_method_definitions import GenericDirectorMethods, MoveDirectorMethods
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 
 config = Config()

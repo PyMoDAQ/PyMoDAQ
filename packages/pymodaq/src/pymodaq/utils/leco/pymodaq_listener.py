@@ -11,7 +11,7 @@ from pyleco.utils.listener import Listener, PipeHandler
 from qtpy.QtCore import QObject, Signal  # type: ignore
 
 from pymodaq_data.data import DataWithAxes
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+from serializall import SerializableFactory, SerializableBase
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath

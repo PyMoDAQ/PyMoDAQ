@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 from pymodaq_data import data as data_mod
 
 
