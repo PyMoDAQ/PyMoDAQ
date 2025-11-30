@@ -20,7 +20,7 @@ from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.managers.configurator.entries import ConfiguratorSubEntry
 from pymodaq.utils.managers.configurator.subentries import (
-    SubEntryHandlerFactory, SubEntryHandler, SubEntryError)
+    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes)
 from pymodaq.utils.managers.configurator.utils import (
     ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
     get_module_from_param, config_subentries_from_path, ParameterDelegate,
@@ -342,7 +342,7 @@ class Configurator(ManagerBase):
         if self.tree.currentItem() is not None:
             current_setting = self.tree.currentItem().param
             module, module_type = get_module_from_param(ParameterWithPath(current_setting))
-            entry = ConfiguratorSubEntry(module, module_type, ParameterWithPath(current_setting))
+            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS,module, module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
