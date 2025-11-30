@@ -8,10 +8,10 @@ import pytest
 from pathlib import Path
 from qtpy import QtWidgets
 from pymodaq.utils.managers import Configurator
-from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory
+from pymodaq.utils.managers.configurator.special_entries import SubEntryHandlerFactory
 
 
-factory = SpecialEntryFactory()
+factory = SubEntryHandlerFactory()
 
 
 @pytest.fixture

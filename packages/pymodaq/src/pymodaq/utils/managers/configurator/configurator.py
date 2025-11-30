@@ -1,3 +1,4 @@
+from jupyter_core.migrate import config_substitutions
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
@@ -17,12 +18,13 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
-from pymodaq.utils.managers.configurator.entries import ConfiguratorEntry
-from pymodaq.utils.managers.configurator.special_entries import SpecialEntryFactory, SpecialEntry
-from pymodaq.utils.managers.configurator.utils import (ConfiguratorParameterTree, ConfiguratorModel,
-                                                       ConfiguratorTableView, get_module_from_param, config_entries_from_path,
-                                                       ParameterDelegate, EntryActions,
-                                                       ModuleType)
+from pymodaq.utils.managers.configurator.entries import ConfiguratorSubEntry
+from pymodaq.utils.managers.configurator.special_entries import (
+    SubEntryHandlerFactory, SubEntryHandler, SubEntryError)
+from pymodaq.utils.managers.configurator.utils import (
+    ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
+    get_module_from_param, config_subentries_from_path, ParameterDelegate,
+    EntryActions, ModuleType)
 
 
 
@@ -34,8 +36,7 @@ if TYPE_CHECKING:
 
 
 logger = set_logger(get_module_name(__file__))
-
-special_entry_factory = SpecialEntryFactory()
+handler_factory = SubEntryHandlerFactory()
 
 
 class Configurator(ManagerBase):
@@ -62,7 +63,7 @@ class Configurator(ManagerBase):
                  preset_filename: str = 'default'):
 
         self._preset_ini = preset_filename
-        self.special_entry: SpecialEntry = None
+        self.subentry_handler: SubEntryHandler = None
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
@@ -103,7 +104,7 @@ class Configurator(ManagerBase):
         self.config_model.save(entry_path)
 
     @staticmethod
-    def format_entry_sublist(entries: list[ConfiguratorEntry]):
+    def format_subentries(entries: list[ConfiguratorSubEntry]):
         return [(f'{entry.entry_type.capitalize()} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
@@ -117,26 +118,29 @@ class Configurator(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
-        config_entries = config_entries_from_path(entry_path)
+        config_subentries = config_subentries_from_path(entry_path)
 
-        if len(config_entries) > 0:
-            self.show_entry_sublist(config_entries, f'Loading Configuration: {self.entry}')
+        if len(config_subentries) > 0:
+            self.show_subentries(config_subentries, f'Loading Configuration: {self.entry}')
 
-        for ind, entry in enumerate(config_entries):
-            special_entry = special_entry_factory.get_entry(entry.entry_type)(
+        for ind, entry in enumerate(config_subentries):
+            subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
                 self.config_model, self.settings, self.actuators, self.detectors)
             try:
-                mod = self.dashboard.modules_manager.get_mod_from_name(entry.module_name,
-                                                                       entry.module_type)
-                special_entry.apply_entry(entry, module=mod, dashboard=self.dashboard)
-                self.entry_sublist_model.set_status(ind, True)
+                if entry.module_name is 'None':
+                    mod = None
+                else:
+                    mod = self.dashboard.modules_manager.get_mod_from_name(
+                        entry.module_name, entry.module_type)
+                subentry_handler.apply_subentry(entry, module=mod, dashboard=self.dashboard)
+                self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
                 QtCore.QThread.msleep(200)
-            except Exception as e:
+            except SubEntryError as e:
                 logger.exception(str(e))
-                self.entry_sublist_model.set_status(ind, False)
+                self.subentries_model.set_status(ind, False)
 
-        self.close_entry_sublist(1000)
+        self.close_subentries_display(1000)
 
     def populate_from_settings(self, settings: Parameter):
         """
@@ -176,10 +180,10 @@ class Configurator(ManagerBase):
         )
         self.populate_from_settings(settings)
 
-    def add_special_entry(self, special_entry_name: str):
-        self.special_entry = special_entry_factory.get_entry(special_entry_name)(
+    def add_subentry(self, special_entry_name: str):
+        self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
             self.config_model, self.settings, self.actuators, self.detectors)
-        self.special_entry.show_dialog()
+        self.subentry_handler.show_dialog()
 
     def setup_docks(self):
         self.tree.setDragEnabled(True)
@@ -197,7 +201,7 @@ class Configurator(ManagerBase):
 
         self.config_model = ConfiguratorModel()
         self.table_out.setModel(self.config_model)
-        self.table_out.add_data_signal[str].connect(self.add_special_entry)
+        self.table_out.add_data_signal[str].connect(self.add_subentry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
         self.table_out.load_data_signal.connect(self.config_model.load)
         self.table_out.save_data_signal.connect(self.config_model.save)
@@ -338,7 +342,7 @@ class Configurator(ManagerBase):
         if self.tree.currentItem() is not None:
             current_setting = self.tree.currentItem().param
             module, module_type = get_module_from_param(ParameterWithPath(current_setting))
-            entry = ConfiguratorEntry(module, module_type, ParameterWithPath(current_setting))
+            entry = ConfiguratorSubEntry(module, module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)

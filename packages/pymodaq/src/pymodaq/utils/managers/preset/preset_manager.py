@@ -107,7 +107,7 @@ class PresetManager(ManagerBase):
             else:
                 plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
-            self.show_entry_sublist(plugin_list_message, title= f'Loading Preset: {self.entry}')
+            self.show_subentries(plugin_list_message, title=f'Loading Preset: {self.entry}')
 
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
@@ -296,7 +296,7 @@ class PresetManager(ManagerBase):
                             self.dashboard.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
-                    self.entry_sublist_model.set_status(ind_module, True)
+                    self.subentries_model.set_status(ind_module, True)
 
                 else:
                     ind_det += 1
@@ -339,10 +339,10 @@ class PresetManager(ManagerBase):
                             self.dashboard.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
-                    self.entry_sublist_model.set_status(ind_module, True)
+                    self.subentries_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
-        self.close_entry_sublist()
+        self.close_subentries_display()
         # restore dock state if saved
 
         self.dashboard.title = self.entry
@@ -471,7 +471,7 @@ class PresetManager(ManagerBase):
                             self.dashboard.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
-                    self.entry_sublist_model.set_status(ind_module, True)
+                    self.subentries_model.set_status(ind_module, True)
 
                 else:
                     ind_det += 1
@@ -519,10 +519,10 @@ class PresetManager(ManagerBase):
                             self.dashboard.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
-                    self.entry_sublist_model.set_status(ind_module, True)
+                    self.subentries_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
-        self.close_entry_sublist()
+        self.close_subentries_display()
         # restore dock state if saved
 
         self.dashboard.title = self.entry

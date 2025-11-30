@@ -45,7 +45,7 @@ class Menu(StrEnum):
     EXTERNAL = 'external'
 
 
-class ManagerEntrySubListModel(QtCore.QAbstractListModel):
+class ManagerSubEntriesModel(QtCore.QAbstractListModel):
 
     def __init__(self, entries: list[str]):
         super().__init__()
@@ -113,8 +113,8 @@ class ManagerBase(CustomExt):
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
-        self.splash_list: Optional[EntrySubListSplash] = None
-        self.entry_sublist_model: Optional[ManagerEntrySubListModel] = None
+        self.splash_subentries: Optional[SubEntriesSplash] = None
+        self.subentries_model: Optional[ManagerSubEntriesModel] = None
 
         if toolbar is not None:
             self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
@@ -127,19 +127,19 @@ class ManagerBase(CustomExt):
         self.update_apply_action_tooltip(self.entry)
 
     @staticmethod
-    def format_entry_sublist(entries: list[Any]):
+    def format_subentries(entries: list[Any]):
         """ Should be reimplemented for better display than the repr one """
         return [str(entry) for entry in entries]
 
-    def show_entry_sublist(self, entries: list[Any], title=''):
-        self.splash_list = EntrySubListSplash(title=title)
-        self.entry_sublist_model = ManagerEntrySubListModel(self.format_entry_sublist(entries))
-        self.splash_list.setModel(self.entry_sublist_model)
-        self.splash_list.show_splash()
+    def show_subentries(self, subentries: list[Any], title=''):
+        self.splash_subentries = SubEntriesSplash(title=title)
+        self.subentries_model = ManagerSubEntriesModel(self.format_subentries(subentries))
+        self.splash_subentries.setModel(self.subentries_model)
+        self.splash_subentries.show_splash()
 
-    def close_entry_sublist(self, after_ms=1000):
-        if self.splash_list is not None:
-            QtCore.QTimer.singleShot(after_ms, self.splash_list.close)
+    def close_subentries_display(self, after_ms=1000):
+        if self.splash_subentries is not None:
+            QtCore.QTimer.singleShot(after_ms, self.splash_subentries.close)
 
     @property
     def manager_name(self) -> str:
@@ -491,7 +491,7 @@ class ListView(QtWidgets.QListView):
         self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 
 
-class EntrySubListSplash(QtWidgets.QLabel):
+class SubEntriesSplash(QtWidgets.QLabel):
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent)
@@ -538,9 +538,9 @@ if __name__ == '__main__':
 
     entries = [f'Module {ind:03.0f} si about to do something incredible' for ind in range(10)]
 
-    widget = EntrySubListSplash()
+    widget = SubEntriesSplash()
 
-    entry_sublist_model = ManagerEntrySubListModel(entries)
+    entry_sublist_model = ManagerSubEntriesModel(entries)
     widget.setModel(entry_sublist_model)
 
 

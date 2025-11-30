@@ -11,24 +11,24 @@ ser_factory = SerializableFactory()
 
 @SerializableFactory.register_decorator()
 @dataclass
-class ConfiguratorEntry:
+class ConfiguratorSubEntry:
     entry_type: str
     module_name: str
     module_type: ModuleType
     setting: ParameterWithPath
 
-    def __eq__(self, other: 'ConfiguratorEntry'):
+    def __eq__(self, other: 'ConfiguratorSubEntry'):
         return (self.entry_type == other.entry_type and
                 self.module_name == other.module_name and
                 self.module_type == other.module_type and
                 self.setting == other.setting)
 
     def __repr__(self):
-        return f"ConfiguratorEntry({self.entry_type} for {self.module_type} module {self.module_name}:"\
+        return f"ConfiguratorSubEntry({self.entry_type} for {self.module_type} module {self.module_name}:"\
                f" {self.setting.value()}"
 
     @staticmethod
-    def serialize(entry: 'ConfiguratorEntry') -> bytes:
+    def serialize(entry: 'ConfiguratorSubEntry') -> bytes:
         """
 
         """
@@ -41,8 +41,8 @@ class ConfiguratorEntry:
 
     @classmethod
     def deserialize(cls,
-                    bytes_str: bytes) -> Union['ConfiguratorEntry',
-    Tuple['ConfiguratorEntry', bytes]]:
+                    bytes_str: bytes) -> Union['ConfiguratorSubEntry',
+    Tuple['ConfiguratorSubEntry', bytes]]:
         """Convert bytes into a ParameterWithPath object
 
         Returns
@@ -54,7 +54,7 @@ class ConfiguratorEntry:
         parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        return ConfiguratorEntry(entry_type,
-                                 module_name,
-                                 ModuleType(module_type),
-                                 parameter_with_path), remaining_bytes
+        return ConfiguratorSubEntry(entry_type,
+                                    module_name,
+                                    ModuleType(module_type),
+                                    parameter_with_path), remaining_bytes
