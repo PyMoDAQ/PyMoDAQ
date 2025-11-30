@@ -398,11 +398,15 @@ class PresetManager(ManagerBase):
         plugin_list_message = []
         for plug_id in plugins_sorted:
             for plugin in plug_id:
+                module_type = ModuleType.Actuator if plugin['type'] == 'move' else ModuleType.Detector
+                inst_plugin = (plugin['value']['params', 'main_settings', 'move_type'].capitalize()
+                               if plugin['type'] == 'move'
+                               else plugin['value']['params', 'main_settings', 'DAQ_type'] +
+                                    '/' +
+                                    plugin['value']['params', 'main_settings', 'detector_type'].capitalize())
                 plugin_list_message.append(
-                    f"Initializing {ModuleType.Actuator if plugin['type'] == 'move' else ModuleType.Detector} "
-                    f"{plugin['value']['params', 'main_settings', 'move_type'].capitalize() if plugin['type'] == 'move' 
-                    else plugin['value']['params', 'main_settings', 'DAQ_type'] + '/' + 
-                         plugin['value']['params', 'main_settings', 'detector_type'].capitalize()}:"
+                    f"Initializing {module_type} "
+                    f"{inst_plugin}:"
                     f" {plugin['value']['name']}")
 
         return plugins_sorted, plugin_list_message
