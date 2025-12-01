@@ -54,6 +54,11 @@ from pymodaq_utils.logger import set_logger
 logger = set_logger('pymodaq_gui', base_logger=False)
 
 logger.info('Starting PyMoDAQ GUI modules')
+if not isinstance(config['qtbackend']['backend'], list): #True for old usage
+    logger.error(f"{config['qtbackend']['backend']} is not a list, please delete your actual "
+                 f"pymodaq_utils configuration file to "
+                 f"reflect this new type")
+    sys.exit(-1)
 logger.info(f"Trying to set Qt backend to: {config['qtbackend']['backend'][0]}")
 set_and_check_qt_backend_or_die(config)
 
