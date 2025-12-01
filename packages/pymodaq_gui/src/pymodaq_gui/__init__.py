@@ -4,11 +4,11 @@ import sys
 import pkgutil
 
 def set_and_check_qt_backend_or_die(config):
-    wanted_backend = config('qtbackend', 'backends')[0]
+    wanted_backend = config('qtbackend', 'backend')[0]
     backend = wanted_backend
     #filter to get only qt backend modules
     available_backends = [mod.name.lower() for mod in pkgutil.iter_modules() \
-                          if mod.name.lower() in [ backend.lower() for backend in config('qtbackend', 'backends')]]
+                          if mod.name.lower() in [ backend.lower() for backend in config('qtbackend', 'backend')]]
 
     backend_found = wanted_backend.lower() in available_backends
     if not backend_found:
@@ -54,7 +54,7 @@ from pymodaq_utils.logger import set_logger
 logger = set_logger('pymodaq_gui', base_logger=False)
 
 logger.info('Starting PyMoDAQ GUI modules')
-logger.info(f"Trying to set Qt backend to: {config['qtbackend']['backends'][0]}")
+logger.info(f"Trying to set Qt backend to: {config['qtbackend']['backend'][0]}")
 set_and_check_qt_backend_or_die(config)
 
 

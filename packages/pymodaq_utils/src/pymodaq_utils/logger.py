@@ -38,7 +38,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     logger = logging.getLogger(logger_name)
 
     if log_level is None:
-        log_level = config('general', 'debug_level')
+        log_level = config('general', 'debug_level')[0]
     logger.setLevel(log_level)
     if add_handler:
         try:
