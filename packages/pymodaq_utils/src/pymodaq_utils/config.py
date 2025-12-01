@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
 from typing import Iterable as IterableType
 
+
+from pymodaq_utils.singleton import Singleton
+from fasteners import ReaderWriterLock
+
 import toml
 import logging
 if TYPE_CHECKING:
@@ -256,15 +260,6 @@ class ConfigError(Exception):
     pass
 
 
-class Singleton(type):
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
 
 class BaseConfig(metaclass=Singleton):
     """Base class to manage configuration files
@@ -283,40 +278,61 @@ class BaseConfig(metaclass=Singleton):
     config_name: str = abstractproperty()
 
     def __init__(self):
-        self.load()
+        # There's different strategies for readers-writer locks
+        # Let's try with a read-preferring lock (may cause starvation of writers but highly improbable)
+        self._lock = ReaderWriterLock()
 
-    def load(self):
-        self._config = self.load_config(self.config_name, self.config_template_path)
+        #write lock because it MODIFIES config
+        with self._lock.write_lock():
+            self._config = self.load_config(self.config_name, self.config_template_path)
+
+    def __del__(self):
+        self.save()
 
     def __repr__(self):
         return f'{self.config_name} configuration file'
 
     def __call__(self, *args):
-        try:
-            ret = getitem_recursive(self._config, *args)
-        except KeyError as e:
-            raise ConfigError(f'the path {args} does not exist in your configuration toml'
-                              f' file, check your config folder')
-        return ret
+        with self._lock.read_lock():
+            try:
+                ret = getitem_recursive(self._config, *args)
+            except KeyError as e:
+                raise ConfigError(f'the path {args} does not exist in your configuration toml'
+                                  f' file, check your config folder')
+            return ret
 
     def __contains__(self, item):
-        return self._config.__contains__(item)
+        with self._lock.read_lock():
+            ret = self._config.__contains__(item)
+        return ret
 
     def to_dict(self):
-        return self._config
+        # We need a copy as a returned object will be unlocked
+        # So it could be modified
+        with self._lock.read_lock():
+            ret = self._config.copy()
+        return ret
+
 
     def get(self, key: Union[str, Iterable[str]], default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
+        with self._lock.read_lock():
+            try:
+                ret = self[key]
+            except KeyError:
+                ret = default
+        return ret
+
+
 
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
-        if isinstance(item, tuple):
-            return getitem_recursive(self._config, *item)
-        else:
-            return self._config[item]
+        with self._lock.read_lock():
+            if isinstance(item, tuple):
+                ret = getitem_recursive(self._config, *item)
+            else:
+                ret = self._config[item]
+        return ret
+
 
     # def __setitem__(self, key, value):
     #     if isinstance(key, tuple):
@@ -326,13 +342,14 @@ class BaseConfig(metaclass=Singleton):
     #         self._config[key] = value
 
     def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
-            if value is None:  # means the setting is a group
-                value = {}
-            dic[key[-1]] = value
-        else:
-            self._config[key] = value
+        with self._lock.write_lock():
+            if isinstance(key, tuple):
+                dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
+                if value is None:  # means the setting is a group
+                    value = {}
+                dic[key[-1]] = value
+            else:
+                self._config[key] = value
 
     def load_config(self, config_file_name, template_path: Path):
         """Load a configuration file from both system-wide and user file
@@ -378,16 +395,18 @@ class BaseConfig(metaclass=Singleton):
 
     def save(self):
         """Save the current Config object into the user toml file and reload it """
-        self.config_path.write_text(toml.dumps(self.to_dict()))
-        self.load()
+        with self._lock.write_lock():
+            self.config_path.write_text(toml.dumps(self.to_dict()))
+            #  self._config = self.load_config(self.config_name, self.config_template_path)
 
     def get_children(self, *path: IterableType[str]):
         """ Get the list of config entries at a given path within the configulation toml file
 
         new in 4.3.0
         """
-        return list(getitem_recursive(self._config, *path).keys())
-
+        with self._lock.read_lock():
+            ret = list(getitem_recursive(self._config, *path).keys())
+        return ret
 
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""

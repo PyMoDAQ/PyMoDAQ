@@ -5,6 +5,7 @@ Created the 19/10/2023
 @author: Sebastien Weber
 """
 import datetime
+from typing import Tuple
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject
@@ -12,6 +13,14 @@ from qtpy.QtCore import QObject
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_utils.config import Config, create_toml_from_dict
 
+def get_param_path(param : Parameter, include_top_level_parent=False) -> Tuple[str]:
+    names = []
+    while param is not None:
+        names.insert(0, param.name())  # prepend name
+        param = param.parent()
+    if not include_top_level_parent and names:
+        names.pop(0)
+    return tuple(names)
 
 class TreeFromToml(QObject):
     """ Create a ParameterTree from a configuration file"""
@@ -29,8 +38,23 @@ class TreeFromToml(QObject):
 
         self.settings = Parameter.create(title='settings', name='settings', type='group',
                                          children=params)
+        self.settings.sigTreeStateChanged.connect(self.cache_config_change)
         self.settings_tree = ParameterTree()
+
         self.settings_tree.setParameters(self.settings, showTop=False)
+
+        self._cached_config_changes = {}
+
+    def cache_config_change(self, _base_param, changes):
+        for param, change_type, value in changes:
+            if change_type == "value":
+                path = get_param_path(param)
+                self._cached_config_changes[path] =  value
+
+    def commit_config_changes_cache(self):
+        for path, value in self._cached_config_changes.items():
+            self._config[*path] = value
+        self._config.save()
 
     def show_dialog(self) -> bool:
 
@@ -50,10 +74,8 @@ class TreeFromToml(QObject):
         res = self.dialog.exec()
 
         if res == QtWidgets.QDialog.DialogCode.Accepted:
-            with open(self._config.config_path, 'w') as f:
-                config_dict = self.param_to_dict(self.settings)
-                config_dict.pop('config_path')
-                create_toml_from_dict(config_dict, self._config.config_path)
+            self.commit_config_changes_cache()
+        # self._cached_config_changes = {}
         return res
 
     @classmethod

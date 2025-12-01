@@ -1580,9 +1580,8 @@ class DashBoard(CustomApp):
         from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
 
         config_tree = TreeFromToml(config)
-        res = config_tree.show_dialog()
-        if res == QtWidgets.QDialog.DialogCode.Accepted:
-            config.load()
+        config_tree.show_dialog()
+
 
     def setup_docks(self):
         # %% create logger dock
