@@ -156,6 +156,19 @@ class TestConfig:
         assert config.get(('style', 'darkstyle')) == True
 
 
+class TestConfigSingleton:
+    def test_is_same_object(self):
+        config1 = Config()
+        config2 = Config()
+
+        assert config1 is config2
+
+    def test_different_class_different_objects(self):
+        config1 = Config()
+        config2 = CustomConfig()
+
+        assert config1 is not config2
+
 class Config(config_mod.BaseConfig):
     config_name = 'custom_config_tested'
     config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
