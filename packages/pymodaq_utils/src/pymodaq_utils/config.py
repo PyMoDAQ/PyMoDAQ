@@ -395,8 +395,11 @@ class Config(BaseConfig):
         elif 'backend' in args:
             entry = super().__call__(*args)
             if not isinstance(entry, list):
-                args = replace_item_in_list(args, 'backend', 'backends')
-                return super().__call__(*args)
+                try:
+                    args = replace_item_in_list(args, 'backend', 'backends')
+                    return super().__call__(*args)
+                except (ConfigError, KeyError):
+                    return [entry]
             else:
                 return entry
         elif 'debug_levels' in args:
@@ -408,7 +411,10 @@ class Config(BaseConfig):
             entry = super().__call__(*args)
             if not isinstance(entry, list):
                 args = replace_item_in_list(args, 'debug_level', 'debug_levels')
-                return super().__call__(*args)
+                try:
+                    return super().__call__(*args)
+                except (KeyError, ConfigError):
+                    return [entry]
             else:
                 return entry
 
