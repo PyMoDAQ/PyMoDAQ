@@ -304,7 +304,8 @@ class Configurator(ManagerBase):
             param.setOpts(**{'readonly': True,
                              VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
         else:
-            param.setOpts(**{VALID_FOR_CONFIGURATION: False})
+            if not param.opts.get(VALID_FOR_CONFIGURATION, False):
+                param.setOpts(**{VALID_FOR_CONFIGURATION: False})
 
         for child in param.children():
             self.set_readonly_setting(child)
