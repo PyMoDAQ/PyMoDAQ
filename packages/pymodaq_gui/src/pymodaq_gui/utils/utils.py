@@ -109,90 +109,91 @@ custom_folder = here.parent.joinpath('QtDesigner_Ressources/custom/')
 QtCore.QDir.addSearchPath('custom', str(custom_folder))
 
 
-def set_dark_palette(app):
+def set_dark_palette(app, dark=True):
     from qtpy.QtGui import QPalette, QColor
     app.setStyle("Fusion")
 
-    palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor(53,53,53))
-    palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.Base, QColor(42,42,42))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.Dark, QColor(35,35,35))
-    palette.setColor(QPalette.ColorRole.Shadow, QColor(20,20,20))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
-    palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
-    palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
-    palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-    palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(250,250,250))
-    palette.setColor(QPalette.Disabled, QPalette.ColorRole.ButtonText, Qt.GlobalColor.darkGray)
-    palette.setColor(QPalette.Disabled, QPalette.ColorRole.WindowText, Qt.GlobalColor.darkGray)
-    palette.setColor(QPalette.Disabled, QPalette.ColorRole.Text, Qt.GlobalColor.darkGray)
-    palette.setColor(QPalette.Disabled, QPalette.ColorRole.Light, QColor(53, 53, 53))
+    if dark:
+        palette = QPalette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(53,53,53))
+        palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.Base, QColor(42,42,42))
+        palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.Dark, QColor(35,35,35))
+        palette.setColor(QPalette.ColorRole.Shadow, QColor(20,20,20))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+        palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
+        palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+        palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+        palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+        palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(250,250,250))
+        palette.setColor(QPalette.Disabled, QPalette.ColorRole.ButtonText, Qt.GlobalColor.darkGray)
+        palette.setColor(QPalette.Disabled, QPalette.ColorRole.WindowText, Qt.GlobalColor.darkGray)
+        palette.setColor(QPalette.Disabled, QPalette.ColorRole.Text, Qt.GlobalColor.darkGray)
+        palette.setColor(QPalette.Disabled, QPalette.ColorRole.Light, QColor(53, 53, 53))
 
-    app.setPalette(palette)
+        app.setPalette(palette)
 
-    # Checkbox are not visible in dark style but it is not possible to
-    # modify QCheckBox style without messing up the check mark (it disappears)
-    # so images are needed to avoid the problem.
-    app.setStyleSheet("""
-        QCheckBox::indicator {
-            width: 1em;
-            height: 1em; 
-        }
-        QCheckBox::indicator:unchecked {
-            image: url('custom:checkbox/unchecked.png');
-        }
-        QCheckBox::indicator:unchecked:disabled {
-            image: url('custom:checkbox/unchecked_disabled.png');
-        }
-        QCheckBox::indicator:unchecked:focus {
-            image: url('custom:checkbox/unchecked_focus.png');
-        }
-        QCheckBox::indicator:unchecked:pressed {
-            image: url('custom:checkbox/unchecked_pressed.png');
-        }
-        QCheckBox::indicator:checked {
-            image: url('custom:checkbox/checked.png');
-        }
-        QCheckBox::indicator:checked:disabled {
-            image: url('custom:checkbox/checked_disabled.png');
-        }
-        QCheckBox::indicator:checked:focus {
-            image: url('custom:checkbox/checked_focus.png');
-        }
-        QCheckBox::indicator:checked:pressed {
-            image: url('custom:checkbox/checked_pressed.png');
-        }
-        QCheckBox::indicator:indeterminate {
-            image: url('custom:checkbox/indeterminate.png');
-        }
-        QCheckBox::indicator:indeterminate:disabled {
-            image: url('custom:checkbox/indeterminate_disabled.png');
-        }
-        QCheckBox::indicator:indeterminate:focus {
-            image: url('custom:checkbox/indeterminate_focus.png');
-        }
-        QCheckBox::indicator:indeterminate:pressed {
-            image: url('custom:checkbox/indeterminate_pressed.png');
-        }
-
-        QToolBarExtension {
-            background: #555555;
-            qproperty-icon: url('custom:arrow/right.png');
-        }
-        QToolTip {
-            color: white;
-            background-color: #555555;
-            border: 1px solid white; 
-        }
-        """)
+        # Checkbox are not visible in dark style but it is not possible to
+        # modify QCheckBox style without messing up the check mark (it disappears)
+        # so images are needed to avoid the problem.
+        app.setStyleSheet("""
+            QCheckBox::indicator {
+                width: 1em;
+                height: 1em; 
+            }
+            QCheckBox::indicator:unchecked {
+                image: url('custom:checkbox/unchecked.png');
+            }
+            QCheckBox::indicator:unchecked:disabled {
+                image: url('custom:checkbox/unchecked_disabled.png');
+            }
+            QCheckBox::indicator:unchecked:focus {
+                image: url('custom:checkbox/unchecked_focus.png');
+            }
+            QCheckBox::indicator:unchecked:pressed {
+                image: url('custom:checkbox/unchecked_pressed.png');
+            }
+            QCheckBox::indicator:checked {
+                image: url('custom:checkbox/checked.png');
+            }
+            QCheckBox::indicator:checked:disabled {
+                image: url('custom:checkbox/checked_disabled.png');
+            }
+            QCheckBox::indicator:checked:focus {
+                image: url('custom:checkbox/checked_focus.png');
+            }
+            QCheckBox::indicator:checked:pressed {
+                image: url('custom:checkbox/checked_pressed.png');
+            }
+            QCheckBox::indicator:indeterminate {
+                image: url('custom:checkbox/indeterminate.png');
+            }
+            QCheckBox::indicator:indeterminate:disabled {
+                image: url('custom:checkbox/indeterminate_disabled.png');
+            }
+            QCheckBox::indicator:indeterminate:focus {
+                image: url('custom:checkbox/indeterminate_focus.png');
+            }
+            QCheckBox::indicator:indeterminate:pressed {
+                image: url('custom:checkbox/indeterminate_pressed.png');
+            }
+    
+            QToolBarExtension {
+                background: #555555;
+                qproperty-icon: url('custom:arrow/right.png');
+            }
+            QToolTip {
+                color: white;
+                background-color: #555555;
+                border: 1px solid white; 
+            }
+            """)
 
 def clickable(widget):
     class Filter(QObject):
@@ -340,8 +341,7 @@ def start_qapplication() -> QtWidgets.QApplication:
 
 def mkQApp(name: str):
     app = mkQApppg(name)
-    if config('style', 'darkstyle'):
-        set_dark_palette(app)
+    set_dark_palette(app, config('style', 'darkstyle'))
     return app
 
 
