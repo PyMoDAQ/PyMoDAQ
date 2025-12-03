@@ -387,18 +387,15 @@ class Config(BaseConfig):
         return dict(user=dict(name=USER))
 
     def __call__(self, *args):
-        if 'backends' in args:
-            try:
-                return super().__call__(*args)
-            except KeyError:
-               args = replace_item_in_list(args, 'backends', 'backend')
-        elif 'debug_levels' in args:
-            try:
-                return super().__call__(*args)
-            except KeyError:
-                args = replace_item_in_list(args, 'debug_levels', 'debug_level')
-
-
+        """ Patch in case of a mixup of configs from different version
+        of pymodaq: v5.1 and v5.2
+        """
+        if 'backend' in args or 'debug_level' in args:
+            entry = super().__call__(*args)
+            if isinstance(entry, list):
+                return entry[0]
+            else:
+                return entry
         return super().__call__(*args)
 
 
