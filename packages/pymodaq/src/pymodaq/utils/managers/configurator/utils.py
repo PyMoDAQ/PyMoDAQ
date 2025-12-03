@@ -472,7 +472,11 @@ class ConfiguratorParameterTree(ParameterTree):
     def mimeData(self, items):
         data = QMimeData()
         param_with_path = ParameterWithPath(items[0].param)
-        module, module_type = get_module_from_param(param_with_path)
+        try:
+            module, module_type = get_module_from_param(param_with_path)
+        except KeyError:
+            module = ModuleType.NONE.value
+            module_type = ModuleType.NONE
         if module is not None:
             entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS,
                                          module, module_type, param_with_path)
