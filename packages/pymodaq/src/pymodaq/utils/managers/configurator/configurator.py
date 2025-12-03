@@ -252,6 +252,7 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
+        self.get_toolbar('main').addSeparator()
         self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
                         checkable=True, toolbar=self.get_toolbar('main'),
                         tip='If Checked: display all settings (in green, settings that can be configured)'
