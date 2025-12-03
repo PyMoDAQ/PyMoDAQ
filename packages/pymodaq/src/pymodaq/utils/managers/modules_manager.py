@@ -302,7 +302,8 @@ class ModulesManager(QObject, ParameterManager):
             settings.child(module_type).addChild(
                 {'title': module.title, 'name': f'{module_type}_{ind:03.0f}', 'type': 'group',
                  'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title}
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title,
+                      VALID_FOR_CONFIGURATION: False}
                  ]},
             )
             settings.child(module_type,
