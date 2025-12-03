@@ -340,7 +340,11 @@ class Configurator(ManagerBase):
     def add_setting(self):
         if self.tree.currentItem() is not None:
             current_setting = self.tree.currentItem().param
-            module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+            try:
+                module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+            except KeyError:
+                module = ModuleType.NONE.value
+                module_type = ModuleType.NONE
             entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS, module,
                                          module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
