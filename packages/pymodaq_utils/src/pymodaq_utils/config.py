@@ -392,25 +392,12 @@ class Config(BaseConfig):
                 return super().__call__(*args)
             except KeyError:
                args = replace_item_in_list(args, 'backends', 'backend')
-        elif 'backend' in args:
-            entry = super().__call__(*args)
-            if not isinstance(entry, list):
-                args = replace_item_in_list(args, 'backend', 'backends')
-                return super().__call__(*args)
-            else:
-                return entry
         elif 'debug_levels' in args:
             try:
                 return super().__call__(*args)
             except KeyError:
                 args = replace_item_in_list(args, 'debug_levels', 'debug_level')
-        elif 'debug_level' in args:
-            entry = super().__call__(*args)
-            if not isinstance(entry, list):
-                args = replace_item_in_list(args, 'debug_level', 'debug_levels')
-                return super().__call__(*args)
-            else:
-                return entry
+
 
         return super().__call__(*args)
 
