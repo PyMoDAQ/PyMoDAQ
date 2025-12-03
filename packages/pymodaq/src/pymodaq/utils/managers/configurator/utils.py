@@ -474,7 +474,7 @@ class ConfiguratorParameterTree(ParameterTree):
         param_with_path = ParameterWithPath(items[0].param)
         module, module_type = get_module_from_param(param_with_path)
         if module is not None:
-            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS.value,
+            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS,
                                          module, module_type, param_with_path)
             data.setData('pymodaq/configurator_entry',
                          ser_factory.get_apply_serializer([entry]))
