@@ -1,6 +1,7 @@
 #this is the configuration file of PyMoDAQ
 [style]
-darkstyle = true
+darkstyle = true #deprecated
+style = ['default', 'dark']
 syntax_highlighting = 'github-dark'
 language = "English"
 country = "UnitedStates"

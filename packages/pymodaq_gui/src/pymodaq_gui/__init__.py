@@ -2,6 +2,7 @@ import importlib.util
 import os
 import sys
 import pkgutil
+from qtpy import QtWidgets
 
 def set_and_check_qt_backend_or_die(config):
     wanted_backend = config('qtbackend', 'backends')[0]
@@ -38,6 +39,19 @@ def set_and_check_qt_backend_or_die(config):
         print(msg)
         sys.exit(-1)
 
+def set_check_style():
+    current_styles = config('style', 'style')
+    styles_default = ['default', 'dark']
+    styles = QtWidgets.QStyleFactory.keys()
+    if 'Fusion' in styles:
+        styles.remove('Fusion')
+    styles_default.extend(styles)
+    for style in current_styles[:]:
+        if style not in styles_default:
+            current_styles.remove(style)
+
+    config['style', 'style'] = current_styles
+    config.save()
 
 
 try:
@@ -59,6 +73,8 @@ set_and_check_qt_backend_or_die(config)
 
 
 from pymodaq_gui.qt_utils import setLocale
+
+set_check_style()
 
 from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
 
