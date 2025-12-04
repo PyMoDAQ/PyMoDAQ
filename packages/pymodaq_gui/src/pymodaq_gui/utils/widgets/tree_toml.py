@@ -10,17 +10,10 @@ from typing import Tuple
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject
 
+from pymodaq_gui.parameter.utils import get_param_path
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_utils.config import Config, create_toml_from_dict
 
-def get_param_path(param : Parameter, include_top_level_parent=False) -> Tuple[str]:
-    names = []
-    while param is not None:
-        names.insert(0, param.name())  # prepend name
-        param = param.parent()
-    if not include_top_level_parent and names:
-        names.pop(0)
-    return tuple(names)
 
 class TreeFromToml(QObject):
     """ Create a ParameterTree from a configuration file"""
@@ -44,11 +37,12 @@ class TreeFromToml(QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         self._cached_config_changes = {}
+        self.dialog = None
 
     def cache_config_change(self, _base_param, changes):
         for param, change_type, value in changes:
             if change_type == "value":
-                path = get_param_path(param)
+                path = tuple(get_param_path(param)[1:])
                 self._cached_config_changes[path] =  value
 
     def commit_config_changes_cache(self):
@@ -61,22 +55,25 @@ class TreeFromToml(QObject):
         self.dialog = QtWidgets.QDialog()
         self.dialog.setWindowTitle('Please enter new configuration values!')
         self.dialog.setLayout(QtWidgets.QVBoxLayout())
-        buttonBox = QtWidgets.QDialogButtonBox(parent=self.dialog)
+        button_box = QtWidgets.QDialogButtonBox(parent=self.dialog)
 
-        buttonBox.addButton('Save', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(self.dialog.accept)
-        buttonBox.addButton("Cancel", QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(self.dialog.reject)
+        save_button = button_box.addButton('Save', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
+        save_button.setObjectName('save')
+        button_box.accepted.connect(self.dialog.accept)
+
+        cancel_button = button_box.addButton("Cancel", QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
+        cancel_button.setObjectName('cancel')
+        button_box.rejected.connect(self.dialog.reject)
 
         self.dialog.layout().addWidget(self.settings_tree)
-        self.dialog.layout().addWidget(buttonBox)
+        self.dialog.layout().addWidget(button_box)
         self.dialog.setWindowTitle('Configuration entries')
         res = self.dialog.exec()
 
         if res == QtWidgets.QDialog.DialogCode.Accepted:
             self.commit_config_changes_cache()
         # self._cached_config_changes = {}
-        return res
+        return bool(res)
 
     @classmethod
     def param_to_dict(cls, param: Parameter) -> dict:

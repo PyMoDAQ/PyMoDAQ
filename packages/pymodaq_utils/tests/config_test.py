@@ -7,6 +7,17 @@ import toml
 from pymodaq_utils import config as config_mod
 
 
+class Config(config_mod.BaseConfig):
+    config_name = 'custom_config_tested'
+    config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+
+
+class CustomConfig(config_mod.BaseConfig):
+    """Main class to deal with configuration values for this plugin"""
+    config_template_path = None
+    config_name = f"custom_settings"
+
+
 TOML_DICT = dict(
     scan=dict(scan1d=
               dict(start=0.,
@@ -163,15 +174,34 @@ class TestConfigSingleton:
 
         assert config1 is config2
 
+    def test_change_is_shared_same_class(self):
+        config1 = Config()
+        config2 = Config()
+
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
+        config1['style', 'darkstyle'] = not config1['style', 'darkstyle']
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
     def test_different_class_different_objects(self):
         config1 = Config()
         config2 = CustomConfig()
 
         assert config1 is not config2
 
-class Config(config_mod.BaseConfig):
-    config_name = 'custom_config_tested'
-    config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+    def test_change_is_not_shared_different_class(self):
+        config1 = Config()
+        config2 = CustomConfig()
+
+        # This entry doesn't exist in CustomConfig, let's create it
+        config1['style', 'darkstyle'] = True
+        config2['style', 'darkstyle'] = True
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
+        config1['style', 'darkstyle'] = False
+        assert config1['style', 'darkstyle'] != config2['style', 'darkstyle']
+
+
 
 
 def test_custom_config():
@@ -213,11 +243,6 @@ def test_nested_update_from_user(tmp_path):
     assert 'start' in config_dict['scan']['scan1d']
     assert 'stop' in config_dict['scan']['scan1d']  # making sure the entry that is not in the user is still present
 
-
-class CustomConfig(config_mod.BaseConfig):
-    """Main class to deal with configuration values for this plugin"""
-    config_template_path = None
-    config_name = f"custom_settings"
 
 
 def test_recursive_iterable_flattening():

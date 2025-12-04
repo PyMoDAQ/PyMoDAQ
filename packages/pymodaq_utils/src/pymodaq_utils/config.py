@@ -1,6 +1,7 @@
 from abc import abstractproperty
 from collections.abc import Iterable
 
+import copy
 from os import environ
 import sys
 import datetime
@@ -281,10 +282,8 @@ class BaseConfig(metaclass=Singleton):
         # There's different strategies for readers-writer locks
         # Let's try with a read-preferring lock (may cause starvation of writers but highly improbable)
         self._lock = ReaderWriterLock()
-
-        #write lock because it MODIFIES config
-        with self._lock.write_lock():
-            self._config = self.load_config(self.config_name, self.config_template_path)
+        self._config = {}
+        self.load()
 
     def __del__(self):
         self.save()
@@ -310,7 +309,7 @@ class BaseConfig(metaclass=Singleton):
         # We need a copy as a returned object will be unlocked
         # So it could be modified
         with self._lock.read_lock():
-            ret = self._config.copy()
+            ret = copy.deepcopy(self._config)
         return ret
 
 
@@ -351,7 +350,7 @@ class BaseConfig(metaclass=Singleton):
             else:
                 self._config[key] = value
 
-    def load_config(self, config_file_name, template_path: Path):
+    def _load_config(self, config_file_name, template_path: Path):
         """Load a configuration file from both system-wide and user file
 
         check also if missing entries in the configuration file compared to the template"""
@@ -392,6 +391,11 @@ class BaseConfig(metaclass=Singleton):
     def system_config_path(self):
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
+
+    def load(self):
+        # write lock because it MODIFIES config
+        with self._lock.write_lock():
+            self._config = self._load_config(self.config_name, self.config_template_path)
 
     def save(self):
         """Save the current Config object into the user toml file and reload it """
