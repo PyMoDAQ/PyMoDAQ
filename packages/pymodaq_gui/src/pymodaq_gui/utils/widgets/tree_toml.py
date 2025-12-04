@@ -47,7 +47,7 @@ class TreeFromToml(QObject):
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():
-            self._config[*path] = value
+            self._config[path] = value
         self._config.save()
 
     def show_dialog(self) -> bool:

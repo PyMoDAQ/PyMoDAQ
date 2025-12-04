@@ -62,8 +62,8 @@ class TestTreeFromToml:
             for path, value in changes:
                 with qtbot.waitSignal(tree_from_toml.settings.sigTreeStateChanged, raising=False):
                     tree_from_toml.settings.param(*path).setValue(value)
-                    qtbot.wait(0.01)
-            qtbot.wait(0.01)
+                    qtbot.wait(0)
+            qtbot.wait(0)
 
             reject_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "cancel")
             qtbot.mouseClick(reject_button, QtCore.Qt.MouseButton.LeftButton)
@@ -106,12 +106,11 @@ class TestTreeFromToml:
             for path, value in changes:
                 with qtbot.waitSignal(tree_from_toml.settings.sigTreeStateChanged, raising=False):
                     tree_from_toml.settings.param(*path).setValue(value)
-                    qtbot.wait(0.01)
-            qtbot.wait(0.01)
+                    qtbot.wait(0)
+            qtbot.wait(0)
 
             reject_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "save")
             qtbot.mouseClick(reject_button, QtCore.Qt.MouseButton.LeftButton)
-            qtbot.wait(1)
 
         QtCore.QTimer.singleShot(0, accept_action)
 
