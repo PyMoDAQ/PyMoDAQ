@@ -46,9 +46,17 @@ def set_check_style():
     if 'Fusion' in styles:
         styles.remove('Fusion')
     styles_default.extend(styles)
+    try:
+        import qt_themes
+        styles_default.extend(list(qt_themes.get_themes().keys()))
+    except ImportError as e:
+        pass
     for style in current_styles[:]:
         if style not in styles_default:
             current_styles.remove(style)
+    for style in styles_default:
+        if style not in current_styles:
+            current_styles.append(style)
 
     config['style', 'style'] = current_styles
     config.save()

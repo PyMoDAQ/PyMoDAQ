@@ -1,4 +1,6 @@
 import os
+
+import qt_themes
 import sys
 
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
@@ -336,16 +338,18 @@ def start_qapplication(name='default_app') -> QtWidgets.QApplication:
 
 def mkQApp(name: str):
     app = mkQApppg(name)
-    if config('style', 'style')[0] == 'default':
-        app.setStyle(app.setStyle("Fusion"))
-    elif config('style', 'style')[0] == 'dark':
-        set_dark_palette(app)
-    else:
-        try:
+    try:
+        if config('style', 'style')[0] == 'default':
+            app.setStyle(app.setStyle("Fusion"))
+        elif config('style', 'style')[0] == 'dark':
+            set_dark_palette(app)
+        elif config('style', 'style')[0] in QtWidgets.QStyleFactory.keys():
             app.setStyle(config('style', 'style')[0])
-        except Exception:
-            logger.warning(f"Could not apply the style {config('style', 'style')[0]}")
-            app.setStyle('default')
+        else:
+            qt_themes.set_theme(config('style', 'style')[0])
+    except Exception:
+        logger.warning(f"Could not apply the style {config('style', 'style')[0]}")
+        app.setStyle('default')
     return app
 
 
