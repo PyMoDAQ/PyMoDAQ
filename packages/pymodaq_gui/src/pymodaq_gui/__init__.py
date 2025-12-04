@@ -41,16 +41,9 @@ def set_and_check_qt_backend_or_die(config):
 
 def set_check_style():
     current_styles = config('style', 'style')
-    styles_default = ['default', 'dark']
+    styles_default = ['Fusion']
     styles = QtWidgets.QStyleFactory.keys()
-    if 'Fusion' in styles:
-        styles.remove('Fusion')
     styles_default.extend(styles)
-    try:
-        import qt_themes
-        styles_default.extend(list(qt_themes.get_themes().keys()))
-    except ImportError as e:
-        pass
     for style in current_styles[:]:
         if style not in styles_default:
             current_styles.remove(style)

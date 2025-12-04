@@ -1,7 +1,21 @@
 #this is the configuration file of PyMoDAQ
 [style]
-darkstyle = true #deprecated
-style = ['default', 'dark']
+style = ['Fusion']
+theme = [
+    'github_dark',
+    'atom_one',
+    'blender',
+    'catppuccin_frappe',
+    'catppuccin_latte',
+    'catppuccin_macchiato',
+    'catppuccin_mocha',
+    'dracula',
+    'github_light',
+    'modern_dark',
+    'modern_light',
+    'monokai',
+    'nord',
+    'one_dark_two']
 syntax_highlighting = 'github-dark'
 language = "English"
 country = "UnitedStates"
