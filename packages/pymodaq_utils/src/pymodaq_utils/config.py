@@ -422,4 +422,21 @@ class Config(BaseConfig):
         return dict(user=dict(name=USER))
 
 
+def _delete_config_files(config : BaseConfig):
+    """
+    **DO NOT USE IN PRODUCTION**
 
+    Delete config files stored on the disk, leaving the config object
+    in an **undetermined state**.
+
+    Parameters
+    ----------
+    config : BaseConfig
+        The config object whose files are to be deleted
+
+    Returns
+    -------
+
+    """
+    get_config_file(config.config_name, user=False).unlink(missing_ok=True)
+    get_config_file(config.config_name, user=True).unlink(missing_ok=True)

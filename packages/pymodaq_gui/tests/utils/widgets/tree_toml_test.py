@@ -5,9 +5,7 @@ from pathlib import Path
 
 from pyqtgraph.parametertree import Parameter
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import Signal
-from pymodaq_utils.config import BaseConfig, get_config_file
-from pymodaq_utils.config import get_set_config_dir
+from pymodaq_utils.config import BaseConfig, _delete_config_files
 from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
 
 class Config(BaseConfig):
@@ -15,10 +13,6 @@ class Config(BaseConfig):
     config_template_path = Path(__file__).parent.parent.parent.joinpath('data/config_template.toml')
 
 
-
-def delete_config(config : BaseConfig):
-    get_config_file(config.config_name, user=False).unlink(missing_ok=True)
-    get_config_file(config.config_name, user=True).unlink(missing_ok=True)
 
 def parameter_tree_dict_equals(param : Parameter, config : Dict):
     parameter_tree = TreeFromToml.param_to_dict(param)
@@ -123,7 +117,7 @@ class TestTreeFromToml:
 
         # And may or not be different (depending on the changes)
         assert (config.to_dict() != old_config_dict) == config_was_modified
-        delete_config(config)
+        _delete_config_files(config)
 
 
 
