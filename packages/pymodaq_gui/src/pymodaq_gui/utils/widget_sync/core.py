@@ -204,7 +204,17 @@ class WidgetSync(QObject):
         # Store weak references to avoid circular references and memory leaks
         widget_ref = ref(widget)
         widget_id = id(widget)  # Store id for dict key
-        widget.destroyed.connect(lambda: self._on_widget_destroyed(widget_id))
+
+        # Use weak reference to self to avoid accessing invalid self during cleanup
+        sync_weak = ref(self)
+
+        def on_destroyed():
+            """Cleanup callback when widget is destroyed"""
+            sync = sync_weak()
+            if sync is not None:
+                sync._on_widget_destroyed(widget_id)
+
+        widget.destroyed.connect(on_destroyed)
 
         connection_info = {
             'widget_id': widget_id,  # Store for easier lookup
