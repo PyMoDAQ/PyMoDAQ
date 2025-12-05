@@ -181,7 +181,7 @@ class WidgetSyncDemo(QWidget):
         # Slider
         slider_layout = QHBoxLayout()
         slider_layout.addWidget(QLabel("Slider:"))
-        self.value_slider = QSlider(Qt.Horizontal)
+        self.value_slider = QSlider(Qt.Orientation.Horizontal)
         self.value_slider.setRange(0, 100)
         slider_layout.addWidget(self.value_slider)
         layout.addLayout(slider_layout)
@@ -348,7 +348,7 @@ class WidgetSyncDemo(QWidget):
         label = QLabel(f"Slider {slider_num}:")
         label.setMinimumWidth(80)
 
-        slider = QSlider(Qt.Horizontal)
+        slider = QSlider(Qt.Orientation.Horizontal)
         slider.setRange(0, 100)
         slider.setValue(self.dynamic_sync.value)
 
@@ -470,7 +470,7 @@ class WidgetSyncDemo(QWidget):
         ))
 
         # Create many different widgets for 0-100 value
-        self.multi_slider = QSlider(Qt.Horizontal)
+        self.multi_slider = QSlider(Qt.Orientation.Horizontal)
         self.multi_slider.setRange(0, 100)
 
         self.multi_spin = QSpinBox()
