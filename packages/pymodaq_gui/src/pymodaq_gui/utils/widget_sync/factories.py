@@ -122,9 +122,9 @@ class WidgetSyncFactories:
         if initial is None:
             initial = widget.property(prop_name)  # Use widget directly before connecting
 
-        # Create sync and connect
+        # Create sync and bind
         sync = cls(initial_value=initial, data_type=data_type)
-        sync.connect(widget, signal, getter, setter, mode)
+        sync.bind(widget, signal, getter, setter, mode)
 
         # Store pattern info in the connection for add() method to use
         widget_id = id(widget)

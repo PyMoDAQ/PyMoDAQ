@@ -57,7 +57,7 @@ Sync different widget types representing the same value:
     sync.add(spinbox, match='property')  # Works because both use 'value'/'valueChanged'
 
     # Add read-only display
-    sync.connect(
+    sync.bind(
         progress_bar,
         setter=lambda v: progress_bar.setValue(v),
         mode=SyncMode.FROM_SYNC  # Read-only
@@ -165,8 +165,8 @@ Three synchronization modes:
     sync.add(widget, mode=SyncMode.TO_SYNC)
 
     # FROM_SYNC: Sync → Widget only (read-only display)
-    sync.connect(label, setter=lambda v: label.setText(str(v)),
-                 mode=SyncMode.FROM_SYNC)
+    sync.bind(label, setter=lambda v: label.setText(str(v)),
+              mode=SyncMode.FROM_SYNC)
 
 Value Transformations
 ---------------------
@@ -199,7 +199,7 @@ Transform values between widgets:
     # Boolean ↔ ComboBox index
     bool_sync = WidgetSync.for_checkbox(checkbox, initial=True)
 
-    bool_sync.connect(
+    bool_sync.bind(
         combobox,
         signal=combobox.currentIndexChanged,
         getter=lambda: combobox.currentIndex(),
@@ -220,7 +220,7 @@ For complete control:
 
     sync = WidgetSync(initial_value=50)
 
-    sync.connect(
+    sync.bind(
         widget,
         signal=widget.valueChanged,
         getter=lambda: widget.value(),
@@ -261,7 +261,7 @@ Temporarily pause syncing without disconnecting:
 **Key differences:**
 
 * ``disable()`` - Temporarily stops syncing, connection remains
-* ``disconnect()`` - Removes connection entirely, needs reconnection
+* ``unbind()`` - Removes connection entirely, needs reconnection
 
 Conditional Widget Enable/Disable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -312,18 +312,18 @@ its connection is automatically removed. Manual management is available when nee
     # Check connection state
     is_syncing = sync.is_enabled(widget)
 
-    # Permanently disconnect widget
-    sync.disconnect(widget)
+    # Permanently unbind widget
+    sync.unbind(widget)
     # or
-    sync.remove(widget)  # Alias for disconnect
+    sync.remove(widget)  # Alias for unbind
 
-    # Disconnect all (useful when deleting the sync itself)
-    sync.disconnect_all()
+    # Unbind all (useful when deleting the sync itself)
+    sync.unbind_all()
 
 **When to use what:**
 
 * ``disable()`` - Temporary pause, keeps connection setup, fast to re-enable
-* ``disconnect()`` - Permanent removal, requires full reconnection
+* ``unbind()`` - Permanent removal, requires full reconnection
 * Automatic cleanup - Widget deletion triggers cleanup automatically
 
 
@@ -349,8 +349,8 @@ Keep toolbar and menu items synchronized:
             # Sync them
             self.auto_sync = WidgetSync.for_checkbox(self.toolbar_auto)
 
-            # Connect menu action
-            self.auto_sync.connect(
+            # Bind menu action
+            self.auto_sync.bind(
                 self.menu_auto,
                 signal=self.menu_auto.toggled,
                 getter=lambda: self.menu_auto.isChecked(),
@@ -372,7 +372,7 @@ Keep multiple views of the same data synchronized:
     main_sync.add(compact_slider)
 
     # Add detailed view with transforms
-    main_sync.connect(
+    main_sync.bind(
         detailed_label,
         setter=lambda v: detailed_label.setText(
             f"Value: {v} ({v/100:.0%})"
@@ -398,8 +398,8 @@ Manage widgets that are created and destroyed dynamically:
             slider = QSlider(Qt.Horizontal)
             slider.setRange(0, 100)
 
-            # Connect to sync
-            self.sync.connect(
+            # Bind to sync
+            self.sync.bind(
                 slider,
                 signal=slider.valueChanged,
                 getter=lambda: slider.value(),
@@ -411,7 +411,7 @@ Manage widgets that are created and destroyed dynamically:
 
         def remove_widget(self, slider):
             """Remove a widget from the panel"""
-            self.sync.disconnect(slider)
+            self.sync.unbind(slider)
             self.widgets.remove(slider)
             slider.deleteLater()
 
@@ -471,12 +471,12 @@ DO:
 
 * ✅ Use ``add()`` for widgets of the same type (default ``match='type'``)
 * ✅ Use ``add(widget, match='property')`` for different types with compatible properties
-* ✅ Use ``connect()`` for complete control over getter/setter/transforms
+* ✅ Use ``bind()`` for complete control over getter/setter/transforms
 * ✅ Use ``SyncMode.FROM_SYNC`` for read-only displays
 * ✅ Use factory methods for common widget types
 * ✅ Use ``data_type`` parameter for explicit type checking
 * ✅ Use ``disable()``/``enable()`` for temporary pauses
-* ✅ Use ``disconnect()`` for permanent removal
+* ✅ Use ``unbind()`` for permanent removal
 * ✅ Check ``connection_count`` and ``connected_widgets`` for debugging
 
 DON'T:

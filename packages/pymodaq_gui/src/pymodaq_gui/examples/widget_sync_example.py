@@ -207,7 +207,7 @@ class WidgetSyncDemo(QWidget):
         self.value_sync.add(self.value_spin, match='property')
 
         # Add progress bar as read-only display
-        self.value_sync.connect(
+        self.value_sync.bind(
             self.value_progress,
             setter=lambda v: self.value_progress.setValue(v),
             mode=SyncMode.FROM_SYNC
@@ -464,7 +464,7 @@ class WidgetSyncDemo(QWidget):
         reconnect_btn.setEnabled(False)
 
         # Add to sync
-        self.dynamic_sync.connect(
+        self.dynamic_sync.bind(
             slider,
             signal=slider.valueChanged,
             getter=lambda s=slider: s.value(),
@@ -482,14 +482,14 @@ class WidgetSyncDemo(QWidget):
             self.update_connection_info()
 
         def disconnect_slider():
-            self.dynamic_sync.disconnect(slider)
+            self.dynamic_sync.unbind(slider)
             enable_btn.setEnabled(False)
             disconnect_btn.setEnabled(False)
             reconnect_btn.setEnabled(True)
             self.update_connection_info()
 
         def reconnect_slider():
-            self.dynamic_sync.connect(
+            self.dynamic_sync.bind(
                 slider,
                 signal=slider.valueChanged,
                 getter=lambda s=slider: s.value(),
@@ -531,11 +531,11 @@ class WidgetSyncDemo(QWidget):
         slider_widget = slider_data[0]
         slider = slider_data[1]
 
-        # Disconnect from sync if still connected
+        # Unbind from sync if still connected
         try:
-            self.dynamic_sync.disconnect(slider)
+            self.dynamic_sync.unbind(slider)
         except ValueError:
-            pass  # Already disconnected
+            pass  # Already unbound
 
         # Remove from UI
         self.sliders_layout.removeWidget(slider_widget)
@@ -612,11 +612,11 @@ class WidgetSyncDemo(QWidget):
 
         layout.addLayout(row4)
 
-        # Create sync and connect all widgets
+        # Create sync and bind all widgets
         self.multi_sync = WidgetSync(initial_value=50)
 
         # Slider
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_slider,
             signal=self.multi_slider.valueChanged,
             getter=lambda: self.multi_slider.value(),
@@ -624,7 +624,7 @@ class WidgetSyncDemo(QWidget):
         )
 
         # SpinBox
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_spin,
             signal=self.multi_spin.valueChanged,
             getter=lambda: self.multi_spin.value(),
@@ -632,7 +632,7 @@ class WidgetSyncDemo(QWidget):
         )
 
         # Dial
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_dial,
             signal=self.multi_dial.valueChanged,
             getter=lambda: self.multi_dial.value(),
@@ -640,14 +640,14 @@ class WidgetSyncDemo(QWidget):
         )
 
         # Progress (read-only)
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_progress,
             setter=lambda v: self.multi_progress.setValue(v),
             mode=SyncMode.FROM_SYNC
         )
 
         # LineEdit with validation
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_lineedit,
             signal=self.multi_lineedit.textChanged,
             getter=lambda: self.multi_lineedit.text(),
@@ -656,7 +656,7 @@ class WidgetSyncDemo(QWidget):
         )
 
         # Label (read-only)
-        self.multi_sync.connect(
+        self.multi_sync.bind(
             self.multi_label,
             setter=lambda v: self.multi_label.setText(f"Value: {v}"),
             mode=SyncMode.FROM_SYNC
@@ -702,23 +702,23 @@ class WidgetSyncDemo(QWidget):
         # Create sync
         self.color_sync = WidgetSync(initial_value="red")
 
-        # Connect custom widget
-        self.color_sync.connect(
+        # Bind custom widget
+        self.color_sync.bind(
             self.color_display,
             signal=self.color_display.colorChanged,
             getter=lambda: self.color_display.get_color(),
             setter=lambda c: self.color_display.set_color(c)
         )
 
-        # Connect ComboBox
-        self.color_sync.connect(
+        # Bind ComboBox
+        self.color_sync.bind(
             self.color_combo,
             signal=self.color_combo.currentTextChanged,
             getter=lambda: self.color_combo.currentText(),
             setter=lambda c: self.color_combo.setCurrentText(c)
         )
 
-        # Connect radio buttons
+        # Bind radio buttons
         def get_selected_radio():
             checked = self.color_radio_group.checkedButton()
             return checked.property("color") if checked else "red"
@@ -737,7 +737,7 @@ class WidgetSyncDemo(QWidget):
             return button
 
         first_radio = self.color_radio_group.buttons()[0]
-        self.color_sync.connect(
+        self.color_sync.bind(
             first_radio,
             signal=self.color_radio_group.buttonClicked,
             getter=get_selected_radio,

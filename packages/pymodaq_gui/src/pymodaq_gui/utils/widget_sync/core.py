@@ -252,16 +252,16 @@ class WidgetSync(QObject):
         finally:
             widget.blockSignals(was_blocked)
 
-    def connect(self,
-                widget: QWidget,
-                signal: Signal | None = None,
-                getter: WidgetGetter | None = None,
-                setter: WidgetSetter | None = None,
-                mode: SyncMode | None = None,
-                to_sync_transform: ValueTransform | None = None,
-                from_sync_transform: ValueTransform | None = None) -> None:
+    def bind(self,
+             widget: QWidget,
+             signal: Signal | None = None,
+             getter: WidgetGetter | None = None,
+             setter: WidgetSetter | None = None,
+             mode: SyncMode | None = None,
+             to_sync_transform: ValueTransform | None = None,
+             from_sync_transform: ValueTransform | None = None) -> None:
         """
-        Connect a widget to this sync.
+        Bind a widget to this sync.
 
         Parameters
         ----------
@@ -295,15 +295,15 @@ class WidgetSync(QObject):
         Examples
         --------
         # Auto-inferred modes (mode parameter omitted):
-        sync.connect(label, setter=lambda v: label.setText(str(v)))  # FROM_SYNC
-        sync.connect(button, button.clicked, getter=lambda: True)     # TO_SYNC
-        sync.connect(spinbox, spinbox.valueChanged,
-                     getter=lambda: spinbox.value(),
-                     setter=lambda v: spinbox.setValue(v))            # BIDIRECTIONAL
+        sync.bind(label, setter=lambda v: label.setText(str(v)))  # FROM_SYNC
+        sync.bind(button, button.clicked, getter=lambda: True)     # TO_SYNC
+        sync.bind(spinbox, spinbox.valueChanged,
+                  getter=lambda: spinbox.value(),
+                  setter=lambda v: spinbox.setValue(v))            # BIDIRECTIONAL
 
         # Explicit mode override:
-        sync.connect(widget, signal, getter=getter, setter=setter,
-                     mode=SyncMode.FROM_SYNC)  # Override auto-inference
+        sync.bind(widget, signal, getter=getter, setter=setter,
+                  mode=SyncMode.FROM_SYNC)  # Override auto-inference
         """
         # Auto-infer mode if not specified
         if mode is None:
@@ -490,16 +490,16 @@ class WidgetSync(QObject):
         widget_id : int
             The id() of the destroyed widget
         """
-        self.disconnect(widget_id)
+        self.unbind(widget_id)
 
-    def disconnect(self, widget: QWidget | int) -> None:
+    def unbind(self, widget: QWidget | int) -> None:
         """
-        Disconnect a widget by reference or ID.
+        Unbind a widget by reference or ID.
 
         Parameters
         ----------
         widget : QWidget | int
-            The widget to disconnect, or its ID
+            The widget to unbind, or its ID
         """
         # Handle both widget object and widget_id
         widget_id = widget if isinstance(widget, int) else id(widget)
@@ -509,8 +509,8 @@ class WidgetSync(QObject):
             self._disconnect_callbacks(conn['callbacks'])
             del self._connections[widget_id]
 
-    def disconnect_all(self) -> None:
-        """Disconnect all connected widgets."""
+    def unbind_all(self) -> None:
+        """Unbind all connected widgets."""
         for conn in self._connections.values():
             self._disconnect_callbacks(conn['callbacks'])
         self._connections.clear()
@@ -598,8 +598,8 @@ class WidgetSync(QObject):
                 f"(match='{match}').\n\n"
                 f"💡 Solutions:\n"
                 f"{('  - ' + match_hint + chr(10)) if match_hint else ''}"
-                f"  - Use connect() directly:\n\n"
-                f"    sync.connect(\n"
+                f"  - Use bind() directly:\n\n"
+                f"    sync.bind(\n"
                 f"        widget,\n"
                 f"        signal=widget.appropriate_signal,\n"
                 f"        getter=lambda: widget.get_value(),\n"
@@ -611,10 +611,10 @@ class WidgetSync(QObject):
         # Check if widget has the required signal
         if not hasattr(widget, signal_name):
             raise TypeError(
-                f"Cannot use add() to connect {widget_type}: "
+                f"Cannot use add() to bind {widget_type}: "
                 f"it doesn't have the '{signal_name}' signal.\n\n"
-                f"💡 Solution: Use connect() instead of add():\n\n"
-                f"    sync.connect(\n"
+                f"💡 Solution: Use bind() instead of add():\n\n"
+                f"    sync.bind(\n"
                 f"        widget,\n"
                 f"        signal=widget.appropriate_signal,\n"
                 f"        getter=lambda: widget.get_value(),\n"
@@ -639,22 +639,22 @@ class WidgetSync(QObject):
             if w is not None:
                 w.setProperty(prop_name, value)
 
-        # Connect the widget
-        self.connect(widget, signal, getter, setter, mode,
-                    to_sync_transform, from_sync_transform)
+        # Bind the widget
+        self.bind(widget, signal, getter, setter, mode,
+                  to_sync_transform, from_sync_transform)
 
     def remove(self, widget: QWidget) -> None:
         """
         Convenience method to remove a widget.
 
-        Alias for disconnect() for consistency with add().
+        Alias for unbind() for consistency with add().
 
         Parameters
         ----------
         widget : QWidget
             Widget to remove
         """
-        self.disconnect(widget)
+        self.unbind(widget)
 
     def enable(self, widget: QWidget | int) -> None:
         """
