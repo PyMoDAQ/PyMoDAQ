@@ -116,10 +116,8 @@ class ManagerBase(CustomExt):
         self.splash_subentries: Optional[SubEntriesSplash] = None
         self.subentries_model: Optional[ManagerSubEntriesModel] = None
 
-        if toolbar is not None:
-            self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
-        if menu is not None:
-            self.reference_menu(Menu.EXTERNAL, menu)
+        self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
+        self.reference_menu(Menu.EXTERNAL, menu)
 
         self.setup_ui()
 
