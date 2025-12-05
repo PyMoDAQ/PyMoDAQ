@@ -4,6 +4,7 @@ Created the 19/10/2023
 
 @author: Sebastien Weber
 """
+from typing import Union
 import datetime
 
 from qtpy import QtWidgets, QtCore
@@ -16,8 +17,11 @@ from pymodaq_utils.config import Config, create_toml_from_dict
 class TreeFromToml(QObject):
     """ Create a ParameterTree from a configuration file"""
 
-    def __init__(self, config: Config = None, capitalize=True):
+    def __init__(self, config: Config = None, capitalize=True, starting_entry: Union[str, tuple[str]] = None):
         super().__init__()
+        if isinstance(starting_entry, str):
+            starting_entry = (starting_entry,)
+        self.starting_entry = starting_entry
 
         if config is None:
             config = Config()
@@ -25,7 +29,14 @@ class TreeFromToml(QObject):
         params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
                    'value': str(self._config.config_path),
                    'readonly': True}]
-        params.extend(self.dict_to_param(config.to_dict(), capitalize=capitalize))
+        if self.starting_entry is None:
+            params.extend(self.dict_to_param(config.to_dict(), capitalize=capitalize))
+        else:
+            if not isinstance(config(*starting_entry), dict):
+                config_dict = {}
+            else:
+                config_dict = config(*starting_entry)
+            params.extend(self.dict_to_param(config_dict, capitalize=capitalize))
 
         self.settings = Parameter.create(title='settings', name='settings', type='group',
                                          children=params)
