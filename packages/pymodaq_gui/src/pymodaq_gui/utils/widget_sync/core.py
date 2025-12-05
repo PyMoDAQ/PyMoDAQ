@@ -324,7 +324,7 @@ class WidgetSync(QObject):
             raise ValueError(f"signal parameter is required for {mode.value} mode")
 
         # Validate getter/setter requirements
-        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) 
+        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC): 
             if getter is None:
                 raise ValueError(f"getter parameter is required for {mode.value} mode")
             else:  # Type checking: validate getter returns correct type (after transform)
