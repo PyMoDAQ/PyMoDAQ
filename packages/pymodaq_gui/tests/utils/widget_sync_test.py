@@ -4,7 +4,7 @@ Tests for widget synchronization module.
 Tests cover:
 - Basic synchronization between widgets
 - Enable/disable functionality
-- Connect/disconnect operations
+- Bind/unbind operations
 - Factory methods
 - Value transformations
 - Sync modes
@@ -186,7 +186,7 @@ class TestConnectDisconnect:
         sync.add(slider2)
 
         # Disconnect slider2
-        sync.disconnect(slider2)
+        sync.unbind(slider2)
 
         # Changes should not propagate
         slider1.setValue(75)
@@ -203,7 +203,7 @@ class TestConnectDisconnect:
         sync.add(slider2)
 
         widget_id = id(slider2)
-        sync.disconnect(widget_id)
+        sync.unbind(widget_id)
 
         slider1.setValue(75)
         assert slider2.value() == 50
@@ -223,8 +223,8 @@ class TestConnectDisconnect:
         slider1.setValue(75)
         assert slider2.value() == 50
 
-    def test_disconnect_all(self, qtbot):
-        """Test disconnecting all widgets"""
+    def test_unbind_all(self, qtbot):
+        """Test unbinding all widgets"""
         sliders = [QSlider(Qt.Orientation.Horizontal) for _ in range(3)]
         for s in sliders:
             s.setRange(0, 100)
@@ -235,7 +235,7 @@ class TestConnectDisconnect:
 
         assert sync.connection_count == 3
 
-        sync.disconnect_all()
+        sync.unbind_all()
 
         assert sync.connection_count == 0
         sliders[0].setValue(75)
@@ -273,7 +273,7 @@ class TestSyncModes:
         sync = WidgetSync.for_slider(slider1, initial=50)
 
         # Connect slider2 in TO_SYNC mode
-        sync.connect(
+        sync.bind(
             slider2,
             signal=slider2.valueChanged,
             getter=lambda: slider2.value(),
@@ -299,7 +299,7 @@ class TestSyncModes:
         sync = WidgetSync.for_slider(slider1, initial=50)
 
         # Connect slider2 in FROM_SYNC mode
-        sync.connect(
+        sync.bind(
             slider2,
             setter=lambda v: slider2.setValue(v),
             mode=SyncMode.FROM_SYNC
@@ -376,7 +376,7 @@ class TestIntrospection:
         sync.add(sliders[2])
         assert sync.connection_count == 3
 
-        sync.disconnect(sliders[1])
+        sync.unbind(sliders[1])
         assert sync.connection_count == 2
 
     def test_connected_widgets(self, qtbot):
@@ -629,7 +629,7 @@ class TestEnableDisableWithDisconnect:
         sync = WidgetSync(initial_value=50)
 
         # Connect
-        sync.connect(
+        sync.bind(
             slider,
             signal=slider.valueChanged,
             getter=lambda: slider.value(),
@@ -641,8 +641,8 @@ class TestEnableDisableWithDisconnect:
         assert not sync.is_enabled(slider)
 
         # Disconnect and reconnect
-        sync.disconnect(slider)
-        sync.connect(
+        sync.unbind(slider)
+        sync.bind(
             slider,
             signal=slider.valueChanged,
             getter=lambda: slider.value(),
@@ -660,6 +660,6 @@ class TestEnableDisableWithDisconnect:
         sync = WidgetSync.for_slider(slider, initial=50)
 
         sync.disable(slider)
-        sync.disconnect(slider)
+        sync.unbind(slider)
 
         assert sync.connection_count == 0
