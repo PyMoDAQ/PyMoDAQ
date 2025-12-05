@@ -1,9 +1,6 @@
 """
 Widget Synchronization Example
 
-Demonstrates how to use WidgetSync to keep multiple widgets synchronized.
-Perfect for settings panels, toolbar/menu consistency, and multi-view UIs.
-
 Run this example:
     python -m pymodaq_gui.examples.widget_sync_example
 """
@@ -78,6 +75,7 @@ class WidgetSyncDemo(QWidget):
         tabs.addTab(self.create_settings_example(), "Module State")
         tabs.addTab(self.create_value_control_example(), "Value Control")
         tabs.addTab(self.create_enable_disable_example(), "Enable/Disable")
+        tabs.addTab(self.create_opposite_checkbox_example(), "Opposite Checkboxes")
         tabs.addTab(self.create_dynamic_add_remove_example(), "Add/Remove Widgets")
         tabs.addTab(self.create_many_widget_types_example(), "Many Widgets")
         tabs.addTab(self.create_custom_widget_example(), "Custom Widget")
@@ -95,8 +93,7 @@ class WidgetSyncDemo(QWidget):
         layout = QVBoxLayout()
 
         layout.addWidget(QLabel(
-            "Use case: Sync DAQ module state between compact and full views\n"
-            "Perfect for PyMoDAQ's module initialization and control states"
+            "Use case: Sync DAQ module state between compact and full views"
         ))
 
         # Compact view controls
@@ -174,8 +171,7 @@ class WidgetSyncDemo(QWidget):
         layout = QVBoxLayout()
 
         layout.addWidget(QLabel(
-            "Use case: Control same value with different widgets\n"
-            "Perfect for PyMoDAQ's parameter controls with multiple views"
+            "Use case: Control same value with different widgets"
         ))
 
         # Slider
@@ -207,7 +203,8 @@ class WidgetSyncDemo(QWidget):
 
         # Create sync
         self.value_sync = WidgetSync.for_slider(self.value_slider, initial=50)
-        self.value_sync.add(self.value_spin)
+        # Spinbox and slider are different types but use same property/signal
+        self.value_sync.add(self.value_spin, match='property')
 
         # Add progress bar as read-only display
         self.value_sync.connect(
@@ -225,8 +222,7 @@ class WidgetSyncDemo(QWidget):
         layout = QVBoxLayout()
 
         layout.addWidget(QLabel(
-            "Use case: Enable/disable controls based on mode\n"
-            "Perfect for PyMoDAQ's acquisition mode settings"
+            "Use case: Enable/disable controls based on mode"
         ))
 
         # Master enable
@@ -263,6 +259,109 @@ class WidgetSyncDemo(QWidget):
 
         widget.setLayout(layout)
         return widget
+
+    def create_opposite_checkbox_example(self):
+        """Example 4: Opposite/Inverted checkboxes with value transforms"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        layout.addWidget(QLabel(
+            "Use case: Lock/Unlock, Enable/Disable with opposite states"
+        ))
+
+        # Enable/Disable example
+        enable_group = QGroupBox("Enable/Disable Control")
+        enable_layout = QVBoxLayout()
+
+        enable_layout.addWidget(QLabel("These checkboxes have opposite states:"))
+
+        self.enable_checkbox = QCheckBox("Enable Acquisition")
+        self.enable_checkbox.setChecked(True)
+        enable_layout.addWidget(self.enable_checkbox)
+
+        self.disable_checkbox = QCheckBox("Disable Acquisition")
+        self.disable_checkbox.setChecked(False)
+        enable_layout.addWidget(self.disable_checkbox)
+
+        # Sync with inversion
+        self.enable_sync = WidgetSync.for_checkbox(self.enable_checkbox, initial=True)
+        self.enable_sync.add(
+            self.disable_checkbox,
+            match='property',  # Both are checkboxes
+            to_sync_transform=lambda checked: not checked,  # Invert
+            from_sync_transform=lambda checked: not checked  # Invert
+        )
+
+        enable_group.setLayout(enable_layout)
+        layout.addWidget(enable_group)
+
+        # Lock/Unlock example
+        lock_group = QGroupBox("Lock/Unlock Control")
+        lock_layout = QVBoxLayout()
+
+        lock_layout.addWidget(QLabel("These checkboxes have opposite states:"))
+
+        self.unlock_checkbox = QCheckBox("Unlocked (Editing Allowed)")
+        self.unlock_checkbox.setChecked(False)
+        lock_layout.addWidget(self.unlock_checkbox)
+
+        self.lock_checkbox = QCheckBox("Locked (Read-Only)")
+        self.lock_checkbox.setChecked(True)
+        lock_layout.addWidget(self.lock_checkbox)
+
+        # Sync with inversion
+        self.unlock_sync = WidgetSync.for_checkbox(self.unlock_checkbox, initial=False)
+        self.unlock_sync.add(
+            self.lock_checkbox,
+            match='property',
+            to_sync_transform=lambda checked: not checked,
+            from_sync_transform=lambda checked: not checked
+        )
+
+        lock_group.setLayout(lock_layout)
+        layout.addWidget(lock_group)
+
+        # Status display
+        status_group = QGroupBox("Current Status")
+        status_layout = QVBoxLayout()
+
+        self.opposite_status = QLabel()
+        self.update_opposite_status()
+        status_layout.addWidget(self.opposite_status)
+
+        status_group.setLayout(status_layout)
+        layout.addWidget(status_group)
+
+        # Connect to update status
+        self.enable_sync.value_changed.connect(lambda _: self.update_opposite_status())
+        self.unlock_sync.value_changed.connect(lambda _: self.update_opposite_status())
+
+        # Info
+        info_label = QLabel(
+            "💡 Implementation:\n"
+            "sync.add(opposite_checkbox, match='property',\n"
+            "         to_sync_transform=lambda v: not v,\n"
+            "         from_sync_transform=lambda v: not v)"
+        )
+        info_label.setStyleSheet("padding: 10px; border-radius: 5px;")
+        layout.addWidget(info_label)
+
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def update_opposite_status(self):
+        """Update the status display for opposite checkboxes"""
+        enable_state = "Enabled" if self.enable_checkbox.isChecked() else "Disabled"
+        disable_state = "Checked" if self.disable_checkbox.isChecked() else "Unchecked"
+        lock_state = "Locked" if self.lock_checkbox.isChecked() else "Unlocked"
+        unlock_state = "Checked" if self.unlock_checkbox.isChecked() else "Unchecked"
+
+        self.opposite_status.setText(
+            f"Enable Acquisition: {enable_state} | Disable Acquisition: {disable_state}\n"
+            f"Locked: {lock_state} | Unlocked: {unlock_state}\n\n"
+            f"✓ States are always opposite!"
+        )
 
     def create_dynamic_add_remove_example(self):
         """Example 4: Dynamic add/remove with connection tracking"""

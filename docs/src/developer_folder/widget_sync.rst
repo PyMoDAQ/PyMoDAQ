@@ -53,7 +53,8 @@ Sync different widget types representing the same value:
 
     # Slider and spinbox for same value
     sync = WidgetSync.for_slider(slider, initial=50)
-    sync.add(spinbox)  # Stays in sync
+    # Use match='property' to allow different widget types with same property/signal
+    sync.add(spinbox, match='property')  # Works because both use 'value'/'valueChanged'
 
     # Add read-only display
     sync.connect(
@@ -99,8 +100,54 @@ For any Qt property:
         widget,
         property_name='value',  # Qt property name
         signal_name='valueChanged',  # Change signal (optional, auto-detected)
-        initial=50
+        initial=50,
+        data_type=int  # Optional: explicit type checking
     )
+
+Adding Widgets: Type vs Property Matching
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When adding widgets with ``add()``, you can control the matching strategy:
+
+.. code-block:: python
+
+    # Type matching (default) - only same widget types
+    sync = WidgetSync.for_slider(slider1)
+    sync.add(slider2)  # OK - both QSlider
+    # sync.add(spinbox)  # Would raise TypeError
+
+    # Property matching - different widget types with compatible property/signal
+    sync = WidgetSync.for_slider(slider1)
+    sync.add(spinbox, match='property')  # OK - both use 'value'/'valueChanged'
+    sync.add(dial, match='property')     # OK - also uses 'value'/'valueChanged'
+
+**When to use:**
+
+- ``match='type'`` (default): Safest, ensures identical widget behavior
+- ``match='property'``: Flexible, allows mixing compatible widget types (e.g., QSlider + QSpinBox)
+
+Data Type Safety
+~~~~~~~~~~~~~~~~
+
+WidgetSync supports explicit data type checking:
+
+.. code-block:: python
+
+    # Type inferred from initial value
+    sync = WidgetSync(initial_value=True)  # data_type = bool
+    sync = WidgetSync(initial_value=50)    # data_type = int
+
+    # Explicit type checking
+    sync = WidgetSync(initial_value=0, data_type=int)
+
+    # Using factories with data_type
+    sync = WidgetSync.for_property(
+        widget, 'value', initial=50, data_type=int
+    )
+
+    # Type checking validates values and transforms
+    sync.value = 100  # OK
+    # sync.value = "text"  # Raises TypeError
 
 Sync Modes
 ----------
@@ -136,6 +183,18 @@ Transform values between widgets:
         to_sync_transform=lambda f: round((f - 32) * 5/9),  # F → C
         from_sync_transform=lambda c: round(c * 9/5 + 32)   # C → F
     )
+
+    # Opposite/Inverted Checkboxes
+    # Perfect for "Enable/Disable" vs "Lock/Unlock" scenarios
+    enable_sync = WidgetSync.for_checkbox(enable_checkbox, initial=True)
+
+    enable_sync.add(
+        disable_checkbox,
+        match='property',  # Both are checkboxes with 'checked' property
+        to_sync_transform=lambda checked: not checked,  # Invert: checked → not checked
+        from_sync_transform=lambda checked: not checked  # Invert: checked → not checked
+    )
+    # Now: enable_checkbox=True ↔ disable_checkbox=False
 
     # Boolean ↔ ComboBox index
     bool_sync = WidgetSync.for_checkbox(checkbox, initial=True)
@@ -298,33 +357,6 @@ Keep toolbar and menu items synchronized:
                 setter=lambda v: self.menu_auto.setChecked(v)
             )
 
-Settings Panel
-~~~~~~~~~~~~~~
-
-Manage complex settings with multiple syncs:
-
-.. code-block:: python
-
-    class SettingsPanel(QWidget):
-        def __init__(self):
-            super().__init__()
-
-            # Create syncs for different settings
-            self.syncs = {
-                'auto_mode': WidgetSync.for_checkbox(self.auto_cb, initial=False),
-                'sample_rate': WidgetSync.for_spinbox(self.rate_spin, initial=1000),
-                'averaging': WidgetSync.for_spinbox(self.avg_spin, initial=10),
-            }
-
-        def get_settings(self):
-            """Get all settings as dict"""
-            return {key: sync.value for key, sync in self.syncs.items()}
-
-        def set_settings(self, settings):
-            """Set all settings from dict"""
-            for key, value in settings.items():
-                if key in self.syncs:
-                    self.syncs[key].value = value
 
 Multi-View Synchronization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -401,25 +433,25 @@ Manage widgets that are created and destroyed dynamically:
 API Reference
 -------------
 
-WidgetSync Class
-~~~~~~~~~~~~~~~~
+.. WidgetSync Class
+.. ~~~~~~~~~~~~~~~~
 
-.. autoclass:: pymodaq_gui.utils.widget_sync.WidgetSync
-   :members:
-   :undoc-members:
+.. .. autoclass:: pymodaq_gui.utils.widget_sync.WidgetSync
+..    :members:
+..    :undoc-members:
 
-SyncMode Enum
-~~~~~~~~~~~~~
+.. SyncMode Enum
+.. ~~~~~~~~~~~~~
 
-.. autoclass:: pymodaq_gui.utils.widget_sync.SyncMode
-   :members:
+.. .. autoclass:: pymodaq_gui.utils.widget_sync.SyncMode
+..    :members:
 
-WidgetSyncFactories Mixin
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. WidgetSyncFactories Mixin
+.. ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: pymodaq_gui.utils.widget_sync.WidgetSyncFactories
-   :members:
-   :undoc-members:
+.. .. autoclass:: pymodaq_gui.utils.widget_sync.WidgetSyncFactories
+..    :members:
+..    :undoc-members:
 
 Examples
 --------
@@ -437,11 +469,12 @@ Best Practices
 DO:
 ~~~
 
-* ✅ Use ``add()`` for widgets of the same type
-* ✅ Use ``connect()`` for different widget types
+* ✅ Use ``add()`` for widgets of the same type (default ``match='type'``)
+* ✅ Use ``add(widget, match='property')`` for different types with compatible properties
+* ✅ Use ``connect()`` for complete control over getter/setter/transforms
 * ✅ Use ``SyncMode.FROM_SYNC`` for read-only displays
-* ✅ Use factory methods for common cases
-* ✅ Create custom factories for your widget types
+* ✅ Use factory methods for common widget types
+* ✅ Use ``data_type`` parameter for explicit type checking
 * ✅ Use ``disable()``/``enable()`` for temporary pauses
 * ✅ Use ``disconnect()`` for permanent removal
 * ✅ Check ``connection_count`` and ``connected_widgets`` for debugging
@@ -449,11 +482,12 @@ DO:
 DON'T:
 ~~~~~~
 
-* ❌ Don't use ``add()`` with different widget types (use ``connect()`` instead)
+* ❌ Don't use ``add()`` without considering the ``match`` parameter
 * ❌ Don't create circular sync chains (A→B→C→A)
 * ❌ Don't disconnect/reconnect frequently (use ``disable()``/``enable()`` instead)
 * ❌ Don't manually disconnect unless necessary (automatic cleanup works)
 * ❌ Don't forget to handle value transformations when syncing different types
+* ❌ Don't mix incompatible data types without proper transforms
 
 
 See Also
