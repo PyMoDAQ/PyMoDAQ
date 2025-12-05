@@ -5,7 +5,7 @@ This module can be extended by users to add their own factory methods.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from weakref import ref
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class WidgetSyncFactories:
                      widget: QWidget,
                      property_name: str,
                      signal_name: str | None = None,
-                     initial: any = None,
+                     initial: Any = None,
                      mode: SyncMode | None = None,
                      data_type: type | None = None) -> WidgetSync:
         """

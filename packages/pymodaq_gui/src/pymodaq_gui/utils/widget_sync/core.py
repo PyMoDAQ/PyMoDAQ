@@ -46,7 +46,6 @@ class WidgetSync(QObject):
 
     Philosophy: Simple by default, powerful when needed.
     - Core responsibility: Sync a single value across multiple widgets
-    - No validation, debouncing, or batch mode in core (see features.py for those)
     - Exception-safe widget updates
     - Automatic cleanup when widgets are deleted
 

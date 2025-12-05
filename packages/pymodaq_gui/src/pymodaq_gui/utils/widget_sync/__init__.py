@@ -1,8 +1,6 @@
 """
 Qt Widget Synchronization
-
-Simple, powerful widget property synchronization for Qt applications.
-
+=================================
 Basic Usage:
     >>> from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
     >>>
@@ -56,5 +54,3 @@ __all__ = [
     'DataType',  # Export for type hints and explicit type specification
     'WidgetSyncFactories',  # Export for custom extensions
 ]
-
-__version__ = '0.1.0'
