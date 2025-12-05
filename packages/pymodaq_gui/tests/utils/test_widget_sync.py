@@ -452,6 +452,115 @@ class TestFactoryMethods:
         assert combo.currentIndex() == sync.value
 
 
+class TestMatchParameter:
+    """Test the match parameter in add() method"""
+
+    def test_add_same_type_default_match(self, qtbot):
+        """Test add() with same widget type (default match='type')"""
+        slider1 = QSlider(Qt.Orientation.Horizontal)
+        slider2 = QSlider(Qt.Orientation.Horizontal)
+        slider1.setRange(0, 100)
+        slider2.setRange(0, 100)
+
+        sync = WidgetSync.for_slider(slider1, initial=50)
+        sync.add(slider2)  # Should work with default match='type'
+
+        slider1.setValue(75)
+        assert slider2.value() == 75
+
+    def test_add_same_type_explicit_type_match(self, qtbot):
+        """Test add() with same widget type and explicit match='type'"""
+        slider1 = QSlider(Qt.Orientation.Horizontal)
+        slider2 = QSlider(Qt.Orientation.Horizontal)
+        slider1.setRange(0, 100)
+        slider2.setRange(0, 100)
+
+        sync = WidgetSync.for_slider(slider1, initial=50)
+        sync.add(slider2, match='type')  # Explicit type matching
+
+        slider1.setValue(75)
+        assert slider2.value() == 75
+
+    def test_add_different_type_with_property_match(self, qtbot):
+        """Test add() with different widget type using match='property'"""
+        slider = QSlider(Qt.Orientation.Horizontal)
+        spinbox = QSpinBox()
+        slider.setRange(0, 100)
+        spinbox.setRange(0, 100)
+
+        sync = WidgetSync.for_slider(slider, initial=50)
+        # Both use 'value' property and 'valueChanged' signal
+        sync.add(spinbox, match='property')
+
+        # Check initial sync
+        assert spinbox.value() == 50
+
+        # Change slider -> spinbox should update
+        slider.setValue(75)
+        assert spinbox.value() == 75
+
+        # Change spinbox -> slider should update
+        spinbox.setValue(25)
+        assert slider.value() == 25
+
+    def test_add_different_type_without_property_match_raises(self, qtbot):
+        """Test add() with different type and default match='type' raises"""
+        slider = QSlider(Qt.Orientation.Horizontal)
+        spinbox = QSpinBox()
+
+        sync = WidgetSync.for_slider(slider, initial=50)
+
+        # Should raise TypeError because types don't match
+        with pytest.raises(TypeError, match="no connection pattern found"):
+            sync.add(spinbox)  # Default match='type'
+
+    def test_add_incompatible_widget_property_match_raises(self, qtbot):
+        """Test add() with incompatible widget using match='property' raises"""
+        slider = QSlider(Qt.Orientation.Horizontal)
+        checkbox = QCheckBox()
+
+        sync = WidgetSync.for_slider(slider, initial=50)
+
+        # Should raise TypeError because checkbox doesn't have 'valueChanged' signal
+        with pytest.raises(TypeError):
+            sync.add(checkbox, match='property')
+
+    def test_add_invalid_match_raises(self, qtbot):
+        """Test add() with invalid match parameter raises ValueError"""
+        slider1 = QSlider(Qt.Orientation.Horizontal)
+        slider2 = QSlider(Qt.Orientation.Horizontal)
+
+        sync = WidgetSync.for_slider(slider1, initial=50)
+
+        with pytest.raises(ValueError, match="match must be"):
+            sync.add(slider2, match='invalid')
+
+    def test_property_match_with_multiple_types(self, qtbot):
+        """Test property matching with multiple different widget types"""
+        from qtpy.QtWidgets import QDial
+
+        slider = QSlider(Qt.Orientation.Horizontal)
+        spinbox = QSpinBox()
+        dial = QDial()
+
+        slider.setRange(0, 100)
+        spinbox.setRange(0, 100)
+        dial.setRange(0, 100)
+
+        sync = WidgetSync.for_slider(slider, initial=50)
+        sync.add(spinbox, match='property')
+        sync.add(dial, match='property')
+
+        # All should be synced
+        assert spinbox.value() == 50
+        assert dial.value() == 50
+
+        # Change one -> all update
+        slider.setValue(75)
+        assert spinbox.value() == 75
+        assert dial.value() == 75
+
+
 class TestEdgeCases:
     """Test edge cases and error conditions"""
 
