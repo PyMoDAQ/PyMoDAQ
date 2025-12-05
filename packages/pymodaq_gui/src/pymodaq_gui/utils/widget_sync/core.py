@@ -9,7 +9,7 @@ from __future__ import annotations
 from qtpy.QtCore import QObject, Signal
 from qtpy.QtWidgets import QWidget
 from enum import Enum
-from typing import Callable, Any, Iterator
+from typing import Callable, Any, Iterator, Type
 from contextlib import contextmanager
 from weakref import ref, ReferenceType
 
@@ -24,6 +24,20 @@ class SyncMode(Enum):
     BIDIRECTIONAL = "bidirectional"  # Widget ↔ Sync (default)
     TO_SYNC = "to_sync"  # Widget → Sync only
     FROM_SYNC = "from_sync"  # Sync → Widget only
+
+
+class DataType(Enum):
+    """
+    Supported data types for widget synchronization.
+
+    Each sync instance is associated with a specific data type, ensuring
+    type safety when connecting widgets and transforming values.
+    """
+    BOOL = bool
+    INT = int
+    FLOAT = float
+    STR = str
+    OBJECT = object  # For custom types or when type checking is disabled
 
 
 class WidgetSync(QObject):
@@ -60,20 +74,127 @@ class WidgetSync(QObject):
 
     value_changed = Signal(object)  # Emitted when value changes
 
-    def __init__(self, initial_value: Any = None) -> None:
+    def __init__(self, initial_value: Any = None, data_type: Type | DataType | None = None) -> None:
         """
-        Initialize widget sync with an initial value.
+        Initialize widget sync with an initial value and optional type checking.
 
         Parameters
         ----------
         initial_value : Any
             Initial value for the sync
+        data_type : Type | DataType, optional
+            Expected data type for values. If None, inferred from initial_value.
+            Use DataType.OBJECT to disable type checking.
+
+        Examples
+        --------
+        >>> # Type inferred from initial value
+        >>> sync = WidgetSync(initial_value=True)  # data_type = bool
+
+        >>> # Explicit type
+        >>> sync = WidgetSync(initial_value=0, data_type=int)
+
+        >>> # Disable type checking
+        >>> sync = WidgetSync(initial_value=None, data_type=DataType.OBJECT)
         """
         super().__init__()
-        self._value: Any = initial_value
+        self._data_type = self._resolve_type(initial_value, data_type)
+        self._value: Any = self._validate_value(initial_value)
         # Dict mapping widget id() to connection info for O(1) lookup
         # Key: id(widget), Value: ConnectionInfo dict
         self._connections: dict[int, ConnectionInfo] = {}
+
+    def _resolve_type(self, initial_value: Any, data_type: Type | DataType | None) -> Type:
+        """
+        Resolve the data type for this sync.
+
+        Parameters
+        ----------
+        initial_value : Any
+            Initial value
+        data_type : Type | DataType, optional
+            Explicit type or None to infer
+
+        Returns
+        -------
+        Type
+            Resolved Python type
+        """
+        if data_type is not None:
+            # Use explicit type
+            if isinstance(data_type, DataType):
+                return data_type.value
+            return data_type
+
+        # Infer from initial value
+        if initial_value is None:
+            return object  # No type checking if no initial value
+        return type(initial_value)
+
+    def _validate_value(self, value: Any) -> Any:
+        """
+        Validate value matches expected type.
+
+        Parameters
+        ----------
+        value : Any
+            Value to validate
+
+        Returns
+        -------
+        Any
+            The value if valid
+
+        Raises
+        ------
+        TypeError
+            If value doesn't match expected type
+        """
+        if value is None or self._data_type is object:
+            return value
+
+        if not isinstance(value, self._data_type):
+            raise TypeError(
+                f"Value has type {type(value).__name__}, "
+                f"but sync expects {self._data_type.__name__}"
+            )
+        return value
+
+    def _is_compatible_type(self, value: Any) -> bool:
+        """
+        Check if value is compatible with sync's data type.
+
+        Parameters
+        ----------
+        value : Any
+            Value to check
+
+        Returns
+        -------
+        bool
+            True if compatible
+        """
+        if value is None or self._data_type is object:
+            return True
+        return isinstance(value, self._data_type)
+
+    def _data_type_name(self) -> str:
+        """Get human-readable name of data type"""
+        if hasattr(self._data_type, '__name__'):
+            return self._data_type.__name__
+        return str(self._data_type)
+
+    @property
+    def data_type(self) -> Type:
+        """
+        Get the data type for this sync.
+
+        Returns
+        -------
+        Type
+            Python type (bool, int, float, str, object)
+        """
+        return self._data_type
 
     @property
     def value(self) -> Any:
@@ -95,7 +216,15 @@ class WidgetSync(QObject):
             The new value to set
         emit : bool, optional
             Whether to emit value_changed signal (default: True)
+
+        Raises
+        ------
+        TypeError
+            If new_value doesn't match expected data type
         """
+        # Validate type
+        new_value = self._validate_value(new_value)
+
         if self._value != new_value:
             self._value = new_value
             if emit:
@@ -195,11 +324,37 @@ class WidgetSync(QObject):
             raise ValueError(f"signal parameter is required for {mode.value} mode")
 
         # Validate getter/setter requirements
-        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) and getter is None:
-            raise ValueError(f"getter parameter is required for {mode.value} mode")
+        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) 
+            if getter is None:
+                raise ValueError(f"getter parameter is required for {mode.value} mode")
+            else:  # Type checking: validate getter returns correct type (after transform)
+                try:
+                    test_value = getter()
+                    # Apply to_sync transform if provided
+                    if to_sync_transform:
+                        test_value = to_sync_transform(test_value)
+                    # Check type compatibility
+                    if not self._is_compatible_type(test_value):
+                        raise TypeError(
+                            f"Getter returns {type(test_value).__name__}, "
+                            f"but sync expects {self._data_type_name()}. "
+                            f"Widget: {type(widget).__name__}"
+                        )
+                except TypeError:
+                    raise  # Re-raise type errors
+                except Exception as e:
+                    # Log other errors but don't fail - the getter might need the widget to be in a specific state
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"Could not validate getter for {type(widget).__name__}: {e}"
+                    )
 
-        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC) and setter is None:
-            raise ValueError(f"setter parameter is required for {mode.value} mode")
+        if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
+            if setter is None:
+                raise ValueError(f"setter parameter is required for {mode.value} mode")
+            else:  # Type checking: validate setter returns correct type (after transform)
+                # TODO: Implement setter type checking if needed
+                pass
 
         # Store weak references to avoid circular references and memory leaks
         widget_ref = ref(widget)
