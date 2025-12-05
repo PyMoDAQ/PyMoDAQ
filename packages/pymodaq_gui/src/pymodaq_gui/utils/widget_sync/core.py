@@ -374,6 +374,7 @@ class WidgetSync(QObject):
         connection_info = {
             'widget_id': widget_id,  # Store for easier lookup
             'widget_ref': widget_ref,
+            'widget_type': type(widget).__name__,  # Store widget type for pattern matching
             'signal': signal,
             'getter': getter,
             'setter': setter,
@@ -381,7 +382,10 @@ class WidgetSync(QObject):
             'to_sync_transform': to_sync_transform,
             'from_sync_transform': from_sync_transform,
             'callbacks': [],
-            'enabled': True  # Connection enabled by default
+            'enabled': True,  # Connection enabled by default
+            # Connection pattern info for add() method (set by factories)
+            'property_name': None,  # Will be set by for_property()
+            'signal_name': None,    # Will be set by for_property()
         }
 
         # Widget → Sync connection
@@ -513,13 +517,13 @@ class WidgetSync(QObject):
         self._connections.clear()
 
     def add(self, widget: QWidget, mode: SyncMode = SyncMode.BIDIRECTIONAL,
+            match: str = 'type',
             to_sync_transform: ValueTransform | None = None,
             from_sync_transform: ValueTransform | None = None) -> None:
         """
         Convenience method to add a widget using auto-detected property sync.
 
-        Must be called AFTER the sync was created with a factory method.
-        Uses the same property/signal as the first widget.
+        Automatically detects the property/signal pattern from existing connections.
 
         Parameters
         ----------
@@ -527,6 +531,11 @@ class WidgetSync(QObject):
             Widget to add
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        match : str, optional
+            Pattern matching strategy (default: 'type'):
+
+            - 'type': Match exact widget type (QSlider → QSlider only, safest)
+            - 'property': Match by property/signal names (QSlider + QSpinBox both work)
         to_sync_transform : callable, optional
             Transform value from widget to sync
         from_sync_transform : callable, optional
@@ -534,41 +543,91 @@ class WidgetSync(QObject):
 
         Raises
         ------
-        NotImplementedError
-            If called before using a factory method
         TypeError
-            If widget doesn't have the required signal
-        """
-        # Check if this sync was created with a factory method
-        if not hasattr(self, '_property_name') or not hasattr(self, '_signal_name'):
-            raise NotImplementedError(
-                "Use add() only after creating sync with a factory method like for_property(). "
-                "For custom connections, use connect() directly."
-            )
+            If no connection pattern found, or if widget doesn't have the required signal
+        ValueError
+            If match parameter has invalid value
 
-        # Check if widget has the required signal
-        if not hasattr(widget, self._signal_name):
+        Examples
+        --------
+        >>> # Type matching (default) - only same widget types
+        >>> sync = WidgetSync.for_slider(slider1)
+        >>> sync.add(slider2)  # OK - both QSlider
+
+        >>> # Property matching - different widget types with same property
+        >>> sync = WidgetSync.for_slider(slider1)
+        >>> sync.add(spinbox, match='property')  # OK - both use 'value'/'valueChanged'
+        """
+        if match not in ('type', 'property'):
+            raise ValueError(f"match must be 'type' or 'property', got {match!r}")
+
+        widget_type = type(widget).__name__
+        property_name = None
+        signal_name = None
+
+        if match == 'type':
+            # Look for existing connection with exact matching widget type
+            for conn in self._connections.values():
+                if conn['widget_type'] == widget_type:
+                    # Found exact type match - use this pattern
+                    property_name = conn.get('property_name')
+                    signal_name = conn.get('signal_name')
+                    if property_name and signal_name:
+                        break
+        else:  # match == 'property'
+            # Look for any connection with property/signal info
+            for conn in self._connections.values():
+                property_name = conn.get('property_name')
+                signal_name = conn.get('signal_name')
+                if property_name and signal_name:
+                    # Found pattern - check if widget is compatible
+                    if hasattr(widget, signal_name):
+                        break
+                    else:
+                        # Reset and continue searching
+                        property_name = None
+                        signal_name = None
+
+        # If no pattern found, raise error
+        if property_name is None or signal_name is None:
+            match_hint = (
+                "try match='property' to allow different widget types"
+                if match == 'type' else ""
+            )
             raise TypeError(
-                f"Cannot use add() to connect {type(widget).__name__}: "
-                f"it doesn't have the '{self._signal_name}' signal.\n\n"
-                f"The sync was created with {self._first_widget_type} which uses "
-                f"'{self._signal_name}', but {type(widget).__name__} uses a different signal.\n\n"
-                f"💡 Solution: Use connect() instead of add() for different widget types:\n\n"
+                f"Cannot use add() for {widget_type}: no connection pattern found "
+                f"(match='{match}').\n\n"
+                f"💡 Solutions:\n"
+                f"{('  - ' + match_hint + chr(10)) if match_hint else ''}"
+                f"  - Use connect() directly:\n\n"
                 f"    sync.connect(\n"
                 f"        widget,\n"
                 f"        signal=widget.appropriate_signal,\n"
                 f"        getter=lambda: widget.get_value(),\n"
                 f"        setter=lambda v: widget.set_value(v),\n"
-                f"        mode=SyncMode.{mode.name},\n"
-                f"        to_sync_transform=...,  # optional\n"
-                f"        from_sync_transform=...  # optional\n"
+                f"        mode=SyncMode.{mode.name}\n"
+                f"    )"
+            )
+
+        # Check if widget has the required signal
+        if not hasattr(widget, signal_name):
+            raise TypeError(
+                f"Cannot use add() to connect {widget_type}: "
+                f"it doesn't have the '{signal_name}' signal.\n\n"
+                f"💡 Solution: Use connect() instead of add():\n\n"
+                f"    sync.connect(\n"
+                f"        widget,\n"
+                f"        signal=widget.appropriate_signal,\n"
+                f"        getter=lambda: widget.get_value(),\n"
+                f"        setter=lambda v: widget.set_value(v),\n"
+                f"        mode=SyncMode.{mode.name}\n"
                 f"    )"
             )
 
         # Get signal and create getter/setter using weak reference to avoid keeping widget alive
         from weakref import ref
-        signal = getattr(widget, self._signal_name)
-        prop_name = self._property_name  # Local variable to avoid closure issues
+        signal = getattr(widget, signal_name)
+        prop_name = property_name  # Local variable to avoid closure issues
         widget_ref = ref(widget)  # Weak reference to widget
 
         # Getter/setter use weak reference to avoid circular reference

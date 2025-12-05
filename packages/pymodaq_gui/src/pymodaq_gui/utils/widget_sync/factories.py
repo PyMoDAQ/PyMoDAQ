@@ -34,7 +34,8 @@ class WidgetSyncFactories:
                      property_name: str,
                      signal_name: str | None = None,
                      initial: any = None,
-                     mode: SyncMode | None = None) -> WidgetSync:
+                     mode: SyncMode | None = None,
+                     data_type: type | None = None) -> WidgetSync:
         """
         Create a sync for any Qt property with auto-detection.
 
@@ -52,6 +53,8 @@ class WidgetSyncFactories:
             Initial value (if None, uses widget's current value)
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        data_type : type, optional
+            Explicit data type for type checking (default: inferred from initial)
 
         Returns
         -------
@@ -120,13 +123,14 @@ class WidgetSyncFactories:
             initial = widget.property(prop_name)  # Use widget directly before connecting
 
         # Create sync and connect
-        sync = cls(initial_value=initial)
+        sync = cls(initial_value=initial, data_type=data_type)
         sync.connect(widget, signal, getter, setter, mode)
 
-        # Store metadata for add() method - the base add() will use these
-        sync._property_name = property_name
-        sync._signal_name = signal_name
-        sync._first_widget_type = type(widget).__name__
+        # Store pattern info in the connection for add() method to use
+        widget_id = id(widget)
+        if widget_id in sync._connections:
+            sync._connections[widget_id]['property_name'] = property_name
+            sync._connections[widget_id]['signal_name'] = signal_name
 
         return sync
 
@@ -293,196 +297,3 @@ class WidgetSyncFactories:
         if mode is None:
             mode = SyncMode.BIDIRECTIONAL
         return cls.for_property(lineedit, 'text', 'textChanged', initial, mode)
-
-    # ========== Type-Based Factories ==========
-    #
-    # These factories are organized by data type rather than widget type,
-    # making it clearer what kind of value is being synchronized.
-    # They work with any widget that has the appropriate property and signal.
-
-    @classmethod
-    def for_bool(cls, widget: QWidget,
-                 property_name: str = 'checked',
-                 signal_name: str = 'toggled',
-                 initial: bool = False,
-                 mode = None) -> WidgetSync:
-        """
-        Create a sync for boolean values.
-
-        Works with any widget that has a boolean property (QCheckBox, QRadioButton,
-        QAction with setCheckable(True), QPushButton with setCheckable(True), etc.)
-
-        Parameters
-        ----------
-        widget : QWidget
-            Widget with a boolean property
-        property_name : str, optional
-            Property name (default: 'checked')
-        signal_name : str, optional
-            Signal name (default: 'toggled')
-        initial : bool, optional
-            Initial value (default: False)
-        mode : SyncMode, optional
-            Sync mode (default: BIDIRECTIONAL)
-
-        Returns
-        -------
-        WidgetSync
-            Sync instance with explicit bool type
-
-        Example
-        -------
-        >>> # Sync different widget types with same boolean value
-        >>> sync = WidgetSync.for_bool(checkbox, initial=True)
-        >>> sync.connect(action, signal=action.toggled,
-        ...              getter=lambda: action.isChecked(),
-        ...              setter=lambda v: action.setChecked(v))
-        """
-        from .core import SyncMode
-        if mode is None:
-            mode = SyncMode.BIDIRECTIONAL
-        # Create sync with explicit bool type
-        sync = cls(initial_value=initial, data_type=bool)
-        # Use for_property to connect the widget
-        temp_sync = cls.for_property(widget, property_name, signal_name, initial, mode)
-        # Copy connection info
-        sync._connections = temp_sync._connections
-        sync._property_name = property_name
-        sync._signal_name = signal_name
-        sync._first_widget_type = type(widget).__name__
-        return sync
-
-    @classmethod
-    def for_int(cls, widget: QWidget,
-                property_name: str = 'value',
-                signal_name: str = 'valueChanged',
-                initial: int = 0,
-                mode = None) -> WidgetSync:
-        """
-        Create a sync for integer values.
-
-        Works with QSpinBox, QSlider, QDial, or any widget with an integer property.
-
-        Parameters
-        ----------
-        widget : QWidget
-            Widget with an integer property
-        property_name : str, optional
-            Property name (default: 'value')
-        signal_name : str, optional
-            Signal name (default: 'valueChanged')
-        initial : int, optional
-            Initial value (default: 0)
-        mode : SyncMode, optional
-            Sync mode (default: BIDIRECTIONAL)
-
-        Returns
-        -------
-        WidgetSync
-            Sync instance with explicit int type
-
-        Example
-        -------
-        >>> sync = WidgetSync.for_int(spinbox, initial=50)
-        >>> sync.add(slider)  # Both use integer values
-        """
-        from .core import SyncMode
-        if mode is None:
-            mode = SyncMode.BIDIRECTIONAL
-        sync = cls(initial_value=initial, data_type=int)
-        temp_sync = cls.for_property(widget, property_name, signal_name, initial, mode)
-        sync._connections = temp_sync._connections
-        sync._property_name = property_name
-        sync._signal_name = signal_name
-        sync._first_widget_type = type(widget).__name__
-        return sync
-
-    @classmethod
-    def for_float(cls, widget: QWidget,
-                  property_name: str = 'value',
-                  signal_name: str = 'valueChanged',
-                  initial: float = 0.0,
-                  mode = None) -> WidgetSync:
-        """
-        Create a sync for float values.
-
-        Works with QDoubleSpinBox or any widget with a float property.
-
-        Parameters
-        ----------
-        widget : QWidget
-            Widget with a float property
-        property_name : str, optional
-            Property name (default: 'value')
-        signal_name : str, optional
-            Signal name (default: 'valueChanged')
-        initial : float, optional
-            Initial value (default: 0.0)
-        mode : SyncMode, optional
-            Sync mode (default: BIDIRECTIONAL)
-
-        Returns
-        -------
-        WidgetSync
-            Sync instance with explicit float type
-
-        Example
-        -------
-        >>> sync = WidgetSync.for_float(double_spin, initial=3.14)
-        """
-        from .core import SyncMode
-        if mode is None:
-            mode = SyncMode.BIDIRECTIONAL
-        sync = cls(initial_value=initial, data_type=float)
-        temp_sync = cls.for_property(widget, property_name, signal_name, initial, mode)
-        sync._connections = temp_sync._connections
-        sync._property_name = property_name
-        sync._signal_name = signal_name
-        sync._first_widget_type = type(widget).__name__
-        return sync
-
-    @classmethod
-    def for_str(cls, widget: QWidget,
-                property_name: str = 'text',
-                signal_name: str = 'textChanged',
-                initial: str = "",
-                mode = None) -> WidgetSync:
-        """
-        Create a sync for string values.
-
-        Works with QLineEdit, QLabel, QTextEdit, or any widget with a text property.
-
-        Parameters
-        ----------
-        widget : QWidget
-            Widget with a string property
-        property_name : str, optional
-            Property name (default: 'text')
-        signal_name : str, optional
-            Signal name (default: 'textChanged')
-        initial : str, optional
-            Initial value (default: "")
-        mode : SyncMode, optional
-            Sync mode (default: BIDIRECTIONAL)
-
-        Returns
-        -------
-        WidgetSync
-            Sync instance with explicit str type
-
-        Example
-        -------
-        >>> sync = WidgetSync.for_str(line_edit, initial="Hello")
-        >>> sync.connect(label, setter=lambda v: label.setText(v),
-        ...              mode=SyncMode.FROM_SYNC)
-        """
-        from .core import SyncMode
-        if mode is None:
-            mode = SyncMode.BIDIRECTIONAL
-        sync = cls(initial_value=initial, data_type=str)
-        temp_sync = cls.for_property(widget, property_name, signal_name, initial, mode)
-        sync._connections = temp_sync._connections
-        sync._property_name = property_name
-        sync._signal_name = signal_name
-        sync._first_widget_type = type(widget).__name__
-        return sync

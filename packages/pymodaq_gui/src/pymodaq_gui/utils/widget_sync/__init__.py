@@ -28,7 +28,7 @@ Advanced Usage - Custom Factories:
     >>> sync = MySync.for_my_widget(my_widget)
 """
 
-from .core import WidgetSync as WidgetSyncBase, SyncMode
+from .core import WidgetSync as WidgetSyncBase, SyncMode, DataType
 from .factories import WidgetSyncFactories
 
 # Combine base class with factory methods for convenience
@@ -53,6 +53,7 @@ class WidgetSync(WidgetSyncBase, WidgetSyncFactories):
 __all__ = [
     'WidgetSync',
     'SyncMode',
+    'DataType',  # Export for type hints and explicit type specification
     'WidgetSyncFactories',  # Export for custom extensions
 ]
 
