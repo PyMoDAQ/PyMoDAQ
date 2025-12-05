@@ -27,7 +27,7 @@ from pymodaq.utils.managers.configurator.utils import (
 
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq.utils.managers.utils import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
