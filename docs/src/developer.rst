@@ -9,6 +9,7 @@ Developer's Guide
    /developer_folder/plugins
    /developer_folder/custom_app
    /developer_folder/managers
+   /developer_folder/widget_sync
    /developer_folder/whats_new34
    /developer_folder/whats_new45
 
