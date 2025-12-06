@@ -682,6 +682,8 @@ class WidgetSyncDemo(QWidget):
         self.color_combo = QComboBox()
         self.color_combo.addItems(["red", "green", "blue", "yellow", "purple"])
 
+        self.color_combo_bis = QComboBox()
+
         # Radio buttons for color
         self.color_radio_group = QButtonGroup()
         radio_layout = QHBoxLayout()
@@ -696,6 +698,7 @@ class WidgetSyncDemo(QWidget):
         layout.addWidget(self.color_display)
         layout.addWidget(QLabel("ComboBox:"))
         layout.addWidget(self.color_combo)
+        layout.addWidget(self.color_combo_bis)
         layout.addWidget(QLabel("Radio Buttons:"))
         layout.addLayout(radio_layout)
 
@@ -716,6 +719,14 @@ class WidgetSyncDemo(QWidget):
             signal=self.color_combo.currentTextChanged,
             getter=lambda: self.color_combo.currentText(),
             setter=lambda c: self.color_combo.setCurrentText(c)
+        )
+
+        # Bind ComboBox
+        self.color_sync.bind(
+            self.color_combo_bis,
+            signal=self.color_combo_bis.currentTextChanged,
+            getter=lambda: self.color_combo_bis.currentText(),
+            setter=lambda c: self.color_combo_bis.setCurrentText(c)
         )
 
         # Bind radio buttons
