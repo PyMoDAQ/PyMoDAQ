@@ -7,8 +7,6 @@ import sys
 from qtpy import QtWidgets, QtCore, QtGui
 
 
-
-
 class MyWidget(ActionManager):
     def __init__(self, parent):
         ActionManager.__init__(self)

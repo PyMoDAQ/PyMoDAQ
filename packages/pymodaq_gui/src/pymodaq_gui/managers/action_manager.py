@@ -47,8 +47,6 @@ class QAction(QtQAction):
         super().__init__(*args, **kwargs)
 
         if icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
-            if icon_checked == 'unshow':
-                pass
             icon_checked = create_icon(icon_checked)
 
         self.icon_checked = icon_checked
@@ -118,7 +116,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         str/Path: the png file name/path to produce the icon
         QtGui.QIcon: the instance of a QIcon element
         ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
-        Optional, if set, will be the icon when the action is checked
+        Optional, if set, will be the icon when the action is checked (checkable will be set to True)
     """
 
     if icon_name is None or icon_name == '':
@@ -128,6 +126,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
 
     if slot is not None:
         action.connect_to(slot)
+    if icon_checked is not None:
+        checkable = True
     action.setCheckable(checkable)
     if checkable:
         action.setChecked(checked)
