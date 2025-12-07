@@ -1,7 +1,9 @@
 [icons]
 fill = [false, true]  # first elt in list is the one pymodaq use
 size = [20, 24, 40, 48]  # first elt in list is the one pymodaq use
+style = ['rounded', 'sharp', 'outlined']
 
-    [icons.rounded]
+    [icons.names]
+
 
 
