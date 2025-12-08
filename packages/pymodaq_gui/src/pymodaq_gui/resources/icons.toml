@@ -6,8 +6,8 @@
 
 
 [icons]
-size = [20, 40]  # add other cases if needed
-style = ['rounded']  # add other cases if needed
+size = [20, 40]  # add other cases if needed among [20, 24, 40, 48]
+style = ['rounded']  # add other cases if needed among ['rounded', 'outlined', 'sharp']
 names = [
     'search',
     'toggle_on',
