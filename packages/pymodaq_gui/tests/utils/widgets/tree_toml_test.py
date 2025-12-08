@@ -13,6 +13,7 @@ class Config(BaseConfig):
     config_template_path = Path(__file__).parent.parent.parent.joinpath('data/config_template.toml')
 
 
+BASE_CONFIG_DICT = Config().to_dict()
 
 def parameter_tree_dict_equals(param : Parameter, config : Dict):
     parameter_tree = TreeFromToml.param_to_dict(param)
@@ -43,11 +44,10 @@ class TestTreeFromToml:
     def test_reject_config(self, qtbot, changes, equals_to_config):
         config = Config()
         config.load()
-        old_config_dict = config.to_dict()
 
         tree_from_toml = TreeFromToml(config)
 
-        def reject_action():
+        def dialog_action():
             # wait for dialog to exist
             qtbot.waitUntil(lambda : tree_from_toml.dialog is not None)
             qtbot.addWidget(tree_from_toml.dialog)
@@ -62,7 +62,7 @@ class TestTreeFromToml:
             reject_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "cancel")
             qtbot.mouseClick(reject_button, QtCore.Qt.MouseButton.LeftButton)
 
-        QtCore.QTimer.singleShot(0, reject_action)
+        QtCore.QTimer.singleShot(0, dialog_action)
 
         # rejected
         saved = tree_from_toml.show_dialog()
@@ -72,7 +72,7 @@ class TestTreeFromToml:
         assert parameter_tree_dict_equals(tree_from_toml.settings, config.to_dict()) == equals_to_config
 
         # In all cases, config object is not changed
-        assert config.to_dict() == old_config_dict
+        assert config.to_dict() == BASE_CONFIG_DICT
 
 
     @pytest.mark.parametrize(
@@ -87,11 +87,10 @@ class TestTreeFromToml:
     def test_accept_config(self, qtbot, changes, config_was_modified):
         config = Config()
         config.load()
-        old_config_dict = config.to_dict()
 
         tree_from_toml = TreeFromToml(config)
 
-        def accept_action():
+        def dialog_action():
             # wait for dialog to exist
             qtbot.waitUntil(lambda : tree_from_toml.dialog is not None)
             qtbot.addWidget(tree_from_toml.dialog)
@@ -103,10 +102,10 @@ class TestTreeFromToml:
                     qtbot.wait(0)
             qtbot.wait(0)
 
-            reject_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "save")
-            qtbot.mouseClick(reject_button, QtCore.Qt.MouseButton.LeftButton)
+            accept_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "save")
+            qtbot.mouseClick(accept_button, QtCore.Qt.MouseButton.LeftButton)
 
-        QtCore.QTimer.singleShot(0, accept_action)
+        QtCore.QTimer.singleShot(0, dialog_action)
 
         # accepted
         saved = tree_from_toml.show_dialog()
@@ -116,8 +115,56 @@ class TestTreeFromToml:
         assert parameter_tree_dict_equals(tree_from_toml.settings, config.to_dict())
 
         # And may or not be different (depending on the changes)
-        assert (config.to_dict() != old_config_dict) == config_was_modified
+        assert (config.to_dict() != BASE_CONFIG_DICT) == config_was_modified
+
+        # As the file was modified, it should be deleted to reload the template
         _delete_config_files(config)
 
+    @pytest.mark.parametrize(
+        "start_path, change, exists", [
+            #Path to start the tree, the change to make, and if it should succeed or not
+            # (entry exist in the sub config)
+            (('optimizer', 'bounds'), (('style', 'darkstyle'), False), False),
+            (('optimizer', 'bounds'), (('actuator_min',), 0), True)
+        ]
+    )
+    def test_subtree(self, qtbot, start_path, change, exists):
+        config = Config()
+        config.load()
+
+        tree_from_toml = TreeFromToml(config, start_path=start_path)
+
+        def dialog_action():
+            # wait for dialog to exist
+            qtbot.waitUntil(lambda: tree_from_toml.dialog is not None)
+            qtbot.addWidget(tree_from_toml.dialog)
+            qtbot.waitExposed(tree_from_toml.dialog)
+
+            path, value = change
+            with (qtbot.waitSignal(tree_from_toml.settings.sigTreeStateChanged, raising=False, timeout=100)):
+                try:
+                    tree_from_toml.settings.param(*path).setValue(value)
+                except KeyError:
+                    assert not exists
+                qtbot.wait(0)
+            qtbot.wait(0)
+
+            reject_button = tree_from_toml.dialog.findChild(QtWidgets.QPushButton, "save")
+            qtbot.mouseClick(reject_button, QtCore.Qt.MouseButton.LeftButton)
+
+        QtCore.QTimer.singleShot(0, dialog_action)
+
+        # accepted
+        saved = tree_from_toml.show_dialog()
+        assert saved
+
+        # Config is synchronized with parameter tree
+        assert parameter_tree_dict_equals(tree_from_toml.settings, config(*start_path))
+
+        # And may or not be different (depending on the changes)
+        assert (config.to_dict() != BASE_CONFIG_DICT) == exists
+
+        # As the file was modified, it should be deleted to reload the template
+        _delete_config_files(config)
 
 

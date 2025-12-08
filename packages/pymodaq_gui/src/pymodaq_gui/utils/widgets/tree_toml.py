@@ -6,7 +6,6 @@ Created the 19/10/2023
 """
 from typing import Union
 import datetime
-from typing import Tuple
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject
@@ -19,11 +18,8 @@ from pymodaq_utils.config import Config, create_toml_from_dict
 class TreeFromToml(QObject):
     """ Create a ParameterTree from a configuration file"""
 
-    def __init__(self, config: Config = None, capitalize=True, starting_entry: Union[str, tuple[str]] = None):
+    def __init__(self, config: Config = None, capitalize=True, start_path: Union[str, tuple[str, ...]] = ()):
         super().__init__()
-        if isinstance(starting_entry, str):
-            starting_entry = (starting_entry,)
-        self.starting_entry = starting_entry
 
         if config is None:
             config = Config()
@@ -31,14 +27,11 @@ class TreeFromToml(QObject):
         params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
                    'value': str(self._config.config_path),
                    'readonly': True}]
-        if self.starting_entry is None:
-            params.extend(self.dict_to_param(config.to_dict(), capitalize=capitalize))
-        else:
-            if not isinstance(config(*starting_entry), dict):
-                config_dict = {}
-            else:
-                config_dict = config(*starting_entry)
-            params.extend(self.dict_to_param(config_dict, capitalize=capitalize))
+
+        self.start_path = (start_path,) if isinstance(start_path, str) else start_path
+
+        #calling a config returns a dict!
+        params.extend(self.dict_to_param(config(*start_path), capitalize=capitalize))
 
         self.settings = Parameter.create(title='settings', name='settings', type='group',
                                          children=params)
@@ -58,7 +51,7 @@ class TreeFromToml(QObject):
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():
-            self._config[path] = value
+            self._config[self.start_path + path] = value
         self._config.save()
 
     def show_dialog(self) -> bool:
@@ -83,7 +76,7 @@ class TreeFromToml(QObject):
 
         if res == QtWidgets.QDialog.DialogCode.Accepted:
             self.commit_config_changes_cache()
-        # self._cached_config_changes = {}
+        self._cached_config_changes = {}
         return bool(res)
 
     @classmethod

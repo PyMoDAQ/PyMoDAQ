@@ -3,3 +3,10 @@ darkstyle = true
 syntax_highlighting = "github-dark"
 language = "English"
 country = "UnitedStates"
+
+[optimizer]
+    n_iter = 100
+
+    [optimizer.bounds]
+    actuator_min = -10
+    actuator_max = 10
