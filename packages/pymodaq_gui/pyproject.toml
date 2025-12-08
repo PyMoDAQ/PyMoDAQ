@@ -37,6 +37,7 @@ dependencies = [
     "pyqtgraph>=0.12 , <0.14.0",
     "qtpy",
     "easydict",
+    "qt_themes",
 ]
 
 [project.optional-dependencies]
