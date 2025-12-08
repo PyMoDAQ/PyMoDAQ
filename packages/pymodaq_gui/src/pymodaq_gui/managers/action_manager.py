@@ -2,34 +2,80 @@ import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Callable, Iterable as IterableType, Union
+import toml
+
 
 from multipledispatch import dispatch
-from pymodaq_utils.warnings import deprecation_msg
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
+from pymodaq_utils.warnings import deprecation_msg
+from pymodaq_utils.config import Config
+
+from pymodaq_gui.resources.qt_material_icons import MaterialIcon
+import qt_themes
+
+
+config = Config()
 here = Path(__file__).parent
 icon_folder = here.parent.joinpath('QtDesigner_Ressources/Icon_Library/')
 QtCore.QDir.addSearchPath('icons', str(icon_folder))
+theme = qt_themes.get_theme(config('style', 'theme')[0])
 
-def create_icon(icon_name: Union[QtGui.QIcon, str, Path]):
+
+
+def resource_exists(name: str, style: MaterialIcon.Style, fill: bool, size: int):
+    if hasattr(MaterialIcon, 'resource_exists'):
+        return MaterialIcon.resource_exists(name, style, fill, size)
+    else:
+        return QtCore.QFile(MaterialIcon.resource_path(name, style, fill, size)).exists()
+
+
+def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, None]:
+    if icon_color is not None:
+        if isinstance(icon_color, str):
+            try:
+                icon_color = theme.__getattribute__(icon_color)
+            except AttributeError:
+                icon_color = QtGui.QColor(icon_color)
+                if not icon_color.isValid():
+                    icon_color = None
+    return icon_color
+
+
+def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
+                icon_color: Union[QtGui.QColor, bytes, str] = None,
+                icon_checked_color: Union[QtGui.QColor, bytes, str] = None):
     if isinstance(icon_name, QtGui.QIcon):
         return icon_name
     else:
-        icon = QtGui.QIcon()
-        if Path(icon_name).is_file(): # Test if icon is in path
-            icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        if resource_exists(icon_name,
+                           style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
+                           fill=config('style', 'icons', 'fill')[0],
+                           size=config('style', 'icons', 'size')[0]):
+            icon = MaterialIcon(
+                icon_name,
+                style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
+                fill=config('style', 'icons', 'fill')[0],
+                size=config('style', 'icons', 'size')[0])
+            icon.set_color(create_color(icon_color))
+            if icon_checked_color is not None:
+                icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
         else:
-            pixmap = QtGui.QPixmap(f"icons:{icon_name}.png") # Test if icon is in pymodaq's library
-            if pixmap.isNull():
-                if hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
-                    icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
-                elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
-                    pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)
-                    icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
+            icon = QtGui.QIcon()
+            if Path(icon_name).is_file(): # Test if icon is in path
+                icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
             else:
-                icon = QtGui.QIcon()
-                icon.addPixmap(QtGui.QPixmap(pixmap), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+                pixmap = QtGui.QPixmap(f"icons:{icon_name}.png") # Test if icon is in pymodaq's library
+                if pixmap.isNull():
+                    if hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
+                        icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
+                    elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
+                        pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)
+                        icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
+                else:
+                    icon = QtGui.QIcon()
+                    icon.addPixmap(QtGui.QPixmap(pixmap), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         return icon
 
 
@@ -38,21 +84,26 @@ class QAction(QtQAction):
     QAction subclass to mimic signals as pushbuttons. Done to be sure of backcompatibility
     when I moved from pushbuttons to QAction
     """
-    def __init__(self, icon_unchecked: Union[None, str, QtGui.QIcon], *args,
-                 icon_checked: Union[str, QtGui.QIcon] = None, **kwargs):
+    def __init__(self, icon_unchecked: Union[None, str, QtGui.QIcon],
+                 name='',
+                 icon_checked: Union[str, QtGui.QIcon] = None,
+                 icon_color: Union[QtGui.QColor, bytes, str]=None,
+                 icon_checked_color: Union[QtGui.QColor, bytes, str]=None):
+
         if icon_unchecked is not None:
-            icon_unchecked = create_icon(icon_unchecked)
-            args = list(args)
-            args.insert(0, icon_unchecked)
-        super().__init__(*args, **kwargs)
+            self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color)
+            super().__init__(self.icon_unchecked, name)
+        else:
+            super().__init__(name)
 
-        if icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
-            icon_checked = create_icon(icon_checked)
-
-        self.icon_checked = icon_checked
-        self.icon_unchecked = icon_unchecked
-        if icon_checked is not None:
-            self.triggered.connect(lambda: self.set_icon())
+        if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
+            icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color)
+            if isinstance(icon_unchecked, MaterialIcon):
+                self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
+            else:
+                self.icon_checked = icon_checked
+                if icon_checked is not None:
+                    self.triggered.connect(lambda: self.set_icon())
 
     def click(self):
         deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
@@ -83,7 +134,10 @@ class QAction(QtQAction):
 def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip='', checkable=False, checked=False,
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
-              enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None):
+              enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
+              icon_color: Union[QtGui.QColor, bytes, str] = None,
+              icon_checked_color: Union[QtGui.QColor, bytes, str] = None
+              ):
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -122,7 +176,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     if icon_name is None or icon_name == '':
         action = QAction(None, name)
     else:
-        action = QAction(icon_name, name, icon_checked=icon_checked)
+        action = QAction(icon_name, name, icon_checked=icon_checked,
+                         icon_color=icon_color, icon_checked_color=icon_checked_color)
 
     if slot is not None:
         action.connect_to(slot)
@@ -296,7 +351,10 @@ class ActionManager:
                    menu: Union[str, QtWidgets.QMenu, None] = None,
                    visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
                    auto_toolbar=True, auto_menu=True,
-                   enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None):
+                   enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
+                   icon_color: Union[QtGui.QColor, bytes, str]=None,
+                   icon_checked_color: Union[QtGui.QColor, bytes, str]=None
+                   ):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -365,8 +423,9 @@ class ActionManager:
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
                                               checked=checked, toolbar=toolbar, menu=menu,
                                               visible=visible, shortcut=shortcut, enabled=enabled,
-                                              icon_checked=icon_checked)
-
+                                              icon_checked=icon_checked,
+                                              icon_color=icon_color,
+                                              icon_checked_color=icon_checked_color)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
