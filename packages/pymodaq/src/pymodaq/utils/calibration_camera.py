@@ -20,7 +20,7 @@ if not os.path.isdir(calib_path):
     os.makedirs(calib_path)
 
 
-class CalibrationCamera(QtWidgets.QWidget, QObject):
+class CalibrationCamera(QtWidgets.QWidget):
     def __init__(self, parent=None, h5filepath=None):
 
         
