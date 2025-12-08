@@ -322,7 +322,6 @@ class BaseConfig(metaclass=Singleton):
         return ret
 
 
-
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
         with self._lock.read_lock():
@@ -331,14 +330,6 @@ class BaseConfig(metaclass=Singleton):
             else:
                 ret = self._config[item]
         return ret
-
-
-    # def __setitem__(self, key, value):
-    #     if isinstance(key, tuple):
-    #         dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
-    #         dic[key[-1]] = value
-    #     else:
-    #         self._config[key] = value
 
     def __setitem__(self, key, value):
         with self._lock.write_lock():
@@ -400,6 +391,7 @@ class BaseConfig(metaclass=Singleton):
     def save(self):
         """Save the current Config object into the user toml file and reload it """
         with self._lock.write_lock():
+
             self.config_path.write_text(toml.dumps(self.to_dict()))
             #  self._config = self.load_config(self.config_name, self.config_template_path)
 
