@@ -135,8 +135,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
               enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
-              icon_color: Union[QtGui.QColor, bytes, str] = None,
-              icon_checked_color: Union[QtGui.QColor, bytes, str] = None
+              icon_color: Union[QtGui.QColor, str] = None,
+              icon_checked_color: Union[QtGui.QColor, str] = None
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -171,6 +171,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         QtGui.QIcon: the instance of a QIcon element
         ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
         Optional, if set, will be the icon when the action is checked (checkable will be set to True)
+    icon_color: QtGui.QColor / str
+        color to be applied (if possible) to the unchecked icon
+    icon_checked_color: QtGui.QColor / str
+        color to be applied to the checked icon (if any)
     """
 
     if icon_name is None or icon_name == '':
@@ -400,6 +404,11 @@ class ActionManager:
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
             Optional, if set, will be the icon when the action is checked
+        icon_color: QtGui.QColor / str
+            color to be applied (if possible) to the unchecked icon
+        icon_checked_color: QtGui.QColor / str
+            color to be applied to the checked icon (if any)
+
         See Also
         --------
         affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
