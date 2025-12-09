@@ -73,7 +73,8 @@ class WidgetSync(QObject):
 
     value_changed = Signal(object)  # Emitted when value changes
 
-    def __init__(self, initial_value: Any = None, data_type: Type | DataType | None = None) -> None:
+    def __init__(self, initial_value: Any = None, data_type: Type | DataType | None = None,
+                 validator: Callable[[Any], Any] | None = None) -> None:
         """
         Initialize widget sync with an initial value and optional type checking.
 
@@ -84,6 +85,10 @@ class WidgetSync(QObject):
         data_type : Type | DataType, optional
             Expected data type for values. If None, inferred from initial_value.
             Use DataType.OBJECT to disable type checking.
+        validator : callable, optional
+            Optional validator function to correct/constrain values.
+            Signature: (value) -> value (returns corrected value)
+            Called before type validation when setting value.
 
         Examples
         --------
@@ -95,13 +100,19 @@ class WidgetSync(QObject):
 
         >>> # Disable type checking
         >>> sync = WidgetSync(initial_value=None, data_type=DataType.OBJECT)
+
+        >>> # With validator
+        >>> sync = WidgetSync(initial_value=50, validator=lambda v: max(0, min(100, v)))
         """
         super().__init__()
+        self._validator = validator
         self._data_type = self._resolve_type(initial_value, data_type)
         self._value: Any = self._validate_value(initial_value)
-        # Dict mapping widget id() to connection info for O(1) lookup
-        # Key: id(widget), Value: ConnectionInfo dict
-        self._connections: dict[int, ConnectionInfo] = {}
+        # Unified connection storage with composite keys
+        # Key: (widget_id, property_key | None), Value: ConnectionInfo dict
+        # - (widget_id, None) for regular bind() connections
+        # - (widget_id, "key") for property connections from bind_properties()
+        self._connections: dict[tuple[int, str | None], ConnectionInfo] = {}
 
     def _resolve_type(self, initial_value: Any, data_type: Type | DataType | None) -> Type:
         """
@@ -221,6 +232,19 @@ class WidgetSync(QObject):
         TypeError
             If new_value doesn't match expected data type
         """
+        # Apply validator first (if provided)
+        if self._validator is not None:
+            try:
+                new_value = self._validator(new_value)
+            except Exception as e:
+                # Log error and keep current value
+                import logging
+                logging.getLogger(__name__).error(
+                    f"Validator raised exception: {e}. Keeping current value.",
+                    exc_info=True
+                )
+                return
+
         # Validate type
         new_value = self._validate_value(new_value)
 
@@ -357,23 +381,13 @@ class WidgetSync(QObject):
 
         # Store weak references to avoid circular references and memory leaks
         widget_ref = ref(widget)
-        widget_id = id(widget)  # Store id for dict key
-
-        # Use weak reference to self to avoid accessing invalid self during cleanup
-        sync_weak = ref(self)
-
-        def on_destroyed():
-            """Cleanup callback when widget is destroyed"""
-            sync = sync_weak()
-            if sync is not None:
-                sync._on_widget_destroyed(widget_id)
-
-        widget.destroyed.connect(on_destroyed)
+        widget_id = id(widget)
+        connection_key = (widget_id, None)  # None for regular bind() connections
 
         connection_info = {
-            'widget_id': widget_id,  # Store for easier lookup
+            'widget_id': widget_id,
             'widget_ref': widget_ref,
-            'widget_type': type(widget).__name__,  # Store widget type for pattern matching
+            'widget_type': type(widget).__name__,
             'signal': signal,
             'getter': getter,
             'setter': setter,
@@ -381,7 +395,7 @@ class WidgetSync(QObject):
             'to_sync_transform': to_sync_transform,
             'from_sync_transform': from_sync_transform,
             'callbacks': [],
-            'enabled': True,  # Connection enabled by default
+            'enabled': True,
             # Connection pattern info for add() method (set by factories)
             'property_name': None,  # Will be set by for_property()
             'signal_name': None,    # Will be set by for_property()
@@ -389,62 +403,19 @@ class WidgetSync(QObject):
 
         # Widget → Sync connection
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC):
-            def on_widget_change(*args):
-                """Handle widget value changes"""
-                widget_obj = widget_ref()
-                if widget_obj is None:
-                    return  # Widget was deleted
-
-                # Check if connection is enabled
-                conn = self._connections.get(widget_id)
-                if conn is None or not conn.get('enabled', True):
-                    return  # Connection disabled
-
-                try:
-                    value = args[0] if args else getter()
-                    if to_sync_transform:
-                        value = to_sync_transform(value)
-                    self.set_value(value, emit=True)
-                except Exception as e:
-                    # Log error instead of raising to avoid crashing Qt event loop
-                    import logging
-                    logging.getLogger(__name__).error(
-                        f"Error syncing from widget {type(widget).__name__}: {e}",
-                        exc_info=True
-                    )
-
-            signal.connect(on_widget_change)
-            connection_info['callbacks'].append(('widget', on_widget_change))
+            callback = self._create_widget_to_sync_callback(
+                connection_key, widget_ref, getter, to_sync_transform, None
+            )
+            signal.connect(callback)
+            connection_info['callbacks'].append(('widget', callback))
 
         # Sync → Widget connection
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
-            def on_sync_change(value):
-                """Handle sync value changes"""
-                widget_obj = widget_ref()
-                if widget_obj is None:
-                    return  # Widget was deleted
-
-                # Check if connection is enabled
-                conn = self._connections.get(widget_id)
-                if conn is None or not conn.get('enabled', True):
-                    return  # Connection disabled
-
-                try:
-                    if from_sync_transform:
-                        value = from_sync_transform(value)
-                    with self._block_signals(widget_obj):
-                        setter(value)
-                except Exception as e:
-                    # Log error instead of raising to avoid crashing Qt event loop
-                    import logging
-                    logging.getLogger(__name__).error(
-                        f"Error updating widget {type(widget).__name__}: {e}",
-                        exc_info=True
-                    )
-
-            self.value_changed.connect(on_sync_change)
-            # Store 2-tuple for sync callbacks to avoid circular reference
-            connection_info['callbacks'].append(('sync', on_sync_change))
+            callback = self._create_sync_to_widget_callback(
+                connection_key, widget_ref, setter, from_sync_transform, None
+            )
+            self.value_changed.connect(callback)
+            connection_info['callbacks'].append(('sync', callback))
 
         # Initialize widget with current value
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC) and self._value is not None:
@@ -459,7 +430,487 @@ class WidgetSync(QObject):
                     f"Error initializing widget {type(widget).__name__}: {e}"
                 ) from e
 
-        self._connections[widget_id] = connection_info
+        # Setup widget destruction callback and store connection
+        self._setup_widget_destruction_callback(widget, [connection_key])
+        self._set_connection(widget_id, None, connection_info)
+
+    def bind_properties(self,
+                       widget: QWidget,
+                       property_map: dict[str, dict[str, Any]]) -> None:
+        """
+        Bind multiple properties of ONE widget to different keys in a dict value.
+
+        **IMPORTANT**: This method is designed for synchronizing multiple properties
+        of a SINGLE widget. All properties control the same widget passed as the first
+        parameter. The simplified 'property' syntax auto-generates getter/setter for
+        this widget.
+
+        **For different widgets mapped to dict keys, use bind_dict() instead.**
+
+        This method allows syncing multiple properties from the same widget to different
+        keys in the sync's value dict. Each property can have its own signal, getter,
+        setter, and mode. When a signal fires, only its corresponding dict key is updated.
+
+        Requires sync value to be a dict.
+
+        **NEW: Simplified Property Syntax**
+        Use 'property' key for automatic getter/setter generation with Qt properties:
+        - Auto-generates getter/setter using widget.property()/setProperty()
+        - Auto-detects signal from Qt property system
+        - Uses weak references internally (memory safe)
+
+        Parameters
+        ----------
+        widget : QWidget
+            The widget to bind (all properties control THIS widget)
+        property_map : dict[str, dict]
+            Mapping of dict keys to property configurations.
+            Each key maps to a dict with EITHER:
+
+            **Simple syntax (recommended for Qt properties):**
+            - 'property': str - Qt property name (auto-generates getter/setter)
+            - 'signal': Signal | str (optional, auto-detected if omitted)
+            - 'mode': SyncMode (optional, default: BIDIRECTIONAL)
+
+            **Advanced syntax (for custom logic):**
+            - 'signal': Signal | None (required for TO_SYNC/BIDIRECTIONAL)
+            - 'getter': callable () -> value (required for TO_SYNC/BIDIRECTIONAL)
+            - 'setter': callable (value) -> None (required for FROM_SYNC/BIDIRECTIONAL)
+            - 'mode': SyncMode (optional, default: inferred from getter/setter)
+
+        Raises
+        ------
+        TypeError
+            If sync value is not a dict
+        ValueError
+            If property configuration is invalid
+
+        See Also
+        --------
+        bind_dict : For binding different widgets to different dict keys
+
+        Examples
+        --------
+        Example 1: SpinBox configuration (min/max/current)
+        >>> config_sync = WidgetSync(initial_value={'min': 0, 'max': 100, 'current': 50})
+        >>> config_sync.bind_properties(
+        ...     spinbox,  # All properties control this ONE spinbox
+        ...     property_map={
+        ...         'min': {'property': 'minimum', 'mode': SyncMode.FROM_SYNC},
+        ...         'max': {'property': 'maximum', 'mode': SyncMode.FROM_SYNC},
+        ...         'current': {'property': 'value'}  # Signal auto-detected, BIDIRECTIONAL
+        ...     }
+        ... )
+        >>> # Change all properties at once
+        >>> config_sync.value = {'min': 10, 'max': 1000, 'current': 100}
+
+        Example 2: ComboBox with items + selection
+        >>> sync = WidgetSync(initial_value={'items': ["A", "B"], 'selection': "A"})
+        >>> sync.bind_properties(
+        ...     combobox,  # All properties control this ONE combobox
+        ...     property_map={
+        ...         'items': {  # Advanced: custom logic for items list
+        ...             'setter': lambda items: (combobox.clear(), combobox.addItems(items)),
+        ...             'mode': SyncMode.FROM_SYNC
+        ...         },
+        ...         'selection': {'property': 'currentText'}  # Simple: auto-detected
+        ...     }
+        ... )
+        >>> # Update combobox
+        >>> sync.value = {'items': ["X", "Y", "Z"], 'selection': "Y"}
+
+        Example 3: WRONG - Different widgets (use bind_dict() instead!)
+        >>> # DON'T DO THIS - different widgets require bind_dict():
+        >>> color_sync = WidgetSync(initial_value={'r': 255, 'g': 0, 'b': 0})
+        >>> # WRONG: trying to control g_slider/b_slider via bind_properties(r_slider)
+        >>> # RIGHT: use bind_dict() - see bind_dict() docstring for correct approach
+        """
+        # Validate that value is a dict
+        if not isinstance(self._value, dict):
+            raise TypeError(
+                f"bind_properties() requires sync value to be a dict, "
+                f"but got {type(self._value).__name__}"
+            )
+
+        widget_id = id(widget)
+        widget_ref = ref(widget)
+
+        # Collect all connection keys for destruction callback
+        all_connection_keys = [(widget_id, prop_key) for prop_key in property_map.keys()]
+
+        # Bind each property
+        for property_key, config in property_map.items():
+            # Validate property key exists in value dict
+            if property_key not in self._value:
+                raise ValueError(
+                    f"Property key '{property_key}' not found in sync value dict. "
+                    f"Available keys: {list(self._value.keys())}"
+                )
+
+            signal = config.get('signal')
+            getter = config.get('getter')
+            setter = config.get('setter')
+            mode = config.get('mode')
+            property_name = config.get('property')
+
+            # AUTO-GENERATION: If 'property' key is provided, auto-generate getter/setter
+            if property_name is not None:
+                # Capture property name in local variable for closure
+                prop_name = property_name
+
+                # Auto-generate getter with weak reference (if not explicitly provided)
+                if getter is None:
+                    def make_property_getter(prop=prop_name, wref=widget_ref):
+                        w = wref()
+                        return w.property(prop) if w is not None else None
+                    getter = make_property_getter
+
+                # Auto-generate setter with weak reference (if not explicitly provided)
+                if setter is None:
+                    def make_property_setter(value, prop=prop_name, wref=widget_ref):
+                        w = wref()
+                        if w is not None:
+                            w.setProperty(prop, value)
+                    setter = make_property_setter
+
+                # Auto-detect signal from Qt property system (if not provided)
+                if signal is None and mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC, None):
+                    try:
+                        meta = widget.metaObject()
+                        prop_index = meta.indexOfProperty(prop_name)
+                        if prop_index != -1:
+                            prop = meta.property(prop_index)
+                            notify_signal = prop.notifySignal()
+                            if notify_signal.isValid():
+                                signal_name = notify_signal.name().data().decode()
+                                signal = getattr(widget, signal_name, None)
+                    except Exception:
+                        # If auto-detection fails, signal remains None
+                        # Will be caught by validation below if needed
+                        pass
+
+            # Auto-infer mode if not specified
+            if mode is None:
+                if getter is not None and setter is not None:
+                    mode = SyncMode.BIDIRECTIONAL
+                elif getter is not None:
+                    mode = SyncMode.TO_SYNC
+                elif setter is not None:
+                    mode = SyncMode.FROM_SYNC
+                else:
+                    raise ValueError(
+                        f"Property '{property_key}': Must provide at least getter or setter"
+                    )
+
+            # Validate signal requirement
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) and signal is None:
+                raise ValueError(
+                    f"Property '{property_key}': signal is required for {mode.value} mode"
+                )
+
+            # Validate getter/setter requirements
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) and getter is None:
+                raise ValueError(
+                    f"Property '{property_key}': getter is required for {mode.value} mode"
+                )
+
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC) and setter is None:
+                raise ValueError(
+                    f"Property '{property_key}': setter is required for {mode.value} mode"
+                )
+
+            connection_key = (widget_id, property_key)
+            connection_info = {
+                'widget_id': widget_id,
+                'widget_ref': widget_ref,
+                'widget_type': type(widget).__name__,
+                'property_key': property_key,
+                'signal': signal,
+                'getter': getter,
+                'setter': setter,
+                'mode': mode,
+                'callbacks': [],
+                'enabled': True
+            }
+
+            # Widget → Sync connection
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC):
+                callback = self._create_widget_to_sync_callback(
+                    connection_key, widget_ref, getter, None, property_key
+                )
+                signal.connect(callback)
+                connection_info['callbacks'].append(('widget', callback))
+
+            # Sync → Widget connection
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
+                callback = self._create_sync_to_widget_callback(
+                    connection_key, widget_ref, setter, None, property_key
+                )
+                self.value_changed.connect(callback)
+                connection_info['callbacks'].append(('sync', callback))
+
+            # Initialize widget with current value
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
+                try:
+                    if property_key in self._value:
+                        with self._block_signals(widget):
+                            setter(self._value[property_key])
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Error initializing property '{property_key}' on widget {type(widget).__name__}: {e}"
+                    ) from e
+
+            self._set_connection(widget_id, property_key, connection_info)
+
+        # Setup widget destruction callback once for all properties
+        self._setup_widget_destruction_callback(widget, all_connection_keys)
+
+    def bind_dict(self, property_map: dict[str, dict[str, Any]]) -> None:
+        """
+        Bind different widgets to different dict keys.
+
+        Each property in the dict value is controlled by its own widget. This method
+        is designed for synchronizing multiple different widgets where each widget
+        corresponds to a specific key in the sync's dict value.
+
+        **Key Difference from bind_properties():**
+        - `bind_properties()`: Multiple properties of ONE widget → dict keys
+        - `bind_dict()`: Multiple different widgets → dict keys (one widget per key)
+
+        Requires sync value to be a dict. Each property must specify its widget
+        using the 'widget' key in its configuration.
+
+        Parameters
+        ----------
+        property_map : dict[str, dict]
+            Mapping of dict keys to widget configurations.
+            Each key maps to a dict that MUST include:
+
+            **Required:**
+            - 'widget': QWidget - The widget for this property
+
+            **Simple syntax (recommended for Qt properties):**
+            - 'property': str - Qt property name (auto-generates getter/setter)
+            - 'signal': Signal | str (optional, auto-detected if omitted)
+            - 'mode': SyncMode (optional, default: BIDIRECTIONAL)
+
+            **Advanced syntax (for custom logic):**
+            - 'signal': Signal | None (required for TO_SYNC/BIDIRECTIONAL)
+            - 'getter': callable () -> value (required for TO_SYNC/BIDIRECTIONAL)
+            - 'setter': callable (value) -> None (required for FROM_SYNC/BIDIRECTIONAL)
+            - 'mode': SyncMode (optional, default: inferred from getter/setter)
+
+        Raises
+        ------
+        TypeError
+            If sync value is not a dict
+        ValueError
+            If property configuration is invalid or missing 'widget' key
+
+        Examples
+        --------
+        Example 1: RGB sliders (different widgets, one per color)
+        >>> color_sync = WidgetSync(initial_value={'r': 255, 'g': 0, 'b': 0})
+        >>> color_sync.bind_dict({
+        ...     'r': {'widget': r_slider, 'property': 'value'},
+        ...     'g': {'widget': g_slider, 'property': 'value'},
+        ...     'b': {'widget': b_slider, 'property': 'value'}
+        ... })
+        >>> # All three sliders sync to their respective dict keys
+        >>> color_sync.value = {'r': 128, 'g': 128, 'b': 128}
+
+        Example 2: Form fields (different widget types)
+        >>> user_sync = WidgetSync(initial_value={
+        ...     'name': 'John', 'email': 'john@example.com', 'role': 'User'
+        ... })
+        >>> user_sync.bind_dict({
+        ...     'name': {'widget': name_field, 'property': 'text'},
+        ...     'email': {'widget': email_field, 'property': 'text'},
+        ...     'role': {'widget': role_combo, 'property': 'currentText'}
+        ... })
+
+        Example 3: Display options (separate checkboxes)
+        >>> display_sync = WidgetSync(initial_value={
+        ...     'grid': True, 'legend': True, 'autoscale': False
+        ... })
+        >>> display_sync.bind_dict({
+        ...     'grid': {'widget': grid_check, 'property': 'checked'},
+        ...     'legend': {'widget': legend_check, 'property': 'checked'},
+        ...     'autoscale': {'widget': autoscale_check, 'property': 'checked'}
+        ... })
+
+        Example 4: Mixed simple and advanced syntax
+        >>> config_sync = WidgetSync(initial_value={'value': 50, 'enabled': True})
+        >>> config_sync.bind_dict({
+        ...     'value': {'widget': slider, 'property': 'value'},  # Simple
+        ...     'enabled': {  # Advanced with custom logic
+        ...         'widget': checkbox,
+        ...         'signal': checkbox.toggled,
+        ...         'getter': lambda: checkbox.isChecked(),
+        ...         'setter': lambda v: checkbox.setChecked(v)
+        ...     }
+        ... })
+        """
+        # Validate that value is a dict
+        if not isinstance(self._value, dict):
+            raise TypeError(
+                f"bind_dict() requires sync value to be a dict, "
+                f"but got {type(self._value).__name__}"
+            )
+
+        # Track all connection keys and widgets for cleanup
+        all_connection_keys = []
+        widgets_to_setup = {}  # widget_id -> list of connection keys
+
+        # Bind each property
+        for property_key, config in property_map.items():
+            # Validate property key exists in value dict
+            if property_key not in self._value:
+                raise ValueError(
+                    f"Property key '{property_key}' not found in sync value dict. "
+                    f"Available keys: {list(self._value.keys())}"
+                )
+
+            # Get the widget for this property (REQUIRED)
+            widget = config.get('widget')
+            if widget is None:
+                raise ValueError(
+                    f"Property '{property_key}': 'widget' key is required in bind_dict(). "
+                    f"Each property must specify which widget it controls."
+                )
+
+            widget_id = id(widget)
+            widget_ref = ref(widget)
+
+            signal = config.get('signal')
+            getter = config.get('getter')
+            setter = config.get('setter')
+            mode = config.get('mode')
+            property_name = config.get('property')
+
+            # AUTO-GENERATION: If 'property' key is provided, auto-generate getter/setter
+            if property_name is not None:
+                # Capture property name in local variable for closure
+                prop_name = property_name
+
+                # Auto-generate getter with weak reference (if not explicitly provided)
+                if getter is None:
+                    def make_property_getter(prop=prop_name, wref=widget_ref):
+                        w = wref()
+                        return w.property(prop) if w is not None else None
+                    getter = make_property_getter
+
+                # Auto-generate setter with weak reference (if not explicitly provided)
+                if setter is None:
+                    def make_property_setter(value, prop=prop_name, wref=widget_ref):
+                        w = wref()
+                        if w is not None:
+                            w.setProperty(prop, value)
+                    setter = make_property_setter
+
+                # Auto-detect signal from Qt property system (if not provided)
+                if signal is None and mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC, None):
+                    try:
+                        meta = widget.metaObject()
+                        prop_index = meta.indexOfProperty(prop_name)
+                        if prop_index != -1:
+                            prop = meta.property(prop_index)
+                            notify_signal = prop.notifySignal()
+                            if notify_signal.isValid():
+                                signal_name = notify_signal.name().data().decode()
+                                signal = getattr(widget, signal_name, None)
+                    except Exception:
+                        # If auto-detection fails, signal remains None
+                        # Will be caught by validation below if needed
+                        pass
+
+            # Auto-infer mode if not specified
+            if mode is None:
+                if getter is not None and setter is not None:
+                    mode = SyncMode.BIDIRECTIONAL
+                elif getter is not None:
+                    mode = SyncMode.TO_SYNC
+                elif setter is not None:
+                    mode = SyncMode.FROM_SYNC
+                else:
+                    raise ValueError(
+                        f"Property '{property_key}': Must provide at least getter or setter"
+                    )
+
+            # Validate signal requirement
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) and signal is None:
+                raise ValueError(
+                    f"Property '{property_key}': signal is required for {mode.value} mode"
+                )
+
+            # Validate getter/setter requirements
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC) and getter is None:
+                raise ValueError(
+                    f"Property '{property_key}': getter is required for {mode.value} mode"
+                )
+
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC) and setter is None:
+                raise ValueError(
+                    f"Property '{property_key}': setter is required for {mode.value} mode"
+                )
+
+            connection_key = (widget_id, property_key)
+            connection_info = {
+                'widget_id': widget_id,
+                'widget_ref': widget_ref,
+                'widget_type': type(widget).__name__,
+                'property_key': property_key,
+                'signal': signal,
+                'getter': getter,
+                'setter': setter,
+                'mode': mode,
+                'callbacks': [],
+                'enabled': True
+            }
+
+            # Widget → Sync connection
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC):
+                callback = self._create_widget_to_sync_callback(
+                    connection_key, widget_ref, getter, None, property_key
+                )
+                signal.connect(callback)
+                connection_info['callbacks'].append(('widget', callback))
+
+            # Sync → Widget connection
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
+                callback = self._create_sync_to_widget_callback(
+                    connection_key, widget_ref, setter, None, property_key
+                )
+                self.value_changed.connect(callback)
+                connection_info['callbacks'].append(('sync', callback))
+
+            # Initialize widget with current value
+            if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
+                try:
+                    if property_key in self._value:
+                        with self._block_signals(widget):
+                            setter(self._value[property_key])
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Error initializing property '{property_key}' on widget {type(widget).__name__}: {e}"
+                    ) from e
+
+            self._set_connection(widget_id, property_key, connection_info)
+
+            # Track for destruction callback setup
+            all_connection_keys.append(connection_key)
+            if widget_id not in widgets_to_setup:
+                widgets_to_setup[widget_id] = []
+            widgets_to_setup[widget_id].append(connection_key)
+
+        # Setup widget destruction callbacks (one per unique widget)
+        for widget_id, connection_keys in widgets_to_setup.items():
+            # Get any widget reference from the connections
+            first_key = connection_keys[0]
+            widget_ref = self._connections[first_key]['widget_ref']
+            widget = widget_ref()
+            if widget is not None:
+                self._setup_widget_destruction_callback(widget, connection_keys)
 
     def _disconnect_callbacks(self, callbacks: list) -> None:
         """
@@ -479,6 +930,122 @@ class WidgetSync(QObject):
                 except (TypeError, RuntimeError):
                     pass  # Already disconnected
 
+    def _get_connection(self, widget_id: int, property_key: str | None = None) -> ConnectionInfo | None:
+        """Get connection by composite key."""
+        return self._connections.get((widget_id, property_key))
+
+    def _set_connection(self, widget_id: int, property_key: str | None, connection_info: ConnectionInfo) -> None:
+        """Set connection with composite key."""
+        connection_info['property_key'] = property_key
+        self._connections[(widget_id, property_key)] = connection_info
+
+    def _remove_connection(self, widget_id: int, property_key: str | None = None) -> None:
+        """Remove connection and disconnect callbacks."""
+        key = (widget_id, property_key)
+        if conn := self._connections.get(key):
+            self._disconnect_callbacks(conn['callbacks'])
+            del self._connections[key]
+
+    def _get_connection_keys_for_widget(self, widget_id: int) -> list[tuple[int, str | None]]:
+        """Get all connection keys for a widget."""
+        return [k for k in self._connections if k[0] == widget_id]
+
+    def _create_widget_to_sync_callback(
+        self,
+        connection_key: tuple[int, str | None],
+        widget_ref: ReferenceType,
+        getter: WidgetGetter,
+        to_sync_transform: ValueTransform | None,
+        property_key: str | None
+    ) -> Callable:
+        """Create callback for widget → sync updates."""
+        def on_widget_change(*args):
+            widget_obj = widget_ref()
+            if widget_obj is None:
+                return
+
+            conn = self._connections.get(connection_key)
+            if conn is None or not conn.get('enabled', True):
+                return
+
+            try:
+                value = args[0] if args else getter()
+                if to_sync_transform:
+                    value = to_sync_transform(value)
+
+                # Property connection: update dict key
+                if property_key is not None:
+                    if isinstance(self._value, dict):
+                        new_dict = self._value.copy()
+                        new_dict[property_key] = value
+                        self.set_value(new_dict, emit=True)
+                # Regular connection: update entire value
+                else:
+                    self.set_value(value, emit=True)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"Error syncing from widget {type(widget_obj).__name__}: {e}",
+                    exc_info=True
+                )
+
+        return on_widget_change
+
+    def _create_sync_to_widget_callback(
+        self,
+        connection_key: tuple[int, str | None],
+        widget_ref: ReferenceType,
+        setter: WidgetSetter,
+        from_sync_transform: ValueTransform | None,
+        property_key: str | None
+    ) -> Callable:
+        """Create callback for sync → widget updates."""
+        def on_sync_change(value):
+            widget_obj = widget_ref()
+            if widget_obj is None:
+                return
+
+            conn = self._connections.get(connection_key)
+            if conn is None or not conn.get('enabled', True):
+                return
+
+            try:
+                # Property connection: extract dict key
+                if property_key is not None:
+                    if isinstance(value, dict) and property_key in value:
+                        value = value[property_key]
+                    else:
+                        return
+
+                if from_sync_transform:
+                    value = from_sync_transform(value)
+                with self._block_signals(widget_obj):
+                    setter(value)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"Error updating widget {type(widget_obj).__name__}: {e}",
+                    exc_info=True
+                )
+
+        return on_sync_change
+
+    def _setup_widget_destruction_callback(
+        self,
+        widget: QWidget,
+        connection_keys: list[tuple[int, str | None]]
+    ) -> None:
+        """Setup callback for widget destruction."""
+        sync_weak = ref(self)
+
+        def on_destroyed():
+            sync = sync_weak()
+            if sync is not None:
+                for key in connection_keys:
+                    sync._remove_connection(key[0], key[1])
+
+        widget.destroyed.connect(on_destroyed)
+
     def _on_widget_destroyed(self, widget_id: int) -> None:
         """
         Callback when a connected widget is destroyed.
@@ -496,6 +1063,8 @@ class WidgetSync(QObject):
         """
         Unbind a widget by reference or ID.
 
+        Removes ALL connections for the widget (both regular and property connections).
+
         Parameters
         ----------
         widget : QWidget | int
@@ -504,13 +1073,14 @@ class WidgetSync(QObject):
         # Handle both widget object and widget_id
         widget_id = widget if isinstance(widget, int) else id(widget)
 
-        conn = self._connections.get(widget_id)
-        if conn is not None:
-            self._disconnect_callbacks(conn['callbacks'])
-            del self._connections[widget_id]
+        # Remove all connections for this widget (both regular and property connections)
+        connection_keys = self._get_connection_keys_for_widget(widget_id)
+        for key in connection_keys:
+            self._remove_connection(key[0], key[1])
 
     def unbind_all(self) -> None:
-        """Unbind all connected widgets."""
+        """Unbind all connected widgets (both regular and property connections)."""
+        # Disconnect all callbacks from the unified connections dictionary
         for conn in self._connections.values():
             self._disconnect_callbacks(conn['callbacks'])
         self._connections.clear()
@@ -658,9 +1228,10 @@ class WidgetSync(QObject):
 
     def enable(self, widget: QWidget | int) -> None:
         """
-        Enable a widget's connection.
+        Enable a widget's connections.
 
         When enabled, the widget will sync bidirectionally with other widgets.
+        This enables ALL connections for the widget (both regular and property connections).
 
         Parameters
         ----------
@@ -673,18 +1244,26 @@ class WidgetSync(QObject):
             If widget is not connected
         """
         widget_id = widget if isinstance(widget, int) else id(widget)
-        conn = self._connections.get(widget_id)
-        if conn is None:
+        connection_keys = self._get_connection_keys_for_widget(widget_id)
+
+        if not connection_keys:
             raise ValueError(f"Widget is not connected to this sync")
-        conn['enabled'] = True
+
+        # Enable all connections for this widget
+        for key in connection_keys:
+            conn = self._connections.get(key)
+            if conn is not None:
+                conn['enabled'] = True
 
     def disable(self, widget: QWidget | int) -> None:
         """
-        Disable a widget's connection temporarily.
+        Disable a widget's connections temporarily.
 
         When disabled, the widget will not receive updates from the sync,
-        and its changes will not affect other widgets. The connection remains
+        and its changes will not affect other widgets. The connections remain
         in place and can be re-enabled later.
+
+        This disables ALL connections for the widget (both regular and property connections).
 
         This is useful for:
         - Temporarily pausing sync during complex operations
@@ -711,14 +1290,22 @@ class WidgetSync(QObject):
         >>> slider2.value()        # Still has old value until next update
         """
         widget_id = widget if isinstance(widget, int) else id(widget)
-        conn = self._connections.get(widget_id)
-        if conn is None:
+        connection_keys = self._get_connection_keys_for_widget(widget_id)
+
+        if not connection_keys:
             raise ValueError(f"Widget is not connected to this sync")
-        conn['enabled'] = False
+
+        # Disable all connections for this widget
+        for key in connection_keys:
+            conn = self._connections.get(key)
+            if conn is not None:
+                conn['enabled'] = False
 
     def is_enabled(self, widget: QWidget | int) -> bool:
         """
-        Check if a widget's connection is enabled.
+        Check if a widget's connections are enabled.
+
+        Returns True only if ALL connections for the widget are enabled.
 
         Parameters
         ----------
@@ -728,7 +1315,7 @@ class WidgetSync(QObject):
         Returns
         -------
         bool
-            True if enabled, False if disabled
+            True if all connections are enabled, False otherwise
 
         Raises
         ------
@@ -736,10 +1323,16 @@ class WidgetSync(QObject):
             If widget is not connected
         """
         widget_id = widget if isinstance(widget, int) else id(widget)
-        conn = self._connections.get(widget_id)
-        if conn is None:
+        connection_keys = self._get_connection_keys_for_widget(widget_id)
+
+        if not connection_keys:
             raise ValueError(f"Widget is not connected to this sync")
-        return conn.get('enabled', True)
+
+        # Return True only if ALL connections are enabled
+        return all(
+            self._connections.get(key, {}).get('enabled', True)
+            for key in connection_keys
+        )
 
     @property
     def connected_widgets(self) -> list[QWidget]:
@@ -747,11 +1340,12 @@ class WidgetSync(QObject):
         Get list of currently connected widgets.
 
         Returns only widgets that haven't been deleted.
+        Includes both regular connections and property connections.
 
         Returns
         -------
         list[QWidget]
-            List of active widget references
+            List of active widget references (unique widgets)
 
         Example
         -------
@@ -762,22 +1356,29 @@ class WidgetSync(QObject):
         3
         """
         widgets = []
+        widget_ids = set()
+
+        # Iterate through unified connections dictionary
         for conn in self._connections.values():
             widget = conn['widget_ref']()
-            if widget is not None:
+            if widget is not None and id(widget) not in widget_ids:
                 widgets.append(widget)
+                widget_ids.add(id(widget))
+
         return widgets
-    
+
 
     @property
     def connection_count(self) -> int:
         """
         Get count of active connections.
 
+        Includes both regular connections and property connections.
+
         Returns
         -------
         int
-            Number of currently connected widgets
+            Number of currently connected widgets/properties
 
         Example
         -------

@@ -28,6 +28,7 @@ Advanced Usage - Custom Factories:
 
 from .core import WidgetSync as WidgetSyncBase, SyncMode, DataType
 from .factories import WidgetSyncFactories
+# from .composite import CompositeSync, ComboBoxFullSync
 
 # Combine base class with factory methods for convenience
 class WidgetSync(WidgetSyncBase, WidgetSyncFactories):
@@ -35,7 +36,7 @@ class WidgetSync(WidgetSyncBase, WidgetSyncFactories):
     Widget synchronization with built-in factory methods.
 
     This is the main class users should use. It combines:
-    - Base WidgetSync functionality (connect, disconnect, value management)
+    - Base WidgetSync functionality (bind, unbind, value management)
     - Factory methods for common widgets (for_checkbox, for_spinbox, etc.)
 
     For extending with custom factories:
