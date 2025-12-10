@@ -12,6 +12,9 @@ from enum import Enum
 from typing import Callable, Any, Iterator, Type
 from contextlib import contextmanager
 from weakref import ref, ReferenceType
+from pymodaq_utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
 
 ValueTransform = Callable[[Any], Any]
 WidgetGetter = Callable[[], Any]
@@ -96,6 +99,157 @@ class BaseWidgetSync(QObject):
         Must be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement _get_bind_value()")
+
+    # Helper Methods for Factorized Logic
+
+    def _apply_validator(self, value: Any) -> Any:
+        """
+        Apply validator if present, with error handling.
+
+        Parameters
+        ----------
+        value : Any
+            Value to validate
+
+        Returns
+        -------
+        Any
+            Validated value
+
+        Raises
+        ------
+        ValueError
+            If validation fails (logs error before raising)
+
+        Notes
+        -----
+        If validation fails, logs error and raises ValueError
+        to signal that the calling method should abort the value update.
+        """
+        if self._validator is None:
+            return value
+
+        try:
+            return self._validator(value)
+        except Exception as e:
+            logger.error(
+                f"Validator raised exception: {e}. Keeping current value.",
+                exc_info=True
+            )
+            raise ValueError(f"Validation failed: {e}") from e
+
+    def _make_property_getter(self, widget_ref: ReferenceType, property_name: str) -> WidgetGetter:
+        """
+        Create a getter function for a Qt property with weak reference.
+
+        Parameters
+        ----------
+        widget_ref : ReferenceType
+            Weak reference to the widget
+        property_name : str
+            Qt property name
+
+        Returns
+        -------
+        WidgetGetter
+            Getter function that safely accesses the property
+        """
+        def getter():
+            w = widget_ref()
+            return w.property(property_name) if w is not None else None
+        return getter
+
+    def _make_property_setter(self, widget_ref: ReferenceType, property_name: str) -> WidgetSetter:
+        """
+        Create a setter function for a Qt property with weak reference.
+
+        Parameters
+        ----------
+        widget_ref : ReferenceType
+            Weak reference to the widget
+        property_name : str
+            Qt property name
+
+        Returns
+        -------
+        WidgetSetter
+            Setter function that safely sets the property
+        """
+        def setter(value):
+            w = widget_ref()
+            if w is not None:
+                w.setProperty(property_name, value)
+        return setter
+
+    def _create_connection_info(
+        self,
+        widget: QWidget,
+        widget_ref: ReferenceType,
+        signal: Signal | None = None,
+        getter: WidgetGetter | None = None,
+        setter: WidgetSetter | None = None,
+        mode: SyncMode | None = None,
+        to_sync_transform: ValueTransform | None = None,
+        from_sync_transform: ValueTransform | None = None,
+        property_key: str | None = None,
+        property_name: str | None = None,
+        signal_name: str | None = None
+    ) -> ConnectionInfo:
+        """
+        Create a standardized connection_info dictionary.
+
+        Ensures all connection_info dicts have the same structure across
+        bind(), bind_properties(), and bind_dict().
+
+        Parameters
+        ----------
+        widget : QWidget
+            The widget being connected
+        widget_ref : ReferenceType
+            Weak reference to the widget
+        signal : Signal, optional
+            Qt signal for widget→sync updates
+        getter : WidgetGetter, optional
+            Function to get value from widget
+        setter : WidgetSetter, optional
+            Function to set value on widget
+        mode : SyncMode, optional
+            Synchronization mode
+        to_sync_transform : ValueTransform, optional
+            Transform function widget→sync
+        from_sync_transform : ValueTransform, optional
+            Transform function sync→widget
+        property_key : str, optional
+            Dict key for property bindings (e.g., 'r', 'g', 'b')
+            None for regular bind()
+        property_name : str, optional
+            Qt property name (e.g., 'value', 'text', 'checked')
+            Used for introspection in add()
+        signal_name : str, optional
+            Qt signal name (e.g., 'valueChanged', 'textChanged')
+            Used for introspection in add()
+
+        Returns
+        -------
+        ConnectionInfo
+            Standardized connection info dictionary with all fields
+        """
+        return {
+            'widget_id': id(widget),
+            'widget_ref': widget_ref,
+            'widget_type': type(widget).__name__,
+            'signal': signal,
+            'getter': getter,
+            'setter': setter,
+            'mode': mode,
+            'to_sync_transform': to_sync_transform,
+            'from_sync_transform': from_sync_transform,
+            'property_key': property_key,
+            'property_name': property_name,
+            'signal_name': signal_name,
+            'callbacks': [],
+            'enabled': True,
+        }
 
     # Connection Management Methods
 
@@ -383,22 +537,20 @@ class BaseWidgetSync(QObject):
         widget_ref = ref(widget)
         connection_key = (widget_id, None)
 
-        # Initialize connection info
-        connection_info = {
-            'widget_id': widget_id,
-            'widget_ref': widget_ref,
-            'widget_type': type(widget).__name__,
-            'signal': signal,
-            'getter': getter,
-            'setter': setter,
-            'mode': mode,
-            'to_sync_transform': to_sync_transform,
-            'from_sync_transform': from_sync_transform,
-            'callbacks': [],
-            'enabled': True,
-            'property_name': None,
-            'signal_name': None,
-        }
+        # Create standardized connection info
+        connection_info = self._create_connection_info(
+            widget=widget,
+            widget_ref=widget_ref,
+            signal=signal,
+            getter=getter,
+            setter=setter,
+            mode=mode,
+            to_sync_transform=to_sync_transform,
+            from_sync_transform=from_sync_transform,
+            property_key=None,  # Regular bind() doesn't use property_key
+            property_name=None,
+            signal_name=None,
+        )
 
         # Get property_key for callbacks (subclass-specific)
         property_key_for_callbacks = self._get_bind_property_key()
@@ -509,8 +661,7 @@ class BaseWidgetSync(QObject):
                     # Always clear sender after update
                     self._sender_widget_id = None
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(
+                logger.error(
                     f"Error syncing from widget {type(widget_obj).__name__}: {e}",
                     exc_info=True
                 )
@@ -572,8 +723,7 @@ class BaseWidgetSync(QObject):
                 with self._block_signals(widget_obj):
                     setter(value)
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(
+                logger.error(
                     f"Error updating widget {type(widget_obj).__name__}: {e}",
                     exc_info=True
                 )
@@ -714,18 +864,11 @@ class ValueSync(BaseWidgetSync):
             If new_value doesn't match expected data type
         """
         # Apply validator first (if provided)
-        validated_value = new_value
-        if self._validator is not None:
-            try:
-                validated_value = self._validator(new_value)
-            except Exception as e:
-                # Log error and keep current value
-                import logging
-                logging.getLogger(__name__).error(
-                    f"Validator raised exception: {e}. Keeping current value.",
-                    exc_info=True
-                )
-                return
+        try:
+            validated_value = self._apply_validator(new_value)
+        except ValueError:
+            # Validation failed (already logged), abort
+            return
 
         # Validate type
         validated_value = self._validate_value(validated_value)
@@ -838,17 +981,11 @@ class ValueSync(BaseWidgetSync):
 
         # Get signal and create getter/setter using weak reference
         signal = getattr(widget, signal_name)
-        prop_name = property_name
         widget_ref = ref(widget)
 
-        def getter():
-            w = widget_ref()
-            return w.property(prop_name) if w is not None else None
-
-        def setter(value):
-            w = widget_ref()
-            if w is not None:
-                w.setProperty(prop_name, value)
+        # Use helper methods to create getter/setter
+        getter = self._make_property_getter(widget_ref, property_name)
+        setter = self._make_property_setter(widget_ref, property_name)
 
         # Bind the widget
         self.bind(widget, signal, getter, setter, mode,
@@ -1028,18 +1165,7 @@ class DictSync(BaseWidgetSync):
             )
 
         # Apply validator if provided
-        validated_value = new_value
-        if self._validator is not None:
-            try:
-                validated_value = self._validator(new_value)
-            except Exception as e:
-                # Log error and keep current value
-                import logging
-                logging.getLogger(__name__).error(
-                    f"Validator raised exception: {e}. Keeping current value.",
-                    exc_info=True
-                )
-                return
+        validated_value = self._apply_validator(new_value)
 
         if self._value != validated_value:
             # Store previous value for property change detection
@@ -1072,28 +1198,18 @@ class DictSync(BaseWidgetSync):
 
         # AUTO-GENERATION: If 'property' key is provided, auto-generate getter/setter
         if property_name is not None:
-            prop_name = property_name
-
-            # Auto-generate getter with weak reference
+            # Use helper methods to create getter/setter
             if getter is None:
-                def make_property_getter(prop=prop_name, wref=widget_ref):
-                    w = wref()
-                    return w.property(prop) if w is not None else None
-                getter = make_property_getter
+                getter = self._make_property_getter(widget_ref, property_name)
 
-            # Auto-generate setter with weak reference
             if setter is None:
-                def make_property_setter(value, prop=prop_name, wref=widget_ref):
-                    w = wref()
-                    if w is not None:
-                        w.setProperty(prop, value)
-                setter = make_property_setter
+                setter = self._make_property_setter(widget_ref, property_name)
 
             # Auto-detect signal from Qt property system
             if signal is None and mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC, None):
                 try:
                     meta = widget.metaObject()
-                    prop_index = meta.indexOfProperty(prop_name)
+                    prop_index = meta.indexOfProperty(property_name)
                     if prop_index != -1:
                         prop = meta.property(prop_index)
                         notify_signal = prop.notifySignal()
@@ -1106,20 +1222,21 @@ class DictSync(BaseWidgetSync):
         mode = self.check_connection_mode(mode, setter, getter, property_key)
         self.validate_property_connection(mode, setter, getter, signal, property_key)
 
-        # Create connection info
+        # Create standardized connection info
         connection_key = (widget_id, property_key)
-        connection_info = {
-            'widget_id': widget_id,
-            'widget_ref': widget_ref,
-            'widget_type': type(widget).__name__,
-            'property_key': property_key,
-            'signal': signal,
-            'getter': getter,
-            'setter': setter,
-            'mode': mode,
-            'callbacks': [],
-            'enabled': True
-        }
+        connection_info = self._create_connection_info(
+            widget=widget,
+            widget_ref=widget_ref,
+            signal=signal,
+            getter=getter,
+            setter=setter,
+            mode=mode,
+            to_sync_transform=None,  # Property bindings don't support transforms
+            from_sync_transform=None,
+            property_key=property_key,  # Dict key (e.g., 'r', 'g', 'b')
+            property_name=property_name,  # Qt property name if auto-generated
+            signal_name=None,  # Could be added if we extract it
+        )
 
         # Create and connect callbacks
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC):
