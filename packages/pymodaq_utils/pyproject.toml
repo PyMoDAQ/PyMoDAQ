@@ -39,6 +39,7 @@ dependencies = [
     "python-dateutil",
     "toml",
     "strenum; python_version<\"3.11\"",
+    "serializall>=0.0.1",
 ]
 
 [project.optional-dependencies]

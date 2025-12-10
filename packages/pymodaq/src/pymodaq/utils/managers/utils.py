@@ -1,13 +1,20 @@
+import sys
 from pathlib import Path
-from typing import Any, Union, TYPE_CHECKING
-from qtpy import QtWidgets, QtCore
+from typing import Any, Union, TYPE_CHECKING, Optional
+
+from qtpy.QtCore import Qt, QModelIndex
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtGui import QKeySequence
+
+from pymodaq_gui.managers.action_manager import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
-
+from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
+from pymodaq_gui.utils.splash import get_pymodaq_pixmap
 
 logger = set_logger(get_module_name(__file__))
 
@@ -23,7 +30,7 @@ class ManagerActions(StrEnum):
     DELETE = 'delete_entry'
     SAVE = 'save_entry'
     RELOAD = 'reload_entry'
-    APPLY = 'apply_entry'
+    EXECUTE = 'execute_entry'
     LIST = 'list_entries'
     LIST_EXTERNAL = 'list_entries_external'
 
@@ -36,6 +43,53 @@ class Toolbar(StrEnum):
 class Menu(StrEnum):
     MAIN = 'main'
     EXTERNAL = 'external'
+
+
+class ManagerSubEntriesModel(QtCore.QAbstractListModel):
+
+    def __init__(self, entries: list[str]):
+        super().__init__()
+        self._data = entries
+        self.colors: list[QtCore.Qt.GlobalColor] = [QtCore.Qt.GlobalColor.darkGray for _ in range(len(self._data))]
+        self.status: list[Union[bool, None]] = [None for _ in range(len(self._data))]
+
+    def set_status(self, index: int, status: bool):
+        self.status[index] = status
+        if status:
+            self.colors[index] = QtCore.Qt.GlobalColor.darkGreen
+        else:
+            self.colors[index] = QtCore.Qt.GlobalColor.darkRed
+        model_index = self.index(index, 0)
+        self.dataChanged.emit(model_index, model_index,
+                              [Qt.ItemDataRole.DecorationRole,
+                              Qt.ItemDataRole.BackgroundColorRole])
+
+    def rowCount(self, *args, **kwargs) -> int:
+        return len(self._data)
+
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole):
+        if index.isValid():
+            if role == Qt.ItemDataRole.DisplayRole:
+                return str(self._data[index.row()])
+            elif role == Qt.ItemDataRole.DecorationRole:
+                if self.status[index.row()] is None:
+                    return create_icon('yellow_light')
+                elif self.status[index.row()]:
+                    return create_icon('greenLight2')
+                else:
+                    return create_icon('red_light')
+            elif role == Qt.ItemDataRole.FontRole:
+                return QtGui.QFont('Arial', 10)
+            elif role == Qt.ItemDataRole.ForegroundRole:
+                if self.status[index.row()] is None:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGray)
+                elif self.status[index.row()]:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkGreen)
+                else:
+                    return QtGui.QBrush(QtCore.Qt.GlobalColor.darkRed)
+            elif role == Qt.ItemDataRole.BackgroundColorRole:
+                return Qt.BrushStyle.NoBrush
+
 
 
 class ManagerBase(CustomExt):
@@ -59,15 +113,31 @@ class ManagerBase(CustomExt):
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
-        if toolbar is not None:
-            self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
-        if menu is not None:
-            self.reference_menu(Menu.EXTERNAL, menu)
+        self.splash_subentries: Optional[SubEntriesSplash] = None
+        self.subentries_model: Optional[ManagerSubEntriesModel] = None
+
+        self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
+        self.reference_menu(Menu.EXTERNAL, menu)
 
         self.setup_ui()
 
         self.update_action_list()
-        self.update_apply_action_tooltip(self.entry)
+        self.update_execute_action_tooltip(self.entry)
+
+    @staticmethod
+    def format_subentries(entries: list[Any]):
+        """ Should be reimplemented for better display than the repr one """
+        return [str(entry) for entry in entries]
+
+    def show_subentries(self, subentries: list[Any], title=''):
+        self.splash_subentries = SubEntriesSplash(title=title)
+        self.subentries_model = ManagerSubEntriesModel(self.format_subentries(subentries))
+        self.splash_subentries.setModel(self.subentries_model)
+        self.splash_subentries.show_splash()
+
+    def close_subentries_display(self, after_ms=1000):
+        if self.splash_subentries is not None:
+            QtCore.QTimer.singleShot(after_ms, self.splash_subentries.close)
 
     @property
     def manager_name(self) -> str:
@@ -173,24 +243,29 @@ class ManagerBase(CustomExt):
         self.add_widget(ManagerActions.LIST, QtWidgets.QComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
-        self.get_action_list().addItems(self.entries + ['...'])
+        self.get_action_list().addItems(self.entries)
 
         self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
         self.add_action(ManagerActions.NEW,
                         f'New {self.entry_type.capitalize()}', 'ListAdd',
-                        tip=f'Create a new {self.entry_type} file')
+                        tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'ListRemove',
-                        tip=f'Delete the current {self.entry_type} file')
+                        tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
         self.add_action(ManagerActions.SAVE,
                         f'Save {self.entry_type.capitalize()}', 'DocumentSave',
-                        tip=f'Save/Update the current {self.entry_type.capitalize()}')
+                        tip=f'Save/Update the current {self.entry_type.capitalize()} ("Ctrl+S")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action(ManagerActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
-                        tip=f'Reload the current {self.entry_type} file')
-        self.add_action(ManagerActions.APPLY,
-                        f'Apply {self.entry_type.capitalize()}', 'MailSend',
-                        tip=f'Apply the current {self.entry_type} file')
+                        tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
+        self.add_action(ManagerActions.EXECUTE,
+                        f'Execute {self.entry_type.capitalize()}', 'MailSend',
+                        tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
 
 
         # ACTIONS external: Dashboard, ...
@@ -203,7 +278,7 @@ class ManagerBase(CustomExt):
                         toolbar=Toolbar.EXTERNAL)
         self.add_widget(ManagerActions.LIST_EXTERNAL, QtWidgets.QComboBox,
                         toolbar=Toolbar.EXTERNAL)
-        self.affect_to(ManagerActions.APPLY, self.get_toolbar(Toolbar.EXTERNAL))
+        self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
 
     def connect_things_base(self):
         self.connect_action(ManagerActions.LIST, self.update_entry_base,
@@ -213,7 +288,7 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
         self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry_base())
-        self.connect_action(ManagerActions.APPLY, lambda: self.apply_entry_base())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry_base())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
@@ -288,8 +363,6 @@ class ManagerBase(CustomExt):
             entry = self.entry
         else:
             self.entry = entry
-        if entry == '...':
-            return
         if bypass_dialog:
             user_agreed = True
         else:
@@ -309,19 +382,21 @@ class ManagerBase(CustomExt):
             self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
             # self.update_action_list()
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
+            self.update_entry_base(self.get_action_list().currentText())
 
-    def apply_entry_base(self, entry_path: Path = None, **kwargs):
+    def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
+            self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filename
 
         if self.dashboard is None:
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.apply_entry(entry_path, **kwargs)
+        self.execute_entry(entry_path, **kwargs)
         self.applied_entry.emit(entry_path.stem)
 
-    def apply_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -332,10 +407,6 @@ class ManagerBase(CustomExt):
         raise NotImplementedError
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
-        if entry == '...':
-            self.create_entry()
-            return
-
         if entry is None:
             entry = self.entry_filename
 
@@ -345,12 +416,13 @@ class ManagerBase(CustomExt):
         self.update_entry(entry)
 
         self.get_action_list().setCurrentText(entry.stem)
-        self.update_apply_action_tooltip(entry.stem)
+        self.update_execute_action_tooltip(entry.stem)
         self.get_action_list_external().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
     def show(self):
         self.mainwindow.show()
+        self.mainwindow.raise_()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
@@ -384,12 +456,12 @@ class ManagerBase(CustomExt):
                     self.get_entry_folder().joinpath(file.stem + self.entry_extension)),
             )
 
-    def update_apply_action_tooltip(self, entry: str):
-        self.get_action(ManagerActions.APPLY).setToolTip(
-            f"Load the selected {self.entry_type}: {entry}")
+    def update_execute_action_tooltip(self, entry: str):
+        self.get_action(ManagerActions.EXECUTE).setToolTip(
+            f'Execute the selected {self.entry_type}: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.apply_entry_base(filename)
+        return lambda: self.execute_entry_base(filename)
 
     def update_menu(self):
         try:
@@ -407,3 +479,78 @@ class ManagerBase(CustomExt):
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass
+
+
+class ListView(QtWidgets.QListView):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+
+
+class SubEntriesSplash(QtWidgets.QLabel):
+
+    def __init__(self, parent=None, title=''):
+        super().__init__(parent)
+        self.list_view = ListView()
+        self.title_label = QtWidgets.QLabel(title)
+
+    def mousePressEvent(self, event):
+        self.close()
+
+    def setModel(self, model):
+        self.list_view.setModel(model)
+
+    def show_splash(self):
+
+        self.setPixmap(get_pymodaq_pixmap())
+
+        self.list_view.viewport().setAutoFillBackground(False)
+        self.list_view.setStyleSheet("QListView { outline: none; }")
+        self.list_view.clearFocus()
+
+        self.title_label.setFont(QtGui.QFont("Arial", 12))
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
+
+        vlayout = QtWidgets.QVBoxLayout()
+        hlayout = QtWidgets.QHBoxLayout()
+        self.setLayout(hlayout)
+        hlayout.addStretch(10)
+        hlayout.addLayout(vlayout)
+        vlayout.addWidget(self.title_label)
+        vlayout.addWidget(self.list_view)
+        vlayout.addStretch(10)
+
+        center_widget_on_screen_and_show(self)
+        self.raise_()
+
+
+if __name__ == '__main__':
+    from pymodaq_gui.utils.utils import mkQApp
+    import numpy as np
+
+
+    # Create application and main window
+    app = mkQApp('Dashboard')
+
+    entries = [f'Module {ind:03.0f} si about to do something incredible' for ind in range(10)]
+
+    widget = SubEntriesSplash()
+
+    entry_sublist_model = ManagerSubEntriesModel(entries)
+    widget.setModel(entry_sublist_model)
+
+
+    def execute_entries(sublist: list[str]):
+        for ind in range(len(sublist)):
+            entry_sublist_model.set_status(ind, bool(np.random.randint(2)))
+            QtWidgets.QApplication.processEvents()
+            QtCore.QThread.msleep(200)
+        QtCore.QThread.msleep(2000)
+        #widget.close()
+
+    widget.show_splash()
+    execute_entries(entries)
+    app.exec()

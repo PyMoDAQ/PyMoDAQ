@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 import datetime
 
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 
 from pymodaq_utils import utils
 

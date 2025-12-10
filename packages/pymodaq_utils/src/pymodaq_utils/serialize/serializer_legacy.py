@@ -5,7 +5,7 @@ from typing import Optional, Union, Any, List, TYPE_CHECKING
 from .mysocket import SocketString, Socket
 from . import utils
 
-from pymodaq_utils.serialize.factory import SerializableFactory, SERIALIZABLE
+from serializall import SerializableFactory, SERIALIZABLE
 
 ser_factory = SerializableFactory()
 

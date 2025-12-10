@@ -3,7 +3,7 @@ import os
 import sys
 import warnings
 
-from qtpy import QtCore
+from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QLocale
 from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import Config
@@ -58,3 +58,10 @@ def setLocale():
     country = getattr(QLocale, config('style', 'country'))
     QLocale.setDefault(QLocale(language, country))
 
+
+def center_widget_on_screen_and_show(widget: QtWidgets.QWidget):
+    widget.show()
+    qtRect = widget.frameGeometry()
+    cPt = QtGui.QScreen.availableGeometry(QtWidgets.QApplication.primaryScreen()).center()
+    qtRect.moveCenter(cPt)
+    widget.move(qtRect.topLeft())

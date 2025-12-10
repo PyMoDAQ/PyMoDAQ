@@ -2,7 +2,7 @@ from typing import Any, Union, TYPE_CHECKING
 
 from pymodaq_utils.mysocket import Socket
 from . import utils
-from .factory import SerializableFactory, SERIALIZABLE
+from serializall import SerializableFactory, SERIALIZABLE
 
 ser_factory = SerializableFactory()
 

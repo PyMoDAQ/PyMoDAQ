@@ -31,7 +31,8 @@ def dialog(title='', message='', widget=None):
     label = QtWidgets.QLabel(message)
     label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
     dlg.layout().addWidget(label)
-    dlg.layout().addWidget(widget)
+    if widget is not None:
+        dlg.layout().addWidget(widget)
     button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
     dlg.layout().addWidget(button_box)
     button_box.accepted.connect(dlg.accept)

@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         qt-backend: ["pyqt5", "pyqt6", "pyside6"]
     runs-on: ${{ matrix.os }}
     defaults:
@@ -64,7 +64,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install matplotlib flake8 pytest pytest-cov pytest-qt pytest-xvfb pytest-order \
             setuptools wheel numpy h5py ${{ matrix.qt-backend }}
-          pip install -e .    
+          cd ..
+          cd ..
+          python install-packages.py -u pymodaq_gui 
 
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder + Setup additional dependencies (Linux)
