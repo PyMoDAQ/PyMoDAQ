@@ -327,6 +327,571 @@ its connection is automatically removed. Manual management is available when nee
 * Automatic cleanup - Widget deletion triggers cleanup automatically
 
 
+Dictionary Synchronization (DictSync)
+--------------------------------------
+
+When you need to synchronize multiple related properties or map widgets to different keys,
+use dictionary-based synchronization.
+
+When to Use DictSync vs ValueSync
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Use ValueSync (default) when:**
+
+* Synchronizing a single value across multiple widgets
+* All widgets represent the same logical property
+* Example: Multiple checkboxes for the same "enabled" state
+
+**Use DictSync when:**
+
+* Synchronizing multiple related properties (e.g., RGB color components)
+* Mapping different widgets to different dictionary keys
+* Syncing multiple properties of a single widget
+* Example: Color picker with separate R, G, B sliders
+
+Creating DictSync
+~~~~~~~~~~~~~~~~~
+
+WidgetSync automatically detects when to use DictSync:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
+
+    # Auto-detects DictSync because initial_value is a dict
+    color_sync = WidgetSync(initial_value={'r': 128, 'g': 64, 'b': 192})
+
+    # Access/modify the dict value
+    print(color_sync.value)  # {'r': 128, 'g': 64, 'b': 192}
+    color_sync.value = {'r': 255, 'g': 0, 'b': 0}  # Red
+
+DictSync Binding Methods
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DictSync provides three binding methods:
+
+1. **bind()** - For widgets that work with entire dict (JSON editors, displays)
+2. **bind_properties()** - For multiple properties of ONE widget
+3. **bind_dict()** - For DIFFERENT widgets mapped to dict keys
+
+Method 1: bind() - Entire Dict
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For widgets that need the entire dictionary:
+
+.. code-block:: python
+
+    config_sync = WidgetSync(initial_value={'host': 'localhost', 'port': 8080})
+
+    # Custom widget that displays JSON
+    config_sync.bind(
+        json_display,
+        signal=json_display.contentChanged,
+        getter=lambda: json_display.get_dict(),
+        setter=lambda d: json_display.set_dict(d),
+        mode=SyncMode.BIDIRECTIONAL
+    )
+
+    # Read-only display
+    config_sync.bind(
+        status_label,
+        setter=lambda d: status_label.setText(f"Config: {d}"),
+        mode=SyncMode.FROM_SYNC
+    )
+
+Method 2: bind_properties() - Multiple Properties of ONE Widget
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For synchronizing multiple properties of a single widget to dict keys:
+
+.. code-block:: python
+
+    # ComboBox with both items and selection
+    combo_sync = WidgetSync(initial_value={
+        'items': ["Red", "Green", "Blue"],
+        'selection': "Red"
+    })
+
+    # Bind multiple properties of ONE combobox
+    combo_sync.bind_properties(
+        my_combobox,
+        property_map={
+            'items': {
+                'signal': None,  # FROM_SYNC only
+                'getter': lambda: [my_combobox.itemText(i)
+                                   for i in range(my_combobox.count())],
+                'setter': lambda items: (my_combobox.clear(),
+                                        my_combobox.addItems(items)),
+                'mode': SyncMode.FROM_SYNC
+            },
+            'selection': {
+                'signal': my_combobox.currentTextChanged,
+                'getter': lambda: my_combobox.currentText(),
+                'setter': lambda text: my_combobox.setCurrentText(text),
+                'mode': SyncMode.BIDIRECTIONAL
+            }
+        }
+    )
+
+    # Update items programmatically
+    combo_sync.value = {
+        'items': ["Apple", "Banana", "Orange"],
+        'selection': "Apple"
+    }
+
+**Using Qt property names (auto-generation):**
+
+.. code-block:: python
+
+    # Shorter syntax using 'property' key
+    widget_sync = WidgetSync(initial_value={'width': 100, 'height': 50})
+
+    widget_sync.bind_properties(
+        my_widget,
+        property_map={
+            'width': {'property': 'minimumWidth'},   # Auto-generates getter/setter
+            'height': {'property': 'minimumHeight'}  # Signal auto-detected
+        }
+    )
+
+Method 3: bind_dict() - DIFFERENT Widgets to Dict Keys
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For mapping different widgets to different dictionary keys:
+
+.. code-block:: python
+
+    # RGB color with separate sliders
+    color_sync = WidgetSync(initial_value={'r': 128, 'g': 64, 'b': 192})
+
+    # Each slider controls one color component
+    color_sync.bind_dict(
+        property_map={
+            'r': {
+                'widget': red_slider,
+                'property': 'value'  # Auto-generates getter/setter/signal
+            },
+            'g': {
+                'widget': green_slider,
+                'property': 'value'
+            },
+            'b': {
+                'widget': blue_slider,
+                'property': 'value'
+            }
+        }
+    )
+
+    # Now changing any slider updates color_sync.value['r'/'g'/'b']
+    # And changing color_sync.value updates all sliders
+
+**Manual getter/setter (full control):**
+
+.. code-block:: python
+
+    position_sync = WidgetSync(initial_value={'x': 0, 'y': 0, 'z': 0})
+
+    position_sync.bind_dict(
+        property_map={
+            'x': {
+                'widget': x_spinbox,
+                'signal': x_spinbox.valueChanged,
+                'getter': lambda: x_spinbox.value(),
+                'setter': lambda v: x_spinbox.setValue(v)
+            },
+            'y': {
+                'widget': y_spinbox,
+                'signal': y_spinbox.valueChanged,
+                'getter': lambda: y_spinbox.value(),
+                'setter': lambda v: y_spinbox.setValue(v)
+            },
+            'z': {
+                'widget': z_spinbox,
+                'signal': z_spinbox.valueChanged,
+                'getter': lambda: z_spinbox.value(),
+                'setter': lambda v: z_spinbox.setValue(v)
+            }
+        }
+    )
+
+Validation with DictSync
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add validators to ensure dict values stay within constraints:
+
+.. code-block:: python
+
+    def validate_rgb(color):
+        """Clamp RGB values to 0-255"""
+        return {
+            'r': max(0, min(255, color.get('r', 0))),
+            'g': max(0, min(255, color.get('g', 0))),
+            'b': max(0, min(255, color.get('b', 0)))
+        }
+
+    color_sync = WidgetSync(
+        initial_value={'r': 128, 'g': 64, 'b': 192},
+        validator=validate_rgb
+    )
+
+    # Bind sliders
+    color_sync.bind_dict(property_map={
+        'r': {'widget': r_slider, 'property': 'value'},
+        'g': {'widget': g_slider, 'property': 'value'},
+        'b': {'widget': b_slider, 'property': 'value'}
+    })
+
+    # Values automatically clamped
+    color_sync.value = {'r': 300, 'g': -50, 'b': 100}
+    print(color_sync.value)  # {'r': 255, 'g': 0, 'b': 100}
+
+Common DictSync Patterns
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Pattern 1: ComboBox Items + Selection**
+
+.. code-block:: python
+
+    class DeviceSelector(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.combo = QComboBox()
+
+            # Sync both items and current selection
+            self.device_sync = WidgetSync(initial_value={
+                'devices': ["Device A", "Device B"],
+                'current': "Device A"
+            })
+
+            self.device_sync.bind_properties(
+                self.combo,
+                property_map={
+                    'devices': {
+                        'setter': lambda items: (self.combo.clear(),
+                                                self.combo.addItems(items)),
+                        'mode': SyncMode.FROM_SYNC
+                    },
+                    'current': {
+                        'signal': self.combo.currentTextChanged,
+                        'getter': lambda: self.combo.currentText(),
+                        'setter': lambda t: self.combo.setCurrentText(t)
+                    }
+                }
+            )
+
+**Pattern 2: Multi-Widget Configuration**
+
+.. code-block:: python
+
+    class ServerConfig(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.host_edit = QLineEdit()
+            self.port_spin = QSpinBox()
+            self.ssl_check = QCheckBox()
+
+            # All settings in one dict
+            self.config_sync = WidgetSync(initial_value={
+                'host': 'localhost',
+                'port': 8080,
+                'ssl': False
+            })
+
+            # Map each widget to a config key
+            self.config_sync.bind_dict(property_map={
+                'host': {'widget': self.host_edit, 'property': 'text'},
+                'port': {'widget': self.port_spin, 'property': 'value'},
+                'ssl': {'widget': self.ssl_check, 'property': 'checked'}
+            })
+
+            # Access full config
+            config = self.config_sync.value
+            # Save/load entire config at once
+            self.config_sync.value = load_config_from_file()
+
+**Pattern 3: Separate Syncs vs Single Dict**
+
+Sometimes you need separate syncs for items and selection:
+
+.. code-block:: python
+
+    # Approach A: Separate syncs (items change independently of selection)
+    self.items_sync = WidgetSync(initial_value=["A", "B", "C"])
+    self.items_sync.bind(combo, setter=lambda items: combo.addItems(items),
+                         mode=SyncMode.FROM_SYNC)
+
+    self.selection_sync = WidgetSync.for_combobox(combo, initial="A")
+
+    # Approach B: Single dict sync (items and selection always change together)
+    self.combo_sync = WidgetSync(initial_value={'items': ["A", "B", "C"],
+                                                  'current': "A"})
+    self.combo_sync.bind_properties(combo, property_map={...})
+
+**When to use which:**
+
+* Separate syncs: Items can change without affecting selection
+* Single dict: Atomic state updates (items + selection always consistent)
+
+
+Extending Widget Sync
+----------------------
+
+You can extend the widget sync system to create custom synchronization tools.
+
+Understanding the Architecture
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The widget sync system has three main classes:
+
+1. **BaseWidgetSync** - Abstract base class with all connection management
+2. **ValueSync** - Synchronizes single values (int, str, bool, etc.)
+3. **DictSync** - Synchronizes dictionary values
+4. **WidgetSync** - Smart factory that auto-selects ValueSync or DictSync
+
+To create custom synchronization:
+
+* Subclass ``BaseWidgetSync`` for completely custom sync types
+* Extend ``WidgetSyncFactories`` for custom factory methods
+* Use ``WidgetSync`` directly for most common scenarios
+
+Creating a Custom Sync Class
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To create a custom sync class, subclass ``BaseWidgetSync`` and implement required methods:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import BaseWidgetSync, SyncMode
+    from typing import Any
+
+    class ListSync(BaseWidgetSync):
+        """Synchronize list values with validation"""
+
+        def __init__(self, initial_value=None, max_length=None):
+            self._max_length = max_length
+            self._value = initial_value or []
+            self._previous_value = self._value.copy()
+            self._data_type = list
+            super().__init__(validator=self._validate_list)
+
+        def _validate_list(self, value):
+            """Ensure value is a list with max_length"""
+            if not isinstance(value, list):
+                raise TypeError(f"Expected list, got {type(value).__name__}")
+            if self._max_length and len(value) > self._max_length:
+                return value[:self._max_length]
+            return value
+
+        def set_value(self, new_value, emit=True):
+            """Update the list value"""
+            validated = self._validate_list(new_value)
+            self._previous_value = self._value.copy()
+            self._value = validated
+            if emit:
+                self.value_changed.emit(self._value)
+
+        @property
+        def value(self):
+            return self._value
+
+        @value.setter
+        def value(self, new_value):
+            self.set_value(new_value, emit=True)
+
+        def _get_bind_property_key(self):
+            """Return None for entire list binding"""
+            return None
+
+        def _get_bind_value(self):
+            """Return full list for widget initialization"""
+            return self._value
+
+    # Usage
+    list_sync = ListSync(initial_value=["A", "B", "C"], max_length=5)
+
+    list_sync.bind(
+        list_widget,
+        signal=list_widget.itemChanged,
+        getter=lambda: [list_widget.item(i).text()
+                       for i in range(list_widget.count())],
+        setter=lambda items: (list_widget.clear(),
+                             list_widget.addItems(items))
+    )
+
+Required Methods
+~~~~~~~~~~~~~~~~
+
+When subclassing ``BaseWidgetSync``, you must implement:
+
+1. **__init__()** - Initialize ``_value``, ``_previous_value``, ``_data_type``
+2. **set_value(new_value, emit=True)** - Update value and emit signal
+3. **value property** - Get/set the synchronized value
+4. **_get_bind_property_key()** - Return property key for bind() callbacks
+5. **_get_bind_value()** - Return value for widget initialization
+
+Available Helper Methods
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+``BaseWidgetSync`` provides many helper methods you can use:
+
+**Connection Management:**
+
+.. code-block:: python
+
+    # Create callbacks for widget ↔ sync communication
+    widget_to_sync_cb = self._create_widget_to_sync_callback(
+        connection_key, widget_ref, getter, mode, to_sync_transform, property_key
+    )
+    sync_to_widget_cb = self._create_sync_to_widget_callback(
+        connection_key, widget_ref, setter, mode, from_sync_transform, property_key
+    )
+
+    # Store connection info
+    self._set_connection(widget_id, property_key, connection_info)
+
+    # Retrieve connection
+    connection = self._get_connection(widget_id, property_key)
+
+    # Setup automatic cleanup when widget is destroyed
+    self._setup_widget_destruction_callback(widget, connection_keys)
+
+**Widget Control:**
+
+.. code-block:: python
+
+    # Temporarily disable/enable syncing
+    self.disable(widget)
+    self.enable(widget)
+    is_syncing = self.is_enabled(widget)
+
+    # Remove widget connection
+    self.unbind(widget)
+    self.unbind_all()
+
+**Property Binding (for DictSync-like behavior):**
+
+.. code-block:: python
+
+    # Setup binding for a single property
+    connection_info = self._setup_property_binding(
+        widget, widget_ref, property_key, config
+    )
+
+Custom Factory Methods
+~~~~~~~~~~~~~~~~~~~~~~
+
+Extend ``WidgetSyncFactories`` to add custom factory methods:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import WidgetSyncFactories, WidgetSync
+
+    class MyFactories(WidgetSyncFactories):
+        """Custom factories for my application widgets"""
+
+        @classmethod
+        def for_color_picker(cls, widget, initial='#000000'):
+            """Factory for custom color picker widget"""
+            return cls.for_property(
+                widget,
+                property_name='color',
+                signal_name='colorChanged',
+                initial=initial,
+                data_type=str
+            )
+
+        @classmethod
+        def for_vector3d(cls, widget, initial=None):
+            """Factory for 3D vector widget"""
+            if initial is None:
+                initial = {'x': 0.0, 'y': 0.0, 'z': 0.0}
+
+            sync = WidgetSync(initial_value=initial)
+            sync.bind_properties(
+                widget,
+                property_map={
+                    'x': {'property': 'xValue'},
+                    'y': {'property': 'yValue'},
+                    'z': {'property': 'zValue'}
+                }
+            )
+            return sync
+
+    # Combine with WidgetSync
+    class MyWidgetSync(WidgetSync, MyFactories):
+        """Enhanced WidgetSync with custom factories"""
+        pass
+
+    # Usage
+    sync = MyWidgetSync.for_color_picker(my_color_widget, initial='#FF0000')
+    sync = MyWidgetSync.for_vector3d(my_vector_widget)
+
+Real-World Example: Custom Range Sync
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    class RangeSync(BaseWidgetSync):
+        """Synchronize a range (min, max) across widgets"""
+
+        def __init__(self, initial_min=0, initial_max=100):
+            self._value = {'min': initial_min, 'max': initial_max}
+            self._previous_value = self._value.copy()
+            self._data_type = dict
+            super().__init__(validator=self._validate_range)
+
+        def _validate_range(self, value):
+            """Ensure min <= max"""
+            min_val = value.get('min', 0)
+            max_val = value.get('max', 100)
+            if min_val > max_val:
+                min_val, max_val = max_val, min_val
+            return {'min': min_val, 'max': max_val}
+
+        def set_value(self, new_value, emit=True):
+            validated = self._validate_range(new_value)
+            self._previous_value = self._value.copy()
+            self._value = validated
+            if emit:
+                self.value_changed.emit(self._value)
+
+        @property
+        def value(self):
+            return self._value
+
+        @value.setter
+        def value(self, new_value):
+            self.set_value(new_value, emit=True)
+
+        def _get_bind_property_key(self):
+            return None
+
+        def _get_bind_value(self):
+            return self._value
+
+        def bind_range_widget(self, widget):
+            """Convenience method for range widgets"""
+            self.bind_dict(
+                property_map={
+                    'min': {
+                        'widget': widget,
+                        'signal': widget.lowerValueChanged,
+                        'getter': lambda: widget.lowerValue(),
+                        'setter': lambda v: widget.setLowerValue(v)
+                    },
+                    'max': {
+                        'widget': widget,
+                        'signal': widget.upperValueChanged,
+                        'getter': lambda: widget.upperValue(),
+                        'setter': lambda v: widget.setUpperValue(v)
+                    }
+                }
+            )
+
+    # Usage
+    range_sync = RangeSync(initial_min=0, initial_max=100)
+    range_sync.bind_range_widget(my_range_slider)
+
 Common Patterns
 ---------------
 
@@ -495,4 +1060,19 @@ See Also
 
 * :ref:`contributing` - Contributing guidelines
 * :ref:`api` - Full API reference
-* Example code: ``pymodaq_gui/examples/widget_sync_example.py``
+
+Example Files
+~~~~~~~~~~~~~
+
+Run these examples to see widget synchronization in action:
+
+.. code-block:: bash
+
+    # Dict synchronization examples (bind_properties and bind_dict)
+    python -m pymodaq_gui.examples.dict_sync_example
+
+    # ComboBox synchronization (items + selection)
+    python -m pymodaq_gui.examples.combobox_sync_example
+
+    # Multi-property synchronization patterns
+    python -m pymodaq_gui.examples.multi_property_sync_example
