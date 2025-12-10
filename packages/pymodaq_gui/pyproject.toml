@@ -51,6 +51,7 @@ dev = [
     "pyside6",
     "pytest-qt",
     "pytest-xvfb",
+    "pytest-order"
 
 ]
 

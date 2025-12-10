@@ -128,6 +128,7 @@ class TestTreeFromToml:
             (('optimizer', 'bounds'), (('actuator_min',), 0), True)
         ]
     )
+    @pytest.mark.order(after="test_accept_config")
     def test_subtree(self, qtbot, start_path, change, exists):
         config = Config()
         config.load()

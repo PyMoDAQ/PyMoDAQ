@@ -1,3 +1,4 @@
+import atexit
 from abc import abstractproperty
 from collections.abc import Iterable
 
@@ -138,7 +139,7 @@ def get_set_local_dir(user=False) -> Path:
     return local_path
 
 
-def get_config_file(config_file_name: str, user=False):
+def get_config_file(config_file_name: str, user=False) -> Path:
     return get_set_local_dir(user).joinpath(replace_file_extension(config_file_name, 'toml'))
 
 
@@ -279,13 +280,14 @@ class BaseConfig(metaclass=Singleton):
     config_name: str = abstractproperty()
 
     def __init__(self):
-        # There's different strategies for readers-writer locks
-        # Let's try with a read-preferring lock (may cause starvation of writers but highly improbable)
         self._lock = ReaderWriterLock()
         self._config = {}
+        self._modified_config = {}
         self.load()
+        atexit.register(self.save)
 
     def __del__(self):
+        print("bye bye")
         self.save()
 
     def __repr__(self):
@@ -334,40 +336,16 @@ class BaseConfig(metaclass=Singleton):
     def __setitem__(self, key, value):
         with self._lock.write_lock():
             if isinstance(key, tuple):
-                dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
-                if value is None:  # means the setting is a group
-                    value = {}
-                dic[key[-1]] = value
+                # In visible config and modified config
+                for config in (self._config, self._modified_config):
+                    parent = getitem_recursive(config, *key, ndepth=1, create_if_missing=True)
+                    parent[key[-1]] = {} if value is None else value
+
             else:
                 self._config[key] = value
+                self._modified_config[key] = value
 
-    def _load_config(self, config_file_name, template_path: Path):
-        """Load a configuration file from both system-wide and user file
 
-        check also if missing entries in the configuration file compared to the template"""
-        toml_base_path = get_config_file(config_file_name, user=False)
-        toml_user_path = get_config_file(config_file_name, user=True)
-        if toml_base_path.is_file():
-            config = toml.load(toml_base_path)
-            if template_path is not None:
-                config_template = toml.load(template_path)
-            else:
-                config_template = {}
-            if check_config(config_template, config):  # check if all fields from template are there
-                # (could have been  modified by some commits)
-                create_toml_from_dict(config, toml_base_path)
-
-        else:
-            copy_template_config(config_file_name, template_path, toml_base_path.parent)
-
-        if not toml_user_path.is_file():
-            # create the author from environment variable
-            config_dict = self.dict_to_add_to_user()
-            if config_dict is not None:
-                create_toml_from_dict(config_dict, toml_user_path)
-
-        config_dict = load_system_config_and_update_from_user(config_file_name)
-        return config_dict
 
     def dict_to_add_to_user(self):
         """To subclass"""
@@ -386,13 +364,36 @@ class BaseConfig(metaclass=Singleton):
     def load(self):
         # write lock because it MODIFIES config
         with self._lock.write_lock():
-            self._config = self._load_config(self.config_name, self.config_template_path)
+            """Load a configuration file from both system-wide and user file
+            check also if missing entries in the configuration file compared to the template"""
+            toml_system_path = get_config_file(self.config_name, user=False)
+            toml_user_path = get_config_file(self.config_name, user=True)
+            if toml_system_path.is_file():
+                config = toml.load(toml_system_path)
+                if self.config_template_path is not None:
+                    config_template = toml.load(self.config_template_path)
+                else:
+                    config_template = {}
+                if check_config(config_template, config):  # check if all fields from template are there
+                    # (could have been  modified by some commits)
+                    create_toml_from_dict(config, toml_system_path)
+
+            else:
+                copy_template_config(self.config_name, self.config_template_path, toml_system_path.parent)
+
+            if not toml_user_path.is_file():
+                # create the author from environment variable
+                config_dict = self.dict_to_add_to_user()
+                if config_dict is not None:
+                    create_toml_from_dict(config_dict, toml_user_path)
+            self._config = load_system_config_and_update_from_user(self.config_name)
+            self._modified_config = toml.load(get_config_file(self.config_name, user=True))
 
     def save(self):
         """Save the current Config object into the user toml file and reload it """
         with self._lock.write_lock():
 
-            self.config_path.write_text(toml.dumps(self.to_dict()))
+            self.config_path.write_text(toml.dumps(self._modified_config))
             #  self._config = self.load_config(self.config_name, self.config_template_path)
 
     def get_children(self, *path: IterableType[str]):
