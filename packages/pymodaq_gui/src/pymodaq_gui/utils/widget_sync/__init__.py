@@ -45,7 +45,8 @@ from .core import (
     ValueSync,
     DictSync,
     SyncMode,
-    DataType
+    DataType,
+    InitFrom
 )
 from .factories import WidgetSyncFactories
 from typing import Any, Callable, Type
@@ -106,4 +107,5 @@ __all__ = [
     'SyncMode',          # Synchronization modes
     'DataType',          # Data type specification
     'WidgetSyncFactories',  # For custom factory extensions
+    'InitFrom',          # Initialization source control
 ]
