@@ -19,7 +19,7 @@ from pyleco.utils.listener import Listener
 
 
 from pymodaq_data.data import DataWithAxes
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 
 class QtLessModule:
     """Some module doing things without Qt.

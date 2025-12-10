@@ -11,8 +11,10 @@ User's Guide
    user_folder/dashboard_control_modules
    user_folder/extensions
    user_folder/configuration
-   user_folder/useful_modules
-   user_folder/tcpip
+   user_folder/module_manager
+   user_folder/dashboard_manager
    user_folder/leco
    user_folder/plugin_manager
    user_folder/backup_environments
+   user_folder/other_modules
+   user_folder/tcpip

@@ -28,6 +28,6 @@ class TestGeneral:
 
         dashboard = DashBoard(area)
         win.show()
-        dashboard.preset_manager.apply_entry()
+        dashboard.preset_manager.execute_entry()
 
         dashboard.quit_fun()

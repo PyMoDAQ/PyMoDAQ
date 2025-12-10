@@ -143,17 +143,17 @@ class TestConfig:
 
     def test_call(self):
         config = config_mod.Config()
-        assert config('style', 'darkstyle') == config['style']['darkstyle']
+        assert config('style', 'theme') == config['style']['theme']
 
     def test_get_item(self):
         config = config_mod.Config()
-        assert config['style', 'darkstyle'] == config['style']['darkstyle']
+        assert config['style', 'theme'] == config['style']['theme']
 
     def test_set_item(self):
         config = config_mod.Config()
 
-        config['style', 'darkstyle'] = 'bright'
-        assert config('style', 'darkstyle') == 'bright'
+        config['style', 'theme'] = 'bright'
+        assert config('style', 'theme') == 'bright'
 
     def test_get_children(self):
         config = config_mod.Config()
@@ -166,8 +166,8 @@ class TestConfig:
         config = config_mod.Config()
 
         assert config.get(('an', 'unknown', 'key', 'in', 'the', 'config'), 'default_value') == 'default_value'
-        config['style', 'darkstyle'] = True
-        assert config.get(('style', 'darkstyle')) == True
+        config['style', 'theme'] = True
+        assert config.get(('style', 'theme')) == True
 
 
 class TestConfigSingleton:
@@ -254,7 +254,7 @@ def test_recursive_iterable_flattening():
 def test_required_config_entries():
     config = config_mod.Config()
     assert 'style' in config
-    assert 'darkstyle' in config['style']
+    assert 'theme' in config['style']
     assert 'syntax_highlighting' in config['style']
     assert 'language' in config['style']
     assert 'country' in config['style']

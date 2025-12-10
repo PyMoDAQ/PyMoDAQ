@@ -3,8 +3,6 @@ from typing import Union, TYPE_CHECKING, Dict
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
-from pyqtgraph.dockarea import DockArea
-
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager

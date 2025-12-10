@@ -19,7 +19,7 @@ import numpy as np
 from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import Config
 from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.serialize.factory import SerializableFactory, SerializableBase
+from serializall import SerializableFactory, SerializableBase
 
 from importlib import metadata
 PackageNotFoundError = metadata.PackageNotFoundError  # for use elsewhere

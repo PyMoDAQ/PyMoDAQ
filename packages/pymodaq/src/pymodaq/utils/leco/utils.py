@@ -5,7 +5,7 @@ from typing import Any, Optional, Union, get_args, TypeVar
 
 
 from pymodaq.utils import data
-from pymodaq_utils.serialize.factory import SerializableFactory
+from serializall import SerializableFactory
 
 from pymodaq_utils.logger import set_logger
 

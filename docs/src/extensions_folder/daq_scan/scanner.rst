@@ -179,7 +179,7 @@ The adaptive algorithm will need for each probed positions a feedback value tell
 From these on all previous points, it will determine the best next points to probe. In order to provide such a feedback,
 on has to choose a signal among all available from the DashBoard detectors. It has to be a Scalar so originate from a 0D
 detector or integrated ROI from 1D or 2D detectors. The module manager user interface (right most setting tree in the
-DAQ_Scan module ,see :numref:`module_managerfig`) will let you probe available datas exported from currently selected
+DAQ_Scan module ,see :numref:`module_manager_fig`) will let you probe available datas exported from currently selected
 detectors. You can then pick the Data0D one you want to use as the Adaptive feedback. For instance, on :numref:`module_managerfig`,
 three Data0D are available, one from a 0D detector (CH000) and 2 from the Measurements ROIs of a 1D detector. In that case the
 CH000 data has been selected and will therefore be use as feedback for the Adaptive algorithm.

@@ -319,7 +319,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                 else:
                     found_path = base_dir
                 if create:
-                    found_path.mkdir()
+                    found_path.mkdir(exist_ok=True)
             else:
                 ind_path = subfolders_year_name.index(part)
                 found_path = subfolders_found_path[ind_path]

@@ -34,6 +34,13 @@ Finally it is advised to create a dedicated virtual environment for this and ins
     - the `-e` option tells pip to install the package in editable mode, meaning that any change done to the source will be reported to the installed package.
     - the `-d` option activates `[dev]` in the package names transmitted to `pip install` (e.g. `pymodaq_utils[dev]`). It indicate to install the package alongside its optional dependancies, declared as `dev` in the `pyproject.toml` file.
 
+.. note::
+  The ``install-packages.py`` script also provides a ``-u/--up-to {pymodaq_utils,pymodaq_data,pymodaq_gui,pymodaq}`` optional argument. 
+
+  When provided, only the necessary packages "up to" the specified ones are installed; e.g. ``-u pymodaq_data`` will install *pymodaq_utils* and *pymodaq_data* but **skip** *pymodaq_gui* and *PyMoDAQ* packages.
+  
+  When not provided, it will install all the packages (equivalent to ``-u pymodaq``)
+
 
 Then any change on the code will be *seen* by python interpreter so that you can see and test your modifications. Think about
 writing tests that will make sure your code is sound and that modification elsewhere doesn't change the expected behavior.
