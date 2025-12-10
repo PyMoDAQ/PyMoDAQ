@@ -69,11 +69,8 @@ class WidgetSyncFactories:
         >>> sync = WidgetSync.for_property(my_spinbox, 'value', initial=50)
         >>> sync.add(other_spinbox)  # Add more spinboxes
         """
-        # Import here to avoid circular dependency
-        from .core import WidgetSync, SyncMode as SM
-
         if mode is None:
-            mode = SM.BIDIRECTIONAL
+            mode = SyncMode.BIDIRECTIONAL
 
         # Get property metadata for auto-detection
         meta = widget.metaObject()
