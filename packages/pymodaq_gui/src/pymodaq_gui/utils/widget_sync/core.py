@@ -83,25 +83,52 @@ class BaseWidgetSync(QObject):
         """Set current value - must be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement value property setter")
 
-    def _get_bind_property_key(self) -> str | None:
+    def _get_internal_storage_key(self) -> str | None:
         """
-        Get the property_key to use for bind() callbacks.
+        Get the internal dict key used for value storage.
 
-        Returns "__value__" for ValueSync, None for DictSync.
-        Must be implemented by subclasses.
+        This is an implementation detail for routing callbacks between ValueSync and DictSync.
+        The base class uses dict storage internally for both sync types:
+        - ValueSync: Returns "__value__" (single value wrapped in dict: {"__value__": 42})
+        - DictSync: Returns None (multi-key dict: {"r": 255, "g": 128, "b": 64})
+
+        This allows unified callback routing in the base class.
+
+        Note
+        ----
+        Internal method. Most users should not need to subclass BaseWidgetSync.
+        Use ValueSync or DictSync directly instead.
+
+        Returns
+        -------
+        str or None
+            "__value__" for ValueSync, None for DictSync
         """
-        raise NotImplementedError("Subclasses must implement _get_bind_property_key()")
+        raise NotImplementedError("Subclasses must implement _get_internal_storage_key()")
 
-    def _get_bind_value(self) -> Any:
+    def _get_user_facing_value(self) -> Any:
         """
-        Get the value to initialize widgets with in bind().
+        Get the value in user-facing format for widget initialization.
 
-        Returns unwrapped value for ValueSync, full dict for DictSync.
-        Must be implemented by subclasses.
+        This handles internal representation differences between ValueSync and DictSync:
+        - ValueSync: Unwraps {"__value__": 42} → 42 (removes internal wrapper)
+        - DictSync: Returns dict directly {"r": 255, "g": 128} → {"r": 255, "g": 128}
+
+        Used by bind() and initialization logic to present the correct value format
+        to widgets.
+
+        Note
+        ----
+        Internal method for BaseWidgetSync infrastructure. Not intended for external use.
+
+        Returns
+        -------
+        Any
+            Unwrapped value for ValueSync, full dict for DictSync
         """
-        raise NotImplementedError("Subclasses must implement _get_bind_value()")
+        raise NotImplementedError("Subclasses must implement _get_user_facing_value()")
 
-    # Helper Methods for Factorized Logic
+    # Helper Methods
 
     def _apply_validator(self, value: Any) -> Any:
         """
@@ -556,7 +583,7 @@ class BaseWidgetSync(QObject):
             if property_key is not None:
                 if property_key == "__value__":
                     # ValueSync: use unwrapped value
-                    value_to_set = self._get_bind_value()
+                    value_to_set = self._get_user_facing_value()
                 else:
                     # DictSync: extract from dict
                     if property_key not in self._value:
@@ -564,7 +591,7 @@ class BaseWidgetSync(QObject):
                     value_to_set = self._value[property_key]
             else:
                 # Regular bind(): use full value
-                value_to_set = self._get_bind_value()
+                value_to_set = self._get_user_facing_value()
 
             # Apply transform
             if from_sync_transform:
@@ -735,7 +762,7 @@ class BaseWidgetSync(QObject):
         )
 
         # Get property_key for callbacks (subclass-specific)
-        property_key_for_callbacks = self._get_bind_property_key()
+        property_key_for_callbacks = self._get_internal_storage_key()
 
         # Create widget→sync callback (TO_SYNC or BIDIRECTIONAL)
         if mode in (SyncMode.TO_SYNC, SyncMode.BIDIRECTIONAL):
@@ -1070,11 +1097,11 @@ class ValueSync(BaseWidgetSync):
                 # Emit unwrapped value for user-facing signal handlers
                 self.value_changed.emit(validated_value)
 
-    def _get_bind_property_key(self) -> str:
+    def _get_internal_storage_key(self) -> str:
         """Return '__value__' for ValueSync bind() callbacks."""
         return "__value__"
 
-    def _get_bind_value(self) -> Any:
+    def _get_user_facing_value(self) -> Any:
         """Return unwrapped value for ValueSync bind() initialization."""
         return self._value.get("__value__")
 
@@ -1364,11 +1391,11 @@ class DictSync(BaseWidgetSync):
             if emit:
                 self.value_changed.emit(self._value)
 
-    def _get_bind_property_key(self) -> None:
+    def _get_internal_storage_key(self) -> None:
         """Return None for DictSync bind() callbacks (entire dict)."""
         return None
 
-    def _get_bind_value(self) -> dict:
+    def _get_user_facing_value(self) -> dict:
         """Return full dict for DictSync bind() initialization."""
         return self._value
 
@@ -1376,7 +1403,10 @@ class DictSync(BaseWidgetSync):
                                 property_key: str, config: dict[str, Any],
                                 global_init_from: InitFrom = 'sync') -> dict:
         """
-        Helper to setup a single property binding (factorizes bind_properties/bind_dict logic).
+        Configure and connect a single property binding.
+
+        Shared setup logic used by both bind_properties() and bind_dict() to provide
+        consistent behavior for property-based connections.
 
         Returns connection_info dict ready to be stored.
         """
@@ -1511,7 +1541,7 @@ class DictSync(BaseWidgetSync):
         # Collect all connection keys for destruction callback
         all_connection_keys = [(widget_id, prop_key) for prop_key in property_map.keys()]
 
-        # Bind each property using factorized helper
+        # Configure and connect each property
         for property_key, config in property_map.items():
             connection_info = self._setup_property_binding(
                 widget, widget_ref, property_key, config, init_from
@@ -1580,7 +1610,7 @@ class DictSync(BaseWidgetSync):
             widget_id = id(widget)
             widget_ref = ref(widget)
 
-            # Use factorized helper to setup property binding
+            # Configure and connect this property
             connection_info = self._setup_property_binding(
                 widget, widget_ref, property_key, config, init_from
             )
