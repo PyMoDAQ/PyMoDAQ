@@ -245,7 +245,10 @@ Temporarily pause syncing without disconnecting:
 
     # Re-enable it
     sync.enable(slider2)
-    slider2.setValue(60)  # Now it syncs again
+    # IMPORTANT: slider2 still has its old value (50)
+    # enable() does NOT auto-update the widget
+
+    slider1.setValue(60)  # Now slider2 updates to 60
 
     # Check if enabled
     if sync.is_enabled(slider2):
@@ -260,8 +263,34 @@ Temporarily pause syncing without disconnecting:
 
 **Key differences:**
 
-* ``disable()`` - Temporarily stops syncing, connection remains
+* ``disable()`` - Temporarily stops syncing, connection remains, widget keeps old value
 * ``unbind()`` - Removes connection entirely, needs reconnection
+* ``enable()`` - Resumes syncing but widget keeps old value (no auto-update)
+* ``bind()`` - Creates connection and immediately updates widget to current sync value
+
+**Critical Behavior Note:**
+
+When you re-bind a widget with ``bind()``, it **automatically updates** to the current sync value.
+When you re-enable a widget with ``enable()``, it **keeps its old value** until the next sync event.
+
+.. code-block:: python
+
+    # Demonstrate the difference
+    sync = WidgetSync.for_slider(master, initial=50)
+    sync.add(slaveA)
+    sync.add(slaveB)
+
+    master.setValue(70)  # All at 70
+
+    sync.disable(slaveA)  # Disable A
+    sync.unbind(slaveB)   # Unbind B
+
+    master.setValue(30)  # A and B don't update
+
+    sync.enable(slaveA)  # A stays at 70 (no auto-update!)
+    sync.bind(slaveB, ...)  # B jumps to 30 (auto-updates!)
+
+    master.setValue(50)  # Now all three update to 50
 
 Conditional Widget Enable/Disable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -636,98 +665,222 @@ Sometimes you need separate syncs for items and selection:
 Extending Widget Sync
 ----------------------
 
-You can extend the widget sync system to create custom synchronization tools.
+**For most users:** Use ``ValueSync`` or ``DictSync`` directly with validators and transforms.
+Subclassing is rarely needed.
+
+**For library developers:** This section explains when and how to extend the sync system.
 
 Understanding the Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The widget sync system has three main classes:
+The widget sync system has four main classes:
 
-1. **BaseWidgetSync** - Abstract base class with all connection management
-2. **ValueSync** - Synchronizes single values (int, str, bool, etc.)
-3. **DictSync** - Synchronizes dictionary values
-4. **WidgetSync** - Smart factory that auto-selects ValueSync or DictSync
+1. **BaseWidgetSync** - Internal base class providing connection management infrastructure
+2. **ValueSync** - Synchronizes single values (int, str, bool, custom objects)
+3. **DictSync** - Synchronizes dictionary values with multiple keys
+4. **WidgetSync** - Smart factory that auto-selects ValueSync or DictSync based on initial_value
 
-To create custom synchronization:
+**Internal Design Note:**
 
-* Subclass ``BaseWidgetSync`` for completely custom sync types
-* Extend ``WidgetSyncFactories`` for custom factory methods
-* Use ``WidgetSync`` directly for most common scenarios
+To maximize code reuse (~900 lines of shared infrastructure), both ValueSync and DictSync
+use dict storage internally:
 
-Creating a Custom Sync Class
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ``ValueSync(42)`` internally stores: ``{"__value__": 42}``
+* ``DictSync({'r': 255})`` stores: ``{'r': 255}``
 
-To create a custom sync class, subclass ``BaseWidgetSync`` and implement required methods:
+This allows unified callback routing at the cost of wrapping overhead for ValueSync.
+This is an implementation detail - users work with the unwrapped values.
+
+When to Extend
+~~~~~~~~~~~~~~
+
+**Don't subclass if you can use:**
+
+* ``DictSync`` with a ``validator`` parameter (handles 90% of custom validation logic)
+* Transform functions (``to_sync_transform`` / ``from_sync_transform``)
+* Custom factory methods (see below)
+
+**Do subclass ``BaseWidgetSync`` only for:**
+
+* **Computed/derived values** - Storage format differs from exposed format (e.g., HSV ↔ RGB, center/width ↔ min/max)
+* **Custom propagation strategies** - Debouncing, throttling, batched updates
+* **Persistent sync** - Auto-save to file/database, network synchronization
+* **Complex behaviors** - Undo/redo history, conditional propagation
+
+Extension Options
+~~~~~~~~~~~~~~~~~
+
+There are three ways to extend the widget sync system:
+
+1. **Custom Factory Methods** (Easiest) - Add convenience methods for your widget types
+2. **Custom Validators** (Common) - Use DictSync/ValueSync with validation functions
+3. **Custom Sync Classes** (Advanced) - Subclass BaseWidgetSync for computed values or custom behavior
+
+Option 1: Custom Factory Methods (Easiest)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Extend ``WidgetSyncFactories`` to add convenience methods for your custom widgets:
 
 .. code-block:: python
 
-    from pymodaq_gui.utils.widget_sync import BaseWidgetSync, SyncMode
-    from typing import Any
+    from pymodaq_gui.utils.widget_sync import WidgetSync, WidgetSyncFactories
 
-    class ListSync(BaseWidgetSync):
-        """Synchronize list values with validation"""
+    class MyWidgetSync(WidgetSync, WidgetSyncFactories):
+        """Enhanced WidgetSync with custom factory methods"""
 
-        def __init__(self, initial_value=None, max_length=None):
-            self._max_length = max_length
-            self._value = initial_value or []
+        @classmethod
+        def for_my_custom_widget(cls, widget, initial=None):
+            """Factory for my custom widget type"""
+            return cls.for_property(
+                widget,
+                property_name='customValue',
+                signal_name='customValueChanged',
+                initial=initial
+            )
+
+    # Usage
+    sync = MyWidgetSync.for_my_custom_widget(my_widget, initial=100)
+    sync.add(another_custom_widget)
+
+Option 2: Custom Validators (Common)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For validation logic, use DictSync or ValueSync with a validator function:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import DictSync
+
+    # Example: Range validation with auto-swap
+    def range_validator(value):
+        """Ensure min <= max, swap if needed"""
+        min_val, max_val = value['min'], value['max']
+        if min_val > max_val:
+            return {'min': max_val, 'max': min_val}
+        return value
+
+    sync = DictSync({'min': 20, 'max': 80}, validator=range_validator)
+    sync.bind_dict({
+        'min': {'widget': min_spinbox, 'property': 'value'},
+        'max': {'widget': max_spinbox, 'property': 'value'}
+    })
+
+    # No subclassing needed! Much simpler than creating a custom class.
+
+Option 3: Custom Sync Classes (Advanced)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Only subclass ``BaseWidgetSync`` when you need computed/derived values or custom
+propagation logic that can't be achieved with validators.
+
+**Example: When NOT to subclass**
+
+Don't create a custom RangeSync class just for validation - use DictSync + validator as shown above.
+
+**Example: When TO subclass - ColorSync**
+
+Subclass when storage format differs from exposed format:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import BaseWidgetSync
+
+    class ColorSync(BaseWidgetSync):
+        """
+        Sync colors with HSV ↔ RGB conversion.
+
+        Stores: HSV internally (easier for brightness/saturation)
+        Exposes: RGB for display widgets
+        """
+
+        def __init__(self, h=0, s=100, v=100):
+            super().__init__()
+            self._h = h  # Hue: 0-360
+            self._s = s  # Saturation: 0-100
+            self._v = v  # Value/Brightness: 0-100
+            self._data_type = dict
+            self._value = self._hsv_to_rgb_dict()
             self._previous_value = self._value.copy()
-            self._data_type = list
-            super().__init__(validator=self._validate_list)
-
-        def _validate_list(self, value):
-            """Ensure value is a list with max_length"""
-            if not isinstance(value, list):
-                raise TypeError(f"Expected list, got {type(value).__name__}")
-            if self._max_length and len(value) > self._max_length:
-                return value[:self._max_length]
-            return value
-
-        def set_value(self, new_value, emit=True):
-            """Update the list value"""
-            validated = self._validate_list(new_value)
-            self._previous_value = self._value.copy()
-            self._value = validated
-            if emit:
-                self.value_changed.emit(self._value)
 
         @property
         def value(self):
-            return self._value
+            """Return as RGB dict for widgets"""
+            return self._hsv_to_rgb_dict()
 
         @value.setter
-        def value(self, new_value):
-            self.set_value(new_value, emit=True)
+        def value(self, rgb_dict):
+            """Accept RGB, store as HSV"""
+            self._rgb_to_hsv(rgb_dict['r'], rgb_dict['g'], rgb_dict['b'])
+            new_value = self._hsv_to_rgb_dict()
+            if self._value != new_value:
+                self._previous_value = self._value.copy()
+                self._value = new_value
+                self.value_changed.emit(self._value)
 
-        def _get_bind_property_key(self):
-            """Return None for entire list binding"""
+        def set_value(self, rgb_dict, emit=True):
+            """Set RGB value"""
+            self._rgb_to_hsv(rgb_dict['r'], rgb_dict['g'], rgb_dict['b'])
+            new_value = self._hsv_to_rgb_dict()
+            if self._value != new_value:
+                self._previous_value = self._value.copy()
+                self._value = new_value
+                if emit:
+                    self.value_changed.emit(self._value)
+
+        def _get_internal_storage_key(self):
+            """Return None for dict-like binding"""
             return None
 
-        def _get_bind_value(self):
-            """Return full list for widget initialization"""
-            return self._value
+        def _get_user_facing_value(self):
+            """Return current RGB dict"""
+            return self.value
+
+        # Convenience methods leveraging HSV storage
+        def adjust_brightness(self, delta):
+            """Adjust brightness (much easier in HSV than RGB!)"""
+            self._v = max(0, min(100, self._v + delta))
+            new_value = self._hsv_to_rgb_dict()
+            if self._value != new_value:
+                self._previous_value = self._value.copy()
+                self._value = new_value
+                self.value_changed.emit(self._value)
+
+        def _hsv_to_rgb_dict(self):
+            """Convert HSV to RGB dict"""
+            # ... conversion logic ...
+            return {'r': r, 'g': g, 'b': b}
+
+        def _rgb_to_hsv(self, r, g, b):
+            """Convert RGB to HSV and store"""
+            # ... conversion logic ...
+            self._h, self._s, self._v = h, s, v
 
     # Usage
-    list_sync = ListSync(initial_value=["A", "B", "C"], max_length=5)
+    color_sync = ColorSync(h=0, s=100, v=100)  # Red
+    color_sync.bind_dict({
+        'r': {'widget': r_slider, 'property': 'value'},
+        'g': {'widget': g_slider, 'property': 'value'},
+        'b': {'widget': b_slider, 'property': 'value'}
+    })
 
-    list_sync.bind(
-        list_widget,
-        signal=list_widget.itemChanged,
-        getter=lambda: [list_widget.item(i).text()
-                       for i in range(list_widget.count())],
-        setter=lambda items: (list_widget.clear(),
-                             list_widget.addItems(items))
-    )
+    # Brightness adjustment is easier in HSV!
+    color_sync.adjust_brightness(10)  # Can't do this with DictSync alone
 
 Required Methods
 ~~~~~~~~~~~~~~~~
 
-When subclassing ``BaseWidgetSync``, you must implement:
+When subclassing ``BaseWidgetSync``, you must implement these five methods:
 
-1. **__init__()** - Initialize ``_value``, ``_previous_value``, ``_data_type``
-2. **set_value(new_value, emit=True)** - Update value and emit signal
-3. **value property** - Get/set the synchronized value
-4. **_get_bind_property_key()** - Return property key for bind() callbacks
-5. **_get_bind_value()** - Return value for widget initialization
+1. **__init__()** - Initialize ``_value``, ``_previous_value``, ``_data_type``, call ``super().__init__()``
+2. **set_value(new_value, emit=True)** - Update value and optionally emit ``value_changed`` signal
+3. **value property** - Get/set the synchronized value (property with getter and setter)
+4. **_get_internal_storage_key()** - Return ``"__value__"`` for single-value sync, ``None`` for dict sync
+5. **_get_user_facing_value()** - Return value for widget initialization (unwrapped for ValueSync, direct for DictSync)
+
+**Note on methods 4 and 5:** These are internal plumbing methods for the base class infrastructure.
+They handle the difference between ValueSync (which wraps values in ``{"__value__": x}``) and
+DictSync (which stores dicts directly). For most custom syncs with dict-like behavior, return ``None``
+from ``_get_internal_storage_key()`` and return ``self.value`` from ``_get_user_facing_value()``.
 
 Available Helper Methods
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -777,120 +930,6 @@ Available Helper Methods
         widget, widget_ref, property_key, config
     )
 
-Custom Factory Methods
-~~~~~~~~~~~~~~~~~~~~~~
-
-Extend ``WidgetSyncFactories`` to add custom factory methods:
-
-.. code-block:: python
-
-    from pymodaq_gui.utils.widget_sync import WidgetSyncFactories, WidgetSync
-
-    class MyFactories(WidgetSyncFactories):
-        """Custom factories for my application widgets"""
-
-        @classmethod
-        def for_color_picker(cls, widget, initial='#000000'):
-            """Factory for custom color picker widget"""
-            return cls.for_property(
-                widget,
-                property_name='color',
-                signal_name='colorChanged',
-                initial=initial,
-                data_type=str
-            )
-
-        @classmethod
-        def for_vector3d(cls, widget, initial=None):
-            """Factory for 3D vector widget"""
-            if initial is None:
-                initial = {'x': 0.0, 'y': 0.0, 'z': 0.0}
-
-            sync = WidgetSync(initial_value=initial)
-            sync.bind_properties(
-                widget,
-                property_map={
-                    'x': {'property': 'xValue'},
-                    'y': {'property': 'yValue'},
-                    'z': {'property': 'zValue'}
-                }
-            )
-            return sync
-
-    # Combine with WidgetSync
-    class MyWidgetSync(WidgetSync, MyFactories):
-        """Enhanced WidgetSync with custom factories"""
-        pass
-
-    # Usage
-    sync = MyWidgetSync.for_color_picker(my_color_widget, initial='#FF0000')
-    sync = MyWidgetSync.for_vector3d(my_vector_widget)
-
-Real-World Example: Custom Range Sync
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    class RangeSync(BaseWidgetSync):
-        """Synchronize a range (min, max) across widgets"""
-
-        def __init__(self, initial_min=0, initial_max=100):
-            self._value = {'min': initial_min, 'max': initial_max}
-            self._previous_value = self._value.copy()
-            self._data_type = dict
-            super().__init__(validator=self._validate_range)
-
-        def _validate_range(self, value):
-            """Ensure min <= max"""
-            min_val = value.get('min', 0)
-            max_val = value.get('max', 100)
-            if min_val > max_val:
-                min_val, max_val = max_val, min_val
-            return {'min': min_val, 'max': max_val}
-
-        def set_value(self, new_value, emit=True):
-            validated = self._validate_range(new_value)
-            self._previous_value = self._value.copy()
-            self._value = validated
-            if emit:
-                self.value_changed.emit(self._value)
-
-        @property
-        def value(self):
-            return self._value
-
-        @value.setter
-        def value(self, new_value):
-            self.set_value(new_value, emit=True)
-
-        def _get_bind_property_key(self):
-            return None
-
-        def _get_bind_value(self):
-            return self._value
-
-        def bind_range_widget(self, widget):
-            """Convenience method for range widgets"""
-            self.bind_dict(
-                property_map={
-                    'min': {
-                        'widget': widget,
-                        'signal': widget.lowerValueChanged,
-                        'getter': lambda: widget.lowerValue(),
-                        'setter': lambda v: widget.setLowerValue(v)
-                    },
-                    'max': {
-                        'widget': widget,
-                        'signal': widget.upperValueChanged,
-                        'getter': lambda: widget.upperValue(),
-                        'setter': lambda v: widget.setUpperValue(v)
-                    }
-                }
-            )
-
-    # Usage
-    range_sync = RangeSync(initial_min=0, initial_max=100)
-    range_sync.bind_range_widget(my_range_slider)
 
 Common Patterns
 ---------------
