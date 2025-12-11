@@ -167,6 +167,7 @@ class DAQ_Move(ParameterControlModule):
         if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_TYPES[0])
 
+        self._module_and_data_saver: module_saving.ActuatorTimeSaver = None
 
         self._move_done_bool = True
 
