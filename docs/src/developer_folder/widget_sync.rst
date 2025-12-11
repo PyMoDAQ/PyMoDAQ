@@ -11,16 +11,130 @@ Overview
 --------
 
 The ``widget_sync`` module provides a simple, powerful way to synchronize widget properties across multiple Qt widgets.
-It's perfect for keeping toolbar buttons, menu items, and settings panels in sync without manual signal management.
+It eliminates the need for manual signal management, feedback loop prevention, and connection cleanup.
+
+Why Use Widget Sync?
+~~~~~~~~~~~~~~~~~~~~~
+
+**The Problem:** Manual signal/slot management becomes complex quickly:
+
+.. code-block:: python
+
+    # Manual approach - repetitive and error-prone ❌
+    def __init__(self):
+        self.slider1.valueChanged.connect(self._on_slider1_changed)
+        self.slider2.valueChanged.connect(self._on_slider2_changed)
+        self.slider3.valueChanged.connect(self._on_slider3_changed)
+
+    def _on_slider1_changed(self, value):
+        # Block signals to prevent feedback loop
+        self.slider2.blockSignals(True)
+        self.slider3.blockSignals(True)
+        self.slider2.setValue(value)
+        self.slider3.setValue(value)
+        self.slider2.blockSignals(False)
+        self.slider3.blockSignals(False)
+
+    # ... repeat for slider2 and slider3 ...
+
+**The Solution:** Widget sync handles everything automatically:
+
+.. code-block:: python
+
+    # With widget_sync - simple and automatic ✅
+    def __init__(self):
+        self.sync = WidgetSync.for_slider(self.slider1, initial=50)
+        self.sync.add(self.slider2)
+        self.sync.add(self.slider3)
+        # Done! All three stay in sync, no feedback loops, automatic cleanup
 
 **Key features:**
 
 * Automatic bidirectional synchronization
+* Built-in feedback loop prevention
 * Multiple sync modes (bidirectional, to_sync, from_sync)
 * Value transformations between widgets
 * Automatic cleanup when widgets are deleted
 * No memory leaks (uses weak references)
 * Easy extension with custom factory methods
+
+Quick Start Guide
+-----------------
+
+Choose your approach based on what you're synchronizing:
+
+**Single Value (Most Common)**
+
+Use factory methods for common widget types:
+
+.. code-block:: python
+
+    from pymodaq_gui.utils.widget_sync import WidgetSync
+
+    # Checkboxes
+    sync = WidgetSync.for_checkbox(checkbox1, initial=True)
+    sync.add(checkbox2)
+    sync.add(checkbox3)
+
+    # Sliders / SpinBoxes
+    sync = WidgetSync.for_spinbox(spinbox1, initial=50)
+    sync.add(spinbox2, match='property')  # Works with different compatible types
+
+    # ComboBoxes
+    sync = WidgetSync.for_combobox(combo1, initial=0)  # By index
+    sync = WidgetSync.for_combobox(combo1, initial="Option A", use_text=True)  # By text
+
+**Multiple Related Values (Dictionary)**
+
+Use dict-based sync for related properties:
+
+.. code-block:: python
+
+    # RGB color with separate sliders
+    color_sync = WidgetSync(initial_value={'r': 128, 'g': 64, 'b': 192})
+
+    color_sync.bind_dict({
+        'r': {'widget': red_slider, 'property': 'value'},
+        'g': {'widget': green_slider, 'property': 'value'},
+        'b': {'widget': blue_slider, 'property': 'value'}
+    })
+
+**Custom Widgets**
+
+Use generic property binding:
+
+.. code-block:: python
+
+    # Any Qt property
+    sync = WidgetSync.for_property(
+        widget,
+        property_name='myProperty',
+        signal_name='myPropertyChanged',  # Optional, auto-detected
+        initial=100
+    )
+
+Understanding WidgetSync Classes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The widget_sync system has three main classes:
+
+* **WidgetSync** - Smart factory that auto-detects what you need (use this!)
+
+  * Pass a single value → Uses ``ValueSync`` internally
+  * Pass a dict → Uses ``DictSync`` internally
+  * Includes all factory methods (``for_checkbox``, ``for_spinbox``, etc.)
+
+* **ValueSync** - For single values (int, str, bool, float, custom objects)
+
+  * Used automatically when you call ``WidgetSync(initial_value=42)``
+
+* **DictSync** - For dictionary values with multiple keys
+
+  * Used automatically when you call ``WidgetSync(initial_value={'a': 1})``
+
+* **BaseWidgetSync** - Base class for advanced extensions (rarely needed)
+
+**Most users only need WidgetSync** - it automatically chooses the right implementation.
 
 Basic Usage
 -----------
@@ -44,6 +158,14 @@ Keep multiple checkboxes in sync:
     # Change value programmatically - all update
     sync.value = False  # All three checkboxes uncheck
 
+.. tip::
+   **Example:** :file:`examples/widget_sync/1_basic_sync_example.py` demonstrates:
+
+   - Checkbox synchronization across multiple views (Tab 1)
+   - Different widget types for the same value (Tab 2)
+   - Value transforms for unit conversions and inverted checkboxes (Tabs 3 & 5)
+   - Enable/disable patterns and many widget types (Tabs 4, 6, 7)
+
 Different Widget Types
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -62,6 +184,74 @@ Sync different widget types representing the same value:
         setter=lambda v: progress_bar.setValue(v),
         mode=SyncMode.FROM_SYNC  # Read-only
     )
+
+Understanding ``add()`` vs ``bind()``
+--------------------------------------
+
+**Important:** The ``add()`` method is only available for **single-value sync** (ValueSync), not for dictionary sync (DictSync).
+
+Why the Difference?
+~~~~~~~~~~~~~~~~~~~
+
+**ValueSync** (single values):
+  * All widgets represent the **same logical property** (e.g., a checkbox state)
+  * Can auto-detect property/signal from first widget and reuse for others
+  * ``add()`` provides convenience: "add another widget just like the first one"
+
+**DictSync** (multiple properties):
+  * Different dict keys map to **different properties or widgets**
+  * Each binding needs explicit configuration (which key? which property?)
+  * Must use ``bind()``, ``bind_properties()``, or ``bind_dict()``
+
+Quick Reference
+~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    # ✅ ValueSync - add() works
+    sync = WidgetSync.for_checkbox(checkbox1, initial=True)
+    sync.add(checkbox2)  # Reuses 'checked' property from checkbox1
+    sync.add(checkbox3)  # Works!
+
+    # ✅ DictSync - must use bind_dict() or bind_properties()
+    color_sync = WidgetSync(initial_value={'r': 128, 'g': 64, 'b': 192})
+    # color_sync.add(red_slider)  # ❌ Won't work - no add() method!
+    color_sync.bind_dict({  # ✅ Must specify which property goes to which key
+        'r': {'widget': red_slider, 'property': 'value'},
+        'g': {'widget': green_slider, 'property': 'value'}
+    })
+
+.. tip::
+   **Rule of thumb:**
+
+   * Single value → Use ``add()``
+   * Dictionary → Use ``bind_dict()`` or ``bind_properties()``
+
+Method Availability by Sync Type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Method
+     - ValueSync (single value)
+     - DictSync (dictionary)
+   * - ``add()``
+     - ✅ Available
+     - ❌ Not available
+   * - ``bind()``
+     - ✅ Available
+     - ✅ Available
+   * - ``bind_properties()``
+     - ❌ Not available
+     - ✅ Available
+   * - ``bind_dict()``
+     - ❌ Not available
+     - ✅ Available
+   * - Factory methods
+     - ✅ ``for_checkbox()``, etc.
+     - ❌ (use ``WidgetSync(initial_value={...})``)
 
 Factory Methods
 ---------------
@@ -167,6 +357,151 @@ Three synchronization modes:
     # FROM_SYNC: Sync → Widget only (read-only display)
     sync.bind(label, setter=lambda v: label.setText(str(v)),
               mode=SyncMode.FROM_SYNC)
+
+Initialization Control (init_from)
+-----------------------------------
+
+The ``init_from`` parameter controls what happens when you connect a widget.
+
+Understanding init_from
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+When you bind a widget to a sync, there are three possibilities for initial values:
+
+.. code-block:: python
+
+    sync = WidgetSync(initial_value=100)
+    widget.setValue(50)  # Widget has different value
+
+    # What should happen when we connect them?
+
+**Three Options:**
+
+1. **init_from='sync'** (default) - Widget gets sync's value
+2. **init_from='widget'** - Sync gets widget's value (and propagates to other widgets)
+3. **init_from=None** - No initialization, keep current values
+
+Examples
+~~~~~~~~
+
+**Option 1: init_from='sync' (Default Behavior)**
+
+.. code-block:: python
+
+    sync = WidgetSync(initial_value=100)
+
+    spinbox.setValue(50)  # Widget starts at 50
+
+    # Default: widget immediately updates to sync's value
+    sync.bind(
+        spinbox,
+        signal=spinbox.valueChanged,
+        getter=spinbox.value,
+        setter=spinbox.setValue,
+        init_from='sync'  # Default, can be omitted
+    )
+
+    print(spinbox.value())  # 100 - widget updated to sync's value!
+
+**Option 2: init_from='widget' (Sync Takes Widget's Value)**
+
+.. code-block:: python
+
+    sync = WidgetSync(initial_value=100)
+    spinbox1.setValue(50)
+    spinbox2.setValue(75)
+
+    # Already connected
+    sync.bind(spinbox1, ..., init_from='sync')
+    print(spinbox1.value())  # 100
+
+    # Connect spinbox2 with init_from='widget'
+    sync.bind(spinbox2, ..., init_from='widget')
+
+    # Sync AND spinbox1 update to spinbox2's value!
+    print(sync.value)         # 75
+    print(spinbox1.value())   # 75
+    print(spinbox2.value())   # 75
+
+**Option 3: init_from=None (No Initialization)**
+
+.. code-block:: python
+
+    sync = WidgetSync(initial_value=100)
+    spinbox.setValue(50)
+
+    # No initialization - values stay different
+    sync.bind(spinbox, ..., init_from=None)
+
+    print(sync.value)         # 100 - unchanged
+    print(spinbox.value())    # 50  - unchanged
+
+    # But future changes do sync!
+    sync.value = 75
+    print(spinbox.value())    # 75  - now they sync
+
+When to Use Each Option
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - init_from
+     - Use When
+     - Example
+   * - ``'sync'`` (default)
+     - Sync holds the "source of truth"
+     - Loading settings into UI widgets
+   * - ``'widget'``
+     - Widget holds current state you want to propagate
+     - Connecting to an already-configured widget
+   * - ``None``
+     - Values are temporarily different but should sync going forward
+     - Testing, debugging, or complex initialization
+
+Requirements and Validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**init_from='widget' Requirements:**
+
+* Mode must have TO_SYNC capability (``TO_SYNC`` or ``BIDIRECTIONAL``)
+* Must provide a ``getter`` to read widget's value
+* Will raise ``ValueError`` if these requirements aren't met
+
+**init_from='sync' Requirements:**
+
+* Mode must have FROM_SYNC capability (``FROM_SYNC`` or ``BIDIRECTIONAL``)
+* Must provide a ``setter`` to update widget
+* With ``TO_SYNC`` mode, silently skips initialization (no setter available)
+
+Per-Property init_from (DictSync)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For ``bind_dict()`` and ``bind_properties()``, you can override ``init_from`` per property:
+
+.. code-block:: python
+
+    # Global default: init_from='sync'
+    sync = WidgetSync(initial_value={'host': 'localhost', 'port': 8080})
+
+    sync.bind_dict(
+        property_map={
+            'host': {
+                'widget': host_edit,
+                'property': 'text',
+                # Uses global default 'sync'
+            },
+            'port': {
+                'widget': port_spin,
+                'property': 'value',
+                'init_from': 'widget'  # Override: use widget's current value
+            }
+        },
+        init_from='sync'  # Global default
+    )
+
+    # Result: 'host' uses sync's value, 'port' uses widget's value
 
 Value Transformations
 ---------------------
@@ -343,8 +678,6 @@ its connection is automatically removed. Manual management is available when nee
 
     # Permanently unbind widget
     sync.unbind(widget)
-    # or
-    sync.remove(widget)  # Alias for unbind
 
     # Unbind all (useful when deleting the sync itself)
     sync.unbind_all()
@@ -361,6 +694,26 @@ Dictionary Synchronization (DictSync)
 
 When you need to synchronize multiple related properties or map widgets to different keys,
 use dictionary-based synchronization.
+
+.. important::
+   **DictSync does NOT have an ``add()`` method.**
+
+   You must use:
+
+   * ``bind_dict()`` - For different widgets mapped to dict keys
+   * ``bind_properties()`` - For multiple properties of ONE widget
+   * ``bind()`` - For custom dict handling
+
+   This is because each dict key needs explicit configuration - there's no "pattern" to auto-detect
+   like with single-value sync.
+
+.. tip::
+   **Example:** :file:`examples/widget_sync/2_dict_sync_example.py` demonstrates:
+
+   - ``bind_properties()``: Multiple properties of ONE widget (Tab 1 - ComboBox items + selection)
+   - ``bind_dict()``: Different widgets to dict keys (Tab 2 - RGB color sliders)
+   - Validators for dict values (Tab 3 - Clamping, auto-swapping min/max)
+   - Custom dict widgets with ``bind()`` (Tab 4 - JSON editor)
 
 When to Use DictSync vs ValueSync
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -669,6 +1022,13 @@ Extending Widget Sync
 Subclassing is rarely needed.
 
 **For library developers:** This section explains when and how to extend the sync system.
+
+.. tip::
+   **Example:** :file:`examples/widget_sync/3_advanced_sync_example.py` demonstrates:
+
+   - Multiple syncs on the same widget (Tab 1 - ListWidget with items + selection)
+   - Dynamic property addition/removal (Tab 2 - Adding properties at runtime)
+   - Custom sync classes extending BaseWidgetSync (Tab 3 - RangeSync example)
 
 Understanding the Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1013,6 +1373,13 @@ Manage widgets that are created and destroyed dynamically:
             self.widgets.append(slider)
             self.layout().addWidget(slider)
 
+.. tip::
+   **Example:** :file:`examples/widget_sync/4_dynamic_widgets_example.py` demonstrates:
+
+   - Dynamic add/remove of synchronized sliders (Tab 1 - Audio mixer)
+   - Widget cloning with automatic sync (Tab 2 - Control panel duplication)
+   - Automatic cleanup when widgets are destroyed
+
         def remove_widget(self, slider):
             """Remove a widget from the panel"""
             self.sync.unbind(slider)
@@ -1060,11 +1427,21 @@ API Reference
 Examples
 --------
 
-See the complete example in:
+Complete examples demonstrating widget synchronization are available:
 
 .. code-block:: bash
 
-    python -m pymodaq_gui.examples.widget_sync_example
+    # Level 1: Basic synchronization (checkboxes, sliders, spinboxes)
+    python -m pymodaq_gui.examples.widget_sync.1_basic_sync_example
+
+    # Level 2: Dictionary synchronization (RGB colors, coordinates)
+    python -m pymodaq_gui.examples.widget_sync.2_dict_sync_example
+
+    # Level 3: Advanced patterns (transforms, conditional syncing)
+    python -m pymodaq_gui.examples.widget_sync.3_advanced_sync_example
+
+    # Level 4: Dynamic widget management
+    python -m pymodaq_gui.examples.widget_sync.4_dynamic_widgets_example
 
 
 Best Practices
@@ -1107,11 +1484,17 @@ Run these examples to see widget synchronization in action:
 
 .. code-block:: bash
 
-    # Dict synchronization examples (bind_properties and bind_dict)
-    python -m pymodaq_gui.examples.dict_sync_example
+    # Level 1: Start here - basics of checkbox, slider, and spinbox synchronization
+    python -m pymodaq_gui.examples.widget_sync.1_basic_sync_example
 
-    # ComboBox synchronization (items + selection)
-    python -m pymodaq_gui.examples.combobox_sync_example
+    # Level 2: Learn dictionary synchronization for multi-property widgets
+    python -m pymodaq_gui.examples.widget_sync.2_dict_sync_example
 
-    # Multi-property synchronization patterns
-    python -m pymodaq_gui.examples.multi_property_sync_example
+    # Level 3: Explore advanced patterns (multiple syncs, dynamic properties, custom classes)
+    python -m pymodaq_gui.examples.widget_sync.3_advanced_sync_example
+
+    # Level 4: Master dynamic widget management
+    python -m pymodaq_gui.examples.widget_sync.4_dynamic_widgets_example
+
+Each example includes multiple tabs demonstrating different aspects. Work through them
+in order for the best learning experience.
