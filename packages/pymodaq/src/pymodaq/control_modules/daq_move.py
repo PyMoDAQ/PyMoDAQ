@@ -20,6 +20,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from pymodaq.utils.h5modules.module_saving import ActuatorSaver
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -166,7 +167,6 @@ class DAQ_Move(ParameterControlModule):
         if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_TYPES[0])
 
-        self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
 
         self._move_done_bool = True
 
@@ -564,6 +564,10 @@ class DAQ_Move(ParameterControlModule):
                     "show_graph"
                 ):
                     self.ui.show_data(DataToExport(name=self.title, data=[data_act]))
+                if self.ui.has_action("refresh_value") and self.ui.is_action_checked('refresh_value'):
+                    data_node = self.module_and_data_saver.get_set_node()
+                    self.module_and_data_saver.add_data(data_node, DataToExport('Actuator', data=[data_act]))
+
             self._current_value = data_act
             self.current_value_signal.emit(self._current_value)
             if (
@@ -685,12 +689,14 @@ class DAQ_Move(ParameterControlModule):
         The current timer period is set by the refresh value *'refresh_timeout'* in the actuator main settings.
         """
         if get_value:
+            self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
             self._refresh_timer.setInterval(
                 self.settings["main_settings", "refresh_timeout"]
             )
             self._refresh_timer.start()
         else:
             self._refresh_timer.stop()
+            self.module_and_data_saver.h5saver.close_file()
 
     @property
     def actuator(self):
