@@ -16,11 +16,7 @@ Tests cover:
 """
 import pytest
 from qtpy.QtWidgets import (
-<<<<<<< HEAD
     QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox
-=======
-    QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox, QTextEdit
->>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
 )
 from qtpy.QtCore import Qt
 
@@ -973,7 +969,6 @@ class TestEnableDisableWithDisconnect:
         assert sync.connection_count == 0
 
 
-<<<<<<< HEAD
 class TestInitFromParameter:
     """Test the init_from parameter for controlling initialization behavior."""
 
@@ -1195,25 +1190,3 @@ class TestInitFromParameter:
 
         # Widget should be initialized with sync's value (backward compatible)
         assert spinbox.value() == 42
-=======
-class TestTextEditCursorPreservation:
-    """Test that text editing doesn't cause cursor jumps"""
-
-    def test_textedit_no_cursor_jump(self, qtbot_app):
-        """Test that synchronized text edits preserve cursor position"""
-        sync = WidgetSync(initial_value={'text': 'Hello World'})
-
-        edit1 = QLineEdit()
-        edit2 = QLineEdit()
-
-        sync.bind_dict({
-            'text': {'widget': edit1, 'property': 'text'}
-        })
-
-        # Simulate typing at end
-        edit1.setText('Hello World!')
-        edit1.setCursorPosition(12)  # At end
-
-        # Cursor should stay at end
-        assert edit1.cursorPosition() == 12
->>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
