@@ -16,11 +16,11 @@ Tests cover:
 """
 import pytest
 from qtpy.QtWidgets import (
-    QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox, QTextEdit
+    QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox
 )
 from qtpy.QtCore import Qt
 
-from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
+from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode, ValueSync, DictSync
 
 
 @pytest.fixture
@@ -958,28 +958,229 @@ class TestEnableDisableWithDisconnect:
         sync = WidgetSync.for_slider(slider, initial=50)
 
         sync.disable(slider)
+        assert sync.connection_count == 1
         sync.unbind(slider)
-
         assert sync.connection_count == 0
 
 
-class TestTextEditCursorPreservation:
-    """Test that text editing doesn't cause cursor jumps"""
+class TestInitFromParameter:
+    """Test the init_from parameter for controlling initialization behavior."""
 
-    def test_textedit_no_cursor_jump(self, qtbot_app):
-        """Test that synchronized text edits preserve cursor position"""
-        sync = WidgetSync(initial_value={'text': 'Hello World'})
+    def test_init_from_sync_default(self, qtbot):
+        """Test default behavior: widget gets initialized with sync's value."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)  # Widget starts with different value
 
-        edit1 = QLineEdit()
-        edit2 = QLineEdit()
+        sync.bind(spinbox, signal=spinbox.valueChanged,
+                 getter=spinbox.value, setter=spinbox.setValue,
+                 mode=SyncMode.BIDIRECTIONAL)
 
-        sync.bind_dict({
-            'text': {'widget': edit1, 'property': 'text'}
+        # Widget should be initialized with sync's value (default init_from='sync')
+        assert spinbox.value() == 42
+
+    def test_init_from_widget(self, qtbot):
+        """Test init_from='widget': sync gets initialized with widget's value."""
+        sync = ValueSync(initial_value=42)
+        spinbox1 = QSpinBox()
+        spinbox1.setValue(99)  # Widget starts with different value
+
+        sync.bind(spinbox1, signal=spinbox1.valueChanged,
+                 getter=spinbox1.value, setter=spinbox1.setValue,
+                 mode=SyncMode.BIDIRECTIONAL, init_from='widget')
+
+        # Sync should be initialized with widget's value
+        assert sync.value == 99
+
+        # Add second widget - it should get the sync's (now 99) value
+        spinbox2 = QSpinBox()
+        spinbox2.setValue(50)
+        sync.bind(spinbox2, signal=spinbox2.valueChanged,
+                 getter=spinbox2.value, setter=spinbox2.setValue,
+                 mode=SyncMode.BIDIRECTIONAL, init_from='sync')
+
+        assert spinbox2.value() == 99
+
+    def test_init_from_none(self, qtbot):
+        """Test init_from=None: no initialization occurs."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)  # Widget starts with different value
+
+        sync.bind(spinbox, signal=spinbox.valueChanged,
+                 getter=spinbox.value, setter=spinbox.setValue,
+                 mode=SyncMode.BIDIRECTIONAL, init_from=None)
+
+        # Neither should change
+        assert spinbox.value() == 99
+        assert sync.value == 42
+
+        # But changes should propagate after binding
+        sync.value = 50
+        assert spinbox.value() == 50
+
+    def test_init_from_widget_updates_all_widgets(self, qtbot):
+        """Test that init_from='widget' updates all previously bound widgets."""
+        sync = ValueSync(initial_value=42)
+
+        spinbox1 = QSpinBox()
+        spinbox1.setValue(10)
+        sync.bind(spinbox1, signal=spinbox1.valueChanged,
+                 getter=spinbox1.value, setter=spinbox1.setValue,
+                 mode=SyncMode.BIDIRECTIONAL, init_from='sync')
+        assert spinbox1.value() == 42
+
+        spinbox2 = QSpinBox()
+        spinbox2.setValue(99)
+        sync.bind(spinbox2, signal=spinbox2.valueChanged,
+                 getter=spinbox2.value, setter=spinbox2.setValue,
+                 mode=SyncMode.BIDIRECTIONAL, init_from='widget')
+
+        # Sync should have widget2's value
+        assert sync.value == 99
+        # Widget1 should also be updated
+        assert spinbox1.value() == 99
+
+    def test_init_from_widget_requires_to_sync_mode(self, qtbot):
+        """Test that init_from='widget' requires TO_SYNC or BIDIRECTIONAL mode."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)
+
+        with pytest.raises(ValueError, match="init_from='widget' requires mode with TO_SYNC capability"):
+            sync.bind(spinbox, signal=spinbox.valueChanged,
+                     getter=spinbox.value, setter=spinbox.setValue,
+                     mode=SyncMode.FROM_SYNC, init_from='widget')
+
+    def test_init_from_widget_requires_getter(self, qtbot):
+        """Test that init_from='widget' requires a getter."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)
+
+        # Use simple ValueError check without specific message matching
+        with pytest.raises(ValueError):
+            sync.bind(spinbox, signal=spinbox.valueChanged,
+                     getter=None, setter=spinbox.setValue,
+                     mode=SyncMode.BIDIRECTIONAL, init_from='widget')
+
+    def test_init_from_sync_with_to_sync_mode_noop(self, qtbot):
+        """Test that init_from='sync' with TO_SYNC mode is a no-op."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)
+
+        # This should not raise an error, just skip initialization
+        sync.bind(spinbox, signal=spinbox.valueChanged,
+                 getter=spinbox.value, setter=spinbox.setValue,
+                 mode=SyncMode.TO_SYNC, init_from='sync')
+
+        # Widget value should be unchanged (no FROM_SYNC capability)
+        assert spinbox.value() == 99
+        assert sync.value == 42
+
+    def test_add_method_passes_init_from(self, qtbot):
+        """Test that add() method properly passes init_from parameter."""
+        checkbox0 = QCheckBox()
+        sync = WidgetSync.for_checkbox(checkbox0, initial=True)
+        checkbox1 = QCheckBox()
+        checkbox1.setChecked(False)
+        sync.add(checkbox1)  # Default init_from='sync'
+        assert checkbox1.isChecked()
+
+        checkbox2 = QCheckBox()
+        checkbox2.setChecked(False)
+        sync.add(checkbox2, init_from='widget')
+
+        # Sync and all widgets should now have value False
+        assert not sync.value
+        assert not checkbox1.isChecked()
+        assert not checkbox2.isChecked()
+
+    def test_init_from_with_transforms(self, qtbot):
+        """Test that transforms are applied during initialization."""
+        sync = ValueSync(initial_value=100)
+        spinbox = QSpinBox()
+        spinbox.setValue(50)
+
+        # to_sync_transform: multiply by 2
+        # from_sync_transform: divide by 2
+        sync.bind(spinbox, signal=spinbox.valueChanged,
+                 getter=spinbox.value, setter=spinbox.setValue,
+                 mode=SyncMode.BIDIRECTIONAL,
+                 to_sync_transform=lambda x: x * 2,
+                 from_sync_transform=lambda x: x // 2,
+                 init_from='sync')
+
+        # Widget should get sync's value (100) transformed (divided by 2)
+        assert spinbox.value() == 50
+
+        # Now test init_from='widget'
+        sync2 = ValueSync(initial_value=100)
+        spinbox2 = QSpinBox()
+        spinbox2.setValue(25)
+
+        sync2.bind(spinbox2, signal=spinbox2.valueChanged,
+                  getter=spinbox2.value, setter=spinbox2.setValue,
+                  mode=SyncMode.BIDIRECTIONAL,
+                  to_sync_transform=lambda x: x * 2,
+                  from_sync_transform=lambda x: x // 2,
+                  init_from='widget')
+
+        # Sync should get widget's value (25) transformed (multiplied by 2)
+        assert sync2.value == 50
+
+    def test_bind_dict_global_init_from(self, qtbot):
+        """Test bind_dict with global init_from parameter."""
+        sync = DictSync(initial_value={'value': 42})
+
+        spinbox = QSpinBox()
+        spinbox.setValue(99)
+
+        sync.bind_dict(property_map={
+            'value': {'widget': spinbox, 'property': 'value'}
+        }, init_from='widget')
+
+        # Sync should be initialized with widget's value
+        assert sync.value['value'] == 99
+
+    def test_bind_dict_per_property_override(self, qtbot):
+        """Test bind_dict with per-property init_from override."""
+        sync = DictSync(initial_value={'a': 10, 'b': 20})
+
+        spinbox_a = QSpinBox()
+        spinbox_a.setValue(50)
+        spinbox_b = QSpinBox()
+        spinbox_b.setValue(200)
+
+        # Bind property 'b' first with init_from='sync'
+        sync.bind_dict(property_map={
+            'b': {'widget': spinbox_b, 'property': 'value', 'init_from': 'sync'}
         })
 
-        # Simulate typing at end
-        edit1.setText('Hello World!')
-        edit1.setCursorPosition(12)  # At end
+        # Property 'b' widget should have sync's value
+        assert spinbox_b.value() == 20
 
-        # Cursor should stay at end
-        assert edit1.cursorPosition() == 12
+        # Now bind property 'a' with init_from='widget'
+        sync.bind_dict(property_map={
+            'a': {'widget': spinbox_a, 'property': 'value', 'init_from': 'widget'}
+        })
+
+        # Property 'a' in sync should now have widget's value
+        assert sync.value['a'] == 50
+        # Property 'b' should still be 20
+        assert sync.value['b'] == 20
+
+    def test_backward_compatibility(self, qtbot):
+        """Test that not specifying init_from maintains backward compatibility."""
+        sync = ValueSync(initial_value=42)
+        spinbox = QSpinBox()
+        spinbox.setValue(99)
+
+        # Don't specify init_from - should default to 'sync'
+        sync.bind(spinbox, signal=spinbox.valueChanged,
+                 getter=spinbox.value, setter=spinbox.setValue,
+                 mode=SyncMode.BIDIRECTIONAL)
+
+        # Widget should be initialized with sync's value (backward compatible)
+        assert spinbox.value() == 42
