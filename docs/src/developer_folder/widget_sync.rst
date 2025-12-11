@@ -1401,6 +1401,24 @@ Manage widgets that are created and destroyed dynamically:
                 'widgets': self.sync.connected_widgets
             }
 
+Extending Widget Sync (Advanced)
+---------------------------------
+
+For library developers who need to extend the widget sync system.
+
+.. tip::
+   **Example:** :file:`examples/widget_sync/5_extending_sync_example.py` demonstrates all three extension approaches:
+
+   - Tab 1: Custom factory methods (range spinboxes, slider with label)
+   - Tab 2: Custom validators (value clamping, range auto-swap)
+   - Tab 3: Custom sync class (CoordinateSync for image coordinate systems)
+
+See the "Extending Widget Sync" section above for detailed documentation on:
+
+- Option 1: Custom Factory Methods (Easiest)
+- Option 2: Custom Validators (Common)
+- Option 3: Custom Sync Classes (Advanced)
+
 API Reference
 -------------
 
@@ -1443,6 +1461,8 @@ Complete examples demonstrating widget synchronization are available:
     # Level 4: Dynamic widget management
     python -m pymodaq_gui.examples.widget_sync.4_dynamic_widgets_example
 
+    # Level 5: Extending widget_sync (custom factories, validators, sync classes)
+    python -m pymodaq_gui.examples.widget_sync.5_extending_sync_example
 
 See Also
 --------
@@ -1450,24 +1470,4 @@ See Also
 * :ref:`contributing` - Contributing guidelines
 * :ref:`api` - Full API reference
 
-Example Files
-~~~~~~~~~~~~~
 
-Run these examples to see widget synchronization in action:
-
-.. code-block:: bash
-
-    # Level 1: Start here - basics of checkbox, slider, and spinbox synchronization
-    python -m pymodaq_gui.examples.widget_sync.1_basic_sync_example
-
-    # Level 2: Learn dictionary synchronization for multi-property widgets
-    python -m pymodaq_gui.examples.widget_sync.2_dict_sync_example
-
-    # Level 3: Explore advanced patterns (multiple syncs, dynamic properties, custom classes)
-    python -m pymodaq_gui.examples.widget_sync.3_advanced_sync_example
-
-    # Level 4: Master dynamic widget management
-    python -m pymodaq_gui.examples.widget_sync.4_dynamic_widgets_example
-
-Each example includes multiple tabs demonstrating different aspects. Work through them
-in order for the best learning experience.
