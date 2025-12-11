@@ -695,7 +695,6 @@ Dictionary Synchronization (DictSync)
 When you need to synchronize multiple related properties or map widgets to different keys,
 use dictionary-based synchronization.
 
-<<<<<<< HEAD
 .. important::
    **DictSync does NOT have an ``add()`` method.**
 
@@ -716,8 +715,6 @@ use dictionary-based synchronization.
    - Validators for dict values (Tab 3 - Clamping, auto-swapping min/max)
    - Custom dict widgets with ``bind()`` (Tab 4 - JSON editor)
 
-=======
->>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
 When to Use DictSync vs ValueSync
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1026,7 +1023,6 @@ Subclassing is rarely needed.
 
 **For library developers:** This section explains when and how to extend the sync system.
 
-<<<<<<< HEAD
 .. tip::
    **Example:** :file:`examples/widget_sync/3_advanced_sync_example.py` demonstrates:
 
@@ -1034,8 +1030,6 @@ Subclassing is rarely needed.
    - Dynamic property addition/removal (Tab 2 - Adding properties at runtime)
    - Custom sync classes extending BaseWidgetSync (Tab 3 - RangeSync example)
 
-=======
->>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
 Understanding the Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1450,33 +1444,6 @@ Complete examples demonstrating widget synchronization are available:
     python -m pymodaq_gui.examples.widget_sync.4_dynamic_widgets_example
 
 
-Best Practices
---------------
-
-DO:
-~~~
-
-* ✅ Use ``add()`` for widgets of the same type (default ``match='type'``)
-* ✅ Use ``add(widget, match='property')`` for different types with compatible properties
-* ✅ Use ``bind()`` for complete control over getter/setter/transforms
-* ✅ Use ``SyncMode.FROM_SYNC`` for read-only displays
-* ✅ Use factory methods for common widget types
-* ✅ Use ``data_type`` parameter for explicit type checking
-* ✅ Use ``disable()``/``enable()`` for temporary pauses
-* ✅ Use ``unbind()`` for permanent removal
-* ✅ Check ``connection_count`` and ``connected_widgets`` for debugging
-
-DON'T:
-~~~~~~
-
-* ❌ Don't use ``add()`` without considering the ``match`` parameter
-* ❌ Don't create circular sync chains (A→B→C→A)
-* ❌ Don't disconnect/reconnect frequently (use ``disable()``/``enable()`` instead)
-* ❌ Don't manually disconnect unless necessary (automatic cleanup works)
-* ❌ Don't forget to handle value transformations when syncing different types
-* ❌ Don't mix incompatible data types without proper transforms
-
-
 See Also
 --------
 
@@ -1490,7 +1457,6 @@ Run these examples to see widget synchronization in action:
 
 .. code-block:: bash
 
-<<<<<<< HEAD
     # Level 1: Start here - basics of checkbox, slider, and spinbox synchronization
     python -m pymodaq_gui.examples.widget_sync.1_basic_sync_example
 
@@ -1505,13 +1471,3 @@ Run these examples to see widget synchronization in action:
 
 Each example includes multiple tabs demonstrating different aspects. Work through them
 in order for the best learning experience.
-=======
-    # Dict synchronization examples (bind_properties and bind_dict)
-    python -m pymodaq_gui.examples.dict_sync_example
-
-    # ComboBox synchronization (items + selection)
-    python -m pymodaq_gui.examples.combobox_sync_example
-
-    # Multi-property synchronization patterns
-    python -m pymodaq_gui.examples.multi_property_sync_example
->>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
