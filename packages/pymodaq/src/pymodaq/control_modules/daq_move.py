@@ -20,7 +20,6 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-from pymodaq.utils.h5modules.module_saving import ActuatorSaver
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -78,8 +77,6 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = config_mod.Config()
 config = ControlModulesConfig()
-
-HardwareController = TypeVar("HardwareController")
 
 HardwareController = TypeVar("HardwareController")
 
