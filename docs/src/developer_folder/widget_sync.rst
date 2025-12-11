@@ -695,6 +695,7 @@ Dictionary Synchronization (DictSync)
 When you need to synchronize multiple related properties or map widgets to different keys,
 use dictionary-based synchronization.
 
+<<<<<<< HEAD
 .. important::
    **DictSync does NOT have an ``add()`` method.**
 
@@ -715,6 +716,8 @@ use dictionary-based synchronization.
    - Validators for dict values (Tab 3 - Clamping, auto-swapping min/max)
    - Custom dict widgets with ``bind()`` (Tab 4 - JSON editor)
 
+=======
+>>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
 When to Use DictSync vs ValueSync
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1023,6 +1026,7 @@ Subclassing is rarely needed.
 
 **For library developers:** This section explains when and how to extend the sync system.
 
+<<<<<<< HEAD
 .. tip::
    **Example:** :file:`examples/widget_sync/3_advanced_sync_example.py` demonstrates:
 
@@ -1030,6 +1034,8 @@ Subclassing is rarely needed.
    - Dynamic property addition/removal (Tab 2 - Adding properties at runtime)
    - Custom sync classes extending BaseWidgetSync (Tab 3 - RangeSync example)
 
+=======
+>>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
 Understanding the Architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1484,6 +1490,7 @@ Run these examples to see widget synchronization in action:
 
 .. code-block:: bash
 
+<<<<<<< HEAD
     # Level 1: Start here - basics of checkbox, slider, and spinbox synchronization
     python -m pymodaq_gui.examples.widget_sync.1_basic_sync_example
 
@@ -1498,3 +1505,13 @@ Run these examples to see widget synchronization in action:
 
 Each example includes multiple tabs demonstrating different aspects. Work through them
 in order for the best learning experience.
+=======
+    # Dict synchronization examples (bind_properties and bind_dict)
+    python -m pymodaq_gui.examples.dict_sync_example
+
+    # ComboBox synchronization (items + selection)
+    python -m pymodaq_gui.examples.combobox_sync_example
+
+    # Multi-property synchronization patterns
+    python -m pymodaq_gui.examples.multi_property_sync_example
+>>>>>>> 50813f47281464e74df0875ac834012d9ae7d845
