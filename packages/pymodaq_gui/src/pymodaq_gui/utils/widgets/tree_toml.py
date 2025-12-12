@@ -8,47 +8,40 @@ from typing import Union, Any
 import datetime
 
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QSignalBlocker
 
 from pymodaq_gui.parameter.utils import get_param_path
 from pymodaq_gui.parameter import ParameterTree, Parameter
-
+from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.config import Config, create_toml_from_dict
 
 
-class TreeFromToml(QObject):
+class TreeFromToml(ParameterManager, QObject):
     """ Create a ParameterTree from a configuration file"""
+    settings_name = 'configuration'
+    params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
+               'value': '', 'readonly': True}]
 
     def __init__(self, config: Config = None, capitalize=True, start_path: Union[str, tuple[str, ...]] = ()):
-        super().__init__()
+        QObject.__init__(self)
+        ParameterManager.__init__(self)
 
         if config is None:
             config = Config()
         self._config = config
-        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
-                   'value': str(self._config.config_path),
-                   'readonly': True}]
 
         self.start_path = (start_path,) if isinstance(start_path, str) else start_path
 
-        #calling a config returns a dict!
-        params.extend(self.dict_to_param(config(*start_path), capitalize=capitalize))
-
-        self.settings = Parameter.create(title='settings', name='settings', type='group',
-                                         children=params)
-        self.settings.sigTreeStateChanged.connect(self.cache_config_change)
-        self.settings_tree = ParameterTree()
-
-        self.settings_tree.setParameters(self.settings, showTop=False)
+        with QSignalBlocker(self.settings):
+            self.settings.child('config_path').setValue(str(self._config.config_path))
+        self.settings.addChildren(self.dict_to_param(config(*start_path), capitalize=capitalize))
 
         self._cached_config_changes = {}
         self.dialog = None
 
-    def cache_config_change(self, _base_param, changes):
-        for param, change_type, value in changes:
-            if change_type == "value":
-                path = tuple(get_param_path(param)[1:])
-                self._cached_config_changes[path] =  self.param_to_object(param)
+    def value_changed(self, param):
+        path = tuple(get_param_path(param)[1:])
+        self._cached_config_changes[path] =  self.param_to_object(param)
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():
