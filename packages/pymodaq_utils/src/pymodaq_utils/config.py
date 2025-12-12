@@ -323,7 +323,6 @@ class BaseConfig(metaclass=Singleton):
                 ret = default
         return ret
 
-
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
         with self._lock.read_lock():

@@ -85,6 +85,8 @@ class TestTreeFromToml:
         ]
     )
     def test_accept_config(self, qtbot, changes, config_was_modified):
+        """ beware test order is important, it uses pytest-order to make sure tests are done
+        in the right order top to bottom, see dev dependencies"""
         config = Config()
         config.load()
 

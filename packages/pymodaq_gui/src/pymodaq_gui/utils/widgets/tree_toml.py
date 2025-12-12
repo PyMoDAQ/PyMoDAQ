@@ -4,7 +4,7 @@ Created the 19/10/2023
 
 @author: Sebastien Weber
 """
-from typing import Union
+from typing import Union, Any
 import datetime
 
 from qtpy import QtWidgets, QtCore
@@ -12,6 +12,7 @@ from qtpy.QtCore import QObject
 
 from pymodaq_gui.parameter.utils import get_param_path
 from pymodaq_gui.parameter import ParameterTree, Parameter
+
 from pymodaq_utils.config import Config, create_toml_from_dict
 
 
@@ -47,7 +48,7 @@ class TreeFromToml(QObject):
         for param, change_type, value in changes:
             if change_type == "value":
                 path = tuple(get_param_path(param)[1:])
-                self._cached_config_changes[path] =  value
+                self._cached_config_changes[path] =  self.param_to_object(param)
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():
@@ -86,22 +87,27 @@ class TreeFromToml(QObject):
             if 'group' in child.opts['type']:
                 config[child.name()] = cls.param_to_dict(child)
             else:
-                if child.opts['type'] == 'datetime':
-                    config[child.name()] = datetime.datetime.fromtimestamp(
-                        child.value().toSecsSinceEpoch())  # convert QDateTime to python datetime
-                elif child.opts['type'] == 'date':
-                    qdt = QtCore.QDateTime()
-                    qdt.setDate(child.value())
-                    pdt = datetime.datetime.fromtimestamp(qdt.toSecsSinceEpoch())
-                    config[child.name()] = pdt.date()
-                elif child.opts['type'] == 'list':
-                    if child.opts['value'] in child.opts['limits']:
-                        child.opts["limits"].remove(child.opts['value'])
-                        child.opts["limits"].insert(0,child.opts["value"])
-                    config[child.name()] = child.opts["limits"]
-                else:
-                    config[child.name()] = child.value()
+                config[child.name()] = cls.param_to_object(child)
         return config
+
+    @classmethod
+    def param_to_object(cls, param: Parameter) -> Any:
+        """ Format the value of the Parameter depending on internal need """
+        if param.opts['type'] == 'datetime':
+            return datetime.datetime.fromtimestamp(
+                param.value().toSecsSinceEpoch())  # convert QDateTime to python datetime
+        elif param.opts['type'] == 'date':
+            qdt = QtCore.QDateTime()
+            qdt.setDate(param.value())
+            pdt = datetime.datetime.fromtimestamp(qdt.toSecsSinceEpoch())
+            return pdt.date()
+        elif param.opts['type'] == 'list':
+            if param.opts['value'] in param.opts['limits']:
+                param.opts["limits"].remove(param.opts['value'])
+                param.opts["limits"].insert(0, param.opts["value"])
+            return param.opts["limits"]
+        else:
+            return param.value()
 
     @classmethod
     def dict_to_param(cls, config: dict, capitalize=True) -> Parameter:
