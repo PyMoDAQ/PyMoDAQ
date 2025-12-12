@@ -1,5 +1,5 @@
 from qtpy import QtGui, QtWidgets
-from pymodaq_gui.resources.qt_material_icons import MaterialIcon
+from pymodaq_gui.resources.material_icons import MaterialIcon
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_utils.config import Config
 

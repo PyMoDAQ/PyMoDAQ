@@ -12,23 +12,18 @@ from qtpy.QtWidgets import QAction as QtQAction
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import Config
 
-from pymodaq_gui.resources.qt_material_icons import MaterialIcon
+from pymodaq_gui.resources.material_icons import MaterialIcon
 import qt_themes
 
 
 config = Config()
-here = Path(__file__).parent
-icon_folder = here.parent.joinpath('QtDesigner_Ressources/Icon_Library/')
-QtCore.QDir.addSearchPath('icons', str(icon_folder))
+resource_folder = Path(__file__).parent.parent.joinpath('resources')
+QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
 theme = qt_themes.get_theme(config('style', 'theme')[0])
 
 
-
-def resource_exists(name: str, style: MaterialIcon.Style, fill: bool, size: int):
-    if hasattr(MaterialIcon, 'resource_exists'):
-        return MaterialIcon.resource_exists(name, style, fill, size)
-    else:
-        return QtCore.QFile(MaterialIcon.resource_path(name, style, fill, size)).exists()
+def resource_path_exists(path: str) -> bool:
+    return QtCore.QFile(path).exists()
 
 
 def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, None]:
@@ -46,37 +41,46 @@ def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, No
 def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_color: Union[QtGui.QColor, bytes, str] = None,
                 icon_checked_color: Union[QtGui.QColor, bytes, str] = None):
+    """ Create an icon from various sources by order of preference:
+
+    1) icon_name is an icon
+    2) icon_name is a registered MaterialIcon
+    3) icon_name is a real path to a png
+    4) icon_name is a registered png in icon_library
+    5) icon_name is a registered ThemeIcon
+    6) icon_name is a registered StandardPixmap
+    """
+
     if isinstance(icon_name, QtGui.QIcon):
         return icon_name
-    else:
-        if resource_exists(icon_name,
-                           style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-                           fill=config('style', 'icons', 'fill')[0],
-                           size=config('style', 'icons', 'size')[0]):
-            icon = MaterialIcon(
+    elif resource_path_exists(
+            MaterialIcon.resource_path(
                 icon_name,
                 style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
                 fill=config('style', 'icons', 'fill')[0],
-                size=config('style', 'icons', 'size')[0])
-            icon.set_color(create_color(icon_color))
-            if icon_checked_color is not None:
-                icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
-        else:
-            icon = QtGui.QIcon()
-            if Path(icon_name).is_file(): # Test if icon is in path
-                icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-            else:
-                pixmap = QtGui.QPixmap(f"icons:{icon_name}.png") # Test if icon is in pymodaq's library
-                if pixmap.isNull():
-                    if hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
-                        icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
-                    elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
-                        pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)
-                        icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
-                else:
-                    icon = QtGui.QIcon()
-                    icon.addPixmap(QtGui.QPixmap(pixmap), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-        return icon
+                size=config('style', 'icons', 'size')[0])):
+        icon = MaterialIcon(
+            icon_name,
+            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
+            fill=config('style', 'icons', 'fill')[0],
+            size=config('style', 'icons', 'size')[0])
+        icon.set_color(create_color(icon_color))
+        if icon_checked_color is not None:
+            icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
+    elif Path(icon_name).is_file(): # Test if icon is in path
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+    elif resource_path_exists(f"icons:{icon_name}.png"):
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(f"icons:{icon_name}.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+    elif hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
+        icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
+    elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
+        pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)
+        icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
+    else:
+        icon = QtGui.QIcon()
+    return icon
 
 
 class QAction(QtQAction):
@@ -411,7 +415,7 @@ class ActionManager:
 
         See Also
         --------
-        affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
+        affect_to, pymodaq.resources.QtDesigner_Ressources.icon_library,
         pymodaq.utils.managers.action_manager.add_action
         """
         if auto_toolbar:
