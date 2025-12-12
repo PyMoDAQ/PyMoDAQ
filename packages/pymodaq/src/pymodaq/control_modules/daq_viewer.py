@@ -172,13 +172,13 @@ class DAQ_Viewer(ParameterControlModule):
         else:
             raise DetectorError('No detected Detector')
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
-        for hided_param in ('custom_name',
+        for hidden_param in ('custom_name',
                             'current_scan_name',
                             'current_scan_path',
                             'current_h5_file',
                             'new_file',
                             'base_name'):
-            self.settings.child('saver_settings', hided_param).setOpts(visible=False)
+            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
