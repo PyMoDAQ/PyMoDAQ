@@ -80,6 +80,34 @@ class QAction(QtQAction):
         return f'QAction {self.text()}'
 
 
+class WidgetActionProxy(QtWidgets.QWidget):
+    """ Wrapper class of a Widget and its associated toolbar Action.
+    All methods call are forwarded to the wrapped Widget. Even its class name
+    is copied.
+
+    Only the setVisible method is different, as the Action need to be hidden.
+    (monkey-patching setVisible on the widget wasn't compatible with PySide6)
+    """
+    def __init__(self, widget : QtWidgets.QWidget, action : QtWidgets.QAction):
+        super().__init__(widget.parent())
+        self.setParent(widget)
+
+        self._widget = widget
+        self._action = action
+
+    def setVisible(self, visible : bool):
+        self._action.setVisible(visible)
+        self._widget.setVisible(visible)
+        super().setVisible(visible)
+
+    def __getattr__(self, name : str):
+        return getattr(self._widget, name)
+
+    @property
+    def __class__(self):
+        return self._widget.__class__
+
+
 def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip='', checkable=False, checked=False,
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
@@ -190,36 +218,6 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='', toolb
             return None
 
     if toolbar is not None:
-        class WidgetActionProxy(QtWidgets.QWidget):
-            '''
-                Wrapper class of a Widget and its associated toolbar Action.
-
-                All methods call are forwarded to the wrapped Widget. Even its class name
-                is copied.
-
-                Only the setVisible method is different, as the Action need to be hidden.
-
-               (monkey-patching setVisible on the widget wasn't compatible with PySide6)
-            '''
-            def __init__(self, widget : QtWidgets.QWidget, action : QtWidgets.QAction):
-                super().__init__(widget.parent())
-                self.setParent(widget)
-
-                self._widget = widget
-                self._action = action
-
-            def setVisible(self, visible : bool):
-                self._action.setVisible(visible)
-                self._widget.setVisible(visible)
-                super().setVisible(visible)
-
-            def __getattr__(self, name : str):
-                return getattr(self._widget, name)
-
-            @property
-            def __class__(self):
-                return self._widget.__class__
-
 
         action: QtWidgets.QAction = toolbar.addWidget(widget)
         action.setVisible(visible)
@@ -673,7 +671,7 @@ class ActionManager:
         """Get the default menu"""
         return self._menu
 
-    def affect_to(self, action_name, obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]):
+    def affect_to(self, action_name: Union[str, QAction, WidgetActionProxy], obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]):
         """Affect action to an object either a toolbar or a menu
 
         Parameters
@@ -684,7 +682,12 @@ class ActionManager:
             The object where to add the action
         """
         if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
-            obj.addAction(self._actions[action_name])
+            if isinstance(action_name, QAction):
+                obj.addAction(action_name)
+            elif isinstance(action_name, WidgetActionProxy):
+                obj.addAction(action_name._action)
+            else:
+                obj.addAction(self._actions[action_name])
 
     def connect_action(self, name, slot=None, connect=True, signal_name=''):
         """Connect (or disconnect) the action referenced by name to the given slot
