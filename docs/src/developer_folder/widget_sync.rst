@@ -750,11 +750,12 @@ WidgetSync automatically detects when to use DictSync:
 DictSync Binding Methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-DictSync provides three binding methods:
+DictSync provides four binding methods:
 
 1. **bind()** - For widgets that work with entire dict (JSON editors, displays)
-2. **bind_properties()** - For multiple properties of ONE widget
-3. **bind_dict()** - For DIFFERENT widgets mapped to dict keys
+2. **bind_properties()** - For multiple properties of ONE widget (regular Qt widgets)
+3. **bind_parameter()** - For pyqtgraph Parameters (avoids blockSignals issue)
+4. **bind_dict()** - For DIFFERENT widgets mapped to dict keys
 
 Method 1: bind() - Entire Dict
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -895,6 +896,210 @@ For mapping different widgets to different dictionary keys:
             }
         }
     )
+
+Binding Parameters with bind_parameter()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``bind_parameter()`` method is specifically designed for binding pyqtgraph Parameters
+to DictSync. Unlike ``bind_properties()``, it avoids the ``blockSignals()`` issue that
+prevents parameter tree widgets from updating visually.
+
+**When to Use Which Method:**
+
+- Use ``bind_properties()`` for regular Qt widgets (QSpinBox, QComboBox, etc.)
+- Use ``bind_parameter()`` for pyqtgraph Parameters
+
+**Why bind_parameter() Exists:**
+
+The ``blockSignals()`` mechanism used by ``bind_properties()`` prevents feedback loops,
+but it also prevents parameter tree widgets from updating. Parameters manage their own
+internal widgets, so we need callback disconnection instead of signal blocking.
+
+Basic Parameter Binding
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from pymodaq_gui.parameter import Parameter, ParameterTree
+    from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
+
+    # Create parameters
+    params = [
+        {'title': 'Threshold:', 'name': 'threshold', 'type': 'float',
+         'value': 0.5, 'limits': (0.0, 1.0)},
+        {'title': 'Buffer Size:', 'name': 'buffer_size', 'type': 'int',
+         'value': 1024, 'limits': (128, 8192)},
+    ]
+
+    settings = Parameter.create(name='settings', type='group',
+                               children=params)
+    tree = ParameterTree()
+    tree.setParameters(settings)
+
+    # Create sync with toolbar widgets
+    sync = WidgetSync(initial_value={
+        'threshold': 0.5,
+        'buffer_size': 1024
+    })
+
+    # Bind toolbar widgets (regular Qt widgets)
+    sync.bind_properties(
+        threshold_spinbox,
+        property_map={'threshold': {'property': 'value'}}
+    )
+
+    sync.bind_properties(
+        buffer_spinbox,
+        property_map={'buffer_size': {'property': 'value'}}
+    )
+
+    # Bind parameters (use bind_parameter - NOT bind_properties!)
+    sync.bind_parameter(
+        settings.child('threshold'),
+        property_map={
+            'threshold': {
+                'signal': settings.child('threshold').sigValueChanged,
+                'getter': settings.child('threshold').value,
+                'setter': settings.child('threshold').setValue,
+            }
+        }
+    )
+
+    sync.bind_parameter(
+        settings.child('buffer_size'),
+        property_map={
+            'buffer_size': {
+                'signal': settings.child('buffer_size').sigValueChanged,
+                'getter': settings.child('buffer_size').value,
+                'setter': settings.child('buffer_size').setValue,
+            }
+        }
+    )
+
+Now changing values in the toolbar spinboxes updates the parameter tree, and vice versa!
+
+Shortcut Syntax for Simple Parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For simple parameter value synchronization, use the shortcut syntax:
+
+.. code-block:: python
+
+    # Shortcut: Auto-generates sigValueChanged, value(), setValue()
+    sync.bind_parameter(
+        threshold_param,
+        property_map={
+            'threshold': {'param': threshold_param}
+        }
+    )
+
+    # Equivalent to:
+    sync.bind_parameter(
+        threshold_param,
+        property_map={
+            'threshold': {
+                'signal': threshold_param.sigValueChanged,
+                'getter': threshold_param.value,
+                'setter': threshold_param.setValue,
+                'mode': SyncMode.BIDIRECTIONAL
+            }
+        }
+    )
+
+The shortcut syntax is ideal for simple cases where you just want to sync the parameter value.
+
+Binding List Parameters (ComboBox)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+List parameters require syncing both the options (limits) and the selected value:
+
+.. code-block:: python
+
+    # Create a list parameter
+    params = [
+        {'title': 'Algorithm:', 'name': 'algorithm', 'type': 'list',
+         'limits': ['FFT', 'Wavelet', 'Correlation'], 'value': 'FFT'},
+    ]
+
+    settings = Parameter.create(name='settings', type='group',
+                               children=params)
+    algorithm_param = settings.child('algorithm')
+
+    # Create sync for both limits and value
+    sync = WidgetSync(initial_value={
+        'algorithms': ['FFT', 'Wavelet', 'Correlation'],
+        'algorithm': 'FFT'
+    })
+
+    # Bind toolbar combobox (regular Qt widget)
+    sync.bind_properties(
+        algorithm_combo,
+        property_map={
+            'algorithms': {
+                'signal': None,  # FROM_SYNC only
+                'getter': lambda: [algorithm_combo.itemText(i)
+                                  for i in range(algorithm_combo.count())],
+                'setter': lambda items: (algorithm_combo.clear(),
+                                        algorithm_combo.addItems(items)),
+                'mode': SyncMode.FROM_SYNC
+            },
+            'algorithm': {
+                'signal': algorithm_combo.currentTextChanged,
+                'getter': lambda: algorithm_combo.currentText(),
+                'setter': lambda text: algorithm_combo.setCurrentText(text),
+            }
+        }
+    )
+
+    # Bind parameter (use bind_parameter!)
+    sync.bind_parameter(
+        algorithm_param,
+        property_map={
+            'algorithms': {
+                'getter': lambda: algorithm_param.opts['limits'],
+                'setter': algorithm_param.setLimits,
+                'mode': SyncMode.FROM_SYNC,
+            },
+            'algorithm': {
+                'signal': algorithm_param.sigValueChanged,
+                'getter': algorithm_param.value,
+                'setter': algorithm_param.setValue,
+            }
+        }
+    )
+
+Now the combobox, parameter value, and parameter tree all stay synchronized!
+
+Parameter Signal Details
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Important:** Parameter signals emit ``(param, value)`` tuples, not just values:
+
+.. code-block:: python
+
+    # Parameter signals emit (param, value)
+    def on_param_changed(param, value):
+        print(f"{param.name()} changed to {value}")
+
+    my_param.sigValueChanged.connect(on_param_changed)
+
+The ``bind_parameter()`` method automatically handles this by extracting the value
+from the ``(param, value)`` tuple before passing it to the sync system.
+
+Complete Example
+^^^^^^^^^^^^^^^^
+
+See ``pymodaq_gui/examples/widget_sync/6_parameter_binding_example.py`` for a complete
+working example showing:
+
+- Syncing multiple parameter types (list, int, float, bool)
+- Toolbar + parameter tree staying synchronized
+- Both shortcut and manual syntax
+- Programmatic value changes
+
+.. code-block:: bash
+
+    python -m pymodaq_gui.examples.widget_sync.6_parameter_binding_example
 
 Validation with DictSync
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1463,6 +1668,9 @@ Complete examples demonstrating widget synchronization are available:
 
     # Level 5: Extending widget_sync (custom factories, validators, sync classes)
     python -m pymodaq_gui.examples.widget_sync.5_extending_sync_example
+
+    # Level 6: Parameter binding (pyqtgraph Parameters with bind_parameter())
+    python -m pymodaq_gui.examples.widget_sync.6_parameter_binding_example
 
 See Also
 --------
