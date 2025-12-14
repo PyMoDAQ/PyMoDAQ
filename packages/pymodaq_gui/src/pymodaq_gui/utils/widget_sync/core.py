@@ -290,18 +290,31 @@ class BaseWidgetSync(QObject):
         connection_info['property_key'] = property_key
         self._connections[(widget_id, property_key)] = connection_info
 
-    def _remove_connection(self, widget_id: int, property_key: str | None = None) -> None:
-        """Remove connection and disconnect callbacks."""
+    def _remove_connection(self, widget_id: int, property_key: str | None = None,
+                          is_destruction: bool = False) -> None:
+        """
+        Remove connection and disconnect callbacks.
+
+        Parameters
+        ----------
+        widget_id : int
+            Widget ID
+        property_key : str | None
+            Property key
+        is_destruction : bool
+            True if called during widget destruction (skip parameter signal disconnection)
+        """
         key = (widget_id, property_key)
         if conn := self._connections.get(key):
-            self._disconnect_callbacks(conn['callbacks'])
+            param_callbacks = conn.get('param_callbacks') if not is_destruction else None
+            self._disconnect_callbacks(conn['callbacks'], param_callbacks)
             del self._connections[key]
 
     def _get_connection_keys_for_widget(self, widget_id: int) -> list[tuple[int, str | None]]:
         """Get all connection keys for a widget."""
         return [k for k in self._connections if k[0] == widget_id]
 
-    def _disconnect_callbacks(self, callbacks: list) -> None:
+    def _disconnect_callbacks(self, callbacks: list, param_callbacks: dict = None) -> None:
         """
         Disconnect sync callbacks from value_changed signal.
 
@@ -311,6 +324,8 @@ class BaseWidgetSync(QObject):
         ----------
         callbacks : list
             List of callback tuples (callback_type, callback)
+        param_callbacks : dict, optional
+            Dict of parameter-specific callbacks to disconnect (for bind_parameter)
         """
         for callback_type, callback in callbacks:
             if callback_type == 'sync':
@@ -318,6 +333,21 @@ class BaseWidgetSync(QObject):
                     self.value_changed.disconnect(callback)
                 except (TypeError, RuntimeError):
                     pass  # Already disconnected
+
+        # Disconnect parameter signal callbacks (only if param_callbacks is provided)
+        # Note: param_callbacks is None during widget destruction to avoid Qt warnings
+        # when the Parameter is being destroyed. Qt automatically disconnects signals
+        # during object destruction, so explicit disconnection is not needed and can
+        # cause warnings.
+        if param_callbacks:
+            for key, value in list(param_callbacks.items()):
+                if key[1] == 'param_to_sync':
+                    # value is (signal, callback)
+                    signal, callback = value
+                    try:
+                        signal.disconnect(callback)
+                    except (TypeError, RuntimeError):
+                        pass  # Already disconnected
 
     # Widget Lifecycle Methods
 
@@ -333,7 +363,8 @@ class BaseWidgetSync(QObject):
             sync = sync_weak()
             if sync is not None:
                 for key in connection_keys:
-                    sync._remove_connection(key[0], key[1])
+                    # Pass is_destruction=True to skip parameter signal disconnection
+                    sync._remove_connection(key[0], key[1], is_destruction=True)
 
         widget.destroyed.connect(on_destroyed)
 
@@ -1550,6 +1581,195 @@ class DictSync(BaseWidgetSync):
 
         # Setup widget destruction callback once for all properties
         self._setup_widget_destruction_callback(widget, all_connection_keys)
+
+    def bind_parameter(self, parameter, property_map: dict[str, dict[str, Any]],
+                      init_from: InitFrom = 'sync') -> None:
+        """
+        Bind multiple properties of a Parameter to different dict keys.
+
+        **IMPORTANT**: Use this method instead of bind_properties() for pyqtgraph
+        Parameters. bind_properties() uses blockSignals() which prevents parameter
+        tree widgets from updating. This method uses callback disconnection instead.
+
+        Parameters
+        ----------
+        parameter : Parameter
+            The pyqtgraph Parameter to bind
+        property_map : dict[str, dict]
+            Mapping of dict keys to parameter property configurations.
+            Each key maps to a dict with:
+
+            **Shortcut for parameter value** (most common case):
+            - 'param': Parameter - Automatically uses sigValueChanged, value(), setValue()
+              This is equivalent to specifying signal/getter/setter manually
+
+            **OR Manual specification**:
+            - 'getter': callable () -> value - Function to get parameter value
+            - 'setter': callable (value) -> None - Function to set parameter value
+            - 'signal': Signal (optional) - Parameter signal for bidirectional sync
+              (Note: Parameter signals emit (param, value), this is handled automatically)
+            - 'mode': SyncMode (optional) - BIDIRECTIONAL, TO_SYNC, or FROM_SYNC
+              (default: BIDIRECTIONAL if signal provided, else FROM_SYNC)
+
+        init_from : InitFrom, optional
+            Initialization source: 'sync' (default), 'widget', or 'none'
+
+        Raises
+        ------
+        TypeError
+            If sync value is not a dict
+        ValueError
+            If property configuration is invalid
+
+        Examples
+        --------
+        >>> # Shortcut syntax (recommended for simple value sync)
+        >>> sync = WidgetSync(initial_value={'threshold': 0.5})
+        >>> sync.bind_parameter(
+        ...     threshold_param,
+        ...     property_map={'threshold': {'param': threshold_param}}
+        ... )
+
+        >>> # Manual syntax (for custom getter/setter or limits)
+        >>> algo_sync = WidgetSync(initial_value={'algorithms': [...], 'algorithm': 'FFT'})
+        >>> algo_sync.bind_parameter(
+        ...     algorithm_param,
+        ...     property_map={
+        ...         'algorithms': {
+        ...             'getter': lambda: algorithm_param.opts['limits'],
+        ...             'setter': algorithm_param.setLimits,
+        ...             'mode': SyncMode.FROM_SYNC,
+        ...         },
+        ...         'algorithm': {'param': algorithm_param}  # Shortcut for value
+        ...     }
+        ... )
+
+        See Also
+        --------
+        bind_properties : For regular Qt widgets (uses blockSignals)
+        bind_dict : For binding different widgets to different dict keys
+        """
+        if not isinstance(self.value, dict):
+            raise TypeError(
+                f"bind_parameter() requires DictSync (sync value must be dict). "
+                f"Got {type(self.value).__name__}"
+            )
+
+        param_id = id(parameter)
+        param_ref = ref(parameter)
+
+        # Collect all connection keys for destruction callback
+        all_connection_keys = [(param_id, prop_key) for prop_key in property_map.keys()]
+
+        # Store param callbacks for feedback loop prevention across all properties
+        # This dict is shared across all properties of this parameter
+        all_param_callbacks = {}
+
+        for property_key, config in property_map.items():
+            # Check for shortcut syntax
+            if 'param' in config:
+                # Shortcut: {'param': parameter} auto-generates signal/getter/setter
+                param_obj = config['param']
+                signal = param_obj.sigValueChanged
+                getter = param_obj.value
+                setter = param_obj.setValue
+                mode = config.get('mode', SyncMode.BIDIRECTIONAL)
+            else:
+                # Manual specification
+                signal = config.get('signal')
+                getter = config.get('getter')
+                setter = config.get('setter')
+                mode = config.get('mode', SyncMode.BIDIRECTIONAL if signal else SyncMode.FROM_SYNC)
+
+                if not getter and not setter:
+                    raise ValueError(
+                        f"Property '{property_key}': Must provide at least 'getter' or 'setter', "
+                        f"or use shortcut syntax with 'param'"
+                    )
+
+            # Initialize value based on init_from
+            if init_from == 'sync' and setter:
+                initial_value = self.value.get(property_key)
+                if initial_value is not None and getter:
+                    current_value = getter()
+                    if initial_value != current_value:
+                        setter(initial_value)
+            elif init_from == 'widget' and getter:
+                initial_value = getter()
+                if property_key not in self.value or self.value[property_key] != initial_value:
+                    new_dict = self.value.copy()
+                    new_dict[property_key] = initial_value
+                    self.value = new_dict
+
+            # Create connection info for this property
+            connection_info: ConnectionInfo = {
+                'widget': parameter,
+                'widget_ref': param_ref,
+                'callbacks': [],
+                'enabled': True,
+                'property_key': property_key,
+                'param_callbacks': all_param_callbacks  # Share across all properties
+            }
+
+            # Parameter → Sync (TO_SYNC or BIDIRECTIONAL)
+            if mode in (SyncMode.TO_SYNC, SyncMode.BIDIRECTIONAL) and signal and getter:
+                def make_param_to_sync_callback(key, get_fn, callbacks_ref):
+                    def on_param_change(param, value):
+                        # Get actual value using getter
+                        actual_value = get_fn()
+                        if actual_value != self.value.get(key):
+                            new_dict = self.value.copy()
+                            new_dict[key] = actual_value
+                            # Get the reverse callback to disconnect it
+                            reverse_cb = callbacks_ref.get((key, 'sync_to_param'))
+                            if reverse_cb:
+                                self.value_changed.disconnect(reverse_cb)
+                            try:
+                                self.value = new_dict
+                            finally:
+                                if reverse_cb:
+                                    self.value_changed.connect(reverse_cb)
+                    return on_param_change
+
+                callback = make_param_to_sync_callback(property_key, getter, all_param_callbacks)
+                signal.connect(callback)
+                all_param_callbacks[(property_key, 'param_to_sync')] = (signal, callback)
+                # Note: Don't add to connection_info['callbacks'] - Qt auto-disconnects
+
+            # Sync → Parameter (FROM_SYNC or BIDIRECTIONAL)
+            if mode in (SyncMode.FROM_SYNC, SyncMode.BIDIRECTIONAL) and setter:
+                def make_sync_to_param_callback(key, set_fn, get_fn, sig, mode_val, callbacks_ref):
+                    def on_sync_change(value_dict):
+                        new_value = value_dict.get(key)
+                        if new_value is not None:
+                            # Check if value changed
+                            current_value = get_fn() if get_fn else None
+                            if new_value != current_value:
+                                # Get the forward callback to disconnect it
+                                if sig and mode_val == SyncMode.BIDIRECTIONAL:
+                                    forward_cb_info = callbacks_ref.get((key, 'param_to_sync'))
+                                    if forward_cb_info:
+                                        sig.disconnect(forward_cb_info[1])
+                                    try:
+                                        set_fn(new_value)
+                                    finally:
+                                        if forward_cb_info:
+                                            sig.connect(forward_cb_info[1])
+                                else:
+                                    # FROM_SYNC mode - no disconnection needed
+                                    set_fn(new_value)
+                    return on_sync_change
+
+                callback = make_sync_to_param_callback(property_key, setter, getter, signal, mode, all_param_callbacks)
+                self.value_changed.connect(callback)
+                all_param_callbacks[(property_key, 'sync_to_param')] = callback
+                connection_info['callbacks'].append(('sync', callback))
+
+            # Store this property's connection
+            self._set_connection(param_id, property_key, connection_info)
+
+        # Setup parameter destruction callback once for all properties
+        self._setup_widget_destruction_callback(parameter, all_connection_keys)
 
     def bind_dict(self, property_map: dict[str, dict[str, Any]],
                  init_from: InitFrom = 'sync') -> None:

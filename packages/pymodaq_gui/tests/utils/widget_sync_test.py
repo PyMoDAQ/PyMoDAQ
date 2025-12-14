@@ -13,6 +13,7 @@ Tests cover:
 - Sync modes
 - Memory management
 - Dict synchronization with bind_properties() and bind_dict()
+- Parameter binding with bind_parameter()
 """
 import pytest
 from qtpy.QtWidgets import (
@@ -1190,3 +1191,448 @@ class TestInitFromParameter:
 
         # Widget should be initialized with sync's value (backward compatible)
         assert spinbox.value() == 42
+
+
+class TestBindParameter:
+    """Test bind_parameter() method for pyqtgraph Parameters"""
+
+    def test_bind_parameter_basic(self, qtbot):
+        """Test basic parameter binding with manual specification"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 42}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 42})
+
+        # Bind parameter
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'setter': value_param.setValue,
+                }
+            }
+        )
+
+        # Check initial sync
+        assert value_param.value() == 42
+
+        # Change parameter -> sync updates
+        value_param.setValue(99)
+        assert sync.value['value'] == 99
+
+        # Change sync -> parameter updates
+        sync.value = {'value': 50}
+        assert value_param.value() == 50
+
+    def test_bind_parameter_shortcut_syntax(self, qtbot):
+        """Test bind_parameter() with shortcut syntax"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Threshold:', 'name': 'threshold', 'type': 'float', 'value': 0.5}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        threshold_param = settings.child('threshold')
+
+        # Create sync
+        sync = WidgetSync(initial_value={'threshold': 0.5})
+
+        # Bind using shortcut syntax
+        sync.bind_parameter(
+            threshold_param,
+            property_map={
+                'threshold': {'param': threshold_param}
+            }
+        )
+
+        # Check initial sync
+        assert threshold_param.value() == 0.5
+
+        # Change parameter -> sync updates
+        threshold_param.setValue(0.8)
+        assert sync.value['threshold'] == 0.8
+
+        # Change sync -> parameter updates
+        sync.value = {'threshold': 0.2}
+        assert threshold_param.value() == 0.2
+
+    def test_bind_parameter_list_with_limits(self, qtbot):
+        """Test bind_parameter() with list parameter (sync both limits and value)"""
+        from pymodaq_gui.parameter import Parameter
+
+        algorithms = ['FFT', 'Wavelet', 'Correlation']
+
+        # Create parameter
+        params = [
+            {'title': 'Algorithm:', 'name': 'algorithm', 'type': 'list',
+             'limits': algorithms, 'value': 'FFT'}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        algorithm_param = settings.child('algorithm')
+
+        # Create sync for both limits and value
+        sync = WidgetSync(initial_value={
+            'algorithms': algorithms,
+            'algorithm': 'FFT'
+        })
+
+        # Bind parameter for both limits and value
+        sync.bind_parameter(
+            algorithm_param,
+            property_map={
+                'algorithms': {
+                    'getter': lambda: algorithm_param.opts['limits'],
+                    'setter': algorithm_param.setLimits,
+                    'mode': SyncMode.FROM_SYNC,
+                },
+                'algorithm': {
+                    'signal': algorithm_param.sigValueChanged,
+                    'getter': algorithm_param.value,
+                    'setter': algorithm_param.setValue,
+                }
+            }
+        )
+
+        # Check initial sync
+        assert algorithm_param.opts['limits'] == algorithms
+        assert algorithm_param.value() == 'FFT'
+
+        # Change sync value -> parameter updates
+        sync.value = {'algorithms': algorithms, 'algorithm': 'Wavelet'}
+        assert algorithm_param.value() == 'Wavelet'
+
+        # Change parameter value -> sync updates
+        algorithm_param.setValue('Correlation')
+        assert sync.value['algorithm'] == 'Correlation'
+
+        # Update limits via sync
+        new_algorithms = ['FFT', 'Wavelet', 'ML-Enhanced']
+        sync.value = {'algorithms': new_algorithms, 'algorithm': 'FFT'}
+        assert algorithm_param.opts['limits'] == new_algorithms
+        assert algorithm_param.value() == 'FFT'
+
+    def test_bind_parameter_multiple_types(self, qtbot):
+        """Test bind_parameter() with multiple parameter types"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameters
+        params = [
+            {'title': 'Int:', 'name': 'int_val', 'type': 'int', 'value': 42},
+            {'title': 'Float:', 'name': 'float_val', 'type': 'float', 'value': 3.14},
+            {'title': 'Bool:', 'name': 'bool_val', 'type': 'bool', 'value': True},
+            {'title': 'String:', 'name': 'str_val', 'type': 'str', 'value': 'test'},
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+
+        # Create sync
+        sync = WidgetSync(initial_value={
+            'int_val': 42,
+            'float_val': 3.14,
+            'bool_val': True,
+            'str_val': 'test'
+        })
+
+        # Bind all parameters using shortcut syntax
+        for param_name in ['int_val', 'float_val', 'bool_val', 'str_val']:
+            param = settings.child(param_name)
+            sync.bind_parameter(
+                param,
+                property_map={param_name: {'param': param}}
+            )
+
+        # Check initial sync
+        assert settings.child('int_val').value() == 42
+        assert settings.child('float_val').value() == 3.14
+        assert settings.child('bool_val').value() == True
+        assert settings.child('str_val').value() == 'test'
+
+        # Change sync -> all parameters update
+        sync.value = {
+            'int_val': 99,
+            'float_val': 2.71,
+            'bool_val': False,
+            'str_val': 'updated'
+        }
+        assert settings.child('int_val').value() == 99
+        assert settings.child('float_val').value() == 2.71
+        assert settings.child('bool_val').value() == False
+        assert settings.child('str_val').value() == 'updated'
+
+        # Change parameters -> sync updates
+        settings.child('int_val').setValue(50)
+        settings.child('float_val').setValue(1.41)
+        assert sync.value['int_val'] == 50
+        assert sync.value['float_val'] == 1.41
+
+    def test_bind_parameter_feedback_prevention(self, qtbot):
+        """Test that bind_parameter() prevents feedback loops without blockSignals()"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Track setValue calls
+        setter_calls = {'count': 0}
+        original_setValue = value_param.setValue
+
+        def tracked_setValue(value):
+            setter_calls['count'] += 1
+            original_setValue(value)
+
+        value_param.setValue = tracked_setValue
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 10})
+
+        # Bind parameter
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'setter': lambda v: value_param.setValue(v),
+                }
+            }
+        )
+
+        # Reset counter after initial sync
+        setter_calls['count'] = 0
+
+        # Change parameter value using original setter to trigger signal
+        original_setValue(50)
+
+        # Setter should NOT be called (feedback prevention)
+        # Only the sync should be updated
+        assert setter_calls['count'] == 0
+        assert sync.value['value'] == 50
+
+    def test_bind_parameter_with_widget_sync(self, qtbot):
+        """Test sync between parameter and regular Qt widget"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 50}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create Qt widget
+        spinbox = QSpinBox()
+        spinbox.setRange(0, 100)
+        spinbox.setValue(50)
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 50})
+
+        # Bind both parameter and widget
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'setter': value_param.setValue,
+                }
+            }
+        )
+
+        sync.bind_properties(
+            spinbox,
+            property_map={'value': {'property': 'value'}}
+        )
+
+        # All should be in sync
+        assert value_param.value() == 50
+        assert spinbox.value() == 50
+        assert sync.value['value'] == 50
+
+        # Change parameter -> widget updates
+        value_param.setValue(75)
+        assert spinbox.value() == 75
+        assert sync.value['value'] == 75
+
+        # Change widget -> parameter updates
+        spinbox.setValue(25)
+        assert value_param.value() == 25
+        assert sync.value['value'] == 25
+
+        # Change sync -> both update
+        sync.value = {'value': 60}
+        assert value_param.value() == 60
+        assert spinbox.value() == 60
+
+    def test_bind_parameter_from_sync_mode(self, qtbot):
+        """Test bind_parameter() with FROM_SYNC mode (read-only)"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 10})
+
+        # Bind parameter in FROM_SYNC mode (read-only)
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'setter': value_param.setValue,
+                    'mode': SyncMode.FROM_SYNC,
+                }
+            }
+        )
+
+        # Sync -> parameter should work
+        sync.value = {'value': 50}
+        assert value_param.value() == 50
+
+        # Parameter -> sync should NOT work
+        value_param.setValue(99)
+        assert sync.value['value'] == 50  # Unchanged
+
+    def test_bind_parameter_to_sync_mode(self, qtbot):
+        """Test bind_parameter() with TO_SYNC mode (write-only to sync)"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 10})
+
+        # Bind parameter in TO_SYNC mode
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'mode': SyncMode.TO_SYNC,
+                }
+            }
+        )
+
+        # Parameter -> sync should work
+        value_param.setValue(75)
+        assert sync.value['value'] == 75
+
+        # Sync -> parameter should NOT work
+        sync.value = {'value': 99}
+        assert value_param.value() == 75  # Unchanged
+
+    def test_bind_parameter_init_from_widget(self, qtbot):
+        """Test bind_parameter() with init_from='widget'"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter with different value than sync
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync with different value
+        sync = WidgetSync(initial_value={'value': 42})
+
+        # Bind parameter with init_from='widget'
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'setter': value_param.setValue,
+                }
+            },
+            init_from='widget'
+        )
+
+        # Sync should be initialized with parameter's value
+        assert sync.value['value'] == 99
+
+    def test_bind_parameter_init_from_sync(self, qtbot):
+        """Test bind_parameter() with init_from='sync' (default)"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter with different value than sync
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync with different value
+        sync = WidgetSync(initial_value={'value': 42})
+
+        # Bind parameter with init_from='sync' (default)
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {
+                    'signal': value_param.sigValueChanged,
+                    'getter': value_param.value,
+                    'setter': value_param.setValue,
+                }
+            },
+            init_from='sync'
+        )
+
+        # Parameter should be initialized with sync's value
+        assert value_param.value() == 42
+
+    def test_bind_parameter_unbind(self, qtbot):
+        """Test unbinding a parameter"""
+        from pymodaq_gui.parameter import Parameter
+
+        # Create parameter
+        params = [
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+        ]
+        settings = Parameter.create(name='settings', type='group', children=params)
+        value_param = settings.child('value')
+
+        # Create sync
+        sync = WidgetSync(initial_value={'value': 10})
+
+        # Bind parameter
+        sync.bind_parameter(
+            value_param,
+            property_map={
+                'value': {'param': value_param}
+            }
+        )
+
+        # Check it works
+        value_param.setValue(50)
+        assert sync.value['value'] == 50
+
+        # Unbind
+        sync.unbind(value_param)
+
+        # Changes should not propagate
+        value_param.setValue(99)
+        assert sync.value['value'] == 50  # Unchanged
