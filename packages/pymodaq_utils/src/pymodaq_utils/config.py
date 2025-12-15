@@ -26,6 +26,16 @@ CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else 
 KeyType = TypeVar('KeyType')
 
 
+def replace_item_in_list(items: list[str],
+                         item_to_check: str,
+                         item_to_replace:str):
+    if not isinstance(items, list):
+        items = list(items)
+    index = items.index(item_to_check)
+    items[index] = item_to_replace
+    return items
+
+
 def deep_update(mapping: Dict[KeyType, Any], *updating_mappings: Dict[KeyType, Any]) -> Dict[KeyType, Any]:
     """ Make sure a dictionary is updated using another dict in any nested level
     Taken from Pydantic v1
@@ -295,22 +305,14 @@ class BaseConfig:
     def get(self, key: Union[str, Iterable[str]], default=None):
         try:
             return self[key]
-        except KeyError:
+        except (KeyError, ConfigError):
             return default
 
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
-        if isinstance(item, tuple):
-            return getitem_recursive(self._config, *item)
-        else:
-            return self._config[item]
-
-    # def __setitem__(self, key, value):
-    #     if isinstance(key, tuple):
-    #         dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
-    #         dic[key[-1]] = value
-    #     else:
-    #         self._config[key] = value
+        if not isinstance(item, tuple):
+            item = tuple([item])
+        return self(*item)
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
@@ -383,6 +385,20 @@ class Config(BaseConfig):
     def dict_to_add_to_user(self):
         """To subclass"""
         return dict(user=dict(name=USER))
+
+    def __call__(self, *args):
+        """ Patch in case of a mixup of configs from different version
+        of pymodaq: v5.1 and v5.2
+        """
+        if 'backend' in args or 'debug_level' in args:
+            entry = super().__call__(*args)
+            if isinstance(entry, list):
+                return entry[0]
+            else:
+                return entry
+        return super().__call__(*args)
+
+
 
 
 

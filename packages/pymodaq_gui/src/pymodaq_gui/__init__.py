@@ -54,7 +54,7 @@ from pymodaq_utils.logger import set_logger
 logger = set_logger('pymodaq_gui', base_logger=False)
 
 logger.info('Starting PyMoDAQ GUI modules')
-logger.info(f"Trying to set Qt backend to: {config['qtbackend']['backends'][0]}")
+logger.info(f"Trying to set Qt backend to: {config('qtbackend', 'backends')[0]}")
 set_and_check_qt_backend_or_die(config)
 
 
@@ -62,7 +62,7 @@ from pymodaq_gui.qt_utils import setLocale
 
 from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
 
-logger.info(f"Setting Locale to {config['style']['language']} / {config['style']['country']}")
+logger.info(f"Setting Locale to {config('style', 'language')} / {config('style', 'country')}")
 setLocale()
 
 logger.info(f"Registering PyMoDAQ qt plotters...")
