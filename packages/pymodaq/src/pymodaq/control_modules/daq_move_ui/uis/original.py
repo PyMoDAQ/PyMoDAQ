@@ -53,7 +53,6 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
         #widget.layout().addStretch()
 
         # populate the main ui
-        self.move_toolbar = QToolBar()
         self.main_ui.setLayout(QGridLayout())
         self.main_ui.layout().setSpacing(0)
         self.main_ui.layout().setContentsMargins(0, 0, 0, 0)

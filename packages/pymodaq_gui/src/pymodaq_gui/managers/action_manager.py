@@ -564,7 +564,8 @@ class ActionManager:
         else:
             raise KeyError(f'Menu {short_name} is already existing')
 
-    def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None) -> QtWidgets.QToolBar:
+    def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
+                    toolbar: QtWidgets.QToolBar = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 
         Parameters
@@ -575,6 +576,8 @@ class ActionManager:
             Displayed title of the toolbar
         parent: QWidget, optional
             parent widget for the toolbar (typically a QMainWindow)
+        toolbar: QToolbar, optional
+            A given toolbar, if None, it is created
 
         Returns
         -------
@@ -585,7 +588,10 @@ class ActionManager:
         --------
         add_action, get_toolbar
         """
-        toolbar = QtWidgets.QToolBar(title, parent)
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar(title, parent)
+        else:
+            toolbar.setParent(parent)
         self._toolbars[short_name] = toolbar
         return toolbar
 

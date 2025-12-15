@@ -24,7 +24,6 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
         self.parent.setLayout(QVBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.move_toolbar = QToolBar()
         self.parent.layout().addWidget(self.move_toolbar)
 
         self.current_value_sb.set_font_size(10)

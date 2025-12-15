@@ -65,6 +65,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.title = title
         self._unit = ''
 
+        self.move_toolbar = QtWidgets.QToolBar()
+
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
         self.abs_value_sb_2: QSpinBoxWithShortcut = None

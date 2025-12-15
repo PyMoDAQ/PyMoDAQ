@@ -24,7 +24,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.parent.setLayout(QVBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.move_toolbar = QToolBar()
+
         self.parent.layout().addWidget(self.move_toolbar)
 
         self.abs_value_sb_2.setMinimumWidth(80)

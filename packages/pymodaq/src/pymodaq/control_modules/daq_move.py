@@ -1137,16 +1137,26 @@ class DAQ_Move_Hardware(QObject):
 
 
 def main(init_qt=True):
-    if init_qt:  # used for the test suite
-        app = mkQApp("PyMoDAQ Move")
+    from pymodaq.utils.common_window import CommonWindow
+
+    app = mkQApp("PyMoDAQ Move")
 
     widget = QtWidgets.QWidget()
     prog = DAQ_Move(widget, title="test")
-    widget.show()
 
-    if init_qt:
-        sys.exit(app.exec_())
-    return prog, widget
+    main_window = QtWidgets.QMainWindow()
+    common_window = CommonWindow(main_window)
+    common_window.restart_fun = lambda file: common_window.restart_fun(file=__file__)
+    if config("actuator", "ui") == "Original":
+        main_window.addToolBar(Qt.ToolBarArea.LeftToolBarArea, prog.ui.toolbar)
+        main_window.addToolBar(prog.ui.move_toolbar)
+    else:
+        main_window.addToolBar(prog.ui.move_toolbar)
+    main_window.setCentralWidget(widget)
+    main_window.show()
+
+    app.exec()
+
 
 
 if __name__ == "__main__":
