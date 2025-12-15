@@ -17,6 +17,8 @@ class MockDAQViewer:
         self.h5saver = h5saver
         self.title = title
         self.module_and_data_saver = DetectorSaver(self)
+        self.module_and_data_saver.h5saver = h5saver
+        self._module_and_data_saver = self.module_and_data_saver
         self.ui = None
 
 
@@ -28,6 +30,8 @@ class MockDAQMove:
         self.h5saver = h5saver
         self.title = title
         self.module_and_data_saver = ActuatorTimeSaver(self)
+        self.module_and_data_saver.h5saver = h5saver
+        self._module_and_data_saver = self.module_and_data_saver
         self.ui = None
 
 
@@ -35,6 +39,8 @@ class ModulesManagerMock:
     def __init__(self, actuators, detectors):
         self.modules_all = actuators + detectors
         self.modules = actuators + detectors
+        self.detectors_all = detectors
+        self.actuators_all = actuators
 
 
 class MockScan:
