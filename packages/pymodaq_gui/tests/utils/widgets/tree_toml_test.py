@@ -2,18 +2,19 @@ import pytest
 from typing import Dict
 from pathlib import Path
 
-
+from joblib.testing import fixture
 from pyqtgraph.parametertree import Parameter
 from qtpy import QtWidgets, QtCore
 from pymodaq_utils.config import BaseConfig, _delete_config_files
 from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
+import toml
 
 class Config(BaseConfig):
     config_name = 'custom_config_tested'
     config_template_path = Path(__file__).parent.parent.parent.joinpath('data/config_template.toml')
 
 
-BASE_CONFIG_DICT = Config().to_dict()
+BASE_CONFIG_DICT = toml.load(Config.config_template_path)
 
 def parameter_tree_dict_equals(param : Parameter, config : Dict):
     parameter_tree = TreeFromToml.param_to_dict(param)
@@ -22,12 +23,16 @@ def parameter_tree_dict_equals(param : Parameter, config : Dict):
 
     return parameter_tree == config
 
+@fixture
+def config():
+    config = Config()
+    _delete_config_files(config)
+    config.load()
+    return config
 
 class TestTreeFromToml:
 
-    def test_contains_config(self, qtbot):
-        config = Config()
-        config.load()
+    def test_contains_config(self, qtbot, config):
         tree_from_toml = TreeFromToml(config)
 
         assert parameter_tree_dict_equals(tree_from_toml.settings, config.to_dict())
@@ -41,9 +46,7 @@ class TestTreeFromToml:
             ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], True)
         ]
     )
-    def test_reject_config(self, qtbot, changes, equals_to_config):
-        config = Config()
-        config.load()
+    def test_reject_config(self, qtbot, config, changes, equals_to_config):
 
         tree_from_toml = TreeFromToml(config)
 
@@ -84,12 +87,11 @@ class TestTreeFromToml:
             ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], False)
         ]
     )
-    def test_accept_config(self, qtbot, changes, config_was_modified):
+
+    @pytest.mark.order(after="test_reject_config")
+    def test_accept_config(self, qtbot, config, changes, config_was_modified):
         """ beware test order is important, it uses pytest-order to make sure tests are done
         in the right order top to bottom, see dev dependencies"""
-        config = Config()
-        config.load()
-
         tree_from_toml = TreeFromToml(config)
 
         def dialog_action():
@@ -119,8 +121,6 @@ class TestTreeFromToml:
         # And may or not be different (depending on the changes)
         assert (config.to_dict() != BASE_CONFIG_DICT) == config_was_modified
 
-        # As the file was modified, it should be deleted to reload the template
-        _delete_config_files(config)
 
     @pytest.mark.parametrize(
         "start_path, change, exists", [
@@ -131,10 +131,7 @@ class TestTreeFromToml:
         ]
     )
     @pytest.mark.order(after="test_accept_config")
-    def test_subtree(self, qtbot, start_path, change, exists):
-        config = Config()
-        config.load()
-
+    def test_subtree(self, qtbot, config, start_path, change, exists):
         tree_from_toml = TreeFromToml(config, start_path=start_path)
 
         def dialog_action():
@@ -167,7 +164,5 @@ class TestTreeFromToml:
         # And may or not be different (depending on the changes)
         assert (config.to_dict() != BASE_CONFIG_DICT) == exists
 
-        # As the file was modified, it should be deleted to reload the template
-        _delete_config_files(config)
 
 
