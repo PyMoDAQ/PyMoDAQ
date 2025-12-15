@@ -6,7 +6,7 @@ language = "English"
 country = "UnitedStates"
 
 [qtbackend]
-backend = ["pyqt6",  "pyqt5", "pyside2", "pyside6",]
+backend = ["pyqt6",  "pyqt5", "pyside6",]
 
 
 [data_saving]
