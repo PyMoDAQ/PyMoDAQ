@@ -2,7 +2,6 @@ import pytest
 from typing import Dict
 from pathlib import Path
 
-from joblib.testing import fixture
 from pyqtgraph.parametertree import Parameter
 from qtpy import QtWidgets, QtCore
 from pymodaq_utils.config import BaseConfig, _delete_config_files
@@ -23,7 +22,7 @@ def parameter_tree_dict_equals(param : Parameter, config : Dict):
 
     return parameter_tree == config
 
-@fixture
+@pytest.fixture
 def config():
     config = Config()
     _delete_config_files(config)
