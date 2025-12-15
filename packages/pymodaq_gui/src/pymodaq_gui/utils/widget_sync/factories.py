@@ -35,7 +35,8 @@ class WidgetSyncFactories:
                      signal_name: str | None = None,
                      initial: Any = None,
                      mode: SyncMode | None = None,
-                     data_type: type | None = None) -> WidgetSync:
+                     data_type: type | None = None,
+                     validator: Any = None) -> WidgetSync:
         """
         Create a sync for any Qt property with auto-detection.
 
@@ -55,6 +56,8 @@ class WidgetSyncFactories:
             Sync mode (default: BIDIRECTIONAL)
         data_type : type, optional
             Explicit data type for type checking (default: inferred from initial)
+        validator : callable, optional
+            Optional validator function to correct/constrain values
 
         Returns
         -------
@@ -66,11 +69,8 @@ class WidgetSyncFactories:
         >>> sync = WidgetSync.for_property(my_spinbox, 'value', initial=50)
         >>> sync.add(other_spinbox)  # Add more spinboxes
         """
-        # Import here to avoid circular dependency
-        from .core import WidgetSync, SyncMode as SM
-
         if mode is None:
-            mode = SM.BIDIRECTIONAL
+            mode = SyncMode.BIDIRECTIONAL
 
         # Get property metadata for auto-detection
         meta = widget.metaObject()
@@ -123,20 +123,21 @@ class WidgetSyncFactories:
             initial = widget.property(prop_name)  # Use widget directly before connecting
 
         # Create sync and bind
-        sync = cls(initial_value=initial, data_type=data_type)
+        sync = cls(initial_value=initial, data_type=data_type, validator=validator)
         sync.bind(widget, signal, getter, setter, mode)
 
         # Store pattern info in the connection for add() method to use
         widget_id = id(widget)
-        if widget_id in sync._connections:
-            sync._connections[widget_id]['property_name'] = property_name
-            sync._connections[widget_id]['signal_name'] = signal_name
+        connection_key = (widget_id, None)  # Use composite key (widget_id, property_key)
+        if connection_key in sync._connections:
+            sync._connections[connection_key]['property_name'] = property_name
+            sync._connections[connection_key]['signal_name'] = signal_name
 
         return sync
 
     @classmethod
     def for_checkbox(cls, checkbox, initial: bool = False,
-                     mode = None) -> WidgetSync:
+                     mode = None, validator = None) -> WidgetSync:
         """
         Create a sync for checkbox widgets.
 
@@ -148,6 +149,8 @@ class WidgetSyncFactories:
             Initial checked state (default: False)
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        validator : callable, optional
+            Optional validator function
 
         Returns
         -------
@@ -162,11 +165,11 @@ class WidgetSyncFactories:
         from .core import SyncMode
         if mode is None:
             mode = SyncMode.BIDIRECTIONAL
-        return cls.for_property(checkbox, 'checked', 'toggled', initial, mode)
+        return cls.for_property(checkbox, 'checked', 'toggled', initial, mode, validator=validator)
 
     @classmethod
     def for_spinbox(cls, spinbox, initial: int | float = 0,
-                    mode = None) -> WidgetSync:
+                    mode = None, validator = None) -> WidgetSync:
         """
         Create a sync for QSpinBox or QDoubleSpinBox widgets.
 
@@ -178,6 +181,8 @@ class WidgetSyncFactories:
             Initial value (default: 0)
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        validator : callable, optional
+            Optional validator function
 
         Returns
         -------
@@ -193,11 +198,11 @@ class WidgetSyncFactories:
         from .core import SyncMode
         if mode is None:
             mode = SyncMode.BIDIRECTIONAL
-        return cls.for_property(spinbox, 'value', 'valueChanged', initial, mode)
+        return cls.for_property(spinbox, 'value', 'valueChanged', initial, mode, validator=validator)
 
     @classmethod
     def for_slider(cls, slider, initial: int = 0,
-                   mode = None) -> WidgetSync:
+                   mode = None, validator = None) -> WidgetSync:
         """
         Create a sync for QSlider widgets.
 
@@ -209,6 +214,8 @@ class WidgetSyncFactories:
             Initial value (default: 0)
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        validator : callable, optional
+            Optional validator function
 
         Returns
         -------
@@ -223,12 +230,12 @@ class WidgetSyncFactories:
         from .core import SyncMode
         if mode is None:
             mode = SyncMode.BIDIRECTIONAL
-        return cls.for_property(slider, 'value', 'valueChanged', initial, mode)
+        return cls.for_property(slider, 'value', 'valueChanged', initial, mode, validator=validator)
 
     @classmethod
     def for_combobox(cls, combobox, initial: int | str = 0,
                      use_text: bool = False,
-                     mode = None) -> WidgetSync:
+                     mode = None, validator = None) -> WidgetSync:
         """
         Create a sync for QComboBox widgets.
 
@@ -242,6 +249,8 @@ class WidgetSyncFactories:
             If True, sync currentText; if False, sync currentIndex (default: False)
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        validator : callable, optional
+            Optional validator function
 
         Returns
         -------
@@ -263,14 +272,14 @@ class WidgetSyncFactories:
             mode = SyncMode.BIDIRECTIONAL
         if use_text:
             return cls.for_property(combobox, 'currentText', 'currentTextChanged',
-                                   initial, mode)
+                                   initial, mode, validator=validator)
         else:
             return cls.for_property(combobox, 'currentIndex', 'currentIndexChanged',
-                                   initial, mode)
+                                   initial, mode, validator=validator)
 
     @classmethod
     def for_lineedit(cls, lineedit, initial: str = "",
-                     mode = None) -> WidgetSync:
+                     mode = None, validator = None) -> WidgetSync:
         """
         Create a sync for QLineEdit widgets.
 
@@ -282,6 +291,8 @@ class WidgetSyncFactories:
             Initial text (default: "")
         mode : SyncMode, optional
             Sync mode (default: BIDIRECTIONAL)
+        validator : callable, optional
+            Optional validator function
 
         Returns
         -------
@@ -296,4 +307,4 @@ class WidgetSyncFactories:
         from .core import SyncMode
         if mode is None:
             mode = SyncMode.BIDIRECTIONAL
-        return cls.for_property(lineedit, 'text', 'textChanged', initial, mode)
+        return cls.for_property(lineedit, 'text', 'textChanged', initial, mode, validator=validator)

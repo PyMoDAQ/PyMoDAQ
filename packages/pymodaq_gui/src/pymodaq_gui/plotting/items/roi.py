@@ -381,7 +381,7 @@ class EllipseROI(ROI):
         """
         # Note: we could use the same method as used by PolyLineROI, but this
         # implementation produces a nicer mask.
-        if kwds["returnMappedCoords"]:
+        if kwds.get("returnMappedCoords", False):
             arr, coords = pgROI.getArrayRegion(self, arr, img, axes, **kwds)
         else:
             arr = pgROI.getArrayRegion(self, arr, img, axes, **kwds)
@@ -398,7 +398,7 @@ class EllipseROI(ROI):
             mask = mask.T
         shape = [(n if i in axes else 1) for i, n in enumerate(arr.shape)]
         mask = mask.reshape(shape)
-        if kwds["returnMappedCoords"]:
+        if kwds.get("returnMappedCoords", False):
             return arr * mask, coords
         else:
             return arr * mask

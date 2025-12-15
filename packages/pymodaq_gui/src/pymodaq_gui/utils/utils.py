@@ -107,7 +107,7 @@ def first_available_integer(liste):
 
 
 here = Path(__file__).parent
-custom_folder = here.parent.joinpath('QtDesigner_Ressources/custom/')
+custom_folder = here.parent.joinpath('resources/custom/')
 QtCore.QDir.addSearchPath('custom', str(custom_folder))
 
 
