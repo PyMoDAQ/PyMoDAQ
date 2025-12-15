@@ -659,7 +659,8 @@ class DAQScan(QObject, ParameterManager):
             viewers_enum.extend([ViewersEnum.Viewer1D.increase_dim(self.scanner.n_axes)
                                  for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
-        if not self.settings['scan_options', 'average_on_top']:
+        if (self.settings['scan_options', 'scan_average'] > 1 and
+                not self.settings['scan_options', 'average_on_top']):
 
             viewers_enum = viewers_enum + viewers_enum
             data_names = data_names + [f'{data_name}_averaged' for data_name in data_names]
