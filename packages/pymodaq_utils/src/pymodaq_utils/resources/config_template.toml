@@ -21,8 +21,8 @@ backend = ["pyqt6",  "pyqt5", "pyside6",]
     pwd = "pymodaq"
 
     [data_saving.data_type]
-    dynamic = 'float64' # choose from below. This will force the datatype to be saved to
-    dynamics =  ['uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64', 'float64']
+    # choose from below. This will force the datatype to be saved to
+    dynamic =  [ 'float64', 'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64',]
 
 
 [general]

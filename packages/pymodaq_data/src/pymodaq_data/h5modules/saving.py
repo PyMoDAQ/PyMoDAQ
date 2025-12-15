@@ -227,7 +227,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if array_type is None:
             if array_to_save is None:
-                array_type = config('data_saving', 'data_type', 'dynamics')[0]
+                array_type = config('data_saving', 'data_type', 'dynamic')[0]
             else:
                 array_type = array_to_save.dtype
 

@@ -417,6 +417,21 @@ class Config(BaseConfig):
                     return [entry]
             else:
                 return entry
+        elif 'dynamics' in args:
+            try:
+                return super().__call__(*args)
+            except KeyError:
+                args = replace_item_in_list(args, 'dynamics', 'dynamic')
+        elif 'dynamic' in args:
+            entry = super().__call__(*args)
+            if not isinstance(entry, list):
+                args = replace_item_in_list(args, 'dynamic', 'dynamics')
+                try:
+                    return super().__call__(*args)
+                except (KeyError, ConfigError):
+                    return [entry]
+            else:
+                return entry
 
         return super().__call__(*args)
 

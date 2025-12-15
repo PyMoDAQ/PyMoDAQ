@@ -239,7 +239,6 @@ def test_required_config_entries():
 
     assert 'data_type' in config['data_saving']
     assert 'dynamic' in config('data_saving', 'data_type')
-    assert 'dynamics' in config('data_saving', 'data_type')
 
     assert 'user' in config
     assert 'name' in config('user')
