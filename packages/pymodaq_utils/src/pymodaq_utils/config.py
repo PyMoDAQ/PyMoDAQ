@@ -26,13 +26,13 @@ CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else 
 KeyType = TypeVar('KeyType')
 
 
-def replace_item_in_list(items: list[str],
-                         item_to_check: str,
-                         item_to_replace:str):
+def replace_item_in_list(items: list[Any],
+                         old: Any,
+                         new: Any):
     if not isinstance(items, list):
         items = list(items)
-    index = items.index(item_to_check)
-    items[index] = item_to_replace
+    index = items.index(old)
+    items[index] = new
     return items
 
 
