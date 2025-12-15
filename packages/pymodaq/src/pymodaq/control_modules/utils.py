@@ -177,7 +177,6 @@ class ControlModule(QObject):
         self._module_and_data_saver = mod
         self._module_and_data_saver.h5saver = self.h5saver
 
-
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))
 

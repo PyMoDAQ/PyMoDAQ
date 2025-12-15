@@ -377,10 +377,15 @@ class ScanSaver(ModuleSaver):
         self._module: DAQScan = module
         self._h5saver = None
 
+        for detector in self._module.modules_manager.detectors_all:
+            detector._module_and_data_saver = DetectorSaver(detector)
+        for actuator in self._module.modules_manager.actuators_all:
+            actuator._module_and_data_saver = ActuatorSaver(actuator)
+
     def update_after_h5changed(self):
         for module in self._module.modules_manager.modules_all:
-            if hasattr(module, 'module_and_data_saver'):
-                module.module_and_data_saver.h5saver = self.h5saver
+            if hasattr(module, '_module_and_data_saver'):
+                module._module_and_data_saver.h5saver = self.h5saver
 
     def forget_h5(self):
         for module in self._module.modules_manager.modules_all:
