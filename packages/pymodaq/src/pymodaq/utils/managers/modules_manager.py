@@ -105,9 +105,6 @@ class ModulesManager(QObject, ParameterManager):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.actuator_timeout = config('actuator', 'timeout')
-        self.detector_timeout = config('viewer', 'timeout')
-
         self.det_done_datas: DataToExport = None
         self.det_done_flag = False
         self.move_done_positions: DataToExport = None
@@ -127,6 +124,14 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
+
+    @property
+    def actuator_timeout(self):
+        return config('actuator', 'timeout')
+
+    @property
+    def detector_timeout(self):
+        return config('viewer', 'timeout')
 
     def __repr__(self):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'

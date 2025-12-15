@@ -1,12 +1,18 @@
+import atexit
 from abc import abstractproperty
 from collections.abc import Iterable
 
+import copy
 from os import environ
 import sys
 import datetime
 from pathlib import Path
 from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
 from typing import Iterable as IterableType
+
+
+from pymodaq_utils.singleton import Singleton
+from fasteners import ReaderWriterLock
 
 import toml
 import logging
@@ -133,7 +139,7 @@ def get_set_local_dir(user=False) -> Path:
     return local_path
 
 
-def get_config_file(config_file_name: str, user=False):
+def get_config_file(config_file_name: str, user=False) -> Path:
     return get_set_local_dir(user).joinpath(replace_file_extension(config_file_name, 'toml'))
 
 
@@ -256,7 +262,8 @@ class ConfigError(Exception):
     pass
 
 
-class BaseConfig:
+
+class BaseConfig(metaclass=Singleton):
     """Base class to manage configuration files
 
     Should be subclassed with proper class attributes for each configuration file you need with pymodaq
@@ -273,81 +280,71 @@ class BaseConfig:
     config_name: str = abstractproperty()
 
     def __init__(self):
-        self._config = self.load_config(self.config_name, self.config_template_path)
+        self._lock = ReaderWriterLock()
+        self._config = {}
+        self._modified_config = {}
+        self.load()
+        atexit.register(self.save)
+
+    def __del__(self):
+        print("bye bye")
+        self.save()
 
     def __repr__(self):
         return f'{self.config_name} configuration file'
 
     def __call__(self, *args):
-        try:
-            ret = getitem_recursive(self._config, *args)
-        except KeyError as e:
-            raise ConfigError(f'the path {args} does not exist in your configuration toml'
-                              f' file, check your config folder')
-        return ret
+        with self._lock.read_lock():
+            try:
+                ret = getitem_recursive(self._config, *args)
+            except KeyError as e:
+                raise ConfigError(f'the path {args} does not exist in your configuration toml'
+                                  f' file, check your config folder')
+            return ret
 
     def __contains__(self, item):
-        return self._config.__contains__(item)
+        with self._lock.read_lock():
+            ret = self._config.__contains__(item)
+        return ret
 
     def to_dict(self):
-        return self._config
+        # We need a copy as a returned object will be unlocked
+        # So it could be modified
+        with self._lock.read_lock():
+            ret = copy.deepcopy(self._config)
+        return ret
+
 
     def get(self, key: Union[str, Iterable[str]], default=None):
-        try:
-            return self[key]
-        except KeyError:
-            return default
+        with self._lock.read_lock():
+            try:
+                ret = self[key]
+            except KeyError:
+                ret = default
+        return ret
 
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
-        if isinstance(item, tuple):
-            return getitem_recursive(self._config, *item)
-        else:
-            return self._config[item]
-
-    # def __setitem__(self, key, value):
-    #     if isinstance(key, tuple):
-    #         dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=False)
-    #         dic[key[-1]] = value
-    #     else:
-    #         self._config[key] = value
+        with self._lock.read_lock():
+            if isinstance(item, tuple):
+                ret = getitem_recursive(self._config, *item)
+            else:
+                ret = self._config[item]
+        return ret
 
     def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            dic = getitem_recursive(self._config, *key, ndepth=1, create_if_missing=True)
-            if value is None:  # means the setting is a group
-                value = {}
-            dic[key[-1]] = value
-        else:
-            self._config[key] = value
+        with self._lock.write_lock():
+            if isinstance(key, tuple):
+                # In visible config and modified config
+                for config in (self._config, self._modified_config):
+                    parent = getitem_recursive(config, *key, ndepth=1, create_if_missing=True)
+                    parent[key[-1]] = {} if value is None else value
 
-    def load_config(self, config_file_name, template_path: Path):
-        """Load a configuration file from both system-wide and user file
-
-        check also if missing entries in the configuration file compared to the template"""
-        toml_base_path = get_config_file(config_file_name, user=False)
-        toml_user_path = get_config_file(config_file_name, user=True)
-        if toml_base_path.is_file():
-            config = toml.load(toml_base_path)
-            if template_path is not None:
-                config_template = toml.load(template_path)
             else:
-                config_template = {}
-            if check_config(config_template, config):  # check if all fields from template are there
-                # (could have been  modified by some commits)
-                create_toml_from_dict(config, toml_base_path)
+                self._config[key] = value
+                self._modified_config[key] = value
 
-        else:
-            copy_template_config(config_file_name, template_path, toml_base_path.parent)
 
-        if not toml_user_path.is_file():
-            # create the author from environment variable
-            config_dict = self.dict_to_add_to_user()
-            if config_dict is not None:
-                create_toml_from_dict(config_dict, toml_user_path)
-
-        config_dict = load_system_config_and_update_from_user(config_file_name)
-        return config_dict
 
     def dict_to_add_to_user(self):
         """To subclass"""
@@ -363,17 +360,49 @@ class BaseConfig:
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
 
+    def load(self):
+        # write lock because it MODIFIES config
+        with self._lock.write_lock():
+            """Load a configuration file from both system-wide and user file
+            check also if missing entries in the configuration file compared to the template"""
+            toml_system_path = get_config_file(self.config_name, user=False)
+            toml_user_path = get_config_file(self.config_name, user=True)
+            if toml_system_path.is_file():
+                config = toml.load(toml_system_path)
+                if self.config_template_path is not None:
+                    config_template = toml.load(self.config_template_path)
+                else:
+                    config_template = {}
+                if check_config(config_template, config):  # check if all fields from template are there
+                    # (could have been  modified by some commits)
+                    create_toml_from_dict(config, toml_system_path)
+
+            else:
+                copy_template_config(self.config_name, self.config_template_path, toml_system_path.parent)
+
+            if not toml_user_path.is_file():
+                # create the author from environment variable
+                config_dict = self.dict_to_add_to_user()
+                if config_dict is not None:
+                    create_toml_from_dict(config_dict, toml_user_path)
+            self._config = load_system_config_and_update_from_user(self.config_name)
+            self._modified_config = toml.load(get_config_file(self.config_name, user=True))
+
     def save(self):
-        """Save the current Config object into the user toml file"""
-        self.config_path.write_text(toml.dumps(self.to_dict()))
+        """Save the current Config object into the user toml file and reload it """
+        with self._lock.write_lock():
+
+            self.config_path.write_text(toml.dumps(self._modified_config))
+            #  self._config = self.load_config(self.config_name, self.config_template_path)
 
     def get_children(self, *path: IterableType[str]):
         """ Get the list of config entries at a given path within the configulation toml file
 
         new in 4.3.0
         """
-        return list(getitem_recursive(self._config, *path).keys())
-
+        with self._lock.read_lock():
+            ret = list(getitem_recursive(self._config, *path).keys())
+        return ret
 
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
@@ -385,4 +414,21 @@ class Config(BaseConfig):
         return dict(user=dict(name=USER))
 
 
+def _delete_config_files(config : BaseConfig):
+    """
+    **DO NOT USE IN PRODUCTION**
 
+    Delete config files stored on the disk, leaving the config object
+    in an **undetermined state**.
+
+    Parameters
+    ----------
+    config : BaseConfig
+        The config object whose files are to be deleted
+
+    Returns
+    -------
+
+    """
+    get_config_file(config.config_name, user=False).unlink(missing_ok=True)
+    get_config_file(config.config_name, user=True).unlink(missing_ok=True)

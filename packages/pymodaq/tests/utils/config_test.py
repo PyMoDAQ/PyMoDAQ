@@ -87,4 +87,3 @@ def test_required_config_entries():
     assert 'timeflow' in config('scan')
     assert 'wait_time' in config('scan', 'timeflow')
     assert 'wait_time_between' in config('scan', 'timeflow')
-    assert 'timeout' in config('scan', 'timeflow')

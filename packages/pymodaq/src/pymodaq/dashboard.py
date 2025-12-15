@@ -1572,6 +1572,7 @@ class DashBoard(CustomApp):
         config_tree = TreeFromToml(config)
         config_tree.show_dialog()
 
+
     def setup_docks(self):
         # %% create logger dock
         self.logger_dock = Dock("Logger")

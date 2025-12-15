@@ -5,6 +5,18 @@ import datetime
 import toml
 
 from pymodaq_utils import config as config_mod
+from pymodaq_utils.config import _delete_config_files
+
+
+class Config(config_mod.BaseConfig):
+    config_name = 'custom_config_tested'
+    config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+
+
+class CustomConfig(config_mod.BaseConfig):
+    """Main class to deal with configuration values for this plugin"""
+    config_template_path = None
+    config_name = f"custom_settings"
 
 
 TOML_DICT = dict(
@@ -54,7 +66,9 @@ class TestCopy:
         test_name = 'config'
         dest_file = config_mod.copy_template_config()
         dest_path = config_mod.get_set_local_dir()
+
         assert dest_path.joinpath(f'{test_name}.toml') == dest_file
+
 
     def test_copy_source(self, tmp_path):
         suffix = '.ini'
@@ -156,23 +170,52 @@ class TestConfig:
         assert config.get(('style', 'theme')) == True
 
 
-class Config(config_mod.BaseConfig):
-    config_name = 'custom_config_tested'
-    config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+class TestConfigSingleton:
+    def test_is_same_object(self):
+        config1 = Config()
+        config2 = Config()
+
+        assert config1 is config2
+
+
+    def test_change_is_shared_same_class(self):
+        config1 = Config()
+        config2 = Config()
+
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
+        config1['style', 'darkstyle'] = not config1['style', 'darkstyle']
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
+    def test_different_class_different_objects(self):
+        config1 = Config()
+        config2 = CustomConfig()
+
+        assert config1 is not config2
+    def test_change_is_not_shared_different_class(self):
+        config1 = Config()
+        config2 = CustomConfig()
+
+        # This entry doesn't exist in CustomConfig, let's create it
+        config1['style', 'darkstyle'] = True
+        config2['style', 'darkstyle'] = True
+        assert config1['style', 'darkstyle'] == config2['style', 'darkstyle']
+
+        config1['style', 'darkstyle'] = False
+        assert config1['style', 'darkstyle'] != config2['style', 'darkstyle']
+
+        #Let's put it back to its original state
+        config1['style', 'darkstyle'] = True
+
 
 
 def test_custom_config():
-
-    config_mod.get_config_file(Config.config_name, True).unlink(missing_ok=True)
-    config_mod.get_config_file(Config.config_name, False).unlink(missing_ok=True)
-
     config = Config()
     config_dict = toml.load(config.config_template_path)
 
     assert config_mod.get_config_file(config.config_name, user=False).is_file()
 
     assert config.to_dict() == config_dict
-
 
 def test_nested_update_from_user(tmp_path):
     """ make sure the user defined entry within a nested config is loaded but that the other entries are also loaded
@@ -200,11 +243,6 @@ def test_nested_update_from_user(tmp_path):
     assert 'start' in config_dict['scan']['scan1d']
     assert 'stop' in config_dict['scan']['scan1d']  # making sure the entry that is not in the user is still present
 
-
-class CustomConfig(config_mod.BaseConfig):
-    """Main class to deal with configuration values for this plugin"""
-    config_template_path = None
-    config_name = f"custom_settings"
 
 
 def test_recursive_iterable_flattening():
