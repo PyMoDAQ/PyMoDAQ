@@ -39,7 +39,7 @@ names = icon_config['icons']['names']
 styles = tuple(extract.MaterialIcon.Style(s) for s in styles)
 
 extract.extract_package(output=str(resource_folder))
-extract.extract_icons(
+extract.extract_icons_multi(
     names=names,
     styles=styles,
     sizes=sizes,

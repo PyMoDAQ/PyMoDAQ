@@ -12,7 +12,10 @@ from qtpy.QtWidgets import QAction as QtQAction
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import Config
 
-from pymodaq_gui.resources.material_icons import MaterialIcon
+try:
+    from pymodaq_gui.resources.material_icons import MaterialIcon
+except  ImportError:
+    pass #this could happen when creating /importing new MaterialIcons
 import qt_themes
 
 
