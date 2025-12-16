@@ -113,7 +113,7 @@ def create_info_param(module_type: ModuleType,
 
     if module_type == ModuleType.Actuator:
         ui = ActuatorUIFactory.keys()
-        ui_default = config('actuator', 'ui')
+        ui_default = config('actuator', 'ui')[0]
     else:
         ui = []
         ui_default = None

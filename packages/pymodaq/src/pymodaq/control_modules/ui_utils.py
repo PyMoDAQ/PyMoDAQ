@@ -56,14 +56,14 @@ class ControlModuleUI(CustomApp):
 def register_uis(parent_module_name: str = 'pymodaq.control_modules.daq_move_ui'):
     uis = []
     try:
-        scanner_module = import_module(f'{parent_module_name}.uis')
+        module = import_module(f'{parent_module_name}.uis')
 
-        scanner_path = Path(scanner_module.__path__[0])
+        path = Path(module.__path__[0])
 
-        for file in scanner_path.iterdir():
+        for file in path.iterdir():
             if file.is_file() and 'py' in file.suffix and file.stem != '__init__':
                 try:
-                    uis.append(import_module(f'.{file.stem}', scanner_module.__name__))
+                    uis.append(import_module(f'.{file.stem}', module.__name__))
                 except (ModuleNotFoundError, Exception) as e:
                     pass
     except ModuleNotFoundError:
