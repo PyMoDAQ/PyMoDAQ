@@ -12,6 +12,8 @@ names = [
     'search',
     'toggle_on',
     'toggle_off',
+    'visibility',
+    'visibility_off'
 ]
 
 
