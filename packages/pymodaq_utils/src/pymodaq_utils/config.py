@@ -344,8 +344,6 @@ class BaseConfig(metaclass=Singleton):
                 self._config[key] = value
                 self._modified_config[key] = value
 
-
-
     def dict_to_add_to_user(self):
         """To subclass"""
         return dict([])

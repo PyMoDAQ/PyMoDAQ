@@ -48,6 +48,7 @@ try:
         config = Config()  # to ckeck for config file existence, otherwise create one
         copy_preset()
 
+
         from pymodaq_utils.config import Config
         from pymodaq.utils.scanner.utils import register_scanners
 
@@ -63,9 +64,27 @@ try:
                     " You should update it."
             print(infos)
             logger.warning(infos)
+
         logger.info('*************************************************************************')
         logger.info(f"Registering UIs...")
         register_uis(parent_module_name='pymodaq.control_modules.daq_move_ui')
+
+        # check the registered UI wrt the configuration
+        from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+        from pymodaq.utils.config import Config
+        ui_factory = ActuatorUIFactory()
+        uis_registered = ui_factory.keys()
+        pymodaq_config = Config()
+        uis_config = pymodaq_config('actuator', 'ui')
+        if not isinstance(uis_config, list):
+            uis_config = [uis_config]
+        for ui in uis_registered:
+            if ui not in uis_config:
+                uis_config.append(ui)
+        pymodaq_config['actuator', 'ui'] = uis_config
+        pymodaq_config.save()
+
+
         logger.info(f"Done")
         logger.info('************************')
 
