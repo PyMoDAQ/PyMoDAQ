@@ -1,9 +1,11 @@
 from qtpy import QtGui, QtWidgets
 from pymodaq_gui.resources.material_icons import MaterialIcon
+from pymodaq_gui.managers.action_manager import resource_path_exists
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_utils.config import Config
 
 config = Config()
+
 
 class WidgetWithMaterialIcons(CustomApp):
     def __init__(self, parent):
@@ -63,6 +65,8 @@ class WidgetWithMaterialIcons(CustomApp):
                         icon_color='green',
                         icon_checked_color='red')
         self.add_action('toggle', 'Toggle Action', 'toggle_off', icon_checked='toggle_on',
+                        icon_color='red', icon_checked_color='green')
+        self.add_action('visibility', 'Visibility Action', 'visibility', icon_checked='visibility_off',
                         icon_color='red', icon_checked_color='green')
 
     def connect_things(self):
