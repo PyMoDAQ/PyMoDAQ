@@ -77,7 +77,7 @@ try:
         pymodaq_config = Config()
         uis_config = pymodaq_config('actuator', 'ui')
         if not isinstance(uis_config, list):
-            uis = [uis_config]
+            uis_config = [uis_config]
         for ui in uis_registered:
             if ui not in uis_config:
                 uis_config.append(ui)
