@@ -71,7 +71,7 @@ if __name__ == '__main__':
     from pymodaq.utils import data as data_mod
     import numpy as np
     from pymodaq.utils.math_utils import gauss1D
-    from pymodaq.utils.plotting.plotter.plotter import PlotterFactory
+
 
     qapp = start_qapplication()
 
