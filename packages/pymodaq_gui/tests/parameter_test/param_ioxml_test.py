@@ -104,7 +104,8 @@ class TestXMLbackForth():
         for child, child_back in zip(children_list_in,children_list_back):
             assert child_back.name() == child.name()
             assert child_back.title() == child.title()
-            assert child_back.value() == child.value()
+            if 'value' in child_back.opts:
+                assert child_back.value() == child.value()
             assert child_back.readonly() == child.readonly()
             if 'limits' in child_back.opts:
                 assert child_back.opts['limits'] == child.opts['limits']

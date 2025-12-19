@@ -5,7 +5,7 @@ import datetime
 import toml
 
 from pymodaq_utils import config as config_mod
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.config_saver_loader import ConfigSaverLoader, get_set_roi_path
 
 

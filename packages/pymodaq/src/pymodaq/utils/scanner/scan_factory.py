@@ -19,7 +19,8 @@ from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils import config as configmod
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter import Parameter
 from pymodaq_data.data import Axis, DataDistribution
 
 from pymodaq.utils.scanner.scan_config import ScanConfig

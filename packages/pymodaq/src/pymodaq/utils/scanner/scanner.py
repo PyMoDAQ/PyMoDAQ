@@ -10,7 +10,8 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 import pymodaq_utils.utils as utils
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter import Parameter
 
 from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.scanner.utils import ScanInfo

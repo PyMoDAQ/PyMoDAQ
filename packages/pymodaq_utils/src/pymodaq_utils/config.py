@@ -17,7 +17,7 @@ from fasteners import ReaderWriterLock
 import toml
 import logging
 if TYPE_CHECKING:
-    from pyqtgraph import Parameter
+    from pymodaq_gui.parameter import Parameter
 
 
 try:

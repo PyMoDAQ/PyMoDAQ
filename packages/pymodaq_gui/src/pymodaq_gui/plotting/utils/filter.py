@@ -1,5 +1,5 @@
 import numpy as np
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QPointF, Slot, Signal, QObject
 from typing import List, Tuple

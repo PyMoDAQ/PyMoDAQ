@@ -370,7 +370,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
 def main(init_qt=True):
     from pymodaq.utils.gui_utils.dock import DockArea
-    from pymodaq.utils.parameter import ParameterTree, Parameter
+    from pymodaq.utils.parameter import ParameterTree
+    from pymodaq_gui.parameter import Parameter
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 
     if init_qt:  # used for the test suite

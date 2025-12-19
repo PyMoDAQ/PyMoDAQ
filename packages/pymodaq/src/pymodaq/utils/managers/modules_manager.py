@@ -12,7 +12,8 @@ from pymodaq_utils.enums import StrEnum
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator

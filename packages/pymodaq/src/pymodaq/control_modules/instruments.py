@@ -1,4 +1,4 @@
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import BaseEnum
