@@ -16,6 +16,9 @@ from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
 from pymodaq_gui.utils.splash import get_pymodaq_pixmap
 
+from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
+
+
 logger = set_logger(get_module_name(__file__))
 
 
@@ -118,6 +121,12 @@ class ManagerBase(CustomExt):
 
         self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
         self.reference_menu(Menu.EXTERNAL, menu)
+
+        self.entries_sync = WidgetSync(
+            initial_value={
+            'items': self.entries,
+            'current': self.entries[0]
+        })
 
         self.setup_ui()
 
@@ -292,9 +301,28 @@ class ManagerBase(CustomExt):
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        self.get_action_list_external().currentTextChanged.connect(self.get_action_list().setCurrentText)
+        for combo in (self.get_action(ManagerActions.LIST), self.get_action(ManagerActions.LIST_EXTERNAL)):
+            self.entries_sync.bind_properties(
+                combo,
+                property_map={
+                    'items': {
+                        'signal': None,  # FROM_SYNC only
+                        'getter': lambda c=combo: [c.itemText(i) for i in range(c.count())],
+                        'setter': lambda items, c=combo: (c.clear(), c.addItems(items)),
+                        'mode': SyncMode.FROM_SYNC
+                    },
+                    'current': {
+                        'signal': combo.currentTextChanged,
+                        'getter': lambda c=combo: c.currentText(),
+                        'setter': lambda text, c=combo: c.setCurrentText(text),
+                        'mode': SyncMode.BIDIRECTIONAL
+                    }
+                }
+            )
 
-        self.get_action_list().setCurrentText('default')
+        # self.get_action_list_external().currentTextChanged.connect(self.get_action_list().setCurrentText)
+        #
+        # self.get_action_list().setCurrentText('default')
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -458,7 +486,7 @@ class ManagerBase(CustomExt):
 
     def update_execute_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.EXECUTE).setToolTip(
-            f'Execute the selected {self.entry_type}: {entry} ("Ctrl+A")')
+            f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
         return lambda: self.execute_entry_base(filename)
