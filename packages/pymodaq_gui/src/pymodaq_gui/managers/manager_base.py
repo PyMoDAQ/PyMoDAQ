@@ -301,7 +301,7 @@ class ManagerBase(CustomExt):
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        for combo in (self.get_action(ManagerActions.LIST), self.get_action(ManagerActions.LIST_EXTERNAL)):
+        for combo in (self.get_action_list(), self.get_action_list_external()):
             self.entries_sync.bind_properties(
                 combo,
                 property_map={
@@ -320,10 +320,6 @@ class ManagerBase(CustomExt):
                 }
             )
 
-        # self.get_action_list_external().currentTextChanged.connect(self.get_action_list().setCurrentText)
-        #
-        # self.get_action_list().setCurrentText('default')
-
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
             ok = True
@@ -337,11 +333,8 @@ class ManagerBase(CustomExt):
                        ind in range(self.get_action_list().count())]
             if entry.lower() not in entries:
                 entries.append(entry.lower())
-                entries.sort()
-                index = entries.index(entry.lower())
-                self.get_action_list().insertItem(index-1, entry)
+            self.entries_sync.value = {'items': entries, 'current': entry}
 
-            self.get_action_list().setCurrentText(entry)
             self.save_check(bypass_dialog=bypass_dialog)
             self.update_action_list()
             self.new_entry.emit(entry)
@@ -400,17 +393,21 @@ class ManagerBase(CustomExt):
                         f' {entry} ?',
             )
         if user_agreed:
-            self.connect_action(ManagerActions.LIST, signal_name='currentTextChanged', connect=False)
-            self.entry_filename.unlink(missing_ok=True)
+            # self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged',
+            #                     connect=False)
+            entries = self.entries[:]  # to get before unlinking
 
+            self.entry_filename.unlink(missing_ok=True)
             logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
-            self.get_action_list().removeItem(
-                self.get_action_list().currentIndex()
-            )
-            self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
+
+            index = entries.index(entry)
+            entries.pop(index)
+            current = entries[max(0, index-1)]
+            self.entries_sync.value = {'items': entries, 'current': current}
+            #self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
             # self.update_action_list()
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
-            self.update_entry_base(self.get_action_list().currentText())
+            self.update_entry_base(current)
 
     def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
@@ -445,7 +442,6 @@ class ManagerBase(CustomExt):
 
         self.get_action_list().setCurrentText(entry.stem)
         self.update_execute_action_tooltip(entry.stem)
-        self.get_action_list_external().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
     def show(self):
@@ -457,7 +453,6 @@ class ManagerBase(CustomExt):
             with QtCore.QSignalBlocker(self.get_action(ManagerActions.LIST)):
                 try:
                     entries = []
-                    self.get_action_list_external().clear()
                     for ind_file, file in enumerate(self.list_managed_entries_path()):
                         if not self.has_action(self.get_action_from_file(file)):
                             self.add_action(
@@ -468,11 +463,11 @@ class ManagerBase(CustomExt):
                                 auto_toolbar=False,
                             )
                         entries.append(file.stem)
-                    self.get_action_list_external().addItems(entries)
                     self.update_actions_connection()
                     self.update_menu()
                 except KeyError as e:
                     pass
+
     def update_actions_connection(self):
 
         for ind_file, file in enumerate(self.list_managed_entries_path()):
