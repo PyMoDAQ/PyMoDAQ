@@ -786,7 +786,10 @@ class ActionManager:
                 getattr(self._actions[name], signal).connect(slot)
             else:
                 try:
-                    getattr(self._actions[name], signal).disconnect()
+                    if slot is not None:
+                        getattr(self._actions[name], signal).disconnect(slot)
+                    else:
+                        getattr(self._actions[name], signal).disconnect()
                 except (TypeError,) as e:
                     pass  # the action was not connected
         else:
