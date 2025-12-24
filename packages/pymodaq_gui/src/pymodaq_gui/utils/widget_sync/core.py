@@ -5,6 +5,7 @@ Implementation for syncing widget properties across multiple widgets.
 
 """
 from __future__ import annotations
+import copy
 
 from qtpy.QtCore import QObject, Signal
 from qtpy.QtWidgets import QWidget
@@ -1078,12 +1079,22 @@ class ValueSync(BaseWidgetSync):
 
         # Validate and wrap the initial value
         validated_value = self._validate_value(initial_value)
-        self._value = {"__value__": validated_value}
-        self._previous_value = self._value.copy()
+        # Deep copy to ensure independence of mutable values
+        self._value = {"__value__": copy.deepcopy(validated_value) if validated_value is not None else None}
+        self._previous_value = copy.deepcopy(self._value)
 
     @property
     def value(self) -> Any:
-        """Get current synced value."""
+        """Get current synced value.
+
+        Warning: For mutable values (lists, dicts, custom objects), returns
+        a direct reference to the internal value. Modifying the returned
+        value in-place will affect the sync's internal state and may cause
+        change detection to fail.
+
+        For a fully independent copy of mutable values, use:
+        copy.copy(sync.value) or copy.deepcopy(sync.value)
+        """
         return self._value.get("__value__")
 
     @value.setter
@@ -1122,8 +1133,8 @@ class ValueSync(BaseWidgetSync):
 
         if self._value != new_dict_value:
             # Store previous value for property change detection
-            self._previous_value = self._value.copy()
-            self._value = new_dict_value
+            self._previous_value = copy.deepcopy(self._value)
+            self._value = copy.deepcopy(new_dict_value)
             if emit:
                 # Emit unwrapped value for user-facing signal handlers
                 self.value_changed.emit(validated_value)
@@ -1378,13 +1389,20 @@ class DictSync(BaseWidgetSync):
 
         self._validator = validator
         self._data_type = dict
-        self._value = initial_value.copy() if initial_value else {}
-        self._previous_value = self._value.copy()
+        self._value = copy.deepcopy(initial_value) if initial_value else {}
+        self._previous_value = copy.deepcopy(self._value)
 
     @property
     def value(self) -> dict:
-        """Get current synced dict value."""
-        return self._value
+        """Get current synced dict value.
+
+        Returns a shallow copy of the internal dict. Modifying dict keys
+        will not affect the sync, but modifying nested mutable objects
+        (lists, dicts) will affect internal state and should be avoided.
+
+        For a fully independent copy, use copy.deepcopy(sync.value).
+        """
+        return copy.copy(self._value)
 
     @value.setter
     def value(self, new_value: dict) -> None:
@@ -1417,8 +1435,8 @@ class DictSync(BaseWidgetSync):
 
         if self._value != validated_value:
             # Store previous value for property change detection
-            self._previous_value = self._value.copy()
-            self._value = validated_value.copy()
+            self._previous_value = copy.deepcopy(self._value)
+            self._value = copy.deepcopy(validated_value)
             if emit:
                 self.value_changed.emit(self._value)
 
@@ -1849,3 +1867,164 @@ class DictSync(BaseWidgetSync):
             widget = widget_ref()
             if widget is not None:
                 self._setup_widget_destruction_callback(widget, connection_keys)
+
+    def _validate_list_key(self, key: str) -> None:
+        """
+        Validate that a key exists and points to a list.
+
+        Parameters
+        ----------
+        key : str
+            The dict key to validate
+
+        Raises
+        ------
+        KeyError
+            If key doesn't exist in dict
+        TypeError
+            If value at key is not a list
+        """
+        if key not in self._value:
+            raise KeyError(f"Key '{key}' not found in dict value")
+        if not isinstance(self._value[key], list):
+            raise TypeError(f"Value at key '{key}' is not a list")
+
+    def _modify_and_set(self, modify_fn: callable, emit: bool = True) -> Any:
+        """
+        Common pattern: deep copy dict, modify it, set it back.
+
+        Parameters
+        ----------
+        modify_fn : callable
+            Function that takes the copied dict and modifies it.
+            Should return the value to return from the calling method (or None).
+        emit : bool, optional
+            Whether to emit value_changed signal (default: True)
+
+        Returns
+        -------
+        Any
+            Whatever modify_fn returns
+        """
+        new_dict = copy.deepcopy(self._value)
+        result = modify_fn(new_dict)
+        self.set_value(new_dict, emit=emit)
+        return result
+
+    def update_key(self, key: str, value: Any, emit: bool = True) -> None:
+        """
+        Update a single key in the dict value.
+
+        Convenience method that handles copying internally.
+
+        Parameters
+        ----------
+        key : str
+            The dict key to update
+        value : Any
+            The new value for the key
+        emit : bool, optional
+            Whether to emit value_changed signal (default: True)
+
+        Example
+        -------
+        >>> sync = DictSync({'items': ['a', 'b'], 'current': 'a'})
+        >>> sync.update_key('current', 'b')
+        """
+        self._modify_and_set(lambda d: d.__setitem__(key, value), emit=emit)
+
+    def append_to_list(self, key: str, item: Any, emit: bool = True) -> None:
+        """
+        Append an item to a list value in the dict.
+
+        Parameters
+        ----------
+        key : str
+            The dict key containing the list
+        item : Any
+            The item to append
+        emit : bool, optional
+            Whether to emit value_changed signal (default: True)
+
+        Raises
+        ------
+        KeyError
+            If key doesn't exist in dict
+        TypeError
+            If value at key is not a list
+
+        Example
+        -------
+        >>> sync = DictSync({'items': ['a', 'b'], 'current': 'a'})
+        >>> sync.append_to_list('items', 'c')
+        >>> sync.value['items']  # Returns ['a', 'b', 'c']
+        """
+        self._validate_list_key(key)
+        self._modify_and_set(lambda d: d[key].append(item), emit=emit)
+
+    def remove_from_list(self, key: str, item: Any, emit: bool = True) -> None:
+        """
+        Remove an item from a list value in the dict.
+
+        Parameters
+        ----------
+        key : str
+            The dict key containing the list
+        item : Any
+            The item to remove
+        emit : bool, optional
+            Whether to emit value_changed signal (default: True)
+
+        Raises
+        ------
+        KeyError
+            If key doesn't exist in dict
+        TypeError
+            If value at key is not a list
+        ValueError
+            If item not in list
+
+        Example
+        -------
+        >>> sync = DictSync({'items': ['a', 'b', 'c'], 'current': 'a'})
+        >>> sync.remove_from_list('items', 'b')
+        >>> sync.value['items']  # Returns ['a', 'c']
+        """
+        self._validate_list_key(key)
+        self._modify_and_set(lambda d: d[key].remove(item), emit=emit)
+
+    def pop_from_list(self, key: str, index: int = -1, emit: bool = True) -> Any:
+        """
+        Pop an item from a list value in the dict.
+
+        Parameters
+        ----------
+        key : str
+            The dict key containing the list
+        index : int, optional
+            Index to pop (default: -1, last item)
+        emit : bool, optional
+            Whether to emit value_changed signal (default: True)
+
+        Returns
+        -------
+        Any
+            The popped item
+
+        Raises
+        ------
+        KeyError
+            If key doesn't exist in dict
+        TypeError
+            If value at key is not a list
+        IndexError
+            If index out of range
+
+        Example
+        -------
+        >>> sync = DictSync({'items': ['a', 'b', 'c'], 'current': 'a'})
+        >>> removed = sync.pop_from_list('items', 1)  # Returns 'b'
+        >>> sync.value['items']  # Returns ['a', 'c']
+        """
+        self._validate_list_key(key)
+        return self._modify_and_set(lambda d: d[key].pop(index), emit=emit)
