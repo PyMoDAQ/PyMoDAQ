@@ -15,6 +15,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
 from pymodaq_gui.utils.splash import get_pymodaq_pixmap
+from pymodaq_gui.utils.widgets.combo import ComboBox
 
 from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
 
@@ -232,11 +233,11 @@ class ManagerBase(CustomExt):
         vlayout.addWidget(self.settings_tree)
         self.main_widget.setLayout(vlayout)
 
-    def get_action_list(self) -> QtWidgets.QComboBox:
+    def get_action_list(self) -> ComboBox:
         """ Convenience method to get right return type """
         return self.get_action(ManagerActions.LIST)
 
-    def get_action_list_external(self) -> QtWidgets.QComboBox:
+    def get_action_list_external(self) -> ComboBox:
         """ Convenience method to get right return type """
         return self.get_action(ManagerActions.LIST_EXTERNAL)
 
@@ -249,7 +250,7 @@ class ManagerBase(CustomExt):
         # ACTIONS in Manager
         self.add_widget('entry_label', QtWidgets.QLabel(
             f'Configuration from {self.entry_type.capitalize()}:'))
-        self.add_widget(ManagerActions.LIST, QtWidgets.QComboBox(),
+        self.add_widget(ManagerActions.LIST, ComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
         self.get_action_list().addItems(self.entries)
@@ -285,7 +286,7 @@ class ManagerBase(CustomExt):
 
         self.add_widget('external_label', QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
                         toolbar=Toolbar.EXTERNAL)
-        self.add_widget(ManagerActions.LIST_EXTERNAL, QtWidgets.QComboBox,
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
                         toolbar=Toolbar.EXTERNAL)
         self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
 
@@ -306,15 +307,15 @@ class ManagerBase(CustomExt):
                 combo,
                 property_map={
                     'items': {
-                        'signal': None,  # FROM_SYNC only
-                        'getter': lambda c=combo: [c.itemText(i) for i in range(c.count())],
-                        'setter': lambda items, c=combo: (c.clear(), c.addItems(items)),
-                        'mode': SyncMode.FROM_SYNC
+                        'signal': combo.items_changed,  # FROM_SYNC only
+                        'getter': combo.get_items,
+                        'setter': combo.set_items,
+                        'mode': SyncMode.BIDIRECTIONAL
                     },
                     'current': {
                         'signal': combo.currentTextChanged,
-                        'getter': lambda c=combo: c.currentText(),
-                        'setter': lambda text, c=combo: c.setCurrentText(text),
+                        'getter': combo.currentText,
+                        'setter': combo.setCurrentText,
                         'mode': SyncMode.BIDIRECTIONAL
                     }
                 }
@@ -329,11 +330,8 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
-            entries = [self.get_action_list().itemText(ind).lower() for
-                       ind in range(self.get_action_list().count())]
-            if entry.lower() not in entries:
-                entries.append(entry.lower())
-            self.entries_sync.value = {'items': entries, 'current': entry}
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
 
             self.save_check(bypass_dialog=bypass_dialog)
             self.update_action_list()
@@ -450,23 +448,20 @@ class ManagerBase(CustomExt):
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
-            with QtCore.QSignalBlocker(self.get_action(ManagerActions.LIST)):
-                try:
-                    entries = []
-                    for ind_file, file in enumerate(self.list_managed_entries_path()):
-                        if not self.has_action(self.get_action_from_file(file)):
-                            self.add_action(
-                                self.get_action_from_file(file),
-                                file.stem,
-                                "",
-                                f"Load the {file.stem} entry",
-                                auto_toolbar=False,
-                            )
-                        entries.append(file.stem)
-                    self.update_actions_connection()
-                    self.update_menu()
-                except KeyError as e:
-                    pass
+            try:
+                for ind_file, file in enumerate(self.list_managed_entries_path()):
+                    if not self.has_action(self.get_action_from_file(file)):
+                        self.add_action(
+                            self.get_action_from_file(file),
+                            file.stem,
+                            "",
+                            f"Load the {file.stem} entry",
+                            auto_toolbar=False,
+                        )
+                self.update_actions_connection()
+                self.update_menu()
+            except KeyError as e:
+                pass
 
     def update_actions_connection(self):
 
