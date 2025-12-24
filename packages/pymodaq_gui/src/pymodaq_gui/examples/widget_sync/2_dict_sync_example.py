@@ -13,7 +13,7 @@ Run: python -m pymodaq_gui.examples.2_dict_sync_example
 import sys
 import json
 from qtpy.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                             QComboBox, QPushButton, QLabel, QGroupBox,
+                             QComboBox, QPushButton, QLabel, QGroupBox,QLineEdit,
                              QTabWidget, QSpinBox, QSlider, QTextEdit)
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPalette, QColor
@@ -340,8 +340,183 @@ class ConfigurationFormExample(QWidget):
         )
 
 
+class HelperMethodsExample(QWidget):
+    """Example 4: Using DictSync helper methods for list manipulation"""
+
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel(
+            "Use Case: Dynamic list management with helper methods\n"
+            "✓ append_to_list() - Add items safely\n"
+            "✓ remove_from_list() - Remove items safely\n"
+            "✓ pop_from_list() - Remove by index\n"
+            "✓ update_key() - Update individual keys\n"
+            "✓ All methods handle deep copying internally!"
+        ))
+
+        # Display area
+        display_group = QGroupBox("Current State")
+        display_layout = QVBoxLayout()
+
+        self.items_display = QLabel()
+        self.items_display.setStyleSheet(
+            "padding: 10px; "
+            "font-family: monospace; border-radius: 5px;"
+        )
+        display_layout.addWidget(self.items_display)
+
+        display_group.setLayout(display_layout)
+        layout.addWidget(display_group)
+
+        # Initialize sync with a list of items
+        self.list_sync = WidgetSync(initial_value={
+            'items': ['Apple', 'Banana', 'Cherry'],
+            'current': 'Apple',
+            'count': 3
+        })
+
+        # Update display when value changes
+        self.list_sync.value_changed.connect(lambda _: self.update_display())
+        self.update_display()
+
+        # Controls
+        controls_group = QGroupBox("List Operations")
+        controls_layout = QVBoxLayout()
+
+        # Add item controls
+        add_layout = QHBoxLayout()
+        add_layout.addWidget(QLabel("Add item:"))
+        self.add_input = QLineEdit()
+        self.add_input.setPlaceholderText("Enter item name...")
+        add_layout.addWidget(self.add_input)
+
+        add_btn = QPushButton("Append")
+        add_btn.clicked.connect(self.append_item)
+        add_layout.addWidget(add_btn)
+        controls_layout.addLayout(add_layout)
+
+        # Remove item controls
+        remove_layout = QHBoxLayout()
+        remove_layout.addWidget(QLabel("Remove item:"))
+        self.remove_input = QLineEdit()
+        self.remove_input.setPlaceholderText("Enter item name...")
+        remove_layout.addWidget(self.remove_input)
+
+        remove_btn = QPushButton("Remove")
+        remove_btn.clicked.connect(self.remove_item)
+        remove_layout.addWidget(remove_btn)
+        controls_layout.addLayout(remove_layout)
+
+        # Pop item controls
+        pop_layout = QHBoxLayout()
+        pop_layout.addWidget(QLabel("Pop by index:"))
+        self.pop_spin = QSpinBox()
+        self.pop_spin.setRange(-10, 10)
+        self.pop_spin.setValue(0)
+        pop_layout.addWidget(self.pop_spin)
+
+        pop_btn = QPushButton("Pop")
+        pop_btn.clicked.connect(self.pop_item)
+        pop_layout.addWidget(pop_btn)
+
+        pop_last_btn = QPushButton("Pop Last")
+        pop_last_btn.clicked.connect(lambda: self.pop_item(-1))
+        pop_layout.addWidget(pop_last_btn)
+        controls_layout.addLayout(pop_layout)
+
+        # Update current
+        current_layout = QHBoxLayout()
+        current_layout.addWidget(QLabel("Set current:"))
+        self.current_combo = QComboBox()
+        current_layout.addWidget(self.current_combo)
+
+        set_current_btn = QPushButton("Update")
+        set_current_btn.clicked.connect(self.update_current)
+        current_layout.addWidget(set_current_btn)
+        controls_layout.addLayout(current_layout)
+
+        # Bind combo to items list (display only)
+        self.list_sync.bind_properties(
+            self.current_combo,
+            property_map={
+                'items': {
+                    'getter': lambda: [self.current_combo.itemText(i)
+                                     for i in range(self.current_combo.count())],
+                    'setter': lambda items: (self.current_combo.clear(),
+                                           self.current_combo.addItems(items)),
+                    'mode': SyncMode.FROM_SYNC
+                }
+            }
+        )
+
+        controls_group.setLayout(controls_layout)
+        layout.addWidget(controls_group)
+
+        # Info box
+        info = QLabel(
+            "💡 All operations use helper methods that handle deep copying internally.\n"
+            "This prevents the shallow copy bug and ensures proper change detection!"
+        )
+        info.setStyleSheet("color: #0288d1; padding: 10px; font-style: italic;")
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        layout.addStretch()
+
+    def append_item(self):
+        item = self.add_input.text().strip()
+        if item:
+            try:
+                # Use helper method - handles copying internally
+                self.list_sync.append_to_list('items', item)
+                self.list_sync.update_key('count', len(self.list_sync.value['items']))
+                self.add_input.clear()
+            except (KeyError, TypeError) as e:
+                print(f"Error: {e}")
+
+    def remove_item(self):
+        item = self.remove_input.text().strip()
+        if item:
+            try:
+                # Use helper method - handles copying internally
+                self.list_sync.remove_from_list('items', item)
+                self.list_sync.update_key('count', len(self.list_sync.value['items']))
+                self.remove_input.clear()
+            except (KeyError, TypeError, ValueError) as e:
+                print(f"Error: {e}")
+
+    def pop_item(self, index=None):
+        if index is None:
+            index = self.pop_spin.value()
+        try:
+            # Use helper method - handles copying internally
+            popped = self.list_sync.pop_from_list('items', index)
+            self.list_sync.update_key('count', len(self.list_sync.value['items']))
+            print(f"Popped: {popped}")
+        except (KeyError, TypeError, IndexError) as e:
+            print(f"Error: {e}")
+
+    def update_current(self):
+        current = self.current_combo.currentText()
+        if current:
+            # Use helper method - handles copying internally
+            self.list_sync.update_key('current', current)
+
+    def update_display(self):
+        v = self.list_sync.value
+        items_str = ', '.join(f"'{item}'" for item in v.get('items', []))
+        self.items_display.setText(
+            f"Items: [{items_str}]\n"
+            f"Current: '{v.get('current', 'N/A')}'\n"
+            f"Count: {v.get('count', 0)}\n\n"
+            f"Internal dict:\n{v}"
+        )
+
+
 class MixedBindingExample(QWidget):
-    """Example 4: Mix bind(), bind_dict(), and custom logic"""
+    """Example 5: Mix bind(), bind_dict(), and custom logic"""
 
     def __init__(self):
         super().__init__()
@@ -459,7 +634,8 @@ class DictSyncDemo(QWidget):
         tabs.addTab(ComboBoxPropertiesExample(), "1. bind_properties()")
         tabs.addTab(RGBSlidersExample(), "2. bind_dict()")
         tabs.addTab(ConfigurationFormExample(), "3. Config Forms")
-        tabs.addTab(MixedBindingExample(), "4. Mixed Binding")
+        tabs.addTab(HelperMethodsExample(), "4. Helper Methods")
+        tabs.addTab(MixedBindingExample(), "5. Mixed Binding")
 
         layout.addWidget(tabs)
 

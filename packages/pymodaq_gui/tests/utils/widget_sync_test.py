@@ -1636,3 +1636,350 @@ class TestBindParameter:
         # Changes should not propagate
         value_param.setValue(99)
         assert sync.value['value'] == 50  # Unchanged
+
+
+class TestHelperMethods:
+    """Test DictSync helper methods for list manipulation"""
+
+    def test_update_key(self, qtbot_app):
+        """Test update_key() method"""
+        sync = DictSync(initial_value={'a': 1, 'b': 2, 'c': 3})
+
+        # Track value changes
+        changes = []
+        sync.value_changed.connect(lambda v: changes.append(v.copy()))
+
+        # Update single key
+        sync.update_key('b', 99)
+
+        assert sync.value['a'] == 1
+        assert sync.value['b'] == 99
+        assert sync.value['c'] == 3
+        assert len(changes) == 1
+        assert changes[0]['b'] == 99
+
+    def test_update_key_with_widgets(self, qtbot_app):
+        """Test that update_key() triggers widget updates"""
+        sync = DictSync(initial_value={'value': 10})
+
+        spinbox = QSpinBox()
+        sync.bind_dict({'value': {'widget': spinbox, 'property': 'value'}})
+
+        assert spinbox.value() == 10
+
+        # Update key
+        sync.update_key('value', 50)
+
+        # Widget should be updated
+        assert spinbox.value() == 50
+
+    def test_append_to_list_basic(self, qtbot_app):
+        """Test append_to_list() basic functionality"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c']})
+
+        sync.append_to_list('items', 'd')
+
+        assert sync.value['items'] == ['a', 'b', 'c', 'd']
+
+    def test_append_to_list_triggers_signal(self, qtbot_app):
+        """Test that append_to_list() emits value_changed signal"""
+        sync = DictSync(initial_value={'items': ['a']})
+
+        changes = []
+        sync.value_changed.connect(lambda v: changes.append(v.copy()))
+
+        sync.append_to_list('items', 'b')
+
+        assert len(changes) == 1
+        assert changes[0]['items'] == ['a', 'b']
+
+    def test_append_to_list_nonexistent_key_raises(self, qtbot_app):
+        """Test that append_to_list() raises KeyError for nonexistent key"""
+        sync = DictSync(initial_value={'items': []})
+
+        with pytest.raises(KeyError, match="Key 'missing' not found"):
+            sync.append_to_list('missing', 'x')
+
+    def test_append_to_list_non_list_raises(self, qtbot_app):
+        """Test that append_to_list() raises TypeError for non-list value"""
+        sync = DictSync(initial_value={'value': 42})
+
+        with pytest.raises(TypeError, match="not a list"):
+            sync.append_to_list('value', 10)
+
+    def test_remove_from_list_basic(self, qtbot_app):
+        """Test remove_from_list() basic functionality"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c', 'b']})
+
+        sync.remove_from_list('items', 'b')
+
+        # Only first occurrence removed
+        assert sync.value['items'] == ['a', 'c', 'b']
+
+    def test_remove_from_list_not_found_raises(self, qtbot_app):
+        """Test that remove_from_list() raises ValueError when item not found"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c']})
+
+        with pytest.raises(ValueError):
+            sync.remove_from_list('items', 'x')
+
+    def test_remove_from_list_nonexistent_key_raises(self, qtbot_app):
+        """Test that remove_from_list() raises KeyError for nonexistent key"""
+        sync = DictSync(initial_value={'items': []})
+
+        with pytest.raises(KeyError, match="Key 'missing' not found"):
+            sync.remove_from_list('missing', 'x')
+
+    def test_remove_from_list_non_list_raises(self, qtbot_app):
+        """Test that remove_from_list() raises TypeError for non-list value"""
+        sync = DictSync(initial_value={'value': 42})
+
+        with pytest.raises(TypeError, match="not a list"):
+            sync.remove_from_list('value', 10)
+
+    def test_pop_from_list_basic(self, qtbot_app):
+        """Test pop_from_list() basic functionality"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c']})
+
+        popped = sync.pop_from_list('items', 1)
+
+        assert popped == 'b'
+        assert sync.value['items'] == ['a', 'c']
+
+    def test_pop_from_list_last_item(self, qtbot_app):
+        """Test pop_from_list() with default index (last item)"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c']})
+
+        popped = sync.pop_from_list('items')  # Default index=-1
+
+        assert popped == 'c'
+        assert sync.value['items'] == ['a', 'b']
+
+    def test_pop_from_list_negative_index(self, qtbot_app):
+        """Test pop_from_list() with negative index"""
+        sync = DictSync(initial_value={'items': ['a', 'b', 'c']})
+
+        popped = sync.pop_from_list('items', -2)
+
+        assert popped == 'b'
+        assert sync.value['items'] == ['a', 'c']
+
+    def test_pop_from_list_out_of_range_raises(self, qtbot_app):
+        """Test that pop_from_list() raises IndexError for invalid index"""
+        sync = DictSync(initial_value={'items': ['a', 'b']})
+
+        with pytest.raises(IndexError):
+            sync.pop_from_list('items', 10)
+
+    def test_pop_from_list_nonexistent_key_raises(self, qtbot_app):
+        """Test that pop_from_list() raises KeyError for nonexistent key"""
+        sync = DictSync(initial_value={'items': []})
+
+        with pytest.raises(KeyError, match="Key 'missing' not found"):
+            sync.pop_from_list('missing', 0)
+
+    def test_pop_from_list_non_list_raises(self, qtbot_app):
+        """Test that pop_from_list() raises TypeError for non-list value"""
+        sync = DictSync(initial_value={'value': 42})
+
+        with pytest.raises(TypeError, match="not a list"):
+            sync.pop_from_list('value', 0)
+
+    def test_helper_methods_with_widgets(self, qtbot_app):
+        """Test that helper methods properly update bound widgets"""
+        sync = DictSync(initial_value={
+            'items': ['Red', 'Green', 'Blue'],
+            'current': 'Red'
+        })
+
+        # Create combo box bound to items
+        combo = QComboBox()
+        sync.bind_properties(
+            combo,
+            property_map={
+                'items': {
+                    'getter': lambda: [combo.itemText(i) for i in range(combo.count())],
+                    'setter': lambda items: (combo.clear(), combo.addItems(items)),
+                    'mode': SyncMode.FROM_SYNC
+                }
+            }
+        )
+
+        assert combo.count() == 3
+        assert combo.itemText(0) == 'Red'
+
+        # Append using helper method
+        sync.append_to_list('items', 'Yellow')
+        assert combo.count() == 4
+        assert combo.itemText(3) == 'Yellow'
+
+        # Remove using helper method
+        sync.remove_from_list('items', 'Green')
+        assert combo.count() == 3
+        assert combo.itemText(1) == 'Blue'
+
+        # Pop using helper method
+        popped = sync.pop_from_list('items', 0)
+        assert popped == 'Red'
+        assert combo.count() == 2
+        assert combo.itemText(0) == 'Blue'
+
+    def test_helper_methods_emit_control(self, qtbot_app):
+        """Test that helper methods respect emit parameter"""
+        sync = DictSync(initial_value={'items': ['a']})
+
+        changes = []
+        sync.value_changed.connect(lambda v: changes.append(v.copy()))
+
+        # With emit=True (default)
+        sync.append_to_list('items', 'b')
+        assert len(changes) == 1
+
+        # With emit=False
+        sync.append_to_list('items', 'c', emit=False)
+        assert len(changes) == 1  # No new emission
+
+        # Verify value was updated even without emission
+        assert sync.value['items'] == ['a', 'b', 'c']
+
+    def test_deep_copy_prevents_external_modification(self, qtbot_app):
+        """Test that helper methods use deep copy to prevent external modifications"""
+        # This test verifies the fix for the shallow copy bug
+        my_list = ['a', 'b', 'c']
+        sync = DictSync(initial_value={'items': my_list})
+
+        # Modify external list
+        my_list.append('d')
+
+        # Sync's internal list should NOT be affected (deep copy)
+        assert sync.value['items'] == ['a', 'b', 'c']
+
+        # Use helper method
+        sync.append_to_list('items', 'x')
+
+        # External list should not be affected
+        assert my_list == ['a', 'b', 'c', 'd']
+        assert sync.value['items'] == ['a', 'b', 'c', 'x']
+
+    def test_complex_list_operations_sequence(self, qtbot_app):
+        """Test a sequence of list operations"""
+        sync = DictSync(initial_value={
+            'items': ['Apple', 'Banana', 'Cherry'],
+            'count': 3
+        })
+
+        # Append
+        sync.append_to_list('items', 'Date')
+        sync.update_key('count', 4)
+        assert sync.value['items'] == ['Apple', 'Banana', 'Cherry', 'Date']
+        assert sync.value['count'] == 4
+
+        # Remove
+        sync.remove_from_list('items', 'Banana')
+        sync.update_key('count', 3)
+        assert sync.value['items'] == ['Apple', 'Cherry', 'Date']
+        assert sync.value['count'] == 3
+
+        # Pop
+        popped = sync.pop_from_list('items', 1)
+        sync.update_key('count', 2)
+        assert popped == 'Cherry'
+        assert sync.value['items'] == ['Apple', 'Date']
+        assert sync.value['count'] == 2
+
+        # Append again
+        sync.append_to_list('items', 'Elderberry')
+        sync.update_key('count', 3)
+        assert sync.value['items'] == ['Apple', 'Date', 'Elderberry']
+        assert sync.value['count'] == 3
+
+
+class TestDeepCopyBugFix:
+    """Test that the deep copy bug fix works correctly"""
+
+    def test_dictsync_deep_copy_on_set(self, qtbot_app):
+        """Test that DictSync deep copies values on set"""
+        my_list = [1, 2, 3]
+        sync = DictSync(initial_value={'items': my_list})
+
+        # Modify external list
+        my_list.append(4)
+
+        # Sync's value should be unaffected
+        assert sync.value['items'] == [1, 2, 3]
+
+    def test_dictsync_shallow_copy_on_get(self, qtbot_app):
+        """Test that DictSync returns shallow copy on get"""
+        sync = DictSync(initial_value={'a': 1, 'b': 2})
+
+        # Get value
+        value1 = sync.value
+        value2 = sync.value
+
+        # Should be different dict objects (shallow copy)
+        assert value1 is not value2
+        assert value1 == value2
+
+    def test_valuesync_deep_copy_on_set(self, qtbot_app):
+        """Test that ValueSync deep copies mutable values on set"""
+        my_list = [1, 2, 3]
+        sync = ValueSync(initial_value=my_list)
+
+        # Modify external list
+        my_list.append(4)
+
+        # Sync's value should be unaffected
+        assert sync.value == [1, 2, 3]
+
+    def test_valuesync_with_immutable_values(self, qtbot_app):
+        """Test that ValueSync works correctly with immutable values"""
+        sync = ValueSync(initial_value=42)
+
+        val = sync.value
+        assert val == 42
+
+        sync.value = 99
+        assert sync.value == 99
+
+    def test_widget_callback_deep_copy(self, qtbot_app):
+        """Test that widget callbacks properly handle deep copy"""
+        sync = DictSync(initial_value={'items': ['a', 'b'], 'current': 'a'})
+
+        combo = QComboBox()
+        # Add items to combo box first
+        combo.addItems(['a', 'b'])
+
+        sync.bind_properties(
+            combo,
+            property_map={
+                'current': {
+                    'signal': combo.currentTextChanged,
+                    'getter': combo.currentText,
+                    'setter': combo.setCurrentText,
+                    'mode': SyncMode.BIDIRECTIONAL
+                }
+            }
+        )
+
+        # Initial value should be set
+        assert combo.currentText() == 'a'
+
+        # Change via widget
+        combo.setCurrentText('b')
+
+        # This should have updated the sync without causing shallow copy issues
+        assert sync.value['current'] == 'b'
+        assert sync.value['items'] == ['a', 'b']  # Unchanged
+
+    def test_no_signal_emission_on_unchanged_value(self, qtbot_app):
+        """Test that setting same value doesn't emit signal"""
+        sync = DictSync(initial_value={'items': [1, 2, 3]})
+
+        changes = []
+        sync.value_changed.connect(lambda v: changes.append(v.copy()))
+
+        # Set to same value (different list object but same contents)
+        sync.value = {'items': [1, 2, 3]}
+
+        # Should not emit (comparison works correctly with deep copy)
+        assert len(changes) == 0
