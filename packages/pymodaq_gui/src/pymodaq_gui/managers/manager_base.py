@@ -291,8 +291,6 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
 
     def connect_things_base(self):
-        self.connect_action(ManagerActions.LIST, self.update_entry_base,
-                            signal_name='currentTextChanged')
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
@@ -302,6 +300,7 @@ class ManagerBase(CustomExt):
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
+        self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
         for combo in (self.get_action_list(), self.get_action_list_external()):
             self.entries_sync.bind_properties(
                 combo,
