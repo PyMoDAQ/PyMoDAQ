@@ -235,11 +235,11 @@ class ManagerBase(CustomExt):
 
     def get_action_list(self) -> ComboBox:
         """ Convenience method to get right return type """
-        return self.get_action(ManagerActions.LIST)
+        return self.get_action(ManagerActions.LIST).widget
 
     def get_action_list_external(self) -> ComboBox:
         """ Convenience method to get right return type """
-        return self.get_action(ManagerActions.LIST_EXTERNAL)
+        return self.get_action(ManagerActions.LIST_EXTERNAL).widget
 
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
