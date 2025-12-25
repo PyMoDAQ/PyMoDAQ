@@ -330,14 +330,13 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
-            self.entries_sync.append_to_list('items', entry)
-            self.entries_sync.update_key('current', entry)
+            if self.save_check(bypass_dialog=bypass_dialog):
+                self.entries_sync.append_to_list('items', entry)
+                self.entries_sync.update_key('current', entry)
+                self.update_action_list()
+                self.new_entry.emit(entry)
 
-            self.save_check(bypass_dialog=bypass_dialog)
-            self.update_action_list()
-            self.new_entry.emit(entry)
-
-    def save_check(self, entry: str = None, bypass_dialog=False):
+    def save_check(self, entry: str = None, bypass_dialog=False) -> bool:
         if entry is not None:
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
@@ -349,8 +348,9 @@ class ManagerBase(CustomExt):
                     message='File exist do you want to overwrite it ?',
                 )
                 if not user_agreed:
-                    return
+                    return False
         self.save_entries(entry_path)
+        return True
 
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
@@ -364,18 +364,18 @@ class ManagerBase(CustomExt):
             if not ok or entry == '':
                 return
 
-        self.save_check(entry, bypass_dialog=bypass_dialog)
-        entries = [self.get_action_list().itemText(ind).lower() for
-                   ind in range(self.get_action_list().count())]
-        if entry.lower() not in entries:
-            entries.append(entry.lower())
-            entries.sort()
-            index = entries.index(entry.lower())
-            self.get_action_list().insertItem(index-1, entry)
+        if self.save_check(entry, bypass_dialog=bypass_dialog):
+            entries = [self.get_action_list().itemText(ind).lower() for
+                       ind in range(self.get_action_list().count())]
+            if entry.lower() not in entries:
+                entries.append(entry.lower())
+                entries.sort()
+                index = entries.index(entry.lower())
+                self.get_action_list().insertItem(index-1, entry)
 
-        self.get_action_list().setCurrentText(entry)
+            self.get_action_list().setCurrentText(entry)
 
-        self.new_entry.emit(entry)
+            self.new_entry.emit(entry)
 
     def delete_entry(self, entry: str = None, bypass_dialog=False):
         if entry is None:
