@@ -12,7 +12,7 @@ class ComboBox(QtWidgets.QComboBox):
 
     def set_items(self, items: list[str]):
         self.clear()
-        self.addItems(items[:])
-        self.items_changed.emit(items[:])
+        self.addItems(items)
+        self.items_changed.emit(items)
 
-    all_items = QtCore.Property(list, get_items, set_items, notify=items_changed)
+    items = QtCore.Property(list, get_items, set_items, notify=items_changed)
