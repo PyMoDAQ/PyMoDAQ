@@ -365,16 +365,9 @@ class ManagerBase(CustomExt):
                 return
 
         if self.save_check(entry, bypass_dialog=bypass_dialog):
-            entries = [self.get_action_list().itemText(ind).lower() for
-                       ind in range(self.get_action_list().count())]
-            if entry.lower() not in entries:
-                entries.append(entry.lower())
-                entries.sort()
-                index = entries.index(entry.lower())
-                self.get_action_list().insertItem(index-1, entry)
-
-            self.get_action_list().setCurrentText(entry)
-
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
+            self.update_action_list()
             self.new_entry.emit(entry)
 
     def delete_entry(self, entry: str = None, bypass_dialog=False):
