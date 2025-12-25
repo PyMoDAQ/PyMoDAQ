@@ -69,7 +69,9 @@ class WidgetSyncFactories:
         >>> sync = WidgetSync.for_property(my_spinbox, 'value', initial=50)
         >>> sync.add(other_spinbox)  # Add more spinboxes
         """
+
         if mode is None:
+            from .core import SyncMode
             mode = SyncMode.BIDIRECTIONAL
 
         # Get property metadata for auto-detection
