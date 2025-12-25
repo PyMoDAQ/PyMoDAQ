@@ -158,6 +158,14 @@ class WidgetActionProxy(QtWidgets.QWidget):
         self._widget.setVisible(visible)
         super().setVisible(visible)
 
+    @property
+    def widget(self) -> QtWidgets.QWidget:
+        return self._widget
+
+    @property
+    def action(self) -> QtWidgets.QAction:
+        return self._action
+
     def __getattr__(self, name : str):
         return getattr(self._widget, name)
 
