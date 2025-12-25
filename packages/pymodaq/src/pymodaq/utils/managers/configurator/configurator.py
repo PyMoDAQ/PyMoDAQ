@@ -91,12 +91,8 @@ class Configurator(ManagerBase):
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
             self._preset_ini = preset_filename
-            try:
-                self.get_action('preset_filename').setText(preset_filename)
-                self.get_action('entries').clear()
-                self.get_action('entries').addItems(self.entries)
-            except KeyError as e:
-                pass
+            self.get_action('preset_filename').setText(preset_filename)
+            self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
