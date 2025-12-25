@@ -282,9 +282,8 @@ class ConfiguratorModel(TableModel):
         else:
             for child in entry.setting.parameter.children():
                 if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
-                    module, module_type = get_module_from_param(ParameterWithPath(child))
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
-                    config_entry = ConfiguratorSubEntry(entry.entry_type, module, module_type, pwp)
+                    config_entry = ConfiguratorSubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
         return entries
 
