@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import datetime
-import subprocess
 import logging
-from pathlib import Path
-from importlib import import_module
 from packaging import version as version_mod
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
-import argparse
+import subprocess
+import sys
+from typing import Optional
 
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QThread, Signal, QSize
@@ -17,7 +13,6 @@ from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QLabel,
-    QDialogButtonBox,
     QMessageBox,
 )
 from time import perf_counter
@@ -27,37 +22,13 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
+from pymodaq_utils.utils import get_version
 from pymodaq_utils import config as configmod
-from pymodaq_utils.enums import BaseEnum, StrEnum
-
-from pymodaq_gui.parameter import ParameterTree, Parameter
-from pymodaq_gui.utils import DockArea, Dock, select_file
-import pymodaq_gui.utils.layout as layout_mod
-from pymodaq_gui.messenger import messagebox, dialog
-from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.managers.roi_manager import ROISaver
-from pymodaq_gui.utils.custom_app import CustomApp
-
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
-from pymodaq.utils.managers import PresetManager
-from pymodaq.utils.managers.overshoot_manager import OvershootManager
-from pymodaq.utils.managers.remote_manager import RemoteManager
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
-from pymodaq.utils.daq_utils import get_instrument_plugins
 from pymodaq.utils.leco.utils import start_coordinator
-from pymodaq.utils import config as config_mod_pymodaq
-from pymodaq.utils.gui_utils.widgets.window import make_window
-
-from pymodaq.control_modules.daq_move import DAQ_Move
-from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-
-from pymodaq_gui.utils.splash import get_splash_sc
-from pymodaq import extensions as extmod
 from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq.utils.managers import Configurator
+
+from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.splash import get_splash_sc
 
 
 logger = set_logger(get_module_name(__file__))
@@ -108,11 +79,10 @@ class PymodaqUpdateTableWidget(QTableWidget):
         return QSize(width, height)
 
 
-
-class CommonWindow(CustomApp):
+class SharedUI(CustomApp):
     """ """
 
-    def __init__(self, parent):
+    def __init__(self, parent, child_class_file: str = None):
         """
 
         Parameters
@@ -121,6 +91,9 @@ class CommonWindow(CustomApp):
         """
 
         super().__init__(parent)
+        self.child_class_file = child_class_file
+
+        self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
         self.setup_ui()
         self.mainwindow.setVisible(True)
@@ -151,6 +124,7 @@ class CommonWindow(CustomApp):
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()
         self.add_action("plugin_manager", "Plugin Manager", "")
+        self.mainwindow.addToolBarBreak()
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
@@ -219,7 +193,7 @@ class CommonWindow(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def restart_fun(self, ask=False, file=__file__):
+    def restart_fun(self, ask=False):
         ret = False
         if ask:
             mssg = QMessageBox()
@@ -233,7 +207,7 @@ class CommonWindow(CustomApp):
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
-            subprocess.call([sys.executable, file])
+            subprocess.call([sys.executable, self.child_class_file])
 
     def show_log(self):
         import webbrowser
@@ -328,7 +302,7 @@ def main():
     win = QtWidgets.QMainWindow()
     win.resize(1000, 500)
     win.setWindowTitle("PyMoDAQ Dashboard")
-    window = CommonWindow(win)
+    window = SharedUI(win)
 
     # Run application
     app.exec()
