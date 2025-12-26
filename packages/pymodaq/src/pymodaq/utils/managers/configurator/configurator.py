@@ -62,12 +62,11 @@ class Configurator(ManagerBase):
 
         self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
+        self.config_model = ConfiguratorModel()
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
-
         self.preset_filename = preset_filename
-
 
     def show(self):
         self.update_settings(self.dashboard.modules_manager.get_settings_all())
@@ -193,7 +192,7 @@ class Configurator(ManagerBase):
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
-        self.config_model = ConfiguratorModel()
+
         self.table_out.setModel(self.config_model)
         self.table_out.add_data_signal[str].connect(self.add_subentry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)

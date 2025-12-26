@@ -123,11 +123,15 @@ class ManagerBase(CustomExt):
         self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
         self.reference_menu(Menu.EXTERNAL, menu)
 
+        #first create the object
         self.entries_sync = WidgetSync(
             initial_value={
-            'items': self.entries,
-            'current': self.entries[0]
+            'items': [],
+            'current': None
         })
+        # then update it using a call to self.entries (itself needing entries_sync)
+        self.entries_sync.update_key('items', self.entries)
+        self.entries_sync.update_key('current', 'default')
 
         self.setup_ui()
 
@@ -205,9 +209,6 @@ class ManagerBase(CustomExt):
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
         """Returns a list of names of managed entries with 'default' as first """
         entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
-        if 'default' in entries:  #  make sure the default is the first one shown
-            default = entries.pop(entries.index('default'))
-            entries.insert(0, default)
         return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -329,7 +330,7 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
-            if self.save_check(bypass_dialog=bypass_dialog):
+            if self.save_check(entry, bypass_dialog=bypass_dialog):
                 self.entries_sync.append_to_list('items', entry)
                 self.entries_sync.update_key('current', entry)
                 self.update_action_list()
