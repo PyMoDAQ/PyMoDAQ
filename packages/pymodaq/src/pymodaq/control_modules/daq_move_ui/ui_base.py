@@ -33,17 +33,14 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
             * init
-            * quit
             * get_value
             * loop_get_value
             * find_home
             * stop
             * move_abs
             * move_rel
-            * show_log
             * actuator_changed
             * rel_value
-            * show_config
             * show_plugin_config
 
     Methods
@@ -313,8 +310,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
         if 'move_abs_2' in self.actions_names:
             self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
-        if 'log' in self.actions_names:
-            self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_LOG, )))
         if 'stop' in self.actions_names:
             self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         if 'show_config' in self.actions_names:
@@ -341,8 +336,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
         self.actuators_combo.currentTextChanged.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
-        if 'quit' in self.actions_names:
-            self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.QUIT, )))
         if 'refresh_value' in self.actions_names:
             self.connect_action('refresh_value',
                                 lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,

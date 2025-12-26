@@ -96,16 +96,12 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
                         toolbar=self.toolbar)
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.toolbar)
         self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", checkable=False,
                         toolbar=self.toolbar)
-        self.add_action('quit', 'Quit the module', 'close2')
-        self.add_action('log', 'Show Log file', 'information2')
 
     def connect_things(self):
         super().connect_things()

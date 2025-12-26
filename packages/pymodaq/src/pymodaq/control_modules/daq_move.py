@@ -164,22 +164,17 @@ class DAQ_Move(ParameterControlModule):
         cmd: ThreadCommand
             Possible values are :
             * init
-            * quit
             * get_value
             * loop_get_value
             * find_home
             * stop
             * move_abs
             * move_rel
-            * show_log
             * actuator_changed
             * rel_value
-            * show_config
         """
         if cmd.command == UiToMainMove.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == UiToMainMove.QUIT:
-            self.quit_fun()
         elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
         elif cmd.command == UiToMainMove.LOOP_GET_VALUE:
@@ -204,10 +199,6 @@ class DAQ_Move(ParameterControlModule):
             ):
                 data_act.force_units(self.units)
             self.move_rel(data_act)
-        elif cmd.command == UiToMainMove.SHOW_LOG:
-            self.show_log()
-        elif cmd.command == UiToMainMove.SHOW_CONFIG:
-            self.config = self.show_config(self.config)
             self.ui.config = self.config
         elif cmd.command == UiToMainMove.ACTUATOR_CHANGED:
             self.actuator = cmd.attribute
@@ -1137,7 +1128,7 @@ class DAQ_Move_Hardware(QObject):
 
 
 def main(init_qt=True):
-    from pymodaq.utils.common_window import CommonWindow
+    from pymodaq.utils.shared_ui import SharedUI
 
     app = mkQApp("PyMoDAQ Move")
 
@@ -1145,8 +1136,7 @@ def main(init_qt=True):
     prog = DAQ_Move(widget, title="test")
 
     main_window = QtWidgets.QMainWindow()
-    common_window = CommonWindow(main_window)
-    common_window.restart_fun = lambda file: common_window.restart_fun(file=__file__)
+    shared_ui = SharedUI(main_window, __file__)
     if config("actuator", "ui") == "Original":
         main_window.addToolBar(Qt.ToolBarArea.LeftToolBarArea, prog.ui.toolbar)
         main_window.addToolBar(prog.ui.move_toolbar)

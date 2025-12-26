@@ -318,11 +318,6 @@ class ControlModule(QObject):
         if self.ui is not None:
             self.ui.do_init(do_init)
 
-    def show_log(self):
-        """Open the log file in the default text editor"""
-        import webbrowser
-        webbrowser.open(get_base_logger(logger).handlers[0].baseFilename)
-
     def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""
         if config is not None:

@@ -67,11 +67,6 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
                         toolbar=self.move_toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.move_toolbar)
-        self.add_action('quit', 'Quit the module', 'close2', toolbar=self.move_toolbar)
-        self.add_action('log', 'Show Log file', 'information2', toolbar=self.move_toolbar)
         self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
 
     def connect_things(self):
