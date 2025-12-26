@@ -129,11 +129,12 @@ class ManagerBase(CustomExt):
             'items': [],
             'current': None
         })
+
+        self.setup_ui()
+
         # then update it using a call to self.entries (itself needing entries_sync)
         self.entries_sync.update_key('items', self.entries)
         self.entries_sync.update_key('current', 'default')
-
-        self.setup_ui()
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
@@ -186,8 +187,8 @@ class ManagerBase(CustomExt):
         return self.get_action_list().currentText()
 
     @entry.setter
-    def entry(self, preset_name: str):
-        self.update_entry_base(preset_name)
+    def entry(self, entry_name: str):
+        self.get_action_list().setCurrentText(entry_name)
 
     @property
     def entry_filename(self) -> Path:
@@ -384,8 +385,6 @@ class ManagerBase(CustomExt):
                         f' {entry} ?',
             )
         if user_agreed:
-            # self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged',
-            #                     connect=False)
             entries = self.entries[:]  # to get before unlinking
 
             self.entry_filename.unlink(missing_ok=True)
@@ -393,12 +392,10 @@ class ManagerBase(CustomExt):
 
             index = entries.index(entry)
             entries.pop(index)
-            current = entries[max(0, index-1)]
-            self.entries_sync.value = {'items': entries, 'current': current}
-            #self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
-            # self.update_action_list()
+            current = entries[max(0, index - 1)]
+            self.entries_sync.set_value({'items': entries,
+                                        'current': current})  # deleting will update current and fire update_entry_base
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
-            self.update_entry_base(current)
 
     def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
@@ -430,8 +427,6 @@ class ManagerBase(CustomExt):
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
 
         self.update_entry(entry)
-
-        self.get_action_list().setCurrentText(entry.stem)
         self.update_execute_action_tooltip(entry.stem)
         self.updated_entry.emit(entry.stem)
 
