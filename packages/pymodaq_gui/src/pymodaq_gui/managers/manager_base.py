@@ -392,7 +392,11 @@ class ManagerBase(CustomExt):
 
             index = entries.index(entry)
             entries.pop(index)
-            current = entries[max(0, index - 1)]
+            if len(entries) != 0:
+                current = entries[max(0, index - 1)]
+            else: # should trigger the default entry creation!
+                entries = self.entries  # this recreate default
+                current = entries[0]
             self.entries_sync.set_value({'items': entries,
                                         'current': current})  # deleting will update current and fire update_entry_base
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
