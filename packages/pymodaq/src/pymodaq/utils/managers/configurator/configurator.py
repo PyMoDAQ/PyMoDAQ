@@ -1,4 +1,4 @@
-from jupyter_core.migrate import config_substitutions
+
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
@@ -27,7 +27,7 @@ from pymodaq.utils.managers.configurator.utils import (
 
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq.utils.managers.utils import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -62,12 +62,11 @@ class Configurator(ManagerBase):
 
         self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
+        self.config_model = ConfiguratorModel()
 
         super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
                          tree=ConfiguratorParameterTree())
-
         self.preset_filename = preset_filename
-
 
     def show(self):
         self.update_settings(self.dashboard.modules_manager.get_settings_all())
@@ -91,12 +90,8 @@ class Configurator(ManagerBase):
     def preset_filename(self, preset_filename: str):
         if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
             self._preset_ini = preset_filename
-            try:
-                self.get_action('preset_filename').setText(preset_filename)
-                self.get_action('entries').clear()
-                self.get_action('entries').addItems(self.entries)
-            except KeyError as e:
-                pass
+            self.get_action('preset_filename').setText(preset_filename)
+            self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -197,7 +192,7 @@ class Configurator(ManagerBase):
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
 
-        self.config_model = ConfiguratorModel()
+
         self.table_out.setModel(self.config_model)
         self.table_out.add_data_signal[str].connect(self.add_subentry)
         self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
@@ -252,7 +247,8 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
-        self.add_action('show_all_settings', 'Show All Settings', 'FormatJustifyLeft',
+        self.get_toolbar('main').addSeparator()
+        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
                         checkable=True, toolbar=self.get_toolbar('main'),
                         tip='If Checked: display all settings (in green, settings that can be configured)'
                             ' otherwise only configurables ones')
@@ -303,7 +299,8 @@ class Configurator(ManagerBase):
             param.setOpts(**{'readonly': True,
                              VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
         else:
-            param.setOpts(**{VALID_FOR_CONFIGURATION: False})
+            if not param.opts.get(VALID_FOR_CONFIGURATION, False):
+                param.setOpts(**{VALID_FOR_CONFIGURATION: False})
 
         for child in param.children():
             self.set_readonly_setting(child)
@@ -339,7 +336,11 @@ class Configurator(ManagerBase):
     def add_setting(self):
         if self.tree.currentItem() is not None:
             current_setting = self.tree.currentItem().param
-            module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+            try:
+                module, module_type = get_module_from_param(ParameterWithPath(current_setting))
+            except KeyError:
+                module = ModuleType.NONE.value
+                module_type = ModuleType.NONE
             entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS, module,
                                          module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)

@@ -15,6 +15,10 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
 from pymodaq_gui.utils.splash import get_pymodaq_pixmap
+from pymodaq_gui.utils.widgets.combo import ComboBox
+
+from pymodaq_gui.utils.widget_sync import WidgetSync, SyncMode
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -119,7 +123,18 @@ class ManagerBase(CustomExt):
         self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
         self.reference_menu(Menu.EXTERNAL, menu)
 
+        #first create the object
+        self.entries_sync = WidgetSync(
+            initial_value={
+            'items': [],
+            'current': None
+        })
+
         self.setup_ui()
+
+        # then update it using a call to self.entries (itself needing entries_sync)
+        self.entries_sync.update_key('items', self.entries)
+        self.entries_sync.update_key('current', 'default')
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
@@ -172,8 +187,8 @@ class ManagerBase(CustomExt):
         return self.get_action_list().currentText()
 
     @entry.setter
-    def entry(self, preset_name: str):
-        self.update_entry_base(preset_name)
+    def entry(self, entry_name: str):
+        self.get_action_list().setCurrentText(entry_name)
 
     @property
     def entry_filename(self) -> Path:
@@ -195,9 +210,6 @@ class ManagerBase(CustomExt):
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
         """Returns a list of names of managed entries with 'default' as first """
         entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
-        if 'default' in entries:  #  make sure the default is the first one shown
-            default = entries.pop(entries.index('default'))
-            entries.insert(0, default)
         return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -223,13 +235,13 @@ class ManagerBase(CustomExt):
         vlayout.addWidget(self.settings_tree)
         self.main_widget.setLayout(vlayout)
 
-    def get_action_list(self) -> QtWidgets.QComboBox:
+    def get_action_list(self) -> ComboBox:
         """ Convenience method to get right return type """
-        return self.get_action(ManagerActions.LIST)
+        return self.get_action(ManagerActions.LIST).widget
 
-    def get_action_list_external(self) -> QtWidgets.QComboBox:
+    def get_action_list_external(self) -> ComboBox:
         """ Convenience method to get right return type """
-        return self.get_action(ManagerActions.LIST_EXTERNAL)
+        return self.get_action(ManagerActions.LIST_EXTERNAL).widget
 
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
@@ -240,7 +252,7 @@ class ManagerBase(CustomExt):
         # ACTIONS in Manager
         self.add_widget('entry_label', QtWidgets.QLabel(
             f'Configuration from {self.entry_type.capitalize()}:'))
-        self.add_widget(ManagerActions.LIST, QtWidgets.QComboBox(),
+        self.add_widget(ManagerActions.LIST, ComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
         self.get_action_list().addItems(self.entries)
@@ -276,13 +288,11 @@ class ManagerBase(CustomExt):
 
         self.add_widget('external_label', QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
                         toolbar=Toolbar.EXTERNAL)
-        self.add_widget(ManagerActions.LIST_EXTERNAL, QtWidgets.QComboBox,
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
                         toolbar=Toolbar.EXTERNAL)
         self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
 
     def connect_things_base(self):
-        self.connect_action(ManagerActions.LIST, self.update_entry_base,
-                            signal_name='currentTextChanged')
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
@@ -292,9 +302,25 @@ class ManagerBase(CustomExt):
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        self.get_action_list_external().currentTextChanged.connect(self.get_action_list().setCurrentText)
-
-        self.get_action_list().setCurrentText('default')
+        self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
+        for combo in (self.get_action_list(), self.get_action_list_external()):
+            self.entries_sync.bind_properties(
+                combo,
+                property_map={
+                    'items': {
+                        'signal': combo.items_changed,  # FROM_SYNC only
+                        'getter': combo.get_items,
+                        'setter': combo.set_items,
+                        'mode': SyncMode.BIDIRECTIONAL
+                    },
+                    'current': {
+                        'signal': combo.currentTextChanged,
+                        'getter': combo.currentText,
+                        'setter': combo.setCurrentText,
+                        'mode': SyncMode.BIDIRECTIONAL
+                    }
+                }
+            )
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:
@@ -305,20 +331,13 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         if ok and entry != '':
-            entries = [self.get_action_list().itemText(ind).lower() for
-                       ind in range(self.get_action_list().count())]
-            if entry.lower() not in entries:
-                entries.append(entry.lower())
-                entries.sort()
-                index = entries.index(entry.lower())
-                self.get_action_list().insertItem(index-1, entry)
+            if self.save_check(entry, bypass_dialog=bypass_dialog):
+                self.entries_sync.append_to_list('items', entry)
+                self.entries_sync.update_key('current', entry)
+                self.update_action_list()
+                self.new_entry.emit(entry)
 
-            self.get_action_list().setCurrentText(entry)
-            self.save_check(bypass_dialog=bypass_dialog)
-            self.update_action_list()
-            self.new_entry.emit(entry)
-
-    def save_check(self, entry: str = None, bypass_dialog=False):
+    def save_check(self, entry: str = None, bypass_dialog=False) -> bool:
         if entry is not None:
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
@@ -330,8 +349,9 @@ class ManagerBase(CustomExt):
                     message='File exist do you want to overwrite it ?',
                 )
                 if not user_agreed:
-                    return
+                    return False
         self.save_entries(entry_path)
+        return True
 
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
@@ -345,18 +365,11 @@ class ManagerBase(CustomExt):
             if not ok or entry == '':
                 return
 
-        self.save_check(entry, bypass_dialog=bypass_dialog)
-        entries = [self.get_action_list().itemText(ind).lower() for
-                   ind in range(self.get_action_list().count())]
-        if entry.lower() not in entries:
-            entries.append(entry.lower())
-            entries.sort()
-            index = entries.index(entry.lower())
-            self.get_action_list().insertItem(index-1, entry)
-
-        self.get_action_list().setCurrentText(entry)
-
-        self.new_entry.emit(entry)
+        if self.save_check(entry, bypass_dialog=bypass_dialog):
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
+            self.update_action_list()
+            self.new_entry.emit(entry)
 
     def delete_entry(self, entry: str = None, bypass_dialog=False):
         if entry is None:
@@ -372,17 +385,21 @@ class ManagerBase(CustomExt):
                         f' {entry} ?',
             )
         if user_agreed:
-            self.connect_action(ManagerActions.LIST, signal_name='currentTextChanged', connect=False)
-            self.entry_filename.unlink(missing_ok=True)
+            entries = self.entries[:]  # to get before unlinking
 
+            self.entry_filename.unlink(missing_ok=True)
             logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
-            self.get_action_list().removeItem(
-                self.get_action_list().currentIndex()
-            )
-            self.connect_action(ManagerActions.LIST, self.update_entry_base, signal_name='currentTextChanged')
-            # self.update_action_list()
+
+            index = entries.index(entry)
+            entries.pop(index)
+            if len(entries) != 0:
+                current = entries[max(0, index - 1)]
+            else: # should trigger the default entry creation!
+                entries = self.entries  # this recreate default
+                current = entries[0]
+            self.entries_sync.set_value({'items': entries,
+                                        'current': current})  # deleting will update current and fire update_entry_base
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
-            self.update_entry_base(self.get_action_list().currentText())
 
     def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
@@ -414,10 +431,7 @@ class ManagerBase(CustomExt):
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
 
         self.update_entry(entry)
-
-        self.get_action_list().setCurrentText(entry.stem)
         self.update_execute_action_tooltip(entry.stem)
-        self.get_action_list_external().setCurrentText(entry.stem)
         self.updated_entry.emit(entry.stem)
 
     def show(self):
@@ -426,25 +440,21 @@ class ManagerBase(CustomExt):
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
-            with QtCore.QSignalBlocker(self.get_action(ManagerActions.LIST)):
-                try:
-                    entries = []
-                    self.get_action_list_external().clear()
-                    for ind_file, file in enumerate(self.list_managed_entries_path()):
-                        if not self.has_action(self.get_action_from_file(file)):
-                            self.add_action(
-                                self.get_action_from_file(file),
-                                file.stem,
-                                "",
-                                f"Load the {file.stem} entry",
-                                auto_toolbar=False,
-                            )
-                        entries.append(file.stem)
-                    self.get_action_list_external().addItems(entries)
-                    self.update_actions_connection()
-                    self.update_menu()
-                except KeyError as e:
-                    pass
+            try:
+                for ind_file, file in enumerate(self.list_managed_entries_path()):
+                    if not self.has_action(self.get_action_from_file(file)):
+                        self.add_action(
+                            self.get_action_from_file(file),
+                            file.stem,
+                            "",
+                            f"Load the {file.stem} entry",
+                            auto_toolbar=False,
+                        )
+                self.update_actions_connection()
+                self.update_menu()
+            except KeyError as e:
+                pass
+
     def update_actions_connection(self):
 
         for ind_file, file in enumerate(self.list_managed_entries_path()):
@@ -458,7 +468,7 @@ class ManagerBase(CustomExt):
 
     def update_execute_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.EXECUTE).setToolTip(
-            f'Execute the selected {self.entry_type}: {entry} ("Ctrl+A")')
+            f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
         return lambda: self.execute_entry_base(filename)

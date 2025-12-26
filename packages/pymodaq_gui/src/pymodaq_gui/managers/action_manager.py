@@ -158,6 +158,14 @@ class WidgetActionProxy(QtWidgets.QWidget):
         self._widget.setVisible(visible)
         super().setVisible(visible)
 
+    @property
+    def widget(self) -> QtWidgets.QWidget:
+        return self._widget
+
+    @property
+    def action(self) -> QtWidgets.QAction:
+        return self._action
+
     def __getattr__(self, name : str):
         return getattr(self._widget, name)
 
@@ -786,7 +794,10 @@ class ActionManager:
                 getattr(self._actions[name], signal).connect(slot)
             else:
                 try:
-                    getattr(self._actions[name], signal).disconnect()
+                    if slot is not None:
+                        getattr(self._actions[name], signal).disconnect(slot)
+                    else:
+                        getattr(self._actions[name], signal).disconnect()
                 except (TypeError,) as e:
                     pass  # the action was not connected
         else:
