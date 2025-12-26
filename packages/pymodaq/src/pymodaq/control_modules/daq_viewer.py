@@ -1478,25 +1478,28 @@ def prepare_docks(area, title):
 
 def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
+    from pymodaq.utils.shared_ui import SharedUI
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")
 
-    win = QtWidgets.QMainWindow()
+    main_window = QtWidgets.QMainWindow()
+    shared_ui = SharedUI(main_window, __file__)
+
     area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.show()
+    main_window.setCentralWidget(area)
+    main_window.resize(1000, 500)
+    main_window.show()
 
     title = "Testing"
     viewer = DAQ_Viewer(area, title="Testing", daq_type=config('viewer', 'daq_type'),
                         **prepare_docks(area, title))
+    main_window.addToolBar(viewer.ui.toolbar)
     if init_det:
         viewer.init_hardware_ui(init_det)
 
     if init_qt:
         sys.exit(app.exec_())
-    return viewer, win
 
 
 if __name__ == '__main__':
