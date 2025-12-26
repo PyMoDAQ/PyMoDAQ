@@ -4,6 +4,7 @@ Created the 27/10/2022
 
 @author: Sebastien Weber
 """
+import sys
 import logging
 import warnings
 from logging.handlers import TimedRotatingFileHandler
@@ -39,6 +40,13 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
 
     if log_level is None:
         log_level = config('general', 'debug_level')
+        if not isinstance(log_level, list):
+            print(
+                f"{config('general', 'debug_level')} is not a list, please delete your "
+                f"actual pymodaq_utils configuration file to "
+                f"reflect this new type")
+            sys.exit(-1)
+        log_level = log_level[0]
     logger.setLevel(log_level)
     if add_handler:
         try:

@@ -260,12 +260,12 @@ def test_required_config_entries():
     assert 'country' in config['style']
 
     assert 'qtbackend' in config
-    assert 'backends' in config['qtbackend']
     assert 'backend' in config['qtbackend']
+    assert isinstance(config('qtbackend', 'backend'), list)
 
     assert 'general' in config
     assert 'debug_level' in config('general')
-    assert 'debug_levels' in config('general')
+    assert isinstance(config('general', 'debug_level'), list)
     assert 'check_version' in config('general')
     assert 'message_status_persistence' in config('general')
     assert 'hdf5_backend' in config('general')
@@ -277,7 +277,6 @@ def test_required_config_entries():
 
     assert 'data_type' in config['data_saving']
     assert 'dynamic' in config('data_saving', 'data_type')
-    assert 'dynamics' in config('data_saving', 'data_type')
 
     assert 'user' in config
     assert 'name' in config('user')

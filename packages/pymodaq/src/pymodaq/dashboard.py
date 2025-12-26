@@ -152,8 +152,8 @@ class DashBoard(CustomApp):
 
     params = [
         {"title": "Log level", "name": "log_level", "type": "list",
-         "value": config_utils("general", "debug_levels")[0],
-         "limits": config_utils("general", "debug_levels"),},
+         "value": config_utils("general", "debug_level")[0],
+         "limits": config_utils("general", "debug_level"),},
         {"title": "Loaded presets", "name": "loaded_files", "type": "group",
          "children": [
              {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},

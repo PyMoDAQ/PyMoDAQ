@@ -32,6 +32,16 @@ CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else 
 KeyType = TypeVar('KeyType')
 
 
+def replace_item_in_list(items: list[Any],
+                         old: Any,
+                         new: Any):
+    if not isinstance(items, list):
+        items = list(items)
+    index = items.index(old)
+    items[index] = new
+    return items
+
+
 def deep_update(mapping: Dict[KeyType, Any], *updating_mappings: Dict[KeyType, Any]) -> Dict[KeyType, Any]:
     """ Make sure a dictionary is updated using another dict in any nested level
     Taken from Pydantic v1
@@ -410,6 +420,57 @@ class Config(BaseConfig):
     def dict_to_add_to_user(self):
         """To subclass"""
         return dict(user=dict(name=USER))
+
+    def __call__(self, *args):
+        if 'backends' in args:
+            try:
+                return super().__call__(*args)
+            except KeyError:
+               args = replace_item_in_list(args, 'backends', 'backend')
+        elif 'backend' in args:
+            entry = super().__call__(*args)
+            if not isinstance(entry, list):
+                try:
+                    args = replace_item_in_list(args, 'backend', 'backends')
+                    return super().__call__(*args)
+                except (ConfigError, KeyError):
+                    return [entry]
+            else:
+                return entry
+        elif 'debug_levels' in args:
+            try:
+                return super().__call__(*args)
+            except KeyError:
+                args = replace_item_in_list(args, 'debug_levels', 'debug_level')
+        elif 'debug_level' in args:
+            entry = super().__call__(*args)
+            if not isinstance(entry, list):
+                args = replace_item_in_list(args, 'debug_level', 'debug_levels')
+                try:
+                    return super().__call__(*args)
+                except (KeyError, ConfigError):
+                    return [entry]
+            else:
+                return entry
+        elif 'dynamics' in args:
+            try:
+                return super().__call__(*args)
+            except KeyError:
+                args = replace_item_in_list(args, 'dynamics', 'dynamic')
+        elif 'dynamic' in args:
+            entry = super().__call__(*args)
+            if not isinstance(entry, list):
+                args = replace_item_in_list(args, 'dynamic', 'dynamics')
+                try:
+                    return super().__call__(*args)
+                except (KeyError, ConfigError):
+                    return [entry]
+            else:
+                return entry
+
+        return super().__call__(*args)
+
+
 
 
 def _delete_config_files(config : BaseConfig):

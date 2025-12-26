@@ -25,8 +25,7 @@ country = "UnitedStates"
     style = ['rounded']  # pymodaq uses the first elt in config
 
 [qtbackend]
-backends = [ "pyqt5", "pyqt6", "pyside2", "pyside6",]
-backend = "pyqt6"
+backend = ["pyqt6",  "pyqt5", "pyside6",]
 
 
 [data_saving]
@@ -41,13 +40,12 @@ backend = "pyqt6"
     pwd = "pymodaq"
 
     [data_saving.data_type]
-    dynamic = 'float64' # choose from below. This will force the datatype to be saved to
-    dynamics =  ['uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64', 'float64']
+    # choose from below. This will force the datatype to be saved to
+    dynamic =  [ 'float64', 'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64',]
 
 
 [general]
-debug_level = "INFO" #either "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-debug_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+debug_level = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 check_version = false  # automatically check version at startup (or not if False)
 message_status_persistence = 1000  # ms
 
@@ -58,7 +56,7 @@ name = "User name"  # default name used as author in the hdf5 saving files
 
 
 [plotting]
-backend = 'matplotlib'  # either 'matplotlib' or 'qt' or any other custom backend
+backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend
 plot_colors = [[255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255], [14, 207, 189], [207, 14, 166], [207, 204, 14]]
 process_roi = true  # if True subdata is extracted from the ROI in the data viewers
 
