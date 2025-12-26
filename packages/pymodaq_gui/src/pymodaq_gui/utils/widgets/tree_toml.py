@@ -4,57 +4,74 @@ Created the 19/10/2023
 
 @author: Sebastien Weber
 """
+from typing import Union, Any
 import datetime
 
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QSignalBlocker
 
+from pymodaq_gui.parameter.utils import get_param_path
 from pymodaq_gui.parameter import ParameterTree, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_utils.config import Config, create_toml_from_dict
 
 
-class TreeFromToml(QObject):
+class TreeFromToml(ParameterManager, QObject):
     """ Create a ParameterTree from a configuration file"""
+    settings_name = 'configuration'
+    params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
+               'value': '', 'readonly': True}]
 
-    def __init__(self, config: Config = None, capitalize=True):
-        super().__init__()
+    def __init__(self, config: Config = None, capitalize=True, start_path: Union[str, tuple[str, ...]] = ()):
+        QObject.__init__(self)
+        ParameterManager.__init__(self)
 
         if config is None:
             config = Config()
         self._config = config
-        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str',
-                   'value': str(self._config.config_path),
-                   'readonly': True}]
-        params.extend(self.dict_to_param(config.to_dict(), capitalize=capitalize))
 
-        self.settings = Parameter.create(title='settings', name='settings', type='group',
-                                         children=params)
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setParameters(self.settings, showTop=False)
+        self.start_path = (start_path,) if isinstance(start_path, str) else start_path
+
+        with QSignalBlocker(self.settings):
+            self.settings.child('config_path').setValue(str(self._config.config_path))
+        self.settings.addChildren(self.dict_to_param(config(*start_path), capitalize=capitalize))
+
+        self._cached_config_changes = {}
+        self.dialog = None
+
+    def value_changed(self, param):
+        path = tuple(get_param_path(param)[1:])
+        self._cached_config_changes[path] =  self.param_to_object(param)
+
+    def commit_config_changes_cache(self):
+        for path, value in self._cached_config_changes.items():
+            self._config[self.start_path + path] = value
+        self._config.save()
 
     def show_dialog(self) -> bool:
 
         self.dialog = QtWidgets.QDialog()
         self.dialog.setWindowTitle('Please enter new configuration values!')
         self.dialog.setLayout(QtWidgets.QVBoxLayout())
-        buttonBox = QtWidgets.QDialogButtonBox(parent=self.dialog)
+        button_box = QtWidgets.QDialogButtonBox(parent=self.dialog)
 
-        buttonBox.addButton('Save', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
-        buttonBox.accepted.connect(self.dialog.accept)
-        buttonBox.addButton("Cancel", QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
-        buttonBox.rejected.connect(self.dialog.reject)
+        save_button = button_box.addButton('Save', QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
+        save_button.setObjectName('save')
+        button_box.accepted.connect(self.dialog.accept)
+
+        cancel_button = button_box.addButton("Cancel", QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
+        cancel_button.setObjectName('cancel')
+        button_box.rejected.connect(self.dialog.reject)
 
         self.dialog.layout().addWidget(self.settings_tree)
-        self.dialog.layout().addWidget(buttonBox)
+        self.dialog.layout().addWidget(button_box)
         self.dialog.setWindowTitle('Configuration entries')
         res = self.dialog.exec()
 
         if res == QtWidgets.QDialog.DialogCode.Accepted:
-            with open(self._config.config_path, 'w') as f:
-                config_dict = self.param_to_dict(self.settings)
-                config_dict.pop('config_path')
-                create_toml_from_dict(config_dict, self._config.config_path)
-        return res
+            self.commit_config_changes_cache()
+        self._cached_config_changes = {}
+        return bool(res)
 
     @classmethod
     def param_to_dict(cls, param: Parameter) -> dict:
@@ -63,22 +80,27 @@ class TreeFromToml(QObject):
             if 'group' in child.opts['type']:
                 config[child.name()] = cls.param_to_dict(child)
             else:
-                if child.opts['type'] == 'datetime':
-                    config[child.name()] = datetime.datetime.fromtimestamp(
-                        child.value().toSecsSinceEpoch())  # convert QDateTime to python datetime
-                elif child.opts['type'] == 'date':
-                    qdt = QtCore.QDateTime()
-                    qdt.setDate(child.value())
-                    pdt = datetime.datetime.fromtimestamp(qdt.toSecsSinceEpoch())
-                    config[child.name()] = pdt.date()
-                elif child.opts['type'] == 'list':
-                    if child.opts['value'] in child.opts['limits']:
-                        child.opts["limits"].remove(child.opts['value'])
-                        child.opts["limits"].insert(0,child.opts["value"])
-                    config[child.name()] = child.opts["limits"]
-                else:
-                    config[child.name()] = child.value()
+                config[child.name()] = cls.param_to_object(child)
         return config
+
+    @classmethod
+    def param_to_object(cls, param: Parameter) -> Any:
+        """ Format the value of the Parameter depending on internal need """
+        if param.opts['type'] == 'datetime':
+            return datetime.datetime.fromtimestamp(
+                param.value().toSecsSinceEpoch())  # convert QDateTime to python datetime
+        elif param.opts['type'] == 'date':
+            qdt = QtCore.QDateTime()
+            qdt.setDate(param.value())
+            pdt = datetime.datetime.fromtimestamp(qdt.toSecsSinceEpoch())
+            return pdt.date()
+        elif param.opts['type'] == 'list':
+            if param.opts['value'] in param.opts['limits']:
+                param.opts["limits"].remove(param.opts['value'])
+                param.opts["limits"].insert(0, param.opts["value"])
+            return param.opts["limits"]
+        else:
+            return param.value()
 
     @classmethod
     def dict_to_param(cls, config: dict, capitalize=True) -> Parameter:

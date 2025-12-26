@@ -1572,6 +1572,7 @@ class DashBoard(CustomApp):
         config_tree = TreeFromToml(config)
         config_tree.show_dialog()
 
+
     def setup_docks(self):
         # %% create logger dock
         self.logger_dock = Dock("Logger")
@@ -1754,16 +1755,9 @@ class DashBoard(CustomApp):
 
 def main():
     from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
-
+    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset, create_load_dashboard
     # Create application and main window
     app = mkQApp('Dashboard')
-
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle("PyMoDAQ Dashboard")
 
     # Command-line argument parsing
     parser = argparse.ArgumentParser(prog="dashboard", description="PyMoDAQ dashboard")
@@ -1772,11 +1766,11 @@ def main():
 
     # If preset name is supplied, load dashboard with this preset
     if args.preset:
-        load_dashboard_with_preset(args.preset)
+        dashboard, extension, win = load_dashboard_with_preset(args.preset)
 
     # If no command-line arguments are supplied, start empty
     else:
-        prog = DashBoard(area)
+        win, dashboard = create_load_dashboard()
         win.show()
 
     # Run application

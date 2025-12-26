@@ -123,7 +123,7 @@ class DAQ_Move(ParameterControlModule):
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
         ):
-            ui_identifier = config("actuator", "ui")
+            ui_identifier = config("actuator", "ui")[0]
         self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
         self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
 

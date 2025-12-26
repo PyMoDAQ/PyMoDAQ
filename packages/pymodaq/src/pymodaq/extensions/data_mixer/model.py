@@ -14,7 +14,8 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 
 

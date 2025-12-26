@@ -26,9 +26,9 @@ from pymodaq_utils import utils
 from pymodaq_data import data as data_mod
 from pymodaq_data.h5modules import data_saving
 
-from pymodaq_gui.parameter import ioxml
+from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTree
 from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
@@ -87,7 +87,6 @@ class DAQScan(QObject, ParameterManager):
             {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int',
              'value': 0,
              'tip': 'Wait time in ms between move and grab processes'},
-            {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int',
@@ -218,7 +217,6 @@ class DAQScan(QObject, ParameterManager):
     def set_config(self):
         self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
         self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])
-        self.settings.child('time_flow', 'timeout').setValue(config['scan']['timeflow']['timeout'])
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
 
@@ -659,7 +657,8 @@ class DAQScan(QObject, ParameterManager):
             viewers_enum.extend([ViewersEnum.Viewer1D.increase_dim(self.scanner.n_axes)
                                  for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
             data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
-        if not self.settings['scan_options', 'average_on_top']:
+        if (self.settings['scan_options', 'scan_average'] > 1 and
+                not self.settings['scan_options', 'average_on_top']):
 
             viewers_enum = viewers_enum + viewers_enum
             data_names = data_names + [f'{data_name}_averaged' for data_name in data_names]

@@ -73,3 +73,14 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
         msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
         ret = msgBox.exec()
     return dashboard, extension, win
+
+
+
+def create_load_dashboard():
+    win = QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle("PyMoDAQ Dashboard")
+    dashboard = DashBoard(area)
+    return win, dashboard

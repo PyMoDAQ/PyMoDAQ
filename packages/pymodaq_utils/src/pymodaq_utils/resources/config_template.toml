@@ -1,9 +1,28 @@
 #this is the configuration file of PyMoDAQ
 [style]
-darkstyle = true
+style = ['Fusion']
+theme = [
+    'github_dark',
+    'atom_one',
+    'blender',
+    'catppuccin_frappe',
+    'catppuccin_latte',
+    'catppuccin_macchiato',
+    'catppuccin_mocha',
+    'dracula',
+    'github_light',
+    'modern_dark',
+    'modern_light',
+    'monokai',
+    'nord',
+    'one_dark_two']
 syntax_highlighting = 'github-dark'
 language = "English"
 country = "UnitedStates"
+    [style.icons]
+    fill = [false, true]  # pymodaq uses the first elt in config
+    size = [20, 40]  # pymodaq uses the first elt in config
+    style = ['rounded']  # pymodaq uses the first elt in config
 
 [qtbackend]
 backend = ["pyqt6",  "pyqt5", "pyside6",]

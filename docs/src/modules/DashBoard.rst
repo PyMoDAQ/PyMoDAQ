@@ -44,7 +44,7 @@ different actions.
 
   .. _dashboard:
 
-.. figure:: /image/dashboard.png
+.. figure:: /image/dashboard/dashboard.png
    :alt: dashboard
 
    Dashboard user interface containing all declared control modules (actuators/detectors) and some initialization info.
@@ -60,7 +60,7 @@ within PyMoDAQ and described below:
 
   .. _dashboard_menu:
 
-.. figure:: /image/dashboard_menu.png
+.. figure:: /image/dashboard/dashboard_menu.png
    :alt: dashboard_menu
 
    Dashboard menu bar.

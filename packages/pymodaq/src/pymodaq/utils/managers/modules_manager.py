@@ -12,8 +12,10 @@ from pymodaq_utils.enums import StrEnum
 
 from pymodaq_data.data import DataToExport
 
-from pymodaq_gui.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
+from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
@@ -105,9 +107,6 @@ class ModulesManager(QObject, ParameterManager):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.actuator_timeout = config('actuator', 'timeout')
-        self.detector_timeout = config('viewer', 'timeout')
-
         self.det_done_datas: DataToExport = None
         self.det_done_flag = False
         self.move_done_positions: DataToExport = None
@@ -127,6 +126,14 @@ class ModulesManager(QObject, ParameterManager):
 
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
+
+    @property
+    def actuator_timeout(self):
+        return config('actuator', 'timeout')
+
+    @property
+    def detector_timeout(self):
+        return config('viewer', 'timeout')
 
     def __repr__(self):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
@@ -295,7 +302,8 @@ class ModulesManager(QObject, ParameterManager):
             settings.child(module_type).addChild(
                 {'title': module.title, 'name': f'{module_type}_{ind:03.0f}', 'type': 'group',
                  'children': [
-                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title}
+                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': module.title,
+                      VALID_FOR_CONFIGURATION: False}
                  ]},
             )
             settings.child(module_type,
@@ -307,8 +315,10 @@ class ModulesManager(QObject, ParameterManager):
             title="Control Modules Settings",
             name="control_modules_settings",
             type="group",
-            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group'},
-                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group'},],
+            children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group',
+                       VALID_FOR_CONFIGURATION: True},
+                      {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group',
+                       VALID_FOR_CONFIGURATION: True},],
         )
 
         self.add_settings_from_modules(settings, ModuleType.Actuator)

@@ -1,0 +1,19 @@
+# This file is specifying the icons names, style, size and filling state necessary for pymodaq
+# Their existence will be check by developpers using the check_icons_dev.py script that will add them if necessary
+#
+# So if a dev need to add a given Material icon (https://fonts.google.com/icons) in a given style, size...
+# it should add it here and run the check_icons_dev.py script
+
+
+[icons]
+size = [20, 40]  # add other cases if needed among [20, 24, 40, 48]
+style = ['rounded']  # add other cases if needed among ['rounded', 'outlined', 'sharp']
+names = [
+    'search',
+    'toggle_on',
+    'toggle_off',
+    'visibility',
+    'visibility_off'
+]
+
+

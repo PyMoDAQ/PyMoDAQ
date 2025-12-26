@@ -3,6 +3,14 @@ from qtpy import QtWidgets
 from pyqtgraph.parametertree import parameterTypes, Parameter, ParameterTree
 from . import pymodaq_ptypes
 
+__parameter_value_old_fun = Parameter.value
+def __parameter_value_monkey_path(self):
+    try:
+        return __parameter_value_old_fun(self)
+    except ValueError:
+        return None
+
+Parameter.value = __parameter_value_monkey_path
 
 class ParameterTree(ParameterTree):
     def __init__(self, *args, **kwargs):

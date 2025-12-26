@@ -23,7 +23,7 @@ from pymodaq_gui.plotting.data_viewers import ViewersEnum
 
 
 if TYPE_CHECKING:
-    from pymodaq.utils.parameter import ParameterTree
+    from pymodaq_gui.parameter import ParameterTree
 
 config = Config()
 logger = set_logger(get_module_name(__file__))

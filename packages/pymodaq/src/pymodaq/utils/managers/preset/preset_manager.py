@@ -12,13 +12,13 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq.utils import config as config_mod_pymodaq
 
 from pymodaq.utils.config import get_set_preset_path
-from pymodaq.utils.managers.utils import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules_manager import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.utils.daq_utils import copy_preset
-from pymodaq.utils.managers.preset import utils  #  necessary to register preset parameter types
+from pymodaq.utils.managers.preset import utils  # to register groupemove and groupdet Parameters
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard

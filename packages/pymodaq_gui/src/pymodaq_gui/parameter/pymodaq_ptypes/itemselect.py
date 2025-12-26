@@ -3,7 +3,7 @@ from copy import deepcopy
 from qtpy import QtWidgets, QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
-from pyqtgraph.parametertree import Parameter
+from pymodaq_gui.parameter import Parameter
 
 
 class ItemSelect_pb(QtWidgets.QWidget):

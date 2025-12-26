@@ -1,4 +1,6 @@
 import os
+
+import qt_themes
 import sys
 
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
@@ -105,14 +107,13 @@ def first_available_integer(liste):
 
 
 here = Path(__file__).parent
-custom_folder = here.parent.joinpath('QtDesigner_Ressources/custom/')
+custom_folder = here.parent.joinpath('resources/custom/')
 QtCore.QDir.addSearchPath('custom', str(custom_folder))
 
 
 def set_dark_palette(app):
     from qtpy.QtGui import QPalette, QColor
     app.setStyle("Fusion")
-
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, QColor(53,53,53))
     palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
@@ -331,17 +332,14 @@ def pngbinary2Qlabel(databinary, scale_height: int = None):
     return label
 
 
-def start_qapplication() -> QtWidgets.QApplication:
-    app = QtWidgets.QApplication(sys.argv)
-    if config('style', 'darkstyle'):
-        set_dark_palette(app)
-    return app
+def start_qapplication(name='default_app') -> QtWidgets.QApplication:
+    return mkQApp(name=name)
 
 
 def mkQApp(name: str):
     app = mkQApppg(name)
-    if config('style', 'darkstyle'):
-        set_dark_palette(app)
+    qt_themes.set_theme(theme=config('style', 'theme')[0],
+                        style=config('style', 'style')[0])
     return app
 
 

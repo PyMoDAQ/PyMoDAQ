@@ -34,6 +34,7 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
+
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move_Hardware
 
