@@ -342,6 +342,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 def main(init_qt=True):
     from pymodaq_gui.parameter import Parameter, ParameterTree
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
+    from pymodaq.utils.shared_ui import SharedUI
 
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
@@ -350,9 +351,10 @@ def main(init_qt=True):
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
 
-    parent = QtWidgets.QWidget()
-    prog = DAQ_Viewer_UI(parent)
-    parent.show()
+    widget = QtWidgets.QWidget()
+    shared_ui = SharedUI(widget, __file__)
+
+    prog = DAQ_Viewer_UI(widget)
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
@@ -367,6 +369,11 @@ def main(init_qt=True):
     prog.add_setting_tree(tree)
 
     prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
+
+    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=prog.toolbar, add_break=True)
+
+    shared_ui.show()
+
 
     if init_qt:
         sys.exit(app.exec_())

@@ -210,35 +210,22 @@ class DAQ_Viewer(ParameterControlModule):
         cmd: ThreadCommand
             Possible values are:
                 * init
-                * quit
                 * grab
                 * snap
-                * stop
-                * show_log
                 * detector_changed
                 * daq_type_changed
                 * save_current
-                * save_new
                 * do_bkg
                 * take_bkg
                 * viewers_changed
-                * show_config
         """
 
         if cmd.command == UiToMainViewer.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == UiToMainViewer.QUIT:
-            self.quit_fun()
-        elif cmd.command == UiToMainViewer.STOP:
-            self.stop()
-        elif cmd.command == UiToMainViewer.SHOW_LOG:
-            self.show_log()
         elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
-        elif cmd.command == UiToMainViewer.SAVE_NEW:
-            self.save_new()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
@@ -254,9 +241,6 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-        elif cmd.command == UiToMainViewer.SHOW_CONFIG:
-            self.config = self.show_config(self.config)
-            self.ui.config = self.config
 
     @property
     def bkg(self) -> DataToExport:
@@ -600,12 +584,6 @@ class DAQ_Viewer(ParameterControlModule):
                                                                                   ext='h5')  # see daq_utils
         self._save_export_data(self._data_to_save_export)
 
-    def save_new(self):
-        """Snap data and save them into a h5file"""
-        self._do_save_data = True
-        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
-        self.snapshot(pathname=self._save_file_pathname, dosave=True)
 
     def _init_continuous_save(self):
         """ Initialize the continuous saving H5Saver object
