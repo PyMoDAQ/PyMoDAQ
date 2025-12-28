@@ -9,7 +9,7 @@ Created the 05/09/2022
 from typing import List
 import sys
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 from pymodaq.utils.daq_utils import ThreadCommand
@@ -21,6 +21,7 @@ from pymodaq_utils.config import Config as ConfigUtils
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
+from pymodaq_gui.utils.utils import create_font
 from pymodaq_utils.enums import enum_checker
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
@@ -83,7 +84,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget = None
         self._daq_types_combo = None
         self._detectors_combo = None
-        self._ini_state_led = None
         self._do_bkg_cb = None
         self._take_bkg_pb = None
 
@@ -174,7 +174,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._detectors_combo = QComboBox()
         self._detectors_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self._ini_state_led = QLED(readonly=True)
         self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
         self._take_bkg_pb = QtWidgets.QPushButton('Take Bkg')
         self._take_bkg_pb.setChecked(False)
@@ -183,7 +182,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
         self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
         self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
-        self._detector_widget.layout().addWidget(self._ini_state_led, 1, 2)
         self._detector_widget.layout().addWidget(bkg_widget, 2, 0, 1, 3)
 
         bkg_widget.layout().addWidget(self._do_bkg_cb)
@@ -196,19 +194,15 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
 
-    @property
-    def _info_detector(self) -> QtWidgets.QLabel:
-        return self.get_action('info_detector').widget
-
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True))
-        self.add_widget('info_detector',
-                        LabelWithFont('', font_name="Tahoma", font_size=8,
-                                      isbold=True, isitalic=True))
+        self.add_widget('name', QtWidgets.QLabel(self.title))
+        self.get_action('name').widget.setFont(
+            create_font(font_name="Tahoma",
+                        font_size=14, isbold=True, isitalic=True))
         self.add_widget('selector', self.selector.add_widget)
         self.add_action('ini_detector', 'Ini. Detector', 'ini', checkable=True,
                         tip='Initialize selected detector')
+        self.add_widget('ini_led', QLED(readonly=True), tip='Tell the initialized status')
 
         self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True,
                         icon_checked='stop')
@@ -336,12 +330,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """bool: the status of the init LED."""
         return self._ini_state_led.get_state()
 
+    @property
+    def _ini_state_led(self) -> QLED:
+        return self.get_action('ini_led').widget
+
     @detector_init.setter
     def detector_init(self, status):
-        if status:
-            self._info_detector.setText(f'{self.daq_type.name} : {self.detector}')
-        else:
-            self._info_detector.setText('')
         self._ini_state_led.set_as(status)
         self._enable_grab_buttons(status)
 
@@ -369,7 +363,7 @@ def main(init_qt=True):
     widget = QtWidgets.QWidget()
     shared_ui = SharedUI(widget, __file__)
 
-    prog = DAQ_Viewer_UI(widget)
+    prog = DAQ_Viewer_UI(widget, title='myViewer')
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)

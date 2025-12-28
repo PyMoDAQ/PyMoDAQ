@@ -346,3 +346,15 @@ def mkQApp(name: str):
 def exec():
     app = mkQApp('a name')
     return app.exec() if hasattr(app, 'exec') else app.exec_()
+
+
+def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
+    font = QtGui.QFont()
+    if font_name is not None:
+        font.setFamily(font_name)
+    if font_size is not None:
+        font.setPointSize(font_size)
+
+    font.setBold(isbold)
+    font.setItalic(isitalic)
+    return font
