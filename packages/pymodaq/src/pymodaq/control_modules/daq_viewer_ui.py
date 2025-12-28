@@ -203,17 +203,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
         self.add_action('stop', 'Stop', 'stop', "Stop grabing")
         self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
-        self.add_action('save_new', 'Save New Data', 'Snap&Save', "Save New Data")
         self.add_action('open', 'Load Data', 'Open', "Load Saved Data")
 
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
-
-        self.add_action('quit', 'Quit the module', 'close2')
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.toolbar)
-        self.add_action('log', 'Show Log file', 'information2')
 
         self._data_ready_led = QLED(readonly=True)
         self.toolbar.addWidget(self._data_ready_led)
@@ -221,16 +215,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', self._show_settings)
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.QUIT, )))
-        self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_CONFIG, )))
 
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SHOW_LOG, )))
         self.connect_action('stop', self._stop)
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
-        self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_NEW, )))
         self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.OPEN, )))
 
         self._ini_det_pb.clicked.connect(self.send_init)
@@ -361,11 +351,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.get_action('snap').setEnabled(status)
         self.get_action('stop').setEnabled(status)
         self.get_action('save_current').setEnabled(status)
-        self.get_action('save_new').setEnabled(status)
 
     def _enable_ini_buttons(self, status):
         self._ini_det_pb.setEnabled(status)
-        self.get_action('quit').setEnabled(status)
 
 
 def main(init_qt=True):
