@@ -241,8 +241,6 @@ class DAQ_Viewer(ParameterControlModule):
             self.save_new()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
-        elif cmd.command == UiToMainViewer.OPEN:
-            self.load_data()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
             if cmd.attribute != '':
                 self.detector_changed_from_ui(cmd.attribute)
@@ -594,14 +592,6 @@ class DAQ_Viewer(ParameterControlModule):
         """  Print the "timeout occurred" error message in the status bar via the update_status method.
         """
         self.update_status("Timeout occurred", log_type="log")
-
-    @staticmethod
-    def load_data():
-        """Opens a H5 file in the H5Browser module
-
-        Convenience static method.
-        """
-        browse_data()
 
     def save_current(self):
         """Save current data into a h5file"""

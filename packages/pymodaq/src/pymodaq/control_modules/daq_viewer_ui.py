@@ -199,7 +199,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         icon_checked='stop')
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
         self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
-        self.add_action('open', 'Load Data', 'Open', "Load Saved Data")
 
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
@@ -216,8 +215,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
-        self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.OPEN, )))
-
         self._ini_det_pb.clicked.connect(self.send_init)
 
         self._detectors_combo.currentTextChanged.connect(
