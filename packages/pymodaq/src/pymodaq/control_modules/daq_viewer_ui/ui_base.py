@@ -24,11 +24,19 @@ from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.enums import enum_checker
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
-
+from pymodaq.control_modules.control_module_selector import ModuleSelector, add_category_layers
 
 viewer_factory = ViewerFactory()
 config = Config()
 config_utils = ConfigUtils()
+
+options = {
+    'DAQ0D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ0D']]],
+    'DAQ1D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ1D']]],
+    'DAQ2D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ2D']]],
+    'DAQND': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
+}
+add_menu_entries = add_category_layers(options)
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -75,10 +83,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget = None
         self._daq_types_combo = None
         self._detectors_combo = None
-        self._ini_det_pb = None
         self._ini_state_led = None
         self._do_bkg_cb = None
         self._take_bkg_pb = None
+
+        self.selector = ModuleSelector('Add', add_menu_entries)
+
         self.setup_docks()
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
@@ -164,7 +174,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._detectors_combo = QComboBox()
         self._detectors_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self._ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
         self._ini_state_led = QLED(readonly=True)
         self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
         self._take_bkg_pb = QtWidgets.QPushButton('Take Bkg')
@@ -174,7 +183,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
         self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
         self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
-        self._detector_widget.layout().addWidget(self._ini_det_pb, 0, 2)
         self._detector_widget.layout().addWidget(self._ini_state_led, 1, 2)
         self._detector_widget.layout().addWidget(bkg_widget, 2, 0, 1, 3)
 
@@ -198,6 +206,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_widget('info_detector',
                         LabelWithFont('', font_name="Tahoma", font_size=8,
                                       isbold=True, isitalic=True))
+        self.add_widget('selector', self.selector.add_widget)
+        self.add_action('ini_detector', 'Ini. Detector', 'ini', checkable=True,
+                        tip='Initialize selected detector')
+
         self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True,
                         icon_checked='stop')
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
@@ -218,7 +230,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
-        self._ini_det_pb.clicked.connect(self.send_init)
+        self.connect_action('ini_detector', self.send_init)
 
         self._detectors_combo.currentTextChanged.connect(
             lambda mod: self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, mod)))
@@ -281,8 +293,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         do_init: bool
             will fire the Init button depending on the argument value and the button check state
         """
-        if do_init is not self._ini_det_pb.isChecked():
-            self._ini_det_pb.click()
+        if do_init is not self.is_action_checked('ini_detector'):
+            self.get_action('ini_detector').trigger()
 
     def do_grab(self, do_grab=True):
         """Programmatically press the Grab button
@@ -339,7 +351,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.get_action('save_current').setEnabled(status)
 
     def _enable_ini_buttons(self, status):
-        self._ini_det_pb.setEnabled(status)
+        self.set_action_enabled('ini_detector', status)
 
 
 def main(init_qt=True):
