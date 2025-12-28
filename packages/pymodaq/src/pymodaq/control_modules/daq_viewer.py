@@ -111,11 +111,9 @@ class DAQ_Viewer(ParameterControlModule):
 
     def __init__(
         self,
-        parent: Optional[DockArea] = None,
+        parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
         daq_type=config("viewer", "daq_type"),
-        dock_settings=None,
-        dock_viewer=None,
         **kwargs,
     ):
 
@@ -133,16 +131,9 @@ class DAQ_Viewer(ParameterControlModule):
         self.override_grab_from_extension = False  # boolean allowing an extension to tell to init a grab or not
         # (see DataMixer for reasons and use case in ModulesManager and dashboard method add_det_from_extension)
 
-        if isinstance(parent, DockArea):
-            self.dockarea = parent
-        else:
-            self.dockarea = None
-
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
-                                                   dock_settings=dock_settings,
-                                                   dock_viewer=dock_viewer)
+            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type)
         else:
             self.ui = None
 
@@ -763,7 +754,7 @@ class DAQ_Viewer(ParameterControlModule):
             (root, filename) = os.path.split(str(path))
             filename, ext = os.path.splitext(filename)
             image_path = os.path.join(root, filename + '.png')
-            self.dockarea.parent().grab().save(image_path)
+            self.parent.parent().grab().save(image_path)
 
         h5saver.close_file()
         self.data_saved.emit()
@@ -1483,18 +1474,16 @@ def main(init_qt=True, init_det=False):
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")
 
-    main_window = QtWidgets.QMainWindow()
-    shared_ui = SharedUI(main_window, __file__)
-
-    area = DockArea()
-    main_window.setCentralWidget(area)
-    main_window.resize(1000, 500)
-    main_window.show()
+    widget = QtWidgets.QWidget()
+    shared_ui = SharedUI(widget, __file__)
 
     title = "Testing"
-    viewer = DAQ_Viewer(area, title="Testing", daq_type=config('viewer', 'daq_type'),
-                        **prepare_docks(area, title))
-    main_window.addToolBar(viewer.ui.toolbar)
+    viewer = DAQ_Viewer(widget, title="Testing", daq_type=config('viewer', 'daq_type'),
+                        )
+    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=viewer.ui.toolbar, add_break=True)
+
+    shared_ui.show()
+
     if init_det:
         viewer.init_hardware_ui(init_det)
 

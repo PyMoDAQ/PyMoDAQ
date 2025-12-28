@@ -16,7 +16,7 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
-from pymodaq_gui.utils import Dock
+from pymodaq_gui.utils import Dock, DockArea
 from pymodaq_utils.config import Config as ConfigUtils
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
@@ -66,9 +66,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, parent, title="DAQ_Viewer", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
+    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", daq_type='DAQ2D'):
         ControlModuleUI.__init__(self, parent)
-        ViewerDispatcher.__init__(self, self.dockarea, title=title, next_to_dock=dock_settings)
+
+        self.dockarea = DockArea()
+
+        ViewerDispatcher.__init__(self, self.dockarea, title=title)
 
         self.title = title
 
@@ -81,7 +84,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._ini_state_led = None
         self._do_bkg_cb = None
         self._take_bkg_pb = None
-        self._settings_dock = dock_settings
         self.setup_docks()
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
@@ -90,7 +92,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.detectors = [det['name'] for det in DET_TYPES[self.daq_type.name]]
         self.setup_actions()  # see ActionManager MixIn class
-        self.add_viewer(self.daq_type.to_viewer_type(), dock_viewer=dock_viewer)
+        self.add_viewer(self.daq_type.to_viewer_type())
         self.connect_things()
 
         self._enable_grab_buttons(False)
@@ -138,15 +140,14 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_dock.close()
 
     def setup_docks(self):
-        if self._settings_dock is None:
-            self._settings_dock = Dock(self.title + "_Settings", size=(150, 250))
-            self.dockarea.addDock(self._settings_dock)
 
-        widget = QWidget()
+
+        widget = self.parent
+
         widget.setLayout(QVBoxLayout())
         #widget.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
         widget.layout().setContentsMargins(2, 2, 2, 2)
-        self._settings_dock.addWidget(widget)
+
 
         info_ui = QWidget()
         self._detector_widget = QWidget()
@@ -159,8 +160,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         widget.layout().addWidget(info_ui)
         widget.layout().addWidget(self.toolbar)
         widget.layout().addWidget(self._detector_widget)
-        if not config('viewer', 'settings_as_popup'):
-            widget.layout().addWidget(self._settings_widget)
+        widget.layout().addWidget(self.dockarea)
         widget.layout().addStretch(0)
 
         info_ui.setLayout(QtWidgets.QHBoxLayout())
@@ -171,9 +171,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._detector_widget.setLayout(QtWidgets.QGridLayout())
         self._daq_types_combo = QComboBox()
-        self._daq_types_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._detectors_combo = QComboBox()
-        self._detectors_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._detectors_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
         self._ini_state_led = QLED(readonly=True)
         self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
@@ -369,9 +369,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
 
 def main(init_qt=True):
-    from pymodaq.utils.gui_utils.dock import DockArea
-    from pymodaq.utils.parameter import ParameterTree
-    from pymodaq_gui.parameter import Parameter
+    from pymodaq_gui.parameter import Parameter, ParameterTree
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 
     if init_qt:  # used for the test suite
@@ -381,9 +379,9 @@ def main(init_qt=True):
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
 
-    dockarea = DockArea()
-    prog = DAQ_Viewer_UI(dockarea)
-    dockarea.show()
+    parent = QtWidgets.QWidget()
+    prog = DAQ_Viewer_UI(parent)
+    parent.show()
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
@@ -401,7 +399,6 @@ def main(init_qt=True):
 
     if init_qt:
         sys.exit(app.exec_())
-    return prog, dockarea
 
 
 if __name__ == '__main__':
