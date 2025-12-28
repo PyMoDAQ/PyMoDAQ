@@ -6,7 +6,7 @@ MOCK_ITEMS = {}
 
 
 
-class ViewerSelector:
+class InstrumentPluginSelector:
     """
     Group parameters are used mainly as a generic parent item that holds (and groups!) a set
     of child parameters. It also provides a simple mechanism for displaying a button or combo
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     add_menu_entries = add_category_layers(options)
 
 
-    selector = ViewerSelector('Add', add_menu_entries)
+    selector = InstrumentPluginSelector('Add', add_menu_entries)
     selector.add_widget.show()
 
     app.exec()
