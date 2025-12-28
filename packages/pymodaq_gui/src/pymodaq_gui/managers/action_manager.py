@@ -645,7 +645,7 @@ class ActionManager:
     def actions_names(self) -> list[str]:
         return list(self._actions.keys())
 
-    def get_action(self, name) -> Union[QAction, QtWidgets.QWidget]:
+    def get_action(self, name) -> Union[QAction, WidgetActionProxy]:
         """Getter of a given action
 
         Parameters

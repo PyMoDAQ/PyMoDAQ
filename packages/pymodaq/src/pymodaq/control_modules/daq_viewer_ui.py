@@ -73,7 +73,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._detector_widget = None
         self._settings_widget = None
-        self._info_detector = None
         self._daq_types_combo = None
         self._detectors_combo = None
         self._ini_det_pb = None
@@ -160,11 +159,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         widget.layout().addStretch(0)
 
         info_ui.setLayout(QtWidgets.QHBoxLayout())
-        info_ui.layout().addWidget(LabelWithFont(self.title, font_name="Tahoma", font_size=14, isbold=True,
-                                                 isitalic=True))
-        self._info_detector = LabelWithFont('', font_name="Tahoma", font_size=8, isbold=True, isitalic=True)
-        info_ui.layout().addWidget(self._info_detector)
-
         self._detector_widget.setLayout(QtWidgets.QGridLayout())
         self._daq_types_combo = QComboBox()
         self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -194,7 +188,16 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
 
+    @property
+    def _info_detector(self) -> QtWidgets.QLabel:
+        return self.get_action('info_detector').widget
+
     def setup_actions(self):
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
+                                              font_size=14, isbold=True, isitalic=True))
+        self.add_widget('info_detector',
+                        LabelWithFont('', font_name="Tahoma", font_size=8,
+                                      isbold=True, isitalic=True))
         self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True,
                         icon_checked='stop')
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
