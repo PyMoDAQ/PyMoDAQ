@@ -5,7 +5,7 @@ import logging
 from packaging import version as version_mod
 import subprocess
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QThread, Signal, QSize
@@ -21,6 +21,7 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
+from pymodaq_gui.utils import DockArea
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils import config as configmod
@@ -80,16 +81,21 @@ class PymodaqUpdateTableWidget(QTableWidget):
 
 
 class SharedUI(CustomApp):
-    """ """
+    """ This class is a UI wrapper that incorporates all base functionalities one want in a
+    main PyMoDAQ app including default menu and toolbar with settings, log, help... shortcuts
 
-    def __init__(self, parent, child_class_file: str = None):
-        """
+    It takes as input argument a widget: parent of the wrapped UI eg stand alone DAQ_Move, Viewer,
+    Browser DashBoard...
 
-        Parameters
-        ----------
-        parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
-        """
+    The second argument is the module file path from where the app has been launched: allows simple restart
+    """
 
+    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+                 child_class_file: str = None):
+
+        parent = QtWidgets.QMainWindow()
+        parent.setCentralWidget(widget)
+        self.central_widget = widget
         super().__init__(parent)
         self.child_class_file = child_class_file
 
@@ -97,6 +103,9 @@ class SharedUI(CustomApp):
 
         self.setup_ui()
         self.mainwindow.setVisible(True)
+
+    def show(self):
+        self.mainwindow.show()
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
@@ -124,7 +133,6 @@ class SharedUI(CustomApp):
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()
         self.add_action("plugin_manager", "Plugin Manager", "")
-        self.mainwindow.addToolBarBreak()
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
@@ -220,9 +228,14 @@ class SharedUI(CustomApp):
         config_tree = TreeFromToml(config)
         config_tree.show_dialog()
 
-
     def setup_docks(self):
        pass
+
+    def add_toolbar(self, short_name: str, title: str = '',
+                    toolbar: QtWidgets.QToolBar = None,
+                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True) -> QtWidgets.QToolBar:
+        return super().add_toolbar(short_name, title, self.mainwindow,
+                                   toolbar, area, add_break)
 
     @property
     def menubar(self):

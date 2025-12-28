@@ -1135,15 +1135,20 @@ def main(init_qt=True):
     widget = QtWidgets.QWidget()
     prog = DAQ_Move(widget, title="test")
 
-    main_window = QtWidgets.QMainWindow()
-    shared_ui = SharedUI(main_window, __file__)
+    shared_ui = SharedUI(widget, __file__)
+
     if config("actuator", "ui") == "Original":
-        main_window.addToolBar(Qt.ToolBarArea.LeftToolBarArea, prog.ui.toolbar)
-        main_window.addToolBar(prog.ui.move_toolbar)
+        shared_ui.add_toolbar('ui_toolbar', 'ui_toolbar', toolbar=prog.ui.toolbar,
+                              area=Qt.ToolBarArea.LeftToolBarArea)
+        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=prog.ui.move_toolbar,
+                              area=Qt.ToolBarArea.TopToolBarArea,
+                              add_break=True)
     else:
-        main_window.addToolBar(prog.ui.move_toolbar)
-    main_window.setCentralWidget(widget)
-    main_window.show()
+        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=prog.ui.move_toolbar,
+                              area=Qt.ToolBarArea.TopToolBarArea,
+                              add_break=True)
+
+    shared_ui.show()
 
     app.exec()
 
