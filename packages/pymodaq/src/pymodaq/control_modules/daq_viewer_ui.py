@@ -42,15 +42,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         This signal is emitted whenever some actions done by the user has to be
         applied on the main module. Possible commands are:
             * init
-            * quit
             * grab
             * snap
-            * stop
-            * show_log
             * detector_changed
             * daq_type_changed
             * save_current
-            * save_new
 
     Methods
     -------
@@ -199,9 +195,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.layout().addWidget(tree)
 
     def setup_actions(self):
-        self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True)
+        self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True,
+                        icon_checked='stop')
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
-        self.add_action('stop', 'Stop', 'stop', "Stop grabing")
         self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
         self.add_action('open', 'Load Data', 'Open', "Load Saved Data")
 
@@ -216,7 +212,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', self._show_settings)
 
-        self.connect_action('stop', self._stop)
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
 
@@ -278,13 +273,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
-    def _stop(self):
-        """Slot from the *stop* action"""
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.STOP, ))
-        self.get_action('grab').setChecked(False)
-        self._enable_ini_buttons(True)
-        self._settings_widget.setEnabled(True)
-
     def do_init(self, do_init=True):
         """Programmatically press the Init button
         API entry
@@ -314,10 +302,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.get_action('snap').trigger()
 
     def do_stop(self):
-        """Programmatically press the Stop button
+        """Programmatically uncheck the grab button
         API entry
         """
-        self.get_action('stop').trigger()
         if self.is_action_checked('grab'):
             self.get_action('grab').trigger()
 
@@ -349,7 +336,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _enable_grab_buttons(self, status):
         self.get_action('grab').setEnabled(status)
         self.get_action('snap').setEnabled(status)
-        self.get_action('stop').setEnabled(status)
         self.get_action('save_current').setEnabled(status)
 
     def _enable_ini_buttons(self, status):
