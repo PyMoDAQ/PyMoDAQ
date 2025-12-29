@@ -12,16 +12,21 @@ import sys
 from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
+
+import qt_themes
+
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq_gui.utils import Dock, DockArea
 from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.utils.utils import create_font
+from pymodaq_gui.managers.action_manager import create_icon
 from pymodaq_utils.enums import enum_checker
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
@@ -38,6 +43,10 @@ options = {
     'DAQND': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQND']]],
 }
 add_menu_entries = add_category_layers(options)
+
+
+class ActionIconNames(StrEnum):
+    SNAP = 'camera'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -79,6 +88,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         ViewerDispatcher.__init__(self, self.dockarea, title=title)
 
         self.title = title
+
+        self._ini_state = False
+        self._data_ready = False
 
         self._detector_widget = None
         self._settings_widget = None
@@ -200,13 +212,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
             create_font(font_name="Tahoma",
                         font_size=14, isbold=True, isitalic=True))
         self.add_widget('selector', self.selector.add_widget)
-        self.add_action('ini_detector', 'Ini. Detector', 'ini', checkable=True,
-                        tip='Initialize selected detector')
-        self.add_widget('ini_led', QLED(readonly=True), tip='Tell the initialized status')
-
-        self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True,
-                        icon_checked='stop')
-        self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
+        self.add_action('ini_detector', 'Ini. Detector', 'cable', checkable=True,
+                        tip='Connect to selected detector', icon_color=qt_themes.get_theme().red,
+                        icon_checked_color=qt_themes.get_theme().green)
+        self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
+                        icon_checked='videocam_off')
+        self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
         self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
         self.toolbar.addSeparator()
         self.add_action('background_snap', 'Snap Background', 'background_replace',
@@ -217,9 +228,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
         self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
-
-        self._data_ready_led = QLED(readonly=True)
-        self.toolbar.addWidget(self._data_ready_led)
 
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
@@ -251,11 +259,18 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     @property
     def data_ready(self):
-        return self._data_ready_led.get_state()
+        return self._data_ready
 
     @data_ready.setter
     def data_ready(self, status):
-        self._data_ready_led.set_as(status)
+        self._data_ready = status
+        if status:
+            icon = create_icon(ActionIconNames.SNAP,
+                               icon_color=qt_themes.get_theme().green,)
+        else:
+            icon = create_icon(ActionIconNames.SNAP,
+                               icon_color=qt_themes.get_theme().green,)
+        self.get_action('snap').set_icon(icon)
 
     def _daq_type_changed(self, daq_type: DAQTypesEnum):
         try:
@@ -280,7 +295,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _grab(self):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
-        self._enable_ini_buttons(not self.is_action_checked('grab'))
+        self.enable_actions(not self.is_action_checked('grab'), all_except=('grab',))
+
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
@@ -327,27 +343,30 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                              self._detectors_combo.currentText()]))
 
     def _enable_detchoices(self, enable=True):
+        self.get_action('selector').widget.setEnabled(enable)
         self._detectors_combo.setEnabled(enable)
         self._daq_types_combo.setEnabled(enable)
 
     @property
     def detector_init(self):
         """bool: the status of the init LED."""
-        return self._ini_state_led.get_state()
-
-    @property
-    def _ini_state_led(self) -> QLED:
-        return self.get_action('ini_led').widget
+        return self._ini_state
 
     @detector_init.setter
     def detector_init(self, status):
-        self._ini_state_led.set_as(status)
+        self._ini_state = status
+        self.set_action_checked('ini_detector', status)
         self._enable_grab_buttons(status)
 
     def _enable_grab_buttons(self, status):
         self.get_action('grab').setEnabled(status)
         self.get_action('snap').setEnabled(status)
         self.get_action('save_current').setEnabled(status)
+
+    def enable_actions(self, status=True, all_except=()):
+        for action in self.actions_names:
+            if action not in all_except:
+                self.set_action_enabled(action, status)
 
     def _enable_ini_buttons(self, status):
         self.set_action_enabled('ini_detector', status)
@@ -357,9 +376,10 @@ def main(init_qt=True):
     from pymodaq_gui.parameter import Parameter, ParameterTree
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
     from pymodaq.utils.shared_ui import SharedUI
+    from pymodaq_gui.utils.utils import mkQApp
 
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
+        app = mkQApp("PyMoDAQ UI Viewer")
 
     param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
     tree = ParameterTree()

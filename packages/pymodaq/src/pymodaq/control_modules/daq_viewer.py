@@ -41,7 +41,7 @@ from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_
 from pymodaq_utils import utils
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_gui.utils import DockArea, Dock
-from pymodaq_gui.utils.utils import mkQApp
+
 
 from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
@@ -1438,6 +1438,7 @@ def prepare_docks(area, title):
 def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
     from pymodaq.utils.shared_ui import SharedUI
+    from pymodaq_gui.utils.utils import mkQApp
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")
