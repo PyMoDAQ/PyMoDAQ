@@ -6,7 +6,7 @@ Created the 05/09/2022
 """
 
 
-from typing import List
+from typing import List, Union
 import sys
 
 from qtpy import QtWidgets, QtGui, QtCore
@@ -30,7 +30,8 @@ from pymodaq_gui.managers.action_manager import create_icon
 from pymodaq_utils.enums import enum_checker
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
-from pymodaq.control_modules.control_module_selector import ModuleSelector, add_category_layers
+from pymodaq.control_modules.control_module_selector import add_category_layers
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
 
 viewer_factory = ViewerFactory()
 config = Config()
@@ -95,102 +96,47 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self._detector_widget = None
         self._settings_widget = None
-        self._daq_types_combo = None
-        self._detectors_combo = None
 
-        self.selector = ModuleSelector('Add', add_menu_entries)
+        self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
         self.setup_docks()
 
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
-        self.daq_types = daq_type.names()  # init the combobox through the daq_types attribute
-        self.daq_type = daq_type
-
-        self.detectors = [det['name'] for det in DET_TYPES[self.daq_type.name]]
         self.setup_actions()  # see ActionManager MixIn class
-        self.add_viewer(self.daq_type.to_viewer_type())
+        self.add_viewer(ViewersEnum.Viewer0D)
         self.connect_things()
 
-        self.enable_actions(False, all_except=('ini_detector',))
-        self._detector_widget.setVisible(False)
+        self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings'))
         self._settings_widget.setVisible(False)
 
     @property
     def detector(self):
-        return self._detectors_combo.currentText()
+        return self.selector.selected_module.module_name
 
     @detector.setter
     def detector(self, det_name: str):
-        self._detectors_combo.setCurrentText(det_name)
-    @property
-    def detectors(self):
-        return [self._detectors_combo.itemText(ind) for ind in range(self._detectors_combo.count())]
-
-    @detectors.setter
-    def detectors(self, detectors: List[str]):
-        self._detectors_combo.clear()
-        self._detectors_combo.addItems(detectors)
+        self.selector.selected_module.module_name = det_name
 
     @property
     def daq_type(self):
-        return DAQTypesEnum[self._daq_types_combo.currentText()]
+        return self.selector.selected_module.daq_type
 
     @daq_type.setter
     def daq_type(self, dtype: DAQTypesEnum):
-        dtype = enum_checker(DAQTypesEnum, dtype)
-        self._daq_types_combo.setCurrentText(dtype.name)
-
-    @property
-    def daq_types(self):
-        return self.daq_type.names()
-
-    @daq_types.setter
-    def daq_types(self, dtypes: List[str]):
-        self._daq_types_combo.clear()
-        self._daq_types_combo.addItems(dtypes)
-        self.daq_type = DAQTypesEnum[dtypes[0]]
+        self.selector.selected_module.daq_type = dtype
 
     def close(self):
         for dock in self.viewer_docks:
             dock.close()
-        self._settings_dock.close()
 
     def setup_docks(self):
-
-
         widget = self.parent
 
         widget.setLayout(QVBoxLayout())
-        #widget.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
         widget.layout().setContentsMargins(2, 2, 2, 2)
-
-
-        info_ui = QWidget()
-        self._detector_widget = QWidget()
         self._settings_widget = QWidget()
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
-        widget.layout().addWidget(info_ui)
-        widget.layout().addWidget(self.toolbar)
-        widget.layout().addWidget(self._detector_widget)
         widget.layout().addWidget(self.dockarea)
-        widget.layout().addStretch(0)
-
-        info_ui.setLayout(QtWidgets.QHBoxLayout())
-        self._detector_widget.setLayout(QtWidgets.QGridLayout())
-        self._daq_types_combo = QComboBox()
-        self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self._detectors_combo = QComboBox()
-        self._detectors_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-
-        self._detector_widget.layout().addWidget(LabelWithFont('DAQ type:'), 0, 0)
-        self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
-        self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
-        self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
-
-        self.statusbar = QtWidgets.QStatusBar()
-        self.statusbar.setMaximumHeight(30)
-        widget.layout().addWidget(self.statusbar)
 
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
@@ -213,13 +159,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         tip='Take a snapshot a set it as background')
         self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
                         tip='If checked, apply background substraction')
-
-        self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
-                        checkable=True)
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True)
 
     def connect_things(self):
-        self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', self._show_settings)
 
         self.connect_action('grab', self._grab)
@@ -228,11 +170,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
         self.connect_action('ini_detector', self.send_init)
 
-        self._detectors_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, mod)))
-        self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
-
-
+        self.selector.module_changed.connect(self._detector_changed)
         self.connect_action('background_subtract',
                             lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
         self.connect_action('background_snap',
@@ -242,7 +180,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.setVisible(show)
         self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
 
-    def update_viewers(self, viewers_type: List[ViewersEnum]):
+    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
+                       viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type)
         self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
                                             attribute=dict(viewer_types=self.viewer_types,
@@ -263,13 +202,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                icon_color=qt_themes.get_theme().red,)
         self.get_action('snap').set_icon(icon)
 
-    def _daq_type_changed(self, daq_type: DAQTypesEnum):
+    def _detector_changed(self, sel_mod: SelectedModule):
         try:
-            daq_type = enum_checker(DAQTypesEnum, daq_type)
-
-            self.command_sig.emit(ThreadCommand(UiToMainViewer.DAQ_TYPE_CHANGED, daq_type))
-            if self.viewer_types != [daq_type.to_viewer_type()]:
-                self.update_viewers([daq_type.to_viewer_type()])
+            self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, sel_mod))
+            if self.viewer_types != [sel_mod.daq_type.to_viewer_type()]:
+                self.update_viewers([sel_mod.daq_type.to_viewer_type()])
         except ValueError as e:
             pass
 
@@ -277,16 +214,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         if (self.is_action_checked('show_settings') and not show) or \
                 (not self.is_action_checked('show_settings') and show):
             self.get_action('show_settings').trigger()
-            
-    def show_controls(self, show=True):
-        if (self.is_action_checked('show_controls') and not show) or \
-                (not self.is_action_checked('show_controls') and show):
-            self.get_action('show_controls').trigger()
 
     def _grab(self):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
-        self.enable_actions(not self.is_action_checked('grab'), all_except=('grab', 'snap', 'selector'))
+        self.enable_actions(not self.is_action_checked('grab'),
+                            all_except=('grab', 'snap', 'selector', 'show_settings'))
 
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
@@ -330,13 +263,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._enable_detchoices(not checked)
         self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
                                             [checked,
-                                             self._daq_types_combo.currentText(),
-                                             self._detectors_combo.currentText()]))
+                                             self.selector.selected_module]))
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
-        self._detectors_combo.setEnabled(enable)
-        self._daq_types_combo.setEnabled(enable)
 
     @property
     def detector_init(self):
@@ -346,7 +276,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector_init.setter
     def detector_init(self, status):
         self._ini_state = status
-        self.enable_actions(status, all_except=('ini_detector', 'selector'))
+        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings'))
         self.set_action_enabled('selector', not status)
 
         if status:
@@ -380,9 +310,10 @@ def main(init_qt=True):
 
 
     widget = QtWidgets.QWidget()
-    shared_ui = SharedUI(widget, __file__)
-
     prog = DAQ_Viewer_UI(widget, title='myViewer')
+    shared_ui = SharedUI(prog, app_class_file=__file__)
+
+
 
     def set_data_ready(ready=True):
         prog.data_ready = True

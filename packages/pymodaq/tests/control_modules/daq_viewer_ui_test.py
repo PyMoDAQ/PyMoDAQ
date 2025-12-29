@@ -7,7 +7,7 @@ Created the 03/10/2022
 import pytest
 from pytest import fixture
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
-from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
+from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
 from pymodaq_gui.utils.dock import DockArea
 from qtpy import QtWidgets
 

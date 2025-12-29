@@ -1,4 +1,4 @@
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 from pymodaq.control_modules.instruments import DET_TYPES
 
 REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
@@ -6,14 +6,17 @@ MOCK_ITEMS = {}
 
 
 
-class ModuleSelector:
+class ModuleSelector(QtCore.QObject):
     """
     Group parameters are used mainly as a generic parent item that holds (and groups!) a set
     of child parameters. It also provides a simple mechanism for displaying a button or combo
     that can be used to add new parameters to the group.
     """
 
+    module_changed = QtCore.Signal(tuple)
+
     def __init__(self, add_text: str, add_menu_entries):
+        super().__init__()
         self.add_widget = QtWidgets.QPushButton(add_text)
         #self.add_widget.clicked.connect(self.addClicked)
         self.add_menu_entries = add_menu_entries
@@ -67,11 +70,14 @@ class ModuleSelector:
 
     def _add_menu_item_selected(self, path_tuple):
         """Called when a menu item is selected from the nested add menu
-        The parameter MUST have an 'addNew' method defined.
+
+        To be subclassed for particular signal emission
+
         """
         # Call the parameter's addNew method with the selected type
-        self.add_widget.setText(f'{path_tuple[0]}/{path_tuple[-1]}')
+        self.add_widget.setText('/'.join(path_tuple))
         self.add_widget.adjustSize()
+        self.module_changed.emit(path_tuple)
 
 
 def categorize_items(item_list, remote_items=None, mock_items=None):

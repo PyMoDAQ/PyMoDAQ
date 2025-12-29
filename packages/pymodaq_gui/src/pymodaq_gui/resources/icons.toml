@@ -22,6 +22,7 @@ names = [
     'plug_connect',
     'cable',
     'save_as',
+    'settings',
 
 
 ]

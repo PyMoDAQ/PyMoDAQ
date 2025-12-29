@@ -1444,13 +1444,13 @@ def main(init_qt=True, init_det=False):
         app = mkQApp("PyMoDAQ Viewer")
 
     widget = QtWidgets.QWidget()
-    shared_ui = SharedUI(widget, __file__)
-
-    title = "Testing"
     viewer = DAQ_Viewer(widget, title="Testing", daq_type=config('viewer', 'daq_type'),
+    shared_ui = SharedUI(viewer, __file__)
+
+
                         )
     shared_ui.add_toolbar('viewer', 'Viewer', toolbar=viewer.ui.toolbar, add_break=True)
-
+    shared_ui.quit_fun()
     shared_ui.show()
 
     if init_det:

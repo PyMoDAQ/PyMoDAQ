@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+from pathlib import Path
 import logging
 from packaging import version as version_mod
 import subprocess
@@ -84,20 +84,27 @@ class SharedUI(CustomApp):
     """ This class is a UI wrapper that incorporates all base functionalities one want in a
     main PyMoDAQ app including default menu and toolbar with settings, log, help... shortcuts
 
-    It takes as input argument a widget: parent of the wrapped UI eg stand alone DAQ_Move, Viewer,
-    Browser DashBoard...
+    Parameters:
+    -----------
+    app: CustomApp
+        The wrapped application
+    widget: QWidget, DockArea
+        parent of the wrapped app eg stand alone DAQ_Move, Viewer, Browser DashBoard...
+        if None, uses app.parent
 
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
-                 child_class_file: str = None):
-
+    def __init__(self, app: CustomApp, widget: Union[QtWidgets.QWidget, DockArea] = None,
+                 app_class_file: Union[Path, str] = None):
+        self.app = app
+        if widget is None:
+            widget = app.parent
         parent = QtWidgets.QMainWindow()
         parent.setCentralWidget(widget)
         self.central_widget = widget
         super().__init__(parent)
-        self.child_class_file = child_class_file
+        self.app_class_file = app_class_file
 
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
@@ -195,6 +202,9 @@ class SharedUI(CustomApp):
         quit_fun
         """
         try:
+            self.app.quit_fun()
+            QtWidgets.QApplication.processEvents()
+
             if hasattr(self, "mainwindow"):
                 self.mainwindow.close()
 
@@ -215,7 +225,7 @@ class SharedUI(CustomApp):
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
-            subprocess.call([sys.executable, self.child_class_file])
+            subprocess.call([sys.executable, self.app_class_file])
 
     def show_log(self):
         import webbrowser
