@@ -9,7 +9,7 @@ Created the 05/09/2022
 from typing import List
 import sys
 
-from qtpy import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui, QtCore
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 
@@ -47,6 +47,7 @@ add_menu_entries = add_category_layers(options)
 
 class ActionIconNames(StrEnum):
     SNAP = 'camera'
+    INI = 'cable'
 
 
 class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
@@ -112,7 +113,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_viewer(self.daq_type.to_viewer_type())
         self.connect_things()
 
-        self._enable_grab_buttons(False)
+        self.enable_actions(False, all_except=('ini_detector',))
         self._detector_widget.setVisible(False)
         self._settings_widget.setVisible(False)
 
@@ -212,9 +213,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
             create_font(font_name="Tahoma",
                         font_size=14, isbold=True, isitalic=True))
         self.add_widget('selector', self.selector.add_widget)
-        self.add_action('ini_detector', 'Ini. Detector', 'cable', checkable=True,
+        self.add_action('ini_detector', 'Ini. Detector', ActionIconNames.INI, checkable=True,
                         tip='Connect to selected detector', icon_color=qt_themes.get_theme().red,
-                        icon_checked_color=qt_themes.get_theme().green)
+                        )
         self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
                         icon_checked='videocam_off')
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
@@ -269,7 +270,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                                icon_color=qt_themes.get_theme().green,)
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=qt_themes.get_theme().green,)
+                               icon_color=qt_themes.get_theme().red,)
         self.get_action('snap').set_icon(icon)
 
     def _daq_type_changed(self, daq_type: DAQTypesEnum):
@@ -295,7 +296,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _grab(self):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
-        self.enable_actions(not self.is_action_checked('grab'), all_except=('grab',))
+        self.enable_actions(not self.is_action_checked('grab'), all_except=('grab', 'snap', 'selector'))
 
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
@@ -349,27 +350,27 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     @property
     def detector_init(self):
-        """bool: the status of the init LED."""
+        """bool: the internal init status."""
         return self._ini_state
 
     @detector_init.setter
     def detector_init(self, status):
         self._ini_state = status
-        self.set_action_checked('ini_detector', status)
-        self._enable_grab_buttons(status)
+        self.enable_actions(status, all_except=('ini_detector', 'selector'))
+        self.set_action_enabled('selector', not status)
 
-    def _enable_grab_buttons(self, status):
-        self.get_action('grab').setEnabled(status)
-        self.get_action('snap').setEnabled(status)
-        self.get_action('save_current').setEnabled(status)
+        if status:
+            icon = create_icon(ActionIconNames.INI,
+                               icon_color=qt_themes.get_theme().green,)
+        else:
+            icon = create_icon(ActionIconNames.INI,
+                               icon_color=qt_themes.get_theme().red,)
+        self.get_action('ini_detector').set_icon(icon)
 
     def enable_actions(self, status=True, all_except=()):
         for action in self.actions_names:
             if action not in all_except:
                 self.set_action_enabled(action, status)
-
-    def _enable_ini_buttons(self, status):
-        self.set_action_enabled('ini_detector', status)
 
 
 def main(init_qt=True):
@@ -384,18 +385,45 @@ def main(init_qt=True):
     param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
+    timer = QtCore.QTimer()
+
+
 
     widget = QtWidgets.QWidget()
     shared_ui = SharedUI(widget, __file__)
 
     prog = DAQ_Viewer_UI(widget, title='myViewer')
 
+    def set_data_ready(ready=True):
+        prog.data_ready = True
+
+    def set_data_ready_loop(ready=True):
+        prog.data_ready = True
+        app.processEvents()
+        QtCore.QThread.msleep(100)
+        prog.data_ready = False
+        app.processEvents()
+
     def print_command_sig(cmd_sig):
         print(cmd_sig)
         prog.display_status(str(cmd_sig))
         if cmd_sig.command == UiToMainViewer.INIT:
-            prog._enable_grab_buttons(cmd_sig.attribute[0])
             prog.detector_init = cmd_sig.attribute[0]
+        elif cmd_sig.command == UiToMainViewer.SNAP:
+            prog.data_ready = False
+            timer.timeout.connect(set_data_ready)
+            timer.setSingleShot(True)
+            timer.start(500)
+
+        elif cmd_sig.command == UiToMainViewer.GRAB:
+            prog.data_ready = False
+            if cmd_sig.attribute:
+                timer.timeout.connect(set_data_ready_loop)
+                timer.setSingleShot(False)
+                timer.start(500)
+            else:
+                timer.stop()
+
 
     # prog.detectors = detectors
     prog.command_sig.connect(print_command_sig)
