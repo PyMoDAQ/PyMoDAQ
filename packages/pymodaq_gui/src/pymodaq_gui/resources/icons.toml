@@ -13,7 +13,9 @@ names = [
     'toggle_on',
     'toggle_off',
     'visibility',
-    'visibility_off'
+    'visibility_off',
+    'background_replace',
+    'texture_minus',
 ]
 
 
