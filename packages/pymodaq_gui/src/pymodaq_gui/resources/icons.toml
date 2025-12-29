@@ -16,6 +16,12 @@ names = [
     'visibility_off',
     'background_replace',
     'texture_minus',
+    'camera',
+    'videocam',
+    'videocam_off',
+    'plug_connect',
+    'cable',
+
 ]
 
 
