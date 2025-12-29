@@ -97,8 +97,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget = None
         self._daq_types_combo = None
         self._detectors_combo = None
-        self._do_bkg_cb = None
-        self._take_bkg_pb = None
 
         self.selector = ModuleSelector('Add', add_menu_entries)
 
@@ -172,9 +170,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget = QWidget()
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
-        bkg_widget = QWidget()
-        bkg_widget.setLayout(QtWidgets.QHBoxLayout())
-
         widget.layout().addWidget(info_ui)
         widget.layout().addWidget(self.toolbar)
         widget.layout().addWidget(self._detector_widget)
@@ -187,18 +182,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._detectors_combo = QComboBox()
         self._detectors_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
-        self._take_bkg_pb = QtWidgets.QPushButton('Take Bkg')
-        self._take_bkg_pb.setChecked(False)
 
         self._detector_widget.layout().addWidget(LabelWithFont('DAQ type:'), 0, 0)
         self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
         self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
         self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
-        self._detector_widget.layout().addWidget(bkg_widget, 2, 0, 1, 3)
-
-        bkg_widget.layout().addWidget(self._do_bkg_cb)
-        bkg_widget.layout().addWidget(self._take_bkg_pb)
 
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
@@ -219,11 +207,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
                         icon_checked='videocam_off')
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
-        self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
+        self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
         self.toolbar.addSeparator()
         self.add_action('background_snap', 'Snap Background', 'background_replace',
                         tip='Take a snapshot a set it as background')
-        self.add_action('background_subtract', 'Subtract Background', 'texture_minus',
+        self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
                         tip='If checked, apply background substraction')
 
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
@@ -245,8 +233,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
 
-        self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
-        self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
+        self.connect_action('background_subtract',
+                            lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
+        self.connect_action('background_snap',
+                            lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
 
     def _show_settings(self, show: bool = True):
         self._settings_widget.setVisible(show)

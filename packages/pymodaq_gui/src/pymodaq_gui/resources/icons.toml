@@ -21,6 +21,8 @@ names = [
     'videocam_off',
     'plug_connect',
     'cable',
+    'save_as',
+
 
 ]
 
