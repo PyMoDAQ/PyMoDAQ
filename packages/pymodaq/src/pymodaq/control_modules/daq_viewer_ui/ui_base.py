@@ -208,6 +208,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         icon_checked='stop')
         self.add_action('snap', 'Snap', 'snap', "Take a snapshot from the detector")
         self.add_action('save_current', 'Save Current Data', 'SaveAs', "Save Current Data")
+        self.toolbar.addSeparator()
+        self.add_action('background_snap', 'Snap Background', 'background_replace',
+                        tip='Take a snapshot a set it as background')
+        self.add_action('background_subtract', 'Subtract Background', 'texture_minus',
+                        tip='If checked, apply background substraction')
 
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
