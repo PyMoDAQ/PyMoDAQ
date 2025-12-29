@@ -88,7 +88,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def quit_fun(self):
         """Method to be subclassed in order to define a custom quit function
         """
-        self.mainwindow.close()
+        if self.mainwindow is not None:
+            self.mainwindow.close()
 
     def do_things_after_ui_setup(self):
         """Non mandatory method to be subclassed in order to do things after the UI setup
