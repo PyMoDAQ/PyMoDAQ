@@ -1135,7 +1135,7 @@ def main(init_qt=True):
     widget = QtWidgets.QWidget()
     prog = DAQ_Move(widget, title="test")
 
-    shared_ui = SharedUI(widget, __file__)
+    shared_ui = SharedUI(prog, app_class_file=__file__)
 
     if config("actuator", "ui") == "Original":
         shared_ui.add_toolbar('ui_toolbar', 'ui_toolbar', toolbar=prog.ui.toolbar,
