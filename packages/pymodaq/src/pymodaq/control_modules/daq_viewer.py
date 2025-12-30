@@ -33,7 +33,7 @@ from pymodaq_gui.h5modules.browsing import browse_data
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
 from pymodaq_data.h5modules.backends import Node
-from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
@@ -122,8 +122,8 @@ class DAQ_Viewer(ParameterControlModule):
 
         super().__init__(**kwargs)
 
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
-        self._daq_type: DAQTypesEnum = daq_type
+        detector = SelectedModule()
+
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -133,7 +133,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type)
+            self.ui = DAQ_Viewer_UI(parent, title, daq_type=detector.daq_type)
         else:
             self.ui = None
 
@@ -156,8 +156,8 @@ class DAQ_Viewer(ParameterControlModule):
         self._ind_continuous_grab = 0
         self.setup_continuous_saving()
 
-        self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
-        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
+        self.settings.child('main_settings', 'DAQ_type').setValue(detector.module_name)
+        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type.name]]
         if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
             self._detector: str = self._detectors[0]
         else:
@@ -188,8 +188,14 @@ class DAQ_Viewer(ParameterControlModule):
         self.grab_done_signal.connect(self._save_export_data)
         self.update_plugin_config()
 
+    def get_detector_module(self, detector: SelectedModule):
+        detector_module = find_dict_in_list_from_key_val(
+            DET_TYPES[detector.daq_type.name]['module'],
+            'name', detector.module_name)
+        return detector_module
+
     def __repr__(self):
-        return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
+        return f'{self.__class__.__name__}: {self.title} {self.detector}'
 
     def setup_continuous_saving(self):
         """Configure the objects dealing with the continuous saving mode"""
@@ -230,9 +236,9 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
             if not isinstance(cmd.attribute, SelectedModule):
                 self.detector_changed_from_ui(cmd.attribute)
-        elif cmd.command == UiToMainViewer.DAQ_TYPE_CHANGED:
-            if cmd.attribute != '':
-                self.daq_type_changed_from_ui(cmd.attribute)
+        # elif cmd.command == UiToMainViewer.DAQ_TYPE_CHANGED:
+        #     if cmd.attribute != '':
+        #         self.daq_type_changed_from_ui(cmd.attribute)
         elif cmd.command == UiToMainViewer.TAKE_BKG:
             self.take_bkg()
         elif cmd.command == UiToMainViewer.DO_BKG:
@@ -319,12 +325,12 @@ class DAQ_Viewer(ParameterControlModule):
         self._set_setting_tree()
 
     @property
-    def detector(self) -> str:
-        """:obj:`str`: Get/Set the currently selected detector among available detectors"""
+    def detector(self) -> SelectedModule:
+        """Get/Set the currently selected detector among available detectors"""
         return self._detector
 
     @detector.setter
-    def detector(self, det: str):
+    def detector(self, det: SelectedModule):
         if det not in self.detectors:
             raise ValueError(f'{det} is not a valid Detector: {self.detectors}')
         self._detector = det
@@ -343,7 +349,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.settings.child('main_settings', 'Naverage').setValue(ngrab)
 
     def update_plugin_config(self):
-        parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self.daq_type.name], 'name', self.detector)
+        parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self._daq_type.name], 'name', self.detector)
         mod = import_module(parent_module['module'].__package__.split('.')[0])
         if hasattr(mod, 'config'):
             self.plugin_config = mod.config
@@ -352,7 +358,7 @@ class DAQ_Viewer(ParameterControlModule):
         self._detectors = detectors
 
     @property
-    def detectors(self) -> str:
+    def detectors(self) -> list[str]:
         """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type (DAQTypesEnum)"""
         return self._detectors
 
