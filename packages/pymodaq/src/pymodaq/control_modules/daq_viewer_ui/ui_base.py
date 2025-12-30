@@ -108,21 +108,16 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings'))
         self._settings_widget.setVisible(False)
 
+
+
     @property
-    def detector(self):
-        return self.selector.selected_module.module_name
+    def detector(self) -> SelectedModule:
+        return self.selector.selected_module
 
     @detector.setter
-    def detector(self, det_name: str):
-        self.selector.selected_module.module_name = det_name
-
-    @property
-    def daq_type(self):
-        return self.selector.selected_module.daq_type
-
-    @daq_type.setter
-    def daq_type(self, dtype: DAQTypesEnum):
-        self.selector.selected_module.daq_type = dtype
+    def detector(self, det: SelectedModule):
+        self.selector.selected_module = det
+        self.selector.add_widget.setText(str(det))
 
     def close(self):
         for dock in self.viewer_docks:
@@ -158,7 +153,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('background_snap', 'Snap Background', 'background_replace',
                         tip='Take a snapshot a set it as background')
         self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
-                        tip='If checked, apply background substraction')
+                        tip='If checked, apply background substraction',
+                        icon_checked_color=qt_themes.get_theme().green)
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True)
 
     def connect_things(self):
@@ -264,6 +260,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
                                             [checked,
                                              self.selector.selected_module]))
+        if not checked and self.is_action_checked('background_subtract'):
+            self.get_action('background_subtract').trigger()
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)

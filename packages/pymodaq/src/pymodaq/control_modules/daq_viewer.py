@@ -122,8 +122,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         super().__init__(**kwargs)
 
-        detector = SelectedModule()
-
+        self._detector = SelectedModule()
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -133,7 +132,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=detector.daq_type)
+            self.ui = DAQ_Viewer_UI(parent, title, daq_type=self._detector.daq_type)
         else:
             self.ui = None
 
@@ -143,6 +142,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.ui.command_sig.connect(self.process_ui_cmds)
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
+
+        self.detector = SelectedModule()
 
         self.splash_sc = get_splash_sc()
 
@@ -156,13 +157,8 @@ class DAQ_Viewer(ParameterControlModule):
         self._ind_continuous_grab = 0
         self.setup_continuous_saving()
 
-        self.settings.child('main_settings', 'DAQ_type').setValue(detector.module_name)
-        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type.name]]
-        if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
-            self._detector: str = self._detectors[0]
-        else:
-            raise DetectorError('No detected Detector')
-        self.settings.child('main_settings', 'detector_type').setValue(self._detector)
+        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
+        self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -190,8 +186,8 @@ class DAQ_Viewer(ParameterControlModule):
 
     def get_detector_module(self, detector: SelectedModule):
         detector_module = find_dict_in_list_from_key_val(
-            DET_TYPES[detector.daq_type.name]['module'],
-            'name', detector.module_name)
+            DET_TYPES[detector.daq_type.name],
+            'name', detector.module_name)['module']
         return detector_module
 
     def __repr__(self):
@@ -234,11 +230,8 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
-            if not isinstance(cmd.attribute, SelectedModule):
+            if isinstance(cmd.attribute, SelectedModule):
                 self.detector_changed_from_ui(cmd.attribute)
-        # elif cmd.command == UiToMainViewer.DAQ_TYPE_CHANGED:
-        #     if cmd.attribute != '':
-        #         self.daq_type_changed_from_ui(cmd.attribute)
         elif cmd.command == UiToMainViewer.TAKE_BKG:
             self.take_bkg()
         elif cmd.command == UiToMainViewer.DO_BKG:
@@ -316,11 +309,8 @@ class DAQ_Viewer(ParameterControlModule):
         return DAQTypesEnum.names()
 
     def detector_changed_from_ui(self, detector: SelectedModule):
-        self._detector = detector.module_name
-        self._daq_type = detector.daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(self._daq_type.name)
-        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
-
+        self._detector = detector
+        self.settings.child('main_settings', 'DAQ_type').setValue(detector.daq_type.name)
         self.update_plugin_config()
         self._set_setting_tree()
 
@@ -331,8 +321,6 @@ class DAQ_Viewer(ParameterControlModule):
 
     @detector.setter
     def detector(self, det: SelectedModule):
-        if det not in self.detectors:
-            raise ValueError(f'{det} is not a valid Detector: {self.detectors}')
         self._detector = det
         self.update_plugin_config()
         if self.ui is not None:
@@ -349,24 +337,10 @@ class DAQ_Viewer(ParameterControlModule):
             self.settings.child('main_settings', 'Naverage').setValue(ngrab)
 
     def update_plugin_config(self):
-        parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self._daq_type.name], 'name', self.detector)
-        mod = import_module(parent_module['module'].__package__.split('.')[0])
+        parent_module = self.get_detector_module(self.detector)
+        mod = import_module(parent_module.__package__.split('.')[0])
         if hasattr(mod, 'config'):
             self.plugin_config = mod.config
-
-    def detectors_changed_from_ui(self, detectors: List[str]):
-        self._detectors = detectors
-
-    @property
-    def detectors(self) -> list[str]:
-        """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type (DAQTypesEnum)"""
-        return self._detectors
-
-    @detectors.setter
-    def detectors(self, detectors):
-        self._detectors = detectors
-        if self.ui is not None:
-            self.ui.detectors = detectors
 
     @property
     def grab_state(self):
@@ -433,9 +407,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         except Exception as e:
             self.logger.exception(str(e))
-
-        if __name__ == '__main__':
-            self.parent.close()
 
     #  #####################################
     #  Methods for running the acquisition
@@ -1009,7 +980,8 @@ class DAQ_Viewer(ParameterControlModule):
                 for child in self.settings.child('detector_settings').children():
                     child.remove()
 
-            det_params, _class = get_viewer_plugins(self.daq_type.name, self.detector)
+            det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
+                                                    self.detector.module_name)
             self.settings.child('detector_settings').addChildren(det_params.children())
             self.settings.child('main_settings', 'module_name').setValue(self._title)
         except Exception as e:
@@ -1160,13 +1132,13 @@ class DAQ_Detector(QObject):
     data_detector_sig = Signal(DataToExport)
     data_detector_temp_sig = Signal(DataToExport)
 
-    def __init__(self, title, settings_parameter, detector_name):
+    def __init__(self, title, settings_parameter, detector: SelectedModule):
         super().__init__()
         self.waiting_for_data = False
         self.controller = None
         self.logger = set_logger(f'{logger.name}.{title}.detector')
         self._title = title
-        self.detector_name = detector_name
+        self.detector_name = detector.module_name
         self.detector: DAQ_Viewer_base = None
         self.controller_adress: int = None
         self.grab_state = False
@@ -1178,7 +1150,7 @@ class DAQ_Detector(QObject):
         self.hardware_averaging = False
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
-        self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
+        self.daq_type = detector.daq_type
 
     @property
     def title(self):
