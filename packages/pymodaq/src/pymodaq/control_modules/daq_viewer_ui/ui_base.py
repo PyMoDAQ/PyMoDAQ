@@ -82,7 +82,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", daq_type='DAQ2D'):
+    def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", **kwargs):
         ControlModuleUI.__init__(self, parent)
 
         self.dockarea = DockArea()
@@ -102,7 +102,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.setup_docks()
 
         self.setup_actions()  # see ActionManager MixIn class
-        self.add_viewer(ViewersEnum.Viewer0D)
+        self.update_viewers([self.selector.selected_module.daq_type.to_viewer_type()])
         self.connect_things()
 
         self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings'))

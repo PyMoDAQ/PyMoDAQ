@@ -122,7 +122,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         super().__init__(**kwargs)
 
-        self._detector = SelectedModule()
+        self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -132,7 +132,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=self._detector.daq_type)
+            self.ui = DAQ_Viewer_UI(parent, title)
         else:
             self.ui = None
 
@@ -143,7 +143,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
 
-        self.detector = SelectedModule()
+        self.detector = self._detector
 
         self.splash_sc = get_splash_sc()
 
@@ -270,38 +270,6 @@ class DAQ_Viewer(ParameterControlModule):
         if self.initialized_state:
             self.settings.child('detector_settings', 'controller_status').setValue(
                 ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
-
-    # def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
-    #     """ Apply changes from the selection of a different DAQTypesEnum in the UI
-    #
-    #     Parameters
-    #     ----------
-    #     daq_type: DAQTypesEnum
-    #     """
-    #     daq_type = enum_checker(DAQTypesEnum, daq_type)
-    #     self._daq_type = daq_type
-    #     self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
-    #     self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
-    #     self.detector = self.detectors[0]
-    #
-    # @property
-    # def daq_type(self) -> DAQTypesEnum:
-    #     """Get/Set the daq_type as a DAQTypesEnum
-    #
-    #     Update the detector property with the list of available detectors of a given daq_type
-    #     """
-    #     return self._daq_type
-    #
-    # @daq_type.setter
-    # def daq_type(self, daq_type: DAQTypesEnum):
-    #     daq_type = enum_checker(DAQTypesEnum, daq_type)
-    #
-    #     self._daq_type = daq_type
-    #     if self.ui is not None:
-    #         self.ui.daq_type = daq_type
-    #     self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
-    #     self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
-    #     self.detector = self.detectors[0]
 
     @property
     def daq_types(self) -> List[str]:
@@ -1428,7 +1396,6 @@ def main(init_qt=True, init_det=False):
     viewer = DAQ_Viewer(widget, title="Testing", daq_type=config('viewer', 'daq_type'))
     shared_ui = SharedUI(viewer, app_class_file=__file__)
     shared_ui.add_toolbar('viewer', 'Viewer', toolbar=viewer.ui.toolbar, add_break=True)
-    shared_ui.quit_fun()
     shared_ui.show()
 
     if init_det:
