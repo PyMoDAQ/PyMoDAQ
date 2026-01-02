@@ -346,7 +346,7 @@ def main(init_qt=True):
 
     prog.add_setting_tree(tree)
 
-    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
+    #prog.update_viewers([prog.selector.selected_module.daq_type.to_viewer_type()])
 
     shared_ui.add_toolbar('viewer', 'Viewer', toolbar=prog.toolbar, add_break=True)
 
