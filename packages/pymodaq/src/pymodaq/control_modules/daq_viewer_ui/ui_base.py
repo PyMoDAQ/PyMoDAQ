@@ -108,8 +108,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings'))
         self._settings_widget.setVisible(False)
 
-
-
     @property
     def detector(self) -> SelectedModule:
         return self.selector.selected_module
@@ -117,7 +115,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector.setter
     def detector(self, det: SelectedModule):
         self.selector.selected_module = det
-        self.selector.add_widget.setText(str(det))
 
     def close(self):
         for dock in self.viewer_docks:

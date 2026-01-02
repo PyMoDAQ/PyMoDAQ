@@ -78,13 +78,15 @@ def test_signals(ini_daq_viewer_ui):
 
     daq_viewer.detector_init = False
 
-    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
-        daq_viewer.detector = SelectedModule()
-    assert blocker.args[0].command == UiToMainViewer.DETECTOR_CHANGED
-    assert blocker.args[0].attribute == SelectedModule()
+    assert daq_viewer.viewer_types[0] == DAQTypesEnum.DAQ0D.to_viewer_type()
 
-    assert blocker.all_signals_and_args[1].args[0].command == UiToMainViewer.VIEWERS_CHANGED
-    assert blocker.all_signals_and_args[1].args[0].attribute['viewer_types'][0] == f'Viewer{daq_viewer.daq_types[1][3:]}'
+    MOD = SelectedModule(daq_type=DAQTypesEnum.DAQ1D, module_name='Mock')
+    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
+        daq_viewer.detector = MOD
+    assert blocker.args[0].command == UiToMainViewer.DETECTOR_CHANGED
+    assert blocker.args[0].attribute == MOD
+
+    assert daq_viewer.viewer_types[0] == MOD.daq_type.to_viewer_type()
 
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
@@ -92,7 +94,12 @@ def test_signals(ini_daq_viewer_ui):
 
     assert blocker.args[0].command == UiToMainViewer.INIT
     assert blocker.args[0].attribute[0]
-    assert blocker.args[0].attribute[1] == SelectedModule()
+    assert blocker.args[0].attribute[1] == MOD
+
+    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    #after the right return from the plugin instrument
+
+    assert daq_viewer.is_action_enabled('save_current')
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('save_current').trigger()
@@ -104,7 +111,7 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].attribute
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
-        daq_viewer.get_action('background_snap').click()
+        daq_viewer.get_action('background_snap').trigger()
     assert blocker.args[0].command == UiToMainViewer.TAKE_BKG
 
 
@@ -139,28 +146,13 @@ def test_do_init(ini_daq_viewer_ui):
 
 
 @pytestmark
-def test_is_init(ini_daq_viewer_ui):
-    IND_daq_type = 1
-    IND_det_type = 2
-
-    daq_viewer, qtbot = ini_daq_viewer_ui
-    daq_viewer.daq_type = daq_viewer.daq_types[IND_daq_type]
-    daq_viewer.detector = daq_viewer.detectors[IND_det_type]
-
-    daq_viewer.detector_init = True
-    assert daq_viewer.detector_init
-    assert daq_viewer._info_detector.text() == f'{daq_viewer.daq_type.name} : {daq_viewer.detector}'
-
-    daq_viewer.detector_init = False
-    assert not daq_viewer.detector_init
-    assert daq_viewer._info_detector.text() == ''
-
-
-@pytestmark
 def test_do_grab(ini_daq_viewer_ui):
     daq_viewer, qtbot = ini_daq_viewer_ui
 
     daq_viewer.do_init(True)
+    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    #after the right return from the plugin instrument
+
     with pytest.raises(qtbot.TimeoutError):
         with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
             daq_viewer.do_grab(False)

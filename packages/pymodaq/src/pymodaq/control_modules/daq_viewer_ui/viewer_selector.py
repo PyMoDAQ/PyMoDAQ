@@ -19,7 +19,17 @@ class ViewerSelector(ModuleSelector):
     def __init__(self, *args, **kwargs):
         super().__init__(str(SelectedModule()), *args, **kwargs)
 
-        self.selected_module: SelectedModule = SelectedModule()
+        self._selected_module: SelectedModule = SelectedModule()
+
+    @property
+    def selected_module(self):
+        return self._selected_module
+
+    @selected_module.setter
+    def selected_module(self, value: SelectedModule):
+        self._selected_module = value
+        self.add_widget.setText(str(value))
+        self.module_changed.emit(value)
 
     def _add_menu_item_selected(self, path_tuple):
         """Called when a menu item is selected from the nested add menu
