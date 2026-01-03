@@ -1,3 +1,5 @@
+from typing import Any, TYPE_CHECKING
+
 from pathlib import Path
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
@@ -13,6 +15,10 @@ from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.utils.config import Config as ControlModulesConfig
 
 config = ControlModulesConfig()
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 
 def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
@@ -74,7 +80,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     return dashboard, extension, shared_ui
 
 
-def create_load_dashboard():
+def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
     win = QMainWindow()
     area = DockArea()
@@ -87,7 +93,7 @@ def create_load_dashboard():
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
 
-def create_load_daq_move():
+def create_load_daq_move() -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
     widget = QtWidgets.QWidget()
@@ -110,7 +116,7 @@ def create_load_daq_move():
     return shared_ui, daq_move
 
 
-def create_load_daq_viewer():
+def create_load_daq_viewer() -> tuple[SharedUI, 'DAQ_Viewer']:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
     widget = QtWidgets.QWidget()
