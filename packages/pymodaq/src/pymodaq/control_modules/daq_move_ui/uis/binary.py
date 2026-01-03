@@ -63,7 +63,7 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
 
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
 
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
                         toolbar=self.move_toolbar)
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.move_toolbar)

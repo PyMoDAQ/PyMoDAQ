@@ -94,7 +94,7 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
 
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
                         toolbar=self.toolbar)
