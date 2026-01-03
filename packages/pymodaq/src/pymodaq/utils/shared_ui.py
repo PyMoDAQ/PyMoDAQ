@@ -100,9 +100,13 @@ class SharedUI(CustomApp):
         self.app = app
         if widget is None:
             widget = app.parent
-        parent = QtWidgets.QMainWindow()
-        parent.setCentralWidget(widget)
-        self.central_widget = widget
+        if isinstance(widget, QtWidgets.QMainWindow):
+            parent = widget
+            self.central_widget = widget.centralWidget()
+        else:
+            parent = QtWidgets.QMainWindow()
+            parent.setCentralWidget(widget)
+            self.central_widget = widget
         super().__init__(parent)
         self.app_class_file = app_class_file
 
@@ -158,10 +162,10 @@ class SharedUI(CustomApp):
         """
         Create the menubar object looking like :
         """
-        menubar.clear()
+       # menubar.clear()
 
         # %% create Settings menu
-        self.file_menu = menubar.addMenu("File")
+        self.file_menu = QtWidgets.QMenu("File")
         self.file_menu.addAction(self.get_action("log"))
         self.file_menu.addAction(self.get_action("config_utils"))
         self.file_menu.addAction(self.get_action("config"))
@@ -169,8 +173,15 @@ class SharedUI(CustomApp):
         self.file_menu.addAction(self.get_action("quit"))
         self.file_menu.addAction(self.get_action("restart"))
 
-        self.settings_menu = menubar.addMenu("Settings")
+        self.settings_menu = QtWidgets.QMenu("Settings")
         self.settings_menu.addAction(self.get_action("leco"))
+
+        menus = self.menubar.actions()
+        for menu in (self.file_menu, self.settings_menu):
+            if len(menus) > 0:
+                self.menubar.insertMenu(menus[0], menu)
+            else:
+                self.menubar.addMenu(self.menu)
 
         # help menu
         help_menu = menubar.addMenu("?")

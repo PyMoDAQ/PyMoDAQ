@@ -215,13 +215,7 @@ class DashBoard(CustomApp):
 
         self.setup_ui()
 
-        self.mainwindow.setVisible(True)
-
         logger.info("Dashboard Initialized")
-
-        if config_utils("general", "check_version"):
-            if self.check_update(show=False):
-                sys.exit(0)
 
     @property
     def actuators_modules(self) -> list[DAQ_Move]:
@@ -529,19 +523,6 @@ class DashBoard(CustomApp):
         return self.extensions[ext["class_name"]]
 
     def setup_actions(self):
-        self.add_action(
-            "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
-        )
-        self.add_action("quit", "Quit", "close2", "Quit program")
-
-        self.toolbar.addSeparator()
-
-        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "tree",
-                        tip="Show Control Modules and Extensions configuration file",)
-        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
-        self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
-                        auto_toolbar=False,)
         self.add_action("load_layout", "Load Layout", "",
                         "Load the Saved Docks layout corresponding to the current preset",
                         auto_toolbar=False,)
@@ -550,10 +531,10 @@ class DashBoard(CustomApp):
                         auto_toolbar=False,)
         self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
 
-        preset_toolbar = self.add_toolbar('preset', 'Preset Toolbar', parent=None)
-        config_toolbar = self.add_toolbar('configurator', 'Configurator Toolbar', parent=None)
-        self.mainwindow.addToolBar(preset_toolbar)
-        self.mainwindow.addToolBar(config_toolbar)
+        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
+                         add_break=False)
 
         self.toolbar.addSeparator()
 
@@ -619,21 +600,8 @@ class DashBoard(CustomApp):
         self.add_action("datamixer", "DataMixer", auto_toolbar=False)
         self.add_action("configurator", "Configurator", auto_toolbar=False)
 
-        self.add_action("about", "About", "information2")
-        self.add_action("help", "Help", "help1")
-        self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
-        self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
-        self.toolbar.addSeparator()
-        self.add_action("plugin_manager", "Plugin Manager", "")
-
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
-        self.connect_action("log", self.show_log)
-        self.connect_action("config_utils", lambda: self.show_config(config_utils))
-        self.connect_action("config", lambda: self.show_config(config))
-        self.connect_action("quit", self.quit_fun)
-        self.connect_action("restart", self.restart_fun)
-        self.connect_action("leco", start_coordinator)
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("log_window", self.logger_dock.setVisible)
@@ -688,34 +656,17 @@ class DashBoard(CustomApp):
         self.connect_action("adaptive", lambda: self.load_adaptive())
         self.connect_action("datamixer", lambda: self.load_datamixer())
 
-        self.connect_action("about", self.show_about)
-        self.connect_action("help", self.show_help)
-        self.connect_action("check_update", lambda: self.check_update(True))
-        self.connect_action("plugin_manager", self.start_plugin_manager)
-
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
         Create the menubar object looking like :
         """
-        menubar.clear()
-
-        # %% create Settings menu
-        self.file_menu = menubar.addMenu("File")
-        self.file_menu.addAction(self.get_action("log"))
-        self.file_menu.addAction(self.get_action("config_utils"))
-        self.file_menu.addAction(self.get_action("config"))
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(self.get_action("quit"))
-        self.file_menu.addAction(self.get_action("restart"))
+        #menubar.clear()
 
         self.settings_menu = menubar.addMenu("Settings")
-        self.settings_menu.addAction(self.get_action("leco"))
         docked_menu = self.settings_menu.addMenu("Docked windows")
         docked_menu.addAction(self.get_action("load_layout"))
         docked_menu.addAction(self.get_action("save_layout"))
 
-        docked_menu.addSeparator()
-        docked_menu.addAction(self.get_action("log_window"))
 
         self.add_menu('preset', 'Preset', menubar)
         self.add_menu('configurator', 'Configurator', menubar)
@@ -746,19 +697,11 @@ class DashBoard(CustomApp):
             extensions_actions.append(self.extensions_menu.addAction(ext["name"]))
             extensions_actions[-1].triggered.connect(self.create_menu_slot_ext(ext))
 
-        # help menu
-        help_menu = menubar.addMenu("?")
-        help_menu.addAction(self.get_action("about"))
-        help_menu.addAction(self.get_action("help"))
-        help_menu.addSeparator()
-        help_menu.addAction(self.get_action("check_update"))
-        help_menu.addAction(self.get_action("plugin_manager"))
 
         status = True
 
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(not status)
-        self.file_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
 
@@ -812,16 +755,6 @@ class DashBoard(CustomApp):
                         self.get_action_from_file(file, ManagerEnums.overshoot)
                     )
                 )
-
-    def start_plugin_manager(self):
-        self.win_plug_manager = QtWidgets.QMainWindow()
-        self.win_plug_manager.setWindowTitle("PyMoDAQ Plugin Manager")
-        widget = QtWidgets.QWidget()
-        self.win_plug_manager.setCentralWidget(widget)
-        self.plugin_manager = PluginManager(widget)
-        self.plugin_manager.quit_signal.connect(self.quit_fun)
-        self.plugin_manager.restart_signal.connect(self.restart_fun)
-        self.win_plug_manager.show()
 
     def create_menu_slot_ext(self, ext):
         return lambda: self.load_extensions_module(ext)
@@ -1561,18 +1494,6 @@ class DashBoard(CustomApp):
         for mod in self.actuators_modules:
             mod.stop_motion()
 
-    def show_log(self):
-        import webbrowser
-
-        webbrowser.open(logging.getLogger("pymodaq").handlers[0].baseFilename)
-
-    def show_config(self, config):
-        from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
-
-        config_tree = TreeFromToml(config)
-        config_tree.show_dialog()
-
-
     def setup_docks(self):
         # %% create logger dock
         self.logger_dock = Dock("Logger")
@@ -1623,69 +1544,6 @@ class DashBoard(CustomApp):
             elif change == "parent":
                 pass
 
-    def show_about(self):
-        self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage(
-            f"PyMoDAQ version {get_version('pymodaq')}\n"
-            f"Modular Acquisition with Python\n"
-            f"Written by Sébastien Weber"
-        )
-
-    def check_update(self, show=True):
-        try:
-            packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
-            current_versions = [version_mod.parse(get_version(p)) for p in packages]
-            available_versions = [
-                version_mod.parse(get_pypi_pymodaq(p)["version"]) for p in packages
-            ]
-            new_versions = np.greater(available_versions, current_versions)
-            # Combine package and version information and select only the ones with a newer version available
-
-            packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
-            )[new_versions]
-
-            if len(packages_data) > 0:
-                # Create a QDialog window and different graphical components
-                dialog = QtWidgets.QDialog()
-                dialog.setWindowTitle("Update check")
-
-                vlayout = QtWidgets.QVBoxLayout()
-
-                message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
-                )
-                message_label.setAlignment(Qt.AlignCenter)
-
-                table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data))
-                table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
-                )
-
-                for p in packages_data:
-                    table.append_row(p[0], p[1], p[2])
-
-                # The vlayout contains the message, the table and the buttons
-                # and is connected to the dialog window
-                vlayout.addWidget(message_label)
-                vlayout.addWidget(table)
-                dialog.setLayout(vlayout)
-
-                ret = dialog.exec()
-
-            else:
-                if show:
-                    msgBox = QMessageBox()
-                    msgBox.setWindowTitle("Update check")
-                    msgBox.setText("Everything is up to date!")
-                    ret = msgBox.exec()
-        except Exception as e:
-            logger.exception("Error while checking the available PyMoDAQ version")
-
-        return False
-
     def show_file_attributes(self, type_info="dataset"):
         """
         Switch the type_info value.
@@ -1730,9 +1588,6 @@ class DashBoard(CustomApp):
         dialog.setWindowTitle("Fill in information about this {}".format(type_info))
         res = dialog.exec()
         return res
-
-    def show_help(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
     def update_status(self, txt, wait_time=0, log_type=None):
         """

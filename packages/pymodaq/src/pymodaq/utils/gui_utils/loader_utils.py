@@ -77,10 +77,18 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
 
 
 def create_load_dashboard():
+    from pymodaq.utils.shared_ui import SharedUI
+
     win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle("PyMoDAQ Dashboard")
     dashboard = DashBoard(area)
-    return win, dashboard
+
+    shared_ui = SharedUI(dashboard, widget=win,
+                         app_class_file=DashBoard.__module__)
+
+    shared_ui.show()
+
+    return shared_ui, dashboard
