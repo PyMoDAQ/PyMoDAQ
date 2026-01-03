@@ -1,11 +1,18 @@
 from pathlib import Path
-
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QMessageBox, QMainWindow
 
+from pymodaq import dashboard
 from pymodaq.dashboard import DashBoard
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.utils import CustomExt
+
+from pymodaq.utils.shared_ui import SharedUI
+from pymodaq.utils.config import Config as ControlModulesConfig
+
+config = ControlModulesConfig()
 
 
 def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
@@ -30,22 +37,14 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     -------
 
     """
-    win = QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('extension_name')
-    win.show()
+    shared_ui, dashboard = create_load_dashboard()
 
-    # win.setVisible(False)
-    dashboard = DashBoard(area)
 
     preset_name = Path(preset_name).stem
+    extension = None
 
-    file = Path(get_set_preset_path()).joinpath(f"{preset_name}.xml")
-
-    if file is not None and file.exists():
-        dashboard.apply_preset_to_dashboard(file)
+    if preset_name in dashboard.preset_manager.entries:
+        dashboard.preset_manager.entry = preset_name
 
         if extension_name:
             if extension_name == 'DAQScan':
@@ -68,27 +67,57 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     else:
         msgBox = QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{file}\n"
+                       f"{preset_name}\n"
                        f"Impossible to load the {extension_name} extension")
         msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
         ret = msgBox.exec()
-    return dashboard, extension, win
-
+    return dashboard, extension, shared_ui
 
 
 def create_load_dashboard():
-    from pymodaq.utils.shared_ui import SharedUI
 
     win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle("PyMoDAQ Dashboard")
+
+    shared_ui = SharedUI(win)
     dashboard = DashBoard(area)
-
-    shared_ui = SharedUI(dashboard, widget=win,
-                         app_class_file=DashBoard.__module__)
-
-    shared_ui.show()
-
+    shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
+
+def create_load_daq_move():
+    from pymodaq.control_modules.daq_move import DAQ_Move
+
+    widget = QtWidgets.QWidget()
+    daq_move = DAQ_Move(widget, title="test")
+
+    shared_ui = SharedUI(widget)
+    shared_ui.affect_application(daq_move)
+
+    if config("actuator", "ui") == "Original":
+        shared_ui.add_toolbar('ui_toolbar', 'ui_toolbar', toolbar=daq_move.ui.toolbar,
+                              area=Qt.ToolBarArea.LeftToolBarArea)
+        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=daq_move.ui.move_toolbar,
+                              area=Qt.ToolBarArea.TopToolBarArea,
+                              add_break=True)
+    else:
+        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=daq_move.ui.move_toolbar,
+                              area=Qt.ToolBarArea.TopToolBarArea,
+                              add_break=True)
+
+    return shared_ui, daq_move
+
+
+def create_load_daq_viewer():
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+
+    widget = QtWidgets.QWidget()
+    daq_viewer = DAQ_Viewer(widget, title="test")
+
+    shared_ui = SharedUI(widget)
+    shared_ui.affect_application(daq_viewer)
+    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=daq_viewer.ui.toolbar, add_break=True)
+
+    return shared_ui, daq_viewer

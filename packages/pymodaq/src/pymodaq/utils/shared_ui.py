@@ -5,7 +5,7 @@ import logging
 from packaging import version as version_mod
 import subprocess
 import sys
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QThread, Signal, QSize
@@ -27,7 +27,7 @@ from pymodaq_utils.utils import get_version
 from pymodaq_utils import config as configmod
 from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq.utils.config import Config as ControlModulesConfig
-
+from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.splash import get_splash_sc
 
@@ -95,11 +95,8 @@ class SharedUI(CustomApp):
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, app: CustomApp, widget: Union[QtWidgets.QWidget, DockArea] = None,
-                 app_class_file: Union[Path, str] = None):
-        self.app = app
-        if widget is None:
-            widget = app.parent
+    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea]):
+        
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
             self.central_widget = widget.centralWidget()
@@ -107,13 +104,22 @@ class SharedUI(CustomApp):
             parent = QtWidgets.QMainWindow()
             parent.setCentralWidget(widget)
             self.central_widget = widget
+            
         super().__init__(parent)
-        self.app_class_file = app_class_file
+        
+        
+        self._app_class_file: Union[str, Path] = None
+        self._main_application: Any = None
 
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
         self.setup_ui()
         self.mainwindow.setVisible(True)
+        
+    def affect_application(self, app: Any):
+        """ Affect this SharedUI to the given application"""
+        self._app_class_file = get_module_path(app.__module__)
+        self._main_application = app
 
     def show(self):
         self.mainwindow.show()
@@ -181,7 +187,7 @@ class SharedUI(CustomApp):
             if len(menus) > 0:
                 self.menubar.insertMenu(menus[0], menu)
             else:
-                self.menubar.addMenu(self.menu)
+                self.menubar.addMenu(menu)
 
         # help menu
         help_menu = menubar.addMenu("?")
@@ -213,7 +219,7 @@ class SharedUI(CustomApp):
         quit_fun
         """
         try:
-            self.app.quit_fun()
+            self._main_application.quit_fun()
             QtWidgets.QApplication.processEvents()
 
             if hasattr(self, "mainwindow"):
@@ -236,7 +242,7 @@ class SharedUI(CustomApp):
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
-            subprocess.call([sys.executable, self.app_class_file])
+            subprocess.call([sys.executable, self._app_class_file])
 
     def show_log(self):
         import webbrowser

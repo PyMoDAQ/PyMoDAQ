@@ -26,6 +26,7 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
+from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
@@ -167,15 +168,14 @@ class DashBoard(CustomApp):
         {"title": "Detectors Init.", "name": "detectors", "type": "group", "children": [],},
     ]
 
-    def __init__(self, dockarea):
+    def __init__(self, parent: Union[DockArea]):
         """
 
         Parameters
         ----------
-        parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
         """
 
-        super().__init__(dockarea)
+        super().__init__(parent)
 
         logger.info("Initializing Dashboard")
         self.extra_params = []

@@ -1128,30 +1128,11 @@ class DAQ_Move_Hardware(QObject):
 
 
 def main(init_qt=True):
-    from pymodaq.utils.shared_ui import SharedUI
-
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-
-    widget = QtWidgets.QWidget()
-    prog = DAQ_Move(widget, title="test")
-
-    shared_ui = SharedUI(prog, app_class_file=__file__)
-
-    if config("actuator", "ui") == "Original":
-        shared_ui.add_toolbar('ui_toolbar', 'ui_toolbar', toolbar=prog.ui.toolbar,
-                              area=Qt.ToolBarArea.LeftToolBarArea)
-        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=prog.ui.move_toolbar,
-                              area=Qt.ToolBarArea.TopToolBarArea,
-                              add_break=True)
-    else:
-        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=prog.ui.move_toolbar,
-                              area=Qt.ToolBarArea.TopToolBarArea,
-                              add_break=True)
-
+    shared_ui, daq_move = create_load_daq_move()
     shared_ui.show()
-
     app.exec()
-
 
 
 if __name__ == "__main__":

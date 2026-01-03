@@ -664,6 +664,14 @@ def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path'
     file = f'{base_name}_{index:03d}'
     return file, curr_dir
 
+def get_module_path(module_name: str):
+    """ Get Path of a given module represented by its name
+
+    You get the name usually with the dunder __module__ on an object or class
+    """
+    module = sys.modules[module_name]
+    return module.__file__
+
 
 if __name__ == '__main__':
 

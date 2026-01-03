@@ -18,7 +18,6 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-
 from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
 
@@ -1394,20 +1393,17 @@ def prepare_docks(area, title):
 
 def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
-    from pymodaq.utils.shared_ui import SharedUI
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
     from pymodaq_gui.utils.utils import mkQApp
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")
 
-    widget = QtWidgets.QWidget()
-    viewer = DAQ_Viewer(widget, title="Testing", daq_type=config('viewer', 'daq_type'))
-    shared_ui = SharedUI(viewer, app_class_file=__file__)
-    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=viewer.ui.toolbar, add_break=True)
+    shared_ui, daq_viewer = create_load_daq_viewer()
     shared_ui.show()
 
     if init_det:
-        viewer.init_hardware_ui(init_det)
+        daq_viewer.init_hardware_ui(init_det)
 
     if init_qt:
         sys.exit(app.exec_())
