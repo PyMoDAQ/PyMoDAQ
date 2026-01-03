@@ -97,21 +97,11 @@ def create_load_daq_move() -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
     widget = QtWidgets.QWidget()
-    daq_move = DAQ_Move(widget, title="test")
+    daq_move = DAQ_Move(widget, title="test",
+                        ui_identifier='Original')
 
     shared_ui = SharedUI(widget)
     shared_ui.affect_application(daq_move)
-
-    if config("actuator", "ui") == "Original":
-        shared_ui.add_toolbar('ui_toolbar', 'ui_toolbar', toolbar=daq_move.ui.toolbar,
-                              area=Qt.ToolBarArea.LeftToolBarArea)
-        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=daq_move.ui.move_toolbar,
-                              area=Qt.ToolBarArea.TopToolBarArea,
-                              add_break=True)
-    else:
-        shared_ui.add_toolbar('move_toolbar', 'move_toolbar', toolbar=daq_move.ui.move_toolbar,
-                              area=Qt.ToolBarArea.TopToolBarArea,
-                              add_break=True)
 
     return shared_ui, daq_move
 
