@@ -9,6 +9,11 @@ class SelectedModule:
     daq_type: DAQTypesEnum = field(default_factory=lambda: DAQTypesEnum.DAQ0D)
     module_name: str = 'Mock'
 
+    def __post_init__(self):
+        if not isinstance(self.daq_type, DAQTypesEnum):
+            if isinstance(self.daq_type, str):
+                self.daq_type = DAQTypesEnum[self.daq_type]
+
     def __repr__(self):
         return f'{self.daq_type.name}/{self.module_name}'
 

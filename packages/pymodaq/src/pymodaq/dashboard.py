@@ -26,6 +26,7 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -54,6 +55,7 @@ from pymodaq.utils.gui_utils.widgets.window import make_window
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.instruments import DAQTypesEnum
 
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
@@ -297,11 +299,8 @@ class DashBoard(CustomApp):
                     self.detector_modules.remove(detector_module)
                 detector_module.quit_fun()
                 dock = self.dockarea.docks.get(
-                    f"{detector_module.title} settings", None
+                    f"{detector_module.title}", None
                 )
-                if dock:
-                    dock.close()
-                dock = self.dockarea.docks.get(f"{detector_module.title} viewer", None)
                 if dock:
                     dock.close()
         except Exception as e:
@@ -1100,32 +1099,27 @@ class DashBoard(CustomApp):
         # Update actuators modules and module manager
         self.actuators_modules.append(actuator)
 
-    def add_det(self, plug_name, plug_settings, detector_docks_settings, detector_docks_viewer,
+    def add_det(self, plug_name, plug_settings, detector_docks_viewer,
                 detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
             plug_subtype = plug_settings.child("main_settings", "detector_type").value()
-        detector_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-        detector_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
+        detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
-            self.logger_dock.area.addDock(detector_docks_settings[-1], "bottom")
-            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_settings[-1])
+            self.logger_dock.area.addDock(detector_docks_viewer[-1], "bottom")
         else:
-            self.dockarea.addDock(detector_docks_settings[-1], "bottom", detector_docks_settings[-2])
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
-
+        widget = QtWidgets.QWidget()
+        detector_docks_viewer[-1].addWidget(widget)
         det_mod_tmp = DAQ_Viewer(
-            self.dockarea,
+            widget,
             title=plug_name,
             daq_type=plug_type,
-            dock_settings=detector_docks_settings[-1],
-            dock_viewer=detector_docks_viewer[-1],
         )
         QtWidgets.QApplication.processEvents()
-        det_mod_tmp.detector = plug_subtype
+        det_mod_tmp.detector = SelectedModule(plug_type, plug_subtype)
         QtWidgets.QApplication.processEvents()
-        det_mod_tmp.manage_ui_actions("quit", "setEnabled", False)
 
         if plug_settings is not None:
             try:
@@ -1183,7 +1177,7 @@ class DashBoard(CustomApp):
             which created it
         """
         detector = self.add_det(
-            name, None, [], [], [], plug_type=daq_type, plug_subtype=instrument_name
+            name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name
         )
         detector.controller = instrument_controller
         detector.master = False

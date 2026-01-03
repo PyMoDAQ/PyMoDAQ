@@ -245,7 +245,6 @@ class PresetManager(ManagerBase):
         detector_modules: list[DAQ_Viewer] = []
 
         actuator_docks: list[Dock] = []
-        detector_docks_settings: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
 
@@ -274,7 +273,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].init_hardware_ui()
                             actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = actuators_modules[-1].controller
 
@@ -293,7 +292,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -302,7 +301,7 @@ class PresetManager(ManagerBase):
                     ind_det += 1
                     plug_dim = plugin["settings"].child("info", "dim").value()
                     self.dashboard.add_det(plug_name, None,
-                                           detector_docks_settings, detector_docks_viewer, detector_modules,
+                                           detector_docks_viewer, detector_modules,
                                            plug_dim, plug_type)
                     QtWidgets.QApplication.processEvents()
 
@@ -316,7 +315,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = detector_modules[-1].controller
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
@@ -336,7 +335,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -418,7 +417,6 @@ class PresetManager(ManagerBase):
         detector_modules: list[DAQ_Viewer] = []
 
         actuator_docks: list[Dock] = []
-        detector_docks_settings: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
 
@@ -453,7 +451,7 @@ class PresetManager(ManagerBase):
                         if plug_init:
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = actuators_modules[-1].controller
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
@@ -472,7 +470,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -484,7 +482,6 @@ class PresetManager(ManagerBase):
                     self.dashboard.add_det(
                         plug_name,
                         None,
-                        detector_docks_settings,
                         detector_docks_viewer,
                         detector_modules,
                         plug_type=plug_type,
@@ -501,7 +498,7 @@ class PresetManager(ManagerBase):
                         if plug_init:
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = detector_modules[-1].controller
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
@@ -520,7 +517,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].controller = master_controller
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)

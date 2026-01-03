@@ -142,7 +142,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.viewers = self.ui.viewers
             self._viewer_types = self.ui.viewer_types
 
-        self.detector = self._detector
+
 
         self.splash_sc = get_splash_sc()
 
@@ -178,7 +178,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._do_save_data: bool = False
 
-        self._set_setting_tree()  # to activate parameters of default Mock detector
+        self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
         self.update_plugin_config()
