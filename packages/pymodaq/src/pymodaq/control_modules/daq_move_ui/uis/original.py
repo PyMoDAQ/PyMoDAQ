@@ -69,7 +69,6 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
         self.main_ui.layout().addWidget(self.actuators_combo, 2, 1)
 
         self.main_ui.layout().addWidget(self.ini_actuator_pb, 3, 0)
-        self.main_ui.layout().addWidget(self.ini_state_led, 3, 1)
         self.main_ui.layout().addWidget(LabelWithFont('Current value:'), 4, 0)
         self.main_ui.layout().addWidget(self.move_done_led, 4, 1)
 

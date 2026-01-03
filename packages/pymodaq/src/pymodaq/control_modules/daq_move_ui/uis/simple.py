@@ -46,7 +46,6 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=self.move_toolbar,
                         tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
                         icon_checked_color=qt_themes.get_theme().green)
-        self.add_widget('ini_led', self.ini_state_led, toolbar=self.move_toolbar)
         self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
         self.add_widget('abs_green', self.abs_value_sb, toolbar=self.move_toolbar)
