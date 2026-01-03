@@ -272,6 +272,14 @@ class DAQ_Viewer(ParameterControlModule):
                 ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
 
     @property
+    def daq_type(self) -> DAQTypesEnum:
+        """Get/Set the daq_type as a DAQTypesEnum
+
+        Update the detector property with the list of available detectors of a given daq_type
+        """
+        return self.detector.daq_type
+
+    @property
     def daq_types(self) -> List[str]:
         """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
         return DAQTypesEnum.names()
