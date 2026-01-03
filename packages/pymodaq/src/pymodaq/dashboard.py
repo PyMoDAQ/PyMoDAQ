@@ -1094,7 +1094,7 @@ class DashBoard(CustomApp):
         actuator.master = False
         actuator.init_hardware_ui()
         QtWidgets.QApplication.processEvents()
-        self.poll_init(actuator)
+        self.modules_manager.poll_init(actuator)
         QtWidgets.QApplication.processEvents()
 
         # Update actuators modules and module manager
@@ -1189,22 +1189,11 @@ class DashBoard(CustomApp):
         detector.master = False
         detector.init_hardware_ui()
         QtWidgets.QApplication.processEvents()
-        self.poll_init(detector)
+        self.modules_manager.poll_init(detector)
         QtWidgets.QApplication.processEvents()
 
         # Update actuators modules and module manager
         self.detector_modules.append(detector)
-
-    def poll_init(self, module):
-        is_init = False
-        tstart = perf_counter()
-        while not is_init:
-            QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-            is_init = module.initialized_state
-            if perf_counter() - tstart > 60:  # timeout of 60sec
-                break
-        return is_init
 
     def set_roi_configuration(self, filename):
         if not isinstance(filename, Path):
