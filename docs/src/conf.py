@@ -158,7 +158,6 @@ autodoc_mock_imports = [
     "h5py",
     "matplotlib",
     "qtpy",
-    "pyqtgraph",
     "qtpy.QtCore",
     "qtpy.QtGui",
     "qtpy.QtWidgets"
