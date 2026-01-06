@@ -118,7 +118,7 @@ class DAQ_Move(ParameterControlModule):
         self.logger = set_logger(f"{logger.name}.{title}")
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
-        super().__init__(action_list=("save", "update"), **kwargs)
+        super().__init__(**kwargs)
 
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
