@@ -38,7 +38,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
-                 tree: ParameterTree = None):
+                 tree: ParameterTree = None, title: str = None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self, tree=tree)
@@ -58,6 +58,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         else:
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
+        if title is not None:
+            parent.setWindowTitle(title)
 
         self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
