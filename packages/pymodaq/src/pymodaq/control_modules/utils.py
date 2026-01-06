@@ -56,6 +56,44 @@ def create_controller_param(axis_name: str = None, axis_names: Optional[list[str
     return controller_param
 
 
+def create_remote_connection_params() -> list[dict]:
+    """Create common remote connection parameter definitions (TCP/IP and LECO)
+
+    These parameters are shared between DAQ_Move and DAQ_Viewer control modules
+    and provide the settings for connecting to remote TCP/IP servers or LECO instances.
+
+    Returns
+    -------
+    list of dict
+        Parameter definitions for TCP/IP and LECO remote connections
+    """
+    return [
+        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True,
+         'expanded': False, 'children': [
+            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push',
+             'label': 'Connect', 'value': False},
+            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
+             VALID_FOR_CONFIGURATION: False, 'readonly': True},
+            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
+             'value': config_utils('network', 'tcp-server', 'ip')},
+            {'title': 'Port:', 'name': 'port', 'type': 'int',
+             'value': config_utils('network', 'tcp-server', 'port')},
+        ]},
+        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True,
+         'expanded': False, 'children': [
+            {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push',
+             'label': 'Connect', 'value': False},
+            {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
+             VALID_FOR_CONFIGURATION: False, 'readonly': True},
+            {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
+            {'title': 'Host:', 'name': 'host', 'type': 'str',
+             'value': config_utils('network', "leco-server", "host"), "default": "localhost"},
+            {'title': 'Port:', 'name': 'port', 'type': 'int',
+             'value': config_utils('network', 'leco-server', 'port')},
+        ]},
+    ]
+
+
 config_utils = Config()
 config = ControlModulesConfig()
 logger = set_logger(get_module_name(__file__))
