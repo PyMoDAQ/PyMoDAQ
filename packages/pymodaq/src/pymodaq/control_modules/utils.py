@@ -384,7 +384,8 @@ class ParameterControlModule(ParameterManager, ControlModule):
     listener_class: Type[ActorListener] = ActorListener
 
     def __init__(self, **kwargs):
-        ParameterManager.__init__(self, action_list=("search", "save", "update"))
+        action_list = kwargs.get("action_list", ("search", "save", "update"))
+        ParameterManager.__init__(self, action_list=action_list)
         ControlModule.__init__(self)
 
     def apply_controller_parameters(self, controller_param: Parameter):
