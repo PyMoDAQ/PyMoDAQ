@@ -46,6 +46,7 @@ from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
+from pymodaq.utils.compact_dock_manager import CompactDockManager
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.utils.daq_utils import get_instrument_plugins
 from pymodaq.utils.leco.utils import start_coordinator
@@ -213,8 +214,8 @@ class DashBoard(CustomApp):
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        self.compact_actuator_dock: Dock = None
-        self.compact_detector_dock: Dock = None
+        self.compact_actuator_manager: CompactDockManager = None
+        self.compact_detector_manager: CompactDockManager = None
 
         self.setup_ui()
 
@@ -299,15 +300,19 @@ class DashBoard(CustomApp):
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
                 detector_module.quit_fun()
-                dock = self.dockarea.docks.get(
-                    f"{detector_module.title}", None
-                )
+
+                # Remove from compact dock manager
+                if self.compact_detector_manager:
+                    is_empty = self.compact_detector_manager.remove_widget(detector_module.ui.toolbar,
+                                                                           module=detector_module)
+                    if is_empty:
+                        self.compact_detector_manager.close()
+                        self.compact_detector_manager = None
+
+                # Close individual detector dock
+                dock = self.dockarea.docks.get(f"{detector_module.title}", None)
                 if dock:
                     dock.close()
-                self.compact_detector_dock.widgets.remove(detector_module.ui.toolbar)
-            if len(self.compact_detector_dock.widgets) == 0:
-                self.compact_detector_dock.close()
-                self.compact_detector_dock = None
         except Exception as e:
             logger.exception(str(e))
 
@@ -327,17 +332,20 @@ class DashBoard(CustomApp):
                     self.actuators_modules.remove(actuator_module)
                 actuator_module.quit_fun()
                 QtWidgets.QApplication.processEvents()
-                dock = self.dockarea.docks.get(actuator_module.title, None)
+
+                # Remove from compact dock manager
+                if self.compact_actuator_manager:
+                    is_empty = self.compact_actuator_manager.remove_widget(actuator_module.ui.toolbar,
+                                                                           module=actuator_module)
+                    if is_empty:
+                        self.compact_actuator_manager.close()
+                        self.compact_actuator_manager = None
+
+                # Close individual actuator dock (for non-compact actuators)
+                dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
                     dock.removeWidgets()
                     dock.close()
-                try:
-                    self.compact_actuator_dock.widgets.remove(actuator_module.ui.parent)
-                except ValueError:
-                    pass
-            if len(self.compact_actuator_dock.widgets) == 0:
-                self.compact_actuator_dock.close()
-                self.compact_actuator_dock = None
         except Exception as e:
             logger.exception(str(e))
 
@@ -1029,12 +1037,16 @@ class DashBoard(CustomApp):
         )
 
         if is_compact:
-            if self.compact_actuator_dock is None:
-                self.compact_actuator_dock = Dock("Simple Actuators")
-                self.compact_actuator_dock.layout.setSpacing(0)
-                self.compact_actuator_dock.layout.setContentsMargins(0, 0, 0, 0)
-                self.dockarea.addDock(self.compact_actuator_dock, "top")
-            dock = self.compact_actuator_dock
+            # Create compact manager if needed
+            if self.compact_actuator_manager is None:
+                self.compact_actuator_manager = CompactDockManager(
+                    "Simple Actuators",
+                    self.dockarea,
+                    orientation=Qt.Orientation.Vertical,
+                    module_type='actuator'
+                )
+                self.compact_actuator_manager.show("top")
+            dock = None  # Compact widgets don't have individual docks
 
         else:
             dock = Dock(plug_name, size=(150, 250))
@@ -1065,7 +1077,15 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        dock.addWidget(actuator_widgets[-1])
+
+        # Add widget to appropriate container
+        if is_compact:
+            # For compact actuators, use the toolbar directly (like detectors)
+            self.compact_actuator_manager.add_widget(mov_mod_tmp.ui.toolbar,
+                                                    create_toolbar=False,
+                                                    module=mov_mod_tmp)
+        else:
+            dock.addWidget(actuator_widgets[-1])
 
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
@@ -1115,14 +1135,17 @@ class DashBoard(CustomApp):
         if plug_subtype is None:
             plug_subtype = plug_settings.child("main_settings", "detector_type").value()
 
-        if self.compact_detector_dock is None:
-            self.compact_detector_dock = Dock("DAQ Viewer Toolbars")
-            self.compact_detector_dock.layout.setSpacing(0)
-            self.compact_detector_dock.layout.setContentsMargins(0, 0, 0, 0)
-            self.dockarea.addDock(self.compact_detector_dock, "top")
+        # Create compact manager if needed
+        if self.compact_detector_manager is None:
+            self.compact_detector_manager = CompactDockManager(
+                "DAQ Viewer Toolbars",
+                self.dockarea,
+                orientation=Qt.Orientation.Vertical,
+                module_type='detector'
+            )
+            self.compact_detector_manager.show("top")
 
-        toolbar_dock = self.compact_detector_dock
-
+        # Create individual detector dock
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
             self.logger_dock.area.addDock(detector_docks_viewer[-1], "bottom")
@@ -1135,7 +1158,11 @@ class DashBoard(CustomApp):
             title=plug_name,
             daq_type=plug_type,
         )
-        toolbar_dock.addWidget(det_mod_tmp.ui.toolbar)
+
+        # Add toolbar to compact dock manager (toolbar is already a QToolBar, so create_toolbar=False)
+        self.compact_detector_manager.add_widget(det_mod_tmp.ui.toolbar,
+                                                 create_toolbar=False,
+                                                 module=det_mod_tmp)
         QtWidgets.QApplication.processEvents()
         det_mod_tmp.detector = SelectedModule(plug_type, plug_subtype)
         QtWidgets.QApplication.processEvents()

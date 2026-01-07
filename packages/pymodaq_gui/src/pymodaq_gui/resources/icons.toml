@@ -23,8 +23,8 @@ names = [
     'cable',
     'save_as',
     'settings',
-
-
+    'lock',
+    'lock_open_right',
 ]
 
 
