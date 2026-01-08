@@ -3,6 +3,7 @@ from abc import abstractproperty
 from collections.abc import Iterable
 
 import copy
+from functools import lru_cache
 from os import environ
 import sys
 import datetime
@@ -11,6 +12,9 @@ from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
 from typing import Iterable as IterableType
 
 
+import pymodaq_utils.link
+from pymodaq_utils.environment import guess_virtual_environment
+from pymodaq_utils.link import link_or_copy, unlink_or_delete
 from pymodaq_utils.singleton import Singleton
 from fasteners import ReaderWriterLock
 
@@ -28,8 +32,11 @@ except:
 CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
     Path('/Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
 
+CONFIG_USER_PATH = Path.home()
+
 
 KeyType = TypeVar('KeyType')
+
 
 
 def replace_item_in_list(items: list[Any],
@@ -143,7 +150,7 @@ def get_set_local_dir(user=False) -> Path:
     Path: the local path
     """
     if user:
-        local_path = get_set_path(Path.home(), '.pymodaq')
+        local_path = get_set_path(CONFIG_USER_PATH, '.pymodaq')
     else:
         local_path = get_set_path(CONFIG_BASE_PATH, '.pymodaq')
     return local_path
@@ -491,3 +498,115 @@ def _delete_config_files(config : BaseConfig):
     """
     get_config_file(config.config_name, user=False).unlink(missing_ok=True)
     get_config_file(config.config_name, user=True).unlink(missing_ok=True)
+
+
+
+def __generate_backup_path(base_path: Path, filename_fmt: str) -> Path:
+    date = datetime.datetime.now().strftime('%Y%m%d')
+    candidate = base_path / filename_fmt.format(date)
+    counter = 0
+    while candidate.exists():
+        counter += 1
+        candidate = base_path / (filename_fmt.format(date) + f'-{counter}')
+    return candidate
+
+def __get_version_hash() -> str:
+    import hashlib
+    from importlib import metadata
+    packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
+    versions = []
+    for package in packages:
+        try:
+            versions.append(metadata.version(package))
+        except metadata.PackageNotFoundError:
+            pass
+    hashed = hashlib.sha256(''.join(versions).encode()).digest()[:8].hex()
+    return hashed + '-dev' if any('dev' in version for version in versions) else ''
+
+def __generate_env_path(base_path: Path, filename_fmt: str) -> Path:
+
+    candidate = base_path / filename_fmt.format(guess_virtual_environment(), __get_version_hash())
+    return candidate
+
+
+def __dict_to_type(a : Any) -> Any:
+    if isinstance(a, dict):
+        return { k : __dict_to_type(v) for k,v in a.items()}
+    if isinstance(a, list):
+        return [__dict_to_type(x) for x in a]
+    return type(a)
+
+
+T = TypeVar('T')
+
+def deep_type_equals(a : T, b : T) -> bool:
+    '''
+    Compares two objects a and b not on their values but on their types.
+    For iterable objects like lists and dictionaries the function recursively
+    compare the types of nested elements.
+
+    Initially made to work with data loaded from toml.
+    Parameters
+    ----------
+    a : T
+        The first element to compare
+    b : T
+        The second element to compare
+
+    Returns
+    -------
+        True if types are all recursively equals, False otherwise.
+    '''
+    if type(a) != type(b):
+        return False
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(deep_type_equals(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return all(deep_type_equals(x, y) for x, y in zip(a, b))
+    return True
+
+def __validate_config(template_path : Union[Path, str], config_path : Union[Path, str]) -> bool:
+    template_path = Path(template_path)
+    config_path = Path(config_path)
+    return deep_type_equals(toml.load(template_path), toml.load(config_path))
+
+@lru_cache(maxsize=1)
+def __sanitize_config_directory():
+    import logging
+
+    logging.critical("Sanitize configuration folder")
+    next_today_backup_dir =__generate_backup_path(CONFIG_USER_PATH, '.pymodaq_backup_{0}')
+    environment_version_specific_dir = __generate_env_path(CONFIG_USER_PATH, '.pymodaq_{0}_{1}')
+    logging.critical(f"next_today_backup_dir: {next_today_backup_dir}")
+    logging.critical(f"environment_version_specific_dir: {environment_version_specific_dir}")
+
+    local_config_dir = get_set_local_dir(user=True).absolute()
+    if (local_config_dir.exists() and
+      (not local_config_dir.is_symlink()
+        and not local_config_dir.is_junction())):
+            local_config_dir.rename(next_today_backup_dir)
+            link_or_copy(next_today_backup_dir, local_config_dir)
+            logging.critical(f"creating symlink {next_today_backup_dir} -> {local_config_dir}")
+
+    if __validate_config():
+        logging.critical("config is valid")
+        config_path = local_config_dir.resolve()
+        logging.critical(f"config is in path: {config_path}")
+        if config_path.stem.startswith('.pymodaq_backup'):
+            #unlink old config_path
+            logging.critical(f"local_config_dir : {local_config_dir}")
+            unlink_or_delete(local_config_dir)
+            #rename it
+            config_path = config_path.rename(environment_version_specific_dir)
+            #relink
+            link_or_copy(config_path, local_config_dir)
+    else:
+        config_path = local_config_dir.resolve()
+        unlink_or_delete(local_config_dir)
+        config_path.rename(next_today_backup_dir)
+        if not environment_version_specific_dir.exists():
+            environment_version_specific_dir.mkdir(parents=True)
+        link_or_copy(config_path, local_config_dir)
+
+
+__sanitize_config_directory()

@@ -7,15 +7,19 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
-from pymodaq_utils import config as configmod
-from pymodaq_utils.config import get_set_local_dir
-from pymodaq_utils.logger import set_logger, get_module_name
+
+def get_logger():
+    from pymodaq_utils.logger import set_logger, get_module_name
+    return set_logger(get_module_name(__file__))
 
 
-logger = set_logger(get_module_name(__file__))
+def get_config():
+    from pymodaq_utils import config as configmod
+    return configmod.Config()
 
-config = configmod.Config()
-
+def get_set_local_dir(user=False) -> Path:
+    from pymodaq_utils import config as configmod
+    return configmod.get_set_local_dir(user=user)
 
 def guess_virtual_environment() -> str:
     '''
@@ -45,6 +49,7 @@ class EnvironmentBackupManager:
 
     '''
     def __init__(self):
+        config = get_config()
         # Path is: <local_config_path>/<backup_path(default=environments)>/<venv_name>/
         self._path = get_set_local_dir(user=True) / config['backup']['folder'] / guess_virtual_environment()
         self._path.mkdir(parents=True, exist_ok=True)
@@ -62,6 +67,8 @@ class EnvironmentBackupManager:
             [PythonEnvironment]: 
                 A sorted list of PythonEnvironment objects (from oldest to newest)
         '''
+
+        logger = get_logger()
         environments = []
         filenames = list(self._path.glob('*.txt'))
 
@@ -93,6 +100,9 @@ class EnvironmentBackupManager:
 
             Also, remove the oldest one(s) if there's more than the limit defined in configuration.
         '''
+
+        logger = get_logger()
+        config = get_config()
         if self._should_save():
             logger.info(f'Current environment is different than the last one. Keeping backup.')
             self._save_newest()
@@ -114,6 +124,7 @@ class PythonEnvironment:
 
     def __init__(self, filename=None):
         # set comparison is easy, order does not matter
+        config = get_config()
         self._packages = set()
         storage_path = get_set_local_dir(user=True) / config['backup']['folder'] / guess_virtual_environment()
         self._path = Path(filename) if filename else storage_path / f'{datetime.now().strftime(PythonEnvironment.DATE_FORMAT)}_environment.txt'
@@ -141,18 +152,20 @@ class PythonEnvironment:
             datetime: 
                 The date associated with this environment
         '''
+
+        logger = get_logger()
         try:
             date_in_filename = self._path.name.split('_')[0]
             return datetime.strptime(date_in_filename, PythonEnvironment.DATE_FORMAT)
         except ValueError:
-            logging.warning(f'Date is not defined in filename for: {self._path.name}. Guessing from file date.')
+            logger.warning(f'Date is not defined in filename for: {self._path.name}. Guessing from file date.')
 
         if self._path.is_file():
             try:
                 return datetime.fromtimestamp(self._path.stat().st_ctime)
             except:
                 pass
-        logging.warning(f'{self._path.name} does not exists or has no metadata. Defaulting to now().')
+        logger.warning(f'{self._path.name} does not exists or has no metadata. Defaulting to now().')
         return datetime.now()
     
     def extend(self, packages):
@@ -170,6 +183,8 @@ class PythonEnvironment:
         '''
             Remove the backup file associated with this environment, if it exists. 
         '''
+
+        logger = get_logger()
         if not self._path.is_file():
             logger.error('Trying to remove a PythonEnvironment that has no filename/is not saved.')
         else:
@@ -179,6 +194,8 @@ class PythonEnvironment:
         '''
             Save the backup file associated with this environment, if it does not exists. 
         '''
+
+        logger = get_logger()
         if self._path.is_file():
             logger.error('Trying to save a PythonEnvironment that was already saved. They should not be modified.')
         else:
