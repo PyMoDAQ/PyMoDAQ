@@ -11,29 +11,26 @@ DATA = [dict(name='papa', contents=[
         dict(name='maman', contents=[dict(name='fistone', contents=[dict(name='subfistone', contents='baby')])])]
 
 @fixture
-def tree_yield(qtbot):
+def tree(qtbot):
     widget = QtWidgets.QWidget()
     tree = TreeLayout(widget, col_counts=2, labels=["Material", "File"])
     qtbot.addWidget(widget)
     widget.show()
 
-    yield tree, qtbot
+    yield tree
     widget.close()
 
 
 
-def test_populate_tree(tree_yield):
-    tree, qtbot = tree_yield
+def test_populate_tree(tree):
     tree.populate_tree(DATA)
 
 
-def test_add_action(tree_yield):
-    tree, qtbot = tree_yield
+def test_add_action(tree):
     detector_action = QtWidgets.QAction("Grab from camera", None)
     tree.tree.addAction(detector_action)
 
-def test_clicked(tree_yield):
-    tree, qtbot = tree_yield
+def test_clicked(tree):
     tree.populate_tree(DATA)
 
     def print_item(item: QtWidgets.QTreeWidgetItem):
