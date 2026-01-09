@@ -151,23 +151,23 @@ class DAQScan(QObject, ParameterManager):
         self.plot_colors = utils.plot_colors
 
         self.runner_thread: QThread = None
-        self._h5saver: H5Saver = None
-        self._module_and_data_saver: module_saving.ScanSaver = None
 
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
-        self.module_and_data_saver = module_saving.ScanSaver(self)
+
+        self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+        self._h5saver.settings.child('do_save').hide()
+        self._h5saver.settings.child('custom_name').hide()
+        self._h5saver.new_file_sig.connect(self.create_new_file)
+
+        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
 
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
-
-        self.h5saver.settings.child('do_save').hide()
-        self.h5saver.settings.child('custom_name').hide()
-        self.h5saver.new_file_sig.connect(self.create_new_file)
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
         self.scan_parameters = None
@@ -202,7 +202,7 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
     def setup_ui(self):
-        self.ui.populate_toolbox_widget([self.settings_tree, self.h5saver.settings_tree],
+        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
 
         self.ui.set_scanner_settings(self.scanner.parent_widget)
@@ -526,6 +526,9 @@ class DAQScan(QObject, ParameterManager):
     def h5saver(self):
         if self._h5saver is None:
             self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver.settings.child('do_save').hide()
+            self._h5saver.settings.child('custom_name').hide()
+            self._h5saver.new_file_sig.connect(self.create_new_file)
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():
@@ -795,6 +798,7 @@ class DAQScan(QObject, ParameterManager):
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
+
             res = self.update_scan_info()
             if not res:
                 return False
@@ -821,17 +825,6 @@ class DAQScan(QObject, ParameterManager):
                 messagebox(
                     text="There are not enough or too much selected move modules for this scan")
                 return False
-
-            ## TODO the stuff about adaptive scans have to be moved into a dedicated extension. M
-            ## Most similat to the Bayesian one!
-            if self.scanner.scan_sub_type == 'Adaptive':
-                #todo include this in scanners objects for the adaptive scanners
-                if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    messagebox(
-                        text="In adaptive mode, you have to pick a 0D signal from which the "
-                             "algorithm will determine the next positions to scan, see 'probe_data'"
-                             " in the modules selector panel")
-                    return False
 
             self.ui.n_scan_steps = self.scanner.n_steps
 
@@ -907,6 +900,7 @@ class DAQScan(QObject, ParameterManager):
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
 
+        self._module_and_data_saver.h5saver = self.h5saver
         res = self.set_scan()
         if res:
             # deactivate module controls using remote_control
@@ -926,9 +920,9 @@ class DAQScan(QObject, ParameterManager):
             else:
                 scan_shape = self.scanner.get_scan_shape()
             for det in self.modules_manager.detectors:
-                det.module_and_data_saver = (
+                det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
-            self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver ill also be set on each detectors
+            self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
 
             # mandatory to deal with multithreads
             if self.runner_thread is not None:

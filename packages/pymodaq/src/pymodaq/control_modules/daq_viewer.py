@@ -103,7 +103,9 @@ class DAQ_Viewer(ParameterControlModule):
     data_saved = Signal()
     grab_status = Signal(bool)
 
-    params = daq_viewer_params
+    params = daq_viewer_params + [
+        {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
+         'visible': False, 'children': H5Saver.params}]
 
     listener_class = ViewerActorListener
     ui: Optional[DAQ_Viewer_UI]
@@ -162,7 +164,6 @@ class DAQ_Viewer(ParameterControlModule):
                                           module_saving.DetectorExtendedSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
-        self.setup_continuous_saving()
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
@@ -171,6 +172,13 @@ class DAQ_Viewer(ParameterControlModule):
         else:
             raise DetectorError('No detected Detector')
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
+        for hidden_param in ('custom_name',
+                            'current_scan_name',
+                            'current_scan_path',
+                            'current_h5_file',
+                            'new_file',
+                            'base_name'):
+            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -199,14 +207,15 @@ class DAQ_Viewer(ParameterControlModule):
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
 
-    def setup_continuous_saving(self):
+    def setup_continuous_saving(self, init: bool = True):
         """Configure the objects dealing with the continuous saving mode"""
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self._h5saver_continuous = H5Saver(save_type='detector')
-        self._h5saver_continuous.show_settings(False)
-        self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
-        if self.ui is not None:
-            self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
+        if init:
+            self.module_and_data_saver = module_saving.DetectorSaver(self)
+            self._h5saver_continuous = H5Saver(save_type='detector')
+            self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
+        else:
+            self._h5saver_continuous.close_file()
+
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -632,9 +641,9 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if self._h5saver_continuous.settings.child('do_save').value():
 
-            self._h5saver_continuous.settings.child('base_name').setValue('Data')
-            self._h5saver_continuous.settings.child('N_saved').show()
-            self._h5saver_continuous.settings.child('N_saved').setValue(0)
+            self.settings.child('saver_settings', 'base_name').setValue('Data')
+            self.settings.child('saver_settings', 'N_saved').show()
+            self.settings.child('saver_settings', 'N_saved').setValue(0)
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self._h5saver_continuous.init_file(update_h5=True)
 
@@ -645,7 +654,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.grab_done_signal.connect(self.append_data)
         else:
             self._do_continuous_save = False
-            self._h5saver_continuous.settings.child('N_saved').hide()
+            self.settings.child('saver_settings', 'N_saved').hide()
             self.grab_done_signal.disconnect(self.append_data)
 
             try:
@@ -674,13 +683,13 @@ class DAQ_Viewer(ParameterControlModule):
             dte = self._data_to_save_export
         init_step = kwargs.pop('init_step', None)
         if init_step is None:
-            init_step = self._h5saver_continuous.settings['N_saved'] == 0
+            init_step = self.settings['saver_settings', 'N_saved'] == 0
         self._add_data_to_saver(dte,
                                 init_step=init_step,
                                 where=where,
                                 **kwargs)
 
-        self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
+        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
     def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
                     distribution=DataDistribution['uniform']):
@@ -960,7 +969,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
-            self._h5saver_continuous.settings.child('do_save').setValue(False)
+            self.settings.child('saver_settings', 'do_save').setValue(False)
             self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
 
         elif param.name() == 'show_averaging':
@@ -992,11 +1001,17 @@ class DAQ_Viewer(ParameterControlModule):
                         viewer.x_axis, viewer.y_axis = self.get_scaling_options()
 
         elif param.name() == 'continuous_saving_opt':
-            self._h5saver_continuous.show_settings(param.value())
+            self.settings.child('saver_settings').setOpts(visible=param.value())
+
 
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
+
+        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
+            if param.name() == 'do_save':
+                self.setup_continuous_saving(param.value())
+            self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
 
         self._update_settings(param=param)
 

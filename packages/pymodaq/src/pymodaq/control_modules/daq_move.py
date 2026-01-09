@@ -30,6 +30,7 @@ from pymodaq_utils.warnings import deprecation_msg
 from pymodaq.utils.data import DataToExport, DataActuator
 from pymodaq_data.h5modules.backends import Node
 
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.utils.utils import mkQApp
@@ -80,8 +81,6 @@ config = ControlModulesConfig()
 
 HardwareController = TypeVar("HardwareController")
 
-HardwareController = TypeVar("HardwareController")
-
 DAQ_Move_Actuators = get_plugins("daq_move")
 ACTUATOR_TYPES = [mov["name"] for mov in DAQ_Move_Actuators]
 if len(ACTUATOR_TYPES) == 0:
@@ -117,7 +116,9 @@ class DAQ_Move(ParameterControlModule):
     current_value_signal = Signal(DataActuator)
     bounds_signal = Signal(bool)
 
-    params = daq_move_params
+    params = daq_move_params +  [
+        {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
+         'visible': False, 'children': H5Saver.params}]
 
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
@@ -166,7 +167,14 @@ class DAQ_Move(ParameterControlModule):
         if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
             self.actuator = kwargs.get("actuator", ACTUATOR_TYPES[0])
 
-        self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
+        self._module_and_data_saver: module_saving.ActuatorTimeSaver = None
+        for hidden_param in ('custom_name',
+                            'current_scan_name',
+                            'current_scan_path',
+                            'current_h5_file',
+                            'new_file',
+                            'base_name'):
+            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._move_done_bool = True
 
@@ -268,7 +276,7 @@ class DAQ_Move(ParameterControlModule):
         if dte is None:
             dte = DataToExport(name=self.title, data=[self._current_value])
         self._add_data_to_saver(dte, where=where)
-        # todo: test this for logging
+        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
     def _add_data_to_saver(self, data: DataToExport, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
@@ -482,11 +490,43 @@ class DAQ_Move(ParameterControlModule):
     def value_changed(self, param: Parameter):
         """Apply changes of value in the settings"""
         super().value_changed(param=param)
+        path = self.settings.childPath(param)
 
         if param.name() == "refresh_timeout":
             self._refresh_timer.setInterval(param.value())
 
+        elif param.name() == 'continuous_saving_opt':
+            self.settings.child('saver_settings').setOpts(visible=param.value())
+
+        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
+            if param.name() == 'do_save':
+                self.setup_continuous_saving(param.value())
+            self.h5saver.settings.child(*path[1:]).setValue(param.value())
+
         self._update_settings(param=param)
+
+    def setup_continuous_saving(self, init: bool = True):
+        """Configure the objects dealing with the continuous saving mode"""
+        if init:
+            self.module_and_data_saver = module_saving.ActuatorTimeSaver(self)
+            self.module_and_data_saver.h5saver = self.h5saver
+            self.h5saver.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
+        else:
+            self.h5saver.close_file()
+
+    def _init_continuous_save(self):
+        """ Initialize the continuous saving H5Saver object
+
+        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
+        """
+        if self.settings.child('saver_settings', 'do_save').value():
+
+            self.settings.child('saver_settings', 'base_name').setValue('Data')
+            self.settings.child('saver_settings', 'N_saved').show()
+            self.settings.child('saver_settings', 'N_saved').setValue(0)
+            self.h5saver.init_file(update_h5=True)
+        else:
+            self.settings.child('saver_settings', 'N_saved').hide()
 
     def param_deleted(self, param):
         """Apply deletion of settings"""
@@ -564,10 +604,14 @@ class DAQ_Move(ParameterControlModule):
                     "show_graph"
                 ):
                     self.ui.show_data(DataToExport(name=self.title, data=[data_act]))
+
             self._current_value = data_act
+            if self.settings['saver_settings', 'do_save']:
+                self.append_data()
+
             self.current_value_signal.emit(self._current_value)
             if (
-                self.settings["main_settings", "tcpip", "tcp_connected"]
+                    self.settings["main_settings", "tcpip", "tcp_connected"]
                 and self._send_to_tcpip
             ):
                 self._command_tcpip.emit(ThreadCommand("position_is", data_act))

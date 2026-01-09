@@ -194,14 +194,13 @@ class ModulesManager(QObject, ParameterManager):
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
-    def detectors_all(self):
+    def detectors_all(self)  -> List['DAQ_Viewer']:
         """Get/Set the list of all detectors"""
         return self._detectors
 
     @detectors_all.setter
     def detectors_all(self, detectors: List['DAQ_Viewer']):
         self._detectors = detectors
-
 
     @property
     def actuators(self) -> List['DAQ_Move']:
