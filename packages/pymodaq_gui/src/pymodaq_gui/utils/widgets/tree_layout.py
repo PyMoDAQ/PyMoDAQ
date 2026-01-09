@@ -31,8 +31,8 @@ class TreeLayout(QObject):
         self.close_tree_pb.clicked.connect(self.collapse_all)
         self.open_tree_selected_pb.clicked.connect(self.open_tree_selection)
         
-        self.tree.itemClicked.connect(self.item_clicked_sig.emit)
-        self.tree.itemDoubleClicked.connect(self.item_double_clicked_sig.emit)
+        self.tree.itemClicked.connect(lambda item, index: self.item_clicked_sig.emit(item))
+        self.tree.itemDoubleClicked.connect(lambda item, index: self.item_double_clicked_sig.emit(item))
 
     def _current_text(self, col_index: int = 2):
         return self.tree.currentItem().text(col_index)
