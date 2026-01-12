@@ -25,37 +25,123 @@ jobs:
       fail-fast: false
     runs-on: "ubuntu-latest"
     steps:
-
-      - name: Set up GitHub CLI 
-        run: sudo apt-get install gh -y
-
-      - name: Set up Python
-        uses: actions/setup-python@v5.4.0
+  collect-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait and collect coverage
+        uses: actions/github-script@v8
         with:
-          python-version: '3.12'
-
-      - name: Trigger missing test workflows per package
-        run: |
-          set -e
-          workflows=("Test for pymodaq" "Test for pymodaq_utils" "Test for pymodaq_gui" "Test for pymodaq_data")
-          for wf in "${workflows[@]}"; do
-            pkg=$(echo "$wf" | sed 's/Test for //')
-      
-            # Try to download artifact to check if workflow already ran
-            if ! gh run download --workflow "$wf" --name "coverage-$pkg" -D ./coverage 2>/dev/null; then
-              gh workflow run "$wf" -f ref="${GITHUB_SHA}"
-
-              # Wait for workflow to complete
-              while true; do
-                sleep 60
-                status=$(gh run list --workflow "$wf" --branch "${GITHUB_REF##*/}" --limit 1 --json status,conclusion -q '.[0]')
-                if [[ "$status" == *"completed"* ]]; then
-                  break
-                fi
-              done
-            fi
-          done
-
+          script: |
+            const packages = ['pymodaq_utils', 'pymodaq_data', 'pymodaq_gui', 'pymodaq'];
+            const headSha = context.payload.workflow_run.head_sha;
+            const headBranch = context.payload.workflow_run.head_branch;
+            const event = context.payload.workflow_run.event;
+            
+            console.log(`SHA: ${headSha}, Branch: ${headBranch}, Event: ${event}\n`);
+            
+            // Wait 10 minutes so that test mostly finishes
+            await new Promise(r => setTimeout(r, 10*60000));
+            // Get all test runs for this commit
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: headSha,
+              event: event
+            });
+            
+            const testRuns = {};
+            for (const pkg of packages) {
+              const run = runs.workflow_runs.find(r => r.name === `Test for ${pkg}`);
+              if (run) testRuns[pkg] = run;
+            }
+            
+            // Wait for in-progress runs
+            for (const pkg of packages) {
+              if (testRuns[pkg]?.status !== 'completed') {
+                console.log(`Waiting for ${pkg}...`);
+                let attempts = 0;
+                while (attempts < 60) {
+                  await new Promise(r => setTimeout(r, 1*60000));
+                  const { data: run } = await github.rest.actions.getWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    run_id: testRuns[pkg].id
+                  });
+                  if (run.status === 'completed') {
+                    testRuns[pkg] = run;
+                    console.log(`${pkg} completed`);
+                    break;
+                  }
+                  attempts++;
+                }
+              }
+            }
+            
+            // Check for missing artifacts and trigger tests
+            for (const pkg of packages) {
+              const run = testRuns[pkg];
+              let hasArtifact = false;
+              
+              if (run) {
+                const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+                hasArtifact = artifacts.artifacts.some(a => a.name === `coverage-${pkg}`);
+              }
+              
+              if (!hasArtifact) {
+                console.log(`Triggering test for ${pkg}...`);
+                
+                const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                
+                const workflow = workflows.workflows.find(w => w.name === `Test for ${pkg}`);
+                if (workflow) {
+                  await github.rest.actions.createWorkflowDispatch({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: workflow.id,
+                    ref: headBranch
+                  });
+                  
+                  // Wait for new run to appear and complete (10 minutes should be enough)
+                  await new Promise(r => setTimeout(r, 10*60000));
+                  
+                  const { data: newRuns } = await github.rest.actions.listWorkflowRuns({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: workflow.id,
+                    branch: headBranch,
+                    per_page: 1
+                  });
+                  
+                  if (newRuns.workflow_runs[0]) {
+                    const runId = newRuns.workflow_runs[0].id;
+                    console.log(`Waiting for triggered ${pkg}...`);
+                    
+                    let attempts = 0;
+                    while (attempts < 60) {
+                      await new Promise(r => setTimeout(r, 1*60000));
+                      const { data: run } = await github.rest.actions.getWorkflowRun({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: runId
+                      });
+                      if (run.status === 'completed') {
+                        testRuns[pkg] = run;
+                        console.log(`${pkg} completed`);
+                        break;
+                      }
+                      attempts++;
+                    }
+                  }
+                }
+              }
+            }
       - name: Download merged coverage artifacts
         uses: actions/download-artifact@v5.0.0
         with:
