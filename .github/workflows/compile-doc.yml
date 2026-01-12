@@ -1,0 +1,39 @@
+name: Ensure documentation compilation
+
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches:
+    - '*'
+    - '!badges' # to exclude execution if someone PR on this branch (shouldn't happen)
+  push:
+    branches:
+    - '*'
+    - '!badges' # to exclude execution if someone pushes on this branch (shouldn't happen)
+
+jobs:
+  compile-doc:
+    continue-on-error: false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup compilation environment
+        run: |
+          python install-packages.py
+          pip install -r docs/requirements.txt
+
+
+      - name: Build documentation with 15 min timeout
+        run: |
+          cd docs/
+          python automodule.py
+          #readthedocs give us a timeout of 15 min to complete a build
+          timeout 15m make html
