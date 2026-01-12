@@ -27,7 +27,6 @@ jobs:
 
       - name: Setup compilation environment
         run: |
-          python docs/automodule.py
           python install-packages.py
           pip install -r docs/requirements.txt
 
@@ -35,6 +34,6 @@ jobs:
       - name: Build documentation with 15 min timeout
         run: |
           cd docs/
-
+          python automodule.py
           #readthedocs give us a timeout of 15 min to complete a build
           timeout 15m make html
