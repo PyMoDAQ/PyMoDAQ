@@ -19,11 +19,6 @@ concurrency:
   cancel-in-progress: true
   
 jobs:
-  merge:
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-    runs-on: "ubuntu-latest"
   collect-coverage:
     runs-on: ubuntu-latest
     steps:
