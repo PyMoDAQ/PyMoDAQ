@@ -41,7 +41,7 @@ class Dock(Dock):
                 self.updateStyle()
 
 
-class DockArea(DockArea, QObject):
+class DockArea(DockArea):
     """
     Custom Dockarea class subclassing from the standard DockArea class and QObject so it can emit a signal when docks
     are moved around (one subclassed method: moveDock)
