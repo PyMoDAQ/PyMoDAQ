@@ -221,6 +221,12 @@ def dict_from_param(param):
             filetype = '0'
         opts.update(dict(filetype=filetype))
 
+    if 'patterns' in param.opts:
+        opts.update(dict(patterns=param.opts["patterns"]))
+
+    if 'completer_config' in param.opts:
+        opts.update(dict(completer_config=param.opts["completer_config"]))
+
     return opts
 
 
@@ -322,6 +328,20 @@ def elt_to_dict(el):
         try:
             limits = eval(el.get('limits'))
             param.update(dict(limits=limits))
+        except:
+            pass
+
+    if 'patterns' in el.attrib.keys():
+        try:
+            patterns = eval(el.get('patterns'))
+            param.update(dict(patterns=patterns))
+        except:
+            pass
+
+    if 'completer_config' in el.attrib.keys():
+        try:
+            completer_config = eval(el.get('completer_config'))
+            param.update(dict(completer_config=completer_config))
         except:
             pass
 

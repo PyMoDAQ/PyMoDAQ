@@ -23,6 +23,25 @@ class ScalableGroup(GroupParameter):
 # Need to register a new type to properly trigger addNew
 registerParameterType('groupedit', ScalableGroup, override=True)
 
+def create_text_with_pattern_parameter():
+    text_params = {
+                "name": "text_with_pattern",
+                "title": "Text Editing with pattern completion (@ for users, # for languages):",
+                "type": "text_pattern",
+                "value": "",
+                "patterns": {
+                    "@": ["alice", "bob", "charlie"],
+                    "#": ["python", "javascript", "cpp"],
+                },
+                "completer_config": {
+                    "min_width": 200,
+                    "max_width": 400,
+                    "case_sensitive": False,
+                    "visual_indicator": True,
+                },
+            }
+
+    return text_params
 
 class ParameterEx(ParameterManager):
     params = [
@@ -117,6 +136,7 @@ class ParameterEx(ParameterManager):
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
+            create_text_with_pattern_parameter(),        
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},
         ]},
