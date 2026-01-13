@@ -283,12 +283,15 @@ class DataSaverLoader(DataManagement):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
+                 new_file=False, metadata=None):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, Path) or isinstance(h5saver, str):
             h5saver_tmp = H5SaverLowLevel()
-            h5saver_tmp.init_file(file_name=Path(h5saver))
+            h5saver_tmp.init_file(file_name=Path(h5saver),
+                                  new_file=new_file,
+                                  metadata=metadata)
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
