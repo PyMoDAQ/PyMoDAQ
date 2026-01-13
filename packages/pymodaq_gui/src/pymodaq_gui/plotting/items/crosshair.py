@@ -56,7 +56,7 @@ class Crosshair(pg.GraphicsObject):
 
     def update_hline(self):
         self.hLine.sigDragged.disconnect(self.update_vline)
-        p = self.vLine.getYPos() - self.vLine.cursorOffset[1]
+        p = self.vLine.getYPos() - self.vLine.cursorOffset.y()
         self.hLine.setPos(p)
         self.hLine.sigDragged.connect(self.update_vline)
         self.crosshair_dragged.emit(self.vLine.getXPos(), self.hLine.getYPos())
@@ -66,7 +66,7 @@ class Crosshair(pg.GraphicsObject):
 
     def update_vline(self):
         self.vLine.sigDragged.disconnect(self.update_hline)
-        p = self.hLine.getXPos() - self.hLine.cursorOffset[0]
+        p = self.hLine.getXPos() - self.hLine.cursorOffset.x()
         self.vLine.setPos(p)
         self.vLine.sigDragged.connect(self.update_hline)
         self.crosshair_dragged.emit(self.vLine.getXPos(), self.hLine.getYPos())
