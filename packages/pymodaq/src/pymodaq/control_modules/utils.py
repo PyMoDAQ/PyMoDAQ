@@ -168,7 +168,7 @@ class ControlModule(QObject):
 
     @property
     def module_and_data_saver(self):
-        if not self._module_and_data_saver.h5saver.isopen():
+        if self._module_and_data_saver.h5saver is None or not self._module_and_data_saver.h5saver.isopen():
             self._module_and_data_saver.h5saver = self.h5saver
         return self._module_and_data_saver
 
@@ -176,7 +176,6 @@ class ControlModule(QObject):
     def module_and_data_saver(self, mod: Union[DetectorSaver, ActuatorSaver]):
         self._module_and_data_saver = mod
         self._module_and_data_saver.h5saver = self.h5saver
-
 
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))

@@ -181,9 +181,10 @@ params = [
          'limits': ActuatorUIFactory.keys()},
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
          VALID_FOR_CONFIGURATION: False,},
-
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('actuator', 'refresh_timeout_ms')},
+        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
+         'value': False},
     ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]

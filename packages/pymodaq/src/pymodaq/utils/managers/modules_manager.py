@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 
-
 logger = set_logger(get_module_name(__file__))
 config_utils = Config()
 config = ControlModulesConfig()
@@ -212,7 +211,7 @@ class ModulesManager(QObject, ParameterManager):
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
-    def detectors_all(self):
+    def detectors_all(self)  -> List['DAQ_Viewer']:
         """Get/Set the list of all detectors"""
         return self._detectors
 
