@@ -23,7 +23,8 @@ names = [
     'cable',
     'save_as',
     'settings',
-
+    'bid_landscape',
+    'bid_landscape_disabled',
 
 ]
 

@@ -105,7 +105,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.update_viewers([self.selector.selected_module.daq_type.to_viewer_type()])
         self.connect_things()
 
-        self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings'))
+        self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self._settings_widget.setVisible(False)
 
     @property
@@ -148,6 +148,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
                         icon_checked='videocam_off', icon_checked_color=self._theme.red)
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
+        self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
+                        checkable=True, icon_checked='bid_landscape_disabled',
+                        icon_color=self._theme.green, icon_checked_color=self._theme.red)
         self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
         self.toolbar.addSeparator()
         self.add_action('background_snap', 'Snap Background', 'background_replace',
@@ -170,6 +173,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                             lambda checked: self.command_sig.emit(ThreadCommand(UiToMainViewer.DO_BKG, checked)))
         self.connect_action('background_snap',
                             lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
+        self.connect_action('show_graphs', lambda checked: self.show_graphs(not checked))
+
+    def show_graphs(self, show: bool = True):
+        self.dockarea.setVisible(show)
+        self.dockarea.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
 
     def _show_settings(self, show: bool = True):
         self._settings_widget.setVisible(show)
@@ -214,7 +222,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self.enable_actions(not self.is_action_checked('grab'),
-                            all_except=('grab', 'selector', 'show_settings'))
+                            all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
 
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
@@ -273,7 +281,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     @detector_init.setter
     def detector_init(self, status):
         self._ini_state = status
-        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings'))
+        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self.set_action_enabled('selector', not status)
 
         if status:
