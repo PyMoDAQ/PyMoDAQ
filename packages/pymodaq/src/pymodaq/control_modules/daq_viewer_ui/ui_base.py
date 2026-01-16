@@ -140,10 +140,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         font_size=14, isbold=True, isitalic=True))
         self.add_widget('selector', self.selector.add_widget)
         self.add_action('ini_detector', 'Ini. Detector', ActionIconNames.INI, checkable=True,
-                        tip='Connect to selected detector', icon_color=qt_themes.get_theme().red,
+                        tip='Connect to selected detector', icon_color=self._theme.red,
                         )
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
+                        checkable=True, icon_checked_color=self._theme.green)
+        self.toolbar.addSeparator()
         self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
-                        icon_checked='videocam_off')
+                        icon_checked='videocam_off', icon_checked_color=self._theme.red)
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
         self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
         self.toolbar.addSeparator()
@@ -151,8 +154,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         tip='Take a snapshot a set it as background')
         self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
                         tip='If checked, apply background substraction',
-                        icon_checked_color=qt_themes.get_theme().green)
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True)
+                        icon_checked_color=self._theme.green)
 
     def connect_things(self):
         self.connect_action('show_settings', self._show_settings)
@@ -189,10 +191,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=qt_themes.get_theme().green,)
+                               icon_color=self._theme.green,)
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=qt_themes.get_theme().red,)
+                               icon_color=self._theme.red,)
         self.get_action('snap').set_icon(icon)
 
     def _detector_changed(self, sel_mod: SelectedModule):
@@ -212,7 +214,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         """Slot from the *grab* action"""
         self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
         self.enable_actions(not self.is_action_checked('grab'),
-                            all_except=('grab', 'snap', 'selector', 'show_settings'))
+                            all_except=('grab', 'selector', 'show_settings'))
 
         if not self.config('viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
@@ -276,10 +278,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         if status:
             icon = create_icon(ActionIconNames.INI,
-                               icon_color=qt_themes.get_theme().green,)
+                               icon_color=self._theme.green,)
         else:
             icon = create_icon(ActionIconNames.INI,
-                               icon_color=qt_themes.get_theme().red,)
+                               icon_color=self._theme.red,)
         self.get_action('ini_detector').set_icon(icon)
 
     def enable_actions(self, status=True, all_except=()):
@@ -306,8 +308,7 @@ def main(init_qt=True):
 
     widget = QtWidgets.QWidget()
     prog = DAQ_Viewer_UI(widget, title='myViewer')
-    shared_ui = SharedUI(prog, app_class_file=__file__)
-
+    shared_ui = SharedUI(widget)
 
 
     def set_data_ready(ready=True):
