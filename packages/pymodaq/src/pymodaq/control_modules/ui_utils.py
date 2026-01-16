@@ -2,7 +2,7 @@ from importlib import import_module
 from pathlib import Path
 
 from qtpy import QtCore
-
+import qt_themes
 
 from pymodaq_gui.utils import CustomApp
 
@@ -33,6 +33,8 @@ class ControlModuleUI(CustomApp):
     def __init__(self, parent):
         super().__init__(parent)
         self.config = config
+
+        self._theme = qt_themes.get_theme()
 
     def display_status(self, txt, wait_time=config_utils('general', 'message_status_persistence')):
         if self.statusbar is not None:
