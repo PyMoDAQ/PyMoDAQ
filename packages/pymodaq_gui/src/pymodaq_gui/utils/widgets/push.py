@@ -3,7 +3,7 @@ from pathlib import Path
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QWidget
 
-from pymodaq_gui.utils.utils import create_icon
+from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 
 

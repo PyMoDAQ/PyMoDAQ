@@ -6,7 +6,8 @@ Created the 29/07/2022
 """
 
 from qtpy import QtWidgets, QtCore, QtGui
-from pymodaq_gui.utils.utils import create_font
+from pymodaq_gui.utils.styling import create_font
+
 
 class LabelWithFont(QtWidgets.QLabel):
 

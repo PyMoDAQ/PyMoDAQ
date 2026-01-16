@@ -242,7 +242,7 @@ class SharedUI(CustomApp):
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
-            subprocess.call([sys.executable, self._app_class_file])
+            subprocess.call([sys.executable, str(self._app_class_file)])
 
     def show_log(self):
         import webbrowser

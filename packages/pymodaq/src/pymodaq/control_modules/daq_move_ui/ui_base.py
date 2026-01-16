@@ -19,7 +19,7 @@ from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq_gui.utils.utils import create_icon
+from pymodaq_gui.utils.styling import create_icon
 
 config_utils = Config()
 config = ControlModulesConfig()

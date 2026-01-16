@@ -7,7 +7,7 @@ from multipledispatch import dispatch
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
-from pymodaq_gui.utils.utils import create_icon
+from pymodaq_gui.utils.styling import create_icon
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import Config
 
@@ -15,17 +15,10 @@ try:
     from pymodaq_gui.resources.material_icons import MaterialIcon
 except  ImportError:
     pass #this could happen when creating /importing new MaterialIcons
-import qt_themes
-
 
 config = Config()
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
 QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
-theme = qt_themes.get_theme(config('style', 'theme')[0])
-
-
-def resource_path_exists(path: str) -> bool:
-    return QtCore.QFile(path).exists()
 
 
 class QAction(QtQAction):
