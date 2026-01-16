@@ -263,11 +263,12 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def send_init(self, checked: bool):
         self._enable_detchoices(not checked)
+        if not checked and self.is_action_checked('background_subtract'):
+            self.get_action('background_subtract').trigger()
+        QtWidgets.QApplication.processEvents()
         self.command_sig.emit(ThreadCommand(UiToMainViewer.INIT,
                                             [checked,
                                              self.selector.selected_module]))
-        if not checked and self.is_action_checked('background_subtract'):
-            self.get_action('background_subtract').trigger()
 
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
