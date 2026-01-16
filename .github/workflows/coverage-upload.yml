@@ -1,0 +1,293 @@
+name: Coverage upload
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Test for pymodaq"
+      - "Test for pymodaq_utils"
+      - "Test for pymodaq_gui"
+      - "Test for pymodaq_data"
+    types:
+      - completed
+
+concurrency:
+  # github.workflow: name of the workflow
+  # github.event.pull_request.number || github.ref: pull request number or branch name if not a pull request
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Cancel in-progress runs when a new workflow with the same group name is triggered
+  cancel-in-progress: true
+  
+jobs:
+  collect-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+
+
+      - name: Ensure coverage is generated and download artifacts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            /* ================================================================================= */
+            /* ================================================================================= */
+            /* =================================== Context ===================================== */
+            /* ================================================================================= */
+            /* ================================================================================= */
+
+            const sha    = process.env.GITHUB_SHA;
+            const branch = process.env.GITHUB_REF_NAME;
+            const event  = process.env.GITHUB_EVENT_NAME;
+            const owner  = context.repo.owner
+            const repo   = context.repo.repo
+
+            const artifact_save_base_path = "."
+
+            const fs = require("fs");
+            const path = require("path");
+
+            /* ================================================================================= */
+            /* ================================================================================= */
+            /* ============================== Helper functions ================================= */
+            /* ================================================================================= */
+            /* ================================================================================= */
+
+            //Sleep `seconds` seconds (works with floats)
+            const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
+
+            //Check if a json object contains something or is just {}
+            const is_empty = (json) => Object.keys(json).length === 0;
+
+            // List all "Test for <package>" runs for each package in packages.
+            // If strict is true, only _event is considered
+            // Otherwise a priority based search strategy is made
+            const get_corresponding_test_runs = async (packages, _event=event, strict=false) => {
+              const test_runs = {};
+            
+              
+              const base_strategies = [
+                {branch : branch, head_sha: sha, event : _event }, // Runs directly triggered by this event
+                {branch : branch, head_sha: sha },                 // Runs from the same commit 
+                {branch : branch},                                 // Runs from the same branch
+                {}                                                 // Any run
+              ];
+
+              // strict => we only want runs triggered by this event so, only the first strategy
+              const strategies = strict ? [base_strategies[0]] : base_strategies;
+
+              for (const package of packages) {
+                let run = null;
+                // Try each strategy until a run is found
+                for (const strategy of strategies) {
+                  const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                    owner : owner,
+                    repo : repo,
+                    ...strategy,
+                  });
+
+                  run = data.workflow_runs.find(r => r.name === `Test for ${package}`);
+                  if (run) break; // stop as soon as a match is found
+                }
+
+                test_runs[package] = run;
+              }
+
+              return test_runs;
+            };
+
+            // Wait `attempts` times for `seconds` seconds for `run_id` run to complete
+            // return null if timed out.  
+            const wait_for_run_completion = async (run_id, seconds = 60, attempts=10) => {
+              let i = 0;
+              while (i < attempts) {
+                await sleep(seconds);
+                const { data: run } = await github.rest.actions.getWorkflowRun({
+                  owner: owner,
+                  repo: repo,
+                  run_id: run_id
+                });
+                if (run.status === 'completed') {
+                  return run;
+                }
+                i++;
+              }
+              return null;
+            };
+
+            // Return a workflow from its name
+            const get_workflow_by_name = async (name) => {
+              const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+                owner: owner,
+                repo: repo
+              });
+              
+              return workflows.workflows.find(w => w.name === name);
+            };
+
+            // Return the reference of an artifact by its name, and an optional associated 
+            // run id. If run id is provided the artifact is fetched from this run,
+            // otherwise from any workflow, The first one found (most recent) is returned
+            const get_artifact_from_name = async (name, run_id=undefined) => {
+              let artifacts;
+              if (run_id) {
+                ({ data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                  owner: owner,
+                  repo: repo,
+                  run_id: run_id,
+                  name :  name
+                }));
+              } 
+              else {
+                ({ data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+                  owner: owner,
+                  repo: repo,
+                  name : name
+                }));
+              }
+              return artifacts.artifacts?.[0]
+            };
+
+            // Download and save an artifact as zip file from its name.
+            // It is saved in the globally defined location `artifact_save_base_path`
+            const save_artifact = async (artifact) => {
+              const {data : data } = await github.rest.actions.downloadArtifact({
+                owner : owner,
+                repo : repo,
+                artifact_id : artifact.id,
+                archive_format : "zip"
+              });
+
+              const filename = path.join(artifact_save_base_path, `${artifact.name}.zip`)
+              fs.writeFileSync(filename, Buffer.from(data, "base64"))
+            };
+            /* ================================================================================= */
+            /* ================================================================================= */
+            /* ================================== Entrypoint =================================== */
+            /* ================================================================================= */
+            /* ================================================================================= */
+
+            const packages = ['pymodaq_utils', 'pymodaq_data', 'pymodaq_gui', 'pymodaq'];
+            console.log(`SHA: ${sha}, Branch: ${branch}, Event: ${event}\n`);
+
+
+            //Create artifact download folder
+            if (!fs.existsSync(artifact_save_base_path)){
+              fs.mkdirSync(artifact_save_base_path, {recursive: true});
+            }
+
+            //Wait 10 seconds so that we're "sure" that everything else is started
+            await sleep(10);
+
+            // Get last test runs for each package in this commit (if they exist)
+            const test_runs = await get_corresponding_test_runs(packages);
+
+            // Wait for in-progress runs
+            // For each package, is there's a run not completed, we wait for it
+            for (const package of packages) {
+              if (!test_runs[package]){
+                continue;
+              }
+
+              if (test_runs[package].status !== 'completed') {
+                console.log(`Waiting for initial run of ${package}...`);
+                const run = await wait_for_run_completion(test_runs[package].id);
+
+                if (run){
+                  console.log(`Initial run of ${package} is over.`);
+                  test_runs[package] = run;
+                }
+                else {
+                  console.log(`Waiting for initial run of ${package} timed out.`);
+                }
+              }
+            }
+
+            // For each package_name, get the corresponding run, 
+            // and check if one of its artifact is "merged-coverage-<package-name>"
+            // If a package doesn't have an artifact, keep track of it
+            // Otherwise, download and save it
+            const packages_without_coverage_artifact = [];
+            for (const package of packages) {
+              console.log(`Looking for artifacts in ${package}`)
+              const artifact = await get_artifact_from_name(`merged-coverage-${package.split("_")[1] ?? package}`);
+      
+              if (artifact) {
+                await save_artifact(artifact)
+                console.log(`Saved artifact ${artifact.name} for ${package}`)
+              }
+              else {
+                console.log(`${package} is missing coverage artifact`);
+                packages_without_coverage_artifact.push(package);
+              }
+            }
+
+
+            // For each package with a missing coverage artifact, trigger a run for its test
+            const triggered_runs = {};
+            for (const package of packages_without_coverage_artifact) {
+              console.log(`Triggering test for ${package}...`);
+
+              //Start the workflow
+              const workflow = await get_workflow_by_name(`Test for ${package}`);
+              if (workflow) {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: owner,
+                  repo: repo,
+                  workflow_id: workflow.id,
+                  ref : branch
+                });
+
+                //Try to get the run corresponding to the started workflow
+                // by polling the API after 30 seconds. 
+                await sleep(10);
+                ({ [package] : triggered_runs[package]} = await get_corresponding_test_runs([package], _event='workflow_dispatch', strict=true));
+                if (triggered_runs[package]) {
+                  console.log(`Triggered ${package}, run id = ${triggered_runs[package].id}`);
+                }
+                else{
+                  console.log(`Failed to detect triggered run for ${package}`)  
+                }
+              }
+            }
+
+            //Wait for any triggered run
+            if (!is_empty(triggered_runs)){
+              // Sleep for 10 minutes should be enough for all test runs to be over
+              await sleep(10*60);
+
+              //Wait for each triggered run to complete
+              for(const package of Object.keys(triggered_runs)) {
+                console.log(`Waiting for triggered run of ${package}...`);
+                const run = await wait_for_run_completion(triggered_runs[package].id);
+                if (run){
+                    console.log(`Triggered run of ${package} is over.`);
+                    const artifact = await get_artifact_from_name(`merged-coverage-${package.split("_")[1] ?? package}`, run.id);
+                
+                    if (artifact) {
+                      await save_artifact(artifact)
+                      console.log(`Saved artifact ${artifact.name} for ${package}`)
+                    }
+                    else {
+                      console.log(`${package} is missing coverage artifact`);
+                    }
+                }
+                else {
+                  console.log(`Waiting for triggered run of ${package} timed out.`);
+                }
+              }
+            }
+      - name: Merge coverage files and convert to xml
+        run: |
+          unzip \*.zip
+          python -m pip install coverage
+          coverage combine ./merged_coverage_*
+          coverage xml -i
+
+      - name: Upload combined coverage report to Codecov
+        uses: codecov/codecov-action@v5.5.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
