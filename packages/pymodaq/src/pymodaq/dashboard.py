@@ -7,7 +7,7 @@ import subprocess
 import logging
 from pathlib import Path
 from importlib import import_module
-from packaging import version as version_mod
+
 from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
 import argparse
 
@@ -20,14 +20,11 @@ from qtpy.QtWidgets import (
     QDialogButtonBox,
     QMessageBox,
 )
-from time import perf_counter
 import numpy as np
 
-from pymodaq_plugin_manager.manager import PluginManager
-from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
-from pymodaq.utils.shared_ui import SharedUI
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
@@ -45,17 +42,15 @@ from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
-from pymodaq.utils.managers.remote_manager import RemoteManager
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
+
 from pymodaq.utils.daq_utils import get_instrument_plugins
-from pymodaq.utils.leco.utils import start_coordinator
+
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.instruments import DAQTypesEnum
 
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
