@@ -576,7 +576,7 @@ class ModulesManager(QObject, ParameterManager):
         while not module.initialized_state:
             QThread.msleep(1000)
             QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tstart > 60:  # timeout of 60sec
+            if time.perf_counter() - tstart > config('control_module_ini_polling'):  # timeout of 60sec
                 break
         return module.initialized_state
 
