@@ -572,15 +572,13 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_flag = True
 
     def poll_init(self, module):
-        is_init = False
         tstart = time.perf_counter()
-        while not is_init:
+        while not module.initialized_state:
             QThread.msleep(1000)
             QtWidgets.QApplication.processEvents()
-            is_init = module.initialized_state
             if time.perf_counter() - tstart > 60:  # timeout of 60sec
                 break
-        return is_init
+        return module.initialized_state
 
     def order_positions(self, positions: DataToExport):
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
