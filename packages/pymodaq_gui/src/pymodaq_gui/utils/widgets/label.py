@@ -6,19 +6,12 @@ Created the 29/07/2022
 """
 
 from qtpy import QtWidgets, QtCore, QtGui
-
+from pymodaq_gui.utils.utils import create_font
 
 class LabelWithFont(QtWidgets.QLabel):
 
     def __init__(self, text: str = '', *args, font_name=None, font_size=None, isbold=False, isitalic=False, **kwargs):
         super().__init__(text, *args, **kwargs)
 
-        font = QtGui.QFont()
-        if font_name is not None:
-            font.setFamily(font_name)
-        if font_size is not None:
-            font.setPointSize(font_size)
-
-        font.setBold(isbold)
-        font.setItalic(isitalic)
+        font = create_font(font_name, font_size, isbold, isitalic)
         self.setFont(font)

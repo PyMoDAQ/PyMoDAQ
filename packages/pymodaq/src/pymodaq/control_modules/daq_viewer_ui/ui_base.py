@@ -25,8 +25,7 @@ from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.utils.utils import create_font
-from pymodaq_gui.managers.action_manager import create_icon
+from pymodaq_gui.utils.utils import create_font, create_icon
 from pymodaq_utils.enums import enum_checker
 from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
