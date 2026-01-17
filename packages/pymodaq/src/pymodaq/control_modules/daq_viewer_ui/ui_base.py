@@ -175,8 +175,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('show_graphs', lambda checked: self.show_graphs(not checked))
 
     def show_graphs(self, show: bool = True):
-        self.dockarea.setVisible(show)
-        self.dockarea.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
+        self.parent.setVisible(show)
+        self.parent.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
 
     def _show_settings(self, show: bool = True):
         self._settings_widget.setVisible(show)
