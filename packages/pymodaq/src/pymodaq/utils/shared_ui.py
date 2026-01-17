@@ -22,6 +22,7 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
 from pymodaq_gui.utils import DockArea
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils import config as configmod
@@ -36,6 +37,12 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = configmod.Config()
 config = ControlModulesConfig()
+
+
+class MenuNames(StrEnum):
+    FILE = 'file'
+    SETTINGS = 'settings'
+    HELP = 'help'
 
 
 class PymodaqUpdateTableWidget(QTableWidget):
@@ -117,9 +124,29 @@ class SharedUI(CustomApp):
         self.mainwindow.setVisible(True)
         
     def affect_application(self, app: Any):
-        """ Affect this SharedUI to the given application"""
+        """ Affect the given application to this SharedUI and add the App QMenus to the
+        QMainWindow menubar reordering/merging them if necessary
+        """
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
+        menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
+        if isinstance(app, CustomApp):
+            for menu in app.menus:
+                if menu.title() in menus_dict: # two main menus with identical names (titles)
+                    menus_dict[menu.title()].addSeparator()
+                    for child_menu in self._get_menus_from_widget(menu):
+                        menus_dict[menu.title()].addMenu(child_menu)
+                else:
+                    self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
+                                            menu)
+
+    @staticmethod
+    def _get_menus_from_widget(widget: QtWidgets.QWidget) -> list[QtWidgets.QMenu]:
+        menus = []
+        for child in widget.children():
+            if isinstance(child, QtWidgets.QMenu):
+                menus.append(child)
+        return menus
 
     def show(self):
         self.mainwindow.show()
@@ -171,34 +198,34 @@ class SharedUI(CustomApp):
        # menubar.clear()
 
         # %% create Settings menu
-        self.file_menu = QtWidgets.QMenu("File")
-        self.file_menu.addAction(self.get_action("log"))
-        self.file_menu.addAction(self.get_action("config_utils"))
-        self.file_menu.addAction(self.get_action("config"))
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(self.get_action("quit"))
-        self.file_menu.addAction(self.get_action("restart"))
+        file_menu = self.add_menu(MenuNames.FILE, 'File', menubar)
+        file_menu.addAction(self.get_action("log"))
+        file_menu.addAction(self.get_action("config_utils"))
+        file_menu.addAction(self.get_action("config"))
+        file_menu.addSeparator()
+        file_menu.addAction(self.get_action("quit"))
+        file_menu.addAction(self.get_action("restart"))
 
-        self.settings_menu = QtWidgets.QMenu("Settings")
-        self.settings_menu.addAction(self.get_action("leco"))
+        settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
+        settings_menu.addAction(self.get_action("leco"))
 
-        menus = self.menubar.actions()
-        for menu in (self.file_menu, self.settings_menu):
-            if len(menus) > 0:
-                self.menubar.insertMenu(menus[0], menu)
-            else:
-                self.menubar.addMenu(menu)
+        # menus = self.menubar.actions()
+        # for menu in (file_menu, settings_menu):
+        #     if len(menus) > 0:
+        #         self.menubar.insertMenu(menus[0], menu)
+        #     else:
+        #         self.menubar.addMenu(menu)
 
         # help menu
-        help_menu = menubar.addMenu("?")
+        help_menu = self.add_menu(MenuNames.HELP, '?', menubar)
         help_menu.addAction(self.get_action("about"))
         help_menu.addAction(self.get_action("help"))
         help_menu.addSeparator()
         help_menu.addAction(self.get_action("check_update"))
         help_menu.addAction(self.get_action("plugin_manager"))
 
-        self.file_menu.setEnabled(True)
-        self.settings_menu.setEnabled(True)
+        file_menu.setEnabled(True)
+        settings_menu.setEnabled(True)
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()

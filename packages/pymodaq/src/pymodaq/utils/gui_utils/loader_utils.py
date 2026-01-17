@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 
-def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
-        (DashBoard, CustomExt, QMainWindow):
+def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  -> \
+        tuple[DashBoard, CustomExt, QMainWindow]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -52,7 +52,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str) -> \
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
 
-        if extension_name:
+        if extension_name is not None:
             if extension_name == 'DAQScan':
                 extension = dashboard.load_scan_module()
             elif extension_name == 'DAQLogger':

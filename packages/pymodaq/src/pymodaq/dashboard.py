@@ -666,27 +666,27 @@ class DashBoard(CustomApp):
         """
         #menubar.clear()
 
-        self.settings_menu = menubar.addMenu("Settings")
-        docked_menu = self.settings_menu.addMenu("Docked windows")
+        settings_menu = self.add_menu('settings', 'Settings', auto_menu=False)
+        docked_menu = settings_menu.addMenu("Docked windows")
         docked_menu.addAction(self.get_action("load_layout"))
         docked_menu.addAction(self.get_action("save_layout"))
 
 
-        self.add_menu('preset', 'Preset', menubar)
-        self.add_menu('configurator', 'Configurator', menubar)
+        self.add_menu('preset', 'Preset', auto_menu=False)
+        self.add_menu('configurator', 'Configurator', auto_menu=False)
         self.get_menu('configurator').setEnabled(False)
 
-        self.overshoot_menu = menubar.addMenu("Overshoot Modes")
+        self.overshoot_menu = self.add_menu('overshoot', "Overshoot", auto_menu=False)
         self.update_overshoot_menu()
 
-        self.roi_menu = menubar.addMenu("ROI Modes")
+        self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
         self.update_roi_menu()
 
-        self.remote_menu = menubar.addMenu("Remote/Shortcuts Control")
+        self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         self.update_remote_menu()
 
         # extensions menu
-        self.extensions_menu = menubar.addMenu("Extensions")
+        self.extensions_menu = self.add_menu('extensions', "Extensions")
         self.extensions_menu.addAction(self.get_action("do_scan"))
         self.extensions_menu.addAction(self.get_action("do_log"))
         self.extensions_menu.addAction(self.get_action("do_pid"))
@@ -706,7 +706,7 @@ class DashBoard(CustomApp):
 
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(not status)
-        self.settings_menu.setEnabled(True)
+        settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
 
 
