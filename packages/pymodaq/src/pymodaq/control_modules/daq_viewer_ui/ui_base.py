@@ -302,7 +302,7 @@ def main(init_qt=True):
     from pymodaq_gui.parameter import Parameter, ParameterTree
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
     from pymodaq.utils.shared_ui import SharedUI
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ UI Viewer")

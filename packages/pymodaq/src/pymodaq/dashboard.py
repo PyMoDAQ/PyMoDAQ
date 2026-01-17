@@ -22,7 +22,7 @@ from qtpy.QtWidgets import (
 )
 import numpy as np
 
-
+import pymodaq_gui.qt_utils
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -1606,7 +1606,7 @@ class DashBoard(CustomApp):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset, create_load_dashboard
     # Create application and main window
     app = mkQApp('Dashboard')
@@ -1626,7 +1626,7 @@ def main():
         win.show()
 
     # Run application
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
 
 if __name__ == "__main__":

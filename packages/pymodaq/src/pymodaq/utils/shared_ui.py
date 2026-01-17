@@ -21,6 +21,7 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
+import pymodaq_gui.qt_utils
 from pymodaq_gui.utils import DockArea
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -363,7 +364,7 @@ class SharedUI(CustomApp):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     app = mkQApp('CommonWindow')
 
     win = QtWidgets.QMainWindow()
@@ -372,7 +373,7 @@ def main():
     window = SharedUI(win)
 
     # Run application
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
 
 if __name__ == "__main__":

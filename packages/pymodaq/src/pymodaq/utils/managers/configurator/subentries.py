@@ -5,6 +5,7 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 
+import pymodaq_gui.qt_utils
 from pymodaq_data import DataToExport
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
@@ -361,8 +362,7 @@ if __name__ == '__main__':
 
     factory = SubEntryHandlerFactory()
 
-    from pymodaq_gui.utils.utils import mkQApp
-
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('SpecialEntry')
 
@@ -370,6 +370,6 @@ if __name__ == '__main__':
     special_entry.show_dialog()
 
     # Run application
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
 

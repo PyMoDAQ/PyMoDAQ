@@ -1414,7 +1414,7 @@ def prepare_docks(area, title):
 def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")

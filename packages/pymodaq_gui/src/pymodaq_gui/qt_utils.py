@@ -3,8 +3,12 @@ import os
 import sys
 import warnings
 
+import qt_themes
+from pyqtgraph import mkQApp as mkQApppg
+
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QLocale
+
 from pymodaq_utils import logger as logger_module
 from pymodaq_utils.config import Config
 
@@ -65,3 +69,19 @@ def center_widget_on_screen_and_show(widget: QtWidgets.QWidget):
     cPt = QtGui.QScreen.availableGeometry(QtWidgets.QApplication.primaryScreen()).center()
     qtRect.moveCenter(cPt)
     widget.move(qtRect.topLeft())
+
+
+def start_qapplication(name='default_app') -> QtWidgets.QApplication:
+    return mkQApp(name=name)
+
+
+def mkQApp(name: str):
+    app = mkQApppg(name)
+    qt_themes.set_theme(theme=config('style', 'theme')[0],
+                        style=config('style', 'style')[0])
+    return app
+
+
+def exec():
+    app = mkQApp('a name')
+    return app.exec() if hasattr(app, 'exec') else app.exec_()

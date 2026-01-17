@@ -20,6 +20,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -33,7 +34,7 @@ from pymodaq_data.h5modules.backends import Node
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.instruments import ACTUATOR_TYPES, ACTUATOR_NAMES
@@ -1178,7 +1179,7 @@ def main(init_qt=True):
     app = mkQApp("PyMoDAQ Move")
     shared_ui, daq_move = create_load_daq_move()
     shared_ui.show()
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
 
 if __name__ == "__main__":

@@ -535,7 +535,8 @@ class PresetManager(ManagerBase):
 
 
 if __name__ == '__main__':
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
+
     app = mkQApp('PresetManager')
 
     external_ui = QtWidgets.QMainWindow()

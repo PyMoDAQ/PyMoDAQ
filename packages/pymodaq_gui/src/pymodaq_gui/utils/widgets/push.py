@@ -3,6 +3,7 @@ from pathlib import Path
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QWidget
 
+import pymodaq_gui.qt_utils
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 
@@ -23,7 +24,7 @@ class PushButtonIcon(QtWidgets.QPushButton):
         
     def contextMenuEvent(self, event):
         if self._menu is not None:
-            self._menu.exec(event.globalPos())
+            pymodaq_gui.qt_utils.exec(event.globalPos())
 
 
 class EditPushInfo:
@@ -94,7 +95,7 @@ class ActionMenu(QtWidgets.QAction):
 
     def contextMenuEvent(self, event):
         if self._menu is not None:
-            self._menu.exec(event.globalPos())
+            pymodaq_gui.qt_utils.exec(event.globalPos())
 
 
 def main(init_qt=True):

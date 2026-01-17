@@ -23,7 +23,7 @@ from pymodaq_data.data import DataUnitError, Q_, Unit
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg

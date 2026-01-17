@@ -4,6 +4,7 @@ from pathlib import Path
 
 from typing import Optional
 
+import pymodaq_gui.qt_utils
 from pymodaq_gui import utils as gutils
 from pymodaq_utils.config import Config, ConfigError
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -246,14 +247,14 @@ class DataMixer(CustomExt):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DataMixer')
 
     preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
     return dashboard, extension, win
 

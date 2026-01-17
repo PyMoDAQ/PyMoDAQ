@@ -380,7 +380,8 @@ class Configurator(ManagerBase):
 
 
 if __name__ == "__main__":
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
+
     app = mkQApp('PresetManager')
     settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()

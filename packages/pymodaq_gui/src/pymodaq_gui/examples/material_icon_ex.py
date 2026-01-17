@@ -75,7 +75,7 @@ class WidgetWithMaterialIcons(CustomApp):
 
 if __name__ == '__main__':
 
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     # Create application and main window
     app = mkQApp('Qt Material Icons and theme')

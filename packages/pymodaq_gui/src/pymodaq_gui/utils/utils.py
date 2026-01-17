@@ -1,15 +1,10 @@
-import qt_themes
-
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
 
-from pymodaq_gui.managers.action_manager import config
 from pymodaq_utils.config import Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pyqtgraph import mkQApp as mkQApppg
-
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -329,21 +324,5 @@ def pngbinary2Qlabel(databinary, scale_height: int = None):
     label = QtWidgets.QLabel()
     label.setPixmap(pixmap)
     return label
-
-
-def start_qapplication(name='default_app') -> QtWidgets.QApplication:
-    return mkQApp(name=name)
-
-
-def mkQApp(name: str):
-    app = mkQApppg(name)
-    qt_themes.set_theme(theme=config('style', 'theme')[0],
-                        style=config('style', 'style')[0])
-    return app
-
-
-def exec():
-    app = mkQApp('a name')
-    return app.exec() if hasattr(app, 'exec') else app.exec_()
 
 

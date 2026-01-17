@@ -20,7 +20,7 @@ from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
