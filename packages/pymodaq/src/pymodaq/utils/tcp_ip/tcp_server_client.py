@@ -323,13 +323,12 @@ class TCPClient(TCPClientTemplate, QObject):
         self.send_data(data)
 
 
-class TCPServer(QObject):
+class TCPServer:
     """
     Abstract class to be used as inherited by DAQ_Viewer_TCP or DAQ_Move_TCP
     """
 
     def __init__(self, client_type='GRABBER'):
-        QObject.__init__(self)
         self.serversocket: Socket = None
         self.connected_clients = []
         self.listening = True
@@ -673,11 +672,12 @@ class TCPServer(QObject):
             self.settings.child('infos', info).setValue(data)
 
 
-class MockServer(TCPServer):
+class MockServer(TCPServer, QObject):
     params = []
 
     def __init__(self, client_type='GRABBER'):
-        super().__init__(client_type)
+        QObject.__init__(self)
+        TCPServer.__init__(self, client_type)
 
         self.settings = Parameter.create(name='settings', type='group', children=tcp_parameters)
 

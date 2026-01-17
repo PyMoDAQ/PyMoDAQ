@@ -24,7 +24,7 @@ from serializall import SerializableFactory
 
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules_manager import ModuleType
-
+import copy
 
 logger = set_logger(get_module_name(__file__))
 ser_factory = SerializableFactory()
@@ -73,17 +73,20 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
     def _connect_editor_signals(self, widget):
         """Connect widget signals to auto-commit data changes"""
         # Try common value changed signals
-        if hasattr(widget, 'valueChanged'):
-            widget.valueChanged.connect(lambda: self.commitData.emit(widget))
-        elif hasattr(widget, 'currentIndexChanged'):  # For comboboxes
-            widget.currentIndexChanged.connect(lambda: self.commitData.emit(widget))
-        elif hasattr(widget, 'textChanged'):
-            widget.textChanged.connect(lambda: self.commitData.emit(widget))
-        elif hasattr(widget, 'stateChanged'):  # For checkboxes
-            widget.stateChanged.connect(lambda: self.commitData.emit(widget))
-
-        # Install event filter to catch focus loss
-        widget.installEventFilter(self)
+        # if hasattr(widget, 'toggled'):
+        #     widget.toggled.connect(lambda: self.commitData.emit(widget))
+        # elif hasattr(widget, 'currentIndexChanged'):  # For comboboxes
+        #     widget.currentIndexChanged.connect(lambda: self.commitData.emit(widget))
+        # elif hasattr(widget, 'editingFinished'):
+        #     widget.editingFinished.connect(lambda: self.commitData.emit(widget))
+        # elif hasattr(widget, 'stateChanged'):  # For checkboxes
+        #     widget.stateChanged.connect(lambda: self.commitData.emit(widget))
+        # elif hasattr(widget, 'checkStateChanged'):  # For checkboxes
+        #     widget.checkStateChanged.connect(lambda: self.commitData.emit(widget))
+        #
+        # # Install event filter to catch focus loss
+        #widget.installEventFilter(self)
+        pass
 
     def setEditorData(self, editor, index: QModelIndex):
         try:
@@ -92,7 +95,7 @@ class ParameterDelegate(QtWidgets.QStyledItemDelegate):
             super().setEditorData(editor, index)
 
     def setModelData(self, editor, model, index: QModelIndex):
-        model.setData(index, editor.value(), Qt.ItemDataRole.EditRole)
+        model.setData(index, copy.copy(editor.value()), Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
         """Ensure editor fills the cell completely"""
