@@ -158,10 +158,6 @@ class Scan1DSparse(Scan1DBase):
         except Exception as e:
             pass  # many things could happen when parsing strings
 
-    def set_settings_titles(self):
-        if len(self.actuators) == 1:
-            self.settings.child('start').setOpts(title=f'{self.actuators[0].title} start:')
-
     def evaluate_steps(self) -> int:
         """Quick evaluation of the number of steps to stop the calculation if the evaluation os above the
         configured limit"""
