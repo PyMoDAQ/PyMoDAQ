@@ -729,10 +729,13 @@ class DashBoard(CustomApp):
     def update_remote_menu(self):
         self.remote_menu.clear()
         self.remote_menu.addAction(self.get_action("show_remote"))
+        self.connect_action('show_remote', self.show_remote)
         self.remote_menu.addSeparator()
 
-        self.remote_menu.addAction("New remote config.", self.create_remote)
-        self.remote_menu.addAction("Modify remote config.", self.modify_remote)
+        self.remote_menu.addAction(self.get_action('new_remote'))
+        self.connect_action('new_remote', self.create_remote)
+        self.remote_menu.addAction(self.get_action('modify_remote'))
+        self.connect_action('modify_remote', self.modify_remote)
         self.remote_menu.addSeparator()
         load_remote_menu = self.remote_menu.addMenu("Load remote config.")
 
