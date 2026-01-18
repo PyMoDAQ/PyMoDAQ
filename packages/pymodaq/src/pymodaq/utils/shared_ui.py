@@ -41,7 +41,6 @@ config = ControlModulesConfig()
 
 
 class MenuNames(StrEnum):
-    FILE = 'file'
     SETTINGS = 'settings'
     HELP = 'help'
 
@@ -199,23 +198,16 @@ class SharedUI(CustomApp):
        # menubar.clear()
 
         # %% create Settings menu
-        file_menu = self.add_menu(MenuNames.FILE, 'File', menubar)
-        file_menu.addAction(self.get_action("log"))
-        file_menu.addAction(self.get_action("config_utils"))
-        file_menu.addAction(self.get_action("config"))
-        file_menu.addSeparator()
-        file_menu.addAction(self.get_action("quit"))
-        file_menu.addAction(self.get_action("restart"))
-
         settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
-        settings_menu.addAction(self.get_action("leco"))
+        settings_menu.addAction(self.get_action("log"))
+        settings_menu.addAction(self.get_action("config_utils"))
+        settings_menu.addAction(self.get_action("config"))
+        settings_menu.addSeparator()
+        settings_menu.addAction(self.get_action("quit"))
+        settings_menu.addAction(self.get_action("restart"))
 
-        # menus = self.menubar.actions()
-        # for menu in (file_menu, settings_menu):
-        #     if len(menus) > 0:
-        #         self.menubar.insertMenu(menus[0], menu)
-        #     else:
-        #         self.menubar.addMenu(menu)
+
+        settings_menu.addAction(self.get_action("leco"))
 
         # help menu
         help_menu = self.add_menu(MenuNames.HELP, '?', menubar)
@@ -225,7 +217,6 @@ class SharedUI(CustomApp):
         help_menu.addAction(self.get_action("check_update"))
         help_menu.addAction(self.get_action("plugin_manager"))
 
-        file_menu.setEnabled(True)
         settings_menu.setEnabled(True)
 
     def start_plugin_manager(self):
