@@ -11,6 +11,7 @@ from collections import OrderedDict
 import datetime
 from typing import TYPE_CHECKING, Union
 
+import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.config import Config
@@ -502,7 +503,7 @@ class DAQ_Logging(QObject):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DAQLogger')
@@ -510,7 +511,7 @@ def main():
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQLogger')
 
-    app.exec()
+    pymodaq_gui.qt_utils.exec()
 
     return dashboard, extension, win
 

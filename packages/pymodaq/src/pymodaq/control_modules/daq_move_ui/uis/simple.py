@@ -3,6 +3,7 @@ import sys
 from qtpy.QtWidgets import QVBoxLayout, QToolBar
 from qtpy import QtWidgets
 
+import qt_themes
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq_gui.utils.widgets import LabelWithFont
@@ -24,7 +25,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.parent.setLayout(QVBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.move_toolbar = QToolBar()
+
         self.parent.layout().addWidget(self.move_toolbar)
 
         self.abs_value_sb_2.setMinimumWidth(80)
@@ -42,8 +43,12 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
                         toolbar=self.move_toolbar)
 
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'ini', toolbar=self.move_toolbar)
-        self.add_widget('ini_led', self.ini_state_led, toolbar=self.move_toolbar)
+        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=self.move_toolbar,
+                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
+                        icon_checked_color=qt_themes.get_theme().green)
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
+                        toolbar=self.move_toolbar)
+        self.move_toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
         self.add_widget('abs_green', self.abs_value_sb, toolbar=self.move_toolbar)
@@ -56,20 +61,15 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
 
 
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
-
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
-                        toolbar=self.move_toolbar)
+        self.move_toolbar.addSeparator()
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.move_toolbar)
-        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
+        self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
+                        checkable=True, icon_checked='bid_landscape_disabled',
+                        icon_color=self._theme.green, icon_checked_color=self._theme.red,
                         toolbar=self.move_toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.move_toolbar)
-        self.add_action('quit', 'Quit the module', 'close2', toolbar=self.move_toolbar)
-        self.add_action('log', 'Show Log file', 'information2', toolbar=self.move_toolbar)
         self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
 
     def connect_things(self):

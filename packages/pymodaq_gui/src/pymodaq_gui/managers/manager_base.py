@@ -6,14 +6,15 @@ from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtGui import QKeySequence
 
-from pymodaq_gui.managers.action_manager import create_icon
+import pymodaq_gui.qt_utils
+from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
-from pymodaq_gui.qt_utils import center_widget_on_screen_and_show
+from pymodaq_gui.qt_utils import center_widget_on_screen_and_show, mkQApp
 from pymodaq_gui.utils.splash import get_pymodaq_pixmap
 from pymodaq_gui.utils.widgets.combo import ComboBox
 
@@ -538,7 +539,6 @@ class SubEntriesSplash(QtWidgets.QLabel):
 
 
 if __name__ == '__main__':
-    from pymodaq_gui.utils.utils import mkQApp
     import numpy as np
 
 
@@ -563,4 +563,4 @@ if __name__ == '__main__':
 
     widget.show_splash()
     execute_entries(entries)
-    app.exec()
+    pymodaq_gui.qt_utils.exec()

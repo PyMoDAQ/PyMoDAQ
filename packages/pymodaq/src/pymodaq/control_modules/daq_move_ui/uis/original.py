@@ -53,7 +53,6 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
         #widget.layout().addStretch()
 
         # populate the main ui
-        self.move_toolbar = QToolBar()
         self.main_ui.setLayout(QGridLayout())
         self.main_ui.layout().setSpacing(0)
         self.main_ui.layout().setContentsMargins(0, 0, 0, 0)
@@ -70,7 +69,6 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
         self.main_ui.layout().addWidget(self.actuators_combo, 2, 1)
 
         self.main_ui.layout().addWidget(self.ini_actuator_pb, 3, 0)
-        self.main_ui.layout().addWidget(self.ini_state_led, 3, 1)
         self.main_ui.layout().addWidget(LabelWithFont('Current value:'), 4, 0)
         self.main_ui.layout().addWidget(self.move_done_led, 4, 1)
 
@@ -95,9 +93,7 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
 
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
                         toolbar=self.toolbar)
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
-                        toolbar=self.toolbar)
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
                         toolbar=self.toolbar)
         self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
                         toolbar=self.toolbar)
@@ -105,8 +101,6 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
                         toolbar=self.toolbar)
         self.add_action('stop', 'Stop', 'stop', "Stop Motion", checkable=False,
                         toolbar=self.toolbar)
-        self.add_action('quit', 'Quit the module', 'close2')
-        self.add_action('log', 'Show Log file', 'information2')
 
     def connect_things(self):
         super().connect_things()

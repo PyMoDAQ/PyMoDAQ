@@ -39,6 +39,9 @@ class ControllerStatus(StrEnum):
     SLAVE = 'Slave'
 
 
+
+
+
 def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
     controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
         {'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list',
@@ -354,11 +357,6 @@ class ControlModule(QObject):
         """
         if self.ui is not None:
             self.ui.do_init(do_init)
-
-    def show_log(self):
-        """Open the log file in the default text editor"""
-        import webbrowser
-        webbrowser.open(get_base_logger(logger).handlers[0].baseFilename)
 
     def show_config(self, config: Config) -> Config:
         """ Display in a tree the current configuration"""

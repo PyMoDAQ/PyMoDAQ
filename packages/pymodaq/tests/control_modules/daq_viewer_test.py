@@ -5,7 +5,8 @@ import numpy as np
 from qtpy import QtWidgets, QtCore
 import pytest
 from pytest import fixture, approx
-
+import qt_themes
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq_gui.utils.dock import DockArea
 
 from pymodaq.control_modules import daq_viewer as daqvm
@@ -14,11 +15,13 @@ from pymodaq.control_modules.utils import ControlModule
 from pymodaq.control_modules.instruments import DET_TYPES, get_viewer_plugins, DAQTypesEnum
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import Config
+from pymodaq_utils.config import Config as ConfigUtils
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_data.h5modules.browsing import H5BrowserUtil
 
 config = Config()
+config_utils = ConfigUtils()
 config_viewer = daqvm.config
 config_viewer['viewer', 'viewer_in_thread'] = True
 
@@ -40,10 +43,12 @@ def ini_daq_viewer_without_ui(init_qt):
 @fixture
 def ini_daq_viewer_ui(init_qt):
     qtbot = init_qt
-    dockarea = DockArea()
-    qtbot.addWidget(dockarea)
-    prog = daqvm.DAQ_Viewer(dockarea)
-    yield prog, qtbot, dockarea
+    widget = QtWidgets.QWidget()
+    qtbot.addWidget(widget)
+    qt_themes.set_theme(theme=config_utils('style', 'theme')[0],
+                        style=config_utils('style', 'style')[0])
+    prog = daqvm.DAQ_Viewer(widget, 'test')
+    yield prog, qtbot, widget
     prog.quit_fun()
     QtWidgets.QApplication.processEvents()
 
@@ -63,47 +68,24 @@ class TestWithoutUI:
         assert prog.viewers is None
         assert prog.viewer_docks is None
 
-    def test_daq_type_detector(self, ini_daq_viewer_without_ui):
-        prog, qtbot = ini_daq_viewer_without_ui
-        assert prog.daq_types == DAQTypesEnum.names()
-        assert prog.daq_type == config('viewer', 'daq_type')
-        assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[prog.daq_type.name]]
-        assert prog.detector == prog.detectors[0]
-
-
-    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
-    def test_daq_type_changed(self, ini_daq_viewer_without_ui, daq_type):
-        prog, qtbot = ini_daq_viewer_without_ui
-        prog.daq_type = daq_type
-        assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
 
     @pytest.mark.parametrize("det", [det_dict['name'] for det_dict in DET_TYPES['DAQ0D']])
     def test_detector_changed(self, ini_daq_viewer_without_ui, det):
         prog, qtbot = ini_daq_viewer_without_ui
-        prog.daq_type = 'DAQ0D'
-        prog.detector = det
-        det_params, _class = get_viewer_plugins(prog.daq_type.name, prog.detector)
+        daq_type = 'DAQ0D'
+        prog.detector = SelectedModule(DAQTypesEnum[daq_type], det)
+        det_params, _class = get_viewer_plugins(prog.detector.daq_type.name, prog.detector.module_name)
         assert putils.iter_children(prog.settings.child('detector_settings'), []) == \
             putils.iter_children(det_params, [])
 
-@pytest.mark.skip
+#@pytest.mark.skip
 class TestWithUI:
 
     @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
     def test_daq_type_changed(self, ini_daq_viewer_ui, daq_type):
         prog, qtbot, dockarea = ini_daq_viewer_ui
-        prog.daq_type = daq_type
-        assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
+        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
+            prog.detector = SelectedModule(DAQTypesEnum[daq_type], 'Mock')
         assert len(prog.viewers) == 1
         assert prog.viewers[0].viewer_type == f'Data{daq_type[3:]}'
-
-    def test_process_commands(self, ini_daq_viewer_ui):
-        prog, qtbot, dockarea = ini_daq_viewer_ui
-
-        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
-            qtbot.mouseClick(prog.ui._ini_det_pb, QtCore.Qt.LeftButton)
-        assert blocker.args[0].command == 'init'
-        with qtbot.waitSignal(prog.ui.command_sig) as blocker:
-            prog.ui.get_action('stop').trigger()
-        assert blocker.args[0].command == 'stop'
 

@@ -1,4 +1,4 @@
-
+import pymodaq_gui.qt_utils
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_utils.config import Config
 
@@ -32,14 +32,13 @@ class MyWidget(ActionManager):
 
 def main():
     """Run the example application"""
-    from pymodaq_gui.utils.utils import mkQApp
-
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Example')
     widget = QtWidgets.QWidget()
     mywidget = MyWidget(widget)
 
-    sys.exit(app.exec())
+    sys.exit(pymodaq_gui.qt_utils.exec())
 
 
 if __name__ == '__main__':

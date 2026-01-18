@@ -1,6 +1,6 @@
 from qtpy import QtGui, QtWidgets
 from pymodaq_gui.resources.material_icons import MaterialIcon
-from pymodaq_gui.managers.action_manager import resource_path_exists
+from pymodaq_gui.utils.styling import resource_path_exists
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_utils.config import Config
 
@@ -75,7 +75,7 @@ class WidgetWithMaterialIcons(CustomApp):
 
 if __name__ == '__main__':
 
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     # Create application and main window
     app = mkQApp('Qt Material Icons and theme')

@@ -2,13 +2,12 @@ import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Callable, Iterable as IterableType, Union
-import toml
-
 
 from multipledispatch import dispatch
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QAction as QtQAction
 
+from pymodaq_gui.utils.styling import create_icon
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.config import Config
 
@@ -16,74 +15,10 @@ try:
     from pymodaq_gui.resources.material_icons import MaterialIcon
 except  ImportError:
     pass #this could happen when creating /importing new MaterialIcons
-import qt_themes
-
 
 config = Config()
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
 QtCore.QDir.addSearchPath('icons', str(resource_folder.joinpath('icon_library')))
-theme = qt_themes.get_theme(config('style', 'theme')[0])
-
-
-def resource_path_exists(path: str) -> bool:
-    return QtCore.QFile(path).exists()
-
-
-def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, None]:
-    if icon_color is not None:
-        if isinstance(icon_color, str):
-            try:
-                icon_color = theme.__getattribute__(icon_color)
-            except AttributeError:
-                icon_color = QtGui.QColor(icon_color)
-                if not icon_color.isValid():
-                    icon_color = None
-    return icon_color
-
-
-def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
-                icon_color: Union[QtGui.QColor, bytes, str] = None,
-                icon_checked_color: Union[QtGui.QColor, bytes, str] = None):
-    """ Create an icon from various sources by order of preference:
-
-    1) icon_name is an icon
-    2) icon_name is a registered MaterialIcon
-    3) icon_name is a real path to a png
-    4) icon_name is a registered png in icon_library
-    5) icon_name is a registered ThemeIcon
-    6) icon_name is a registered StandardPixmap
-    """
-
-    if isinstance(icon_name, QtGui.QIcon):
-        return icon_name
-    elif resource_path_exists(
-            MaterialIcon.resource_path(
-                icon_name,
-                style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-                fill=config('style', 'icons', 'fill')[0],
-                size=config('style', 'icons', 'size')[0])):
-        icon = MaterialIcon(
-            icon_name,
-            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-            fill=config('style', 'icons', 'fill')[0],
-            size=config('style', 'icons', 'size')[0])
-        icon.set_color(create_color(icon_color))
-        if icon_checked_color is not None:
-            icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
-    elif Path(icon_name).is_file(): # Test if icon is in path
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-    elif resource_path_exists(f"icons:{icon_name}.png"):
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(f"icons:{icon_name}.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-    elif hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
-        icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
-    elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
-        pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)
-        icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
-    else:
-        icon = QtGui.QIcon()
-    return icon
 
 
 class QAction(QtQAction):
@@ -564,7 +499,9 @@ class ActionManager:
         else:
             raise KeyError(f'Menu {short_name} is already existing')
 
-    def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None) -> QtWidgets.QToolBar:
+    def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
+                    toolbar: QtWidgets.QToolBar = None,
+                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 
         Parameters
@@ -575,6 +512,13 @@ class ActionManager:
             Displayed title of the toolbar
         parent: QWidget, optional
             parent widget for the toolbar (typically a QMainWindow)
+        toolbar: QToolbar, optional
+            A given toolbar, if None, it is created
+        area: Qt.ToolBarArea, optional
+            the area where this toolbar should be added, valid only for a QMainWindow parent
+        add_break: bool, optional
+            If True, a toolbar break is added in the given area before adding the toolbar, valid only for a
+            QMainWindow parent
 
         Returns
         -------
@@ -585,7 +529,14 @@ class ActionManager:
         --------
         add_action, get_toolbar
         """
-        toolbar = QtWidgets.QToolBar(title, parent)
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar(title, parent)
+        else:
+            toolbar.setParent(parent)
+        if isinstance(parent, QtWidgets.QMainWindow):
+            if add_break:
+                parent.addToolBarBreak(area)
+            parent.addToolBar(area, toolbar)
         self._toolbars[short_name] = toolbar
         return toolbar
 
@@ -629,7 +580,7 @@ class ActionManager:
     def actions_names(self) -> list[str]:
         return list(self._actions.keys())
 
-    def get_action(self, name) -> Union[QAction, QtWidgets.QWidget]:
+    def get_action(self, name) -> Union[QAction, WidgetActionProxy]:
         """Getter of a given action
 
         Parameters

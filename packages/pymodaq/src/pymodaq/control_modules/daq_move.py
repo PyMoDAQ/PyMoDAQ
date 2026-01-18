@@ -20,6 +20,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -33,7 +34,7 @@ from pymodaq_data.h5modules.backends import Node
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.instruments import ACTUATOR_TYPES, ACTUATOR_NAMES
@@ -174,22 +175,17 @@ class DAQ_Move(ParameterControlModule):
         cmd: ThreadCommand
             Possible values are :
             * init
-            * quit
             * get_value
             * loop_get_value
             * find_home
             * stop
             * move_abs
             * move_rel
-            * show_log
             * actuator_changed
             * rel_value
-            * show_config
         """
         if cmd.command == UiToMainMove.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == UiToMainMove.QUIT:
-            self.quit_fun()
         elif cmd.command == UiToMainMove.GET_VALUE:
             self.get_actuator_value()
         elif cmd.command == UiToMainMove.LOOP_GET_VALUE:
@@ -214,10 +210,6 @@ class DAQ_Move(ParameterControlModule):
             ):
                 data_act.force_units(self.units)
             self.move_rel(data_act)
-        elif cmd.command == UiToMainMove.SHOW_LOG:
-            self.show_log()
-        elif cmd.command == UiToMainMove.SHOW_CONFIG:
-            self.config = self.show_config(self.config)
             self.ui.config = self.config
         elif cmd.command == UiToMainMove.ACTUATOR_CHANGED:
             self.actuator = cmd.attribute
@@ -1183,16 +1175,11 @@ class DAQ_Move_Hardware(QObject):
 
 
 def main(init_qt=True):
-    if init_qt:  # used for the test suite
-        app = mkQApp("PyMoDAQ Move")
-
-    widget = QtWidgets.QWidget()
-    prog = DAQ_Move(widget, title="test")
-    widget.show()
-
-    if init_qt:
-        sys.exit(app.exec_())
-    return prog, widget
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
+    app = mkQApp("PyMoDAQ Move")
+    shared_ui, daq_move = create_load_daq_move()
+    shared_ui.show()
+    pymodaq_gui.qt_utils.exec()
 
 
 if __name__ == "__main__":
