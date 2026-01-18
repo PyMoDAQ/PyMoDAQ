@@ -533,8 +533,7 @@ class DashBoard(CustomApp):
         self.add_action("save_layout", "Save Layout", "",
                         "Save the Saved Docks layout corresponding to the current preset",
                         auto_toolbar=False,)
-        self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
-
+        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False)
         self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
@@ -573,7 +572,8 @@ class DashBoard(CustomApp):
                     "",
                     auto_toolbar=False,
                 )
-
+        self.add_action('show_remote', "Show/Hide Remote", 'visibility',
+                        icon_checked='visibility_off', auto_toolbar=False)
         self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False)
         self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False)
         for ind_file, file in enumerate(
@@ -608,7 +608,7 @@ class DashBoard(CustomApp):
         self.status_signal[str].connect(self.add_status)
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
-        self.connect_action("log_window", self.logger_dock.setVisible)
+        self.connect_action("show_log_widget", self.show_log_widget)
 
         self.connect_action("new_overshoot", self.create_overshoot)
         self.connect_action("modify_overshoot", self.modify_overshoot)
@@ -638,7 +638,7 @@ class DashBoard(CustomApp):
                         config_mod_pymodaq.get_set_roi_path().joinpath(file)
                     ),
                 )
-
+        self.connect_action('show_remote', self.show_remote)
         self.connect_action("new_remote", self.create_remote)
         self.connect_action("modify_remote", self.modify_remote)
         for ind_file, file in enumerate(
@@ -667,10 +667,11 @@ class DashBoard(CustomApp):
         #menubar.clear()
 
         settings_menu = self.add_menu('settings', 'Settings', auto_menu=False)
+        settings_menu.addAction(self.get_action("show_log_widget"))
+
         docked_menu = settings_menu.addMenu("Docked windows")
         docked_menu.addAction(self.get_action("load_layout"))
         docked_menu.addAction(self.get_action("save_layout"))
-
 
         self.add_menu('preset', 'Preset', auto_menu=False)
         self.add_menu('configurator', 'Configurator', auto_menu=False)
@@ -727,8 +728,14 @@ class DashBoard(CustomApp):
 
     def update_remote_menu(self):
         self.remote_menu.clear()
-        self.remote_menu.addAction("New remote config.", self.create_remote)
-        self.remote_menu.addAction("Modify remote config.", self.modify_remote)
+        self.remote_menu.addAction(self.get_action("show_remote"))
+        self.connect_action('show_remote', self.show_remote)
+        self.remote_menu.addSeparator()
+
+        self.remote_menu.addAction(self.get_action('new_remote'))
+        self.connect_action('new_remote', self.create_remote)
+        self.remote_menu.addAction(self.get_action('modify_remote'))
+        self.connect_action('modify_remote', self.modify_remote)
         self.remote_menu.addSeparator()
         load_remote_menu = self.remote_menu.addMenu("Load remote config.")
 
@@ -741,6 +748,49 @@ class DashBoard(CustomApp):
                         self.get_action_from_file(file, ManagerEnums.remote)
                     )
                 )
+
+    def create_remote(self):
+        try:
+            if self.preset_file is not None:
+                self.remote_manager.set_new_remote(self.preset_file.stem)
+                self.add_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+                    self.preset_file.stem,
+                    "",
+                )
+                self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+                    self.create_menu_slot_remote(
+                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
+                    ),
+                )
+
+        except Exception as e:
+            logger.exception(str(e))
+
+    def modify_remote(self):
+        try:
+            path = select_file(
+                start_path=config_mod_pymodaq.get_set_remote_path(),
+                save=False,
+                ext="xml",
+            )
+            if path != "":
+                self.remote_manager.set_file_remote(path)
+
+            else:  # cancel
+                pass
+        except Exception as e:
+            logger.exception(str(e))
+
+    def show_remote(self, show=True):
+        self.remote_widget.setVisible(show)
+        self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
+
+    def show_log_widget(self, show=True):
+        self.logger_widget.setVisible(show)
+        self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
 
     def update_overshoot_menu(self):
         self.overshoot_menu.clear()
@@ -793,25 +843,6 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def create_remote(self):
-        try:
-            if self.preset_file is not None:
-                self.remote_manager.set_new_remote(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(
-                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
-                    ),
-                )
-
-        except Exception as e:
-            logger.exception(str(e))
 
     def create_overshoot(self):
         try:
@@ -836,20 +867,7 @@ class DashBoard(CustomApp):
     def get_action_from_file(file: Path, manager: ManagerEnums):
         return f"{file.stem}_{manager.name}"
 
-    def modify_remote(self):
-        try:
-            path = select_file(
-                start_path=config_mod_pymodaq.get_set_remote_path(),
-                save=False,
-                ext="xml",
-            )
-            if path != "":
-                self.remote_manager.set_file_remote(path)
 
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
 
     def modify_overshoot(self):
         try:
@@ -1036,7 +1054,7 @@ class DashBoard(CustomApp):
             actuator_docks.append(dock)
 
             if len(actuator_docks) == 1:
-                self.dockarea.addDock(dock, "right", self.logger_dock)
+                self.dockarea.addDock(dock, "top")
             else:
                 self.dockarea.addDock(dock, "above", actuator_docks[-2])
         QtWidgets.QApplication.processEvents()
@@ -1120,7 +1138,7 @@ class DashBoard(CustomApp):
 
         detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
         if len(detector_modules) == 0:
-            self.logger_dock.area.addDock(detector_docks_viewer[-1], "bottom")
+            self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
         else:
             self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
         widget = QtWidgets.QWidget()
@@ -1229,8 +1247,8 @@ class DashBoard(CustomApp):
             self.remote_manager.set_file_remote(filename, show=False)
             self.settings.child("loaded_files", "remote_file").setValue(filename)
             self.remote_manager.set_remote_configuration()
-            self.remote_dock.addWidget(self.remote_manager.remote_settings_tree)
-            self.remote_dock.setVisible(True)
+            self.remote_widget.layout().addWidget(self.remote_manager.remote_settings_tree)
+            self.get_action('show_remote').trigger()
 
     def activate_remote(self, remote_action, activate_all=False):
         """
@@ -1493,21 +1511,22 @@ class DashBoard(CustomApp):
 
     def setup_docks(self):
         # %% create logger dock
-        self.logger_dock = Dock("Logger")
+        self.logger_widget = QtWidgets.QWidget(windowTitle='Logger')
+        self.logger_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.logger_widget.setVisible(False)
+
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
 
         splitter = QtWidgets.QSplitter(Qt.Vertical)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.logger_list)
-        self.logger_dock.addWidget(splitter)
+        self.logger_widget.layout().addWidget(splitter)
 
-        self.remote_dock = Dock("Remote controls")
-        self.dockarea.addDock(self.remote_dock, "top")
-        self.dockarea.addDock(self.logger_dock, "above", self.remote_dock)
-        self.logger_dock.setVisible(True)
-
-        self.remote_dock.setVisible(False)
+        self.remote_widget = QtWidgets.QWidget(windowTitle='Remote Manager')
+        self.remote_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.remote_widget.setVisible(False)
 
 
     @property
