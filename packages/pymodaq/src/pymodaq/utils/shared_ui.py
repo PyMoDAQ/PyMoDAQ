@@ -22,6 +22,7 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
 import pymodaq_gui.qt_utils
+from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils import DockArea
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -134,8 +135,7 @@ class SharedUI(CustomApp):
             for menu in app.menus:
                 if menu.title() in menus_dict: # two main menus with identical names (titles)
                     menus_dict[menu.title()].addSeparator()
-                    for child_menu in self._get_menus_from_widget(menu):
-                        menus_dict[menu.title()].addMenu(child_menu)
+                    menus_dict[menu.title()].addActions(menu.actions())
                 else:
                     self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
                                             menu)
