@@ -38,40 +38,11 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=self.move_toolbar)
+        self.setup_actions_in_toolbar(self.move_toolbar)
 
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=self.move_toolbar,
-                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
-                        icon_checked_color=qt_themes.get_theme().green)
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
-        self.add_widget('abs_green', self.abs_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=self.move_toolbar)
-        self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
-                        toolbar=self.move_toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute"
-                                                             " value",
-                        toolbar=self.move_toolbar)
-
-
-        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
-                        toolbar=self.move_toolbar, icon_color=self.get_theme().red)
-        self.move_toolbar.addSeparator()
-        self.add_action('show_controls', 'Show Controls', 'tune', "Show more controls", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
-                        checkable=True, icon_checked='bid_landscape_disabled',
-                        icon_color=self._theme.green, icon_checked_color=self._theme.red,
-                        toolbar=self.move_toolbar)
-        self.add_action('refresh_value', 'Refresh', 'refresh', "Refresh Value", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        self._setup_absolute_spinbox_actions(toolbar)
+        self._setup_absolute_actions(toolbar)
 
     def connect_things(self):
         super().connect_things()

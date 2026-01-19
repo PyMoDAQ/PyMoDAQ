@@ -34,8 +34,6 @@ class ControlModuleUI(CustomApp):
         super().__init__(parent)
         self.config = config
 
-        self._theme = qt_themes.get_theme()
-
     def display_status(self, txt, wait_time=config_utils('general', 'message_status_persistence')):
         if self.statusbar is not None:
             self.statusbar.showMessage(txt, wait_time)

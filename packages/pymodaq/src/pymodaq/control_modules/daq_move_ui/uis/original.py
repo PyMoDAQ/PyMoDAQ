@@ -83,24 +83,7 @@ class DAQ_Move_UI(DAQ_Move_UI_Base):
         self.parent.layout().addWidget(self.statusbar)
 
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=self.toolbar)
-        self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
-                        toolbar=self.move_toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute value",
-                        toolbar=self.move_toolbar)
-
-        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
-                        toolbar=self.toolbar)
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
-                        toolbar=self.toolbar)
-        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
-                        toolbar=self.toolbar)
-        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
-                        toolbar=self.toolbar)
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", checkable=False,
-                        toolbar=self.toolbar)
+        self.setup_actions_in_toolbar(self.toolbar)
 
     def connect_things(self):
         super().connect_things()
