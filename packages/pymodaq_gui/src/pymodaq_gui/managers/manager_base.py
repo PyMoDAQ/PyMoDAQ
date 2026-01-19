@@ -261,12 +261,12 @@ class ManagerBase(CustomExt):
         self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}',
                         'file_copy')
         self.add_action(ManagerActions.NEW,
-                        f'New {self.entry_type.capitalize()}', 'add',
+                        f'New {self.entry_type.capitalize()}', 'add_circle',
                         tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N),
                         icon_color=self.get_theme().green,)
         self.add_action(ManagerActions.DELETE,
-                        f'Delete {self.entry_type.capitalize()}', 'remove',
+                        f'Delete {self.entry_type.capitalize()}', 'do_not_disturb_on',
                         icon_color=self.get_theme().red,
                         tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))

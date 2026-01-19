@@ -41,12 +41,17 @@ names = [
     'build_circle',
     'file_copy',
     'add',
+    'add_circle',
     'remove',
+    'do_not_disturb_on',
     'refresh',
     'gesture',
     'more_time',
     'timer',
     'timer_off',
+    'tune',
+    'step_into',
+    'step_out',
 ]
 
 
