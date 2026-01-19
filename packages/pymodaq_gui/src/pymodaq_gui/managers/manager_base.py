@@ -258,25 +258,31 @@ class ManagerBase(CustomExt):
                         kwargs={'setReadOnly': True})
         self.get_action_list().addItems(self.entries)
 
-        self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}', 'EditCopy')
+        self.add_action(ManagerActions.COPY, f'Copy {self.entry_type.capitalize()}',
+                        'file_copy')
         self.add_action(ManagerActions.NEW,
-                        f'New {self.entry_type.capitalize()}', 'ListAdd',
+                        f'New {self.entry_type.capitalize()}', 'add',
                         tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N),
+                        icon_color=self.get_theme().green,)
         self.add_action(ManagerActions.DELETE,
-                        f'Delete {self.entry_type.capitalize()}', 'ListRemove',
+                        f'Delete {self.entry_type.capitalize()}', 'remove',
+                        icon_color=self.get_theme().red,
                         tip=f'Delete the current {self.entry_type.capitalize()} ("Ctrl+Delete")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
         self.add_action(ManagerActions.SAVE,
-                        f'Save {self.entry_type.capitalize()}', 'DocumentSave',
+                        f'Save {self.entry_type.capitalize()}', 'save_as',
+                        icon_color=self.get_theme().blue,
                         tip=f'Save/Update the current {self.entry_type.capitalize()} ("Ctrl+S")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action(ManagerActions.RELOAD,
-                        f'Reload {self.entry_type.capitalize()}', 'ViewRefresh',
+                        f'Reload {self.entry_type.capitalize()}', 'refresh',
                         tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
+                        icon_color=self.get_theme().orange,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
         self.add_action(ManagerActions.EXECUTE,
                         f'Execute {self.entry_type.capitalize()}', 'start',
+                        icon_color=self.get_theme().magenta,
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
 
@@ -284,8 +290,9 @@ class ManagerBase(CustomExt):
         # ACTIONS external: Dashboard, ...
 
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
-                        "DocumentProperties",
-                        f'Open the {self.entry_type.capitalize()} Manager',
+                        "build_circle",
+                        icon_color=self.get_theme().blue,
+                        tip=f'Open the {self.entry_type.capitalize()} Manager',
                         toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
 
         self.add_widget('external_label',

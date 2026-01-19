@@ -592,11 +592,11 @@ class DashBoard(CustomApp):
 
         self.toolbar.addSeparator()
 
-        self.add_action("do_scan", "Do Scans", "surfacePlot",
+        self.add_action("do_scan", "Do Scans", "gesture",
                         tip="Open the DAQ Scan extension to acquire data as a function of "
                             "one or more parameter",)
         self.toolbar.addSeparator()
-        self.add_action("do_log", "Log data", "", auto_toolbar=False)
+        self.add_action("do_log", "Log data", "more_time", auto_toolbar=False)
         self.add_action("do_pid", "PID module", auto_toolbar=False)
         self.add_action("console", "IPython Console", auto_toolbar=False)
         self.add_action("bayesian", "Bayesian Optimisation", auto_toolbar=False)

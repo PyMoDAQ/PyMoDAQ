@@ -43,6 +43,10 @@ names = [
     'add',
     'remove',
     'refresh',
+    'gesture',
+    'more_time',
+    'timer',
+    'timer_off',
 ]
 
 
