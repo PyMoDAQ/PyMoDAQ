@@ -25,7 +25,13 @@ names = [
     'settings',
     'bid_landscape',
     'bid_landscape_disabled',
-
+    'close',
+    'not_started',
+    'compare_arrows',
+    'looks_one',
+    'motion_play',
+    'stop',
+    'stop_circle'
 ]
 
 
