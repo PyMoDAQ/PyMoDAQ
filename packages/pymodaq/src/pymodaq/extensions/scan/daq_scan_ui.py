@@ -46,13 +46,12 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_things()
 
     def setup_actions(self):
-        self.add_action('ini_positions', 'Init Positions', '', menu=self.action_menu)
-        self.add_action('start', 'Start Scan', 'run2', "Start the scan", menu=self.action_menu)
+        self.add_action('ini_positions', 'Init Positions', 'compare_arrows', menu=self.action_menu)
+        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan", menu=self.action_menu)
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
-        self.add_action('stop', 'Stop Scan', 'stop', "Stop the scan", menu=self.action_menu)
+        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan", menu=self.action_menu)
         self.add_action('move_at', 'Move at doubleClicked', 'move_contour',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
-        self.add_action('log', 'Show Log file', 'information2', menu=self.file_menu)
 
         self.add_action('load', 'Load File', 'Open', menu=self.file_menu, auto_toolbar=False)
         self.file_menu.addSeparator()
@@ -74,7 +73,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
 
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))
         self.connect_action('save', lambda: self.command_sig.emit(ThreadCommand('save')))

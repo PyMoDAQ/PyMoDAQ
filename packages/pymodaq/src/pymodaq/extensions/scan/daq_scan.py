@@ -262,7 +262,6 @@ class DAQScan(CustomExt):
                 * start_batch
                 * stop
                 * move_at
-                * show_log
                 * load
                 * save
                 * show_file
@@ -280,8 +279,6 @@ class DAQScan(CustomExt):
             self.stop_scan()
         elif cmd.command == 'move_at':
             self.move_to_crosshair()
-        elif cmd.command == 'show_log':
-            self.show_log()
         elif cmd.command == 'load':
             self.load_file()
         elif cmd.command == 'save':
@@ -294,11 +291,6 @@ class DAQScan(CustomExt):
             self.show_batcher(self.ui.menubar)
         elif cmd.command == 'viewers_changed':
             ...
-
-    def show_log(self):
-        """Open the log file in the default text editor"""
-        import webbrowser
-        webbrowser.open(logger.parent.handlers[0].baseFilename)
 
     def quit_fun(self):
         """
