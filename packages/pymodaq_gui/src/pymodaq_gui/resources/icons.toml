@@ -28,7 +28,10 @@ names = [
     'close',
     'not_started',
     'compare_arrows',
-
+    'looks_one',
+    'motion_play',
+    'stop',
+    'stop_circle'
 ]
 
 
