@@ -43,7 +43,7 @@ class ChronoTimer(QObject):
             self.duration = timedelta(**duration)  # seconds
         self.displayed_time = 0  # in seconds
         self.started = False
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.display_time)
 

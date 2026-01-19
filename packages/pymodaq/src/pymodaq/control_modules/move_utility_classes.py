@@ -339,7 +339,7 @@ class DAQ_Move_base(QObject):
                                           data=[np.zeros(self.data_shape, dtype=float)],
                                           units=self.axis_unit)
 
-        self.poll_timer = QTimer()
+        self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
