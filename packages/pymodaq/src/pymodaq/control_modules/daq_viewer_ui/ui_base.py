@@ -310,7 +310,6 @@ def main(init_qt=True):
     param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
-    timer = QtCore.QTimer()
 
 
 
@@ -318,6 +317,7 @@ def main(init_qt=True):
     prog = DAQ_Viewer_UI(widget, title='myViewer')
     shared_ui = SharedUI(widget)
 
+    timer = QtCore.QTimer(shared_ui)
 
     def set_data_ready(ready=True):
         prog.data_ready = True
