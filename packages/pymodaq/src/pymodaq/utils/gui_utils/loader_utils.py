@@ -8,7 +8,7 @@ from qtpy.QtWidgets import QMessageBox, QMainWindow
 from pymodaq import dashboard
 from pymodaq.dashboard import DashBoard
 from pymodaq.utils.gui_utils import DockArea
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path, get_set_configurator_path
 from pymodaq.extensions.utils import CustomExt
 
 from pymodaq.utils.shared_ui import SharedUI
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 
-def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  -> \
+def load_dashboard_with_preset(preset_name: str, extension_name: str = None, configuration_name: str = None)  -> \
         tuple[DashBoard, CustomExt, QMainWindow]:
 
     """ Load the Dashboard using a given preset then load an extension
@@ -45,13 +45,15 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  ->
     """
     shared_ui, dashboard = create_load_dashboard()
 
-
-    preset_name = Path(preset_name).stem
+    preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
+    preset_name = preset_path.stem
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
-        dashboard.preset_manager.entry = preset_name
-
+        dashboard.preset_manager.execute_entry_base(preset_path)
+        if configuration_name is not None:
+            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.execute_entry(configuration_path)
         if extension_name is not None:
             if extension_name == 'DAQScan':
                 extension = dashboard.load_scan_module()
