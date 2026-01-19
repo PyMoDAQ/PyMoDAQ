@@ -50,6 +50,7 @@ names = [
     'timer',
     'timer_off',
     'tune',
+    'discover_tune',
     'step',
     'step_into',
     'step_out',

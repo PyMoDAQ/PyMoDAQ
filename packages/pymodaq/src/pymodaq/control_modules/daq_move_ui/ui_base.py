@@ -66,7 +66,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self._unit = ''
         self._ini_state = False
         self.move_toolbar = self.add_toolbar('move', 'Move')
-        self.controls_toolbar = self.add_toolbar('controls', 'Controls', add_break=False)
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -222,7 +221,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.rel_value_sb.setOpts(siPrefix=show)
 
     def setup_docks(self):
-
+        self.parent.setLayout(QtWidgets.QHBoxLayout())
+        self.parent.layout().addWidget(self.move_toolbar)
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
@@ -340,7 +340,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
                         toolbar=toolbar, icon_color=self.get_theme().red)
         toolbar.addSeparator()
-        self.add_action('show_controls', 'Show Controls', 'tune', "Show more controls", checkable=True,
+        self.add_action('show_controls', 'Show Controls',
+                        'discover_tune', "Show more controls", checkable=True,
                         toolbar=toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
                         checkable=True, icon_checked='bid_landscape_disabled',

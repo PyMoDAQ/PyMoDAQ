@@ -41,8 +41,8 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.setup_actions_in_toolbar(self.move_toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
-        self._setup_absolute_spinbox_actions(self.controls_toolbar)
-        self._setup_absolute_actions(self.controls_toolbar)
+        self._setup_absolute_spinbox_actions(toolbar)
+        self._setup_absolute_actions(toolbar)
 
     def connect_things(self):
         super().connect_things()
