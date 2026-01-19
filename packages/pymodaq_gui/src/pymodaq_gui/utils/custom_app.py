@@ -59,13 +59,15 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         else:
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
-        if title is not None:
-            parent.setWindowTitle(title)
+
+        self.title = title if title is not None else self.__class__.__name__
+
+        parent.setWindowTitle(self.title)
 
         self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
         self._menubar: QtWidgets.QMenuBar = None
-        self.set_toolbar(QtWidgets.QToolBar(title)) # create self._toolbar
+        self.set_toolbar(QtWidgets.QToolBar(self.title)) # create self._toolbar
 
         if self.mainwindow is not None:
             self.mainwindow.addToolBar(self._toolbar)
