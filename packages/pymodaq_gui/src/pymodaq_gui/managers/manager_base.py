@@ -276,7 +276,7 @@ class ManagerBase(CustomExt):
                         tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
         self.add_action(ManagerActions.EXECUTE,
-                        f'Execute {self.entry_type.capitalize()}', 'MailSend',
+                        f'Execute {self.entry_type.capitalize()}', 'start',
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
 

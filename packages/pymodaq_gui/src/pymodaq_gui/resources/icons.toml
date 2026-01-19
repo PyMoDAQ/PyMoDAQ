@@ -38,6 +38,11 @@ names = [
     'info',
     'help',
     'account_tree',
+    'build_circle',
+    'file_copy',
+    'add',
+    'remove',
+    'refresh',
 ]
 
 
