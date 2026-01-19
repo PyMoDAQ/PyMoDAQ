@@ -46,7 +46,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_things()
 
     def setup_actions(self):
-        self.add_action('quit', 'Quit the module', 'close2', menu=self.file_menu)
         self.add_action('ini_positions', 'Init Positions', '', menu=self.action_menu)
         self.add_action('start', 'Start Scan', 'run2', "Start the scan", menu=self.action_menu)
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
@@ -70,7 +69,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.set_action_enabled('stop', enable)
 
     def connect_things(self):
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))

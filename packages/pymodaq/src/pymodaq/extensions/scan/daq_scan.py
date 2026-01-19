@@ -43,7 +43,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
-
+from pymodaq.utils.managers import PresetManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -144,6 +144,9 @@ class DAQScan(CustomExt):
 
         self.runner_thread: QThread = None
 
+        self.preset_manager: PresetManager = None
+
+
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
@@ -193,6 +196,11 @@ class DAQScan(CustomExt):
         self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
     def setup_docks(self):
+        self.mainwindow.removeToolBar(self.toolbar)  # hides it
+
+        self.add_toolbar('dashboard', 'Dashboard Toolbar',
+                         parent=self.mainwindow, add_break=True)
+
         self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
 
@@ -204,10 +212,31 @@ class DAQScan(CustomExt):
         self.ui.set_plotting_settings(self.plotting_settings_tree)
 
     def setup_actions(self):
-        pass
+        self.add_widget('dashboard_label', QtWidgets.QLabel('Dashboard:'),
+                        toolbar='dashboard')
+        self.add_action('show_dashboard', 'Show Dashboard', 'show',
+                        'Show/Hide the Dashboard window', checkable=True,
+                        icon_checked='unshow', toolbar='dashboard')
+        self.preset_manager = PresetManager(self.dashboard, toolbar=self.get_toolbar('dashboard'))
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         pass
+
+    def connect_things(self):
+        self.connect_action('show_dashboard', self.show_dashboard)
+        self.preset_manager.applied_entry.connect(self.update_after_preset_set)
+
+    def update_after_preset_set(self, preset_name: str):
+        # update modules manager
+        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
+        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+
+        # show/hide dashboard
+        self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
+            
+    def show_dashboard(self):
+        self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
+        self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked('show_dashboard', False)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -225,7 +254,6 @@ class DAQScan(CustomExt):
         ----------
         cmd: ThreadCommand
             Possible values are:
-                * quit
                 * ini_positions
                 * start
                 * start_batch
@@ -239,9 +267,7 @@ class DAQScan(CustomExt):
                 * batch
                 * viewers_changed
         """
-        if cmd.command == 'quit':
-            self.quit_fun()
-        elif cmd.command == 'ini_positions':
+        if cmd.command == 'ini_positions':
             self.set_ini_positions()
         elif cmd.command == 'start':
             self.start_scan()
@@ -1198,17 +1224,28 @@ class DAQScanAcquisition(QObject):
 
 def main():
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
+    from pymodaq_gui.utils.dock import DockArea
+    from pymodaq.utils.shared_ui import SharedUI
 
     app = mkQApp('DAQScan')
-    preset_file_name = config('presets', f'default_preset_for_scan')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQScan')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
 
-    pymodaq_gui.qt_utils.exec()
+    win_scan = QtWidgets.QMainWindow()
+    dockarea = DockArea()
+    win_scan.setCentralWidget(dockarea)
 
-    return dashboard, extension, win
+    daq_scan = DAQScan(dockarea, dashboard)
+    shared_ui = SharedUI(win_scan)
+    shared_ui.affect_application(daq_scan)
+    shared_ui.mainwindow.addToolBar(daq_scan.get_toolbar('dashboard'))
+    shared_ui.add_toolbar('scan', 'Scanner', toolbar=daq_scan.ui.toolbar, add_break=False)
 
+    win_scan.show()
+
+    app.exec()
 
 if __name__ == '__main__':
     main()
