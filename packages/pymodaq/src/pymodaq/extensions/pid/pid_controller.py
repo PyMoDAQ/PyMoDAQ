@@ -848,7 +848,7 @@ class PIDRunner(QObject):
         [queue_input.append(output) for queue_input, output in zip(self.queue_inputs, self.outputs)]  # Prefill queues with initial output
         self.clear_queues = True  # Clear queues on first iteration
 
-    #     self.timeout_timer = QtCore.QTimer()
+    #     self.timeout_timer = QtCore.QTimer(self)
     #     self.timeout_timer.setInterval(10000)
     #     self.timeout_scan_flag = False
     #     self.timeout_timer.timeout.connect(self.timeout)

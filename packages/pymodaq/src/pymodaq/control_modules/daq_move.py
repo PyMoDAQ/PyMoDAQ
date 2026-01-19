@@ -182,7 +182,7 @@ class DAQ_Move(ParameterControlModule):
         self._target_value = DataActuator(title, units=self.units)
         self._relative_value = DataActuator(title, units=self.units)
 
-        self._refresh_timer = QTimer()
+        self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.get_actuator_value)
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):

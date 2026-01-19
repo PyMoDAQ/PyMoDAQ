@@ -99,7 +99,7 @@ class LECODirector:
 
     def start_timer(self) -> None:
         """To be called in child classes."""
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_actor_connection)
         try:
             # cast is used by the type checker to infer the returned type (when many are possible)
