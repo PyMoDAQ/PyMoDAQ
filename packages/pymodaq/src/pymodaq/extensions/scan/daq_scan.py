@@ -214,9 +214,12 @@ class DAQScan(CustomExt):
     def setup_actions(self):
         self.add_widget('dashboard_label', QtWidgets.QLabel('Dashboard:'),
                         toolbar='dashboard')
-        self.add_action('show_dashboard', 'Show Dashboard', 'show',
+        self.add_action('show_dashboard', 'Show Dashboard', 'visibility',
                         'Show/Hide the Dashboard window', checkable=True,
-                        icon_checked='unshow', toolbar='dashboard')
+                        icon_color=self.get_theme().green,
+                        icon_checked='visibility_off',
+                        icon_checked_color=self.get_theme().red,
+                        toolbar='dashboard')
         self.preset_manager = PresetManager(self.dashboard, toolbar=self.get_toolbar('dashboard'))
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):

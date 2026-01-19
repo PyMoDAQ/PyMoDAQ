@@ -166,14 +166,16 @@ class SharedUI(CustomApp):
 
         self.toolbar.addSeparator()
 
-        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "tree",
+        self.add_action("config_utils", "Utils Config.", "account_tree",
+                        tip="Show utility configuration file",)
+        self.add_action("config", "Controls/Extensions Config.", "account_tree",
                         tip="Show Control Modules and Extensions configuration file",)
         self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
         self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
                         auto_toolbar=False,)
-        self.add_action("about", "About", "information2")
-        self.add_action("help", "Help", "help1")
+        self.add_action("about", "About", "info",
+                        icon_color=self.get_theme().cyan)
+        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow)
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()

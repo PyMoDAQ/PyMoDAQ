@@ -283,11 +283,13 @@ class ManagerBase(CustomExt):
 
         # ACTIONS external: Dashboard, ...
 
-        self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager", "DocumentProperties",
+        self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
+                        "DocumentProperties",
                         f'Open the {self.entry_type.capitalize()} Manager',
                         toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
 
-        self.add_widget('external_label', QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+        self.add_widget('external_label',
+                        QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
                         toolbar=Toolbar.EXTERNAL)
         self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
                         toolbar=Toolbar.EXTERNAL)
