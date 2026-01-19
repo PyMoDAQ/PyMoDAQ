@@ -18,6 +18,7 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 import pymodaq_gui.qt_utils
+from pymodaq.extensions.utils import CustomExt
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 from pymodaq_utils import utils
@@ -69,7 +70,7 @@ class ScanDataTemp:
         self.data = data
 
 
-class DAQScan(QObject, ParameterManager):
+class DAQScan(CustomExt):
     """
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
@@ -122,17 +123,10 @@ class DAQScan(QObject, ParameterManager):
         """
         
         logger.info('Initializing DAQScan')
-        QObject.__init__(self)
-        ParameterManager.__init__(self)
+        super().__init__(parent=dockarea,
+                         dashboard=dashboard)
 
-        self.title = __class__.__name__
 
-        self.dockarea: gutils.DockArea = dockarea
-        self.dashboard: DashBoard = dashboard
-        if dashboard is None:
-            raise Exception('No valid dashboard initialized')
-
-        self.mainwindow = self.dockarea.parent()
         self.ui: DAQScanUI = DAQScanUI(self.dockarea)
 
         self.wait_time = 1000
@@ -150,7 +144,6 @@ class DAQScan(QObject, ParameterManager):
 
         self.runner_thread: QThread = None
 
-        self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
@@ -199,7 +192,7 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('plot_options', 'plot_0d').setValue(data0D)
         self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
-    def setup_ui(self):
+    def setup_docks(self):
         self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
 
@@ -209,6 +202,12 @@ class DAQScan(QObject, ParameterManager):
         self.plotting_settings_tree = ParameterTree()
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
         self.ui.set_plotting_settings(self.plotting_settings_tree)
+
+    def setup_actions(self):
+        pass
+
+    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+        pass
 
     ################
     #  CONFIG/SETUP UI / EXIT

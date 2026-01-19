@@ -58,8 +58,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         else:
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
-        if title is not None:
-            parent.setWindowTitle(title)
+
+        if title is None:
+            title = self.__class__.__name__
+        self.title = title
+        parent.setWindowTitle(title)
 
         self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
