@@ -49,11 +49,8 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
         self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
         self.move_toolbar.addSeparator()
-        self.add_widget('rel_move', self.rel_value_sb, toolbar=self.move_toolbar)
-        self.add_action('move_rel_plus', 'Set Rel. (+)', 'MoveUp', toolbar=self.move_toolbar)
-        self.add_action('move_rel_minus', 'Set Rel. (-)', 'MoveDown', toolbar=self.move_toolbar)
 
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
+        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion", toolbar=self.move_toolbar)
         self.move_toolbar.addSeparator()
 
         self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,

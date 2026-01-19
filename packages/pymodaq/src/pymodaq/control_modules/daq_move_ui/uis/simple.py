@@ -60,15 +60,16 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
                         toolbar=self.move_toolbar)
 
 
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
+        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
+                        toolbar=self.move_toolbar, icon_color=self.get_theme().red)
         self.move_toolbar.addSeparator()
-        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
+        self.add_action('show_controls', 'Show Controls', 'tune', "Show more controls", checkable=True,
                         toolbar=self.move_toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self._theme.green, icon_checked_color=self._theme.red,
                         toolbar=self.move_toolbar)
-        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
+        self.add_action('refresh_value', 'Refresh', 'refresh', "Refresh Value", checkable=True,
                         toolbar=self.move_toolbar)
         self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
 
