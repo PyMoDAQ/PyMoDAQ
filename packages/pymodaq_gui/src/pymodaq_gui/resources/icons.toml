@@ -9,7 +9,7 @@
 size = [20, 40]  # add other cases if needed among [20, 24, 40, 48]
 style = ['rounded']  # add other cases if needed among ['rounded', 'outlined', 'sharp']
 names = [
-    'search',
+        'search',
     'toggle_on',
     'toggle_off',
     'visibility',
@@ -30,6 +30,7 @@ names = [
     'compare_arrows',
     'looks_one',
     'motion_play',
+    'start',
     'stop',
     'stop_circle',
     'arrows_input',
@@ -37,6 +38,22 @@ names = [
     'info',
     'help',
     'account_tree',
+    'build_circle',
+    'file_copy',
+    'add',
+    'add_circle',
+    'remove',
+    'do_not_disturb_on',
+    'refresh',
+    'gesture',
+    'more_time',
+    'timer',
+    'timer_off',
+    'tune',
+    'discover_tune',
+    'step',
+    'step_into',
+    'step_out',
 
 ]
 

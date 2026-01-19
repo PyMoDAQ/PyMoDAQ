@@ -1177,7 +1177,7 @@ class DAQ_Move_Hardware(QObject):
 def main(init_qt=True):
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move()
+    shared_ui, daq_move = create_load_daq_move('simple')
     shared_ui.show()
     pymodaq_gui.qt_utils.exec()
 

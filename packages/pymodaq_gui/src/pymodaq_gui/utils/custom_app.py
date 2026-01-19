@@ -1,5 +1,6 @@
 from typing import Union, TYPE_CHECKING, Dict
 
+import qt_themes
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
@@ -72,6 +73,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.statusbar = self.mainwindow.statusBar()
             self.reference_toolbar('main', self._toolbar)
 
+    @staticmethod
+    def get_theme(name: str = None):
+        return qt_themes.get_theme(name)
 
     def setup_ui(self):
         self.setup_docks()
