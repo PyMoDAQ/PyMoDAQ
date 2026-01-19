@@ -6,18 +6,16 @@
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 from __future__ import annotations
-from collections import OrderedDict
 import logging
 import os
 from pathlib import Path
-import sys
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
+from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -39,7 +37,7 @@ from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.daq_scan_ui import DAQScanUI
+from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
