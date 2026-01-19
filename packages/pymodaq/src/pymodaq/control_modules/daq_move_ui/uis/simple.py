@@ -22,11 +22,11 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
     def setup_docks(self):
         super().setup_docks()
 
-        self.parent.setLayout(QVBoxLayout())
+        self.parent.setLayout(QtWidgets.QHBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
 
-        self.parent.layout().addWidget(self.move_toolbar)
+        #self.parent.layout().addWidget(self.move_toolbar)
 
         self.abs_value_sb_2.setMinimumWidth(80)
         self.abs_value_sb.setMinimumWidth(80)
@@ -41,8 +41,8 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.setup_actions_in_toolbar(self.move_toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
-        self._setup_absolute_spinbox_actions(toolbar)
-        self._setup_absolute_actions(toolbar)
+        self._setup_absolute_spinbox_actions(self.controls_toolbar)
+        self._setup_absolute_actions(self.controls_toolbar)
 
     def connect_things(self):
         super().connect_things()

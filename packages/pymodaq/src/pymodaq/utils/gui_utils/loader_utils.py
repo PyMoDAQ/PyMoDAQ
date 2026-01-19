@@ -104,6 +104,11 @@ def create_load_daq_move(ui_identifier='Original') -> tuple[SharedUI, 'DAQ_Move'
     shared_ui.affect_application(daq_move)
     shared_ui.add_toolbar('move_toolbar', 'Move', toolbar=daq_move.ui.move_toolbar,
                           add_break=True)
+    shared_ui.add_toolbar('controls', 'Controls', toolbar=daq_move.ui.controls_toolbar,
+                          add_break=True)
+    daq_move.settings_tree.setVisible(False)
+    widget.layout().addWidget(daq_move.ui.control_widget)
+    widget.layout().addWidget(daq_move.settings_tree)
     widget.layout().addWidget(daq_move.ui.graph_widget)
 
     return shared_ui, daq_move

@@ -65,7 +65,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.title = title
         self._unit = ''
         self._ini_state = False
-        self.move_toolbar = QtWidgets.QToolBar()
+        self.move_toolbar = self.add_toolbar('move', 'Move')
+        self.controls_toolbar = self.add_toolbar('controls', 'Controls', add_break=False)
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -260,23 +261,28 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuator_init = False
 
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
-        widget.setLayout(QtWidgets.QGridLayout())
-        widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
+        widget.setLayout(QtWidgets.QVBoxLayout())
+        container_widget = QtWidgets.QWidget()
+        widget.layout().addWidget(container_widget)
+        widget.layout().addStretch()
 
-        widget.layout().addWidget(self.find_home_pb, 0, 1)
+        container_widget.setLayout(QtWidgets.QGridLayout())
+        container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
 
-        widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
-        widget.layout().addWidget(self.move_abs_pb, 1, 1)
-        widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
-        widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
+        container_widget.layout().addWidget(self.find_home_pb, 0, 1)
 
-        widget.layout().addWidget(self.rel_value_sb, 3, 0)
+        container_widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
+        container_widget.layout().addWidget(self.move_abs_pb, 1, 1)
+        container_widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
+        container_widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
 
-        widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
-        widget.layout().addWidget(self.stop_pb, 4, 0)
+        container_widget.layout().addWidget(self.rel_value_sb, 3, 0)
 
-        widget.layout().addWidget(self.get_value_pb, 4, 1)
-        widget.layout().setContentsMargins(0, 0, 0, 0)
+        container_widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
+        container_widget.layout().addWidget(self.stop_pb, 4, 0)
+
+        container_widget.layout().addWidget(self.get_value_pb, 4, 1)
+        container_widget.layout().setContentsMargins(0, 0, 0, 0)
         widget.setVisible(False)
 
     def close(self):
