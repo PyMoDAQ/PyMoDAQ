@@ -233,7 +233,10 @@ class DAQScan(CustomExt):
 
         # show/hide dashboard
         self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
-            
+
+        # set the module saver type and applies its h5saver to submodules
+        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
+
     def show_dashboard(self):
         self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
         self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked('show_dashboard', False)
