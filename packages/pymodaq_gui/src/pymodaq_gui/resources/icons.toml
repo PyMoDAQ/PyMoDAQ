@@ -31,7 +31,9 @@ names = [
     'looks_one',
     'motion_play',
     'stop',
-    'stop_circle'
+    'stop_circle',
+    'arrows_input',
+    'moving',
 ]
 
 
