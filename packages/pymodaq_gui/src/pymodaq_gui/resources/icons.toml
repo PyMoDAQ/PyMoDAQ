@@ -30,6 +30,7 @@ names = [
     'compare_arrows',
     'looks_one',
     'motion_play',
+    'start',
     'stop',
     'stop_circle',
     'arrows_input',
@@ -37,7 +38,6 @@ names = [
     'info',
     'help',
     'account_tree',
-
 ]
 
 
