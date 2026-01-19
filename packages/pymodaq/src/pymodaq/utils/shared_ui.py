@@ -161,14 +161,15 @@ class SharedUI(CustomApp):
         self.add_action(
             "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
         )
-        self.add_action("quit", "Quit", "close2", "Quit program")
+        self.add_action("quit", "Quit", "close", "Quit program",
+                        icon_color=self.get_theme().red)
 
         self.toolbar.addSeparator()
 
         self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
         self.add_action("config", "Controls/Extensions Config.", "tree",
                         tip="Show Control Modules and Extensions configuration file",)
-        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
+        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
         self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
                         auto_toolbar=False,)
         self.add_action("about", "About", "information2")

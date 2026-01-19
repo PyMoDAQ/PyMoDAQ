@@ -8,6 +8,8 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 
+from qt_themes import get_theme
+
 
 class CustomApp(QObject, ActionManager, ParameterManager):
     """Base Class to ease the implementation of User Interfaces
@@ -75,6 +77,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.statusbar = self.mainwindow.statusBar()
             self.reference_toolbar('main', self._toolbar)
 
+    @staticmethod
+    def get_theme(name: str = None):
+        return get_theme(name)
 
     def setup_ui(self):
         self.setup_docks()

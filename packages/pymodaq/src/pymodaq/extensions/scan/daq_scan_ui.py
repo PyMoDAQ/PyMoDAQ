@@ -46,11 +46,13 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_things()
 
     def setup_actions(self):
-        self.add_action('ini_positions', 'Init Positions', 'compare_arrows', menu=self.action_menu)
-        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan", menu=self.action_menu)
+        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu=self.action_menu)
+        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
+                        menu=self.action_menu, icon_color=self.get_theme().green)
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
-        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan", menu=self.action_menu)
-        self.add_action('move_at', 'Move at doubleClicked', 'move_contour',
+        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
+                        menu=self.action_menu, icon_color=self.get_theme().red)
+        self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
 
         self.add_action('load', 'Load File', 'Open', menu=self.file_menu, auto_toolbar=False)
