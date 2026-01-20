@@ -103,7 +103,8 @@ class SharedUI(CustomApp):
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea]):
+    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+                 show=True):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -122,7 +123,7 @@ class SharedUI(CustomApp):
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
         self.setup_ui()
-        self.mainwindow.setVisible(True)
+        self.mainwindow.setVisible(show)
         
     def affect_application(self, app: Any):
         """ Affect the given application to this SharedUI and add the App QMenus to the
