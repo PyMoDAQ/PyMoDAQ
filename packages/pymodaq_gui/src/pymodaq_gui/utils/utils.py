@@ -9,6 +9,15 @@ from pymodaq_utils.logger import set_logger, get_module_name
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
+
+def mkQApp(app_name: str):
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq_utils.utils import deprecation_msg
+    deprecation_msg("Importing mkQApp from pymodaq_gui.utils.utils is deprecated, "
+                    "please use pymodaq_gui.qt_utils module instead")
+    return mkQApp(app_name)
+
+
 def create_nested_menu(layers, items_per_layer, pattern="Menu", prefix_pattern="Sub", use_index_tracking=False):
     """
     Creates a nested dictionary structure with specified layers and items per layer.
