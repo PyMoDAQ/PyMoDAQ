@@ -164,7 +164,7 @@ class DAQ_Move(ParameterControlModule):
         self._target_value = DataActuator(title, units=self.units)
         self._relative_value = DataActuator(title, units=self.units)
 
-        self._refresh_timer = QTimer()
+        self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.get_actuator_value)
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
@@ -1177,7 +1177,7 @@ class DAQ_Move_Hardware(QObject):
 def main(init_qt=True):
     from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
     app = mkQApp("PyMoDAQ Move")
-    shared_ui, daq_move = create_load_daq_move()
+    shared_ui, daq_move = create_load_daq_move('simple')
     shared_ui.show()
     pymodaq_gui.qt_utils.exec()
 

@@ -529,25 +529,28 @@ class ActionManager:
         --------
         add_action, get_toolbar
         """
+        if isinstance(parent, QtWidgets.QMainWindow) and add_break:
+            parent.addToolBarBreak(area)
         if toolbar is None:
             toolbar = QtWidgets.QToolBar(title, parent)
         else:
             toolbar.setParent(parent)
+
         if isinstance(parent, QtWidgets.QMainWindow):
-            if add_break:
-                parent.addToolBarBreak(area)
             parent.addToolBar(area, toolbar)
         self._toolbars[short_name] = toolbar
         return toolbar
 
-    def set_toolbar(self, toolbar):
+    def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
         """Set the default toolbar
 
         Parameters
         ----------
-        toolbar: QtWidgets.QToolBar
+        toolbar: QtWidgets.QToolBar or str
             The toolbar to set as default
         """
+        if isinstance(toolbar, str):
+            toolbar = self.get_toolbar(toolbar)
         self._toolbars['_default'] = toolbar
 
     def set_menu(self, menu):

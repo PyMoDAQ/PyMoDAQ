@@ -139,24 +139,24 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         font_size=14, isbold=True, isitalic=True))
         self.add_widget('selector', self.selector.add_widget)
         self.add_action('ini_detector', 'Ini. Detector', ActionIconNames.INI, checkable=True,
-                        tip='Connect to selected detector', icon_color=self._theme.red,
+                        tip='Connect to selected detector', icon_color=self.get_theme().red,
                         )
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
-                        checkable=True, icon_checked_color=self._theme.green)
+                        checkable=True, icon_checked_color=self.get_theme().green)
         self.toolbar.addSeparator()
         self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
-                        icon_checked='videocam_off', icon_checked_color=self._theme.red)
+                        icon_checked='videocam_off', icon_checked_color=self.get_theme().red)
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
-                        icon_color=self._theme.green, icon_checked_color=self._theme.red)
+                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)
         self.add_action('save_current', 'Save Current Data', 'save_as', "Save Current Data")
         self.toolbar.addSeparator()
         self.add_action('background_snap', 'Snap Background', 'background_replace',
                         tip='Take a snapshot a set it as background')
         self.add_action('background_subtract', 'Subtract Background', 'texture_minus', checkable=True,
                         tip='If checked, apply background substraction',
-                        icon_checked_color=self._theme.green)
+                        icon_checked_color=self.get_theme().green)
 
     def connect_things(self):
         self.connect_action('show_settings', self._show_settings)
@@ -198,10 +198,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self._theme.green,)
+                               icon_color=self.get_theme().green,)
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self._theme.red,)
+                               icon_color=self.get_theme().red,)
         self.get_action('snap').set_icon(icon)
 
     def _detector_changed(self, sel_mod: SelectedModule):
@@ -286,10 +286,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         if status:
             icon = create_icon(ActionIconNames.INI,
-                               icon_color=self._theme.green,)
+                               icon_color=self.get_theme().green,)
         else:
             icon = create_icon(ActionIconNames.INI,
-                               icon_color=self._theme.red,)
+                               icon_color=self.get_theme().red,)
         self.get_action('ini_detector').set_icon(icon)
 
     def enable_actions(self, status=True, all_except=()):
@@ -310,7 +310,6 @@ def main(init_qt=True):
     param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
-    timer = QtCore.QTimer()
 
 
 
@@ -318,6 +317,7 @@ def main(init_qt=True):
     prog = DAQ_Viewer_UI(widget, title='myViewer')
     shared_ui = SharedUI(widget)
 
+    timer = QtCore.QTimer(shared_ui)
 
     def set_data_ready(ready=True):
         prog.data_ready = True

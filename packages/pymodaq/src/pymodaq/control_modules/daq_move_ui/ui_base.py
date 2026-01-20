@@ -65,7 +65,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.title = title
         self._unit = ''
         self._ini_state = False
-        self.move_toolbar = QtWidgets.QToolBar()
+        self.move_toolbar = self.add_toolbar('move', 'Move')
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -221,7 +221,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.rel_value_sb.setOpts(siPrefix=show)
 
     def setup_docks(self):
-
+        self.parent.setLayout(QtWidgets.QHBoxLayout())
+        self.parent.layout().addWidget(self.move_toolbar)
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
@@ -260,23 +261,28 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuator_init = False
 
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
-        widget.setLayout(QtWidgets.QGridLayout())
-        widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
+        widget.setLayout(QtWidgets.QVBoxLayout())
+        container_widget = QtWidgets.QWidget()
+        widget.layout().addWidget(container_widget)
+        widget.layout().addStretch()
 
-        widget.layout().addWidget(self.find_home_pb, 0, 1)
+        container_widget.setLayout(QtWidgets.QGridLayout())
+        container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
 
-        widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
-        widget.layout().addWidget(self.move_abs_pb, 1, 1)
-        widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
-        widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
+        container_widget.layout().addWidget(self.find_home_pb, 0, 1)
 
-        widget.layout().addWidget(self.rel_value_sb, 3, 0)
+        container_widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
+        container_widget.layout().addWidget(self.move_abs_pb, 1, 1)
+        container_widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
+        container_widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
 
-        widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
-        widget.layout().addWidget(self.stop_pb, 4, 0)
+        container_widget.layout().addWidget(self.rel_value_sb, 3, 0)
 
-        widget.layout().addWidget(self.get_value_pb, 4, 1)
-        widget.layout().setContentsMargins(0, 0, 0, 0)
+        container_widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
+        container_widget.layout().addWidget(self.stop_pb, 4, 0)
+
+        container_widget.layout().addWidget(self.get_value_pb, 4, 1)
+        container_widget.layout().setContentsMargins(0, 0, 0, 0)
         widget.setVisible(False)
 
     def close(self):
@@ -312,6 +318,66 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
     def set_settings_tree(self, tree):
         self._tree = tree
+
+
+    def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
+                                              font_size=14, isbold=True, isitalic=True),
+                        toolbar=toolbar)
+
+        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
+        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=toolbar,
+                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
+                        icon_checked_color=qt_themes.get_theme().green)
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
+                        toolbar=toolbar)
+        toolbar.addSeparator()
+        self.add_widget('current', self.current_value_sb, toolbar=toolbar)
+        self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
+
+        self._setup_move_actions(toolbar)
+
+        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
+                        toolbar=toolbar, icon_color=self.get_theme().red)
+        toolbar.addSeparator()
+        self.add_action('show_controls', 'Show Controls',
+                        'discover_tune', "Show more controls", checkable=True,
+                        toolbar=toolbar)
+        self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
+                        checkable=True, icon_checked='bid_landscape_disabled',
+                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
+                        toolbar=toolbar)
+        self.add_action('refresh_value', 'Refresh', 'refresh', "Refresh Value", checkable=True,
+                        toolbar=toolbar)
+        self.add_widget('status', self.statusbar, toolbar=toolbar)
+
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        """ to be reimplemented in dedicated UI class
+
+        either: self._setup_absolute_actions(), self._setup_relative_actions(), ...
+        """
+        pass
+
+    def _setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_widget('abs_green', self.abs_value_sb, toolbar=toolbar)
+        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar)
+
+    def _setup_absolute_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_action('move_abs', 'Move Abs', 'step',
+                        "Move to the set absolute value",
+                        icon_color=self.get_theme().green,
+                        toolbar=toolbar)
+        self.add_action('move_abs_2', 'Move Abs', 'step',
+                        "Move to the other set absolute value",
+                        icon_color=self.get_theme().red,
+                        toolbar=toolbar)
+
+    def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
+        self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
+                        toolbar=toolbar)
+        self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
+                        toolbar=toolbar)
 
     def connect_things(self):
         if 'show_controls' in self.actions_names:

@@ -93,15 +93,21 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
     shared_ui.affect_application(dashboard)
     return shared_ui, dashboard
 
-def create_load_daq_move() -> tuple[SharedUI, 'DAQ_Move']:
+def create_load_daq_move(ui_identifier='Original') -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
     widget = QtWidgets.QWidget()
     daq_move = DAQ_Move(widget, title="test",
-                        ui_identifier='Original')
+                        ui_identifier=ui_identifier)
 
     shared_ui = SharedUI(widget)
     shared_ui.affect_application(daq_move)
+    shared_ui.add_toolbar('move_toolbar', 'Move', toolbar=daq_move.ui.move_toolbar,
+                          add_break=True)
+    daq_move.settings_tree.setVisible(False)
+    widget.layout().addWidget(daq_move.ui.control_widget)
+    widget.layout().addWidget(daq_move.settings_tree)
+    widget.layout().addWidget(daq_move.ui.graph_widget)
 
     return shared_ui, daq_move
 

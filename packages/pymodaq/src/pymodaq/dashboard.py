@@ -196,7 +196,7 @@ class DashBoard(CustomApp):
         self.preset_manager: PresetManager = None  # instanciation in setup_docks
         self.roi_saver: ROISaver = None
 
-        self.remote_timer = QtCore.QTimer()
+        self.remote_timer = QtCore.QTimer(self)
         self.remote_manager = None
         self.shortcuts = dict([])
         self.joysticks = dict([])

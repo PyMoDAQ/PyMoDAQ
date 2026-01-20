@@ -180,7 +180,7 @@ class DAQScan(CustomExt):
         self.set_config()
 
         self.live_plotter = LoaderPlotter(self.dockarea)
-        self.live_timer = QtCore.QTimer()
+        self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
         self.ui.enable_start_stop(True)

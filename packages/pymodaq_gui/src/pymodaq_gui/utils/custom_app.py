@@ -1,5 +1,6 @@
 from typing import Union, TYPE_CHECKING, Dict
 
+import qt_themes
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
@@ -7,8 +8,6 @@ from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
-
-from qt_themes import get_theme
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -40,7 +39,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
-                 tree: ParameterTree = None, title: str = None):
+                 tree: ParameterTree = None, title: str = None, toolbar=None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self, tree=tree)
@@ -61,25 +60,27 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
 
-        if title is None:
-            title = self.__class__.__name__
-        self.title = title
-        parent.setWindowTitle(title)
+        self.title = title if title is not None else self.__class__.__name__
 
         self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
         self._menubar: QtWidgets.QMenuBar = None
-        self.set_toolbar(QtWidgets.QToolBar(self.title)) # create self._toolbar
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar(self.title)
+        self.set_toolbar(toolbar) # create self._toolbar
 
         if self.mainwindow is not None:
+            self.mainwindow.setWindowTitle(self.title)
             self.mainwindow.addToolBar(self._toolbar)
             self._menubar = self.mainwindow.menuBar()
             self.statusbar = self.mainwindow.statusBar()
             self.reference_toolbar('main', self._toolbar)
+        else:
+            parent.setWindowTitle(self.title)
 
     @staticmethod
     def get_theme(name: str = None):
-        return get_theme(name)
+        return qt_themes.get_theme(name)
 
     def setup_ui(self):
         self.setup_docks()
