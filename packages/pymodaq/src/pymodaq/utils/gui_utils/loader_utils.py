@@ -53,7 +53,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None, con
         dashboard.preset_manager.execute_entry_base(preset_path)
         if configuration_name is not None:
             configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
-            dashboard.configurator.execute_entry(configuration_path)
+            dashboard.configurator.execute_entry_base(configuration_path)
         if extension_name is not None:
             if extension_name == 'DAQScan':
                 extension = dashboard.load_scan_module()

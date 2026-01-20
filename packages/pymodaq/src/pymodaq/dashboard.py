@@ -1631,9 +1631,14 @@ def main():
     app = mkQApp('Dashboard')
 
     # Command-line argument parsing
-    parser = argparse.ArgumentParser(prog="dashboard", description="PyMoDAQ dashboard")
-    parser.add_argument("-p", "--preset", metavar="PRESET_NAME", help="preset name to load")
-    parser.add_argument("-c", "--config", metavar="CONFIG_NAME", help="config name to execute")
+    parser = argparse.ArgumentParser(prog="dashboard",
+                                     description="PyMoDAQ dashboard. "
+                                                 "Command-line options only affect GUI initial state."
+                                     )
+    parser.add_argument("-p", "--preset", metavar="PRESET_NAME",
+                        help="preset name to load at startup")
+    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
+                        help="config name to execute (ignored if no preset provided)")
     args = parser.parse_args()
 
     # If preset name is supplied, load dashboard with this preset
