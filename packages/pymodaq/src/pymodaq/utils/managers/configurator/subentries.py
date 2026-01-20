@@ -307,7 +307,7 @@ class InitSubEntryHandler(SubEntryHandler):
         try:
             module.init_hardware_ui(entry.setting.value())
             if entry.setting.value():
-                init_state = dashboard.poll_init(module)
+                init_state = dashboard.modules_manager.poll_init(module)
                 if init_state != entry.setting.value():
                     raise SubEntryError('Could not initialize the module')
         except Exception as e:
