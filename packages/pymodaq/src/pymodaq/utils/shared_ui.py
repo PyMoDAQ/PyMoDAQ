@@ -21,7 +21,6 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
-import pymodaq_gui.qt_utils
 from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils import DockArea
 from pymodaq_utils.enums import StrEnum
@@ -365,7 +364,7 @@ def main():
     window = SharedUI(win)
 
     # Run application
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

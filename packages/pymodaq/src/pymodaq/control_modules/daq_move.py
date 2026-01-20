@@ -20,7 +20,6 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -1179,7 +1178,7 @@ def main(init_qt=True):
     app = mkQApp("PyMoDAQ Move")
     shared_ui, daq_move = create_load_daq_move('simple')
     shared_ui.show()
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

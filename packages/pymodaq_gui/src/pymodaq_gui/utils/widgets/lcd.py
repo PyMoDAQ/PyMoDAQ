@@ -108,4 +108,4 @@ if __name__ == '__main__':
     for ind, data in enumerate(y1):
         prog.setvalues([np.array([data])])
         QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

@@ -1,4 +1,3 @@
-import pymodaq_gui.qt_utils
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 from pymodaq_utils import config as config_mod
@@ -163,6 +162,7 @@ class AdaptiveOptimisation(GenericOptimization):
 
 
 def main():
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
@@ -171,9 +171,7 @@ def main():
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'AdaptiveScan')
 
-    pymodaq_gui.qt_utils.exec()
-
-    return dashboard, extension, win
+    sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()

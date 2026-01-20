@@ -802,7 +802,7 @@ def main():
     prog.show_settings()
 
     widget.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def spread_main():
@@ -840,7 +840,7 @@ def spread_main():
 
     widget.show()
     prog.show_data(data_2D_1x2_spread)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

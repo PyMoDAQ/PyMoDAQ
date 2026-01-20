@@ -1,9 +1,10 @@
+import sys
+
 from qtpy.QtCore import Qt
 from qtpy import QtWidgets
 
 from typing import Optional
 
-import pymodaq_gui.qt_utils
 from pymodaq_data.data import DataRaw, Axis
 
 from pymodaq_gui.utils.widgets.table import SpinBoxDelegate
@@ -118,7 +119,7 @@ def main():
 
     data_picker.show_data(data_to_plot)
     win.show()
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

@@ -1419,7 +1419,7 @@ def main(init_qt=True, init_det=False):
         daq_viewer.init_hardware_ui(init_det)
 
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':

@@ -177,4 +177,4 @@ if __name__ == '__main__':
     win = QtWidgets.QWidget()
     prog = CalibrationCamera(win)
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

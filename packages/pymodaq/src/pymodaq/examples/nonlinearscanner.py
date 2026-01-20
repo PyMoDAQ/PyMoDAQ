@@ -119,7 +119,7 @@ def main():
     prog.positions_signal.connect(dash.scan_module.scanner.update_tabular_positions)
 
     mainwindow.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

@@ -143,4 +143,4 @@ if __name__ == '__main__':  # pragma: no cover
     # tr.scale(300/rect.width(), 300/rect.height())
     # svg_item.setTransform(tr)
     pass
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

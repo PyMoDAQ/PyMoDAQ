@@ -142,7 +142,7 @@ def main(xmlfile):
     import sys
     app = mkQApp('BeamSteering')
     dashboard, extension, win = load_dashboard_with_preset(xmlfile, 'DAQ_PID')
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def get_models(model_name=None):

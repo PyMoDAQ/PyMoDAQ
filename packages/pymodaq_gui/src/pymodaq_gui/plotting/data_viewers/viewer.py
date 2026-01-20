@@ -273,4 +273,4 @@ if __name__ == '__main__':
 
     prog.show_data(dte)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

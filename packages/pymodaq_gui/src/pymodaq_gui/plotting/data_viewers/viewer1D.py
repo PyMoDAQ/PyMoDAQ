@@ -706,7 +706,7 @@ def main():
     QtWidgets.QApplication.processEvents()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_unsorted():
@@ -725,7 +725,7 @@ def main_unsorted():
     widget.show()
     prog.show_data(data)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_random():
@@ -746,7 +746,7 @@ def main_random():
     widget.show()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_extra_scatter():
@@ -775,7 +775,7 @@ def main_extra_scatter():
     widget.show()
     prog.show_data(data, scatter_dwa=scatter_dwa)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_errors():
@@ -798,7 +798,7 @@ def main_errors():
     widget.show()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_view1D():
@@ -806,7 +806,7 @@ def main_view1D():
     widget = QtWidgets.QWidget()
     prog = View1D(widget)
     widget.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_nans():
@@ -826,7 +826,7 @@ def main_nans():
     widget.show()
     prog.show_data(data)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_xy():
@@ -843,7 +843,7 @@ def main_xy():
                    )
     data.plot('qt')
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':  # pragma: no cover

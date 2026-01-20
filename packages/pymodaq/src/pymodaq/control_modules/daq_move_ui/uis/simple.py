@@ -90,7 +90,7 @@ def main(init_qt=True):
 
     win.show()
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return prog, widget
 
 

@@ -658,4 +658,4 @@ if __name__ == '__main__':
     manager = ModulesManager(actuators=[act1, act2], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
     manager.settings_tree.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

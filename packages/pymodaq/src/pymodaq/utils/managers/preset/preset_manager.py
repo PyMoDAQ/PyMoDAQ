@@ -549,4 +549,4 @@ if __name__ == '__main__':
     prog.update_entry_base()
     prog.mainwindow.show()
     external_ui.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

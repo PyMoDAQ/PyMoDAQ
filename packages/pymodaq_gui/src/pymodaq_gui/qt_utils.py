@@ -84,4 +84,4 @@ def mkQApp(name: str):
 
 def exec():
     app = mkQApp('a name')
-    return app.exec() if hasattr(app, 'exec') else app.exec_()
+    return app.exec() if hasattr(app, 'exec') else app.exec()

@@ -6,7 +6,6 @@ import sys
 from qtpy import QtWidgets, QtCore
 from collections import OrderedDict
 
-import pymodaq_gui.qt_utils
 import pymodaq_gui.utils.widgets.table as table
 from pymodaq_gui.utils.utils import create_nested_menu
 from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter, registerParameterType
@@ -195,7 +194,7 @@ def main():
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item1', 'item3']))
 
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

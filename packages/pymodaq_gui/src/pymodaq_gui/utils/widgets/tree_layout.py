@@ -185,4 +185,4 @@ if __name__ == '__main__':
     # base_node = h5_file.root
     # base_tree_item, pixmap_items = h5tree_to_QTree(h5_file, base_node)
     # prog.ui.Tree.addTopLevelItem(base_tree_item)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

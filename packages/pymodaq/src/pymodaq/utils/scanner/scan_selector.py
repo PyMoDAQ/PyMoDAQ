@@ -469,7 +469,7 @@ def main_navigator():
     scan_selector = ScanSelector(viewer_items=items)
     scan_selector.settings_tree.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':
