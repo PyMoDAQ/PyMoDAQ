@@ -82,6 +82,3 @@ def mkQApp(name: str):
     return app
 
 
-def exec():
-    app = mkQApp('a name')
-    return app.exec() if hasattr(app, 'exec') else app.exec()
