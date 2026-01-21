@@ -200,4 +200,4 @@ if __name__ == '__main__':
     # prog = ChronoTimer(area, dict(hours=1, minutes=0, seconds=0))
     prog = ChronoTimer(area)
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

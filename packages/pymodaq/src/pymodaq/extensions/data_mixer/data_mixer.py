@@ -1,10 +1,11 @@
+import sys
+
 from qtpy import QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
 
 from typing import Optional
 
-import pymodaq_gui.qt_utils
 from pymodaq_gui import utils as gutils
 from pymodaq_utils.config import Config, ConfigError
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -254,9 +255,8 @@ def main():
 
     preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
-    pymodaq_gui.qt_utils.exec()
 
-    return dashboard, extension, win
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

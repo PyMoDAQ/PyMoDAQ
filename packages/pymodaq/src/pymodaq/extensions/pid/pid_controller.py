@@ -9,7 +9,6 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from simple_pid import PID
 
-import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
@@ -1006,6 +1005,7 @@ class PIDRunner(QObject):
 
 
 if __name__ == "__main__":
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
@@ -1014,4 +1014,4 @@ if __name__ == "__main__":
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, "DAQ_PID")
 
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())

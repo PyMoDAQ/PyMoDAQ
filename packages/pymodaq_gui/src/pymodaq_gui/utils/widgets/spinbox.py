@@ -1,7 +1,6 @@
 from qtpy import QtWidgets, QtGui, QtCore
 from pyqtgraph.widgets.SpinBox import SpinBox
 
-import pymodaq_gui.qt_utils
 
 
 class SpinBox(SpinBox):
@@ -49,7 +48,7 @@ class QSpinBox_ro(SpinBox):
 
 
 if __name__ == '__main__':
-
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Test Spinbox')
@@ -63,4 +62,4 @@ if __name__ == '__main__':
     spinbox.shortcut['Ctrl+Enter'].activatedAmbiguously.connect(lambda: print_spinbox(f'Ctrl+Enter: {spinbox.value()}'))
     spinbox.show()
 
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())

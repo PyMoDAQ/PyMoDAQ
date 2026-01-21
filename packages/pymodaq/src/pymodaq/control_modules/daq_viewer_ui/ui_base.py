@@ -363,7 +363,7 @@ def main(init_qt=True):
 
 
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':

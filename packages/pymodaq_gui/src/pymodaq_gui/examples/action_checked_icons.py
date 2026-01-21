@@ -1,4 +1,3 @@
-import pymodaq_gui.qt_utils
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_utils.config import Config
 
@@ -38,7 +37,7 @@ def main():
     widget = QtWidgets.QWidget()
     mywidget = MyWidget(widget)
 
-    sys.exit(pymodaq_gui.qt_utils.exec())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

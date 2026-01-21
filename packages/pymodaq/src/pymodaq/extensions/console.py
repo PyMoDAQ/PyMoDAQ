@@ -8,7 +8,6 @@ Created the 25/10/2022
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
-import pymodaq_gui.qt_utils
 from pymodaq_utils import config as configmod
 from pymodaq_utils.utils import get_version
 
@@ -57,6 +56,7 @@ class QtConsole(RichJupyterWidget):
 
 
 def main():
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Console')
@@ -66,8 +66,7 @@ def main():
                      custom_banner=BANNER,
                      )
     prog.show()
-    pymodaq_gui.qt_utils.exec()
-    return prog
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

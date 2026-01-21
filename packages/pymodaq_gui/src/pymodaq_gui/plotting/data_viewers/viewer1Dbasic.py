@@ -228,4 +228,4 @@ if __name__ == '__main__':  # pragma: no cover
     Form.show()
     prog.x_axis
     prog.update_labels(labels=['sig0', 'tralala', 'ouhaouh'])
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

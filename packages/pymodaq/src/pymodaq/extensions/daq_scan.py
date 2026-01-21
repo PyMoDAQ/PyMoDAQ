@@ -19,7 +19,6 @@ from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 
-import pymodaq_gui.qt_utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 from pymodaq_utils import utils
@@ -1208,9 +1207,7 @@ def main():
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQScan')
 
-    pymodaq_gui.qt_utils.exec()
-
-    return dashboard, extension, win
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

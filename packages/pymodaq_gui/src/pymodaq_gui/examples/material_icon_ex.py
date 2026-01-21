@@ -74,7 +74,7 @@ class WidgetWithMaterialIcons(CustomApp):
 
 
 if __name__ == '__main__':
-
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
 
     # Create application and main window
@@ -83,5 +83,5 @@ if __name__ == '__main__':
     myapp = WidgetWithMaterialIcons(parent)
 
     parent.show()
-    app.exec_()
+    sys.exit(app.exec())
 

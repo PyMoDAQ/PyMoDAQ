@@ -137,7 +137,7 @@ def main(data_distribution='uniform'):
 
 
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def generate_uniform_data() -> DataRaw:

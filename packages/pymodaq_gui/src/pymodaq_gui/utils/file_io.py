@@ -92,4 +92,4 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     file = select_file(save=True, filter="Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)")
     print(file)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

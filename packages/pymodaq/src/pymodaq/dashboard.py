@@ -22,7 +22,6 @@ from qtpy.QtWidgets import (
 )
 import numpy as np
 
-import pymodaq_gui.qt_utils
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -1651,7 +1650,7 @@ def main():
         win.show()
 
     # Run application
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

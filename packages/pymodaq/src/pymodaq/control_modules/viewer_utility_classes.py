@@ -115,7 +115,7 @@ def main(plugin_file=None, init=True, title='Testing'):
     if init:
         prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 class DAQ_Viewer_base(QObject):

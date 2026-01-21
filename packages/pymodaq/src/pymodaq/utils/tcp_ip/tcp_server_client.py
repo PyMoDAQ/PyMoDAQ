@@ -769,4 +769,4 @@ if __name__ == '__main__':  # pragma: no cover
     grabber = Grabber(mockdata_grabber.grab)
     grabber.connect_tcp_ip()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
