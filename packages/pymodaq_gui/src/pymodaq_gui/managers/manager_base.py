@@ -239,10 +239,6 @@ class ManagerBase(CustomExt):
         """ Convenience method to get right return type """
         return self.get_action(ManagerActions.LIST).widget
 
-    # def get_action_list_external(self) -> ComboBox:
-    #     """ Convenience method to get right return type """
-    #     return self.get_action(ManagerActions.LIST_EXTERNAL).widget
-
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
         return f"{file.stem}_{self.manager_name}"
@@ -290,23 +286,10 @@ class ManagerBase(CustomExt):
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
                         auto_toolbar=False, auto_menu=False)
 
-        # ACTIONS external: Dashboard, ...
-
-        # self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
-        #                 "build_circle",
-        #                 icon_color=self.get_theme().blue,
-        #                 tip=f'Open the {self.entry_type.capitalize()} Manager',
-        #                 toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
-        #
-        # self.add_widget('external_label',
-        #                 QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-        #                 toolbar=Toolbar.EXTERNAL)
-        # self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
-        #                 toolbar=Toolbar.EXTERNAL)
-        # self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
-
-    def get_external_toolbar_menu(self, toolbar: QtWidgets.QToolBar = None,
-                                  menu: QtWidgets.QMenu = None) -> tuple[QtWidgets.QToolBar, QtWidgets.QMenu]:
+    def get_external_toolbar_menu(
+            self, toolbar: QtWidgets.QToolBar = None,
+            menu: QtWidgets.QMenu = None) -> tuple[QtWidgets.QToolBar, QtWidgets.QMenu]:
+        """ Create or update a toolbar and a menu containing actions to open/set/execute the manager """
         if toolbar is None:
             toolbar = QtWidgets.QToolBar(f'{self.entry_type.capitalize()}')
         if menu is None:

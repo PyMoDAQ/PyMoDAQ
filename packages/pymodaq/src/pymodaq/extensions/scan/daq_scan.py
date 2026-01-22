@@ -43,7 +43,7 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq.utils.managers import PresetManager
+from pymodaq.utils.managers import PresetManager, Configurator
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -144,8 +144,8 @@ class DAQScan(CustomExt):
 
         self.runner_thread: QThread = None
 
-        self.preset_manager: PresetManager = None
-
+        self.preset_manager: PresetManager = self.dashboard.preset_manager
+        self.configurator_manager: Configurator = self.dashboard.configurator
 
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
@@ -220,7 +220,10 @@ class DAQScan(CustomExt):
                         icon_checked='visibility_off',
                         icon_checked_color=self.get_theme().red,
                         toolbar='dashboard')
-        self.preset_manager = PresetManager(self.dashboard, toolbar=self.get_toolbar('dashboard'))
+
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+        self.configurator_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         pass
