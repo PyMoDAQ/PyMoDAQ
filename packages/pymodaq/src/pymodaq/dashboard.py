@@ -400,10 +400,10 @@ class DashBoard(CustomApp):
             logger.exception(str(e))
 
     def load_scan_module(self, win: QtWidgets.QMainWindow=None):
-        win, self.scan_module = create_daq_scan(self, window=win)
+        shared_ui, self.scan_module = create_daq_scan(self, window=win)
         self.extensions["DAQScan"] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
-        win.show()
+        shared_ui.show()
         return self.scan_module
 
     def load_log_module(self, win=None):

@@ -60,7 +60,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
 
-        self.title = title if title is not None else self.__class__.__name__
+        self._title: str = ''
+        self.title = title
 
         self.docks: Dict[str, Dock] = dict([])
         self.statusbar = None
@@ -77,6 +78,16 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.reference_toolbar('main', self._toolbar)
         else:
             parent.setWindowTitle(self.title)
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @title.setter
+    def title(self, title: str):
+        self._title = title if title is not None else self.__class__.__name__
+        if self.mainwindow is not None:
+            self.mainwindow.setWindowTitle(self._title)
 
     @staticmethod
     def get_theme(name: str = None):

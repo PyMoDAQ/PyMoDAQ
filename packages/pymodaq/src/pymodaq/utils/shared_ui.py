@@ -104,7 +104,7 @@ class SharedUI(CustomApp):
     """
 
     def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
-                 show=True):
+                 show=True, title: str = None):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -114,7 +114,7 @@ class SharedUI(CustomApp):
             parent.setCentralWidget(widget)
             self.central_widget = widget
             
-        super().__init__(parent)
+        super().__init__(parent, title = title)
         
         
         self._app_class_file: Union[str, Path] = None
@@ -125,12 +125,13 @@ class SharedUI(CustomApp):
         self.setup_ui()
         self.mainwindow.setVisible(show)
         
-    def affect_application(self, app: Any):
+    def affect_application(self, app: CustomApp):
         """ Affect the given application to this SharedUI and add the App QMenus to the
         QMainWindow menubar reordering/merging them if necessary
         """
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
+        self.title = app.title
         menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
         if isinstance(app, CustomApp):
             for menu in app.menus:
