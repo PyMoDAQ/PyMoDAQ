@@ -21,9 +21,11 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 import numpy as np
+from setuptools.command.bdist_egg import scan_module
 
 import pymodaq_gui.qt_utils
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -397,9 +399,8 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self, win=None):
-        win, area = make_window(win=win, title="Scanner")
-        self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
+    def load_scan_module(self, win: QtWidgets.QMainWindow=None):
+        win, self.scan_module = create_daq_scan(self, window=win)
         self.extensions["DAQScan"] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()

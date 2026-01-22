@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 from pathlib import Path
@@ -5,11 +7,11 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QMessageBox, QMainWindow
 
-from pymodaq import dashboard
-from pymodaq.dashboard import DashBoard
+
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.utils import CustomExt
+from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.utils.config import Config as ControlModulesConfig
@@ -19,10 +21,11 @@ config = ControlModulesConfig()
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-
+    from pymodaq.dashboard import DashBoard
+    from pymodaq.extensions import DAQScan
 
 def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  -> \
-        tuple[DashBoard, CustomExt, QMainWindow]:
+        tuple['DashBoard', CustomExt, QMainWindow]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -81,7 +84,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  ->
 
 
 def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
-
+    from pymodaq.dashboard import DashBoard
     win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
@@ -123,3 +126,24 @@ def create_load_daq_viewer() -> tuple[SharedUI, 'DAQ_Viewer']:
     shared_ui.add_toolbar('viewer', 'Viewer', toolbar=daq_viewer.ui.toolbar, add_break=True)
 
     return shared_ui, daq_viewer
+
+
+def create_daq_scan(dashboard: 'DashBoard',
+                    window: QtWidgets.QMainWindow = None) -> tuple[SharedUI, 'DAQScan']:
+    from pymodaq.extensions import DAQScan
+    from pymodaq_gui.utils.dock import DockArea
+    if window is None:
+        window, dockarea = make_window(win=window, title='DAQScan')
+    else:
+        dockarea = window.centralWidget()
+    if not isinstance(dockarea, DockArea):
+        dockarea = DockArea()
+        window.setCentralWidget(dockarea)
+
+    daq_scan = DAQScan(dockarea, dashboard)
+    shared_ui = SharedUI(window)
+    shared_ui.affect_application(daq_scan)
+    shared_ui.mainwindow.addToolBar(daq_scan.get_toolbar('dashboard'))
+    shared_ui.add_toolbar('scan', 'Scanner', toolbar=daq_scan.ui.toolbar, add_break=False)
+
+    return shared_ui, daq_scan

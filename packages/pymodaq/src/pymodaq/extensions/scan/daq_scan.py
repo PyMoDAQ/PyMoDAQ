@@ -17,8 +17,8 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
-import pymodaq_gui.qt_utils
 from pymodaq.extensions.utils import CustomExt
+from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 from pymodaq_utils import utils
@@ -28,7 +28,7 @@ from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTree
+from pymodaq_gui.managers.parameter_manager import ParameterTree
 from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
@@ -1223,27 +1223,18 @@ class DAQScanAcquisition(QObject):
 def main():
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
-    from pymodaq_gui.utils.dock import DockArea
-    from pymodaq.utils.shared_ui import SharedUI
+
 
     app = mkQApp('DAQScan')
 
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_scan = QtWidgets.QMainWindow()
-    dockarea = DockArea()
-    win_scan.setCentralWidget(dockarea)
-
-    daq_scan = DAQScan(dockarea, dashboard)
-    shared_ui = SharedUI(win_scan)
-    shared_ui.affect_application(daq_scan)
-    shared_ui.mainwindow.addToolBar(daq_scan.get_toolbar('dashboard'))
-    shared_ui.add_toolbar('scan', 'Scanner', toolbar=daq_scan.ui.toolbar, add_break=False)
-
+    win_scan, scan = create_daq_scan(dashboard)
     win_scan.show()
 
     app.exec()
+
 
 if __name__ == '__main__':
     main()
