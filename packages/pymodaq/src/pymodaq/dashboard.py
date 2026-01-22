@@ -234,16 +234,16 @@ class DashBoard(CustomApp):
         self.modules_manager.detectors_all = modules
 
     def do_things_after_ui_setup(self):
-        self.preset_manager = PresetManager(dashboard=self,
-                                            menu=self.get_menu('preset'),
-                                            toolbar = self.get_toolbar('preset'))
+        self.preset_manager = PresetManager(dashboard=self)
         self.preset_manager.update_entry_base()
         self.preset_manager.entry = 'default'
         self.preset_manager.applied_entry.connect(self.update_after_preset)
         self.configurator = Configurator(dashboard=self,
-                                         menu=self.get_menu('configurator'),
-                                         toolbar=self.get_toolbar('configurator'),
                                          preset_filename=self.preset_manager.entry)
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
+                                                      menu=self.get_menu('preset'))
+        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
+                                                    menu=self.get_menu('configurator'))
         self.get_toolbar('configurator').setEnabled(False)
 
     def update_after_preset(self, preset_name: str):
@@ -535,6 +535,7 @@ class DashBoard(CustomApp):
                         "Save the Saved Docks layout corresponding to the current preset",
                         auto_toolbar=False,)
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False)
+
         self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
