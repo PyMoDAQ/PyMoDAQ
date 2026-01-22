@@ -66,6 +66,12 @@ class PresetManager(ManagerBase):
             self.update_entry_base()
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
+    def do_things_for_new_creation(self):
+        for child in self.settings.child(ModuleType.Actuator.value).children():
+            child.remove()
+        for child in self.settings.child(ModuleType.Detector.value).children():
+            child.remove()
+
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
 
@@ -545,6 +551,7 @@ if __name__ == '__main__':
     external_ui.menuBar().addMenu(menu)
 
     prog.update_entry_base()
+    prog.enable_actions(True)
     prog.mainwindow.show()
     external_ui.show()
     sys.exit(app.exec_())

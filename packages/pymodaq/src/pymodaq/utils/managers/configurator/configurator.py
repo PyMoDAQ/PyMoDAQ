@@ -344,6 +344,9 @@ class Configurator(ManagerBase):
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
+    def do_things_for_new_creation(self):
+        self.table_out.clear()
+
     def remove_setting(self):
         index_0 = self.table_out.selectedIndexes()[0]
         indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
@@ -390,6 +393,8 @@ if __name__ == "__main__":
     toolbar, menu = prog.get_external_toolbar_menu()
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
+
+    prog.enable_actions(True)
 
     external_ui.show()
     sys.exit(app.exec_())

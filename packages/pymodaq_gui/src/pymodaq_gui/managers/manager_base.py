@@ -359,12 +359,17 @@ class ManagerBase(CustomExt):
                 None,
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
+        self.do_things_for_new_creation()
         if ok and entry != '':
             if self.save_check(entry, bypass_dialog=bypass_dialog):
                 self.entries_sync.append_to_list('items', entry)
                 self.entries_sync.update_key('current', entry)
                 self.update_action_list()
                 self.new_entry.emit(entry)
+
+    def do_things_for_new_creation(self):
+        """ To be reimplemented if needed """
+        pass
 
     def save_check(self, entry: str = None, bypass_dialog=False) -> bool:
         if entry is not None:
