@@ -116,6 +116,7 @@ class ManagerBase(CustomExt):
 
         self.external_widgets = []  # to store a reference of external widgets, see
         # self.get_external_toolbar_menu
+        self._entry_applied = False
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
@@ -126,18 +127,24 @@ class ManagerBase(CustomExt):
         #first create the object
         self.entries_sync = WidgetSync(
             initial_value={
-            'items': [],
-            'current': None
+                'items': [],
+                'current': None,
+                'enabled': False
         })
 
         self.setup_ui()
-
+        self.enable_actions(False)
         # then update it using a call to self.entries (itself needing entries_sync)
         self.entries_sync.update_key('items', self.entries)
         self.entries_sync.update_key('current', 'default')
 
         self.update_action_list()
         self.update_execute_action_tooltip(self.entry)
+
+    def enable_actions(self, enable=True):
+        self.entries_sync.update_key('enabled', enable)
+        for action in self.actions_names:
+            self.set_action_enabled(action, enable)
 
     @staticmethod
     def format_subentries(entries: list[Any]):
@@ -319,7 +326,7 @@ class ManagerBase(CustomExt):
         self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
         self.sync_entries_with(self.get_action_list())
 
-    def sync_entries_with(self, combo: QtWidgets.QComboBox):
+    def sync_entries_with(self, combo: ComboBox):
         self.entries_sync.bind_properties(
             combo,
             property_map={
@@ -333,6 +340,12 @@ class ManagerBase(CustomExt):
                     'signal': combo.currentTextChanged,
                     'getter': combo.currentText,
                     'setter': combo.setCurrentText,
+                    'mode': SyncMode.BIDIRECTIONAL
+                },
+                'enabled': {
+                    'signal': combo.enabled_changed,
+                    'getter': combo.isEnabled,
+                    'setter': combo.setEnabled,
                     'mode': SyncMode.BIDIRECTIONAL
                 }
             }
@@ -427,7 +440,17 @@ class ManagerBase(CustomExt):
             return
 
         self.execute_entry(entry_path, **kwargs)
-        self.applied_entry.emit(entry_path.stem)
+        self.entry_applied = True
+
+    @property
+    def entry_applied(self) -> bool:
+        return self._entry_applied
+
+    @entry_applied.setter
+    def entry_applied(self, applied: bool):
+        self._entry_applied = applied
+        if applied:
+            self.applied_entry.emit(self.entry_filename.stem)
 
     def execute_entry(self, entry_path: Path = None, **kwargs):
         """Applies the entry from the given file in the manager.

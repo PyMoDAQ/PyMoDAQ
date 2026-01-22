@@ -183,8 +183,10 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        self.ui.enable_start_stop(True)
+        if self.dashboard.preset_manager.entry_applied:
+            self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
+
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -220,6 +222,7 @@ class DAQScan(CustomExt):
                         icon_checked='visibility_off',
                         icon_checked_color=self.get_theme().red,
                         toolbar='dashboard')
+        self.ui.enable_start_stop(False)
 
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
         self.configurator_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
@@ -236,6 +239,8 @@ class DAQScan(CustomExt):
         # update modules manager
         self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
         self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+
+        self.ui.enable_start_stop(True)
 
         # show/hide dashboard
         self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))

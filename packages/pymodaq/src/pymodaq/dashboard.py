@@ -245,12 +245,14 @@ class DashBoard(CustomApp):
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
                                                     menu=self.get_menu('configurator'))
         self.get_toolbar('configurator').setEnabled(False)
+        self.preset_manager.enable_actions(True)
 
     def update_after_preset(self, preset_name: str):
         self.configurator.preset_filename = preset_name
         self.configurator.entry = 'default'
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
+        self.configurator.enable_actions(True)
         self.configurator.execute_entry(self.configurator.entry_filename)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
