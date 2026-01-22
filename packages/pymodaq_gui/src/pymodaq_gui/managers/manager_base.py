@@ -11,6 +11,7 @@ from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.utils import CustomExt
+from pymodaq_gui.managers.action_manager import addwidget
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
@@ -109,20 +110,18 @@ class ManagerBase(CustomExt):
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
                  **kwargs):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
+
+        self.external_widgets = []  # to store a reference of external widgets, see
+        # self.get_external_toolbar_menu
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
 
         self.splash_subentries: Optional[SubEntriesSplash] = None
         self.subentries_model: Optional[ManagerSubEntriesModel] = None
-
-        self.reference_toolbar(Toolbar.EXTERNAL, toolbar)
-        self.reference_menu(Menu.EXTERNAL, menu)
 
         #first create the object
         self.entries_sync = WidgetSync(
@@ -240,9 +239,9 @@ class ManagerBase(CustomExt):
         """ Convenience method to get right return type """
         return self.get_action(ManagerActions.LIST).widget
 
-    def get_action_list_external(self) -> ComboBox:
-        """ Convenience method to get right return type """
-        return self.get_action(ManagerActions.LIST_EXTERNAL).widget
+    # def get_action_list_external(self) -> ComboBox:
+    #     """ Convenience method to get right return type """
+    #     return self.get_action(ManagerActions.LIST_EXTERNAL).widget
 
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
@@ -285,22 +284,44 @@ class ManagerBase(CustomExt):
                         icon_color=self.get_theme().magenta,
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
-
-
-        # ACTIONS external: Dashboard, ...
-
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
                         "build_circle",
                         icon_color=self.get_theme().blue,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
-                        toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
+                        auto_toolbar=False, auto_menu=False)
 
-        self.add_widget('external_label',
-                        QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-                        toolbar=Toolbar.EXTERNAL)
-        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
-                        toolbar=Toolbar.EXTERNAL)
-        self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
+        # ACTIONS external: Dashboard, ...
+
+        # self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
+        #                 "build_circle",
+        #                 icon_color=self.get_theme().blue,
+        #                 tip=f'Open the {self.entry_type.capitalize()} Manager',
+        #                 toolbar=Toolbar.EXTERNAL, menu=Menu.EXTERNAL)
+        #
+        # self.add_widget('external_label',
+        #                 QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+        #                 toolbar=Toolbar.EXTERNAL)
+        # self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(),
+        #                 toolbar=Toolbar.EXTERNAL)
+        # self.affect_to(ManagerActions.EXECUTE, self.get_toolbar(Toolbar.EXTERNAL))
+
+    def get_external_toolbar_menu(self, toolbar: QtWidgets.QToolBar = None,
+                                  menu: QtWidgets.QMenu = None) -> tuple[QtWidgets.QToolBar, QtWidgets.QMenu]:
+        if toolbar is None:
+            toolbar = QtWidgets.QToolBar(f'{self.entry_type.capitalize()}')
+        if menu is None:
+            menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
+
+        self.affect_to(ManagerActions.OPEN, toolbar)
+        self.affect_to(ManagerActions.OPEN, menu)
+        self.external_widgets.append(
+            addwidget(QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+                      toolbar=toolbar,))
+        self.external_widgets.append(addwidget(ComboBox(), toolbar=toolbar))
+        self.sync_entries_with(self.external_widgets[-1].widget)
+        self.affect_to(ManagerActions.EXECUTE, toolbar)
+        self.affect_to(ManagerActions.EXECUTE, menu)
+        return toolbar, menu
 
     def connect_things_base(self):
         self.connect_action(ManagerActions.COPY, lambda: self.copy_entry())
@@ -313,24 +334,26 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
         self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
-        for combo in (self.get_action_list(), self.get_action_list_external()):
-            self.entries_sync.bind_properties(
-                combo,
-                property_map={
-                    'items': {
-                        'signal': combo.items_changed,  # FROM_SYNC only
-                        'getter': combo.get_items,
-                        'setter': combo.set_items,
-                        'mode': SyncMode.BIDIRECTIONAL
-                    },
-                    'current': {
-                        'signal': combo.currentTextChanged,
-                        'getter': combo.currentText,
-                        'setter': combo.setCurrentText,
-                        'mode': SyncMode.BIDIRECTIONAL
-                    }
+        self.sync_entries_with(self.get_action_list())
+
+    def sync_entries_with(self, combo: QtWidgets.QComboBox):
+        self.entries_sync.bind_properties(
+            combo,
+            property_map={
+                'items': {
+                    'signal': combo.items_changed,  # FROM_SYNC only
+                    'getter': combo.get_items,
+                    'setter': combo.set_items,
+                    'mode': SyncMode.BIDIRECTIONAL
+                },
+                'current': {
+                    'signal': combo.currentTextChanged,
+                    'getter': combo.currentText,
+                    'setter': combo.setCurrentText,
+                    'mode': SyncMode.BIDIRECTIONAL
                 }
-            )
+            }
+        )
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
         if entry is not None:

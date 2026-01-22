@@ -539,13 +539,13 @@ if __name__ == '__main__':
 
     app = mkQApp('PresetManager')
 
+    prog = PresetManager()
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset')
+
+    toolbar, menu = prog.get_external_toolbar_menu()
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
 
-    prog = PresetManager(menu=menu, toolbar=toolbar)
     prog.update_entry_base()
     prog.mainwindow.show()
     external_ui.show()

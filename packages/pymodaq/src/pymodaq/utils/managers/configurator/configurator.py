@@ -56,16 +56,13 @@ class Configurator(ManagerBase):
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
                  preset_filename: str = 'default'):
 
         self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
-                         tree=ConfiguratorParameterTree())
+        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
         self.preset_filename = preset_filename
 
     def show(self):
@@ -385,14 +382,14 @@ if __name__ == "__main__":
     app = mkQApp('PresetManager')
     settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Configurator')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    prog = Configurator(menu=menu, toolbar=toolbar)
+    prog = Configurator()
     prog.update_settings(settings_path)
     prog.mainwindow.show()
+
+    toolbar, menu = prog.get_external_toolbar_menu()
+    external_ui.addToolBar(toolbar)
+    external_ui.menuBar().addMenu(menu)
 
     external_ui.show()
     sys.exit(app.exec_())
