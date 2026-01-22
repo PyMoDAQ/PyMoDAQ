@@ -46,11 +46,9 @@ class PresetManager(ManagerBase):
     entry_extension ='.xml'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 dashboard: 'DashBoard' = None):
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
+        super().__init__(dashboard=dashboard)
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
