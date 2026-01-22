@@ -158,6 +158,9 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
             raise ValueError("Can't set_data when data is None")
         self.dte_signal.emit(dte)
 
+    def close(self) -> None:
+        self.timer.stop()
+        super().close()
 
 if __name__ == '__main__':
     main(__file__, init=False)
