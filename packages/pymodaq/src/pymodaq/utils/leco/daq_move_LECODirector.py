@@ -210,7 +210,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def close(self) -> None:
         """ Clear the content of the settings_clients setting"""
+        self.timer.stop()
         super().close()
+
 
 
 if __name__ == '__main__':
