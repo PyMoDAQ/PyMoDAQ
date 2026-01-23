@@ -163,7 +163,7 @@ class DAQScan(CustomExt):
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
 
-        self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators)
         self.scan_parameters = None
 
         self.batcher: BatchScanner = None
@@ -1080,11 +1080,8 @@ class DAQScanAcquisition(QObject):
         self.ind_average = 0
         self.ind_scan = 0
 
-        self.isadaptive = self.scanner.scan_sub_type == 'Adaptive'
-
         self.modules_manager.timeout_signal.connect(self.timeout)
         self.timeout_scan_flag = False
-
 
         self.move_done_flag = False
         self.det_done_flag = False
@@ -1118,13 +1115,8 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
     def set_ini_positions(self):
-        """ Set the actuators's positions totheir initial value as defined in the scanner  """
-        try:
-            if self.scanner.scan_sub_type != 'Adaptive':
-                self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
-
-        except Exception as e:
-            logger.exception(str(e))
+        """ Set the actuators's positions to their initial value as defined in the scanner  """
+        self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
 
     def start_acquisition(self):
         try:
@@ -1146,12 +1138,9 @@ class DAQScanAcquisition(QObject):
                 self.ind_scan = -1
                 while True:
                     self.ind_scan += 1
-                    if not self.isadaptive:
-                        if self.ind_scan >= len(self.scanner.positions):
-                            break
-                        positions = self.scanner.positions_at(self.ind_scan)  # get positions
-                    else:
-                        pass
+                    if self.ind_scan >= len(self.scanner.positions):
+                        break
+                    positions = self.scanner.positions_at(self.ind_scan)  # get positions
 
                     self.status_sig.emit(
                         utils.ThreadCommand("Update_scan_index",
