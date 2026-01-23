@@ -22,8 +22,9 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.extensions import DAQScan
 
-def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  -> \
-        tuple['DashBoard', CustomExt, QMainWindow]:
+def load_dashboard_with_preset(preset_name: str,
+                               extension_name: str = None,
+                               configuration_name: str = None)  -> tuple['DashBoard', CustomExt, QMainWindow]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -44,6 +45,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  ->
     -------
 
     """
+    from pymodaq.dashboard import ExtensionsEnum
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
@@ -51,22 +53,24 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  ->
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
+        dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry_base(preset_path)
         if configuration_name is not None:
             configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.entry = configuration_name
             dashboard.configurator.execute_entry_base(configuration_path)
         if extension_name is not None:
-            if extension_name == 'DAQScan':
+            if extension_name == ExtensionsEnum.SCAN:
                 extension = dashboard.load_scan_module()
-            elif extension_name == 'DAQLogger':
+            elif extension_name == ExtensionsEnum.LOGGER:
                 extension = dashboard.load_log_module()
-            elif extension_name == 'DAQ_PID':
+            elif extension_name == ExtensionsEnum.PID:
                 extension = dashboard.load_pid_module()
-            elif extension_name == 'Bayesian':
+            elif extension_name == ExtensionsEnum.BAYESIAN:
                 extension = dashboard.load_bayesian()
-            elif extension_name == 'AdaptiveScan':
+            elif extension_name == ExtensionsEnum.ADAPTIVE:
                 extension = dashboard.load_adaptive()
-            elif extension_name == 'Data Mixer':
+            elif extension_name == ExtensionsEnum.DATAMIXER:
                 extension = dashboard.load_datamixer()
             else:
                 extension = dashboard.load_extension_from_name(extension_name)

@@ -145,9 +145,6 @@ class DAQScan(CustomExt):
 
         self.runner_thread: QThread = None
 
-        self.preset_manager: PresetManager = self.dashboard.preset_manager
-        self.configurator_manager: Configurator = self.dashboard.configurator
-
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
@@ -198,11 +195,12 @@ class DAQScan(CustomExt):
         self.settings.child('plot_options', 'plot_0d').setValue(data0D)
         self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
+
+
     def setup_docks(self):
         self.mainwindow.removeToolBar(self.toolbar)  # hides it
 
-        self.add_toolbar('dashboard', 'Dashboard Toolbar',
-                         parent=self.mainwindow, add_break=True)
+        self.create_dashboard_toolbar()
 
         self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
@@ -215,19 +213,8 @@ class DAQScan(CustomExt):
         self.ui.set_plotting_settings(self.plotting_settings_tree)
 
     def setup_actions(self):
-        self.add_widget('dashboard_label', QtWidgets.QLabel('Dashboard:'),
-                        toolbar='dashboard')
-        self.add_action('show_dashboard', 'Show Dashboard', 'visibility',
-                        'Show/Hide the Dashboard window', checkable=True,
-                        icon_color=self.get_theme().green,
-                        icon_checked='visibility_off',
-                        icon_checked_color=self.get_theme().red,
-                        toolbar='dashboard')
+
         self.ui.enable_start_stop(False)
-
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
-        self.configurator_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
-
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         pass
