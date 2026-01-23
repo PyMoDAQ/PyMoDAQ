@@ -83,7 +83,7 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None)  ->
     return dashboard, extension, shared_ui
 
 
-def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+def create_load_dashboard() -> tuple[SharedUI, 'DashBoard']:
     from pymodaq.dashboard import DashBoard
     win = QMainWindow()
     area = DockArea()
