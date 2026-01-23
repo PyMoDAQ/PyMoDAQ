@@ -271,7 +271,7 @@ def main_view():
     widget = QtWidgets.QWidget()
     prog = View0D(widget)
     widget.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main():
@@ -290,7 +290,7 @@ def main():
                                         labels=['lab1', 'lab2'], units="V"))
         QtWidgets.QApplication.processEvents()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':  # pragma: no cover

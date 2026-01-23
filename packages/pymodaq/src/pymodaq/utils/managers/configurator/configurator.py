@@ -397,4 +397,4 @@ if __name__ == "__main__":
     prog.enable_actions(True)
 
     external_ui.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

@@ -329,7 +329,7 @@ def main_batch_scanner():
     main.setupUI()
     main.create_menu()
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_batch_manager():
@@ -338,7 +338,7 @@ def main_batch_manager():
     actuators = [MockDAQMove(title='Xaxis'), MockDAQMove(title='Yaxis')]
     detectors = [MockDAQViewer(title='Det0D'), MockDAQViewer(title='Det1D')]
     prog = BatchManager(msgbox=True, actuators=actuators, detectors=detectors)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

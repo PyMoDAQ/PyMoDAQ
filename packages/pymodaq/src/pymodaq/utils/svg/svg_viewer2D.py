@@ -43,7 +43,7 @@ def main():
     prog.view.move_scale_roi_target((50, 40), (20, 20))
 
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -5,7 +5,6 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 
-import pymodaq_gui.qt_utils
 from pymodaq_data import DataToExport
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
@@ -307,7 +306,7 @@ class InitSubEntryHandler(SubEntryHandler):
         try:
             module.init_hardware_ui(entry.setting.value())
             if entry.setting.value():
-                init_state = dashboard.poll_init(module)
+                init_state = dashboard.modules_manager.poll_init(module)
                 if init_state != entry.setting.value():
                     raise SubEntryError('Could not initialize the module')
         except Exception as e:
@@ -353,6 +352,9 @@ class WaitSubEntryHandler(SubEntryHandler):
 
 
 if __name__ == '__main__':
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
+
     class MockModel:
         def add_data(self, index, data: ConfiguratorSubEntry):
             print(data)
@@ -362,14 +364,12 @@ if __name__ == '__main__':
 
     factory = SubEntryHandlerFactory()
 
-    from pymodaq_gui.qt_utils import mkQApp
-
     app = mkQApp('SpecialEntry')
 
     special_entry = factory.get_subentry_handler('wait_time')(MockModel(), None)
     special_entry.show_dialog()
 
     # Run application
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 

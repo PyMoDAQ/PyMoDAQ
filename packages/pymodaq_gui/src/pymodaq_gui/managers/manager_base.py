@@ -6,7 +6,6 @@ from qtpy.QtCore import Qt, QModelIndex
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtGui import QKeySequence
 
-import pymodaq_gui.qt_utils
 from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -607,4 +606,4 @@ if __name__ == '__main__':
 
     widget.show_splash()
     execute_entries(entries)
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())

@@ -481,4 +481,4 @@ if __name__ == "__main__":
 
     p.sigTreeStateChanged.connect(value_changed)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

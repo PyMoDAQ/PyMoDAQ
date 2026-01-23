@@ -233,7 +233,7 @@ def main():
     prog.command_sig.connect(print_command_sig)
     prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

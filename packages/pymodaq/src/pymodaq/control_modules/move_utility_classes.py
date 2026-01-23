@@ -213,7 +213,7 @@ def main(plugin_file, init=True, title='test'):
     if init:
         prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 ##########################

@@ -481,4 +481,4 @@ if __name__ == '__main__':
     #prog = RemoteManager(actuators=actuators, detectors=detectors, msgbox=True)
     msgBox = JoystickButtonsSelection()
     ret = msgBox.exec()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

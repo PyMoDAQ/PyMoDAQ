@@ -316,7 +316,7 @@ def main():
     settings.child('set_scan').sigActivated.connect(scanner.set_scan)
     scanner.scanner_updated_signal.connect(print_info)
     widget_main.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

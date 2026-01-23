@@ -25,7 +25,7 @@ def main():
     itemsel.set_value(dict(all_items=[f'item{ind}' for ind in range(23)],
                            selected=[f'item{ind}' for ind in range(23)]))
     itemsel.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

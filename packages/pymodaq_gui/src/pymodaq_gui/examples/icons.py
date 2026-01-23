@@ -4,8 +4,6 @@ from PyQt6.QtWidgets import (QApplication, QGridLayout, QPushButton, QStyle,
                              QWidget, QVBoxLayout)
 from PyQt6.QtGui import QIcon
 
-import pymodaq_gui.qt_utils
-
 
 class Icons():
     def __init__(self, widget: QWidget):
@@ -40,12 +38,13 @@ class Icons():
         self.widget.layout().addLayout(layout_theme)
 
 def main():
-    app = QApplication(sys.argv)
+    from pymodaq_gui.qt_utils import mkQApp
+    app = mkQApp("Icon list")
 
     w = Icons(QWidget())
     w.widget.show()
 
-    pymodaq_gui.qt_utils.exec()
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

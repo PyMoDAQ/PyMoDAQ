@@ -1046,7 +1046,7 @@ def main_spread():
     prog.show_data(DataRaw(name='mydata', distribution='spread', data=[data_spread],
                            axes=[]))
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main(data_distribution='uniform'):
@@ -1092,7 +1092,7 @@ def main(data_distribution='uniform'):
     button.clicked.connect(lambda: plot_data(prog, ndata.value()))
     widget_button.show()
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def generate_uniform_data() -> DataRaw:
@@ -1133,7 +1133,7 @@ def main_view():
     form = QtWidgets.QWidget()
     prog = View2D(form)
     form.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':  # pragma: no cover

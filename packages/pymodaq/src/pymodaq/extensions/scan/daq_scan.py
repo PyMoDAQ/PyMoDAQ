@@ -19,6 +19,7 @@ from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.extensions.utils import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
 from pymodaq_utils import utils
@@ -1217,6 +1218,7 @@ class DAQScanAcquisition(QObject):
 
 
 def main():
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
 
@@ -1229,7 +1231,8 @@ def main():
     win_scan, scan = create_daq_scan(dashboard)
     win_scan.show()
 
-    app.exec()
+    sys.exit(app.exec())
+
 
 
 if __name__ == '__main__':

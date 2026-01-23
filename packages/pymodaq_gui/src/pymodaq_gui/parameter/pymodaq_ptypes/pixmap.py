@@ -142,7 +142,7 @@ def main_widget():
 
     prog.checkbox.toggled.connect(print_toggled)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_parameter():
@@ -168,7 +168,7 @@ def main_parameter():
     prog = PixmapParameter()
     prog.settings_tree.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

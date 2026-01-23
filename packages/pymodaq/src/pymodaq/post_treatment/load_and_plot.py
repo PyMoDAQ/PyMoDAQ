@@ -344,7 +344,7 @@ def main(init_qt=True):
     loader.show_data()
 
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return loader, win
 
 

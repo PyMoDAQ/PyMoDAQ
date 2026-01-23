@@ -109,4 +109,4 @@ if __name__ == '__main__':
     viewer.setYaxis(Axis(data=y, label='This is y axis', units='au'))
     win.show()
     app.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
