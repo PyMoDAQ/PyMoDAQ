@@ -235,6 +235,12 @@ class DAQScan(CustomExt):
         self.connect_action('show_dashboard', self.show_dashboard)
         self.preset_manager.applied_entry.connect(self.update_after_preset_set)
 
+        self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
+
+    def do_things_after_scanner_changed(self):
+        self.ui.set_action_enabled('ini_positions',
+                                       self.scanner.actuators == self.modules_manager.actuators)
+
     def update_after_preset_set(self, preset_name: str):
         # update modules manager
         self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
@@ -1008,10 +1014,10 @@ class DAQScan(CustomExt):
         QtWidgets.QApplication.processEvents()
 
     def set_ini_positions(self):
-        """
-            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
-        """
-        self.command_daq_signal.emit(utils.ThreadCommand("set_ini_positions"))
+        """ Set the actuators's positions to their initial value as defined in the scanner  """
+        self.scanner.set_scan()
+        if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
 
     def stop_scan(self):
         """
@@ -1108,15 +1114,8 @@ class DAQScanAcquisition(QObject):
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
 
-        elif command.command == "set_ini_positions":
-            self.set_ini_positions()
-
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
-
-    def set_ini_positions(self):
-        """ Set the actuators's positions to their initial value as defined in the scanner  """
-        self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
 
     def start_acquisition(self):
         try:
