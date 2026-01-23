@@ -1656,8 +1656,8 @@ def main():
     parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
                         help="config name to execute (ignored if no preset provided)")
     parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
-                        help=f"extension name to execute (ignored if no preset provided), valid "
-                             f"values are within: \"{'\" \"'.join(extensions_names)}\"")
+                        help="extension name to execute (ignored if no preset provided), valid "
+                             'values are within: "' + '\" \"'.join(extensions_names) +'"')
     args = parser.parse_args()
 
     # If preset name is supplied, load dashboard with this preset
