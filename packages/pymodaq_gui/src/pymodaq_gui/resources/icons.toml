@@ -9,7 +9,7 @@
 size = [20, 40]  # add other cases if needed among [20, 24, 40, 48]
 style = ['rounded']  # add other cases if needed among ['rounded', 'outlined', 'sharp']
 names = [
-        'search',
+    'search',
     'toggle_on',
     'toggle_off',
     'visibility',
@@ -54,6 +54,11 @@ names = [
     'step',
     'step_into',
     'step_out',
+    'home',
+    'repeat_one',
+    'repeat',
+    'extension',
+
 ]
 
 

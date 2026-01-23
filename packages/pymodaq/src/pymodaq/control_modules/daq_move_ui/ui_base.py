@@ -240,15 +240,16 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
                                             siPrefix=config('actuator', 'siprefix'),
                                             )
-        self.find_home_pb = PushButtonIcon('home2', 'Find Home')
-        self.move_rel_plus_pb = PushButtonIcon('MoveUp', 'Set Rel. (+)')
-        self.move_abs_pb = PushButtonIcon('Move', 'Set Abs.',
-                                          tip='Set the value of the actuator to the set absolute value')
+        self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
+        self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
+        self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
+                                          tip='Set the value of the actuator to the set absolute value',
+                                          icon_color=self.get_theme().green)
         self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'),
                                                  key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
-        self.move_rel_minus_pb = PushButtonIcon('MoveDown', 'Set Rel. (-)')
-        self.stop_pb = PushButtonIcon('stop', 'Stop')
-        self.get_value_pb = PushButtonIcon('Help_32', 'Update Value')
+        self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
+        self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
+        self.get_value_pb = PushButtonIcon('repeat_one', 'Update Value', icon_color=self.get_theme().cyan)
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
 
@@ -347,8 +348,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
                         toolbar=toolbar)
-        self.add_action('refresh_value', 'Refresh', 'refresh', "Refresh Value", checkable=True,
-                        toolbar=toolbar)
+        self.add_action('refresh_value', 'Refresh', 'repeat', "Refresh Value Continuously", checkable=True,
+                        toolbar=toolbar, icon_color=self.get_theme().cyan)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):

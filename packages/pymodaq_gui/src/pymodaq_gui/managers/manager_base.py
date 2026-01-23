@@ -302,11 +302,12 @@ class ManagerBase(CustomExt):
         if menu is None:
             menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
 
-        self.affect_to(ManagerActions.OPEN, toolbar)
-        self.affect_to(ManagerActions.OPEN, menu)
         self.external_widgets.append(
             addwidget(QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
                       toolbar=toolbar,))
+        self.affect_to(ManagerActions.OPEN, toolbar)
+        self.affect_to(ManagerActions.OPEN, menu)
+
         self.external_widgets.append(addwidget(ComboBox(), toolbar=toolbar))
         self.sync_entries_with(self.external_widgets[-1].widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
