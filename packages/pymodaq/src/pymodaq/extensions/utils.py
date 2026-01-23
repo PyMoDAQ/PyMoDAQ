@@ -12,6 +12,7 @@ from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
+
 from pymodaq_gui.utils.dock import DockArea
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils import logger as logger_module
@@ -23,6 +24,7 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
+    from pymodaq.utils.managers import PresetManager, Configurator
 
 
 def get_ext_modules(path: Path):
@@ -88,6 +90,16 @@ class CustomExt(CustomApp):
             self._modules_manager = None
 
     @property
+    def preset_manager(self) -> 'PresetManager':
+        if self.dashboard is not None:
+            return self.dashboard.preset_manager
+
+    @property
+    def configurator(self) -> 'Configurator':
+        if self.dashboard is not None:
+            return self.dashboard.configurator
+
+    @property
     def splash(self):
         return self.dashboard.splash_sc
 
@@ -109,3 +121,25 @@ class CustomExt(CustomApp):
         if not terminated:
             self.runner_thread.terminate()
             self.runner_thread.wait()
+
+    def create_dashboard_toolbar(self,
+                                 add_preset=True,
+                                 add_configurator=True,
+                                 add_break=True):
+        """ Creates and add a toolbar named dashboard containing means to show/hide the dashboard and optionally
+        to display the preset and configurator manager in this toolbar """
+
+        self.add_toolbar('dashboard', 'Dashboard Toolbar',
+                         parent=self.mainwindow, add_break=add_break)
+        self.add_widget('dashboard_label', QtWidgets.QLabel('Dashboard:'),
+                        toolbar='dashboard')
+        self.add_action('show_dashboard', 'Show Dashboard', 'visibility',
+                        'Show/Hide the Dashboard window', checkable=True,
+                        icon_color=self.get_theme().green,
+                        icon_checked='visibility_off',
+                        icon_checked_color=self.get_theme().red,
+                        toolbar='dashboard')
+        if add_preset:
+            self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+        if add_configurator:
+            self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
