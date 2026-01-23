@@ -197,8 +197,6 @@ class TableModel(QtCore.QAbstractTableModel):
 
     def remove_row(self, row):
         self.removeRows(row, 1, self.index(-1, -1))
-        self.dataChanged.emit(self.index(-1, -1), self.index(-1, -1),
-                              [Qt.ItemDataRole.DisplayRole])
 
     def removeRows(self, row, count, parent):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
