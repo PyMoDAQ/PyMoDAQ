@@ -181,7 +181,8 @@ class SharedUI(CustomApp):
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()
-        self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager')
+        self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
+                        auto_toolbar=False)
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
