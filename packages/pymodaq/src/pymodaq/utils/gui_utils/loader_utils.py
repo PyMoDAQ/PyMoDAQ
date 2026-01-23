@@ -46,6 +46,7 @@ def load_dashboard_with_preset(preset_name: str,
 
     """
     from pymodaq.dashboard import ExtensionsEnum
+    from pymodaq.utils.config import get_set_configurator_path
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
