@@ -345,6 +345,7 @@ class Configurator(ManagerBase):
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
     def do_things_for_new_creation(self):
+        self.table_out.setCurrentIndex(self.table_out.model().index(0, 0))
         self.table_out.clear()
 
     def remove_setting(self):
