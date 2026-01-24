@@ -60,7 +60,12 @@ names = [
     'extension',
     'repeat_on',
     'repeat_one_on',
-    'looks_one',
+    'input',
+    'function',
+    'target',
+    'deblur',
+    'blur_on',
+    'blur_off'
 
 ]
 
