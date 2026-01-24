@@ -249,7 +249,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                                  key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
         self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
         self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
-        self.get_value_pb = PushButtonIcon('repeat_one', 'Update Value', icon_color=self.get_theme().cyan)
+        self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setMaximumHeight(30)
 
@@ -289,6 +289,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def close(self):
         self.parent.close()
         self.graph_widget.close()
+        self.control_widget.close()
+        self._tree.close()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
@@ -348,8 +350,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
                         toolbar=toolbar)
-        self.add_action('refresh_value', 'Refresh', 'repeat', "Refresh Value Continuously", checkable=True,
-                        toolbar=toolbar, icon_color=self.get_theme().cyan)
+        self.add_action('refresh_value', 'Refresh', 'repeat',
+                        "Refresh Value Continuously", checkable=True,
+                        toolbar=toolbar, icon_checked='repeat_on',
+                        icon_checked_color=self.get_theme().green)
         self.add_widget('status', self.statusbar, toolbar=toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
