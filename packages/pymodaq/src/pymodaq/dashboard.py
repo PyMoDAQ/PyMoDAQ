@@ -21,7 +21,6 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 import numpy as np
-from setuptools.command.bdist_egg import scan_module
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
