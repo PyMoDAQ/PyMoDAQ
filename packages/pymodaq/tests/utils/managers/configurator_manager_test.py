@@ -26,12 +26,8 @@ def ini_configurator(init_qt):
     qtbot = init_qt
 
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset Manager Menu')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    configurator = Configurator(menu=menu, toolbar=toolbar)
+    configurator = Configurator()
     configurator.settings = Path(__file__).parent.joinpath('settings.xml')
 
     configurator.update_entry_base()

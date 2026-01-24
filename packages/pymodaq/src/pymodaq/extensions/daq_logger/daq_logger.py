@@ -85,10 +85,12 @@ class DAQ_Logger(CustomExt):
         logger.debug('setting actions')
         self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
         self.toolbar.addSeparator()
-        self.add_action('start', 'Start Logging', 'run2', "Start the logging",
-                        checkable=True, toolbar=self.toolbar)
-        self.add_action('stop', 'Stop', 'stop', 'Stop/pause logging',
-                        checkable=False, toolbar=self.toolbar)
+        self.add_action('start', 'Start Logging', 'timer', "Start the logging",
+                        checkable=True, toolbar=self.toolbar,
+                        icon_color=self.get_theme().green)
+        self.add_action('stop', 'Stop', 'timer_off', 'Stop/pause logging',
+                        checkable=False, toolbar=self.toolbar,
+                        icon_color=self.get_theme().red)
 
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)

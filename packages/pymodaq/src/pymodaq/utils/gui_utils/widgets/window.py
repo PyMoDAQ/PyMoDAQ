@@ -13,7 +13,7 @@ def make_window(
         | Qt.WindowType.WindowMinimizeButtonHint
         | Qt.WindowType.WindowMaximizeButtonHint
     ),
-):
+) -> tuple[QMainWindow, DockArea]:
     """
     Create and configure a QMainWindow with a DockArea as its central widget.
 

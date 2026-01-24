@@ -5,11 +5,11 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QMessageBox, QMainWindow
 
-from pymodaq import dashboard
-from pymodaq.dashboard import DashBoard
+
 from pymodaq.utils.gui_utils import DockArea
-from pymodaq.utils.config import get_set_preset_path, get_set_configurator_path
+from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.utils import CustomExt
+from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.utils.config import Config as ControlModulesConfig
@@ -19,10 +19,12 @@ config = ControlModulesConfig()
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.dashboard import DashBoard
+    from pymodaq.extensions import DAQScan
 
-
-def load_dashboard_with_preset(preset_name: str, extension_name: str = None, configuration_name: str = None)  -> \
-        tuple[DashBoard, CustomExt, QMainWindow]:
+def load_dashboard_with_preset(preset_name: str,
+                               extension_name: str = None,
+                               configuration_name: str = None)  -> tuple['DashBoard', CustomExt, QMainWindow]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -43,6 +45,8 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None, con
     -------
 
     """
+    from pymodaq.dashboard import ExtensionsEnum
+    from pymodaq.utils.config import get_set_configurator_path
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
@@ -50,22 +54,24 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None, con
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
+        dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry_base(preset_path)
         if configuration_name is not None:
             configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.entry = configuration_name
             dashboard.configurator.execute_entry_base(configuration_path)
         if extension_name is not None:
-            if extension_name == 'DAQScan':
+            if extension_name == ExtensionsEnum.SCAN:
                 extension = dashboard.load_scan_module()
-            elif extension_name == 'DAQLogger':
+            elif extension_name == ExtensionsEnum.LOGGER:
                 extension = dashboard.load_log_module()
-            elif extension_name == 'DAQ_PID':
+            elif extension_name == ExtensionsEnum.PID:
                 extension = dashboard.load_pid_module()
-            elif extension_name == 'Bayesian':
+            elif extension_name == ExtensionsEnum.BAYESIAN:
                 extension = dashboard.load_bayesian()
-            elif extension_name == 'AdaptiveScan':
+            elif extension_name == ExtensionsEnum.ADAPTIVE:
                 extension = dashboard.load_adaptive()
-            elif extension_name == 'Data Mixer':
+            elif extension_name == ExtensionsEnum.DATAMIXER:
                 extension = dashboard.load_datamixer()
             else:
                 extension = dashboard.load_extension_from_name(extension_name)
@@ -82,8 +88,8 @@ def load_dashboard_with_preset(preset_name: str, extension_name: str = None, con
     return dashboard, extension, shared_ui
 
 
-def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
-
+def create_load_dashboard() -> tuple[SharedUI, 'DashBoard']:
+    from pymodaq.dashboard import DashBoard
     win = QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
@@ -125,3 +131,24 @@ def create_load_daq_viewer() -> tuple[SharedUI, 'DAQ_Viewer']:
     shared_ui.add_toolbar('viewer', 'Viewer', toolbar=daq_viewer.ui.toolbar, add_break=True)
 
     return shared_ui, daq_viewer
+
+
+def create_daq_scan(dashboard: 'DashBoard',
+                    window: QtWidgets.QMainWindow = None) -> tuple[SharedUI, 'DAQScan']:
+    from pymodaq.extensions import DAQScan
+    from pymodaq_gui.utils.dock import DockArea
+    if window is None:
+        window, dockarea = make_window(win=window, title='DAQScan')
+    else:
+        dockarea = window.centralWidget()
+    if not isinstance(dockarea, DockArea):
+        dockarea = DockArea()
+        window.setCentralWidget(dockarea)
+
+    daq_scan = DAQScan(dockarea, dashboard)
+    shared_ui = SharedUI(window)
+    shared_ui.affect_application(daq_scan)
+    shared_ui.mainwindow.addToolBar(daq_scan.get_toolbar('dashboard'))
+    shared_ui.add_toolbar('scan', 'Scanner', toolbar=daq_scan.ui.toolbar, add_break=False)
+
+    return shared_ui, daq_scan

@@ -103,7 +103,7 @@ class SharedUI(CustomApp):
     """
 
     def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
-                 show=True):
+                 show=True, title: str = None):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -113,7 +113,7 @@ class SharedUI(CustomApp):
             parent.setCentralWidget(widget)
             self.central_widget = widget
             
-        super().__init__(parent)
+        super().__init__(parent, title = title)
         
         
         self._app_class_file: Union[str, Path] = None
@@ -124,12 +124,13 @@ class SharedUI(CustomApp):
         self.setup_ui()
         self.mainwindow.setVisible(show)
         
-    def affect_application(self, app: Any):
+    def affect_application(self, app: CustomApp):
         """ Affect the given application to this SharedUI and add the App QMenus to the
         QMainWindow menubar reordering/merging them if necessary
         """
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
+        self.title = app.title
         menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
         if isinstance(app, CustomApp):
             for menu in app.menus:
@@ -161,22 +162,26 @@ class SharedUI(CustomApp):
         self.add_action(
             "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
         )
-        self.add_action("quit", "Quit", "close2", "Quit program")
+        self.add_action("quit", "Quit", "close", "Quit program",
+                        icon_color=self.get_theme().red)
 
         self.toolbar.addSeparator()
 
-        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "tree",
+        self.add_action("config_utils", "Utils Config.", "account_tree",
+                        tip="Show utility configuration file",)
+        self.add_action("config", "Controls/Extensions Config.", "account_tree",
                         tip="Show Control Modules and Extensions configuration file",)
-        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
+        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
         self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
                         auto_toolbar=False,)
-        self.add_action("about", "About", "information2")
-        self.add_action("help", "Help", "help1")
+        self.add_action("about", "About", "info",
+                        icon_color=self.get_theme().cyan)
+        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow)
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()
-        self.add_action("plugin_manager", "Plugin Manager", "")
+        self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
+                        auto_toolbar=False)
 
     def connect_things(self):
         self.connect_action("log", self.show_log)

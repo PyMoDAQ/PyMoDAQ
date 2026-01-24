@@ -23,12 +23,8 @@ def ini_preset(init_qt):
     qtbot = init_qt
 
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset Manager Menu')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    preset_manager = PresetManager(menu=menu, toolbar=toolbar)
+    preset_manager = PresetManager()
     preset_manager.update_entry_base()
     qtbot.addWidget(preset_manager.mainwindow)
     preset_manager.mainwindow.show()

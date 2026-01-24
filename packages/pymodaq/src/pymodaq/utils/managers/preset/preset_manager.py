@@ -46,11 +46,9 @@ class PresetManager(ManagerBase):
     entry_extension ='.xml'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 dashboard: 'DashBoard' = None):
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
+        super().__init__(dashboard=dashboard)
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -68,6 +66,12 @@ class PresetManager(ManagerBase):
             self.update_entry_base()
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
+    def do_things_for_new_creation(self):
+        for child in self.settings.child(ModuleType.Actuator.value).children():
+            child.remove()
+        for child in self.settings.child(ModuleType.Detector.value).children():
+            child.remove()
+
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
 
@@ -84,8 +88,10 @@ class PresetManager(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_preset_path()
 
-    def execute_entry(self, entry: Path = None, **kwargs):
+    def execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
+
+        Returns True if the entry has been applied otherwise False
         """
         try:
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
@@ -98,7 +104,7 @@ class PresetManager(ManagerBase):
                     for area in self.dashboard.dockarea.tempAreas:
                         area.window().close()
                 else:
-                    return
+                    return False
             self.update_entry(entry)
 
             if ('Moves' in [child.name() for child in self.settings.children()] or
@@ -139,10 +145,7 @@ class PresetManager(ManagerBase):
                      """,
                 )
                 logger.exception(str(error))
-
-                self.dashboard.quit_fun()
-                return
-
+                return False
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
@@ -167,9 +170,11 @@ class PresetManager(ManagerBase):
                 self.dashboard.update_init_tree()
 
             logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            return False
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
@@ -539,14 +544,15 @@ if __name__ == '__main__':
 
     app = mkQApp('PresetManager')
 
+    prog = PresetManager()
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset')
+
+    toolbar, menu = prog.get_external_toolbar_menu()
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
 
-    prog = PresetManager(menu=menu, toolbar=toolbar)
     prog.update_entry_base()
+    prog.enable_actions(True)
     prog.mainwindow.show()
     external_ui.show()
     sys.exit(app.exec())

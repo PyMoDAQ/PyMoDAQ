@@ -387,7 +387,7 @@ class ScanSelector(ParameterManager, QObject):
 
 
 def main_fake_scan():
-    from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+    from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
     class UI:
@@ -441,23 +441,25 @@ def main_fake_scan():
 
 
 def main_navigator():
-    from pymodaq.utils.plotting.navigator import Navigator
+    from pymodaq_gui.plotting.navigator import Navigator
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-    app = QtWidgets.QApplication(sys.argv)
+    from pymodaq_gui.qt_utils import mkQApp
+
+    app = mkQApp('selector')
     widg = QtWidgets.QWidget()
-    navigator = Navigator(widg, h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
+    navigator = Navigator(widg, h5file_path=r'C:\Data\2026\20260119\Dataset_20260119_008.h5')
 
     widg.show()
     navigator.list_2D_scans()
 
     win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
+    widget = QtWidgets.QWidget()
+    win.setCentralWidget(widget)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
     win.show()
 
-    viewer = DAQ_Viewer(area, title="Testing", daq_type='DAQ2D')
+    viewer = DAQ_Viewer(widget, title="Testing", daq_type='DAQ2D')
     viewer.init_hardware_ui(True)
     time.sleep(1)
     QtWidgets.QApplication.processEvents()

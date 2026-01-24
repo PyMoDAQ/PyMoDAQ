@@ -180,9 +180,10 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     return action
 
 
-def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='', toolbar: QtWidgets.QToolBar = None,
-              visible=True,
-              signal_str=None, slot: Callable=None, setters: dict = None, enabled=True, **kwargs):
+def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
+              toolbar: QtWidgets.QToolBar = None,
+              visible=True, signal_str=None, slot: Callable=None,
+              setters: dict = None, enabled=True, **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
     """Create and eventually add a widget to a toolbar
 
     Parameters
@@ -387,7 +388,8 @@ class ActionManager:
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
                    toolbar: Union[str, QtWidgets.QToolBar] = None, visible=True, signal_str=None,
-                   slot: Callable=None, enabled=True, auto_toolbar=True, **kwargs):
+                   slot: Callable=None, enabled=True, auto_toolbar=True,
+                   **kwargs) -> Union[WidgetActionProxy, QtWidgets.QWidget]:
         """Create and add a widget to a toolbar
 
         Parameters

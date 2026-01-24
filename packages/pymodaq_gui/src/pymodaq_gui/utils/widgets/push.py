@@ -11,12 +11,13 @@ EDIT_PUSH_TYPES = ['abs', 'rel']
 
 
 class PushButtonIcon(QtWidgets.QPushButton):
-    def __init__(self, icon_name: str, text: str, checkable=False, tip="", menu=None):
+    def __init__(self, icon_name: str, text: str, checkable=False, tip="", menu=None,
+                 icon_color=None):
         super().__init__(text)
         self._menu = menu
 
         if icon_name != '':
-            icon = create_icon(icon_name)
+            icon = create_icon(icon_name, icon_color)
             self.setIcon(icon)
         self.setCheckable(checkable)
         self.setToolTip(tip)
