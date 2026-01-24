@@ -100,7 +100,7 @@ class Configurator(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -131,6 +131,7 @@ class Configurator(ManagerBase):
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
+        return True
 
     def populate_from_settings(self, settings: Parameter):
         """

@@ -246,7 +246,7 @@ class DashBoard(CustomApp):
         self.preset_manager = PresetManager(dashboard=self)
         self.preset_manager.update_entry_base()
         self.preset_manager.entry = 'default'
-        self.preset_manager.applied_entry.connect(self.update_after_preset)
+        self.preset_manager.applied_entry.connect(self.do_things_after_preset)
         self.configurator = Configurator(dashboard=self,
                                          preset_filename=self.preset_manager.entry)
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
@@ -256,7 +256,7 @@ class DashBoard(CustomApp):
         self.get_toolbar('configurator').setEnabled(False)
         self.preset_manager.enable_actions(True)
 
-    def update_after_preset(self, preset_name: str):
+    def do_things_after_preset(self, preset_name: str):
         self.configurator.preset_filename = preset_name
         self.configurator.entry = 'default'
         self.get_menu('configurator').setEnabled(True)

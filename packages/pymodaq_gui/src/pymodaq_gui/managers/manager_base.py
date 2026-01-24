@@ -444,8 +444,7 @@ class ManagerBase(CustomExt):
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
             return
 
-        self.execute_entry(entry_path, **kwargs)
-        self.entry_applied = True
+        self.entry_applied = self.execute_entry(entry_path, **kwargs)
 
     @property
     def entry_applied(self) -> bool:
@@ -457,15 +456,17 @@ class ManagerBase(CustomExt):
         if applied:
             self.applied_entry.emit(self.entry_filename.stem)
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
+
+        To be reimplemented
 
         Parameters:
         -----------
         file : Path
             The path to the configuration file to be applied.
         """
-        raise NotImplementedError
+        return False
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
         if entry is None:

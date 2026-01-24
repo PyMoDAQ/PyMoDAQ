@@ -88,8 +88,10 @@ class PresetManager(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_preset_path()
 
-    def execute_entry(self, entry: Path = None, **kwargs):
+    def execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
+
+        Returns True if the entry has been applied otherwise False
         """
         try:
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
@@ -102,7 +104,7 @@ class PresetManager(ManagerBase):
                     for area in self.dashboard.dockarea.tempAreas:
                         area.window().close()
                 else:
-                    return
+                    return False
             self.update_entry(entry)
 
             if ('Moves' in [child.name() for child in self.settings.children()] or
@@ -143,10 +145,7 @@ class PresetManager(ManagerBase):
                      """,
                 )
                 logger.exception(str(error))
-
-                self.dashboard.quit_fun()
-                return
-
+                return False
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
@@ -171,9 +170,11 @@ class PresetManager(ManagerBase):
                 self.dashboard.update_init_tree()
 
             logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            return False
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
