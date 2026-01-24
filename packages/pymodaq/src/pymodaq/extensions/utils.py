@@ -14,6 +14,7 @@ from qtpy import QtCore, QtWidgets
 
 
 from pymodaq_gui.utils.dock import DockArea
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils import logger as logger_module
 from pymodaq_gui.utils.custom_app import CustomApp
@@ -74,6 +75,11 @@ def get_extensions():
     return extension_import
 
 
+class DashBoardToolbarActions(StrEnum):
+    LABEL = 'label'
+    SHOW = 'show_dashboard'
+
+
 class CustomExt(CustomApp):
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
@@ -131,9 +137,9 @@ class CustomExt(CustomApp):
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
-        self.add_widget('dashboard_label', QtWidgets.QLabel('Dashboard:'),
+        self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
                         toolbar='dashboard')
-        self.add_action('show_dashboard', 'Show Dashboard', 'visibility',
+        self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
                         'Show/Hide the Dashboard window', checkable=True,
                         icon_color=self.get_theme().green,
                         icon_checked='visibility_off',
@@ -143,3 +149,11 @@ class CustomExt(CustomApp):
             self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
         if add_configurator:
             self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+
+        self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
+
+    def show_dashboard(self):
+        if self.dashboard is not None:
+            self.dashboard.mainwindow.setVisible(self.is_action_checked(DashBoardToolbarActions.SHOW))
+            self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW,
+                                                                                         False)

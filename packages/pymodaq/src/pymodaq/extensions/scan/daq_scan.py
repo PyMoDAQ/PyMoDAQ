@@ -220,9 +220,7 @@ class DAQScan(CustomExt):
         pass
 
     def connect_things(self):
-        self.connect_action('show_dashboard', self.show_dashboard)
         self.preset_manager.applied_entry.connect(self.update_after_preset_set)
-
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
     def do_things_after_scanner_changed(self):
@@ -237,14 +235,10 @@ class DAQScan(CustomExt):
         self.ui.enable_start_stop(True)
 
         # show/hide dashboard
-        self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
+        self.show_dashboard()
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
-
-    def show_dashboard(self):
-        self.dashboard.mainwindow.setVisible(self.is_action_checked('show_dashboard'))
-        self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked('show_dashboard', False)
 
     ################
     #  CONFIG/SETUP UI / EXIT

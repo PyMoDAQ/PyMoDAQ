@@ -415,6 +415,7 @@ class DashBoard(CustomApp):
         self.extensions[ExtensionsEnum.SCAN] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         shared_ui.show()
+        self.scan_module.set_action_checked('show_dashboard', True)
         return self.scan_module
 
     def load_log_module(self, win=None):
