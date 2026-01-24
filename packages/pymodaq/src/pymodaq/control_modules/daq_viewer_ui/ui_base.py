@@ -46,7 +46,9 @@ add_menu_entries = add_category_layers(options)
 
 
 class ActionIconNames(StrEnum):
-    SNAP = 'camera'
+    SNAP = 'looks_one'
+    GRAB = 'repeat'
+    GRAB_STOP = 'repeat_on'
     INI = 'cable'
 
 
@@ -118,6 +120,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def close(self):
         for dock in self.viewer_docks:
             dock.close()
+        self._settings_widget.close()
 
     def setup_docks(self):
         widget = self.parent
@@ -144,9 +147,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
                         checkable=True, icon_checked_color=self.get_theme().green)
         self.toolbar.addSeparator()
-        self.add_action('grab', 'Grab', 'videocam', "Grab data from the detector", checkable=True,
-                        icon_checked='videocam_off', icon_checked_color=self.get_theme().red)
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
+        self.add_action('grab', 'Grab', ActionIconNames.GRAB, "Grab data from the detector", checkable=True,
+                        icon_checked=ActionIconNames.GRAB_STOP,
+                        icon_checked_color=self.get_theme().green)
         self.add_action('show_graphs', 'ShowGraphs', 'bid_landscape', 'Show/Hide the Graphs Area',
                         checkable=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red)

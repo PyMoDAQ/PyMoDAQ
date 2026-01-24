@@ -58,6 +58,9 @@ names = [
     'repeat_one',
     'repeat',
     'extension',
+    'repeat_on',
+    'repeat_one_on',
+    'looks_one',
 
 ]
 
