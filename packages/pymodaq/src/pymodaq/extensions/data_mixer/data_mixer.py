@@ -13,8 +13,7 @@ from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_data.data import DataToExport, DataWithAxes
 
 from pymodaq.utils.config import Config as PyMoConfig
-from pymodaq.extensions.utils import CustomExt
-
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED

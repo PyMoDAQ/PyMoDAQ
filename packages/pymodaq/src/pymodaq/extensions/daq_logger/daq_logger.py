@@ -25,7 +25,7 @@ from pymodaq_gui.utils.widgets import QLED
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -55,7 +55,6 @@ class DAQ_Logger(CustomExt):
     Main class initializing a DAQ_Logger module
     """
     command_DAQ_signal = Signal(list)
-    status_signal = Signal(str)
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},

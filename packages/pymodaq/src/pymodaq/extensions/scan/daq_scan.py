@@ -17,7 +17,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -44,7 +44,6 @@ from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq.utils.managers import PresetManager, Configurator
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -77,7 +76,6 @@ class DAQScan(CustomExt):
     """
     settings_name = 'daq_scan_settings'
     command_daq_signal = Signal(utils.ThreadCommand)
-    status_signal = Signal(str)
     live_data_1D_signal = Signal(list)
 
     params = [
@@ -185,6 +183,12 @@ class DAQScan(CustomExt):
             self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
 
+    def get_main_toolbar(self) -> QtWidgets.QToolBar:
+        """ Get the main toolbar widget to be eventually added in the main window toolbararea
+
+        Default is the default toolbar. To be reimplemented if needed
+        """
+        return self.ui.toolbar
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()

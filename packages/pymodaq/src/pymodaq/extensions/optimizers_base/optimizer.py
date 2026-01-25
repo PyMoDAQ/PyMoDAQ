@@ -36,7 +36,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils import config as config_mod
@@ -333,11 +333,6 @@ class GenericOptimization(CustomExt):
 
         if len(MODELS) == 1:
             self.get_action(OptimizerAction.INI_MODEL).trigger()
-
-
-    @property
-    def title(self):
-        return f'{self.__class__.__name__}'
 
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""

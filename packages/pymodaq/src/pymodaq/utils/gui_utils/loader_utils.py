@@ -8,7 +8,7 @@ from qtpy.QtWidgets import QMessageBox, QMainWindow
 
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.config import get_set_preset_path
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
@@ -152,3 +152,29 @@ def create_daq_scan(dashboard: 'DashBoard',
     shared_ui.add_toolbar('scan', 'Scanner', toolbar=daq_scan.ui.toolbar, add_break=False)
 
     return shared_ui, daq_scan
+
+
+def create_extension(dashboard: 'DashBoard',
+                     extension_class: type[CustomExt],
+                     *ext_args,
+                     window: QtWidgets.QMainWindow = None,
+                     add_toolbarbreak=True,
+                     **ext_kwargs) -> tuple[SharedUI, CustomExt]:
+
+    from pymodaq_gui.utils.dock import DockArea
+    if window is None:
+        window, dockarea = make_window(win=window, title=extension_class.__name__)
+    else:
+        dockarea = window.centralWidget()
+    if not isinstance(dockarea, DockArea):
+        dockarea = DockArea()
+        window.setCentralWidget(dockarea)
+
+    extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
+    shared_ui = SharedUI(window)
+    shared_ui.affect_application(extension)
+    shared_ui.mainwindow.addToolBar(extension.get_toolbar('dashboard'))
+    if add_toolbarbreak:
+        shared_ui.mainwindow.addToolBarBreak()
+    shared_ui.mainwindow.addToolBar(extension.get_main_toolbar())
+    return shared_ui, extension
