@@ -75,7 +75,8 @@ class CompactDockManager(ActionManager):
 
         # Initialize ActionManager with the control toolbar
         ActionManager.__init__(self, toolbar=self.control_toolbar)
-        self.affect_toolbar(self.control_toolbar,self.main_window)
+        # Add control toolbar to the main window at the bottom
+        self.main_window.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.control_toolbar)
         # Track modules and their widgets
         self.modules: List = []  # List of DAQ_Move or DAQ_Viewer instances
         self.module_toolbars = []  # List of QToolBar objects for drag/drop (renamed to avoid ActionManager conflict)
