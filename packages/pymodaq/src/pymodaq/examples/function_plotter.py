@@ -54,7 +54,7 @@ class FunctionPlotter(CustomApp):
         #                  self.setup_actions()  # see ActionManager MixIn class
         #                  self.setup_menu()
         #                  self.connect_things()
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.setInterval(self.settings['plot_refresh'])
         self.timer.timeout.connect(self.plot_timer)
 
@@ -153,7 +153,7 @@ def main():
     prog = FunctionPlotter(dockarea)
 
     mainwindow.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

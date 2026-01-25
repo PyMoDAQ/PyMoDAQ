@@ -1,19 +1,22 @@
-import os
-
-import qt_themes
-import sys
-
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
+
 from pymodaq_utils.config import Config
 from pymodaq_utils.logger import set_logger, get_module_name
-from pyqtgraph import mkQApp as mkQApppg
-
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+
+def mkQApp(app_name: str):
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq_utils.utils import deprecation_msg
+    deprecation_msg("Importing mkQApp from pymodaq_gui.utils.utils is deprecated, "
+                    "please use pymodaq_gui.qt_utils module instead")
+    return mkQApp(app_name)
+
 
 def create_nested_menu(layers, items_per_layer, pattern="Menu", prefix_pattern="Sub", use_index_tracking=False):
     """
@@ -332,29 +335,3 @@ def pngbinary2Qlabel(databinary, scale_height: int = None):
     return label
 
 
-def start_qapplication(name='default_app') -> QtWidgets.QApplication:
-    return mkQApp(name=name)
-
-
-def mkQApp(name: str):
-    app = mkQApppg(name)
-    qt_themes.set_theme(theme=config('style', 'theme')[0],
-                        style=config('style', 'style')[0])
-    return app
-
-
-def exec():
-    app = mkQApp('a name')
-    return app.exec() if hasattr(app, 'exec') else app.exec_()
-
-
-def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
-    font = QtGui.QFont()
-    if font_name is not None:
-        font.setFamily(font_name)
-    if font_size is not None:
-        font.setPointSize(font_size)
-
-    font.setBold(isbold)
-    font.setItalic(isitalic)
-    return font

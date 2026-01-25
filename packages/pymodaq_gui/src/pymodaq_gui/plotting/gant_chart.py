@@ -120,4 +120,4 @@ if __name__ == '__main__':
         dict(name='This is task 1, the best of all the tasks!yeeah baby', idnumber=1, task_type=1, time_start=5,
              time_end=7))
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

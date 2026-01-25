@@ -1,3 +1,5 @@
+import sys
+
 from qtpy import QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
@@ -246,16 +248,15 @@ class DataMixer(CustomExt):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DataMixer')
 
     preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
-    app.exec()
 
-    return dashboard, extension, win
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

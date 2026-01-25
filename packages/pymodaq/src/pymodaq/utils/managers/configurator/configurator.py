@@ -56,16 +56,13 @@ class Configurator(ManagerBase):
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
                  preset_filename: str = 'default'):
 
         self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
-                         tree=ConfiguratorParameterTree())
+        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
         self.preset_filename = preset_filename
 
     def show(self):
@@ -103,7 +100,7 @@ class Configurator(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -134,6 +131,7 @@ class Configurator(ManagerBase):
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
+        return True
 
     def populate_from_settings(self, settings: Parameter):
         """
@@ -347,6 +345,10 @@ class Configurator(ManagerBase):
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
+    def do_things_for_new_creation(self):
+        self.table_out.setCurrentIndex(self.table_out.model().index(0, 0))
+        self.table_out.clear()
+
     def remove_setting(self):
         index_0 = self.table_out.selectedIndexes()[0]
         indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
@@ -380,18 +382,21 @@ class Configurator(ManagerBase):
 
 
 if __name__ == "__main__":
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
+
     app = mkQApp('PresetManager')
     settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Configurator')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    prog = Configurator(menu=menu, toolbar=toolbar)
+    prog = Configurator()
     prog.update_settings(settings_path)
     prog.mainwindow.show()
 
+    toolbar, menu = prog.get_external_toolbar_menu()
+    external_ui.addToolBar(toolbar)
+    external_ui.menuBar().addMenu(menu)
+
+    prog.enable_actions(True)
+
     external_ui.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

@@ -21,7 +21,9 @@ import numpy as np
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
+from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_gui.utils import DockArea
+from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils import config as configmod
@@ -36,6 +38,11 @@ logger = set_logger(get_module_name(__file__))
 
 config_utils = configmod.Config()
 config = ControlModulesConfig()
+
+
+class MenuNames(StrEnum):
+    SETTINGS = 'settings'
+    HELP = 'help'
 
 
 class PymodaqUpdateTableWidget(QTableWidget):
@@ -95,7 +102,8 @@ class SharedUI(CustomApp):
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea]):
+    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+                 show=True, title: str = None):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -105,7 +113,7 @@ class SharedUI(CustomApp):
             parent.setCentralWidget(widget)
             self.central_widget = widget
             
-        super().__init__(parent)
+        super().__init__(parent, title = title)
         
         
         self._app_class_file: Union[str, Path] = None
@@ -114,12 +122,32 @@ class SharedUI(CustomApp):
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
         self.setup_ui()
-        self.mainwindow.setVisible(True)
+        self.mainwindow.setVisible(show)
         
-    def affect_application(self, app: Any):
-        """ Affect this SharedUI to the given application"""
+    def affect_application(self, app: CustomApp):
+        """ Affect the given application to this SharedUI and add the App QMenus to the
+        QMainWindow menubar reordering/merging them if necessary
+        """
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
+        self.title = app.title
+        menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
+        if isinstance(app, CustomApp):
+            for menu in app.menus:
+                if menu.title() in menus_dict: # two main menus with identical names (titles)
+                    menus_dict[menu.title()].addSeparator()
+                    menus_dict[menu.title()].addActions(menu.actions())
+                else:
+                    self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
+                                            menu)
+
+    @staticmethod
+    def _get_menus_from_widget(widget: QtWidgets.QWidget) -> list[QtWidgets.QMenu]:
+        menus = []
+        for child in widget.children():
+            if isinstance(child, QtWidgets.QMenu):
+                menus.append(child)
+        return menus
 
     def show(self):
         self.mainwindow.show()
@@ -134,22 +162,26 @@ class SharedUI(CustomApp):
         self.add_action(
             "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
         )
-        self.add_action("quit", "Quit", "close2", "Quit program")
+        self.add_action("quit", "Quit", "close", "Quit program",
+                        icon_color=self.get_theme().red)
 
         self.toolbar.addSeparator()
 
-        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "tree",
+        self.add_action("config_utils", "Utils Config.", "account_tree",
+                        tip="Show utility configuration file",)
+        self.add_action("config", "Controls/Extensions Config.", "account_tree",
                         tip="Show Control Modules and Extensions configuration file",)
-        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
+        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
         self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
                         auto_toolbar=False,)
-        self.add_action("about", "About", "information2")
-        self.add_action("help", "Help", "help1")
+        self.add_action("about", "About", "info",
+                        icon_color=self.get_theme().cyan)
+        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow)
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
         self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
         self.toolbar.addSeparator()
-        self.add_action("plugin_manager", "Plugin Manager", "")
+        self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
+                        auto_toolbar=False)
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
@@ -171,34 +203,26 @@ class SharedUI(CustomApp):
        # menubar.clear()
 
         # %% create Settings menu
-        self.file_menu = QtWidgets.QMenu("File")
-        self.file_menu.addAction(self.get_action("log"))
-        self.file_menu.addAction(self.get_action("config_utils"))
-        self.file_menu.addAction(self.get_action("config"))
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(self.get_action("quit"))
-        self.file_menu.addAction(self.get_action("restart"))
+        settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
+        settings_menu.addAction(self.get_action("log"))
+        settings_menu.addAction(self.get_action("config_utils"))
+        settings_menu.addAction(self.get_action("config"))
+        settings_menu.addSeparator()
+        settings_menu.addAction(self.get_action("quit"))
+        settings_menu.addAction(self.get_action("restart"))
 
-        self.settings_menu = QtWidgets.QMenu("Settings")
-        self.settings_menu.addAction(self.get_action("leco"))
 
-        menus = self.menubar.actions()
-        for menu in (self.file_menu, self.settings_menu):
-            if len(menus) > 0:
-                self.menubar.insertMenu(menus[0], menu)
-            else:
-                self.menubar.addMenu(menu)
+        settings_menu.addAction(self.get_action("leco"))
 
         # help menu
-        help_menu = menubar.addMenu("?")
+        help_menu = self.add_menu(MenuNames.HELP, '?', menubar)
         help_menu.addAction(self.get_action("about"))
         help_menu.addAction(self.get_action("help"))
         help_menu.addSeparator()
         help_menu.addAction(self.get_action("check_update"))
         help_menu.addAction(self.get_action("plugin_manager"))
 
-        self.file_menu.setEnabled(True)
-        self.settings_menu.setEnabled(True)
+        settings_menu.setEnabled(True)
 
     def start_plugin_manager(self):
         self.win_plug_manager = QtWidgets.QMainWindow()
@@ -242,7 +266,7 @@ class SharedUI(CustomApp):
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
             self.quit_fun()
-            subprocess.call([sys.executable, self._app_class_file])
+            subprocess.call([sys.executable, str(self._app_class_file)])
 
     def show_log(self):
         import webbrowser
@@ -336,7 +360,7 @@ class SharedUI(CustomApp):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     app = mkQApp('CommonWindow')
 
     win = QtWidgets.QMainWindow()
@@ -345,7 +369,7 @@ def main():
     window = SharedUI(win)
 
     # Run application
-    app.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

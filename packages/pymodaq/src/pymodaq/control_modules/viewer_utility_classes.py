@@ -19,8 +19,8 @@ from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
 from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
+from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
@@ -57,25 +57,7 @@ params = [
         {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
         {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
          'value': False},
-        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
-            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
-             'value': False},
-            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
-             VALID_FOR_CONFIGURATION: False},
-            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-             'value': config('network', 'tcp-server', 'ip')},
-            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
-        ]},
-        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
-         ]},
+    ] + create_remote_connection_params() + [
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -133,7 +115,7 @@ def main(plugin_file=None, init=True, title='Testing'):
     if init:
         prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 class DAQ_Viewer_base(QObject):

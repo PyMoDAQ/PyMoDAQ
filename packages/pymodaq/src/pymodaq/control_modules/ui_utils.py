@@ -2,7 +2,7 @@ from importlib import import_module
 from pathlib import Path
 
 from qtpy import QtCore
-
+import qt_themes
 
 from pymodaq_gui.utils import CustomApp
 

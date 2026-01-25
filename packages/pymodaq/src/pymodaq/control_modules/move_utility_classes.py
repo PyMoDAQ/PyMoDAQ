@@ -23,7 +23,7 @@ from pymodaq_data.data import DataUnitError, Q_, Unit
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
@@ -31,7 +31,7 @@ from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
@@ -181,31 +181,11 @@ params = [
          'limits': ActuatorUIFactory.keys()},
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
          VALID_FOR_CONFIGURATION: False,},
-
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('actuator', 'refresh_timeout_ms')},
-        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-              'value': config_utils('network', 'tcp-server', 'ip')},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'tcp-server', 'port')},
-         ]},
-        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"),
-              "default": "localhost"},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'leco-server', 'port')},
-         ]},
-    ]},
+        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
+         'value': False},
+    ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
@@ -233,7 +213,7 @@ def main(plugin_file, init=True, title='test'):
     if init:
         prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 ##########################
@@ -358,7 +338,7 @@ class DAQ_Move_base(QObject):
                                           data=[np.zeros(self.data_shape, dtype=float)],
                                           units=self.axis_unit)
 
-        self.poll_timer = QTimer()
+        self.poll_timer = QTimer(self)
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)

@@ -233,9 +233,10 @@ class Scanner(QObject, ParameterManager):
     def positions_at(self, index: int) -> DataToExport:
         """ Extract the actuators positions at a given index in the scan as a DataToExport of DataActuators"""
         dte = DataToExport('scanner')
-        for ind, pos in enumerate(self.positions[index]):
-            dte.append(DataActuator(self.actuators[ind].title, data=float(pos),
-                                    units=self.actuators[ind].units))
+        if len(self.positions[index]) == len(self.actuators):
+            for ind, pos in enumerate(self.positions[index]):
+                dte.append(DataActuator(self.actuators[ind].title, data=float(pos),
+                                        units=self.actuators[ind].units))
         return dte
 
     @property
@@ -315,7 +316,7 @@ def main():
     settings.child('set_scan').sigActivated.connect(scanner.set_scan)
     scanner.scanner_updated_signal.connect(print_info)
     widget_main.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

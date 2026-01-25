@@ -56,7 +56,8 @@ class QtConsole(RichJupyterWidget):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Console')
 
@@ -65,8 +66,7 @@ def main():
                      custom_banner=BANNER,
                      )
     prog.show()
-    app.exec()
-    return prog
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

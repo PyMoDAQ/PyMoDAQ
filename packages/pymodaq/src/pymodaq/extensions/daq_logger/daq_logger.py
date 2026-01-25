@@ -85,10 +85,12 @@ class DAQ_Logger(CustomExt):
         logger.debug('setting actions')
         self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
         self.toolbar.addSeparator()
-        self.add_action('start', 'Start Logging', 'run2', "Start the logging",
-                        checkable=True, toolbar=self.toolbar)
-        self.add_action('stop', 'Stop', 'stop', 'Stop/pause logging',
-                        checkable=False, toolbar=self.toolbar)
+        self.add_action('start', 'Start Logging', 'timer', "Start the logging",
+                        checkable=True, toolbar=self.toolbar,
+                        icon_color=self.get_theme().green)
+        self.add_action('stop', 'Stop', 'timer_off', 'Stop/pause logging',
+                        checkable=False, toolbar=self.toolbar,
+                        icon_color=self.get_theme().red)
 
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)
@@ -502,7 +504,7 @@ class DAQ_Logging(QObject):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DAQLogger')
@@ -510,10 +512,7 @@ def main():
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQLogger')
 
-    app.exec()
-
-    return dashboard, extension, win
-
+    sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()

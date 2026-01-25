@@ -46,14 +46,15 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_things()
 
     def setup_actions(self):
-        self.add_action('quit', 'Quit the module', 'close2', menu=self.file_menu)
-        self.add_action('ini_positions', 'Init Positions', '', menu=self.action_menu)
-        self.add_action('start', 'Start Scan', 'run2', "Start the scan", menu=self.action_menu)
+        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu=self.action_menu)
+        self.set_action_enabled('ini_positions', False)
+        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
+                        menu=self.action_menu, icon_color=self.get_theme().green)
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
-        self.add_action('stop', 'Stop Scan', 'stop', "Stop the scan", menu=self.action_menu)
-        self.add_action('move_at', 'Move at doubleClicked', 'move_contour',
+        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
+                        menu=self.action_menu, icon_color=self.get_theme().red)
+        self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
-        self.add_action('log', 'Show Log file', 'information2', menu=self.file_menu)
 
         self.add_action('load', 'Load File', 'Open', menu=self.file_menu, auto_toolbar=False)
         self.file_menu.addSeparator()
@@ -70,13 +71,11 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.set_action_enabled('stop', enable)
 
     def connect_things(self):
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
 
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))
         self.connect_action('save', lambda: self.command_sig.emit(ThreadCommand('save')))
@@ -234,7 +233,7 @@ def main():
     prog.command_sig.connect(print_command_sig)
     prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

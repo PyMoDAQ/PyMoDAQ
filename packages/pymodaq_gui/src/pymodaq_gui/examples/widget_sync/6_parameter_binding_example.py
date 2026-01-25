@@ -484,7 +484,7 @@ def main():
     window = ParameterBindingExample()
     window.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

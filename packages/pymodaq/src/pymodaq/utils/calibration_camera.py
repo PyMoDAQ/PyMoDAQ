@@ -20,7 +20,7 @@ if not os.path.isdir(calib_path):
     os.makedirs(calib_path)
 
 
-class CalibrationCamera(QtWidgets.QWidget, QObject):
+class CalibrationCamera(QtWidgets.QWidget):
     def __init__(self, parent=None, h5filepath=None):
 
         
@@ -177,4 +177,4 @@ if __name__ == '__main__':
     win = QtWidgets.QWidget()
     prog = CalibrationCamera(win)
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

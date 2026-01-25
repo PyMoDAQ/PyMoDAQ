@@ -660,4 +660,4 @@ if __name__ == '__main__':
     prog.add_roi_programmatically(ROI2D_TYPES[0])
     prog.add_roi_programmatically(ROI2D_TYPES[1])
     prog.add_roi_programmatically(ROI2D_TYPES[2])
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

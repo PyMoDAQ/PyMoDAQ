@@ -23,6 +23,25 @@ class ScalableGroup(GroupParameter):
 # Need to register a new type to properly trigger addNew
 registerParameterType('groupedit', ScalableGroup, override=True)
 
+def create_text_with_pattern_parameter():
+    text_params = {
+                "name": "text_with_pattern",
+                "title": "Text Editing with pattern completion (@ for users, # for languages):",
+                "type": "text_pattern",
+                "value": "",
+                "patterns": {
+                    "@": ["alice", "bob", "charlie"],
+                    "#": ["python", "javascript", "cpp"],
+                },
+                "completer_config": {
+                    "min_width": 200,
+                    "max_width": 400,
+                    "case_sensitive": False,
+                    "visual_indicator": True,
+                },
+            }
+
+    return text_params
 
 class ParameterEx(ParameterManager):
     params = [
@@ -117,6 +136,7 @@ class ParameterEx(ParameterManager):
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
+            create_text_with_pattern_parameter(),        
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},
         ]},
@@ -162,7 +182,7 @@ class ParameterEx(ParameterManager):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Parameters')
 
@@ -174,7 +194,7 @@ def main():
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item1', 'item3']))
 
-    app.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

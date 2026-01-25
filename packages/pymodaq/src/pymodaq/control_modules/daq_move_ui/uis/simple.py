@@ -22,11 +22,11 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
     def setup_docks(self):
         super().setup_docks()
 
-        self.parent.setLayout(QVBoxLayout())
+        self.parent.setLayout(QtWidgets.QHBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
 
-        self.parent.layout().addWidget(self.move_toolbar)
+        #self.parent.layout().addWidget(self.move_toolbar)
 
         self.abs_value_sb_2.setMinimumWidth(80)
         self.abs_value_sb.setMinimumWidth(80)
@@ -38,36 +38,11 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=self.move_toolbar)
+        self.setup_actions_in_toolbar(self.move_toolbar)
 
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=self.move_toolbar,
-                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
-                        icon_checked_color=qt_themes.get_theme().green)
-        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
-        self.add_widget('abs_green', self.abs_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=self.move_toolbar)
-        self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
-                        toolbar=self.move_toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute"
-                                                             " value",
-                        toolbar=self.move_toolbar)
-
-
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
-
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        self._setup_absolute_spinbox_actions(toolbar)
+        self._setup_absolute_actions(toolbar)
 
     def connect_things(self):
         super().connect_things()
@@ -115,7 +90,7 @@ def main(init_qt=True):
 
     win.show()
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return prog, widget
 
 

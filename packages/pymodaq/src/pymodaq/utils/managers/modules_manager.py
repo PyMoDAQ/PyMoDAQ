@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 
-
 logger = set_logger(get_module_name(__file__))
 config_utils = Config()
 config = ControlModulesConfig()
@@ -212,7 +211,7 @@ class ModulesManager(QObject, ParameterManager):
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
-    def detectors_all(self):
+    def detectors_all(self)  -> List['DAQ_Viewer']:
         """Get/Set the list of all detectors"""
         return self._detectors
 
@@ -572,15 +571,13 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_flag = True
 
     def poll_init(self, module):
-        is_init = False
         tstart = time.perf_counter()
-        while not is_init:
+        while not module.initialized_state:
             QThread.msleep(1000)
             QtWidgets.QApplication.processEvents()
-            is_init = module.initialized_state
-            if time.perf_counter() - tstart > 60:  # timeout of 60sec
+            if time.perf_counter() - tstart > config('control_module_ini_polling'):  # timeout of 60sec
                 break
-        return is_init
+        return module.initialized_state
 
     def order_positions(self, positions: DataToExport):
         """ Reorder the content of the DataToExport given the order of the selected actuators"""
@@ -661,4 +658,4 @@ if __name__ == '__main__':
     manager = ModulesManager(actuators=[act1, act2], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
     manager.settings_tree.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

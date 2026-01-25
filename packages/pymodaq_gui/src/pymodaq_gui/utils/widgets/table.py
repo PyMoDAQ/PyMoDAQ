@@ -285,4 +285,4 @@ if __name__ == '__main__':
     # c = TreeFromToml()
     # c.show_dialog()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

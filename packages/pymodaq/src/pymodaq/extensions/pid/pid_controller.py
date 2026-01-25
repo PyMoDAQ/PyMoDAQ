@@ -848,7 +848,7 @@ class PIDRunner(QObject):
         [queue_input.append(output) for queue_input, output in zip(self.queue_inputs, self.outputs)]  # Prefill queues with initial output
         self.clear_queues = True  # Clear queues on first iteration
 
-    #     self.timeout_timer = QtCore.QTimer()
+    #     self.timeout_timer = QtCore.QTimer(self)
     #     self.timeout_timer.setInterval(10000)
     #     self.timeout_scan_flag = False
     #     self.timeout_timer.timeout.connect(self.timeout)
@@ -1005,7 +1005,8 @@ class PIDRunner(QObject):
 
 
 if __name__ == "__main__":
-    from pymodaq_gui.utils.utils import mkQApp
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp("DAQ_PID")
@@ -1013,4 +1014,4 @@ if __name__ == "__main__":
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, "DAQ_PID")
 
-    app.exec()
+    sys.exit(app.exec())

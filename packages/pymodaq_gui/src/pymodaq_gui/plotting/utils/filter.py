@@ -576,4 +576,4 @@ if __name__ == '__main__':
         2 * np.pi * 0.008 * xdata - np.deg2rad(-10)) + 2 * np.random.rand(len(xdata))
 
     prog.show_data(dict(data=ydata_sin, xaxis=xdata))
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

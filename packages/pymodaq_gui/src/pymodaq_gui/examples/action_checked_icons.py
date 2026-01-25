@@ -1,4 +1,3 @@
-
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_utils.config import Config
 
@@ -32,8 +31,7 @@ class MyWidget(ActionManager):
 
 def main():
     """Run the example application"""
-    from pymodaq_gui.utils.utils import mkQApp
-
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Example')
     widget = QtWidgets.QWidget()

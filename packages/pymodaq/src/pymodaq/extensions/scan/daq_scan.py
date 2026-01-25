@@ -6,18 +6,19 @@
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 from __future__ import annotations
-from collections import OrderedDict
 import logging
 import os
 from pathlib import Path
-import sys
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
+from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
+
+from pymodaq.extensions.utils import CustomExt
+from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
@@ -28,7 +29,7 @@ from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTree
+from pymodaq_gui.managers.parameter_manager import ParameterTree
 from pymodaq_gui.plotting.navigator import Navigator
 from pymodaq_gui.messenger import messagebox
 from pymodaq_gui import utils as gutils
@@ -38,12 +39,12 @@ from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.daq_scan_ui import DAQScanUI
+from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
-
+from pymodaq.utils.managers import PresetManager, Configurator
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -70,7 +71,7 @@ class ScanDataTemp:
         self.data = data
 
 
-class DAQScan(QObject, ParameterManager):
+class DAQScan(CustomExt):
     """
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
@@ -123,17 +124,10 @@ class DAQScan(QObject, ParameterManager):
         """
         
         logger.info('Initializing DAQScan')
-        QObject.__init__(self)
-        ParameterManager.__init__(self)
+        super().__init__(parent=dockarea,
+                         dashboard=dashboard)
 
-        self.title = __class__.__name__
 
-        self.dockarea: gutils.DockArea = dockarea
-        self.dashboard: DashBoard = dashboard
-        if dashboard is None:
-            raise Exception('No valid dashboard initialized')
-
-        self.mainwindow = self.dockarea.parent()
         self.ui: DAQScanUI = DAQScanUI(self.dockarea)
 
         self.wait_time = 1000
@@ -150,25 +144,24 @@ class DAQScan(QObject, ParameterManager):
         self.plot_colors = utils.plot_colors
 
         self.runner_thread: QThread = None
-        self._h5saver: H5Saver = None
-        self._module_and_data_saver: module_saving.ScanSaver = None
 
-        self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
-        self.module_and_data_saver = module_saving.ScanSaver(self)
+
+        self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+        self._h5saver.settings.child('do_save').hide()
+        self._h5saver.settings.child('custom_name').hide()
+        self._h5saver.new_file_sig.connect(self.create_new_file)
+
+        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
 
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
 
-        self.h5saver.settings.child('do_save').hide()
-        self.h5saver.settings.child('custom_name').hide()
-        self.h5saver.new_file_sig.connect(self.create_new_file)
-
-        self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators)
         self.scan_parameters = None
 
         self.batcher: BatchScanner = None
@@ -185,11 +178,13 @@ class DAQScan(QObject, ParameterManager):
         self.set_config()
 
         self.live_plotter = LoaderPlotter(self.dockarea)
-        self.live_timer = QtCore.QTimer()
+        self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        self.ui.enable_start_stop(True)
+        if self.dashboard.preset_manager.entry_applied:
+            self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
+
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -200,8 +195,14 @@ class DAQScan(QObject, ParameterManager):
         self.settings.child('plot_options', 'plot_0d').setValue(data0D)
         self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
-    def setup_ui(self):
-        self.ui.populate_toolbox_widget([self.settings_tree, self.h5saver.settings_tree],
+
+
+    def setup_docks(self):
+        self.mainwindow.removeToolBar(self.toolbar)  # hides it
+
+        self.create_dashboard_toolbar()
+
+        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
 
         self.ui.set_scanner_settings(self.scanner.parent_widget)
@@ -210,6 +211,34 @@ class DAQScan(QObject, ParameterManager):
         self.plotting_settings_tree = ParameterTree()
         self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
         self.ui.set_plotting_settings(self.plotting_settings_tree)
+
+    def setup_actions(self):
+
+        self.ui.enable_start_stop(False)
+
+    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+        pass
+
+    def connect_things(self):
+        self.preset_manager.applied_entry.connect(self.update_after_preset_set)
+        self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
+
+    def do_things_after_scanner_changed(self):
+        self.ui.set_action_enabled('ini_positions',
+                                       self.scanner.actuators == self.modules_manager.actuators)
+
+    def update_after_preset_set(self, preset_name: str):
+        # update modules manager
+        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
+        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+
+        self.ui.enable_start_stop(True)
+
+        # show/hide dashboard
+        self.show_dashboard()
+
+        # set the module saver type and applies its h5saver to submodules
+        self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -227,13 +256,11 @@ class DAQScan(QObject, ParameterManager):
         ----------
         cmd: ThreadCommand
             Possible values are:
-                * quit
                 * ini_positions
                 * start
                 * start_batch
                 * stop
                 * move_at
-                * show_log
                 * load
                 * save
                 * show_file
@@ -241,9 +268,7 @@ class DAQScan(QObject, ParameterManager):
                 * batch
                 * viewers_changed
         """
-        if cmd.command == 'quit':
-            self.quit_fun()
-        elif cmd.command == 'ini_positions':
+        if cmd.command == 'ini_positions':
             self.set_ini_positions()
         elif cmd.command == 'start':
             self.start_scan()
@@ -253,8 +278,6 @@ class DAQScan(QObject, ParameterManager):
             self.stop_scan()
         elif cmd.command == 'move_at':
             self.move_to_crosshair()
-        elif cmd.command == 'show_log':
-            self.show_log()
         elif cmd.command == 'load':
             self.load_file()
         elif cmd.command == 'save':
@@ -267,11 +290,6 @@ class DAQScan(QObject, ParameterManager):
             self.show_batcher(self.ui.menubar)
         elif cmd.command == 'viewers_changed':
             ...
-
-    def show_log(self):
-        """Open the log file in the default text editor"""
-        import webbrowser
-        webbrowser.open(logger.parent.handlers[0].baseFilename)
 
     def quit_fun(self):
         """
@@ -524,6 +542,9 @@ class DAQScan(QObject, ParameterManager):
     def h5saver(self):
         if self._h5saver is None:
             self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver.settings.child('do_save').hide()
+            self._h5saver.settings.child('custom_name').hide()
+            self._h5saver.new_file_sig.connect(self.create_new_file)
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():
@@ -793,6 +814,7 @@ class DAQScan(QObject, ParameterManager):
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
+
             res = self.update_scan_info()
             if not res:
                 return False
@@ -819,17 +841,6 @@ class DAQScan(QObject, ParameterManager):
                 messagebox(
                     text="There are not enough or too much selected move modules for this scan")
                 return False
-
-            ## TODO the stuff about adaptive scans have to be moved into a dedicated extension. M
-            ## Most similat to the Bayesian one!
-            if self.scanner.scan_sub_type == 'Adaptive':
-                #todo include this in scanners objects for the adaptive scanners
-                if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    messagebox(
-                        text="In adaptive mode, you have to pick a 0D signal from which the "
-                             "algorithm will determine the next positions to scan, see 'probe_data'"
-                             " in the modules selector panel")
-                    return False
 
             self.ui.n_scan_steps = self.scanner.n_steps
 
@@ -905,6 +916,7 @@ class DAQScan(QObject, ParameterManager):
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
 
+        self._module_and_data_saver.h5saver = self.h5saver
         res = self.set_scan()
         if res:
             # deactivate module controls using remote_control
@@ -925,9 +937,9 @@ class DAQScan(QObject, ParameterManager):
             else:
                 scan_shape = self.scanner.get_scan_shape()
             for det in self.modules_manager.detectors:
-                det.module_and_data_saver = (
+                det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
-            self.module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver ill also be set on each detectors
+            self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
 
             # mandatory to deal with multithreads
             if self.runner_thread is not None:
@@ -984,10 +996,10 @@ class DAQScan(QObject, ParameterManager):
         QtWidgets.QApplication.processEvents()
 
     def set_ini_positions(self):
-        """
-            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
-        """
-        self.command_daq_signal.emit(utils.ThreadCommand("set_ini_positions"))
+        """ Set the actuators's positions to their initial value as defined in the scanner  """
+        self.scanner.set_scan()
+        if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
 
     def stop_scan(self):
         """
@@ -1056,11 +1068,8 @@ class DAQScanAcquisition(QObject):
         self.ind_average = 0
         self.ind_scan = 0
 
-        self.isadaptive = self.scanner.scan_sub_type == 'Adaptive'
-
         self.modules_manager.timeout_signal.connect(self.timeout)
         self.timeout_scan_flag = False
-
 
         self.move_done_flag = False
         self.det_done_flag = False
@@ -1087,20 +1096,8 @@ class DAQScanAcquisition(QObject):
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
 
-        elif command.command == "set_ini_positions":
-            self.set_ini_positions()
-
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
-
-    def set_ini_positions(self):
-        """ Set the actuators's positions totheir initial value as defined in the scanner  """
-        try:
-            if self.scanner.scan_sub_type != 'Adaptive':
-                self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
-
-        except Exception as e:
-            logger.exception(str(e))
 
     def start_acquisition(self):
         try:
@@ -1122,12 +1119,9 @@ class DAQScanAcquisition(QObject):
                 self.ind_scan = -1
                 while True:
                     self.ind_scan += 1
-                    if not self.isadaptive:
-                        if self.ind_scan >= len(self.scanner.positions):
-                            break
-                        positions = self.scanner.positions_at(self.ind_scan)  # get positions
-                    else:
-                        pass
+                    if self.ind_scan >= len(self.scanner.positions):
+                        break
+                    positions = self.scanner.positions_at(self.ind_scan)  # get positions
 
                     self.status_sig.emit(
                         utils.ThreadCommand("Update_scan_index",
@@ -1205,17 +1199,21 @@ class DAQScanAcquisition(QObject):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
+
 
     app = mkQApp('DAQScan')
-    preset_file_name = config('presets', f'default_preset_for_scan')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQScan')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
 
-    app.exec()
+    win_scan, scan = create_daq_scan(dashboard)
+    win_scan.show()
 
-    return dashboard, extension, win
+    sys.exit(app.exec())
+
 
 
 if __name__ == '__main__':

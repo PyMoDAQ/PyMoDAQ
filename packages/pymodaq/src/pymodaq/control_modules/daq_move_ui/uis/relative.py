@@ -35,33 +35,10 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=self.move_toolbar)
+        self.setup_actions_in_toolbar(self.move_toolbar)
 
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=self.move_toolbar,
-                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
-                        icon_checked_color=qt_themes.get_theme().green)
-        self.move_toolbar.addSeparator()
-        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_widget('rel_move', self.rel_value_sb, toolbar=self.move_toolbar)
-        self.add_action('move_rel_plus', 'Set Rel. (+)', 'MoveUp', toolbar=self.move_toolbar)
-        self.add_action('move_rel_minus', 'Set Rel. (-)', 'MoveDown', toolbar=self.move_toolbar)
-
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        self._setup_relative_actions(toolbar)
 
     def connect_things(self):
         super().connect_things()
@@ -112,7 +89,7 @@ def main(init_qt=True):
 
     win.show()
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return prog, widget
 
 
