@@ -23,7 +23,7 @@ from qtpy.QtWidgets import (
 import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
-from pymodaq.utils.gui_utils.loader_utils import create_daq_scan, create_extension
+from pymodaq.utils.gui_utils.loader_utils import create_extension
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils

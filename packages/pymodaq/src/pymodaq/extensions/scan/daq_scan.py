@@ -18,7 +18,6 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import Config
@@ -224,22 +223,23 @@ class DAQScan(CustomExt):
         pass
 
     def connect_things(self):
-        self.preset_manager.applied_entry.connect(self.update_after_preset_set)
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
     def do_things_after_scanner_changed(self):
         self.ui.set_action_enabled('ini_positions',
                                        self.scanner.actuators == self.modules_manager.actuators)
 
-    def update_after_preset_set(self, preset_name: str):
-        # update modules manager
-        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
-        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+    def do_things_after_preset_set(self, preset_name: str):
+        """ This method is called whenever a preset entry has been set.
 
+        Its main purpose is to update the list of control modules in the manager and
+        some other actions.
+
+        Can be reimplemented to add some more evolved actions
+        """
+
+        super().do_things_after_preset_set(preset_name)
         self.ui.enable_start_stop(True)
-
-        # show/hide dashboard
-        self.show_dashboard()
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
@@ -313,6 +313,7 @@ class DAQScan(CustomExt):
 
             self.close_file()
             self.mainwindow.close()
+            self.show_dashboard(True) #make sure to show it if it was hidden
 
         except Exception as e:
             logger.exception(str(e))
@@ -898,13 +899,6 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = True
         return res
 
-    def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
-
     def start_scan(self):
         """
             Start an acquisition calling the set_scan function.
@@ -1205,19 +1199,17 @@ class DAQScanAcquisition(QObject):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
-
-
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
     app = mkQApp('DAQScan')
 
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_scan, scan = create_daq_scan(dashboard)
-    win_scan.show()
+    win_ext, scan = create_extension(dashboard, DAQScan)
+    win_ext.show()
 
     sys.exit(app.exec())
-
 
 
 if __name__ == '__main__':

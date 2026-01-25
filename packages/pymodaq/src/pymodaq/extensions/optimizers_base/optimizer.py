@@ -399,6 +399,8 @@ class GenericOptimization(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
+        self.create_dashboard_toolbar()
+
         self.docks['saving'] = gutils.Dock('Saving')
         self.docks['saving'].addWidget(self.h5saver.settings_tree)
         self.dockarea.addDock(self.docks['saving'])
@@ -544,7 +546,6 @@ class GenericOptimization(CustomExt):
 
     def setup_actions(self):
         logger.debug('setting actions')
-        self.add_action(OptimizerAction.QUIT, 'Quit', 'close2', "Quit program")
         combo_model = QtWidgets.QComboBox()
         combo_model.addItems([model['name'] for  model in MODELS])
         self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
@@ -568,7 +569,6 @@ class GenericOptimization(CustomExt):
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action(OptimizerAction.QUIT, self.quit)
         self.connect_action('models', self.update_model_settings_from_action,
                             signal_name='currentTextChanged')
 
@@ -624,9 +624,10 @@ class GenericOptimization(CustomExt):
         self.modules_manager.connect_actuators(False)
 
 
-    def quit(self):
+    def quit_fun(self):
         self.dockarea.parent().close()
         self.clean_h5_temp()
+        self.show_dashboard(True)  # make sure to show it if it was hidden
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()

@@ -30,6 +30,8 @@ class CustomExt(CustomApp):
             self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
                                                    actuators=self.dashboard.actuators_modules,
                                                    parent_name=self.__class__.__name__)
+            if self.preset_manager is not None:
+                self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
         else:
             self._modules_manager = None
 
@@ -44,6 +46,22 @@ class CustomExt(CustomApp):
     def preset_manager(self) -> 'PresetManager':
         if self.dashboard is not None:
             return self.dashboard.preset_manager
+
+
+    def do_things_after_preset_set(self, preset_name: str):
+        """ This method is called whenever a preset entry has been set.
+
+        Its main purpose is to update the list of control modules in the manager and
+        some other actions.
+
+        Can be reimplemented to add some more evolved actions
+        """
+        # update modules manager
+        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
+        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+
+        # show/hide dashboard
+        self.show_dashboard()
 
     @property
     def configurator(self) -> 'Configurator':
@@ -97,8 +115,10 @@ class CustomExt(CustomApp):
 
         self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
 
-    def show_dashboard(self):
-        if self.dashboard is not None:
-            self.dashboard.mainwindow.setVisible(self.is_action_checked(DashBoardToolbarActions.SHOW))
+    def show_dashboard(self, show: bool = None):
+        if self.dashboard is not None and self.has_action(DashBoardToolbarActions.SHOW):
+            if show is None:
+                show = self.is_action_checked(DashBoardToolbarActions.SHOW)
+            self.dashboard.mainwindow.setVisible(show)
             self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW,
                                                                                          False)

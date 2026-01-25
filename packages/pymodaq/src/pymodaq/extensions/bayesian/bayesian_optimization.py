@@ -126,12 +126,16 @@ class BayesianOptimization(GenericOptimization):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Bayesian Optimiser')
-    #preset_file_name = config('presets', f'beam_steering')
+    app = mkQApp('Bayesian Optimizer')
 
-    dashboard, extension, win = load_dashboard_with_preset('beam_steering', 'Bayesian')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, BayesianOptimization)
+    win_ext.show()
 
     sys.exit(app.exec())
 
