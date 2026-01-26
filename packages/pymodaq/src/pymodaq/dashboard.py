@@ -73,16 +73,12 @@ extensions = get_extensions()
 
 local_path = configmod.get_set_local_dir()
 now = datetime.datetime.now()
-preset_path = config_mod_pymodaq.get_set_preset_path()
-configurator_path = config_mod_pymodaq.get_set_configurator_path()
-log_path = configmod.get_set_log_path()
+
+
 layout_path = config_mod_pymodaq.get_set_layout_path()
 overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
 roi_path = config_mod_pymodaq.get_set_roi_path()
 remote_path = config_mod_pymodaq.get_set_remote_path()
-
-
-
 
 
 class ManagerEnums(BaseEnum):
@@ -182,7 +178,7 @@ class DashBoard(CustomApp):
 
         logger.info("Initializing Dashboard")
         self.extra_params = []
-        self.preset_path = preset_path
+
         self.wait_time = 1000
         self.log_module = None
         self.pid_module = None
@@ -1529,7 +1525,7 @@ def load_dashboard_with_preset(preset_name: str,
     -------
 
     """
-    from pymodaq.utils.config import get_set_configurator_path
+    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
