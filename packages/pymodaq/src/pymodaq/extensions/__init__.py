@@ -18,7 +18,7 @@ from .pid.pid_controller import DAQ_PID
 from .bayesian.bayesian_optimization import BayesianOptimization
 from .bayesian.utils import OptimizerModelDefault
 
-from .adaptive.adaptive_optimization import AdaptiveOptimisation
+from .adaptive_optim.adaptive_optimization import AdaptiveOptimisation
 
 from .data_mixer.data_mixer import DataMixer
 from .console import Console

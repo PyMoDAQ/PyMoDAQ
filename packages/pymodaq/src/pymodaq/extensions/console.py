@@ -5,6 +5,8 @@ Created the 25/10/2022
 @author: Sebastien Weber
 """
 from typing import TYPE_CHECKING
+
+import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
@@ -73,18 +75,29 @@ class Console(CustomExt):
             instance of the pymodaq dashboard
 
         """
+        self.console = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
+                                 syntax_style=config('style', 'syntax_highlighting'),
+                                 custom_banner=BANNER)
         super().__init__(dockarea, dashboard)
 
         self.setup_ui()
 
+    def do_things_after_preset_set(self, preset: str):
+        super().do_things_after_preset_set(preset)
+
+        self.console.push_variables(
+            {'dashboard': self.dashboard,
+             'mods': self.modules_manager,
+             'np': np})
+
     def setup_docks(self):
         self.create_dashboard_toolbar()
-        self.console = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
-                                 syntax_style=config('style', 'syntax_highlighting'),
-                                 custom_banner=BANNER)
         self.mainwindow.setCentralWidget(self.console)
 
     def setup_actions(self):
+        pass
+
+    def connect_things(self):
         pass
 
     def quit_fun(self):
@@ -104,8 +117,7 @@ def main():
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, QtConsole,
-                                     )
+    win_ext, scan = create_extension(dashboard, Console)
     win_ext.show()
 
     sys.exit(app.exec())

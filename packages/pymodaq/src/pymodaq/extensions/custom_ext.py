@@ -32,6 +32,8 @@ class CustomExt(CustomApp):
                                                    parent_name=self.__class__.__name__)
             if self.preset_manager is not None:
                 self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
+                if self.preset_manager.entry_applied:
+                    self.do_things_after_preset_set(self.preset_manager.entry)
         else:
             self._modules_manager = None
 

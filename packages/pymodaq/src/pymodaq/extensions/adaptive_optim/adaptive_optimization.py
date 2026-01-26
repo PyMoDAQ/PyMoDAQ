@@ -9,8 +9,8 @@ from pymodaq.extensions.optimizers_base.optimizer import (
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
-from pymodaq.extensions.adaptive.loss_function import LossFunctionFactory,LossDim
-from pymodaq.extensions.adaptive.utils import AdaptiveAlgorithm, AdaptiveConfig
+from pymodaq.extensions.adaptive_optim.loss_function import LossFunctionFactory,LossDim
+from pymodaq.extensions.adaptive_optim.utils import AdaptiveAlgorithm, AdaptiveConfig
 
 
 logger = set_logger(get_module_name(__file__))
