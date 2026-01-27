@@ -17,7 +17,7 @@ from collections.abc import Iterable
 import numpy as np
 
 from pymodaq_utils import logger as logger_module
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.warnings import deprecation_msg
 from serializall import SerializableFactory, SerializableBase
 
@@ -40,7 +40,7 @@ config = Config()
 
 class PlotColors:
 
-    def __init__(self, colors=config('plotting', 'plot_colors')[:]):
+    def __init__(self, colors=config('utils', 'plotting', 'plot_colors')[:]):
 
         self._internal_counter = -1
 
@@ -636,7 +636,7 @@ def zeros_aligned(n, align, dtype=np.uint32):
 # ########################
 # #File management
 
-def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path')), base_name='tttr_data'):
+def get_new_file_name(base_path=Path(config('utils', 'data_saving', 'h5file', 'save_path')), base_name='tttr_data'):
     if isinstance(base_path, str):
         base_path = Path(base_path)
 
@@ -671,6 +671,10 @@ def get_module_path(module_name: str) -> Path:
     """
     module = sys.modules[module_name]
     return Path(module.__file__)
+
+def format_dir_path(path: Path) -> str:
+        dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
+        return f'{path}{dir_trailing_symbol if path.is_dir() else ''}'
 
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ import numpy as np
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_utils import utils
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.data import DataDim, DataToExport, Axis, DataWithAxes
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.warnings import deprecation_msg
@@ -227,7 +227,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if array_type is None:
             if array_to_save is None:
-                array_type = config('data_saving', 'data_type', 'dynamic')[0]
+                array_type = config('utils', 'data_saving', 'data_type', 'dynamic')[0]
             else:
                 array_type = array_to_save.dtype
 

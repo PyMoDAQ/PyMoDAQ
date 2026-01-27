@@ -19,7 +19,7 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.h5modules.backends import (
     H5Backend, backends_available, SaveType,
@@ -104,11 +104,11 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'root_url'), 'readonly': False},
+                    'value': config('utils', 'data_saving', 'hsds', 'root_url'), 'readonly': False},
                 {'title': 'User:', 'name': 'user', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'username'), 'readonly': False},
+                    'value': config('utils', 'data_saving', 'hsds', 'username'), 'readonly': False},
                 {'title': 'password:', 'name': 'password', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'pwd'), 'readonly': False},
+                    'value': config('utils', 'data_saving', 'hsds', 'pwd'), 'readonly': False},
             ]},
         ]},
         {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False,
@@ -116,27 +116,27 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
             'value': False},
         {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-            'value': config('data_saving', 'h5file', 'save_path'), 'filetype': False,
+            'value': config('utils', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
          'readonly': True, },
         {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan',
          'readonly': True},
         {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '',
          'readonly': True},
         {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-            'value': config('data_saving', 'h5file', 'save_path'), 'readonly': True,
+            'value': config('utils', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
          'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
          'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-         'limits': config('data_saving', 'data_type', 'dynamic'),
-         'value': config('data_saving', 'data_type', 'dynamic')[0]},
+         'limits': config('utils', 'data_saving', 'data_type', 'dynamic'),
+         'value': config('utils', 'data_saving', 'data_type', 'dynamic')[0]},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
          'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list',
              'value': 'zlib', 'limits': ['zlib', 'gzip']},
             {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
-                'value': config('data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
+                'value': config('utils', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
         ]},
     ]
 

@@ -18,7 +18,7 @@ from pymodaq_gui.managers.action_manager import QAction
 
 from pymodaq_utils.utils import plot_colors
 from pymodaq_utils.logger import get_module_name, set_logger
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_gui.utils import select_file
 from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, RectROI, DataDim
@@ -99,7 +99,7 @@ class ROIScalableGroup(GroupParameter):
             children.extend([{'title': 'Type', 'name': 'roi_type', 'type': 'list', 'value': descriptor,
                               'limits': ROI2D_TYPES, 'readonly': False,}])
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
-                             'value': config.get(('plotting', 'process_roi'), True),})
+                             'value': config.get(('utils', 'plotting', 'process_roi'), True),})
             children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data2D))
             children.extend(ROIScalableGroup.makeMathParam(DataDim.Data2D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
@@ -123,7 +123,7 @@ class ROIScalableGroup(GroupParameter):
     def make_ROIParam1D(descriptor: str, index):
             children = []
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
-                             'value': config.get(('plotting', 'process_roi'), True),})
+                             'value': config.get(('utils', 'plotting', 'process_roi'), True),})
             children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data1D))
             children.extend(ROIScalableGroup.makeMathParam(DataDim.Data1D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))

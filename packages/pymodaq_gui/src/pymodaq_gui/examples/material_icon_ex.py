@@ -2,7 +2,7 @@ from qtpy import QtGui, QtWidgets
 from pymodaq_gui.resources.material_icons import MaterialIcon
 from pymodaq_gui.utils.styling import resource_path_exists
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 config = Config()
 
@@ -30,9 +30,9 @@ class WidgetWithMaterialIcons(CustomApp):
         # Create a QIcon object
         self.search_icon = MaterialIcon(
             'search',
-            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-            fill=config('style', 'icons', 'fill')[0],
-            size=config('style', 'icons', 'size')[0])
+            style=MaterialIcon.Style(config('utils', 'style', 'icons', 'style')[0]),
+            fill=config('utils', 'style', 'icons', 'fill')[0],
+            size=config('utils', 'style', 'icons', 'size')[0])
 
         # Set a color for a state, for example when a button is checked
         self.search_icon.set_color(QtGui.QColor('green'), state=QtGui.QIcon.State.On)
@@ -45,14 +45,14 @@ class WidgetWithMaterialIcons(CustomApp):
         # Set a different icon for a state, for example when a button is checked
         self.toggle_icon_off = MaterialIcon(
             'toggle_off',
-            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-            fill=config('style', 'icons', 'fill')[0],
-            size=config('style', 'icons', 'size')[0])
+            style=MaterialIcon.Style(config('utils', 'style', 'icons', 'style')[0]),
+            fill=config('utils', 'style', 'icons', 'fill')[0],
+            size=config('utils', 'style', 'icons', 'size')[0])
         self.toggle_icon_on = MaterialIcon(
             'toggle_on',
-            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-            fill=config('style', 'icons', 'fill')[0],
-            size=config('style', 'icons', 'size')[0])
+            style=MaterialIcon.Style(config('utils', 'style', 'icons', 'style')[0]),
+            fill=config('utils', 'style', 'icons', 'fill')[0],
+            size=config('utils', 'style', 'icons', 'size')[0])
         self.toggle_icon_off.set_icon(self.toggle_icon_on, state=QtGui.QIcon.State.On)
 
         self.toggle_button = QtWidgets.QPushButton('Toggle')

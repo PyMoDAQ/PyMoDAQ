@@ -7,10 +7,9 @@ from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING
+from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
 from typing import Iterable as IterableType
-
-
+import warnings
 from pymodaq_utils.singleton import Singleton
 from fasteners import ReaderWriterLock
 
@@ -58,11 +57,7 @@ def deep_update(mapping: Dict[KeyType, Any], *updating_mappings: Dict[KeyType, A
 
 def replace_file_extension(filename: str, ext: str):
     """Replace the extension of a file by the specified one, without the dot"""
-    file_name = Path(filename).stem  # remove eventual extensions
-    if ext[0] == '.':
-        ext = ext[1:]
-    file_name += '.' + ext
-    return file_name
+    return str(Path(filename).with_suffix('.' + ext.lstrip('.')))
 
 
 def getitem_recursive(dic, *args, ndepth=0, create_if_missing=False):
@@ -150,7 +145,7 @@ def get_set_local_dir(user=False) -> Path:
 
 
 def get_config_file(config_file_name: str, user=False) -> Path:
-    return get_set_local_dir(user).joinpath(replace_file_extension(config_file_name, 'toml'))
+    return get_set_config_dir('config',user=user).joinpath(replace_file_extension(config_file_name, 'toml'))
 
 
 def get_set_config_dir(config_name='config', user=False):
@@ -232,7 +227,7 @@ def copy_template_config(config_file_name: str = 'config', source_path: Union[Pa
     Path: the path of the copied file
     """
     if dest_path is None:
-        dest_path = get_set_local_dir()
+        dest_path = get_set_config_dir('config')
 
     file_name = Path(config_file_name).stem  # remove eventual extensions
     file_name += '.toml'
@@ -286,10 +281,18 @@ class BaseConfig(metaclass=Singleton):
         The Path of the template from which the config is constructed
 
     """
-    config_template_path: Path = abstractproperty()
-    config_name: str = abstractproperty()
+    config_template_path: Path = NotImplemented
+    config_name: str = NotImplemented
+    _registered : bool = False
 
     def __init__(self):
+        if not self._registered:
+            warnings.warn('Calling a constructor on Config classes is deprecated.\n'
+                                     'You should use GlobalConfig @register decorator instead.\n'
+                                     'Your config entries will then be stored inside GlobalConfig\n'
+                                     'object, prefixed with `config_name`\n'
+                                     f" (i.e. config['an_entry'] -> config['{self.config_name}', 'an_entry'])"
+                          , DeprecationWarning)
         self._lock = ReaderWriterLock()
         self._config = {}
         self._modified_config = {}
@@ -297,7 +300,6 @@ class BaseConfig(metaclass=Singleton):
         atexit.register(self.save)
 
     def __del__(self):
-        print("bye bye")
         self.save()
 
     def __repr__(self):
@@ -412,10 +414,99 @@ class BaseConfig(metaclass=Singleton):
             ret = list(getitem_recursive(self._config, *path).keys())
         return ret
 
+class GlobalConfig(metaclass=Singleton):
+    config_name = 'global'
+
+    def __init__(self):
+        self._configs = {}
+
+    @classmethod
+    def register(cls) -> Callable:
+        """ To be used as a decorator
+
+        Register in the config registry a new config class using its name
+        """
+        def inner_wrapper(wrapped_class: Type[BaseConfig]) -> Callable:
+            #TODO: Check for config file compatibility here.
+            if wrapped_class.config_template_path is NotImplemented or \
+                    wrapped_class.config_name is NotImplemented:
+                raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
+                                          f'`config_template_path` ({wrapped_class.config_template_path}) or for '
+                                          f'`config_name` ({wrapped_class.config_name})')
+            config = cls()
+            name = wrapped_class.config_name
+            if name in config._configs:
+                raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
+
+            wrapped_class._registered = True
+            config.add_config(name, wrapped_class())
+            return wrapped_class
+
+        return inner_wrapper
+
+    def add_config(self, name : str, config : BaseConfig):
+        self._configs[name] = config
+
+    @property
+    def config_path(self):
+        """Get the user config path"""
+        return get_set_config_dir(user=True)
+
+    @property
+    def system_config_path(self):
+        """Get the system_wide config path"""
+        return get_set_config_dir(user=False)
+
+    def __str__(self):
+        return ('Managing configurations for:\n'
+            + '\n'.join(map(
+                lambda kv: f'\t{kv[0]}: {kv[1]}',
+                self._configs.items()
+            ))
+        )
+    def __contains__(self, item):
+        return item in self._configs
+
+    def get(self, key: Union[str, Iterable[str]], default=None):
+        try:
+            ret = self[key]
+        except KeyError:
+            ret = default
+        return ret
+
+    def __call__(self, *args):
+        return self[args]
+
+    def __getitem__(self, key):
+        config = self._configs
+        if key == ():
+            return self.to_dict()
+
+        if isinstance(key, tuple):
+            config = config[key[0]]
+            key =  key[1:]
+        return config[key]
+
+    def __setitem__(self, key, value):
+        config = self._configs
+        if isinstance(key, tuple):
+            config = config[key[0]]
+            key = key[1:]
+        config[key] = value
+
+    def to_dict(self):
+        return {name : config.to_dict() for name, config in self._configs.items()}
+
+    def save(self):
+        for config in self._configs.values():
+            config.save()
+
+@GlobalConfig.register()
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
     config_template_path = Path(__file__).parent.joinpath('resources/config_template.toml')
-    config_name = 'config_pymodaq_utils'
+    config_name = 'utils'
+
 
     def dict_to_add_to_user(self):
         """To subclass"""

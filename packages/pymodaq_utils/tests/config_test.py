@@ -9,14 +9,14 @@ from pymodaq_utils.config import _delete_config_files
 
 
 class Config(config_mod.BaseConfig):
-    config_name = 'custom_config_tested'
+    config_name = 'custom'
     config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
 
 
 class CustomConfig(config_mod.BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = None
-    config_name = f"custom_settings"
+    config_name = f"settings"
 
 
 TOML_DICT = dict(
@@ -37,7 +37,7 @@ def create_toml(path: Path):
 
 
 def test_replace_extension():
-    test_name = 'config_test'
+    test_name = 'test'
 
     assert config_mod.replace_file_extension(test_name+'.tiff', '.toml') == f'{test_name}.toml'
     assert config_mod.replace_file_extension(test_name+'.tiff', 'toml') == f'{test_name}.toml'
@@ -45,8 +45,8 @@ def test_replace_extension():
 
 
 @pytest.mark.parametrize('user', [False, True])
-def test_get_set_local_dir(user):
-    local_path = config_mod.get_set_local_dir(user=user)
+def test_get_set_config_dir(user):
+    local_path = config_mod.get_set_config_dir(user=user)
     assert isinstance(local_path, Path)
     assert local_path.is_dir()
 
@@ -65,24 +65,24 @@ class TestCopy:
 
         test_name = 'config'
         dest_file = config_mod.copy_template_config()
-        dest_path = config_mod.get_set_local_dir()
+        dest_path = config_mod.get_set_config_dir()
 
         assert dest_path.joinpath(f'{test_name}.toml') == dest_file
 
 
     def test_copy_source(self, tmp_path):
         suffix = '.ini'
-        test_name = 'config_test'
+        test_name = 'test'
         template_path = tmp_path.joinpath('template.toml')
         create_toml(template_path)
 
         dest_file = config_mod.copy_template_config(test_name + suffix, source_path=template_path)
-        dest_path = config_mod.get_set_local_dir()
+        dest_path = config_mod.get_set_config_dir()
         assert dest_path.joinpath(f'{test_name}.toml') == dest_file
         assert toml.load(dest_file) == TOML_DICT
 
     def test_copy_dest(self, tmp_path):
-        test_name = 'config_test'
+        test_name = 'test'
         template_path = tmp_path.joinpath('template.toml')
         create_toml(template_path)
         dest_name = 'dest'
@@ -95,13 +95,13 @@ class TestCopy:
 
 
 def test_load_system_config(tmp_path):
-    test_name = 'config_test'
+    test_name = 'test'
     template_path = tmp_path.joinpath('template.toml')
     TOML_DICT['other'] = '123'
     create_toml(template_path)
 
-    system_file = config_mod.get_set_local_dir().joinpath(test_name + '.toml')
-    user_file = config_mod.get_set_local_dir(True).joinpath(test_name + '.toml')
+    system_file = config_mod.get_set_config_dir().joinpath(test_name + '.toml')
+    user_file = config_mod.get_set_config_dir(user=True).joinpath(test_name + '.toml')
     system_file.unlink(missing_ok=True)
     user_file.unlink(missing_ok=True)
 
@@ -110,14 +110,13 @@ def test_load_system_config(tmp_path):
     assert config_dict == TOML_DICT
     assert config_dict['other'] == '123'
 
-    user_path = config_mod.get_set_local_dir(user=True).joinpath(
+    user_path = config_mod.get_set_config_dir(user=True).joinpath(
         config_mod.replace_file_extension(test_name, 'toml'))
-    user_dict = dict(other='456')
+    user_dict = {'other' : '456'}
     config_mod.create_toml_from_dict(user_dict, user_path)
     assert toml.load(user_path) == user_dict
 
     config_dict = config_mod.load_system_config_and_update_from_user(test_name)
-    print(config_dict)
     assert config_dict['other'] == '456'
 
     # modifying nested dicts
@@ -138,7 +137,7 @@ def test_check_config():
 class TestConfig:
 
     def test_init(self):
-        assert config_mod.Config.config_name == 'config_pymodaq_utils'
+        assert config_mod.Config.config_name == 'utils'
         assert config_mod.Config.config_template_path.name == 'config_template.toml'
 
     def test_call(self):
@@ -221,12 +220,12 @@ def test_nested_update_from_user(tmp_path):
     """ make sure the user defined entry within a nested config is loaded but that the other entries are also loaded
      from the system wide config file"""
 
-    test_name = 'config_test'
+    test_name = 'test'
     template_path = tmp_path.joinpath('template.toml')
     create_toml(template_path)  # creates a system wide config using TOML_DICT
 
-    system_file = config_mod.get_set_local_dir().joinpath(test_name + '.toml')
-    user_file = config_mod.get_set_local_dir(True).joinpath(test_name + '.toml')
+    system_file = config_mod.get_set_config_dir().joinpath(test_name + '.toml')
+    user_file = config_mod.get_set_config_dir(user=True).joinpath(test_name + '.toml')
     dest_file = config_mod.copy_template_config(test_name, source_path=template_path)
 
     user_dict = dict(
