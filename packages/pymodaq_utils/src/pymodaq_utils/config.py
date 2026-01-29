@@ -1,15 +1,19 @@
 import atexit
+import threading
 from abc import abstractproperty
 from collections.abc import Iterable
 
 import copy
+import functools
+from functools import cached_property
 from os import environ
 import sys
 import datetime
 from pathlib import Path
 from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
 from typing import Iterable as IterableType
-import warnings
+
+from pymodaq_utils import warnings
 from pymodaq_utils.singleton import Singleton
 from fasteners import ReaderWriterLock
 
@@ -19,13 +23,13 @@ if TYPE_CHECKING:
     from pymodaq_gui.parameter import Parameter
 
 
-try:
-    USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
-except:
-    USER = 'unknown_user'
+USER = environ.get('USERNAME' if sys.platform == 'win32' else 'USER', 'unknown_user')
 
-CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
-    Path('/Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
+CONFIG_BASE_PATH = (
+    Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else
+    Path('/Library/Application Support') if sys.platform == 'darwin' else
+    Path('/etc')
+)
 
 
 KeyType = TypeVar('KeyType')
@@ -122,6 +126,7 @@ def get_set_path(a_base_path: Path, dir_name: str) -> Path:
     return path_to_get
 
 
+@functools.cache
 def get_set_local_dir(user=False) -> Path:
     """Defines, creates and returns a local folder where configuration files will be saved
 
@@ -267,8 +272,20 @@ class ConfigError(Exception):
     pass
 
 
+class ConfigSingleton(Singleton):
+    _registering: bool = False
+    def __call__(cls, *args, **kwargs):
+        if not cls._registering:
+            warnings.deprecation_msg(
+                "Calling a constructor on Config classes is deprecated.\n"
+                "You should use @GlobalConfig.register() decorator instead.\n"
+                f"Your config entries will then be stored inside GlobalConfig "
+                f"object, prefixed with `config_name` "
+                f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])"
+            )
+        return Singleton.__call__(cls, *args, **kwargs)
 
-class BaseConfig(metaclass=Singleton):
+class BaseConfig(metaclass=ConfigSingleton):
     """Base class to manage configuration files
 
     Should be subclassed with proper class attributes for each configuration file you need with pymodaq
@@ -283,16 +300,11 @@ class BaseConfig(metaclass=Singleton):
     """
     config_template_path: Path = NotImplemented
     config_name: str = NotImplemented
-    _registered : bool = False
+
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
 
     def __init__(self):
-        if not self._registered:
-            warnings.warn('Calling a constructor on Config classes is deprecated.\n'
-                                     'You should use GlobalConfig @register decorator instead.\n'
-                                     'Your config entries will then be stored inside GlobalConfig\n'
-                                     'object, prefixed with `config_name`\n'
-                                     f" (i.e. config['an_entry'] -> config['{self.config_name}', 'an_entry'])"
-                          , DeprecationWarning)
         self._lock = ReaderWriterLock()
         self._config = {}
         self._modified_config = {}
@@ -360,21 +372,22 @@ class BaseConfig(metaclass=Singleton):
         """To subclass"""
         return dict([])
 
-    @property
+    @cached_property
     def config_path(self):
         """Get the user config path"""
         return get_config_file(self.config_name, user=True)
 
-    @property
+    @cached_property
     def system_config_path(self):
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
 
     def load(self):
+        """Load a configuration file from both system-wide and user file
+        check also if missing entries in the configuration file compared to the template"""
+
         # write lock because it MODIFIES config
         with self._lock.write_lock():
-            """Load a configuration file from both system-wide and user file
-            check also if missing entries in the configuration file compared to the template"""
             toml_system_path = get_config_file(self.config_name, user=False)
             toml_user_path = get_config_file(self.config_name, user=True)
             if toml_system_path.is_file():
@@ -401,12 +414,11 @@ class BaseConfig(metaclass=Singleton):
     def save(self):
         """Save the current Config object into the user toml file and reload it """
         with self._lock.write_lock():
-
             self.config_path.write_text(toml.dumps(self._modified_config))
             #  self._config = self.load_config(self.config_name, self.config_template_path)
 
     def get_children(self, *path: IterableType[str]):
-        """ Get the list of config entries at a given path within the configulation toml file
+        """ Get the list of config entries at a given path within the configuration toml file
 
         new in 4.3.0
         """
@@ -415,7 +427,8 @@ class BaseConfig(metaclass=Singleton):
         return ret
 
 class GlobalConfig(metaclass=Singleton):
-    config_name = 'global'
+    config_name: str = 'global'
+    _register_lock: threading.Lock = threading.Lock()
 
     def __init__(self):
         self._configs = {}
@@ -435,11 +448,14 @@ class GlobalConfig(metaclass=Singleton):
                                           f'`config_name` ({wrapped_class.config_name})')
             config = cls()
             name = wrapped_class.config_name
-            if name in config._configs:
-                raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
 
-            wrapped_class._registered = True
-            config.add_config(name, wrapped_class())
+            with cls._register_lock:
+                if name in config._configs:
+                    raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
+
+                wrapped_class._registering = True
+                config.add_config(name, wrapped_class())
+                wrapped_class._registering = False
             return wrapped_class
 
         return inner_wrapper
@@ -447,12 +463,12 @@ class GlobalConfig(metaclass=Singleton):
     def add_config(self, name : str, config : BaseConfig):
         self._configs[name] = config
 
-    @property
+    @cached_property
     def config_path(self):
         """Get the user config path"""
         return get_set_config_dir(user=True)
 
-    @property
+    @cached_property
     def system_config_path(self):
         """Get the system_wide config path"""
         return get_set_config_dir(user=False)
@@ -560,8 +576,6 @@ class Config(BaseConfig):
                 return entry
 
         return super().__call__(*args)
-
-
 
 
 def _delete_config_files(config : BaseConfig):
