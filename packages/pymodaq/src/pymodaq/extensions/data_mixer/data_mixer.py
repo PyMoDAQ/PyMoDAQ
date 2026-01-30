@@ -13,8 +13,7 @@ from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_data.data import DataToExport, DataWithAxes
 
 from pymodaq.utils.config import Config as PyMoConfig
-from pymodaq.extensions.utils import CustomExt
-
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.utils.widgets.qled import QLED
@@ -71,6 +70,8 @@ class DataMixer(CustomExt):
         """Mandatory method to be subclassed to setup the docks layout
 
         """
+        self.create_dashboard_toolbar()
+
         self.docks['settings'] = gutils.Dock('Settings')
         self.dockarea.addDock(self.docks['settings'])
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
@@ -116,7 +117,6 @@ class DataMixer(CustomExt):
         """Method where to create actions to be subclassed. Mandatory
 
         """
-        self.add_action('quit', 'Quit', 'close2', "Quit program")
         combo_model = QtWidgets.QComboBox()
         combo_model.addItems([model['name'] for  model in self.models])
         self.add_widget('models', combo_model, tip='List of available models')
@@ -129,7 +129,6 @@ class DataMixer(CustomExt):
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods"""
-        self.connect_action('quit', self.quit_fun)
         self.connect_action('models', self.update_model_settings_from_action, signal_name='currentTextChanged')
         self.connect_action('ini_model', self.ini_model)
         self.modules_manager.det_done_signal.connect(self.process_data)
@@ -243,18 +242,22 @@ class DataMixer(CustomExt):
                 self.model_class.update_settings(param)
 
     def quit_fun(self):
-        self.mainwindow.close()
         self.dashboard.remove_modules(['DataMixer'])
-
+        super().quit_fun()
 
 def main():
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('DataMixer')
+    app = mkQApp('Data Mixer')
 
-    preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, DataMixer)
+    win_ext.show()
 
     sys.exit(app.exec())
 

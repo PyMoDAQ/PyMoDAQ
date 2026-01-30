@@ -20,7 +20,7 @@ from pymodaq_data.data import (DataCalculated, DataRaw, Axis)
 from pymodaq.extensions.optimizers_base.utils import (
     GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
     OptimizerConfig)
-from pymodaq.extensions.adaptive.loss_function.loss_factory import LossDim, LossFunctionBase, LossFunctionFactory
+from pymodaq.extensions.adaptive_optim.loss_function.loss_factory import LossDim, LossFunctionBase, LossFunctionFactory
 
 logger = set_logger(get_module_name(__file__))
 

@@ -9,8 +9,8 @@ from pymodaq.extensions.optimizers_base.optimizer import (
 from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
-from pymodaq.extensions.adaptive.loss_function import LossFunctionFactory,LossDim
-from pymodaq.extensions.adaptive.utils import AdaptiveAlgorithm, AdaptiveConfig
+from pymodaq.extensions.adaptive_optim.loss_function import LossFunctionFactory,LossDim
+from pymodaq.extensions.adaptive_optim.utils import AdaptiveAlgorithm, AdaptiveConfig
 
 
 logger = set_logger(get_module_name(__file__))
@@ -164,14 +164,19 @@ class AdaptiveOptimisation(GenericOptimization):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Adaptive Optimiser')
-    preset_file_name = config('presets', f'default_preset_for_scan')
+    app = mkQApp('Adaptive Optimizer')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'AdaptiveScan')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, AdaptiveOptimisation)
+    win_ext.show()
 
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()

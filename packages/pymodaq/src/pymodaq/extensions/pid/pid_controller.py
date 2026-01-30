@@ -29,7 +29,7 @@ from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController
 from pymodaq.extensions.pid.utils import PIDModelGeneric
 
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -438,10 +438,6 @@ class DAQ_PID(CustomExt):
                 
     def connect_things(self):
         logger.debug("connecting actions and other")
-        self.connect_action(
-            "quit",
-            self.quit_fun,
-        )
         self.connect_action("ini_model", self.ini_model)
         self.connect_action("create_setp_actuators", self.create_setp_actuators)
         self.connect_action("ini_pid", self.ini_PID)
@@ -451,7 +447,7 @@ class DAQ_PID(CustomExt):
 
     def setup_actions(self):
         logger.debug("setting actions")
-        self.add_action("quit", "Quit", "close2", "Quit program")
+
         self.add_widget("model_label", QtWidgets.QLabel, "Init Model:")
         self.add_action(
             "ini_model",
@@ -497,6 +493,8 @@ class DAQ_PID(CustomExt):
         logger.debug("actions set")
 
     def setup_docks(self):
+        self.create_dashboard_toolbar()
+
         logger.debug("settings the extension docks")
         self.dock_pid = Dock("PID controller", self.dock_area)
         self.dock_area.addDock(self.dock_pid)
@@ -761,8 +759,8 @@ class DAQ_PID(CustomExt):
                 QThread.msleep(1000)
                 QtWidgets.QApplication.processEvents()
 
-            self.dock_area.parent().close()            
             self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
+            super().quit_fun()
 
         except Exception as e:
             print(e)

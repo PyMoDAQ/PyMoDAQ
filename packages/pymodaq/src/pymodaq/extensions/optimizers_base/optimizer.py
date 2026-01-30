@@ -36,7 +36,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils import config as config_mod
@@ -334,11 +334,6 @@ class GenericOptimization(CustomExt):
         if len(MODELS) == 1:
             self.get_action(OptimizerAction.INI_MODEL).trigger()
 
-
-    @property
-    def title(self):
-        return f'{self.__class__.__name__}'
-
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
         self._base_name: str = 'Optimizer'  # base name used for naming the hdf5 file
@@ -404,6 +399,8 @@ class GenericOptimization(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
+        self.create_dashboard_toolbar()
+
         self.docks['saving'] = gutils.Dock('Saving')
         self.docks['saving'].addWidget(self.h5saver.settings_tree)
         self.dockarea.addDock(self.docks['saving'])
@@ -549,7 +546,6 @@ class GenericOptimization(CustomExt):
 
     def setup_actions(self):
         logger.debug('setting actions')
-        self.add_action(OptimizerAction.QUIT, 'Quit', 'close2', "Quit program")
         combo_model = QtWidgets.QComboBox()
         combo_model.addItems([model['name'] for  model in MODELS])
         self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
@@ -573,7 +569,6 @@ class GenericOptimization(CustomExt):
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action(OptimizerAction.QUIT, self.quit)
         self.connect_action('models', self.update_model_settings_from_action,
                             signal_name='currentTextChanged')
 
@@ -629,9 +624,11 @@ class GenericOptimization(CustomExt):
         self.modules_manager.connect_actuators(False)
 
 
-    def quit(self):
-        self.dockarea.parent().close()
+    def quit_fun(self):
         self.clean_h5_temp()
+
+        self.close_file()
+        super().quit_fun()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()
