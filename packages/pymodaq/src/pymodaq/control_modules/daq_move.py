@@ -24,7 +24,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
 from pymodaq.utils.gui_utils import get_splash_sc
-from pymodaq_utils import config as config_mod
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig as Config
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq.utils.data import DataToExport, DataActuator
@@ -53,17 +53,14 @@ from pymodaq import Q_, Unit
 
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.utils.config import Config as ControlModulesConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 
-local_path = config_mod.get_set_local_dir()
-sys.path.append(str(local_path))
+sys.path.append(str(get_set_local_dir()))
 logger = set_logger(get_module_name(__file__))
 
-config_utils = config_mod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 HardwareController = TypeVar("HardwareController")
 
@@ -126,7 +123,7 @@ class DAQ_Move(ParameterControlModule):
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
         ):
-            ui_identifier = config("actuator", "ui")[0]
+            ui_identifier = config("pymodaq", "actuator", "ui")[0]
         self.settings.child("main_settings", "ui_type").setValue(ui_identifier)
         self.settings.child("main_settings", "ui_type").setOpts(readonly=True)
 
@@ -751,12 +748,12 @@ class DAQ_Move(ParameterControlModule):
     @units.setter
     def units(self, unit: str):
         self.settings.child("move_settings", "units").setValue(unit)
-        if self.ui is not None and config("actuator", "display_units"):
+        if self.ui is not None and config("pymodaq", "actuator", "display_units"):
             unit = self.get_unit_to_display(unit)
             self.ui.set_unit_as_suffix(unit)
             self.ui.set_unit_prefix(
-                config("actuator", "siprefix")
-                and (unit != "" or config("actuator", "siprefix_even_without_units"))
+                config("pymodaq", "actuator", "siprefix")
+                and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units"))
             )
 
     @property
@@ -812,9 +809,9 @@ class DAQ_Move(ParameterControlModule):
         elif "°C" in unit:
             return "°C"
         else:
-            for key in config("actuator", "allowed_units"):
+            for key in config("pymodaq", "actuator", "allowed_units"):
                 if key in unit:
-                    return config("actuator", "allowed_units", key)
+                    return config("pymodaq", "actuator", "allowed_units", key)
             return str(Q_(1, unit).to_base_units().units)
 
     def update_settings(self):

@@ -19,7 +19,7 @@ from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils.utils import find_dict_in_list_from_key_val, get_entrypoints
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
-from pymodaq_utils.config import BaseConfig
+from pymodaq_utils.config import BaseConfig, CacheConfig
 
 from pymodaq_gui.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq_gui.parameter import Parameter
@@ -405,7 +405,7 @@ def get_optimizer_models(model_name=None):
         return find_dict_in_list_from_key_val(models_import, 'name', model_name)
 
 
-class OptimizerConfig(BaseConfig):
+class OptimizerConfig(CacheConfig):
     """Main class to deal with configuration values for this plugin
 
     To b subclassed for real implementation if needed, see Optimizer class attribute config_saver

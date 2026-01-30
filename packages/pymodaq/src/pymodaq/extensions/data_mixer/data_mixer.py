@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Optional
 
 from pymodaq_gui import utils as gutils
-from pymodaq_utils.config import Config, ConfigError
+from pymodaq_utils.config import ConfigError, GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_dict_in_list_from_key_val
 from pymodaq_data.data import DataToExport, DataWithAxes
 
-from pymodaq.utils.config import Config as PyMoConfig
 from pymodaq.extensions.utils import CustomExt
 
 
@@ -26,8 +25,7 @@ from pymodaq.extensions.data_mixer.utils import DataMixerConfig, find_key_in_nes
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = Config()
-config_pymodaq = PyMoConfig()
+config = Config()
 
 EXTENSION_NAME = 'Data Mixer'  # the name that will be displayed in the extension list in the
 # dashboard
@@ -253,7 +251,7 @@ def main():
 
     app = mkQApp('DataMixer')
 
-    preset_file_name = config_pymodaq('presets', 'default_preset_for_datamixer')
+    preset_file_name = config_pymodaq('pymodaq', 'presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
 
     sys.exit(app.exec())

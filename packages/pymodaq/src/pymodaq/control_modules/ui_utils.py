@@ -7,10 +7,8 @@ import qt_themes
 from pymodaq_gui.utils import CustomApp
 
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.config import Config as ConfigUtils
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
-config_utils = ConfigUtils()
 config = Config()
 
 
@@ -34,7 +32,7 @@ class ControlModuleUI(CustomApp):
         super().__init__(parent)
         self.config = config
 
-    def display_status(self, txt, wait_time=config_utils('general', 'message_status_persistence')):
+    def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
         if self.statusbar is not None:
             self.statusbar.showMessage(txt, wait_time)
 

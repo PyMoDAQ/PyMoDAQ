@@ -5,7 +5,6 @@ import pkgutil
 import platform
 from pathlib import Path
 
-from pymodaq_utils.config import Config
 from pymodaq_utils.utils import get_entrypoints, ThreadCommand, getLineInfo, find_keys_from_val, is_64bits, timer  # for backcompat
 from pymodaq_utils.logger import set_logger, get_module_name  # for backcompat
 
@@ -22,7 +21,6 @@ else:
 
 logger = set_logger(get_module_name(__file__))
 
-config = Config()
 
 
 def copy_preset():                          # pragma: no cover

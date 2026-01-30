@@ -11,7 +11,7 @@ from easydict import EasyDict as edict
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 
@@ -24,9 +24,12 @@ from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
-from pymodaq.utils.config import Config as ControlModulesConfig
-
 from pymodaq.control_modules.thread_commands import ThreadStatus
+
+
+
+config = Config()
+logger = set_logger(get_module_name(__file__))
 
 
 class ControleModuleType(StrEnum):
@@ -78,9 +81,9 @@ def create_remote_connection_params() -> list[dict]:
             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
              VALID_FOR_CONFIGURATION: False, 'readonly': True},
             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-             'value': config_utils('network', 'tcp-server', 'ip')},
+             'value': config('utils', 'network', 'tcp-server', 'ip')},
             {'title': 'Port:', 'name': 'port', 'type': 'int',
-             'value': config_utils('network', 'tcp-server', 'port')},
+             'value': config('utils', 'network', 'tcp-server', 'port')},
         ]},
         {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True,
          'expanded': False, 'children': [
@@ -90,16 +93,13 @@ def create_remote_connection_params() -> list[dict]:
              VALID_FOR_CONFIGURATION: False, 'readonly': True},
             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
             {'title': 'Host:', 'name': 'host', 'type': 'str',
-             'value': config_utils('network', "leco-server", "host"), "default": "localhost"},
+             'value': config('utils', 'network', "leco-server", "host"), "default": "localhost"},
             {'title': 'Port:', 'name': 'port', 'type': 'int',
-             'value': config_utils('network', 'leco-server', 'port')},
+             'value': config('utils', 'network', 'leco-server', 'port')},
         ]},
     ]
 
 
-config_utils = Config()
-config = ControlModulesConfig()
-logger = set_logger(get_module_name(__file__))
 
 
 class ControlModule(QObject):
@@ -155,7 +155,7 @@ class ControlModule(QObject):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config('utils', 'general', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():

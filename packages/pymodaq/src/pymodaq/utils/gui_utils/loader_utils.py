@@ -12,9 +12,7 @@ from pymodaq.extensions.utils import CustomExt
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
-from pymodaq.utils.config import Config as ControlModulesConfig
 
-config = ControlModulesConfig()
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move

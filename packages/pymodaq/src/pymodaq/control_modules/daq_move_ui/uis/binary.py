@@ -17,19 +17,19 @@ from pymodaq_utils.config import Config
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_move_ui.uis.simple import DAQ_Move_UI_Simple
-from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq_utils.config import GlobalConfig as Config
 from enum import Enum
 
-config = ControlModulesConfig()
+config = Config()
 
 
 class BinaryValue(Enum):
-    VALUE_ONE = config('actuator', 'binary', 'value_1')
-    VALUE_TWO = config('actuator', 'binary', 'value_2')
+    VALUE_ONE = config('pymodaq', 'actuator', 'binary', 'value_1')
+    VALUE_TWO = config('pymodaq', 'actuator', 'binary', 'value_2')
 
 
 @ActuatorUIFactory.register('Binary')
-class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
+class gitDAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
     """ UI for Actuators where only two values are encoded: 0 or 1 for instance
 
     Some other numerical values can be set in the config: 'actuator', 'binary', 'value_1'

@@ -28,7 +28,7 @@ from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
@@ -45,7 +45,8 @@ from pymodaq.utils.managers.overshoot_manager import OvershootManager
 
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
-from pymodaq.utils import config as config_mod_pymodaq
+from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
+                                  get_set_roi_path, get_set_remote_path)
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
@@ -54,29 +55,18 @@ from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 from pymodaq_gui.utils.splash import get_splash_sc
 from pymodaq import extensions as extmod
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.utils.managers import Configurator
 
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 
 get_instrument_plugins()
 extensions = extmod.get_extensions()
 
 
-local_path = configmod.get_set_local_dir()
-now = datetime.datetime.now()
-preset_path = config_mod_pymodaq.get_set_preset_path()
-configurator_path = config_mod_pymodaq.get_set_configurator_path()
-log_path = configmod.get_set_log_path()
-layout_path = config_mod_pymodaq.get_set_layout_path()
-overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
-roi_path = config_mod_pymodaq.get_set_roi_path()
-remote_path = config_mod_pymodaq.get_set_remote_path()
 
 
 class ExtensionsEnum(StrEnum):
@@ -160,8 +150,8 @@ class DashBoard(CustomApp):
 
     params = [
         {"title": "Log level", "name": "log_level", "type": "list",
-         "value": config_utils("general", "debug_level")[0],
-         "limits": config_utils("general", "debug_level"),},
+         "value": config("utils", "general", "debug_level")[0],
+         "limits": config("utils", "general", "debug_level"),},
         {"title": "Loaded presets", "name": "loaded_files", "type": "group",
          "children": [
              {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
@@ -186,7 +176,7 @@ class DashBoard(CustomApp):
 
         logger.info("Initializing Dashboard")
         self.extra_params = []
-        self.preset_path = preset_path
+        self.preset_path = get_set_preset_path()
         self.wait_time = 1000
         self.scan_module = None
         self.log_module = None
@@ -494,8 +484,8 @@ class DashBoard(CustomApp):
         dock_console = Dock("QtConsole")
         self.dockarea.addDock(dock_console, "bottom")
         qtconsole = extmod.QtConsole(
-            style_sheet=config_utils("style", "syntax_highlighting"),
-            syntax_style=config_utils("style", "syntax_highlighting"),
+            style_sheet=config("utils", "style", "syntax_highlighting"),
+            syntax_style=config("utils", "style", "syntax_highlighting"),
             custom_banner=extmod.console.BANNER,
         )
         dock_console.addWidget(qtconsole)
@@ -562,9 +552,7 @@ class DashBoard(CustomApp):
                         "Modify an existing experimental setup overshoot configuration file",
                         auto_toolbar=False,)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
+        for file in get_set_overshoot_path().iterdir():
             if file.suffix == ".xml":
                 self.add_action(
                     self.get_action_from_file(file, ManagerEnums.overshoot),
@@ -576,9 +564,7 @@ class DashBoard(CustomApp):
         self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
         self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 self.add_action(
                     self.get_action_from_file(file, ManagerEnums.roi),
@@ -590,9 +576,7 @@ class DashBoard(CustomApp):
                         icon_checked='visibility_off', auto_toolbar=False)
         self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False)
         self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False)
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 self.add_action(
                     self.get_action_from_file(file, ManagerEnums.remote),
@@ -629,42 +613,33 @@ class DashBoard(CustomApp):
         self.connect_action("modify_overshoot", self.modify_overshoot)
         self.connect_action("activate_overshoot", self.activate_overshoot)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
+        for file in get_set_overshoot_path().iterdir():
             if file.suffix == ".xml":
                 self.connect_action(
                     self.get_action_from_file(file, ManagerEnums.overshoot),
                     self.create_menu_slot_over(
-                        config_mod_pymodaq.get_set_overshoot_path().joinpath(file)
+                        get_set_overshoot_path().joinpath(file)
                     ),
                 )
 
         self.connect_action("save_roi", self.create_roi_file)
         self.connect_action("modify_roi", self.modify_roi)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 self.connect_action(
                     self.get_action_from_file(file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(
-                        config_mod_pymodaq.get_set_roi_path().joinpath(file)
-                    ),
+                    self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
                 )
         self.connect_action('show_remote', self.show_remote)
         self.connect_action("new_remote", self.create_remote)
         self.connect_action("modify_remote", self.modify_remote)
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 self.connect_action(
                     self.get_action_from_file(file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(
-                        config_mod_pymodaq.get_set_remote_path().joinpath(file)
-                    ),
+                    self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
                 )
 
         self.connect_action(ExtensionsEnum.SCAN, lambda: self.load_scan_module())
@@ -733,9 +708,7 @@ class DashBoard(CustomApp):
         self.roi_menu.addSeparator()
         load_roi_menu = self.roi_menu.addMenu("Load roi configs")
 
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 load_roi_menu.addAction(
                     self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
@@ -754,14 +727,10 @@ class DashBoard(CustomApp):
         self.remote_menu.addSeparator()
         load_remote_menu = self.remote_menu.addMenu("Load remote config.")
 
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 load_remote_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.remote)
-                    )
+                    self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
                 )
 
     def create_remote(self):
@@ -776,9 +745,7 @@ class DashBoard(CustomApp):
                 self.setup_menu(self.menubar)
                 self.connect_action(
                     self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(
-                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
-                    ),
+                    self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
                 )
 
         except Exception as e:
@@ -787,7 +754,7 @@ class DashBoard(CustomApp):
     def modify_remote(self):
         try:
             path = select_file(
-                start_path=config_mod_pymodaq.get_set_remote_path(),
+                start_path=get_set_remote_path(),
                 save=False,
                 ext="xml",
             )
@@ -815,14 +782,10 @@ class DashBoard(CustomApp):
         self.overshoot_menu.addSeparator()
         load_overshoot_menu = self.overshoot_menu.addMenu("Load Overshoots")
 
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
+        for file in get_set_overshoot_path().iterdir():
             if file.suffix == ".xml":
                 load_overshoot_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.overshoot)
-                    )
+                    self.get_action(self.get_action_from_file(file, ManagerEnums.overshoot))
                 )
 
     def create_menu_slot_ext(self, ext):
@@ -849,9 +812,7 @@ class DashBoard(CustomApp):
                 self.setup_menu(self.menubar)
                 self.connect_action(
                     self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(
-                        config_mod_pymodaq.get_set_roi_path().joinpath(self.preset_file.name)
-                    ),
+                    self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
                 )
 
 
@@ -872,7 +833,7 @@ class DashBoard(CustomApp):
                 self.connect_action(
                     self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
                     self.create_menu_slot_over(
-                        config_mod_pymodaq.get_set_overshoot_path().joinpath(self.preset_file.name)
+                        get_set_overshoot_path().joinpath(self.preset_file.name)
                     ),
                 )
         except Exception as e:
@@ -887,7 +848,7 @@ class DashBoard(CustomApp):
     def modify_overshoot(self):
         try:
             path = select_file(
-                start_path=config_mod_pymodaq.get_set_overshoot_path(),
+                start_path=get_set_overshoot_path(),
                 save=False,
                 ext="xml",
             )
@@ -902,7 +863,7 @@ class DashBoard(CustomApp):
     def modify_roi(self):
         try:
             path = select_file(
-                start_path=config_mod_pymodaq.get_set_roi_path(), save=False, ext="xml"
+                start_path=get_set_roi_path(), save=False, ext="xml"
             )
             if path != "":
                 self.roi_saver.set_file_roi(path)
@@ -1043,12 +1004,12 @@ class DashBoard(CustomApp):
         if ui_identifier is not None:
             pass
         elif plug_settings is None:
-            ui_identifier = config("actuator", "ui")
+            ui_identifier = config("pymodaq", "actuator", "ui")
         else:
             try:
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
-                ui_identifier = config("actuator", "ui")
+                ui_identifier = config("pymodaq", "actuator", "ui")
 
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact

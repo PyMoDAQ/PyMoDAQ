@@ -1,4 +1,3 @@
-from pymodaq_utils import config as config_mod, utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
@@ -14,7 +13,6 @@ from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
 
 
 EXTENSION_NAME = 'BayesianOptimization'
@@ -117,7 +115,7 @@ class BayesianOptimization(GenericOptimization):
             bounds=self.format_bounds(),
             actuators=self.modules_manager.selected_actuators_name)
 
-    def thread_status(self, status: utils.ThreadCommand):
+    def thread_status(self, status: ThreadCommand):
         super().thread_status(status)
         if status.command == OptimizerThreadStatus.TRADE_OFF:
             self.settings.child('main_settings', 'prediction', 'options', 'tradeoff_actual').setValue(status.attribute)

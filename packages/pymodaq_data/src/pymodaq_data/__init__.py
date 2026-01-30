@@ -19,7 +19,7 @@ try:
     logger.info('Initializing the pint unit register')
     logger.info('************************')
     ureg = UnitRegistry()
-    ureg.default_format = '~'
+    ureg.formatter.default_format = '~'
     Q_ = ureg.Quantity
     Unit = ureg.Unit
     logger.info('')

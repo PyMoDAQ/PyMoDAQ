@@ -10,7 +10,6 @@ import numpy as np
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 
 from pymodaq_data.data import Axis, DataDistribution
 
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
 
 
 class Scan1DBase(ScannerBase):

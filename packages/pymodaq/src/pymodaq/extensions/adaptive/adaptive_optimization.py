@@ -1,6 +1,6 @@
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
-from pymodaq_utils import config as config_mod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
@@ -14,7 +14,7 @@ from pymodaq.extensions.adaptive.utils import AdaptiveAlgorithm, AdaptiveConfig
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
+config = Config()
 
 
 EXTENSION_NAME = 'AdaptiveScan'
@@ -167,7 +167,7 @@ def main():
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('Adaptive Optimiser')
-    preset_file_name = config('presets', f'default_preset_for_scan')
+    preset_file_name = config('utils', 'presets', f'default_preset_for_scan')
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'AdaptiveScan')
 

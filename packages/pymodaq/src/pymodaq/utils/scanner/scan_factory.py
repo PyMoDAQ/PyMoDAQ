@@ -13,11 +13,11 @@ from typing import Callable, Union, List, Tuple, TYPE_CHECKING
 import numpy as np
 from qtpy import QtWidgets
 
+from pymodaq_utils.abstract import abstract_attribute
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.factory import ObjectFactory
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
@@ -40,8 +40,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 class ScanParameterManager(ParameterManager):
     settings_name = 'scanner_settings'
@@ -137,7 +136,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         return [act.title for act in self.actuators]
 
     def check_steps(self):
-        steps_limit = config('scan', 'steps_limit')
+        steps_limit = config('pymodaq', 'scan', 'steps_limit')
         n_steps = self.evaluate_steps()
         return n_steps <= steps_limit
 

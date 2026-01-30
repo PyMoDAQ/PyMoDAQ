@@ -8,11 +8,11 @@ Created the 25/10/2022
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import Config
 from pymodaq_utils.utils import get_version
 
 
-config = configmod.Config()
+config = Config()
 
 BANNER = f'PyMoDAQ v{get_version("pymodaq")}\n' \
          'Main objects available for interaction:\n'\
@@ -61,8 +61,8 @@ def main():
 
     app = mkQApp('Console')
 
-    prog = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
-                     syntax_style=config('style', 'syntax_highlighting'),
+    prog = QtConsole(style_sheet=config('utils', 'style', 'syntax_highlighting'),
+                     syntax_style=config('utils', 'style', 'syntax_highlighting'),
                      custom_banner=BANNER,
                      )
     prog.show()

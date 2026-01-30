@@ -26,9 +26,8 @@ from pymodaq_gui.utils import DockArea
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.utils.leco.utils import start_coordinator
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.splash import get_splash_sc
@@ -36,8 +35,7 @@ from pymodaq_gui.utils.splash import get_splash_sc
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config =  Config()
 
 
 class MenuNames(StrEnum):
@@ -167,10 +165,8 @@ class SharedUI(CustomApp):
 
         self.toolbar.addSeparator()
 
-        self.add_action("config_utils", "Utils Config.", "account_tree",
-                        tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "account_tree",
-                        tip="Show Control Modules and Extensions configuration file",)
+        self.add_action("config", "Config.", "account_tree",
+                        tip="Show all configuration files",)
         self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
         self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
                         auto_toolbar=False,)
@@ -185,7 +181,6 @@ class SharedUI(CustomApp):
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
-        self.connect_action("config_utils", lambda: self.show_config(config_utils))
         self.connect_action("config", lambda: self.show_config(config))
         self.connect_action("quit", self.quit_fun)
         self.connect_action("restart", self.restart_fun)
@@ -205,7 +200,6 @@ class SharedUI(CustomApp):
         # %% create Settings menu
         settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
         settings_menu.addAction(self.get_action("log"))
-        settings_menu.addAction(self.get_action("config_utils"))
         settings_menu.addAction(self.get_action("config"))
         settings_menu.addSeparator()
         settings_menu.addAction(self.get_action("quit"))

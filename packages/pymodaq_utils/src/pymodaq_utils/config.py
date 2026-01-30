@@ -273,9 +273,9 @@ class ConfigError(Exception):
 
 
 class ConfigSingleton(Singleton):
-    _registering: bool = False
+    _allow_direct_call: bool = False
     def __call__(cls, *args, **kwargs):
-        if not cls._registering:
+        if not cls._allow_direct_call:
             warnings.deprecation_msg(
                 "Calling a constructor on Config classes is deprecated.\n"
                 "You should use @GlobalConfig.register() decorator instead.\n"
@@ -284,6 +284,8 @@ class ConfigSingleton(Singleton):
                 f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])"
             )
         return Singleton.__call__(cls, *args, **kwargs)
+
+
 
 class BaseConfig(metaclass=ConfigSingleton):
     """Base class to manage configuration files
@@ -301,8 +303,6 @@ class BaseConfig(metaclass=ConfigSingleton):
     config_template_path: Path = NotImplemented
     config_name: str = NotImplemented
 
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(cls)
 
     def __init__(self):
         self._lock = ReaderWriterLock()
@@ -426,6 +426,9 @@ class BaseConfig(metaclass=ConfigSingleton):
             ret = list(getitem_recursive(self._config, *path).keys())
         return ret
 
+class CacheConfig(BaseConfig):
+    _allow_direct_call: bool = True
+
 class GlobalConfig(metaclass=Singleton):
     config_name: str = 'global'
     _register_lock: threading.Lock = threading.Lock()
@@ -453,9 +456,9 @@ class GlobalConfig(metaclass=Singleton):
                 if name in config._configs:
                     raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
 
-                wrapped_class._registering = True
+                wrapped_class._allow_direct_call = True
                 config.add_config(name, wrapped_class())
-                wrapped_class._registering = False
+                wrapped_class._allow_direct_call = False
             return wrapped_class
 
         return inner_wrapper

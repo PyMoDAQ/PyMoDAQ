@@ -12,7 +12,6 @@ from qtpy.QtCore import Signal
 
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
 
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils import DockArea, Dock
@@ -25,7 +24,6 @@ from pymodaq_gui.plotting.data_viewers import ViewersEnum
 if TYPE_CHECKING:
     from pymodaq_gui.parameter import ParameterTree
 
-config = Config()
 logger = set_logger(get_module_name(__file__))
 
 

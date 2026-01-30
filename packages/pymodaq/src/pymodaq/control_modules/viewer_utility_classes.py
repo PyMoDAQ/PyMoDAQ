@@ -11,7 +11,7 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
-from pymodaq_utils.config import Config, get_set_local_dir
+from pymodaq_utils.config import get_set_local_dir
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
@@ -29,12 +29,11 @@ local_path = get_set_local_dir()
 # look for eventual calibration files
 calibs = ['None']
 if local_path.joinpath('camera_calibrations').is_dir():
-    for ind_file, file in enumerate(local_path.joinpath('camera_calibrations').iterdir()):
+    for file in local_path.joinpath('camera_calibrations').iterdir():
         if 'xml' in file.suffix:
             calibs.append(file.stem)
 
 
-config = Config()
 
 comon_parameters = [create_controller_param()]  #
 

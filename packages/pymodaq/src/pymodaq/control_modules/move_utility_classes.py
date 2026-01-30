@@ -12,7 +12,7 @@ from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.serialize.mysocket import Socket
@@ -29,7 +29,6 @@ from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
@@ -40,8 +39,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 HardwareController = TypeVar("HardwareController")
 
@@ -76,7 +74,7 @@ class DataActuatorType(BaseEnum):
     DataActuator = 1
 
 
-def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
+def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                      epsilons=None):
     if epsilons is not None:
         epsilon = epsilons
@@ -90,7 +88,7 @@ def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
              'value': epsilon,
              'tip': 'Differential Value at which the controller considers it reached the target position'},
             {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
-             'value': config('actuator', 'polling_timeout_s')},
+             'value': config('pymodaq', 'actuator', 'polling_timeout_s')},
             {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
                 {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
                 {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
@@ -131,7 +129,7 @@ class MoveCommand:
 def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
                          master=True,
-                         epsilon: float = config('actuator', 'epsilon_default')):
+                         epsilon: float = config('pymodaq', 'actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -176,13 +174,13 @@ params = [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True,},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
-         'value': config('actuator', 'ui') if config('actuator', 'ui') in ActuatorUIFactory.keys() else
+         'value': config('pymodaq', 'actuator', 'ui') if config('pymodaq', 'actuator', 'ui') in ActuatorUIFactory.keys() else
          ActuatorUIFactory.keys()[0],
          'limits': ActuatorUIFactory.keys()},
         {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
          VALID_FOR_CONFIGURATION: False,},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
-         'value': config('actuator', 'refresh_timeout_ms')},
+         'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
         {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
          'value': False},
     ] + create_remote_connection_params()},
@@ -339,8 +337,8 @@ class DAQ_Move_base(QObject):
                                           units=self.axis_unit)
 
         self.poll_timer = QTimer(self)
-        self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('actuator', 'polling_timeout_s')
+        self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
+        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()

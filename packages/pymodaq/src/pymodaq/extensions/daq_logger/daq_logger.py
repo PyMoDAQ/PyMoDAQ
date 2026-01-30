@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Union
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import ioxml
 
 from qtpy import QtWidgets
@@ -508,7 +508,7 @@ def main():
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp('DAQLogger')
-    preset_file_name = config('presets', f'default_preset_for_logger')
+    preset_file_name = config('utils', 'presets', f'default_preset_for_logger')
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQLogger')
 
