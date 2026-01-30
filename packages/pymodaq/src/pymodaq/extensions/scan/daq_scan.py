@@ -310,8 +310,8 @@ class DAQScan(CustomExt):
                     logger.exception(str(e))
 
             self.close_file()
-            self.mainwindow.close()
-            self.show_dashboard(True) #make sure to show it if it was hidden
+
+            super().quit_fun()
 
         except Exception as e:
             logger.exception(str(e))

@@ -242,11 +242,8 @@ class DataMixer(CustomExt):
                 self.model_class.update_settings(param)
 
     def quit_fun(self):
-        self.mainwindow.close()
         self.dashboard.remove_modules(['DataMixer'])
-        self.show_dashboard(True)  # make sure to show it if it was hidden
-
-
+        super().quit_fun()
 
 def main():
     import sys

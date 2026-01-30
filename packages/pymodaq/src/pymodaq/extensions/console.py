@@ -100,11 +100,6 @@ class Console(CustomExt):
     def connect_things(self):
         pass
 
-    def quit_fun(self):
-        self.show_dashboard(True)
-        super().quit_fun()
-
-
 
 def main():
     import sys

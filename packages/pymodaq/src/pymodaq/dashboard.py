@@ -403,7 +403,7 @@ class DashBoard(CustomApp):
 
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None
-                       ):
+                       ) -> 'CustomExt':
         shared_ui, ext_module = create_extension(
             self, extensions[ext_enum].klass,
             window=win,
@@ -413,6 +413,7 @@ class DashBoard(CustomApp):
         ext_module.status_signal.connect(self.add_status)
         shared_ui.show()
         ext_module.set_action_checked('show_dashboard', True)
+        return ext_module
 
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
@@ -775,7 +776,7 @@ class DashBoard(CustomApp):
 
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
-                    self.extensions[ext].quit_fun()
+                    self.extensions[ext].quit_fun(quit_dashboard = False)
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)

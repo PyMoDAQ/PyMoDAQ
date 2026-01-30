@@ -625,9 +625,8 @@ class GenericOptimization(CustomExt):
 
 
     def quit_fun(self):
-        self.dockarea.parent().close()
         self.clean_h5_temp()
-        self.show_dashboard(True)  # make sure to show it if it was hidden
+        super().quit_fun()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()

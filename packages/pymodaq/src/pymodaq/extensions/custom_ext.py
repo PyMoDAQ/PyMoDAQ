@@ -37,6 +37,14 @@ class CustomExt(CustomApp):
         else:
             self._modules_manager = None
 
+    def quit_fun(self):
+        """Method to be subclassed in order to define a custom quit function
+        """
+        super().quit_fun()
+        if self.dashboard is not None:
+            self.show_dashboard(True) #make sure to show it if it was hidden
+
+
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
         """ Get the main toolbar widget to be eventually added in the main window toolbararea
 
