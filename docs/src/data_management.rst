@@ -10,7 +10,11 @@ transparently by all of PyMoDAQ's modules.
 .. note::
   Moreover, a proper data management system and tools to manipulate and plot data
   could be very useful for offline data analysis. We invite the reader to look at the
-  :ref:`data_analysis_tutorial` tutorial for use case examples.
+  :ref:`data_analysis_tutorial` tutorial for use case examples and the notebook and
+  `video <https://youtu.be/Smlt0VvrNyA>`__ from Aurore Finco, researcher in Montpellier
+  who's using it for her everyday data analysis:
+
+
 
 
 

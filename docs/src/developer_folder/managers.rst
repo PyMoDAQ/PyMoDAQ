@@ -157,6 +157,16 @@ The ActionManager supports multiple ways to specify icons:
     # Qt theme icon (Qt >= 6.7)
     self.add_action('theme_icon', 'Open', 'folder-open')
 
+From PyMoDAQ 5.2, Material Icons from Google (https://fonts.google.com/icons) are available easily. You can browse
+on the website for an icon and should add its name in the `pymodaq_gui/resources/icons.toml` file. Then, as a developer
+(using the ./install_packages.py shortcut for installing) execute:
+``python -m pymodaq_gui.resources.check_icons_dev``.
+
+This will fetch and copy the full list of icons and add them as binary resource files. A specified icon name from this
+list will then be used in priority. To display MaterialIcons already included in PyMoDAQ, run:
+
+``python -m pymodaq_gui.examples.material_icon_ex``
+
 Managing Action States
 ~~~~~~~~~~~~~~~~~~~~~~
 
