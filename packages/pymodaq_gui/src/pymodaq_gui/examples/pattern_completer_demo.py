@@ -1,4 +1,4 @@
-config"""
+"""
 PatternCompleter Examples - PyQt6 Auto-completion System
 
 This demonstrates various use cases for the PatternCompleter mixin class.
