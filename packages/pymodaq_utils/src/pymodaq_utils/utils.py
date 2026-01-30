@@ -674,7 +674,7 @@ def get_module_path(module_name: str) -> Path:
 
 def format_dir_path(path: Path) -> str:
         dir_trailing_symbol = '\\' if sys.platform == 'win32' else '/'
-        return f'{path}{dir_trailing_symbol if path.is_dir() else ''}'
+        return f'{path}{dir_trailing_symbol if path.is_dir() else ""}'
 
 
 if __name__ == '__main__':

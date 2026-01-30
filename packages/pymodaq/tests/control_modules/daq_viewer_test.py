@@ -23,7 +23,7 @@ from pymodaq_data.h5modules.browsing import H5BrowserUtil
 config = Config()
 config_utils = ConfigUtils()
 config_viewer = daqvm.config
-config_viewer['viewer', 'viewer_in_thread'] = True
+config_viewer['utils', 'viewer', 'viewer_in_thread'] = True
 
 
 @fixture
