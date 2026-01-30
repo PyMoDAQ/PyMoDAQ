@@ -415,6 +415,8 @@ class DashBoard(CustomApp):
         ext_module.set_action_checked('show_dashboard', True)
         return ext_module
 
+        return ext_module
+
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
                         "Load the Saved Docks layout corresponding to the current preset",
@@ -1505,13 +1507,13 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_preset(preset_name: str,
                                extension_name: str = None,
-                               configuration_name: str = None)  -> (
-        tuple)[DashBoard, 'CustomExt', QtWidgets.QMainWindow]:
+                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given preset then load an extension
 
     Parameters
     ----------
+    configuration_name: str
     preset_name: str
         The filename (without extension) defining the preset to be loaded in the Dashboard
     extension_name: str

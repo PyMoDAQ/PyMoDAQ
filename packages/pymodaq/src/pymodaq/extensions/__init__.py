@@ -41,7 +41,8 @@ internal_extensions = {
     ExtensionEnum.BAYESIAN.value: BayesianOptimization,
     ExtensionEnum.ADAPTIVE.value: AdaptiveOptimisation,
     ExtensionEnum.DATAMIXER.value: DataMixer,
-    ExtensionEnum.CONSOLE.value: Console,}
+    ExtensionEnum.CONSOLE.value: Console,
+}
 
 
 
