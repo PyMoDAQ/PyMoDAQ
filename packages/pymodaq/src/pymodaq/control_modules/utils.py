@@ -358,14 +358,13 @@ class ControlModule(QObject):
         if self.ui is not None:
             self.ui.do_init(do_init)
 
-    def show_config(self, config: Config) -> Config:
+    def show_config(self, config: Config):
         """ Display in a tree the current configuration"""
         if config is not None:
             from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
             config_tree = TreeFromToml(config)
             config_tree.show_dialog()
 
-            return ControlModulesConfig()
 
     def update_status(self, txt: str, log=True):
         """Display a message in the ui status bar and eventually log the message

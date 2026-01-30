@@ -46,7 +46,7 @@ from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
 from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
-                                  get_set_roi_path, get_set_remote_path)
+                                  get_set_roi_path, get_set_remote_path, get_set_layout_path)
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
@@ -980,7 +980,7 @@ class DashBoard(CustomApp):
 
     def save_layout_state_auto(self):
         if self.preset_file is not None:
-            path = layout_path.joinpath(self.preset_file.stem + ".dock")
+            path = get_set_layout_path().joinpath(self.preset_file.stem + ".dock")
             self.save_layout_state(path)
 
     def add_move(

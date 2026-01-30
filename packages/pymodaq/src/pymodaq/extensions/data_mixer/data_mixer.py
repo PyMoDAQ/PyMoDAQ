@@ -251,7 +251,7 @@ def main():
 
     app = mkQApp('DataMixer')
 
-    preset_file_name = config_pymodaq('pymodaq', 'presets', 'default_preset_for_datamixer')
+    preset_file_name = config('pymodaq', 'presets', 'default_preset_for_datamixer')
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, EXTENSION_NAME)
 
     sys.exit(app.exec())

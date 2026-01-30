@@ -29,7 +29,7 @@ class BinaryValue(Enum):
 
 
 @ActuatorUIFactory.register('Binary')
-class gitDAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
+class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
     """ UI for Actuators where only two values are encoded: 0 or 1 for instance
 
     Some other numerical values can be set in the config: 'actuator', 'binary', 'value_1'

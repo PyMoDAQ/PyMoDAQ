@@ -75,7 +75,7 @@ class BayesianOptimization(GenericOptimization):
         uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
         uparams['kind'] = kind
         self.command_runner.emit(
-            utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
+            ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
 
 
     def validate_config(self) -> bool:
