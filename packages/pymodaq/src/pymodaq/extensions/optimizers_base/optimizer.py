@@ -626,6 +626,8 @@ class GenericOptimization(CustomExt):
 
     def quit_fun(self):
         self.clean_h5_temp()
+
+        self.close_file()
         super().quit_fun()
 
     def set_model(self):

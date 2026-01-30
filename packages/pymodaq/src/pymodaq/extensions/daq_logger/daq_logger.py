@@ -145,7 +145,6 @@ class DAQ_Logger(CustomExt):
         """
         """
         file_menu = menubar.addMenu('File')
-        self.affect_to('infos', file_menu)
 
     def value_changed(self, param):
         if param.name() == 'log_type':
