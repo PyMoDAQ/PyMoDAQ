@@ -25,7 +25,7 @@ from pymodaq_gui.utils.widgets import QLED
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -55,7 +55,6 @@ class DAQ_Logger(CustomExt):
     Main class initializing a DAQ_Logger module
     """
     command_DAQ_signal = Signal(list)
-    status_signal = Signal(str)
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
@@ -83,8 +82,6 @@ class DAQ_Logger(CustomExt):
         subclass method from ActionManager
         '''
         logger.debug('setting actions')
-        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-        self.toolbar.addSeparator()
         self.add_action('start', 'Start Logging', 'timer', "Start the logging",
                         checkable=True, toolbar=self.toolbar,
                         icon_color=self.get_theme().green)
@@ -101,15 +98,15 @@ class DAQ_Logger(CustomExt):
                         checkable=False, toolbar=self.toolbar)
         self.add_action('stop_all', 'Stop All', 'stop_all', "Stop all selected detectors and actuators",
                         checkable=False, toolbar=self.toolbar)
-        self.add_action('infos', 'Log infos', 'information2', "Show log file",
-                        checkable=False, toolbar=self.toolbar)
-
         self.set_action_enabled('start', False)
         self.set_action_enabled('stop', False)
 
         logger.debug('actions set')
 
     def setup_docks(self):
+
+        self.create_dashboard_toolbar()
+
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -137,20 +134,17 @@ class DAQ_Logger(CustomExt):
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
-        self._actions['quit'].connect_to(self.quit_fun)
 
-        self._actions['start'].connect_to(self.start_logging)
-        self._actions['stop'].connect_to(self.stop_logging)
-        self._actions['grab_all'].connect_to(self.start_all)
-        self._actions['stop_all'].connect_to(self.stop_all)
+        self.connect_action('start', self.start_logging)
+        self.connect_action('stop', self.stop_logging)
+        self.connect_action('grab_all', self.start_all)
+        self.connect_action('stop_all', self.stop_all)
 
-        self._actions['infos'].connect_to(self.dashboard.show_log)
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
         """
         file_menu = menubar.addMenu('File')
-        self.affect_to('infos', file_menu)
 
     def value_changed(self, param):
         if param.name() == 'log_type':
@@ -186,7 +180,7 @@ class DAQ_Logger(CustomExt):
         except Exception as e:
             logger.exception(str(e))
 
-        self.dockarea.parent().close()
+        super().quit_fun()
 
     def set_continuous_save(self):
         """
@@ -504,15 +498,21 @@ class DAQ_Logging(QObject):
 
 
 def main():
+    import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('DAQLogger')
-    preset_file_name = config('utils', 'presets', f'default_preset_for_logger')
+    app = mkQApp('DAQ Logger')
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, 'DAQLogger')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, DAQ_Logger)
+    win_ext.show()
 
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()

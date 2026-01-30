@@ -17,8 +17,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
-from pymodaq.extensions.utils import CustomExt
-from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -43,7 +42,7 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.managers import PresetManager, Configurator
+
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -74,7 +73,6 @@ class DAQScan(CustomExt):
     """
     settings_name = 'daq_scan_settings'
     command_daq_signal = Signal(utils.ThreadCommand)
-    status_signal = Signal(str)
     live_data_1D_signal = Signal(list)
 
     params = [
@@ -121,11 +119,9 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
+        self.ui: DAQScanUI = DAQScanUI(dockarea)
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
-
-
-        self.ui: DAQScanUI = DAQScanUI(self.dockarea)
 
         self.wait_time = 1000
 
@@ -182,6 +178,12 @@ class DAQScan(CustomExt):
             self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
 
+    def get_main_toolbar(self) -> QtWidgets.QToolBar:
+        """ Get the main toolbar widget to be eventually added in the main window toolbararea
+
+        Default is the default toolbar. To be reimplemented if needed
+        """
+        return self.ui.toolbar
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -217,22 +219,23 @@ class DAQScan(CustomExt):
         pass
 
     def connect_things(self):
-        self.preset_manager.applied_entry.connect(self.update_after_preset_set)
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
     def do_things_after_scanner_changed(self):
         self.ui.set_action_enabled('ini_positions',
                                        self.scanner.actuators == self.modules_manager.actuators)
 
-    def update_after_preset_set(self, preset_name: str):
-        # update modules manager
-        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
-        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+    def do_things_after_preset_set(self, preset_name: str):
+        """ This method is called whenever a preset entry has been set.
 
+        Its main purpose is to update the list of control modules in the manager and
+        some other actions.
+
+        Can be reimplemented to add some more evolved actions
+        """
+
+        super().do_things_after_preset_set(preset_name)
         self.ui.enable_start_stop(True)
-
-        # show/hide dashboard
-        self.show_dashboard()
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
@@ -305,7 +308,8 @@ class DAQScan(CustomExt):
                     logger.exception(str(e))
 
             self.close_file()
-            self.mainwindow.close()
+
+            super().quit_fun()
 
         except Exception as e:
             logger.exception(str(e))
@@ -891,13 +895,6 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = True
         return res
 
-    def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
-
     def start_scan(self):
         """
             Start an acquisition calling the set_scan function.
@@ -1198,19 +1195,17 @@ class DAQScanAcquisition(QObject):
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
-
-
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
     app = mkQApp('DAQScan')
 
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_scan, scan = create_daq_scan(dashboard)
-    win_scan.show()
+    win_ext, scan = create_extension(dashboard, DAQScan)
+    win_ext.show()
 
     sys.exit(app.exec())
-
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ Created the 07/11/2023
 import pytest
 from pathlib import Path
 from qtpy import QtWidgets
-from pymodaq.utils.managers import Configurator
+from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.configurator.subentries import (
     SubEntryHandlerFactory, SubEntryHandlerTypes)
 

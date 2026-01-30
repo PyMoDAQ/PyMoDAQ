@@ -7,7 +7,7 @@ Created the 07/11/2023
 import pytest
 
 from qtpy import QtWidgets
-from pymodaq.utils.managers import PresetManager
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import ioxml

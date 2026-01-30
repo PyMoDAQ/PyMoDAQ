@@ -4,12 +4,20 @@ Created the 25/10/2022
 
 @author: Sebastien Weber
 """
+from typing import TYPE_CHECKING
 
+import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 from pymodaq_utils.config import Config
+from pymodaq.extensions.custom_ext import CustomExt
+
 from pymodaq_utils.utils import get_version
+from pymodaq_gui.utils.dock import DockArea
+
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
 
 
 config = Config()
@@ -55,17 +63,59 @@ class QtConsole(RichJupyterWidget):
         self.kernel_manager.kernel.shell.push(variable_dict)
 
 
+class Console(CustomExt):
+
+    def __init__(self, dockarea: DockArea = None, dashboard: 'DashBoard' = None):
+        """
+
+        Parameters
+        ----------
+        dockarea: DockArea
+            instance of the modified pyqtgraph Dockarea
+        dashboard: DashBoard
+            instance of the pymodaq dashboard
+
+        """
+        self.console = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
+                                 syntax_style=config('style', 'syntax_highlighting'),
+                                 custom_banner=BANNER)
+        super().__init__(dockarea, dashboard)
+
+        self.setup_ui()
+
+    def do_things_after_preset_set(self, preset: str):
+        super().do_things_after_preset_set(preset)
+
+        self.console.push_variables(
+            {'dashboard': self.dashboard,
+             'mods': self.modules_manager,
+             'np': np})
+
+    def setup_docks(self):
+        self.create_dashboard_toolbar()
+        self.mainwindow.setCentralWidget(self.console)
+
+    def setup_actions(self):
+        pass
+
+    def connect_things(self):
+        pass
+
+
 def main():
     import sys
     from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp('Console')
 
-    prog = QtConsole(style_sheet=config('utils', 'style', 'syntax_highlighting'),
-                     syntax_style=config('utils', 'style', 'syntax_highlighting'),
-                     custom_banner=BANNER,
-                     )
-    prog.show()
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, Console)
+    win_ext.show()
+
     sys.exit(app.exec())
 
 

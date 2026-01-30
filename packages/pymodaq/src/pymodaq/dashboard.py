@@ -23,7 +23,7 @@ from qtpy.QtWidgets import (
 import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
-from pymodaq.utils.gui_utils.loader_utils import create_daq_scan
+from pymodaq.utils.gui_utils.loader_utils import create_extension
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -40,7 +40,7 @@ from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
-from pymodaq.utils.managers import PresetManager
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 
 from pymodaq.utils.daq_utils import get_instrument_plugins
@@ -54,9 +54,15 @@ from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 from pymodaq_gui.utils.splash import get_splash_sc
-from pymodaq import extensions as extmod
-from pymodaq.utils.managers import Configurator
 
+from pymodaq.extensions.utils import get_extensions
+from pymodaq.extensions import  ExtensionEnum
+from pymodaq.utils.shared_ui import SharedUI
+
+from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.utils.managers.configurator.configurator import Configurator
+if TYPE_CHECKING:
+    from pymodaq.extensions.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
@@ -64,19 +70,7 @@ config = Config()
 
 
 get_instrument_plugins()
-extensions = extmod.get_extensions()
-
-
-
-
-class ExtensionsEnum(StrEnum):
-    SCAN = 'DAQScan'
-    LOGGER = 'Logger'
-    PID = 'PID'
-    BAYESIAN = 'Bayesian'
-    ADAPTIVE = 'Adaptive'
-    CONSOLE = 'Console'
-    DATAMIXER = 'Data Mixer'
+extensions = get_extensions()
 
 
 class ManagerEnums(BaseEnum):
@@ -176,15 +170,14 @@ class DashBoard(CustomApp):
 
         logger.info("Initializing Dashboard")
         self.extra_params = []
-        self.preset_path = get_set_preset_path()
+
         self.wait_time = 1000
-        self.scan_module = None
         self.log_module = None
         self.pid_module = None
         self.pid_window = None
         self.retriever_module = None
         self.database_module = None
-        self.extensions = dict([])
+        self.extensions: dict[str, CustomApp] = dict([])
         self.extension_windows = []
         self.preset_manager: PresetManager = None  # instanciation in do_things_after_ui_setup
         self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
@@ -400,134 +393,20 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self, win: QtWidgets.QMainWindow=None):
-        shared_ui, self.scan_module = create_daq_scan(self, window=win)
-        self.extensions[ExtensionsEnum.SCAN] = self.scan_module
-        self.scan_module.status_signal.connect(self.add_status)
+    def load_extension(self, ext_enum: ExtensionEnum,
+                       win: QtWidgets.QMainWindow = None
+                       ) -> 'CustomExt':
+        shared_ui, ext_module = create_extension(
+            self, extensions[ext_enum].klass,
+            window=win,
+        )
+        self.extensions[ext_enum] = ext_module
+        ext_module.shared_ui = shared_ui
+        ext_module.status_signal.connect(self.add_status)
         shared_ui.show()
-        self.scan_module.set_action_checked('show_dashboard', True)
-        return self.scan_module
+        ext_module.set_action_checked('show_dashboard', True)
 
-    def load_log_module(self, win=None):
-        win, area = make_window(win=win, title="Logger")
-        self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
-        self.extensions[ExtensionsEnum.LOGGER] = self.log_module
-        self.log_module.status_signal.connect(self.add_status)
-        win.show()
-        return self.log_module
-
-    def load_pid_module(self, win=None):
-        self.pid_window, area = make_window(win=win, title="PID Controller")
-        self.pid_module = extmod.DAQ_PID(dockarea=area, dashboard=self)
-        self.extensions[ExtensionsEnum.PID] = self.pid_module
-        self.pid_window.show()
-        return self.pid_module
-
-    def load_bayesian(self, win=None):
-        self.bayesian_window, area = make_window(win=win, title="Bayesian Optimiser")
-        self.bayesian_module = extmod.BayesianOptimization(dockarea=area, dashboard=self)
-        self.extensions[ExtensionsEnum.BAYESIAN] = self.bayesian_module
-
-        if self.bayesian_module.validate_config():
-            self.bayesian_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="Bayesian Optimisation error",
-                text=f"""
-                <p>Saved Bayesian Optimisation configuration file is not compatible anymore.</p>
-                <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
-            """,
-            )
-            self.bayesian_module.quit()
-        return self.bayesian_module
-
-    def load_adaptive(self, win=None):
-        self.adaptive_window, area = make_window(win=win, title="Adaptive Scan")
-        self.adaptive_module = extmod.AdaptiveOptimisation(dockarea=area, dashboard=self)
-        self.extensions[ExtensionsEnum.ADAPTIVE] = self.adaptive_module
-
-        if self.adaptive_module.validate_config():
-            self.adaptive_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="Adaptive Optimisation error",
-                text=f"""
-                    <p>Saved Adaptive Optimisation configuration file is not compatible anymore.</p>
-                    <p>Please delete the file at <b>{self.adaptive_module.config_path}</b>.</p>
-                """,
-            )
-            self.adaptive_module.quit()
-        return self.adaptive_module
-
-    def load_datamixer(self, win=None):
-        self.datamixer_window, area = make_window(win=win, title="DataMixer")
-        self.datamixer_module = extmod.DataMixer(parent=area, dashboard=self)
-        self.extensions[ExtensionsEnum.DATAMIXER] = self.datamixer_module
-
-        if self.datamixer_module.validate_config():
-            self.datamixer_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="DataMixer error",
-                text=f"""
-                    <p>Saved DataMixer configuration file is not compatible anymore.</p>
-                    <p>Please delete the file at <b>{self.datamixer_module.config_path}</b>.</p>
-                """,
-            )
-            self.datamixer_module.quit_fun()
-        return self.datamixer_module
-
-    def load_console(self):
-        dock_console = Dock("QtConsole")
-        self.dockarea.addDock(dock_console, "bottom")
-        qtconsole = extmod.QtConsole(
-            style_sheet=config("utils", "style", "syntax_highlighting"),
-            syntax_style=config("utils", "style", "syntax_highlighting"),
-            custom_banner=extmod.console.BANNER,
-        )
-        dock_console.addWidget(qtconsole)
-        self.extensions[ExtensionsEnum.CONSOLE] = qtconsole
-
-        qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
-
-        return qtconsole
-
-    def load_extension_from_name(self, name: str) -> dict:
-        return self.load_extensions_module(
-            find_dict_in_list_from_key_val(extensions, "name", name)
-        )
-
-    def load_extensions_module(self, ext: dict):
-        """Init and load an extension from a plugin package
-
-        ext: dict
-            dictionary containing info on the extension plugin package and class to be loaded,
-             it contains four
-            keys:
-
-            * pkg: the name of the plugin package
-            * module: the module name where your extension class is defined
-            * class_name: the name of the class defining the extension
-            * name: a nice name for your extension to be displayed in the menu
-
-        See Also
-        --------
-        pymodaq.extensions.utils.get_extensions
-        """
-
-        self.extension_windows.append(QtWidgets.QMainWindow())
-        area = DockArea()
-        self.extension_windows[-1].setCentralWidget(area)
-        self.extension_windows[-1].resize(1000, 500)
-        self.extension_windows[-1].setWindowTitle(ext["name"])
-        module = import_module(f"{ext['pkg']}.extensions.{ext['module']}")
-        klass = getattr(module, ext["class_name"])
-        self.extensions[ext["class_name"]] = klass(area, dashboard=self)
-        self.extension_windows[-1].show()
-        return self.extensions[ext["class_name"]]
+        return ext_module
 
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
@@ -589,17 +468,9 @@ class DashBoard(CustomApp):
                         checkable=True, enabled=False,)
 
         self.toolbar.addSeparator()
-
-        self.add_action(ExtensionsEnum.SCAN, "Do Scans", "gesture",
-                        tip="Open the DAQ Scan extension to acquire data as a function of "
-                            "one or more parameter",)
-        self.toolbar.addSeparator()
-        self.add_action(ExtensionsEnum.LOGGER, "Log data", "more_time", auto_toolbar=False)
-        self.add_action(ExtensionsEnum.PID, "PID module", auto_toolbar=False)
-        self.add_action(ExtensionsEnum.CONSOLE, "IPython Console", auto_toolbar=False)
-        self.add_action(ExtensionsEnum.BAYESIAN, "Bayesian Optimisation", auto_toolbar=False)
-        self.add_action(ExtensionsEnum.ADAPTIVE, "Adaptive Scan", auto_toolbar=False)
-        self.add_action(ExtensionsEnum.DATAMIXER, "DataMixer", auto_toolbar=False)
+        for ext_name in ExtensionEnum.names():
+            self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
+                            auto_toolbar=False)
 
         self.add_action("configurator", "Configurator", auto_toolbar=False)
 
@@ -641,14 +512,9 @@ class DashBoard(CustomApp):
                     self.get_action_from_file(file, ManagerEnums.remote),
                     self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
                 )
-
-        self.connect_action(ExtensionsEnum.SCAN, lambda: self.load_scan_module())
-        self.connect_action(ExtensionsEnum.LOGGER, lambda: self.load_log_module())
-        self.connect_action(ExtensionsEnum.PID, lambda: self.load_pid_module())
-        self.connect_action(ExtensionsEnum.CONSOLE, lambda: self.load_console())
-        self.connect_action(ExtensionsEnum.BAYESIAN, lambda: self.load_bayesian())
-        self.connect_action(ExtensionsEnum.ADAPTIVE, lambda: self.load_adaptive())
-        self.connect_action(ExtensionsEnum.DATAMIXER, lambda: self.load_datamixer())
+        for ext_name in ExtensionEnum.names():
+            self.connect_action(ExtensionEnum[ext_name],
+                                self.create_extension_slot(ExtensionEnum[ext_name]))
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
@@ -678,20 +544,8 @@ class DashBoard(CustomApp):
 
         # extensions menu
         self.extensions_menu = self.add_menu('extensions', "Extensions")
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.SCAN))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.LOGGER))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.PID))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.CONSOLE))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.BAYESIAN))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.ADAPTIVE))
-        self.extensions_menu.addAction(self.get_action(ExtensionsEnum.DATAMIXER))
-
-        # extensions from plugins
-        extensions_actions = []
-        for ext in extensions:
-            extensions_actions.append(self.extensions_menu.addAction(ext["name"]))
-            extensions_actions[-1].triggered.connect(self.create_menu_slot_ext(ext))
-
+        for ext_name in ExtensionEnum.names():
+            self.extensions_menu.addAction(self.get_action(ExtensionEnum[ext_name]))
 
         status = True
 
@@ -788,9 +642,6 @@ class DashBoard(CustomApp):
                     self.get_action(self.get_action_from_file(file, ManagerEnums.overshoot))
                 )
 
-    def create_menu_slot_ext(self, ext):
-        return lambda: self.load_extensions_module(ext)
-
     def create_menu_slot_roi(self, filename):
         return lambda: self.set_roi_configuration(filename)
 
@@ -799,6 +650,9 @@ class DashBoard(CustomApp):
 
     def create_menu_slot_remote(self, filename):
         return lambda: self.set_remote_configuration(filename)
+
+    def create_extension_slot(self, extenum: ExtensionEnum):
+        return lambda: self.load_extension(extenum)
 
     def create_roi_file(self):
         try:
@@ -886,7 +740,7 @@ class DashBoard(CustomApp):
 
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
-                    self.extensions[ext].quit_fun()
+                    self.extensions[ext].quit_fun(quit_dashboard = False)
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)
@@ -1463,9 +1317,9 @@ class DashBoard(CustomApp):
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
         if out_of_bounds:
             logger.warning(f"Some actuators reached their bounds")
-            if self.scan_module is not None:
+            if self.extensions[ExtensionEnum.SCAN] is not None:
                 logger.warning(f"Stopping the DAQScan for out of bounds")
-                self.scan_module.stop_scan()
+                self.extensions[ExtensionEnum.SCAN].stop_scan()
 
     def stop_moves_from_overshoot(self, overshoot):
         self.overshoot = overshoot
@@ -1479,8 +1333,8 @@ class DashBoard(CustomApp):
         --------
         stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
-        if self.scan_module is not None:
-            self.scan_module.stop_scan()
+        if self.extensions[ExtensionEnum.SCAN] is not None:
+            self.extensions[ExtensionEnum.SCAN].stop_scan()
 
         for mod in self.actuators_modules:
             mod.stop_motion()
@@ -1600,13 +1454,79 @@ class DashBoard(CustomApp):
             pass
 
 
+def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle("PyMoDAQ Dashboard")
+
+    shared_ui = SharedUI(win)
+    dashboard = DashBoard(area)
+    shared_ui.affect_application(dashboard)
+    return shared_ui, dashboard
+
+
+def load_dashboard_with_preset(preset_name: str,
+                               extension_name: str = None,
+                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+
+    """ Load the Dashboard using a given preset then load an extension
+
+    Parameters
+    ----------
+    configuration_name: str
+    preset_name: str
+        The filename (without extension) defining the preset to be loaded in the Dashboard
+    extension_name: str
+        The name of the extension. Either the builtins ones:
+        * 'DAQScan'
+        * 'DAQLogger'
+        * 'DAQ_PID'
+        * 'Bayesian'
+
+        or the ones defined within a plugin
+
+    Returns
+    -------
+
+    """
+    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
+    shared_ui, dashboard = create_load_dashboard()
+
+    preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
+    preset_name = preset_path.stem
+    extension = None
+
+    if preset_name in dashboard.preset_manager.entries:
+        dashboard.preset_manager.entry = preset_name
+        dashboard.preset_manager.execute_entry_base(preset_path)
+        if configuration_name is not None:
+            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.entry = configuration_name
+            dashboard.configurator.execute_entry_base(configuration_path)
+        if extension_name in ExtensionEnum.names():
+            extension = dashboard.load_extension(ExtensionEnum[extension_name])
+        else:
+            extension = None
+
+    else:
+        msgBox = QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{preset_name}\n"
+                       f"Impossible to load the {extension_name} extension")
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ret = msgBox.exec()
+    return dashboard, extension, shared_ui
+
+
+
 def main():
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset, create_load_dashboard
     # Create application and main window
     app = mkQApp('Dashboard')
 
-    extensions_names = ExtensionsEnum.values() + [ext['name'] for ext in extensions]
+    extensions_names = ExtensionEnum.values()
     # Command-line argument parsing
     parser = argparse.ArgumentParser(prog="dashboard",
                                      description="PyMoDAQ dashboard. "
