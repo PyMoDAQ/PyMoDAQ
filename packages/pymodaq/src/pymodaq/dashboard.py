@@ -409,6 +409,7 @@ class DashBoard(CustomApp):
             window=win,
         )
         self.extensions[ext_enum] = ext_module
+        ext_module.shared_ui = shared_ui
         ext_module.status_signal.connect(self.add_status)
         shared_ui.show()
         ext_module.set_action_checked('show_dashboard', True)
