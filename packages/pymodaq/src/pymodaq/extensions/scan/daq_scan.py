@@ -121,11 +121,9 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
+        self.ui: DAQScanUI = DAQScanUI(self.dockarea)
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
-
-
-        self.ui: DAQScanUI = DAQScanUI(self.dockarea)
 
         self.wait_time = 1000
 
