@@ -403,7 +403,7 @@ class DashBoard(CustomApp):
 
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None
-                       ):
+                       ) -> 'CustomExt':
         shared_ui, ext_module = create_extension(
             self, extensions[ext_enum].klass,
             window=win,
@@ -413,6 +413,8 @@ class DashBoard(CustomApp):
         ext_module.status_signal.connect(self.add_status)
         shared_ui.show()
         ext_module.set_action_checked('show_dashboard', True)
+
+        return ext_module
 
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
@@ -1504,13 +1506,13 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_preset(preset_name: str,
                                extension_name: str = None,
-                               configuration_name: str = None)  -> (
-        tuple)[DashBoard, 'CustomExt', QtWidgets.QMainWindow]:
+                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given preset then load an extension
 
     Parameters
     ----------
+    configuration_name: str
     preset_name: str
         The filename (without extension) defining the preset to be loaded in the Dashboard
     extension_name: str
