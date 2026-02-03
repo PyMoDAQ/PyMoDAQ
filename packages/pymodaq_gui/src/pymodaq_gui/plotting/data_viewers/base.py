@@ -8,7 +8,7 @@ from qtpy.QtCore import QObject, Signal, QRectF
 
 from pymodaq_data.data import DataToExport, DataWithAxes, DataDim, DataDistribution
 
-from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
+from pymodaq_gui.plotting.items.roi import RoiInfo
 
 if TYPE_CHECKING:
     from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
