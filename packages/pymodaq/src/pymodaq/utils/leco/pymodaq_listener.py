@@ -320,7 +320,7 @@ class ActorListener(PymodaqListener):
                     value = value[0]  # for backward compatibility with attributes list
                 self.send_rpc_message_to_remote(
                     method=MoveDirectorMethods.SEND_POSITION,
-                    **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
+                    **binary_serialization_to_kwargs(pymodaq_object=value, data_key="data"),
                 )
 
             elif command.command == LECOMoveCommands.MOVE_DONE:
@@ -329,7 +329,7 @@ class ActorListener(PymodaqListener):
                     value = value[0]  # for backward compatibility with attributes list
                 self.send_rpc_message_to_remote(
                     method=MoveDirectorMethods.SET_MOVE_DONE,
-                    **binary_serialization_to_kwargs(value, data_key="position"),
+                    **binary_serialization_to_kwargs(value, data_key="data"),
                 )
 
             elif command.command == LECOMoveCommands.UNITS_CHANGED:
