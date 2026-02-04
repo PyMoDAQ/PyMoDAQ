@@ -18,7 +18,7 @@ from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataRaw,
                                DataDistribution, DataWithAxes)
 
 from pymodaq_gui.managers.roi_manager import ROIManager, DataDim
-from pymodaq_gui.plotting.items.roi import SimpleRectROI
+from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import ImageWidget
@@ -29,8 +29,7 @@ from pymodaq_gui.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
-from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
-
+from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 
 logger = set_logger(get_module_name(__file__))
 
