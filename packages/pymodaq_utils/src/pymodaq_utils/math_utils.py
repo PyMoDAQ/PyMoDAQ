@@ -100,7 +100,10 @@ def greater2n(x):
 
 
 def is_power_of_two(n: int) -> bool:
-    """ get if integer n is a power of 2"""
+    """ get if integer n is a power of 2
+
+    See https://www.geeksforgeeks.org/python/python-program-to-find-whether-a-no-is-power-of-two/
+    """
     return n > 0 and (n & (n - 1)) == 0
 
 
