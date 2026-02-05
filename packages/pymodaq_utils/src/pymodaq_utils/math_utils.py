@@ -99,6 +99,11 @@ def greater2n(x):
         return 1 << (int(x) - 1).bit_length()
 
 
+def is_power_of_two(n: int) -> bool:
+    """ get if integer n is a power of 2"""
+    return n > 0 and (n & (n - 1)) == 0
+
+
 def wrap(input: Union[np.ndarray, float], phase_range=(0, 2*np.pi)):
     return (input - phase_range[0]) % (phase_range[1]-phase_range[0]) + phase_range[0]
 
