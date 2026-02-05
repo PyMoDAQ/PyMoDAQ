@@ -386,20 +386,23 @@ class View2D(ActionManager, QtCore.QObject):
         size: (iterable) setting the size of the ROI
         """
         if isinstance(self.roi_target, pgROI):
-            if size is not None:
-                x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
-                size = list(np.divide(list(size), [x_scaling, y_scaling]))
-                if list(self.roi_target.size()) != size:
-                    self.roi_target.setSize(size, center=(0.5, 0.5))
-
-            if pos is not None:
-                pos = self.unscale_axis(*list(pos))
-                pos = list(pos)
-                if list(self.roi_target.pos()) != pos:
-                    self.roi_target.setPos(pos)
+            self.move_scale_roi(self.roi_target, pos, size)
 
         else:
             self.roi_target.set_crosshair_position(*list(pos))
+
+    def move_scale_roi(self, roi: pgROI, pos=None, size=None):
+        if size is not None:
+            x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
+            size = list(np.divide(list(size), [x_scaling, y_scaling]))
+            if list(roi.size()) != size:
+                roi.setSize(size, center=(0.5, 0.5))
+
+        if pos is not None:
+            pos = self.unscale_axis(*list(pos))
+            pos = list(pos)
+            if list(roi.pos()) != pos:
+                roi.setPos(pos)
 
     def setup_widgets(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -742,7 +745,7 @@ class Viewer2D(ViewerBase):
         self.isdata = dict([])
         self._is_gradient_manually_set = False
 
-        self.view = View2D(parent)
+        self.view : View2D= View2D(parent)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
