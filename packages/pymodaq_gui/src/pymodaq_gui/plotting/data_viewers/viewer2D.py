@@ -505,7 +505,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('histo', self.show_hide_histogram)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('roi', self.roi_clicked)
-        self.connect_action('ROIselect', self.show_ROI_select)
+        self.connect_action('ROIselect', lambda: self.show_ROI_select())
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
         self.connect_action('legend', self.show_legend)
@@ -666,11 +666,14 @@ class View2D(ActionManager, QtCore.QObject):
             self.lineout_viewers['int'].view.remove_data_displayer('crosshair')
         logger.debug(f'Crosshair visible?: {self.crosshair.isVisible()}')
 
-    def show_ROI_select(self):
+    def show_ROI_select(self, pos=None, size=None):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
         rect = self.data_displayer.get_image('red').boundingRect()
-        self.ROIselect.setPos(rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2)
-        self.ROIselect.setSize(rect.size() * 2 / 3)
+        if size is None:
+            size = rect.size() * 2 / 3
+            pos = rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2
+        self.ROIselect.setPos(pos)
+        self.ROIselect.setSize(size)
 
     def set_image_labels(self, labels: List[str]):
         if self.data_displayer.labels != labels:
