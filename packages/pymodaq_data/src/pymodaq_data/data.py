@@ -6,7 +6,7 @@ Created the 28/10/2022
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 import numbers
 from copy import deepcopy
 
@@ -25,7 +25,7 @@ import pint
 from pint.compat import upcast_type_map
 
 from multipledispatch import dispatch
-from torch.fx.experimental.unification.multipledispatch.dispatcher import source
+
 
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.warnings import deprecation_msg
