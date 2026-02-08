@@ -740,7 +740,7 @@ class DashBoard(CustomApp):
 
             for ext in self.extensions:
                 if hasattr(self.extensions[ext], "quit_fun"):
-                    self.extensions[ext].quit_fun(quit_dashboard = False)
+                    self.extensions[ext].quit_fun()
             for mov in self.actuators_modules:
                 try:
                     mov.init_signal.disconnect(self.update_init_tree)
