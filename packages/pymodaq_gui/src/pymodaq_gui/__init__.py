@@ -18,8 +18,8 @@ def set_and_check_qt_backend_or_die(config):
         other_backends = [backend for backend in available_backends if backend != wanted_backend]
         if len(other_backends) > 0:
             backend_found = True
-            backend =  other_backends[0]
-            config['utils', 'qtbackend', 'backend'] = backend
+            backend =  other_backends.pop(0)
+            config['utils', 'qtbackend', 'backend'] = [backend] + other_backends
 
     if backend_found:
         # environment variable is set
