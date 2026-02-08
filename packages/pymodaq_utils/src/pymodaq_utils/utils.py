@@ -1,4 +1,3 @@
-import copy
 import os
 import sys
 import datetime
@@ -11,8 +10,6 @@ from packaging import version as version_mod
 from pathlib import Path
 import traceback
 from typing import Any, cast, List, Optional, Tuple
-from typing import Iterable as IterableType
-from collections.abc import Iterable
 
 import numpy as np
 
@@ -28,65 +25,14 @@ PackageNotFoundError = metadata.PackageNotFoundError  # for use elsewhere
 # for use elsewhere
 if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
     # from version 3.9 the cache decorator is available
-    from functools import cache
+    pass
 else:
-    from functools import lru_cache as cache
+    pass
 
 
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 config = Config()
-
-
-class PlotColors:
-
-    def __init__(self, colors=config('utils', 'plotting', 'plot_colors')[:]):
-
-        self._internal_counter = -1
-
-        self.check_colors(colors)
-        self._plot_colors = [tuple(color) for color in colors]
-
-    def copy(self):
-        return copy.copy(self)
-
-    def remove(self, item):
-        self._plot_colors.remove(item)
-
-    def __getitem__(self, item: int):
-        if not isinstance(item, int):
-            raise TypeError('getter should be an integer')
-        return tuple(self._plot_colors[item % len(self._plot_colors)])
-
-    def __len__(self):
-        return len(self._plot_colors)
-
-    def __iter__(self):
-        self._internal_counter = -1
-        return self
-
-    def __next__(self):
-        if self._internal_counter >= len(self) - 1:
-            raise StopIteration
-        self._internal_counter += 1
-        return self[self._internal_counter]
-
-    def check_colors(self, colors: IterableType):
-        if not isinstance(colors, Iterable):
-            raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
-        for color in colors:
-            self.check_color(color)
-
-    @staticmethod
-    def check_color(color: IterableType):
-        if not isinstance(color, Iterable) and len(color) != 3:
-            raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
-        for col_val in color:
-            if not (isinstance(col_val, int) and 0 <= col_val <= 255):
-                raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
-
-
-plot_colors = PlotColors()
 
 
 def is_64bits():
@@ -636,7 +582,7 @@ def zeros_aligned(n, align, dtype=np.uint32):
 # ########################
 # #File management
 
-def get_new_file_name(base_path=Path(config('utils', 'data_saving', 'h5file', 'save_path')), base_name='tttr_data'):
+def get_new_file_name(base_path: Path, base_name: str = 'tttr_data'):
     if isinstance(base_path, str):
         base_path = Path(base_path)
 

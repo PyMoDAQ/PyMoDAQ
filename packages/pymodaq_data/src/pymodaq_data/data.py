@@ -2101,7 +2101,7 @@ class DataWithAxes(DataBase, SerializableBase):
         else:
             raise ValueError(f'Cannot create a dwa from a None, should be a list of ndarray')
 
-    def plot(self, plotter_backend: str = config('utils', 'plotting', 'backend')[0], *args, viewer=None,
+    def plot(self, plotter_backend: str = config('data', 'plotting', 'backend')[0], *args, viewer=None,
              **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
         return plotter_factory.get(plotter_backend).plot(self, *args, viewer=viewer, **kwargs)
@@ -3036,7 +3036,7 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         return dte, remaining_bytes
 
-    def plot(self, plotter_backend: str = config('utils', 'plotting', 'backend')[0], *args, **kwargs):
+    def plot(self, plotter_backend: str = config('data', 'plotting', 'backend')[0], *args, **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
         return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
 

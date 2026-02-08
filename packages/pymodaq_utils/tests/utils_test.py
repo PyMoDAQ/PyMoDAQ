@@ -9,6 +9,7 @@ import datetime
 
 from serializall import SerializableFactory
 
+import pymodaq_data.plotting.utils
 from pymodaq_utils import utils
 
 
@@ -290,22 +291,22 @@ class TestPlotColor:
 
     def test_iterable(self):
         with pytest.raises(TypeError):
-            pcolor = utils.PlotColors((0, 0, 0))
+            pcolor = pymodaq_data.plotting.utils.PlotColors((0, 0, 0))
 
     def test_non_integer(self):
         with pytest.raises(TypeError):
-            pcolor = utils.PlotColors([(0, 0., 0)])
+            pcolor = pymodaq_data.plotting.utils.PlotColors([(0, 0., 0)])
 
     def test_non_8bits(self):
         with pytest.raises(TypeError):
-            pcolor = utils.PlotColors([(0, 256, 0)])
+            pcolor = pymodaq_data.plotting.utils.PlotColors([(0, 256, 0)])
 
     def test_negative(self):
         with pytest.raises(TypeError):
-            pcolor = utils.PlotColors([(0, -5, 0)])
+            pcolor = pymodaq_data.plotting.utils.PlotColors([(0, -5, 0)])
 
     def test_get_item(self):
-        pcolor = utils.PlotColors()
+        pcolor = pymodaq_data.plotting.utils.PlotColors()
 
         for _ in range(10):
             item = random.randrange(100)
@@ -313,11 +314,11 @@ class TestPlotColor:
 
     def test_len(self):
         N = random.randrange(10) + 1
-        pcolor = utils.PlotColors([(0, 0, 0) for _ in range(N)])
+        pcolor = pymodaq_data.plotting.utils.PlotColors([(0, 0, 0) for _ in range(N)])
         assert len(pcolor) == N
 
     def test_iter(self):
-        pcolor = utils.PlotColors()
+        pcolor = pymodaq_data.plotting.utils.PlotColors()
 
         np.array(pcolor)
         colors = [color for color in pcolor]

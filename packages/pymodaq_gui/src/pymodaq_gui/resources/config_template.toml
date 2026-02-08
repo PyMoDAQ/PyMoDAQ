@@ -1,0 +1,6 @@
+#this is the configuration file of the pymodaq_gui package
+
+
+[qtbackend]
+backend = ["pyqt6",  "pyqt5", "pyside6",]
+

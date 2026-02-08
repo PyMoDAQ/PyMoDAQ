@@ -90,11 +90,11 @@ setLocale()
 logger.info(f"Registering PyMoDAQ qt plotters...")
 
 register_plotter(parent_module_name='pymodaq_gui.plotting.plotter')
-backends_config = config('utils', 'plotting', 'backend')
+backends_config = config('data', 'plotting', 'backend')
 for backend in PlotterFactory.backends():
     if backend not in backends_config:
         backends_config.append(backend)
-config['utils', 'plotting', 'backend'] = backends_config
+config['data', 'plotting', 'backend'] = backends_config
 config.save()
 logger.info(f"Done")
 

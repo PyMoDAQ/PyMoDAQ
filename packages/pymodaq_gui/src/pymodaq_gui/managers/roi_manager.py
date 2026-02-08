@@ -16,7 +16,7 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 from pymodaq_gui.managers.action_manager import QAction
 
-from pymodaq_utils.utils import plot_colors
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.config_saver_loader import get_set_roi_path
@@ -34,7 +34,7 @@ data_processors = DataProcessorFactory()
 roi_path = get_set_roi_path()
 logger = set_logger(get_module_name(__file__))
 config = Config()
-
+plot_colors = PlotColors()
 
 ROI_NAME_PREFIX = 'ROI_'
 ROI2D_TYPES = ROIFactory.get_descriptors_from_dimensionality(DataDim.Data2D)

@@ -170,7 +170,7 @@ class TestConfig:
 
     def test_get_children(self):
         config = GlobalConfig()
-        config = config['utils']
+        config = config['data']
         children = config.get_children('data_saving')
         for child in ['h5file', 'hsds', 'data_type']:
             assert child in children
@@ -283,22 +283,10 @@ def test_required_config_entries():
     assert isinstance(config('general', 'debug_level'), list)
     assert 'check_version' in config('general')
     assert 'message_status_persistence' in config('general')
-    assert 'hdf5_backend' in config('general')
 
-    assert 'data_saving' in config
-    assert 'h5file' in config['data_saving']
-    assert 'save_path' in config('data_saving', 'h5file')
-    assert 'compression_level' in config('data_saving', 'h5file')
-
-    assert 'data_type' in config['data_saving']
-    assert 'dynamic' in config('data_saving', 'data_type')
 
     assert 'user' in config
     assert 'name' in config('user')
-
-    assert 'plotting' in config
-    assert 'backend' in config('plotting')
-    assert 'plot_colors' in config('plotting')
 
     assert 'backup' in config
     assert 'keep_backup' in config('backup')

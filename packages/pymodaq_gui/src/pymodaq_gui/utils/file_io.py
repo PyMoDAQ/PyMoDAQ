@@ -6,7 +6,7 @@ from qtpy import QtWidgets
 config = Config()
 
 
-def select_file_filter(start_path=config('utils', 'data_saving', 'h5file', 'save_path'), save=True, ext=None,
+def select_file_filter(start_path=config('data', 'data_saving', 'h5file', 'save_path'), save=True, ext=None,
                        filter=None, force_save_extension=False):
     """Opens a selection file popup for loading or saving a file
 
@@ -59,7 +59,7 @@ def select_file_filter(start_path=config('utils', 'data_saving', 'h5file', 'save
     return fname, selected_filter
 
 
-def select_file(start_path=config('utils', 'data_saving', 'h5file', 'save_path'), save=True, ext=None,
+def select_file(start_path=config('data', 'data_saving', 'h5file', 'save_path'), save=True, ext=None,
                 filter=None,
                 force_save_extension=False) -> Path:
     """Opens a selection file popup for loading or saving a file
