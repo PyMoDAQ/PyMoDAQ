@@ -18,6 +18,7 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -134,7 +135,7 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = False
 
         self.curvilinear_values = []
-        self.plot_colors = utils.plot_colors
+        self.plot_colors = PlotColors()
 
         self.runner_thread: QThread = None
 
@@ -143,7 +144,7 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config('utils', 'general', 'hdf5_backend'))
+        self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend'))
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -542,7 +543,7 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('utils', 'general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend'))
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)

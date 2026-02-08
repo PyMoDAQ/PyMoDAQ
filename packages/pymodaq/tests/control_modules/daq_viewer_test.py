@@ -14,16 +14,16 @@ from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.control_modules.instruments import DET_TYPES, get_viewer_plugins, DAQTypesEnum
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
-from pymodaq.utils.config import Config
-from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq.utils.config import GlobalConfig
+
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_data.h5modules.browsing import H5BrowserUtil
 
-config = Config()
-config_utils = ConfigUtils()
-config_viewer = daqvm.config
-config_viewer['utils', 'viewer', 'viewer_in_thread'] = True
+config = GlobalConfig()
+
+config_viewer = config['pymodaq', 'viewer']
+config_viewer['viewer_in_thread'] = True
 
 
 @fixture
@@ -45,8 +45,8 @@ def ini_daq_viewer_ui(init_qt):
     qtbot = init_qt
     widget = QtWidgets.QWidget()
     qtbot.addWidget(widget)
-    qt_themes.set_theme(theme=config_utils('style', 'theme')[0],
-                        style=config_utils('style', 'style')[0])
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
     prog = daqvm.DAQ_Viewer(widget, 'test')
     yield prog, qtbot, widget
     prog.quit_fun()
