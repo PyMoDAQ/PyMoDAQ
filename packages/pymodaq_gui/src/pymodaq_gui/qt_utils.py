@@ -58,8 +58,8 @@ def setLocale():
     defines the Locale to use to convert numbers to strings representation using language/country conventions
     Default is English and US
     """
-    language = getattr(QLocale, config('utils', 'style', 'language'))
-    country = getattr(QLocale, config('utils', 'style', 'country'))
+    language = getattr(QLocale, config('gui', 'style', 'language'))
+    country = getattr(QLocale, config('gui', 'style', 'country'))
     QLocale.setDefault(QLocale(language, country))
 
 
@@ -77,8 +77,8 @@ def start_qapplication(name='default_app') -> QtWidgets.QApplication:
 
 def mkQApp(name: str):
     app = mkQApppg(name)
-    qt_themes.set_theme(theme=config('utils', 'style', 'theme')[0],
-                        style=config('utils', 'style', 'style')[0])
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
     return app
 
 
