@@ -6,7 +6,7 @@ Created the 28/10/2022
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 import numbers
 from copy import deepcopy
 
@@ -25,6 +25,7 @@ import pint
 from pint.compat import upcast_type_map
 
 from multipledispatch import dispatch
+
 
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.warnings import deprecation_msg
@@ -897,6 +898,17 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
         return DataToExport(name, data=[self])
+
+    def split_as_dte(self, name: str = 'mydte') -> DataToExport:
+        """ Convenience method to split each ndarray into a DataWithAxes object """
+        return DataToExport(name, data=[type(self)(self.labels[ind],
+                                                   source=self.source,
+                                                   dim = self.dim,
+                                                   data=[array],
+                                                   labels = [self.labels[ind]],
+                                                   axes = deepcopy(self.axes),
+                                                   units = self.units,
+                                                   ) for ind, array in enumerate(self)])
 
     def add_extra_attribute(self, **kwargs):
         for key in kwargs:

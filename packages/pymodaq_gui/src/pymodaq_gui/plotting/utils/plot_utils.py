@@ -1,20 +1,17 @@
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 
 import copy
-from numbers import Real, Number
-from typing import List, Union, Tuple
+from numbers import Number
+from typing import List, Union
 from typing import Iterable as IterableType
 
-from easydict import EasyDict as edict
 from multipledispatch import dispatch
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtGui, QtCore, QtWidgets
+from qtpy import QtGui, QtCore
 from scipy.spatial import Delaunay as Triangulation
 
 from pymodaq_data import data as data_mod
-from pymodaq_gui.plotting.items.roi import RectROI,LinearROI,EllipseROI,CircularROI,ROI,pgROI,pgLinearROI
 
 
 def make_dashed_pens(color: tuple, nstyle=3):
@@ -517,66 +514,3 @@ class View_cust(pg.ViewBox):
             self.sig_double_clicked.emit(pos.x(), pos.y())
 
 
-@dataclass
-class RoiInfo:
-    """ DataClass holding info about a given ROI
-
-    Parameters
-    ----------
-    origin
-    size
-    angle
-    centered
-    color
-    roi_class
-    index
-    """
-
-    origin: Union[Point, IterableType[float]]
-    size: Union[Point, IterableType[float]]
-    angle: float = None
-    centered: bool = False
-    color: Tuple[int, int, int] = (255, 0, 0)
-    roi_class: type = None
-    index: int = 0
-
-    @classmethod
-    def info_from_linear_roi(cls, roi: LinearROI):
-        pos = roi.pos()
-        return cls(Point((pos[0],)), size=Point((pos[1] - pos[0],)), color=roi.color,
-                   roi_class=type(roi), index=roi.index)
-
-    @classmethod
-    def info_from_rect_roi(cls, roi: RectROI):
-        return cls(Point(list(roi.pos())[::-1]), size=Point((roi.height(), roi.width())),
-                   color=roi.color, roi_class=type(roi), index=roi.index)
-
-    def center_origin(self):
-        if not self.centered:
-            self.origin += Point((self.size[0] / 2, self.size[1] / 2))
-            self.centered = True
-
-    def __repr__(self):
-        return f'Origin: {self.origin}, Size: {self.size}, Centered: {self.centered}'
-
-    def to_slices(self) -> IterableType[slice]:
-        """Get slices to be used directly to slice DataWithAxes"""
-        if issubclass(self.roi_class, pgROI):
-            if self.centered:
-                return (slice(int(self.origin[0] - self.size[0] / 2),
-                              int(self.origin[0] + self.size[0] / 2)),
-                        slice(int(self.origin[1] - self.size[1] / 2),
-                              int(self.origin[1] + self.size[1] / 2)),
-                        )
-            else:
-                return (slice(int(self.origin[0]),
-                              int(self.origin[0] + self.size[0])),
-                        slice(int(self.origin[1]),
-                              int(self.origin[1] + self.size[1])),
-                        )
-        elif issubclass(self.roi_class, pgLinearROI):
-            if self.centered:
-                return (slice((self.origin[0] - self.size[0] / 2),
-                              (self.origin[0] + self.size[0] / 2)),)
-            else:
-                return (slice((self.origin[0]), (self.origin[0] + self.size[0])),)

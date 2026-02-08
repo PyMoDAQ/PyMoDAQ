@@ -16,7 +16,7 @@ import pymodaq_data
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
 from pymodaq_data import data as data_mod
-from pymodaq_data.data import DataDim, Q_
+from pymodaq_data.data import DataDim, Q_, DataToExport
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
 data_processors = DataProcessorFactory()
@@ -503,6 +503,21 @@ class TestDataBase:
         data.append(data_bis)
         assert len(data) == Ndata + Ndatabis
         assert data.labels == labels + label_bis
+
+    def test_split_as_dte(self):
+        Ndata = 2
+        labels = [f'label{ind}' for ind in range(Ndata)]
+        dwa = init_data(data=DATA1D, Ndata=Ndata, labels=labels)
+
+        dte = dwa.split_as_dte('mydte')
+        assert isinstance(dte, DataToExport)
+        for ind, dwa_split in enumerate(dte):
+            assert isinstance(dwa_split, type(dwa))
+            assert dwa_split.name == dwa.labels[ind]
+            assert dwa_split.labels[0] == dwa.labels[ind]
+            assert dwa_split.units == dwa.units
+            for ind_axis, axis in enumerate(dwa_split.axes):
+                assert axis == dwa.axes[ind]
 
 
 class TestDataWithAxesUniform:

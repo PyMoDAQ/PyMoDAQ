@@ -16,7 +16,8 @@ from pymodaq_utils import utils
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
-from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
+from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, DataDim
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget

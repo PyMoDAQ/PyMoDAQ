@@ -50,6 +50,14 @@ class TestMath:
         assert mutils.greater2n([10.4, 248, 1020]) == [16, 256, 1024]
         assert np.all(mutils.greater2n(np.array([10.4, 248, 1020])) == np.array([16, 256, 1024]))
 
+    def test_power_of_2(self):
+        assert mutils.is_power_of_two(2 ** 0)
+        assert mutils.is_power_of_two(2 ** 1)
+        for ind in range(2, 10):
+            assert mutils.is_power_of_two(2 ** ind)
+            assert not mutils.is_power_of_two(2 ** ind + 1)
+            assert not mutils.is_power_of_two(2 ** ind -1)
+
     def test_linspace_step(self):
         assert np.all(mutils.linspace_step(-1.0, 10, 1) == np.array([-1., 0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]))
         assert np.all(

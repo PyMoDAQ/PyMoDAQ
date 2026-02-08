@@ -17,7 +17,7 @@ from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.qt_utils import mkQApp
