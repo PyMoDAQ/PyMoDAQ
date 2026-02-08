@@ -170,9 +170,9 @@ class TestConfig:
 
     def test_get_children(self):
         config = GlobalConfig()
-        config = config['data']
-        children = config.get_children('data_saving')
-        for child in ['h5file', 'hsds', 'data_type']:
+        config = config['utils']
+        children = config.get_children('network', 'logging')
+        for child in ['user', 'sql']:
             assert child in children
 
     def test_get(self):
