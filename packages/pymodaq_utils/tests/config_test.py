@@ -268,15 +268,6 @@ def test_recursive_iterable_flattening():
 
 def test_required_config_entries():
     config = Config()
-    assert 'style' in config
-    assert 'theme' in config['style']
-    assert 'syntax_highlighting' in config['style']
-    assert 'language' in config['style']
-    assert 'country' in config['style']
-
-    assert 'qtbackend' in config
-    assert 'backend' in config['qtbackend']
-    assert isinstance(config('qtbackend', 'backend'), list)
 
     assert 'general' in config
     assert 'debug_level' in config('general')

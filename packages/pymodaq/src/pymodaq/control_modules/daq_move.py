@@ -737,8 +737,6 @@ class DAQ_Move(ParameterControlModule):
             ACTUATOR_TYPES, "name", self.actuator
         )
         mod = import_module(parent_module["module"].__package__.split(".")[0])
-        if hasattr(mod, "config"):
-            self.plugin_config = mod.config
 
     @property
     def units(self):

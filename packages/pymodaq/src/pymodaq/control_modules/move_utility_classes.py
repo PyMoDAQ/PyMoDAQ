@@ -177,8 +177,6 @@ params = [
          'value': config('pymodaq', 'actuator', 'ui') if config('pymodaq', 'actuator', 'ui') in ActuatorUIFactory.keys() else
          ActuatorUIFactory.keys()[0],
          'limits': ActuatorUIFactory.keys()},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
-         VALID_FOR_CONFIGURATION: False,},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
         {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,

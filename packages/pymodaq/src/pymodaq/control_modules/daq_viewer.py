@@ -320,8 +320,6 @@ class DAQ_Viewer(ParameterControlModule):
     def update_plugin_config(self):
         parent_module = self.get_detector_module(self.detector)
         mod = import_module(parent_module.__package__.split('.')[0])
-        if hasattr(mod, 'config'):
-            self.plugin_config = mod.config
 
     @property
     def grab_state(self):

@@ -137,8 +137,6 @@ class ControlModule(QObject):
         self._tcpclient_thread = None
         self._hardware_thread = None
 
-        self.plugin_config: Optional[Config] = None
-
         self._h5saver: Optional[H5Saver] = None
         self._module_and_data_saver = None
 
@@ -358,14 +356,6 @@ class ControlModule(QObject):
         if self.ui is not None:
             self.ui.do_init(do_init)
 
-    def show_config(self, config: Config):
-        """ Display in a tree the current configuration"""
-        if config is not None:
-            from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
-            config_tree = TreeFromToml(config)
-            config_tree.show_dialog()
-
-
     def update_status(self, txt: str, log=True):
         """Display a message in the ui status bar and eventually log the message
 
@@ -450,10 +440,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
         param: Parameter
             a given parameter whose value has been changed by user
         """
-        if param.name() == 'plugin_config':
-            self.show_config(self.plugin_config)
-
-        elif param.name() == 'connect_server':
+        if param.name() == 'connect_server':
             if param.value():
                 self.connect_tcp_ip()
             else:
