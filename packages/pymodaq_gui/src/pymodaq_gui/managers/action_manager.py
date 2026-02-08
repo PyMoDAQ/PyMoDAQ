@@ -9,7 +9,7 @@ from qtpy.QtWidgets import QAction as QtQAction
 
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 try:
     from pymodaq_gui.resources.material_icons import MaterialIcon

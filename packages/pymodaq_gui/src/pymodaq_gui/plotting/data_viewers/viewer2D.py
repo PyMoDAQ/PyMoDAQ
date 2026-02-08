@@ -16,6 +16,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataRaw,
                                DataDistribution, DataWithAxes)
+from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_gui.managers.roi_manager import ROIManager, DataDim
 from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
@@ -44,7 +45,7 @@ COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=
 
 
 IMAGE_TYPES = ['red', 'green', 'blue']
-COLOR_LIST = utils.plot_colors
+COLOR_LIST = PlotColors()
 crosshair_pens = make_dashed_pens(color=(255, 255, 0))
 
 

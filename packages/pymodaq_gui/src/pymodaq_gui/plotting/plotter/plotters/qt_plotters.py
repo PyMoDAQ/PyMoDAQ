@@ -15,7 +15,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase, viewer_factory
 from pymodaq_gui.utils.dock import DockArea
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+config = configmod.GlobalConfig()
 
 
 @PlotterFactory.register()

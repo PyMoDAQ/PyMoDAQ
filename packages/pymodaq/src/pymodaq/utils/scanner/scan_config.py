@@ -6,10 +6,10 @@ Created the 19/11/2023
 """
 
 from pathlib import Path
-from pymodaq_utils.config import BaseConfig
+from pymodaq_utils.config import BaseConfig, CacheConfig
 
 
-class ScanConfig(BaseConfig):
+class ScanConfig(CacheConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = None
     config_name = f"scanner_settings"

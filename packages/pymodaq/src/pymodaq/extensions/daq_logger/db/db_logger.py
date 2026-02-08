@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.h5modules.saving import dashboard_submodules_params
 from pymodaq_gui.messenger import messagebox
@@ -39,11 +39,11 @@ class DBLogHandler(logging.StreamHandler):
 
 
 class DbLogger:
-    user = config('network', 'logging', 'user', 'username')
-    user_pwd = config('network', 'logging', 'user', 'pwd')
+    user = config('utils', 'network', 'logging', 'user', 'username')
+    user_pwd = config('utils', 'network', 'logging', 'user', 'pwd')
 
-    def __init__(self, database_name, ip_address=config('network', 'logging', 'sql', 'ip'),
-                 port=config('network', 'logging', 'sql', 'port'), save2D=False):
+    def __init__(self, database_name, ip_address=config('utils', 'network', 'logging', 'sql', 'ip'),
+                 port=config('utils', 'network', 'logging', 'sql', 'port'), save2D=False):
         """
 
         Parameters
@@ -217,17 +217,17 @@ class DbLoggerGUI(DbLogger, ParameterManager):
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
             'limits': ['PostgreSQL', ]},
         {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
-            'value': config('network', 'logging', 'sql', 'ip'),
+            'value': config('utils', 'network', 'logging', 'sql', 'ip'),
          'tip':'Either localhost if the database server is on the same computer or the IP address of the server'},
         {'title': 'Server port:', 'name': 'server_port', 'type': 'int',
-            'value': config('network', 'logging', 'sql', 'port')},
+            'value': config('utils', 'network', 'logging', 'sql', 'port')},
         {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
         {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False},
     ] + dashboard_submodules_params
 
     def __init__(self, database_name):
-        DbLogger.__init__(self, database_name, ip_address=config('network', 'logging', 'sql', 'ip'),
-                          port=config('network', 'logging', 'sql', 'port'), save2D=False)
+        DbLogger.__init__(self, database_name, ip_address=config('utils', 'network', 'logging', 'sql', 'ip'),
+                          port=config('utils', 'network', 'logging', 'sql', 'port'), save2D=False)
         ParameterManager.__init__(self)
 
         self.settings.child('do_save').hide()

@@ -17,15 +17,15 @@ from pymodaq_utils.config import Config
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_move_ui.uis.simple import DAQ_Move_UI_Simple
-from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq_utils.config import GlobalConfig as Config
 from enum import Enum
 
-config = ControlModulesConfig()
+config = Config()
 
 
 class BinaryValue(Enum):
-    VALUE_ONE = config('actuator', 'binary', 'value_1')
-    VALUE_TWO = config('actuator', 'binary', 'value_2')
+    VALUE_ONE = config('pymodaq', 'actuator', 'binary', 'value_1')
+    VALUE_TWO = config('pymodaq', 'actuator', 'binary', 'value_2')
 
 
 @ActuatorUIFactory.register('Binary')

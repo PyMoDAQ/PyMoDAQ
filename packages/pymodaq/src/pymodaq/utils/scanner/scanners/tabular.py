@@ -14,7 +14,6 @@ from pymodaq_data import Q_
 from pymodaq_gui.utils import SpinBoxDelegate
 from pymodaq_utils.logger import set_logger, get_module_name
 
-from pymodaq_utils import config as configmod
 from pymodaq_gui import utils as gutils
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq_gui.parameter import utils as putils
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
 
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
 
 
 class TableModelTabular(gutils.TableModel):

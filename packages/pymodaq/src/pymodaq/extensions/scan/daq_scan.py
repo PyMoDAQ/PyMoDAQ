@@ -18,9 +18,10 @@ from qtpy.QtWidgets import QDialogButtonBox
 from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.extensions.custom_ext import CustomExt
+from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
 from pymodaq_data import data as data_mod
@@ -42,18 +43,16 @@ from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.config import Config as ControlModulesConfig
+
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
-config_utils = Config()
-config = ControlModulesConfig()
-
+config = Config()
 
 logger = set_logger(get_module_name(__file__))
 
-SHOW_POPUPS = config('scan', 'show_popups')
+SHOW_POPUPS = config('pymodaq', 'scan', 'show_popups')
 
 
 class DAQ_ScanException(Exception):
@@ -88,9 +87,9 @@ class DAQScan(CustomExt):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int',
-             'value': config('scan', 'Naverage'), 'min': 1},
+             'value': config('pymodaq', 'scan', 'Naverage'), 'min': 1},
             {'title': 'Plot on top:', 'name': 'average_on_top', 'type': 'bool',
-             'value': config('scan', 'average_on_top'),
+             'value': config('pymodaq', 'scan', 'average_on_top'),
              'tip': 'At the second iteration will plot the averaged scan on top (True) of the current one'
                     'or in a second panel (False)'},
         ]},
@@ -136,7 +135,7 @@ class DAQScan(CustomExt):
         self._metada_dataset_set = False
 
         self.curvilinear_values = []
-        self.plot_colors = utils.plot_colors
+        self.plot_colors = PlotColors()
 
         self.runner_thread: QThread = None
 
@@ -145,7 +144,7 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+        self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend'))
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -246,10 +245,10 @@ class DAQScan(CustomExt):
     #  CONFIG/SETUP UI / EXIT
 
     def set_config(self):
-        self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
-        self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])
+        self.settings.child('time_flow', 'wait_time').setValue(config('pymodaq', 'scan', 'timeflow', 'wait_time'))
+        self.settings.child('time_flow', 'wait_time_between').setValue(config('pymodaq', 'scan', 'timeflow', 'wait_time'))
 
-        self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
+        self.settings.child('scan_options',  'scan_average').setValue(config('pymodaq', 'scan', 'Naverage'))
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -320,14 +319,14 @@ class DAQScan(CustomExt):
         # params about dataset attributes and scan attibutes
         date = QDateTime(QDate.currentDate(), QTime.currentTime())
         params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config_utils['user']['name']},
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config('utils', 'user', 'name')},
             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
             {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value': ''},
             {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
 
         params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config_utils['user']['name']},
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config('utils', 'user', 'name')},
             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
             {'title': 'Scan type:', 'name': 'scan_type', 'type': 'str', 'value': ''},
             {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'str', 'value': ''},
@@ -544,7 +543,7 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend'))
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -828,7 +827,7 @@ class DAQScan(CustomExt):
                     text=f"An error occurred when establishing the scan steps. Actual settings "
                          f"gives approximately {int(self.scanner.n_steps)} steps."
                          f" Please check the steps number "
-                         f"limit in the config file ({config['scan']['steps_limit']}) or modify"
+                         f"limit in the config file ({config('pymodaq', 'scan', 'steps_limit')}) or modify"
                          f" your scan settings.")
 
             _, _, viewer2D_overload = self.check_number_type_viewers()
@@ -948,7 +947,7 @@ class DAQScan(CustomExt):
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
                                                   )
 
-            if config['scan']['scan_in_thread']:
+            if config('pymodaq', 'scan', 'scan_in_thread'):
                 scan_acquisition.moveToThread(self.runner_thread)
             self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)

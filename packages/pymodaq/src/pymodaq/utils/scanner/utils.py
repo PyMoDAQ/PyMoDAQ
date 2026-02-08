@@ -9,7 +9,6 @@ from pathlib import Path
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils.enums import BaseEnum
 
@@ -17,7 +16,7 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory
 
 
 logger = set_logger(get_module_name(__file__))
-config = Config()
+
 
 
 def register_scanner(parent_module_name: str = 'pymodaq.utils.scanner'):

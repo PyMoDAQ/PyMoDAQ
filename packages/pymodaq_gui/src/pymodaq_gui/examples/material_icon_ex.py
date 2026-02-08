@@ -5,12 +5,11 @@ from qtpy import QtGui, QtWidgets
 from pymodaq_gui.resources.material_icons import MaterialIcon
 from pymodaq_gui.utils.styling import resource_path_exists
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_utils.config import Config
+
 from pymodaq_gui.utils.styling import create_icon
 
 import toml
 
-config = Config()
 here = Path(__file__).parent
 icons = toml.load(here.parent.joinpath('resources/icons.toml'))['icons']['names']
 icons.sort()

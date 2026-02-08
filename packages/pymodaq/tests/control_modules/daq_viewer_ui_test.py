@@ -15,8 +15,8 @@ from qtpy import QtWidgets
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 import qt_themes
 
-from pymodaq_utils.config import Config
-config = Config()
+from pymodaq_utils.config import GlobalConfig
+config = GlobalConfig()
 
 
 pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
@@ -26,8 +26,8 @@ pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 def ini_daq_viewer_ui(qtbot):
     win = QtWidgets.QMainWindow()
     qtbot.addWidget(win)
-    qt_themes.set_theme(theme=config('style', 'theme')[0],
-                        style=config('style', 'style')[0])
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
 
     widget = QtWidgets.QWidget()
     win.setCentralWidget(widget)

@@ -8,6 +8,7 @@ import pyqtgraph
 
 from pymodaq_utils import utils
 from pymodaq_data import data as data_mod
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
 from pymodaq_gui.managers.action_manager import ActionManager
@@ -19,7 +20,7 @@ from collections import OrderedDict
 import datetime
 
 logger = set_logger(get_module_name(__file__))
-PLOT_COLORS = [dict(color=color) for color in utils.plot_colors]
+PLOT_COLORS = [dict(color=color) for color in PlotColors()]
 
 
 class DataDisplayer(QObject):

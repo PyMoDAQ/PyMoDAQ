@@ -9,7 +9,6 @@ import logging
 import numpy as np
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_data.data import DataToExport
 
@@ -18,7 +17,6 @@ from pymodaq.utils.h5modules import module_saving
 from .abstract import AbstractLogger
 
 
-config = Config()
 
 logger = set_logger(get_module_name(__file__))
 

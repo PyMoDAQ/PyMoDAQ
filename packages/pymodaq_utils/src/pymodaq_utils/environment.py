@@ -7,14 +7,14 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.config import get_set_local_dir
 from pymodaq_utils.logger import set_logger, get_module_name
 
 
 logger = set_logger(get_module_name(__file__))
 
-config = configmod.Config()
+config = Config()
 
 
 def guess_virtual_environment() -> str:
@@ -46,7 +46,7 @@ class EnvironmentBackupManager:
     '''
     def __init__(self):
         # Path is: <local_config_path>/<backup_path(default=environments)>/<venv_name>/
-        self._path = get_set_local_dir(user=True) / config['backup']['folder'] / guess_virtual_environment()
+        self._path = get_set_local_dir(user=True) / config('utils', 'backup', 'folder') / guess_virtual_environment()
         self._path.mkdir(parents=True, exist_ok=True)
         
         self._backups = self._load()
@@ -97,7 +97,7 @@ class EnvironmentBackupManager:
             logger.info(f'Current environment is different than the last one. Keeping backup.')
             self._save_newest()
 
-        while len(self._backups) != 0 and len(self._backups) > config['backup']['limit']:
+        while len(self._backups) != 0 and len(self._backups) > config('utils', 'backup', 'limit'):
             logger.info(f'Too many backups, deleting the oldest one.')
             self._remove_oldest()
 
@@ -115,7 +115,7 @@ class PythonEnvironment:
     def __init__(self, filename=None):
         # set comparison is easy, order does not matter
         self._packages = set()
-        storage_path = get_set_local_dir(user=True) / config['backup']['folder'] / guess_virtual_environment()
+        storage_path = get_set_local_dir(user=True) / config('utils', 'backup', 'folder') / guess_virtual_environment()
         self._path = Path(filename) if filename else storage_path / f'{datetime.now().strftime(PythonEnvironment.DATE_FORMAT)}_environment.txt'
         
         # Shouldn't be necessary, but ensure it exists  

@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 import pymodaq_utils.utils as utils
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
@@ -17,7 +17,6 @@ from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.scanner.utils import ScanInfo
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq.utils.data import DataToExport, DataActuator
-from pymodaq.utils.config import Config as ControlModulesConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -25,8 +24,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = Config()
-config = ControlModulesConfig()
+config = Config()
 scanner_factory = ScannerFactory()
 
 
@@ -258,7 +256,7 @@ class Scanner(QObject, ParameterManager):
         -------
         bool: True if the processed number of steps if **higher** than the configured number of steps
         """
-        oversteps = config('scan', 'steps_limit')
+        oversteps = config('pymodaq', 'scan', 'steps_limit')
         if self._scanner.evaluate_steps() > oversteps:
             return True
         self._scanner.set_scan()

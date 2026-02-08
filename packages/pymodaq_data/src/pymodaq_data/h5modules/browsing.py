@@ -16,7 +16,7 @@ from pathlib import Path
 from packaging import version as version_mod
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from .backends import H5Backend
 from .exporter import ExporterFactory
 
