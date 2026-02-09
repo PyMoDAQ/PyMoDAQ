@@ -1,3 +1,4 @@
+setuptools
 sphinx
 sphinx_rtd_theme>=1.2.2
 releases
