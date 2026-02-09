@@ -20,7 +20,7 @@ from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
 from pymodaq_data.h5modules import data_saving
@@ -502,7 +502,7 @@ def browse_data(fname=None, ret_all=False, message=None) -> Tuple[data_saving.Da
 
     """
     if fname is None:
-        fname = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=False, ext='h5'))
+        fname = str(select_file(start_path=config('utils', 'data_saving', 'h5file', 'save_path'), save=False, ext='h5'))
 
     if type(fname) != str:
         try:

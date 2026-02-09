@@ -20,21 +20,20 @@ from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq_gui.utils import Dock, DockArea
-from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.utils.styling import create_font, create_icon
 from pymodaq_utils.enums import enum_checker
-from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
 
 viewer_factory = ViewerFactory()
 config = Config()
-config_utils = ConfigUtils()
+
 
 options = {
     'DAQ0D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ0D']]],
@@ -227,7 +226,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(not self.is_action_checked('grab'),
                             all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
 
-        if not self.config('viewer', 'allow_settings_edition'):
+        if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
     def do_init(self, do_init=True):

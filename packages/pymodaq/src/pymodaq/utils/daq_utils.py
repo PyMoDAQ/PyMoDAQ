@@ -5,10 +5,9 @@ import pkgutil
 import platform
 from pathlib import Path
 
-from pymodaq_utils.config import Config
 from pymodaq_utils.utils import get_entrypoints, ThreadCommand, getLineInfo, find_keys_from_val, is_64bits, timer  # for backcompat
 from pymodaq_utils.logger import set_logger, get_module_name  # for backcompat
-
+from pymodaq_utils.config import GlobalConfig
 from pymodaq.utils.data import DataFromPlugins   # for backcompat
 
 from pymodaq.utils.config import get_set_preset_path
@@ -22,7 +21,6 @@ else:
 
 logger = set_logger(get_module_name(__file__))
 
-config = Config()
 
 
 def copy_preset():                          # pragma: no cover
@@ -58,8 +56,9 @@ def get_instrument_plugins():  # pragma: no cover
     plugin_list = []
     for entrypoint in discovered_plugins:
         #print(f'Looking for valid instrument plugins in package: {module.value}')
-
         try:
+            plugin_utils = importlib.import_module(f'{entrypoint.value}.utils', entrypoint.value)
+            GlobalConfig.register()(plugin_utils.Config)
             try:
                 movemodule = importlib.import_module(f'{entrypoint.value}.daq_move_plugins', entrypoint.value)
                 plugin_list.extend([{'name': mod[len('daq_move') + 1:],

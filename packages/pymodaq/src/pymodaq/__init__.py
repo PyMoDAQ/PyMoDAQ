@@ -12,7 +12,8 @@ import pymodaq_gui  # to init stuff related to pymodaq_gui  # necessary, leave i
 
 from pymodaq_data import Q_, Unit, ureg  # necessary, leave it there
 
-
+from pymodaq.utils.config import Config # Necessary for registration
+from pymodaq_utils.config import GlobalConfig as Config
 try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
     #     __version__ = fvers.read().strip()
@@ -25,7 +26,6 @@ try:
 
         from pymodaq.utils.daq_utils import copy_preset, get_instrument_plugins
 
-        from pymodaq_utils.config import Config
         from pymodaq.utils.scanner.utils import register_scanners
         from pymodaq.control_modules.ui_utils import register_uis
         from pymodaq_data.plotting.plotter.plotter import register_plotter, PlotterFactory
@@ -49,22 +49,14 @@ try:
         copy_preset()
 
 
-        from pymodaq_utils.config import Config
         from pymodaq.utils.scanner.utils import register_scanners
 
-        try:
-            # Need the config to exists before importing
-            from pymodaq_utils.environment import EnvironmentBackupManager
+        from pymodaq_utils.environment import EnvironmentBackupManager
 
-            if config['backup']['keep_backup']:
-                ebm = EnvironmentBackupManager()
-                ebm.save_backup()
-        except ModuleNotFoundError as e:
-            infos = "Your pymodaq_utils version is outdated and doesn't allow for automatic backup of pip packages." \
-                    " You should update it."
-            print(infos)
-            logger.warning(infos)
-
+        if config('utils', 'backup', 'keep_backup'):
+            ebm = EnvironmentBackupManager()
+            ebm.save_backup()
+    
         logger.info('*************************************************************************')
         logger.info(f"Registering UIs...")
         register_uis(parent_module_name='pymodaq.control_modules.daq_move_ui')
@@ -72,17 +64,19 @@ try:
         # check the registered UI wrt the configuration
         from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
         from pymodaq.utils.config import Config
-        ui_factory = ActuatorUIFactory()
-        uis_registered = ui_factory.keys()
-        pymodaq_config = Config()
-        uis_config = pymodaq_config('actuator', 'ui')
+        
+        uis_registered = ActuatorUIFactory().keys()
+        
+        uis_config = config('pymodaq', 'actuator', 'ui')
         if not isinstance(uis_config, list):
             uis_config = [uis_config]
+
         for ui in uis_registered:
             if ui not in uis_config:
                 uis_config.append(ui)
-        pymodaq_config['actuator', 'ui'] = uis_config
-        pymodaq_config.save()
+                
+        config['pymodaq', 'actuator', 'ui'] = uis_config
+        config.save()
 
 
         logger.info(f"Done")

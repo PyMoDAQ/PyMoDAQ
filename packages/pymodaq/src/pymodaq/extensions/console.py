@@ -10,8 +10,9 @@ import numpy as np
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
+from pymodaq_utils.config import GlobalConfig
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq_utils import config as configmod
+
 from pymodaq_utils.utils import get_version
 from pymodaq_gui.utils.dock import DockArea
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
 
-config = configmod.Config()
+config = GlobalConfig()
 
 BANNER = f'PyMoDAQ v{get_version("pymodaq")}\n' \
          'Main objects available for interaction:\n'\
@@ -75,8 +76,8 @@ class Console(CustomExt):
             instance of the pymodaq dashboard
 
         """
-        self.console = QtConsole(style_sheet=config('style', 'syntax_highlighting'),
-                                 syntax_style=config('style', 'syntax_highlighting'),
+        self.console = QtConsole(style_sheet=config('gui', 'style', 'syntax_highlighting'),
+                                 syntax_style=config('gui', 'style', 'syntax_highlighting'),
                                  custom_banner=BANNER)
         super().__init__(dockarea, dashboard)
 

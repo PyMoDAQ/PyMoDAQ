@@ -9,7 +9,9 @@ from pymodaq_gui.plotting.utils.plot_utils import Point
 from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.math_utils import rotate2D
-from pymodaq_utils.utils import plot_colors
+
+from pymodaq_data.plotting.utils import PlotColors
+
 from pyqtgraph import ROI as pgROI, ROI, LinearRegionItem
 from pyqtgraph import LinearRegionItem as pgLinearROI
 from pyqtgraph import functions as fn
@@ -25,6 +27,7 @@ data_processors = DataProcessorFactory()
 roi_path = get_set_roi_path()
 logger = set_logger(get_module_name(__file__))
 translate = QtCore.QCoreApplication.translate
+plot_colors = PlotColors()
 
 
 ROI_NAME_PREFIX = 'ROI_'

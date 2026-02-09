@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Union
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import ioxml
 
 from qtpy import QtWidgets

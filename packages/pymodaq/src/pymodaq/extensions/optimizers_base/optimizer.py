@@ -22,7 +22,7 @@ try:
 except ModuleNotFoundError:
     from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
 
-from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
@@ -39,7 +39,6 @@ from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils import config as config_mod
 
 from pymodaq.extensions.optimizers_base.utils import (
     get_optimizer_models, OptimizerModelGeneric,
@@ -49,8 +48,7 @@ from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
-config_utils = ConfigUtils()
+config = Config()
 
 PREDICTION_PARAMS = []  # to be subclassed in real optimizer implementations
 MODELS = get_optimizer_models()
@@ -88,7 +86,7 @@ def optimizer_params(prediction_params: list[dict]):
              {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
               'children': [
                   {'title': 'Niteration', 'name': 'niter', 'type': 'int',
-                   'value': config('optimizer', 'n_iter'), 'min': 5},
+                   'value': config('pymodaq', 'optimizer', 'n_iter'), 'min': 5},
                   {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
                    'limits': StopType.values(), 'value': str(StopType.ITER),
                    'tip': StopType.ITER.tip()},
@@ -341,7 +339,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config_utils('data_saving',  'h5file', 'hdf5_backend'))
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend'))
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
@@ -704,9 +702,9 @@ class GenericOptimization(CustomExt):
         for actuator in actuators:
             params.append({'title': actuator, 'name': actuator, 'type': 'group', 'children': [
                 {'title': 'min', 'name': 'min', 'type': 'float',
-                 'value': config('optimizer', 'bounds', 'actuator_min')},
+                 'value': config('pymodaq', 'optimizer', 'bounds', 'actuator_min')},
                 {'title': 'max', 'name': 'max', 'type': 'float',
-                 'value': config('optimizer', 'bounds','actuator_max')},
+                 'value': config('pymodaq', 'optimizer', 'bounds','actuator_max')},
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
 

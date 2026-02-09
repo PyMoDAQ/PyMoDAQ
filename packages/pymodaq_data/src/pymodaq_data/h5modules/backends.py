@@ -13,7 +13,7 @@ import pickle
 from typing import Dict
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import capitalize, JsonConverter
 from pymodaq_utils import utils
 from pymodaq_utils.enums import BaseEnum, enum_checker

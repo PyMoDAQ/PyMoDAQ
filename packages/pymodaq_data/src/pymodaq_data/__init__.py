@@ -15,11 +15,12 @@ try:
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
 
+    import pymodaq_data.config
     logger.info('************************')
     logger.info('Initializing the pint unit register')
     logger.info('************************')
     ureg = UnitRegistry()
-    ureg.default_format = '~'
+    ureg.formatter.default_format = '~'
     Q_ = ureg.Quantity
     Unit = ureg.Unit
     logger.info('')

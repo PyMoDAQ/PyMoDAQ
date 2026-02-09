@@ -10,13 +10,12 @@ import numpy as np
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 from pymodaq.utils.scanner.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
