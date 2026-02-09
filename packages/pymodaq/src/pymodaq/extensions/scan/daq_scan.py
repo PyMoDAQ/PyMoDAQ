@@ -738,9 +738,19 @@ class DAQScan(CustomExt):
             self.live_timer.stop()
             self.ui.set_scan_done()
             scan_node = self.module_and_data_saver.get_last_node()
-            scan_node.attrs['scan_done'] = True
-            self.module_and_data_saver.flush()
-            self.close_file()
+            if self.h5saver.is_swmr_active:
+                scan_path = scan_node.path
+                self.h5saver.finalize_swmr()
+                self.h5saver.open_file(
+                    self.h5saver.h5_file_path.joinpath(self.h5saver.h5_file_name),
+                    mode='a')
+                self.h5saver.get_node(scan_path).attrs['scan_done'] = True
+                self.h5saver.flush()
+                self.h5saver.close_file()
+            else:
+                scan_node.attrs['scan_done'] = True
+                self.module_and_data_saver.flush()
+                self.close_file()
 
             if not self.batch_started:
                 if not self.dashboard.overshoot:
@@ -936,6 +946,11 @@ class DAQScan(CustomExt):
                 det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
             self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
+
+            if self.h5saver._swmr_mode:
+                interval = self.h5saver.settings['swmr_options', 'flush_interval']
+                for det in self.modules_manager.detectors:
+                    det._module_and_data_saver._datatoexport_saver.set_swmr_flush_interval(interval)
 
             # mandatory to deal with multithreads
             if self.runner_thread is not None:

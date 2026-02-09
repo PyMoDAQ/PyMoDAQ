@@ -658,7 +658,8 @@ class DataEnlargeableSaver(DataSaverLoader):
                     axis_array.append(np.array([axis_values[ind_axis]]))
                 else:
                     axis_array.append(axis_values[ind_axis], expand=False)
-                axis_array.attrs['size'] += 1
+                if not self._h5saver.is_swmr_active:
+                    axis_array.attrs['size'] += 1
 
 
 class DataExtendedSaver(DataSaverLoader):
@@ -923,7 +924,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             axis_array: EARRAY = self._nav_axis_saver.get_node_from_index(nav_group, ind)
             axis_array.append(squeeze(np.array([axis_values[ind]])),
                               expand=False)
-            axis_array.attrs['size'] += 1
+            if not self._h5saver.is_swmr_active:
+                axis_array.attrs['size'] += 1
 
 
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
@@ -959,6 +961,19 @@ class DataToExportExtendedSaver(DataToExportSaver):
         super().__init__(h5saver)
         self._data_saver = DataExtendedSaver(h5saver, extended_shape)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._swmr_activated = False
+        self._flush_interval = 0
+        self._write_count = 0
+
+    def set_swmr_flush_interval(self, interval: int):
+        """Set how often to flush data for SWMR readers.
+
+        Parameters
+        ----------
+        interval: int
+            0 = flush only at end, N = every N writes
+        """
+        self._flush_interval = interval
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -1002,6 +1017,19 @@ class DataToExportExtendedSaver(DataToExportSaver):
                                                         self.channel_formatter(ind), dwa.name, origin=dwa.origin)
                 self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
                                           distribution=distribution)
+
+        # Enable SWMR after first data point created all structure
+        if (self._h5saver._swmr_mode and not self._swmr_activated
+                and self._h5saver.backend == 'h5py'):
+            self._h5saver.flush()
+            self._h5saver.enable_swmr()
+            self._swmr_activated = True
+
+        # Periodic flush for SWMR readers
+        if self._swmr_activated and self._flush_interval > 0:
+            self._write_count += 1
+            if self._write_count % self._flush_interval == 0:
+                self._h5saver.flush()
 
 
 class DataLoader:

@@ -32,6 +32,8 @@ backend = ["pyqt6",  "pyqt5", "pyside6",]
     [data_saving.h5file]
     save_path = "C:\\Data"  #base path where data are automatically saved
     compression_level = 5  # for hdf5 files between 0(min) and 9 (max)
+    swmr_enabled = false  # enable SWMR (Single Writer Multiple Reader) for h5py backend
+    swmr_flush_interval = 1  # flush every N scan steps in SWMR mode (0 = only at end)
 
     [data_saving.hsds] #hsds connection option (https://www.hdfgroup.org/solutions/highly-scalable-data-service-hsds/)
     #to save data in pymodaq using hpyd backend towards distant server or cloud (mimicking hdf5 files)

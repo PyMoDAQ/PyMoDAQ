@@ -410,9 +410,12 @@ class EARRAY(CARRAY):
             data = np.expand_dims(data, 1)
         self.append_backend(data)
 
-        sh = list(self.attrs['shape'])
-        sh[0] += extended_first_index
-        self.attrs['shape'] = tuple(sh)
+        if self.backend == 'h5py' and self._node.file.swmr_mode:
+            pass  # defer shape attr update until after SWMR ends
+        else:
+            sh = list(self.attrs['shape'])
+            sh[0] += extended_first_index
+            self.attrs['shape'] = tuple(sh)
 
     def append_backend(self, data):
         if self.backend == 'tables':
@@ -429,9 +432,12 @@ class VLARRAY(EARRAY):
     def append(self, data):
         self.append_backend(data)
 
-        sh = list(self.attrs['shape'])
-        sh[0] += 1
-        self.attrs['shape'] = tuple(sh)
+        if self.backend == 'h5py' and self._node.file.swmr_mode:
+            pass  # defer shape attr update until after SWMR ends
+        else:
+            sh = list(self.attrs['shape'])
+            sh[0] += 1
+            self.attrs['shape'] = tuple(sh)
 
 
 class StringARRAY(VLARRAY):
@@ -540,6 +546,8 @@ class H5Backend:
         self.backend = backend
         self.file_path = None
         self.compression = None
+        self._swmr_mode = False
+        self._swmr_enabled = False
         if backend == 'tables':
             if is_tables:
                 self.h5_library = tables
@@ -589,9 +597,12 @@ class H5Backend:
                     self._h5file.close()
         except Exception as e:
             print(e)  # no big deal
+        finally:
+            self._swmr_enabled = False
 
-    def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', **kwargs):
+    def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
         self.file_path = fullpathname
+        self._swmr_mode = swmr_mode
         if self.backend == 'tables':
             self._h5file = self.h5_library.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
             if mode == 'w':
@@ -602,6 +613,8 @@ class H5Backend:
                 self.root().attrs['pymodaq_data_version'] = utils.get_version('pymodaq_data')
             return self._h5file
         else:
+            if swmr_mode and self.backend == 'h5py' and mode == 'w':
+                kwargs['libver'] = 'latest'
             self._h5file = self.h5_library.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
@@ -641,6 +654,40 @@ class H5Backend:
     def flush(self):
         if self._h5file is not None:
             self._h5file.flush()
+
+    def enable_swmr(self):
+        """Activate SWMR mode on the open h5py file.
+
+        Must be called after all groups/datasets have been created.
+        Raises RuntimeError if backend is not h5py or file was not opened with swmr_mode=True.
+        Idempotent: does nothing if already enabled.
+        """
+        if self._swmr_enabled:
+            return
+        if self.backend != 'h5py':
+            raise RuntimeError('SWMR mode is only supported with the h5py backend')
+        if not self._swmr_mode:
+            raise RuntimeError('File was not opened with swmr_mode=True')
+        self._h5file.swmr_mode = True
+        self._swmr_enabled = True
+
+    @property
+    def is_swmr_active(self):
+        """Return True if SWMR mode is currently active on the file."""
+        return self._swmr_enabled
+
+    def reconcile_swmr_attrs(self):
+        """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] from actual data.
+
+        Called after SWMR is ended (file closed and reopened in 'a' mode) to fix
+        deferred attribute writes that were skipped during SWMR.
+        """
+        for node in self.walk_nodes('/'):
+            if 'CLASS' in node.attrs:
+                node_class = node.attrs['CLASS']
+                if node_class in ('EARRAY', 'VLARRAY'):
+                    actual_shape = node.node.shape
+                    node.attrs['shape'] = actual_shape
 
     def define_compression(self, compression, compression_opts):
         """Define cmpression library and level of compression

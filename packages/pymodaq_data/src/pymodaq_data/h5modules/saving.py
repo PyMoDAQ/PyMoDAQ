@@ -92,7 +92,7 @@ class H5SaverLowLevel(H5Backend):
         return self._h5file
 
     def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False,
-                  metadata: dict = None):
+                  metadata: dict = None, swmr_mode: bool = False):
         """Initializes a new h5 file.
 
         Parameters
@@ -105,6 +105,8 @@ class H5SaverLowLevel(H5Backend):
             If True create a new file, otherwise append to a potential existing one
         metadata: dict
             A dictionary to be saved as attributes
+        swmr_mode: bool
+            If True, prepare the file for SWMR (h5py backend only)
 
         Returns
         -------
@@ -123,7 +125,8 @@ class H5SaverLowLevel(H5Backend):
             return
 
         self.close_file()
-        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a', title='PyMoDAQ file')
+        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a',
+                       title='PyMoDAQ file', swmr_mode=swmr_mode)
 
         self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
         self.get_set_logger(self._raw_group)
@@ -144,6 +147,19 @@ class H5SaverLowLevel(H5Backend):
             file_path = Path(filename)
             if str(file_path) != '':
                 super().save_file_as(filename)
+
+    def finalize_swmr(self):
+        """End SWMR by closing the file, reopening in 'a' mode, and reconciling deferred attrs.
+
+        After SWMR mode, attrs['shape'] on EARRAY/VLARRAY nodes may be stale.
+        This method closes the file (ending SWMR), reopens it in append mode,
+        updates all deferred attributes, then closes again.
+        """
+        file_path = self.h5_file_path.joinpath(self.h5_file_name)
+        self.close_file()
+        self.open_file(file_path, mode='a')
+        self.reconcile_swmr_attrs()
+        self.close_file()
 
     def get_set_logger(self, where: Node = None) -> VLARRAY:
         """ Retrieve or create (if absent) a logger enlargeable array to store logs
