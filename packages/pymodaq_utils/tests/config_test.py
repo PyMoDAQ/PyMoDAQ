@@ -268,12 +268,15 @@ def test_required_config_entries():
     assert isinstance(config('general', 'debug_level'), list)
     assert 'check_version' in config('general')
     assert 'message_status_persistence' in config('general')
-    assert 'hdf5_backend' in config('general')
 
     assert 'data_saving' in config
     assert 'h5file' in config['data_saving']
     assert 'save_path' in config('data_saving', 'h5file')
     assert 'compression_level' in config('data_saving', 'h5file')
+    assert 'hdf5_backend' in config('data_saving', 'h5file')
+    assert isinstance(config('data_saving', 'h5file', 'hdf5_backend'), list)
+    assert 'swmr_enabled' in config('data_saving', 'h5file')
+    assert 'swmr_flush_interval' in config('data_saving', 'h5file')
 
     assert 'data_type' in config['data_saving']
     assert 'dynamic' in config('data_saving', 'data_type')
@@ -308,3 +311,60 @@ def test_required_config_entries():
     assert 'tcp-server' in config('network')
     assert 'ip' in config('network', 'tcp-server')
     assert 'port' in config('network', 'tcp-server')
+
+
+class TestHdf5BackendConfig:
+    """Tests for hdf5_backend config special handling."""
+
+    def test_hdf5_backend_in_data_saving_h5file(self):
+        """Verify hdf5_backend is in data_saving.h5file section."""
+        config = config_mod.Config()
+        h5file_children = config.get_children('data_saving', 'h5file')
+        assert 'hdf5_backend' in h5file_children
+
+    def test_hdf5_backend_is_list(self):
+        """Verify hdf5_backend is stored as a list."""
+        config = config_mod.Config()
+        backends = config('data_saving', 'h5file', 'hdf5_backend')
+        assert isinstance(backends, list)
+        assert len(backends) > 0
+
+    def test_hdf5_backend_shortcut_returns_string(self):
+        """Verify 'hdf5_backend' shortcut returns first element (string)."""
+        config = config_mod.Config()
+        # The shortcut is handled in Config.__call__
+        backend = config('hdf5_backend')
+        assert isinstance(backend, str)
+
+    def test_hdf5_backends_shortcut_returns_list(self):
+        """Verify 'hdf5_backends' shortcut returns full list."""
+        config = config_mod.Config()
+        backends = config('hdf5_backends')
+        assert isinstance(backends, list)
+        assert len(backends) > 0
+
+    def test_hdf5_backend_contains_expected_values(self):
+        """Verify hdf5_backend list contains expected backends."""
+        config = config_mod.Config()
+        backends = config('hdf5_backends')
+        # Should contain at least tables and h5py
+        assert 'tables' in backends or 'h5py' in backends
+
+    def test_swmr_config_entries(self):
+        """Verify SWMR-related config entries exist."""
+        config = config_mod.Config()
+        h5file_children = config.get_children('data_saving', 'h5file')
+        assert 'swmr_enabled' in h5file_children
+        assert 'swmr_flush_interval' in h5file_children
+
+    def test_swmr_enabled_is_bool(self):
+        """Verify swmr_enabled is a boolean."""
+        config = config_mod.Config()
+        swmr_enabled = config('data_saving', 'h5file', 'swmr_enabled')
+        assert isinstance(swmr_enabled, bool)
+
+    def test_swmr_flush_interval_is_int(self):
+        """Verify swmr_flush_interval is an integer."""
+        config = config_mod.Config()
+        flush_interval = config('data_saving', 'h5file', 'swmr_flush_interval')
+        assert isinstance(flush_interval, int)
