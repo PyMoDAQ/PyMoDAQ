@@ -184,6 +184,7 @@ class LoaderPlotter:
             data0D_arrays_averaged = []
             labels = []
             labels_averaged = []
+            dwa = None
             for dwa in data:
                 if 'averaged' in dwa.name and separate_average:
                     data0D_arrays_averaged.extend(dwa.data)
@@ -195,23 +196,25 @@ class LoaderPlotter:
                     data0D_arrays.extend(dwa.data)
                     labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
                     self._data.remove(dwa)
-
-            data0D = DataFromPlugins(self.grouped_data0D_fullname.split('/')[1],
-                                     data=data0D_arrays, labels=labels,
-                                     dim='DataND',
-                                     origin=self.grouped_data0D_fullname.split('/')[0],
-                                     axes=dwa.axes, nav_indexes=dwa.nav_indexes,
-                                     )
-            self._data.append(data0D)
-            if 'averaged' in dwa.name and separate_average:
-                data0D_averaged = DataFromPlugins(
-                    f"{self.grouped_data0D_fullname.split('/')[1]}_averaged",
-                    data=data0D_arrays_averaged, labels=labels_averaged,
-                    dim='DataND',
-                    origin=self.grouped_data0D_fullname.split('/')[0],
-                    axes=dwa.axes, nav_indexes=dwa.nav_indexes,
-                )
-                self._data.append(data0D_averaged)
+            if dwa is not None:
+                data0D = DataFromPlugins(self.grouped_data0D_fullname.split('/')[1],
+                                         data=data0D_arrays, labels=labels,
+                                         distribution=dwa.distribution,
+                                         dim='DataND',
+                                         origin=self.grouped_data0D_fullname.split('/')[0],
+                                         axes=dwa.axes, nav_indexes=dwa.nav_indexes,
+                                         )
+                self._data.append(data0D)
+                if 'averaged' in dwa.name and separate_average:
+                    data0D_averaged = DataFromPlugins(
+                        f"{self.grouped_data0D_fullname.split('/')[1]}_averaged",
+                        data=data0D_arrays_averaged, labels=labels_averaged,
+                        distribution=dwa.distribution,
+                        dim='DataND',
+                        origin=self.grouped_data0D_fullname.split('/')[0],
+                        axes=dwa.axes, nav_indexes=dwa.nav_indexes,
+                    )
+                    self._data.append(data0D_averaged)
 
     def load_plot_data(self, **kwargs):
         """Load and plot all data from the current H5Saver
@@ -290,9 +293,6 @@ class LoaderPlotter:
         for ind, _data in enumerate(data.data):
             viewer = self._viewers[_data.get_full_name()]
             self._viewer_docks[_data.get_full_name()].setTitle(_data.name)
-
-            # viewer = self.viewers[ind]
-            # self.dispatcher.viewer_docks[ind].setTitle(_data.name)
 
             viewer.title = _data.name
             if temp:
