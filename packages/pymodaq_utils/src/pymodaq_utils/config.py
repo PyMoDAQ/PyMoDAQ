@@ -467,8 +467,8 @@ class Config(BaseConfig):
                     return [entry]
             else:
                 return entry
-        elif 'hdf5_backends' in args:
-            # Return full list of available backends (for UI)
+        elif args == ('hdf5_backends',):
+            # Shortcut: Return full list of available backends (for UI)
             # Try new path first, then old path for backward compatibility
             try:
                 entry = super().__call__('data_saving', 'h5file', 'hdf5_backend')
@@ -481,7 +481,8 @@ class Config(BaseConfig):
                 return entry
             else:
                 return [entry]  # Wrap old string format in list
-        elif 'hdf5_backend' in args:
+        elif args == ('hdf5_backend',):
+            # Shortcut: Return selected backend (first in list)
             # Try new path first, then old path for backward compatibility
             try:
                 entry = super().__call__('data_saving', 'h5file', 'hdf5_backend')
