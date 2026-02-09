@@ -129,6 +129,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
          'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
+        {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
         {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
          'limits': config('data_saving', 'data_type', 'dynamic'),
          'value': config('data_saving', 'data_type', 'dynamic')[0]},
@@ -140,10 +141,11 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                 'value': config('data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
         ]},
         {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'children': [
-            {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool', 'value': False,
+            {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
+             'value': config('data_saving', 'h5file', 'swmr_enabled'),
              'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
             {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
-             'value': 1, 'min': 0,
+             'value': config('data_saving', 'h5file', 'swmr_flush_interval'), 'min': 0,
              'tooltip': 'Flush every N scan steps. 0 = only at end.'},
         ]},
     ]
@@ -493,6 +495,7 @@ class H5Saver(H5SaverBase, QObject):
         H5SaverBase.__init__(self, *args, **kwargs)
 
         self.settings.child('new_file').sigActivated.connect(lambda: self.emit_new_file(True))
+        self.settings.child('browse_file').sigActivated.connect(self.browse_file)
 
     def close(self):
         self.close_file()
@@ -506,6 +509,33 @@ class H5Saver(H5SaverBase, QObject):
                 emits True if a new file has been asked by the user pressing the new file button on the UI
         """
         self.new_file_sig.emit(status)
+
+    def browse_file(self):
+        """Open a file dialog to select an existing h5 file to append to."""
+        start_path = self.settings['base_path']
+        current_file = self.settings['current_h5_file']
+        if current_file:
+            start_path = str(Path(current_file).parent)
+
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Select HDF5 File",
+            start_path,
+            "HDF5 Files (*.h5);;All Files (*)"
+        )
+        if file_path:
+            try:
+                # Close current file if open
+                if self.isopen():
+                    self.close_file()
+                # Open the selected file
+                self.init_file(addhoc_file_path=file_path)
+                logger.info(f"Opened h5 file: {file_path}")
+            except Exception as e:
+                logger.error(f"Could not open file {file_path}: {e}")
+                QtWidgets.QMessageBox.warning(
+                    None, "Error",
+                    f"Could not open file:\n{file_path}\n\nError: {e}"
+                )
 
     def show_file_content(self):
         win = QtWidgets.QMainWindow()
