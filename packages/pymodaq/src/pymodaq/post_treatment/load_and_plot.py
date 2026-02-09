@@ -294,9 +294,6 @@ class LoaderPlotter:
             viewer = self._viewers[_data.get_full_name()]
             self._viewer_docks[_data.get_full_name()].setTitle(_data.name)
 
-            # viewer = self.viewers[ind]
-            # self.dispatcher.viewer_docks[ind].setTitle(_data.name)
-
             viewer.title = _data.name
             if temp:
                 viewer.show_data_temp(_data)
