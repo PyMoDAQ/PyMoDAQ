@@ -375,6 +375,367 @@ class TestSWMRExtendedSaver:
         reader.close()
         saver.close_file()
 
+    def test_concurrent_read_refresh_updates_view(self, tmp_path):
+        """Verify that reader sees updated data after calling refresh."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'refresh_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create structure and initial data
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append initial data and flush
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        # Open as concurrent reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['data']
+        ds.id.refresh()
+        initial_shape = ds.shape[0]
+        assert initial_shape == 1  # Reader sees first row
+        np.testing.assert_array_equal(ds[0], [1.0, 2.0, 3.0])
+
+        # Write more data and flush
+        earr.append(np.array([4.0, 5.0, 6.0]))
+        saver.flush()
+
+        # After refresh, reader should see new data
+        ds.id.refresh()
+        assert ds.shape[0] == 2
+        np.testing.assert_array_equal(ds[1], [4.0, 5.0, 6.0])
+
+        # Write even more and verify
+        earr.append(np.array([7.0, 8.0, 9.0]))
+        saver.flush()
+        ds.id.refresh()
+        assert ds.shape[0] == 3
+        np.testing.assert_array_equal(ds[2], [7.0, 8.0, 9.0])
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_read_multiple_datasets(self, tmp_path):
+        """Verify reader can access multiple datasets simultaneously during SWMR."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'multi_dataset_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create multiple datasets
+        earr1 = saver.create_earray(saver.root(), 'data1',
+                                    dtype=np.float64, data_shape=(3,))
+        earr2 = saver.create_earray(saver.root(), 'data2',
+                                    dtype=np.float32, data_shape=(5,))
+        carr = saver.create_carray(saver.root(), 'static_data',
+                                   obj=np.array([100.0, 200.0, 300.0]))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append data
+        earr1.append(np.array([1.0, 2.0, 3.0]))
+        earr2.append(np.array([10.0, 20.0, 30.0, 40.0, 50.0], dtype=np.float32))
+        saver.flush()
+
+        # Reader accesses all datasets
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds1 = reader['data1']
+        ds2 = reader['data2']
+        ds_static = reader['static_data']
+
+        ds1.id.refresh()
+        ds2.id.refresh()
+
+        assert ds1.shape[0] == 1
+        assert ds2.shape[0] == 1
+        np.testing.assert_array_equal(ds1[0], [1.0, 2.0, 3.0])
+        np.testing.assert_array_almost_equal(ds2[0], [10.0, 20.0, 30.0, 40.0, 50.0])
+        np.testing.assert_array_equal(ds_static[:], [100.0, 200.0, 300.0])
+
+        # Write more to both earrays
+        earr1.append(np.array([4.0, 5.0, 6.0]))
+        earr2.append(np.array([60.0, 70.0, 80.0, 90.0, 100.0], dtype=np.float32))
+        saver.flush()
+
+        ds1.id.refresh()
+        ds2.id.refresh()
+
+        assert ds1.shape[0] == 2
+        assert ds2.shape[0] == 2
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_read_vlarray(self, tmp_path):
+        """Verify reader can read VLARRAY data during SWMR mode."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'vlarray_concurrent_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create vlarray
+        vlarr = saver.create_vlarray(saver.root(), 'vldata', dtype=np.float64)
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append variable-length data
+        vlarr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        # Reader opens and reads
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['vldata']
+        ds.id.refresh()
+
+        assert ds.shape[0] == 1
+        np.testing.assert_array_equal(ds[0], [1.0, 2.0, 3.0])
+
+        # Append more variable-length data (different sizes)
+        vlarr.append(np.array([4.0, 5.0, 6.0, 7.0, 8.0]))
+        saver.flush()
+
+        ds.id.refresh()
+        assert ds.shape[0] == 2
+        np.testing.assert_array_equal(ds[1], [4.0, 5.0, 6.0, 7.0, 8.0])
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_read_large_data(self, tmp_path):
+        """Verify SWMR handles larger datasets correctly."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'large_data_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create array for large data
+        data_shape = (1000,)  # 1000 elements per row
+        earr = saver.create_earray(saver.root(), 'large_data',
+                                   dtype=np.float64, data_shape=data_shape)
+        saver.flush()
+        saver.enable_swmr()
+
+        # Open reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['large_data']
+
+        # Write and verify multiple large rows
+        num_rows = 10
+        for i in range(num_rows):
+            row_data = np.arange(1000, dtype=np.float64) + i * 1000
+            earr.append(row_data)
+            saver.flush()
+
+            ds.id.refresh()
+            assert ds.shape[0] == i + 1
+            np.testing.assert_array_equal(ds[i], row_data)
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_read_group_structure(self, tmp_path):
+        """Verify reader can navigate group structure during SWMR."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'group_structure_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create group structure
+        group1 = saver.get_set_group(saver.root(), 'group1', 'First Group')
+        group2 = saver.get_set_group(saver.root(), 'group2', 'Second Group')
+        subgroup = saver.get_set_group(group1, 'subgroup', 'Nested Group')
+
+        # Create arrays in different groups
+        earr1 = saver.create_earray(group1.node, 'data',
+                                    dtype=np.float64, data_shape=(3,))
+        earr2 = saver.create_earray(subgroup.node, 'nested_data',
+                                    dtype=np.float64, data_shape=(2,))
+
+        saver.flush()
+        saver.enable_swmr()
+
+        # Write data
+        earr1.append(np.array([1.0, 2.0, 3.0]))
+        earr2.append(np.array([10.0, 20.0]))
+        saver.flush()
+
+        # Reader navigates structure
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+
+        # Check groups exist
+        assert 'group1' in reader
+        assert 'group2' in reader
+        assert 'subgroup' in reader['group1']
+
+        # Access nested data
+        ds1 = reader['group1/data']
+        ds2 = reader['group1/subgroup/nested_data']
+
+        ds1.id.refresh()
+        ds2.id.refresh()
+
+        np.testing.assert_array_equal(ds1[0], [1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(ds2[0], [10.0, 20.0])
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_multiple_readers(self, tmp_path):
+        """Verify multiple readers can access the file simultaneously."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'multi_reader_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create array
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Write initial data
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        # Open multiple readers
+        reader1 = h5py.File(str(filepath), 'r', swmr=True)
+        reader2 = h5py.File(str(filepath), 'r', swmr=True)
+        reader3 = h5py.File(str(filepath), 'r', swmr=True)
+
+        ds1 = reader1['data']
+        ds2 = reader2['data']
+        ds3 = reader3['data']
+
+        # All readers refresh and verify they see the same data
+        ds1.id.refresh()
+        ds2.id.refresh()
+        ds3.id.refresh()
+
+        np.testing.assert_array_equal(ds1[0], [1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(ds2[0], [1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(ds3[0], [1.0, 2.0, 3.0])
+
+        # Write more data
+        earr.append(np.array([4.0, 5.0, 6.0]))
+        saver.flush()
+
+        # All readers refresh and see new data
+        ds1.id.refresh()
+        ds2.id.refresh()
+        ds3.id.refresh()
+
+        assert ds1.shape[0] == 2
+        assert ds2.shape[0] == 2
+        assert ds3.shape[0] == 2
+
+        np.testing.assert_array_equal(ds1[1], [4.0, 5.0, 6.0])
+        np.testing.assert_array_equal(ds2[1], [4.0, 5.0, 6.0])
+        np.testing.assert_array_equal(ds3[1], [4.0, 5.0, 6.0])
+
+        # Write even more and verify all readers can independently refresh
+        earr.append(np.array([7.0, 8.0, 9.0]))
+        saver.flush()
+
+        ds1.id.refresh()
+        ds2.id.refresh()
+        ds3.id.refresh()
+
+        assert ds1.shape[0] == 3
+        np.testing.assert_array_equal(ds1[2], [7.0, 8.0, 9.0])
+        np.testing.assert_array_equal(ds2[2], [7.0, 8.0, 9.0])
+        np.testing.assert_array_equal(ds3[2], [7.0, 8.0, 9.0])
+
+        reader1.close()
+        reader2.close()
+        reader3.close()
+        saver.close_file()
+
+    def test_concurrent_read_rapid_writes(self, tmp_path):
+        """Verify reader handles rapid successive writes correctly."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'rapid_write_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create array
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(10,))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Open reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['data']
+
+        # Rapid writes with single flush at end
+        num_rapid_writes = 50
+        for i in range(num_rapid_writes):
+            earr.append(np.arange(10, dtype=np.float64) + i * 10)
+        saver.flush()
+
+        # Reader should see all data after single refresh
+        ds.id.refresh()
+        assert ds.shape[0] == num_rapid_writes
+
+        # Verify data integrity
+        for i in range(num_rapid_writes):
+            expected = np.arange(10, dtype=np.float64) + i * 10
+            np.testing.assert_array_equal(ds[i], expected)
+
+        reader.close()
+        saver.close_file()
+
+    def test_concurrent_read_2d_data(self, tmp_path):
+        """Verify SWMR works correctly with 2D data."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / '2d_data_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create 2D array (each row is a 10x10 image)
+        data_shape = (10, 10)
+        earr = saver.create_earray(saver.root(), 'images',
+                                   dtype=np.float64, data_shape=data_shape)
+        saver.flush()
+        saver.enable_swmr()
+
+        # Open reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['images']
+
+        # Write 2D frames
+        for i in range(5):
+            frame = np.ones((10, 10), dtype=np.float64) * (i + 1)
+            earr.append(frame)
+            saver.flush()
+
+            ds.id.refresh()
+            assert ds.shape == (i + 1, 10, 10)
+            np.testing.assert_array_equal(ds[i], frame)
+
+        reader.close()
+        saver.close_file()
+
     def test_flush_interval_zero(self, tmp_path):
         """With flush_interval=0, no periodic flushes should happen."""
         from pymodaq_data.h5modules.saving import H5SaverLowLevel
