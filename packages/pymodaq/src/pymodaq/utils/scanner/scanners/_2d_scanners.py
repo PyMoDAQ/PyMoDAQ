@@ -184,6 +184,25 @@ class Scan2DRandom(Scan2DLinear):
 
 
 @ScannerFactory.register()
+class Scan2DRandomSpread(Scan2DRandom):
+    scan_subtype = 'RandomSpread'
+    distribution = DataDistribution.spread
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{act.title}_index',
+                     units=f'{act.units}',
+                     data=np.atleast_1d(self.positions[:, ind]),
+                     index=0, spread_order=ind) for ind, act in enumerate(self.actuators)]
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return (scan_index,)
+
+    def get_scan_shape(self) -> Tuple[int]:
+        return (self.positions.shape[0], )
+
+
+@ScannerFactory.register()
 class Scan2DSpiral(Scan2DLinear):
     scan_subtype = 'Spiral'
     params = [{'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
