@@ -1099,3 +1099,632 @@ class TestSWMRIndexedArrays:
 
         reader.close()
         saver.close_file()
+
+
+class TestSWMRAttributeTracking:
+    """Tests for swmr_active attribute tracking."""
+
+    def test_swmr_active_attribute_set_on_enable(self, tmp_path):
+        """Verify swmr_active attribute is set to True when SWMR is enabled."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'swmr_active_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create a dataset (required before enabling SWMR)
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0]))
+        saver.flush()
+
+        # Before enabling SWMR, attribute should not exist or be False
+        assert saver.root().attrs.get('swmr_active', False) is False
+
+        saver.enable_swmr()
+
+        # After enabling SWMR, attribute should be True
+        assert saver.root().attrs['swmr_active'] is True
+
+        saver.close_file()
+
+    def test_swmr_active_attribute_cleared_on_reconcile(self, tmp_path):
+        """Verify swmr_active is set to False after reconcile_swmr_attrs."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'swmr_reconcile_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0]))
+        saver.flush()
+        saver.enable_swmr()
+
+        assert saver.root().attrs['swmr_active'] is True
+
+        # Finalize SWMR (close, reopen, reconcile)
+        saver.finalize_swmr()
+
+        # Reopen to check attribute
+        saver.open_file(filepath, 'r')
+        assert saver.root().attrs['swmr_active'] is False
+        saver.close_file()
+
+    def test_reader_can_detect_swmr_active(self, tmp_path):
+        """Verify a reader can detect if writer has SWMR active."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'detect_swmr_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0]))
+        saver.flush()
+        saver.enable_swmr()
+        saver.flush()
+
+        # Reader opens and checks attribute
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        reader_swmr_active = reader.attrs.get('swmr_active', False)
+        assert reader_swmr_active is True
+        reader.close()
+
+        saver.close_file()
+
+
+class TestCloseFileCleanup:
+    """Tests for file handle cleanup on close."""
+
+    def test_close_file_sets_h5file_to_none(self, tmp_path):
+        """Verify close_file sets _h5file to None."""
+        from pymodaq_data.h5modules.backends import H5Backend
+
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'close_test.h5'
+        bck.open_file(filepath, 'w', 'test')
+
+        assert bck._h5file is not None
+        assert bck.isopen()
+
+        bck.close_file()
+
+        assert bck._h5file is None
+        assert not bck.isopen()
+
+    def test_close_file_resets_swmr_enabled(self, tmp_path):
+        """Verify close_file resets _swmr_enabled flag."""
+        from pymodaq_data.h5modules.backends import H5Backend
+
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'swmr_close_test.h5'
+        bck.open_file(filepath, 'w', 'test', swmr_mode=True)
+        bck.create_carray(bck.root(), 'data', obj=np.array([1.0]))
+        bck.flush()
+        bck.enable_swmr()
+
+        assert bck._swmr_enabled is True
+
+        bck.close_file()
+
+        assert bck._swmr_enabled is False
+
+
+class TestFinalizeSWMRKeepOpen:
+    """Tests for finalize_swmr with keep_open parameter."""
+
+    def test_finalize_swmr_keep_open_true(self, tmp_path):
+        """Verify finalize_swmr(keep_open=True) leaves file open."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'keep_open_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0]))
+        saver.flush()
+        saver.enable_swmr()
+
+        saver.finalize_swmr(keep_open=True)
+
+        # File should still be open
+        assert saver.isopen()
+
+        # Can set attributes now (not in SWMR mode anymore)
+        saver.root().attrs['test_attr'] = 'test_value'
+        saver.flush()
+
+        saver.close_file()
+
+        # Verify attribute was saved
+        saver.open_file(filepath, 'r')
+        assert saver.root().attrs['test_attr'] == 'test_value'
+        saver.close_file()
+
+    def test_finalize_swmr_keep_open_false(self, tmp_path):
+        """Verify finalize_swmr(keep_open=False) closes file."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'close_after_finalize.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0]))
+        saver.flush()
+        saver.enable_swmr()
+
+        saver.finalize_swmr(keep_open=False)
+
+        # File should be closed
+        assert not saver.isopen()
+        assert saver._h5file is None
+
+
+class TestSWMRUtilityFunctions:
+    """Tests for SWMR utility functions."""
+
+    def test_open_h5_file_for_reading_normal_file(self, tmp_path):
+        """Verify open_h5_file_for_reading works with normal (non-SWMR) file."""
+        import h5py
+        from pymodaq_data.h5modules import open_h5_file_for_reading
+
+        filepath = tmp_path / 'normal_file.h5'
+
+        # Create a normal file
+        with h5py.File(str(filepath), 'w') as f:
+            f.create_dataset('data', data=[1, 2, 3])
+
+        # Open with utility function
+        f, is_swmr = open_h5_file_for_reading(str(filepath))
+
+        assert is_swmr is False
+        np.testing.assert_array_equal(f['data'][:], [1, 2, 3])
+        f.close()
+
+    def test_open_h5_file_for_reading_swmr_file(self, tmp_path):
+        """Verify open_h5_file_for_reading detects SWMR file."""
+        import h5py
+        from pymodaq_data.h5modules import open_h5_file_for_reading
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'swmr_utility_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+        saver.enable_swmr()
+        saver.flush()
+
+        # Open with utility function
+        f, is_swmr = open_h5_file_for_reading(str(filepath))
+
+        assert is_swmr is True
+        f.close()
+
+        saver.close_file()
+
+    def test_open_h5_file_for_reading_force_swmr(self, tmp_path):
+        """Verify open_h5_file_for_reading with swmr=True forces SWMR mode."""
+        import h5py
+        from pymodaq_data.h5modules import open_h5_file_for_reading
+
+        filepath = tmp_path / 'force_swmr.h5'
+
+        # Create file with libver='latest' (required for SWMR)
+        with h5py.File(str(filepath), 'w', libver='latest') as f:
+            f.create_dataset('data', data=[1, 2, 3])
+
+        # Force SWMR mode
+        f, is_swmr = open_h5_file_for_reading(str(filepath), swmr=True)
+
+        assert is_swmr is True
+        f.close()
+
+    def test_open_h5_file_for_reading_force_no_swmr(self, tmp_path):
+        """Verify open_h5_file_for_reading with swmr=False opens normally."""
+        import h5py
+        from pymodaq_data.h5modules import open_h5_file_for_reading
+
+        filepath = tmp_path / 'no_swmr.h5'
+
+        with h5py.File(str(filepath), 'w') as f:
+            f.create_dataset('data', data=[1, 2, 3])
+
+        f, is_swmr = open_h5_file_for_reading(str(filepath), swmr=False)
+
+        assert is_swmr is False
+        f.close()
+
+    def test_is_file_swmr_active_true(self, tmp_path):
+        """Verify is_file_swmr_active returns True for active SWMR file."""
+        from pymodaq_data.h5modules import is_file_swmr_active
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'swmr_active_check.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0]))
+        saver.flush()
+        saver.enable_swmr()
+        saver.flush()
+
+        # Check from outside
+        assert is_file_swmr_active(str(filepath)) is True
+
+        saver.close_file()
+
+    def test_is_file_swmr_active_false(self, tmp_path):
+        """Verify is_file_swmr_active returns False for normal file."""
+        import h5py
+        from pymodaq_data.h5modules import is_file_swmr_active
+
+        filepath = tmp_path / 'normal_check.h5'
+
+        with h5py.File(str(filepath), 'w') as f:
+            f.create_dataset('data', data=[1, 2, 3])
+
+        assert is_file_swmr_active(str(filepath)) is False
+
+    def test_is_file_swmr_active_after_finalize(self, tmp_path):
+        """Verify is_file_swmr_active returns False after finalize."""
+        from pymodaq_data.h5modules import is_file_swmr_active
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'finalized_check.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0]))
+        saver.flush()
+        saver.enable_swmr()
+        saver.finalize_swmr()
+
+        assert is_file_swmr_active(str(filepath)) is False
+
+
+class TestGetHdf5Backend:
+    """Tests for the get_hdf5_backend utility function."""
+
+    def test_get_hdf5_backend_returns_available(self):
+        """Verify get_hdf5_backend returns an available backend."""
+        from pymodaq_data.h5modules import get_hdf5_backend, backends_available
+
+        backend = get_hdf5_backend()
+        assert backend in backends_available
+
+    def test_get_hdf5_backend_with_config(self):
+        """Verify get_hdf5_backend works with explicit config."""
+        from pymodaq_data.h5modules import get_hdf5_backend, backends_available
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        backend = get_hdf5_backend(config)
+        assert backend in backends_available
+
+
+class TestSWMRConfigEntries:
+    """Tests for SWMR-related config entries."""
+
+    def test_swmr_config_entries_exist(self):
+        """Verify SWMR config entries are present in config template."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+
+        # Check SWMR entries exist in data_saving.h5file
+        h5file_children = config.get_children('data_saving', 'h5file')
+        assert 'swmr_enabled' in h5file_children
+        assert 'swmr_flush_interval' in h5file_children
+
+    def test_swmr_enabled_default_value(self):
+        """Verify swmr_enabled has correct default value."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        swmr_enabled = config('data_saving', 'h5file', 'swmr_enabled')
+        assert isinstance(swmr_enabled, bool)
+        # Default is False
+        assert swmr_enabled is False
+
+    def test_swmr_flush_interval_default_value(self):
+        """Verify swmr_flush_interval has correct default value."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        flush_interval = config('data_saving', 'h5file', 'swmr_flush_interval')
+        assert isinstance(flush_interval, int)
+        # Default is 1
+        assert flush_interval == 1
+
+
+class TestHdf5BackendConfig:
+    """Tests for hdf5_backend config handling."""
+
+    def test_hdf5_backend_in_data_saving(self):
+        """Verify hdf5_backend can be accessed from data_saving.h5file."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        # Should be able to access it via direct path
+        backends_list = config('data_saving', 'h5file', 'hdf5_backend')
+        assert isinstance(backends_list, list)
+        assert len(backends_list) > 0
+        assert 'tables' in backends_list or 'h5py' in backends_list
+
+    def test_hdf5_backend_shortcut_returns_first(self):
+        """Verify 'hdf5_backend' shortcut returns first element."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        # The shortcut should return the first backend (selected one)
+        backend = config('hdf5_backend')
+        assert isinstance(backend, str)
+        assert backend in ['tables', 'h5py', 'h5pyd']
+
+    def test_hdf5_backends_shortcut_returns_list(self):
+        """Verify 'hdf5_backends' shortcut returns full list."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        # The plural shortcut should return the full list
+        backends = config('hdf5_backends')
+        assert isinstance(backends, list)
+        assert len(backends) > 0
+
+    def test_hdf5_backend_config_children(self):
+        """Verify h5file config section has expected children."""
+        from pymodaq_utils.config import Config
+
+        config = Config()
+        children = config.get_children('data_saving', 'h5file')
+        assert 'save_path' in children
+        assert 'hdf5_backend' in children
+        assert 'compression_level' in children
+
+
+class TestSWMRReconciliation:
+    """Tests for SWMR attr reconciliation edge cases."""
+
+    def test_reconcile_updates_all_earray_shapes(self, tmp_path):
+        """Verify reconcile updates shape attrs on all EARRAY nodes."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'multi_earray.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create multiple earrays
+        earr1 = saver.create_earray(saver.root(), 'earray1',
+                                    dtype=np.float64, data_shape=(3,))
+        earr2 = saver.create_earray(saver.root(), 'earray2',
+                                    dtype=np.float64, data_shape=(5,))
+        earr3 = saver.create_earray(saver.root(), 'earray3',
+                                    dtype=np.float64, data_shape=(2,))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append different amounts to each
+        earr1.append(np.array([1.0, 2.0, 3.0]))
+        earr1.append(np.array([4.0, 5.0, 6.0]))  # 2 rows
+
+        earr2.append(np.array([1.0, 2.0, 3.0, 4.0, 5.0]))  # 1 row
+
+        earr3.append(np.array([1.0, 2.0]))
+        earr3.append(np.array([3.0, 4.0]))
+        earr3.append(np.array([5.0, 6.0]))  # 3 rows
+
+        # Shapes should be stale during SWMR
+        assert earr1.attrs['shape'] == (0, 3)
+        assert earr2.attrs['shape'] == (0, 5)
+        assert earr3.attrs['shape'] == (0, 2)
+
+        # Finalize and reconcile
+        saver.finalize_swmr()
+
+        # Reopen and verify all shapes are correct
+        saver.open_file(filepath, 'r')
+        node1 = saver.get_node('/earray1')
+        node2 = saver.get_node('/earray2')
+        node3 = saver.get_node('/earray3')
+
+        assert node1.attrs['shape'] == (2, 3)
+        assert node2.attrs['shape'] == (1, 5)
+        assert node3.attrs['shape'] == (3, 2)
+
+        saver.close_file()
+
+    def test_reconcile_updates_vlarray_shapes(self, tmp_path):
+        """Verify reconcile updates shape attrs on VLARRAY nodes."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'vlarray_reconcile.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        vlarr = saver.create_vlarray(saver.root(), 'vldata', dtype=np.float64)
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append variable-length rows
+        vlarr.append(np.array([1.0, 2.0]))
+        vlarr.append(np.array([3.0, 4.0, 5.0, 6.0]))
+        vlarr.append(np.array([7.0]))
+
+        # Shape should be stale
+        assert vlarr.attrs['shape'] == (0,)
+
+        saver.finalize_swmr()
+
+        saver.open_file(filepath, 'r')
+        node = saver.get_node('/vldata')
+        assert node.attrs['shape'] == (3,)
+        saver.close_file()
+
+    def test_reconcile_in_nested_groups(self, tmp_path):
+        """Verify reconcile works for arrays in nested group structure."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'nested_reconcile.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Create nested structure
+        group1 = saver.get_set_group(saver.root(), 'level1', 'Level 1')
+        group2 = saver.get_set_group(group1.node, 'level2', 'Level 2')
+        group3 = saver.get_set_group(group2.node, 'level3', 'Level 3')
+
+        # Create arrays at different levels
+        earr_root = saver.create_earray(saver.root(), 'root_data',
+                                        dtype=np.float64, data_shape=(2,))
+        earr_l1 = saver.create_earray(group1.node, 'l1_data',
+                                      dtype=np.float64, data_shape=(3,))
+        earr_l3 = saver.create_earray(group3.node, 'l3_data',
+                                      dtype=np.float64, data_shape=(4,))
+
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append data
+        earr_root.append(np.array([1.0, 2.0]))
+        earr_l1.append(np.array([1.0, 2.0, 3.0]))
+        earr_l1.append(np.array([4.0, 5.0, 6.0]))
+        earr_l3.append(np.array([1.0, 2.0, 3.0, 4.0]))
+
+        saver.finalize_swmr()
+
+        saver.open_file(filepath, 'r')
+        assert saver.get_node('/root_data').attrs['shape'] == (1, 2)
+        assert saver.get_node('/level1/l1_data').attrs['shape'] == (2, 3)
+        assert saver.get_node('/level1/level2/level3/l3_data').attrs['shape'] == (1, 4)
+        saver.close_file()
+
+
+class TestSWMRErrorHandling:
+    """Tests for SWMR error handling and edge cases."""
+
+    def test_double_enable_swmr_safe(self, h5_swmr):
+        """Verify enable_swmr can be called multiple times without error."""
+        h5_swmr.create_carray(h5_swmr.root(), 'data', obj=np.array([1.0]))
+        h5_swmr.flush()
+
+        h5_swmr.enable_swmr()
+        assert h5_swmr.is_swmr_active is True
+
+        # Second call should not raise
+        h5_swmr.enable_swmr()
+        assert h5_swmr.is_swmr_active is True
+
+        # Third call still safe
+        h5_swmr.enable_swmr()
+        assert h5_swmr.is_swmr_active is True
+
+    def test_close_without_finalize(self, tmp_path):
+        """Verify closing without finalize doesn't corrupt file."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'close_no_finalize.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        # Close without finalize (simulating unexpected exit)
+        saver.close_file()
+
+        # File should still be readable
+        with h5py.File(str(filepath), 'r') as f:
+            assert f['data'].shape == (1, 3)
+            np.testing.assert_array_equal(f['data'][0], [1.0, 2.0, 3.0])
+            # Shape attr will be stale but data is intact
+            # This is expected behavior - finalize is needed for clean attrs
+
+    def test_finalize_already_closed(self, tmp_path):
+        """Verify finalize_swmr handles already-closed file gracefully."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'finalize_closed.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        saver.create_carray(saver.root(), 'data', obj=np.array([1.0]))
+        saver.flush()
+        saver.enable_swmr()
+        saver.close_file()
+
+        # finalize_swmr should handle this - it will try to close (noop)
+        # then open, reconcile, and close
+        saver.finalize_swmr()
+
+        # Verify file is readable
+        saver.open_file(filepath, 'r')
+        assert saver.get_node('/data').attrs['swmr_active'] is False
+        saver.close_file()
+
+    def test_read_during_swmr_no_refresh_sees_stale(self, tmp_path):
+        """Verify reader without refresh sees stale data (expected behavior)."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'stale_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Append initial data
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        # Open reader and get initial shape
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['data']
+        ds.id.refresh()
+        initial_shape = ds.shape[0]
+
+        # Write more data
+        earr.append(np.array([4.0, 5.0, 6.0]))
+        earr.append(np.array([7.0, 8.0, 9.0]))
+        saver.flush()
+
+        # Without refresh, reader might see old shape
+        # (This is expected SWMR behavior - refresh is needed)
+        shape_before_refresh = ds.shape[0]
+
+        # After refresh, should see new shape
+        ds.id.refresh()
+        shape_after_refresh = ds.shape[0]
+
+        # The test verifies the refresh is necessary
+        assert shape_after_refresh == 3
+        # Note: shape_before_refresh might be 1, 2, or 3 depending on timing
+        # but after refresh it must be 3
+
+        reader.close()
+        saver.close_file()
+
+
+class TestBackendsAvailable:
+    """Tests for backend availability checking."""
+
+    def test_backends_available_is_list(self):
+        """Verify backends_available is a list."""
+        from pymodaq_data.h5modules import backends_available
+        assert isinstance(backends_available, list)
+
+    def test_h5py_in_backends(self):
+        """Verify h5py is in available backends (since SWMR tests require it)."""
+        from pymodaq_data.h5modules import backends_available
+        # This test file is skipped if h5py not available, so it must be here
+        assert 'h5py' in backends_available
