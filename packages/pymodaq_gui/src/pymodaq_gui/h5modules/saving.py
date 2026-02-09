@@ -100,6 +100,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         [
             {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
+             'value': config('data_saving', 'h5file', 'hdf5_backend'),
              'limits': backends_available, 'readonly': True},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [

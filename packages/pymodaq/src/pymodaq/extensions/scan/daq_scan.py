@@ -145,7 +145,7 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+        self._h5saver = H5Saver(backend=config_utils('data_saving',  'h5file', 'hdf5_backend'))
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -534,8 +534,14 @@ class DAQScan(CustomExt):
         if new_file:
             self._metada_dataset_set = False
             self.close_file()
+            # Explicitly create a new file (don't reopen existing)
+            try:
+                self._h5saver.init_file(update_h5=True)
+                logger.info(f"Created new h5 file: {self._h5saver.settings['current_h5_file']}")
+            except Exception as e:
+                logger.error(f"Could not create new h5 file: {e}")
 
-        self.module_and_data_saver.h5saver = self.h5saver  # force it for detectors to update their h5saver
+        self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
         res = self.update_file_settings()
         if new_file:
             self.ui.enable_start_stop()
@@ -544,15 +550,78 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config_utils('data_saving',  'h5file', 'hdf5_backend'))
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)
-        if self._h5saver.h5_file is None:
-            self._h5saver.init_file(update_h5=True)
-        if not self._h5saver.isopen():
-            self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
+        if self._h5saver.h5_file is None or not self._h5saver.isopen():
+            # Check if there's an existing file to reopen
+            current_file = self._h5saver.settings['current_h5_file']
+            if current_file and Path(current_file).exists():
+                self._try_open_existing_file(current_file)
+            else:
+                try:
+                    self._h5saver.init_file(update_h5=True)
+                except Exception as e:
+                    logger.warning(f"Could not initialize h5 file: {e}")
         return self._h5saver
+
+    def _try_open_existing_file(self, current_file: str):
+        """Try to open an existing file, asking user what to do if locked."""
+        while True:
+            try:
+                logger.debug(f"Reopening existing h5 file: {current_file}")
+                self._h5saver.init_file(addhoc_file_path=current_file)
+                return  # Success
+            except Exception as e:
+                if 'lock' in str(e).lower() or 'errno = 0' in str(e).lower():
+                    # File is locked - ask user what to do
+                    msg = QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+                    msg.setWindowTitle("File Locked")
+                    msg.setText(f"Cannot open file:\n{current_file}\n\n"
+                                f"The file may be open in another application.")
+                    msg.setInformativeText("Close the file elsewhere and click Retry, "
+                                           "or select a different file.")
+                    retry_btn = msg.addButton("Retry", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                    new_auto_btn = msg.addButton("New File (Auto)", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+                    browse_btn = msg.addButton("Browse...", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                    msg.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+                    msg.exec()
+
+                    if msg.clickedButton() == retry_btn:
+                        continue  # Try again
+                    elif msg.clickedButton() == new_auto_btn:
+                        logger.info("User chose to create new file (auto)")
+                        self._h5saver.init_file(update_h5=True)
+                        return
+                    elif msg.clickedButton() == browse_btn:
+                        # Let user select a file
+                        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                            None, "Select HDF5 File",
+                            str(Path(current_file).parent),
+                            "HDF5 Files (*.h5);;All Files (*)"
+                        )
+                        if file_path:
+                            logger.info(f"User selected file: {file_path}")
+                            try:
+                                self._h5saver.init_file(addhoc_file_path=file_path)
+                                return
+                            except Exception as e2:
+                                logger.warning(f"Could not open selected file: {e2}")
+                                continue  # Show dialog again
+                        else:
+                            continue  # User cancelled browse, show dialog again
+                    else:
+                        # User cancelled - still need to initialize something
+                        logger.info("User cancelled - creating new file")
+                        self._h5saver.init_file(update_h5=True)
+                        return
+                else:
+                    # Other error - fall back to new file
+                    logger.warning(f"Could not reopen h5 file: {e}")
+                    self._h5saver.init_file(update_h5=True)
+                    return
 
     @h5saver.setter
     def h5saver(self, h5saver_temp: H5Saver):
@@ -737,20 +806,29 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
-            scan_node = self.module_and_data_saver.get_last_node()
-            if self.h5saver.is_swmr_active:
-                scan_path = scan_node.path
-                self.h5saver.finalize_swmr()
-                self.h5saver.open_file(
-                    self.h5saver.h5_file_path.joinpath(self.h5saver.h5_file_name),
-                    mode='a')
-                self.h5saver.get_node(scan_path).attrs['scan_done'] = True
-                self.h5saver.flush()
-                self.h5saver.close_file()
-            else:
-                scan_node.attrs['scan_done'] = True
-                self.module_and_data_saver.flush()
-                self.close_file()
+            try:
+                scan_node = self.module_and_data_saver.get_last_node()
+                if self.h5saver.is_swmr_active:
+                    scan_path = scan_node.path
+                    logger.info("Finalizing SWMR mode...")
+                    self.h5saver.finalize_swmr(keep_open=True)  # Keep open to set scan_done
+                    logger.info("Setting scan_done attribute...")
+                    self.h5saver.get_node(scan_path).attrs['scan_done'] = True
+                    self.h5saver.flush()
+                    self.h5saver.close_file()
+                    logger.info("Scan file closed successfully")
+                else:
+                    scan_node.attrs['scan_done'] = True
+                    self.module_and_data_saver.flush()
+                    self.close_file()
+                    logger.info("Scan file closed successfully")
+            except Exception as e:
+                logger.error(f"Error finalizing scan file: {e}")
+                # Try to close the file anyway
+                try:
+                    self.h5saver.close_file()
+                except Exception:
+                    pass
 
             if not self.batch_started:
                 if not self.dashboard.overshoot:

@@ -467,6 +467,33 @@ class Config(BaseConfig):
                     return [entry]
             else:
                 return entry
+        elif 'hdf5_backends' in args:
+            # Return full list of available backends (for UI)
+            # Try new path first, then old path for backward compatibility
+            try:
+                entry = super().__call__('data_saving', 'h5file', 'hdf5_backend')
+            except (KeyError, ConfigError):
+                try:
+                    entry = super().__call__('general', 'hdf5_backend')
+                except (KeyError, ConfigError):
+                    return ['tables', 'h5py', 'h5pyd']  # Default
+            if isinstance(entry, list):
+                return entry
+            else:
+                return [entry]  # Wrap old string format in list
+        elif 'hdf5_backend' in args:
+            # Try new path first, then old path for backward compatibility
+            try:
+                entry = super().__call__('data_saving', 'h5file', 'hdf5_backend')
+            except (KeyError, ConfigError):
+                try:
+                    entry = super().__call__('general', 'hdf5_backend')
+                except (KeyError, ConfigError):
+                    return 'tables'  # Default
+            if isinstance(entry, list):
+                return entry[0]  # Return selected backend (first in list)
+            else:
+                return entry  # Backward compatibility with old string format
 
         return super().__call__(*args)
 

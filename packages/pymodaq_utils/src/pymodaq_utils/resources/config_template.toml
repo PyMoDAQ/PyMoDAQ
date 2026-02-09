@@ -31,6 +31,7 @@ backend = ["pyqt6",  "pyqt5", "pyside6",]
 [data_saving]
     [data_saving.h5file]
     save_path = "C:\\Data"  #base path where data are automatically saved
+    hdf5_backend = ['tables', 'h5py', 'h5pyd']  # first element is default, mostly tested with tables    
     compression_level = 5  # for hdf5 files between 0(min) and 9 (max)
     swmr_enabled = false  # enable SWMR (Single Writer Multiple Reader) for h5py backend
     swmr_flush_interval = 1  # flush every N scan steps in SWMR mode (0 = only at end)
@@ -51,11 +52,8 @@ debug_level = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 check_version = false  # automatically check version at startup (or not if False)
 message_status_persistence = 1000  # ms
 
-hdf5_backend = 'tables'  # could be among ['tables', 'h5py', 'h5pyd'], mostly tested with tables
-
 [user]
 name = "User name"  # default name used as author in the hdf5 saving files
-
 
 [plotting]
 backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend

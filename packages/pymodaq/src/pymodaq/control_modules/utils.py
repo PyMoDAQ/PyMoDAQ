@@ -155,7 +155,7 @@ class ControlModule(QObject):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(backend=config_utils('data_saving',  'h5file', 'hdf5_backend'))
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
         if not self._h5saver.isopen():
