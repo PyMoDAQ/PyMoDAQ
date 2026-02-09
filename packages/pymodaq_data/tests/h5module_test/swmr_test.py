@@ -782,3 +782,320 @@ class TestSWMRExtendedSaver:
 
         saver.flush = original_flush
         saver.close_file()
+
+
+class TestSWMRIndexedArrays:
+    """Tests for SWMR with pre-allocated indexed arrays (DAQ_Scan workflow)."""
+
+    def test_preallocated_carray_indexed_write(self, tmp_path):
+        """Verify SWMR works with pre-allocated CARRAY using indexed writes."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'indexed_carray.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Pre-allocate array with scan shape (simulating a 5-point 1D scan with 10-element data)
+        scan_shape = (5,)
+        data_shape = (10,)
+        full_shape = scan_shape + data_shape
+
+        # Create pre-allocated array (like DAQ_Scan does)
+        carr = saver.create_carray(saver.root(), 'scan_data',
+                                   obj=np.zeros(full_shape, dtype=np.float64))
+        saver.flush()
+        saver.enable_swmr()
+
+        # Open reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['scan_data']
+        ds.id.refresh()
+
+        # Write data at specific indices (simulating scan points)
+        for scan_idx in range(5):
+            data = np.arange(10, dtype=np.float64) + scan_idx * 100
+            carr[scan_idx] = data
+            saver.flush()
+
+            # Reader should see the data after refresh
+            ds.id.refresh()
+            np.testing.assert_array_equal(ds[scan_idx], data)
+
+        reader.close()
+        saver.close_file()
+
+    def test_preallocated_2d_scan_indexed_write(self, tmp_path):
+        """Verify SWMR works with 2D scan shape (e.g., XY scan)."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'indexed_2d_scan.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Pre-allocate array with 2D scan shape (3x4 scan with 8-element data)
+        scan_shape = (3, 4)
+        data_shape = (8,)
+        full_shape = scan_shape + data_shape
+
+        carr = saver.create_carray(saver.root(), 'scan_data',
+                                   obj=np.zeros(full_shape, dtype=np.float64))
+        saver.flush()
+        saver.enable_swmr()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['scan_data']
+
+        # Write data at 2D indices
+        for i in range(3):
+            for j in range(4):
+                data = np.arange(8, dtype=np.float64) + i * 100 + j * 10
+                carr[i, j] = data
+                saver.flush()
+
+                ds.id.refresh()
+                np.testing.assert_array_equal(ds[i, j], data)
+
+        reader.close()
+        saver.close_file()
+
+    def test_preallocated_2d_image_data(self, tmp_path):
+        """Verify SWMR works with 2D image data at each scan point."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'indexed_image_scan.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Pre-allocate: 5 scan points, each with a 10x10 image
+        scan_shape = (5,)
+        image_shape = (10, 10)
+        full_shape = scan_shape + image_shape
+
+        carr = saver.create_carray(saver.root(), 'images',
+                                   obj=np.zeros(full_shape, dtype=np.float64))
+        saver.flush()
+        saver.enable_swmr()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['images']
+
+        for scan_idx in range(5):
+            image = np.ones(image_shape, dtype=np.float64) * (scan_idx + 1)
+            carr[scan_idx] = image
+            saver.flush()
+
+            ds.id.refresh()
+            np.testing.assert_array_equal(ds[scan_idx], image)
+
+        reader.close()
+        saver.close_file()
+
+    def test_extended_saver_indexed_workflow(self, tmp_path):
+        """Test DataToExportExtendedSaver with SWMR using indexed writes."""
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+        from pymodaq_data.h5modules.data_saving import DataToExportExtendedSaver
+        from pymodaq_data.data import DataWithAxes, DataSource, DataToExport, Axis
+        from pymodaq_data.h5modules.backends import CARRAY
+        import h5py
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'extended_indexed.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Simulate a 5-point 1D scan
+        scan_shape = (5,)
+        ext_saver = DataToExportExtendedSaver(saver, extended_shape=scan_shape)
+
+        # Add navigation axes before first data
+        nav_axes = [Axis('scan_axis', 'mm', data=np.linspace(0, 4, 5), index=0)]
+        ext_saver.add_nav_axes(saver.raw_group, nav_axes)
+
+        # First data point creates the structure
+        data_array = np.random.rand(10)
+        dwa = DataWithAxes('test', source=DataSource(0), data=[data_array],
+                           axes=[Axis('x', 'um', data=np.arange(10), index=0)])
+        dte = DataToExport('scan_data', data=[dwa])
+        ext_saver.add_data(saver.raw_group, dte, indexes=[0])
+
+        # SWMR should now be active
+        assert saver.is_swmr_active is True
+
+        # Open reader
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+
+        # Add remaining data points with indexed writes
+        for i in range(1, 5):
+            data_array = np.arange(10, dtype=np.float64) + i * 10
+            dwa = DataWithAxes('test', source=DataSource(0), data=[data_array],
+                               axes=[Axis('x', 'um', data=np.arange(10), index=0)])
+            dte = DataToExport('scan_data', data=[dwa])
+            ext_saver.add_data(saver.raw_group, dte, indexes=[i])
+            saver.flush()
+
+        # Find the data node by walking the structure
+        data_path = None
+        for node in saver.walk_nodes('/'):
+            if isinstance(node, CARRAY) and 'data_type' in node.attrs:
+                if node.attrs['data_type'] == 'data':
+                    data_path = node.path
+                    break
+
+        assert data_path is not None, "Could not find data node"
+
+        # Verify reader can see the data
+        ds = reader[data_path]
+        ds.id.refresh()
+        assert ds.shape[0] == 5  # 5 scan points
+
+        reader.close()
+        saver.finalize_swmr()
+
+        # Verify data integrity after finalization
+        saver.open_file(filepath, 'r')
+        node = saver.get_node(data_path)
+        assert node.attrs['shape'][0] == 5
+        saver.close_file()
+
+    def test_concurrent_read_indexed_non_sequential(self, tmp_path):
+        """Verify reader sees data when scan points are written non-sequentially."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'non_sequential.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Pre-allocate 10-point scan
+        scan_shape = (10,)
+        data_shape = (5,)
+        full_shape = scan_shape + data_shape
+
+        carr = saver.create_carray(saver.root(), 'scan_data',
+                                   obj=np.zeros(full_shape, dtype=np.float64))
+        saver.flush()
+        saver.enable_swmr()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['scan_data']
+
+        # Write data in non-sequential order (simulating snake scan or random access)
+        write_order = [0, 9, 5, 2, 7, 1, 8, 4, 3, 6]
+        for scan_idx in write_order:
+            data = np.arange(5, dtype=np.float64) + scan_idx * 10
+            carr[scan_idx] = data
+            saver.flush()
+
+            ds.id.refresh()
+            np.testing.assert_array_equal(ds[scan_idx], data)
+
+        # Verify all data after complete scan
+        ds.id.refresh()
+        for scan_idx in range(10):
+            expected = np.arange(5, dtype=np.float64) + scan_idx * 10
+            np.testing.assert_array_equal(ds[scan_idx], expected)
+
+        reader.close()
+        saver.close_file()
+
+    def test_multiple_datasets_indexed(self, tmp_path):
+        """Verify SWMR with multiple pre-allocated datasets (like multiple detectors)."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'multi_detector.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        scan_shape = (5,)
+
+        # Create multiple detector data arrays
+        det1_group = saver.get_set_group(saver.root(), 'Detector1', 'First Detector')
+        det2_group = saver.get_set_group(saver.root(), 'Detector2', 'Second Detector')
+
+        carr1 = saver.create_carray(det1_group.node, 'data',
+                                    obj=np.zeros(scan_shape + (10,), dtype=np.float64))
+        carr2 = saver.create_carray(det2_group.node, 'data',
+                                    obj=np.zeros(scan_shape + (20,), dtype=np.float32))
+
+        saver.flush()
+        saver.enable_swmr()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds1 = reader['Detector1/data']
+        ds2 = reader['Detector2/data']
+
+        # Write to both detectors at each scan point
+        for scan_idx in range(5):
+            data1 = np.arange(10, dtype=np.float64) + scan_idx * 100
+            data2 = np.arange(20, dtype=np.float32) + scan_idx * 50
+
+            carr1[scan_idx] = data1
+            carr2[scan_idx] = data2
+            saver.flush()
+
+            ds1.id.refresh()
+            ds2.id.refresh()
+
+            np.testing.assert_array_equal(ds1[scan_idx], data1)
+            np.testing.assert_array_almost_equal(ds2[scan_idx], data2)
+
+        reader.close()
+        saver.close_file()
+
+    def test_reader_partial_scan(self, tmp_path):
+        """Verify reader correctly sees partially completed scan."""
+        import h5py
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'partial_scan.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        # Pre-allocate for 10-point scan
+        scan_shape = (10,)
+        data_shape = (8,)
+        full_shape = scan_shape + data_shape
+
+        # Initialize with NaN to distinguish written vs unwritten
+        init_data = np.full(full_shape, np.nan, dtype=np.float64)
+        carr = saver.create_carray(saver.root(), 'scan_data', obj=init_data)
+        saver.flush()
+        saver.enable_swmr()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        ds = reader['scan_data']
+
+        # Write only first 3 points
+        for scan_idx in range(3):
+            data = np.arange(8, dtype=np.float64) + scan_idx * 10
+            carr[scan_idx] = data
+        saver.flush()
+
+        ds.id.refresh()
+
+        # Reader sees written data
+        for scan_idx in range(3):
+            expected = np.arange(8, dtype=np.float64) + scan_idx * 10
+            np.testing.assert_array_equal(ds[scan_idx], expected)
+
+        # Unwritten points still have NaN
+        assert np.all(np.isnan(ds[5]))
+
+        # Continue writing
+        for scan_idx in range(3, 10):
+            data = np.arange(8, dtype=np.float64) + scan_idx * 10
+            carr[scan_idx] = data
+        saver.flush()
+
+        ds.id.refresh()
+
+        # Now all data should be valid
+        for scan_idx in range(10):
+            expected = np.arange(8, dtype=np.float64) + scan_idx * 10
+            np.testing.assert_array_equal(ds[scan_idx], expected)
+
+        reader.close()
+        saver.close_file()
