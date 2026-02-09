@@ -596,9 +596,10 @@ class H5Backend:
                 if self.isopen():
                     self._h5file.close()
         except Exception as e:
-            print(e)  # no big deal
+            logger.warning(f"Error closing h5file: {e}")
         finally:
             self._swmr_enabled = False
+            self._h5file = None  # Release the file handle reference
 
     def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
         self.file_path = fullpathname
@@ -668,6 +669,8 @@ class H5Backend:
             raise RuntimeError('SWMR mode is only supported with the h5py backend')
         if not self._swmr_mode:
             raise RuntimeError('File was not opened with swmr_mode=True')
+        # Mark file as being written with SWMR (for readers to detect)
+        self.root().attrs['swmr_active'] = True
         self._h5file.swmr_mode = True
         self._swmr_enabled = True
 
@@ -682,6 +685,10 @@ class H5Backend:
         Called after SWMR is ended (file closed and reopened in 'a' mode) to fix
         deferred attribute writes that were skipped during SWMR.
         """
+        # Clear the swmr_active flag now that writing is complete
+        if 'swmr_active' in self.root().attrs.attrs_name:
+            self.root().attrs['swmr_active'] = False
+
         for node in self.walk_nodes('/'):
             if 'CLASS' in node.attrs:
                 node_class = node.attrs['CLASS']
