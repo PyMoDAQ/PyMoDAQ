@@ -101,7 +101,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
              'value': config('data', 'general', 'hdf5_backend')[0],
-             'limits': backends_available, 'readonly': True},
+             'limits': backends_available},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
@@ -149,16 +149,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
              'value': 'zlib', 'limits': ['zlib', 'gzip']},
             {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
                 'value': config('data', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
-        ]},
-        {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'visible': False,
-         'tooltip': 'Single Writer Multiple Reader mode (only available with h5py backend)',
-         'children': [
-            {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
-             'value': config('data', 'data_saving', 'swmr_enabled'),
-             'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
-            {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
-             'value': config('data', 'data_saving', 'swmr_flush_interval'), 'min': 0,
-             'tooltip': 'Flush every N scan steps. 0 = only at end.'},
         ]},
     ]
 
@@ -488,11 +478,13 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             self.define_compression(compression, compression_opts)
 
         elif param.name() == 'backend_type':
-            is_h5py = param.value() == 'h5py'
+            new_backend = param.value()
+            is_h5py = new_backend == 'h5py'
             self.settings.child('swmr_options').setOpts(visible=is_h5py)
             if not is_h5py and self.settings['swmr_options', 'enable_swmr']:
                 self.settings.child('swmr_options', 'enable_swmr').setValue(False)
                 self.update_status('SWMR is only supported with h5py backend, disabling.')
+            self.set_backend(new_backend)
 
     def update_status(self, status):
         logger.warning(status)

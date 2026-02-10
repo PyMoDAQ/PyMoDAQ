@@ -549,11 +549,25 @@ class H5Backend:
     def __init__(self, backend='tables'):
 
         self._h5file = None
-        self.backend = backend
         self.file_path = None
         self.compression = None
         self._swmr_mode = False
         self._swmr_enabled = False
+        self.set_backend(backend)
+
+    def set_backend(self, backend: str):
+        """Switch the active backend, closing any open file first.
+
+        Updates both ``self.backend`` (the name string) and ``self.h5_library``
+        (the imported module), which both need to be consistent for file operations.
+
+        Parameters
+        ----------
+        backend: str
+            One of ``'tables'``, ``'h5py'``, or ``'h5pyd'``.
+        """
+        if hasattr(self, '_h5file'):
+            self.close_file()
         if backend == 'tables':
             if is_tables:
                 self.h5_library = tables
@@ -569,6 +583,9 @@ class H5Backend:
                 self.h5_library = h5pyd
             else:
                 raise ImportError('the h5pyd module is not present')
+        else:
+            raise ValueError(f"Unknown backend: {backend!r}. Must be one of {backends_available}")
+        self.backend = backend
 
     @property
     def h5file(self):
