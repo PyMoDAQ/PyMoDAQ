@@ -107,7 +107,7 @@ def get_instrument_plugins():  # pragma: no cover
         except Exception as e:  # pragma: no cover
             """If an error is generated at the import, then exclude this plugin"""
             logger.debug(f'Impossible to import Instrument plugin {mod["name"]}'
-                         f' from module: {mod["parent_module"].__package__}')
+                         f' from module: {mod["parent_module"].__package__} \n {str(e)}')
 
 
     # add utility plugin for PID
