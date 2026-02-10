@@ -61,6 +61,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.file_menu.addSeparator()
         self.add_action('save', 'Save file as', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
         self.add_action('show_file', 'Show file content', '', menu=self.file_menu, auto_toolbar=False)
+        self.file_menu.addSeparator()
+        self.add_action('open_file', 'Open current file', '', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('close_file', 'Close current file', '', menu=self.file_menu, auto_toolbar=False)
 
         self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
@@ -85,6 +88,8 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))
         self.connect_action('save', lambda: self.command_sig.emit(ThreadCommand('save')))
         self.connect_action('show_file', lambda: self.command_sig.emit(ThreadCommand('show_file')))
+        self.connect_action('open_file', lambda: self.command_sig.emit(ThreadCommand('open_file')))
+        self.connect_action('close_file', lambda: self.command_sig.emit(ThreadCommand('close_file')))
         self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator')))
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
@@ -184,6 +189,10 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._file_open_LED.clickable = False
         self._file_open_LED.setToolTip('H5 file open and accessible')
 
+        self._swmr_label = QtWidgets.QLabel('')
+        self._swmr_label.setToolTip('SWMR mode status')
+        self._swmr_label.setVisible(False)
+
         self._statusbar.addPermanentWidget(self._status_message_label)
 
         self._statusbar.addPermanentWidget(self._n_scan_steps_sb)
@@ -193,6 +202,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._statusbar.addPermanentWidget(self._scan_done_LED)
         self._statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
         self._statusbar.addPermanentWidget(self._file_open_LED)
+        self._statusbar.addPermanentWidget(self._swmr_label)
 
     @property
     def n_scan_steps(self):
@@ -229,6 +239,15 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
             True (green) if the h5 file is open and accessible, False (red) otherwise.
         """
         self._file_open_LED.set_as(is_open)
+
+    def set_swmr_status(self, active: bool):
+        """Show or hide the SWMR mode indicator in the status bar."""
+        if active:
+            self._swmr_label.setText('SWMR')
+            self._swmr_label.setVisible(True)
+        else:
+            self._swmr_label.setText('')
+            self._swmr_label.setVisible(False)
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type, viewers_name, force)

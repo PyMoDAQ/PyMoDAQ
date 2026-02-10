@@ -562,14 +562,17 @@ class H5Saver(H5SaverBase, QObject):
     def show_file_content(self):
         win = QtWidgets.QMainWindow()
         if not self.isopen():
-            if self.h5_file_path is not None:
-                if self.h5_file_path.exists():
-                    self.analysis_prog = browsing.H5Browser(win, h5file_path=self.h5_file_path)
+            if self.h5_file_path is not None and self.h5_file_name is not None:
+                full_path = self.h5_file_path / self.h5_file_name
+                if full_path.exists():
+                    self.analysis_prog = browsing.H5Browser(
+                        win, h5file_path=full_path, backend=self.backend)
                 else:
-                    logger.warning('The h5 file path has not been defined yet')
+                    logger.warning('The h5 file does not exist')
             else:
                 logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
-            self.analysis_prog = browsing.H5Browser(win, h5file=self.h5file)
+            self.analysis_prog = browsing.H5Browser(
+                win, h5file=self.h5file, backend=self.backend)
         win.show()

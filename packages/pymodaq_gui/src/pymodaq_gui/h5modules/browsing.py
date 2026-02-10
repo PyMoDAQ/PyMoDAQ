@@ -150,6 +150,8 @@ class H5Browser(QObject, ActionManager):
         if specified load the corresponding file, otherwise open a select file dialog
     backend: str
         either 'tables, 'h5py' or 'h5pyd'
+    swmr: bool
+        if True, open the file in SWMR reading mode (h5py backend only)
 
     See Also
     --------
@@ -159,7 +161,8 @@ class H5Browser(QObject, ActionManager):
     # whatever use from the caller
     status_signal = Signal(str)
 
-    def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None, backend='tables'):
+    def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None,
+                 backend='tables', swmr=False):
         QObject.__init__(self)
         # toolbar = QtWidgets.QToolBar()
         ActionManager.__init__(self)  # , toolbar=toolbar)
@@ -172,6 +175,7 @@ class H5Browser(QObject, ActionManager):
         self.main_window.setCentralWidget(self.parent_widget)
         #self.main_window.addToolBar(self.toolbar)
 
+        self._swmr = swmr
         self.current_node_path = None
 
         self.settings_attributes = ParameterManager()
@@ -213,15 +217,17 @@ class H5Browser(QObject, ActionManager):
     def get_node_and_plot(self, with_bkg, plot_all=False):
         self.show_h5_data(item=None, with_bkg=with_bkg, plot_all=plot_all)
 
-    def load_file(self, h5file=None, h5file_path=None):
+    def load_file(self, h5file=None, h5file_path=None, swmr=None):
+        if swmr is None:
+            swmr = self._swmr
         if h5file is None:
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
             if Path(h5file_path).is_file():
                 if self.h5utils.isopen():
                     self.h5utils.close_file()
-
-                self.h5utils.open_file(h5file_path, 'r+')
+                mode = 'r' if swmr else 'r+'
+                self.h5utils.open_file(h5file_path, mode, swmr_mode=swmr)
             else:
                 return
         else:

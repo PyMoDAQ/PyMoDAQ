@@ -118,8 +118,20 @@ class H5SaverLowLevel(H5Backend):
         if file_name is not None and isinstance(file_name, Path):
             self.h5_file_name = file_name.stem + ".h5"
             self.h5_file_path = file_name.parent
-            if not self.h5_file_path.joinpath(self.h5_file_name).is_file():
+            fullpath = self.h5_file_path.joinpath(self.h5_file_name)
+            if not fullpath.is_file():
                 new_file = True
+            elif swmr_mode and not new_file and self.backend == 'h5py':
+                # SWMR requires the file to have been created with libver='latest'
+                # (superblock v3+). Check for the marker attribute.
+                try:
+                    with self.h5_library.File(str(fullpath), 'r') as tmp:
+                        if not tmp.attrs.get('swmr_compatible', False):
+                            logger.info('Existing file is not SWMR-compatible, '
+                                        'creating a new file')
+                            new_file = True
+                except Exception:
+                    new_file = True
 
         else:
             return

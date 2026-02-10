@@ -270,6 +270,8 @@ class DAQScan(CustomExt):
                 * load
                 * save
                 * show_file
+                * open_file
+                * close_file
                 * navigator
                 * batch
                 * viewers_changed
@@ -296,6 +298,10 @@ class DAQScan(CustomExt):
             self.show_navigator()
         elif cmd.command == 'batch':
             self.show_batcher(self.ui.menubar)
+        elif cmd.command == 'open_file':
+            self.open_file()
+        elif cmd.command == 'close_file':
+            self.close_file()
         elif cmd.command == 'viewers_changed':
             ...
 
@@ -424,7 +430,7 @@ class DAQScan(CustomExt):
 
     def show_file_content(self):
         try:
-            self.h5saver.show_file_content()
+            self._h5saver.show_file_content()
         except Exception as e:
             logger.exception(str(e))
 
@@ -638,13 +644,16 @@ class DAQScan(CustomExt):
         self._h5saver = h5saver_temp
 
     def _update_file_status_led(self):
-        """Reflect the current h5 file open/accessible state in the status bar LED."""
+        """Reflect the current h5 file open/accessible state in the status bar LED
+        and the SWMR mode indicator."""
         if self.ui is None:
             return
         is_open = (self._h5saver is not None
                    and self._h5saver.h5_file is not None
                    and self._h5saver.isopen())
         self.ui.set_file_open(is_open)
+        swmr_active = is_open and self._h5saver.is_swmr_active
+        self.ui.set_swmr_status(swmr_active)
 
     def _on_file_changed(self, file_path: str):
         """Called when H5Saver switches to a different file (e.g. browse)."""
@@ -656,8 +665,18 @@ class DAQScan(CustomExt):
         else:
             self.ui.set_permanent_status(file_name)
 
+    def open_file(self):
+        """Reopen the current h5 file if it is closed."""
+        if self._h5saver is not None and not self._h5saver.isopen():
+            current_file = self._h5saver.settings['current_h5_file']
+            if current_file and Path(current_file).exists():
+                self._try_open_existing_file(current_file)
+            else:
+                logger.warning('No file to reopen')
+        self._update_file_status_led()
+
     def close_file(self):
-        self.h5saver.close_file()
+        self._h5saver.close_file()
         self._update_file_status_led()
 
     @property
@@ -849,14 +868,14 @@ class DAQScan(CustomExt):
             self.ui.set_scan_done()
             try:
                 scan_node = self.module_and_data_saver.get_last_node()
-                if self.h5saver.is_swmr_active:
+                if self._h5saver.is_swmr_active:
                     scan_path = scan_node.path
                     logger.info("Finalizing SWMR mode...")
-                    self.h5saver.finalize_swmr(keep_open=True)  # Keep open to set scan_done
+                    self._h5saver.finalize_swmr(keep_open=True)  # Keep open to set scan_done
                     logger.info("Setting scan_done attribute...")
-                    self.h5saver.get_node(scan_path).attrs['scan_done'] = True
-                    self.h5saver.flush()
-                    self.h5saver.close_file()
+                    self._h5saver.get_node(scan_path).attrs['scan_done'] = True
+                    self._h5saver.flush()
+                    self.close_file()
                     logger.info("Scan file closed successfully")
                 else:
                     scan_node.attrs['scan_done'] = True
@@ -867,7 +886,8 @@ class DAQScan(CustomExt):
                 logger.error(f"Error finalizing scan file: {e}")
                 # Try to close the file anyway
                 try:
-                    self.h5saver.close_file()
+                    self._h5saver.close_file()
+                    self._update_file_status_led()
                 except Exception:
                     pass
 

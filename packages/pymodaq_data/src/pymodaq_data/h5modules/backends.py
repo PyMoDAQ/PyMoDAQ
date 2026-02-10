@@ -637,8 +637,11 @@ class H5Backend:
                 self.root().attrs['pymodaq_data_version'] = utils.get_version('pymodaq_data')
             return self._h5file
         else:
-            if swmr_mode and self.backend == 'h5py' and mode == 'w':
-                kwargs['libver'] = 'latest'
+            if swmr_mode and self.backend == 'h5py':
+                if mode == 'w':
+                    kwargs['libver'] = 'latest'
+                elif mode == 'r':
+                    kwargs['swmr'] = True
             self._h5file = self.h5_library.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
@@ -648,6 +651,8 @@ class H5Backend:
                 except importlib.metadata.PackageNotFoundError:
                     self.root().attrs['pymodaq_version'] = '0.0.0'
                 self.root().attrs['pymodaq_data_version'] = utils.get_version('pymodaq_data')
+                if swmr_mode:
+                    self.root().attrs['swmr_compatible'] = True
             return self._h5file
 
     def save_file_as(self, filenamepath='h5copy.txt'):
