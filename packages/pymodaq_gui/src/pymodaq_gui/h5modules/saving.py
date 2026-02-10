@@ -172,6 +172,10 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         self.settings.child('save_type').setValue(self.save_type.name)
 
+        # Apply initial SWMR visibility based on the configured backend
+        is_h5py = self.settings['backend', 'backend_type'] == 'h5py'
+        self.settings.child('swmr_options').setOpts(visible=is_h5py)
+
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
