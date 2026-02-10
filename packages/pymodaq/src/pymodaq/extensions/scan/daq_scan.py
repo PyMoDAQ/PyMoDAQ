@@ -148,6 +148,7 @@ class DAQScan(CustomExt):
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
+        self._h5saver.file_changed_sig.connect(self._on_file_changed)
 
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
 
@@ -540,8 +541,10 @@ class DAQScan(CustomExt):
             except Exception as e:
                 logger.error(f"Could not create new h5 file: {e}")
 
-        self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
+        if hasattr(self, '_module_and_data_saver'):
+            self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
         res = self.update_file_settings()
+        self._update_file_status_led()
         if new_file:
             self.ui.enable_start_stop()
         return res
@@ -553,6 +556,7 @@ class DAQScan(CustomExt):
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)
+            self._h5saver.file_changed_sig.connect(self._on_file_changed)
         if self._h5saver.h5_file is None or not self._h5saver.isopen():
             # Check if there's an existing file to reopen
             current_file = self._h5saver.settings['current_h5_file']
@@ -563,6 +567,7 @@ class DAQScan(CustomExt):
                     self._h5saver.init_file(update_h5=True)
                 except Exception as e:
                     logger.warning(f"Could not initialize h5 file: {e}")
+            self._update_file_status_led()
         return self._h5saver
 
     def _try_open_existing_file(self, current_file: str):
@@ -571,7 +576,7 @@ class DAQScan(CustomExt):
             try:
                 logger.debug(f"Reopening existing h5 file: {current_file}")
                 self._h5saver.init_file(addhoc_file_path=current_file)
-                return  # Success
+                break  # Success
             except Exception as e:
                 if 'lock' in str(e).lower() or 'errno = 0' in str(e).lower():
                     # File is locked - ask user what to do
@@ -593,10 +598,10 @@ class DAQScan(CustomExt):
                     elif msg.clickedButton() == new_auto_btn:
                         logger.info("User chose to create new file (auto)")
                         self._h5saver.init_file(update_h5=True)
-                        return
+                        break
                     elif msg.clickedButton() == browse_btn:
-                        # Let user select a file
-                        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                        # Let user select an existing file to append to
+                        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
                             None, "Select HDF5 File",
                             str(Path(current_file).parent),
                             "HDF5 Files (*.h5);;All Files (*)"
@@ -605,33 +610,54 @@ class DAQScan(CustomExt):
                             logger.info(f"User selected file: {file_path}")
                             try:
                                 self._h5saver.init_file(addhoc_file_path=file_path)
-                                return
+                                break
                             except Exception as e2:
                                 logger.warning(f"Could not open selected file: {e2}")
                                 continue  # Show dialog again
                         else:
                             continue  # User cancelled browse, show dialog again
                     else:
-                        # User cancelled - still need to initialize something
-                        logger.info("User cancelled - creating new file")
-                        self._h5saver.init_file(update_h5=True)
-                        return
+                        # User cancelled - leave h5_file unchanged
+                        logger.info("User cancelled file selection - keeping current file state")
+                        break
                 else:
                     # Other error - fall back to new file
                     logger.warning(f"Could not reopen h5 file: {e}")
                     self._h5saver.init_file(update_h5=True)
-                    return
+                    break
+        self._update_file_status_led()
 
     @h5saver.setter
     def h5saver(self, h5saver_temp: H5Saver):
         self._h5saver = h5saver_temp
 
+    def _update_file_status_led(self):
+        """Reflect the current h5 file open/accessible state in the status bar LED."""
+        if self.ui is None:
+            return
+        is_open = (self._h5saver is not None
+                   and self._h5saver.h5_file is not None
+                   and self._h5saver.isopen())
+        self.ui.set_file_open(is_open)
+
+    def _on_file_changed(self, file_path: str):
+        """Called when H5Saver switches to a different file (e.g. browse)."""
+        self._update_file_status_led()
+        file_name = Path(file_path).name
+        scan_name = self._h5saver.settings['current_scan_name']
+        if scan_name:
+            self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+        else:
+            self.ui.set_permanent_status(file_name)
+
     def close_file(self):
         self.h5saver.close_file()
+        self._update_file_status_led()
 
     @property
     def module_and_data_saver(self):
-        if not self._module_and_data_saver.h5saver.isopen():
+        if (self._module_and_data_saver.h5saver is None
+                or not self._module_and_data_saver.h5saver.isopen()):
             self._module_and_data_saver.h5saver = self.h5saver
         return self._module_and_data_saver
 
@@ -650,6 +676,13 @@ class DAQScan(CustomExt):
             if self.navigator is not None:
                 self.navigator.update_h5file(self.h5saver.h5_file)
                 self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
+
+            file_name = Path(self.h5saver.settings['current_h5_file']).name
+            scan_name = self.h5saver.settings['current_scan_name']
+            if scan_name:
+                self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+            else:
+                self.ui.set_permanent_status(file_name)
 
             return res
 
@@ -670,6 +703,9 @@ class DAQScan(CustomExt):
         self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
         self.scan_attributes.child('scan_info', 'description').setValue('')
         self.h5saver.settings.child('current_scan_name').setValue(scan_name)
+
+        file_name = Path(self.h5saver.settings['current_h5_file']).name
+        self.ui.set_permanent_status(f'{file_name} | {scan_name}')
 
         res = self.set_metadata_about_current_scan()
         return res
