@@ -243,6 +243,16 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         super().init_file(fullpathname, new_file=update_h5, metadata=metadata,
                           swmr_mode=swmr_mode)
 
+        if addhoc_file_path is not None:
+            # Derive the current scan name from what already exists in the open file
+            try:
+                scan_index = self.get_scan_index() + 1
+                current_scan_name = f'Scan{scan_index:03d}'
+                self.current_scan_name = current_scan_name
+                self.settings.child('current_scan_name').setValue(current_scan_name)
+            except Exception:
+                pass
+
         self.get_set_logger(self.raw_group)
 
         return update_h5
