@@ -2,7 +2,7 @@ from . import browsing
 from .utils import register_exporter, register_exporters
 from .backends import backends_available
 
-from pymodaq_utils.config import Config
+from pymodaq_data.config import Config
 from pymodaq_utils.logger import set_logger
 
 logger = set_logger('pymodaq_data.h5modules')
@@ -34,7 +34,7 @@ def get_hdf5_backend(config: Config = None) -> str:
 
     # Get configured backends list
     try:
-        configured_backends = config('data_saving', 'h5file', 'hdf5_backend')
+        configured_backends = config('general', 'hdf5_backend')
         if not isinstance(configured_backends, list):
             configured_backends = [configured_backends]
     except Exception:
@@ -61,7 +61,7 @@ def get_hdf5_backend(config: Config = None) -> str:
             logger.info(f"Falling back to HDF5 backend: {backend}")
             # Update config with the working backend
             try:
-                config['data_saving', 'h5file', 'hdf5_backend'] = [backend] + [
+                config['general', 'hdf5_backend'] = [backend] + [
                     b for b in configured_backends if b != backend
                 ]
                 config.save()

@@ -100,7 +100,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         [
             {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
-             'value': config('data_saving', 'h5file', 'hdf5_backend'),
+             'value': config('data', 'general', 'hdf5_backend')[0],
              'limits': backends_available, 'readonly': True},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [
@@ -140,12 +140,14 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
                 'value': config('data', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
         ]},
-        {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'children': [
+        {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'visible': False,
+         'tooltip': 'Single Writer Multiple Reader mode (only available with h5py backend)',
+         'children': [
             {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
-             'value': config('data_saving', 'h5file', 'swmr_enabled'),
+             'value': config('data', 'data_saving', 'swmr_enabled'),
              'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
             {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
-             'value': config('data_saving', 'h5file', 'swmr_flush_interval'), 'min': 0,
+             'value': config('data', 'data_saving', 'swmr_flush_interval'), 'min': 0,
              'tooltip': 'Flush every N scan steps. 0 = only at end.'},
         ]},
     ]

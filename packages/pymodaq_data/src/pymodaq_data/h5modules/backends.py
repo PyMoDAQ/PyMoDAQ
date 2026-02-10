@@ -494,6 +494,12 @@ class Attributes(object):
     def __len__(self):
         return len(self.attrs_name)
 
+    def get(self, key, default=None):
+        """Return the attribute value for key, or default if not present."""
+        if key in self.attrs_name:
+            return self[key]
+        return default
+
     def to_dict(self) -> dict:
         """Returns attributes name/value as a dict"""
         attrs_dict = dict()
@@ -670,7 +676,8 @@ class H5Backend:
         if not self._swmr_mode:
             raise RuntimeError('File was not opened with swmr_mode=True')
         # Mark file as being written with SWMR (for readers to detect)
-        self.root().attrs['swmr_active'] = True
+        # Write as plain bool (not JSON-serialized) so raw h5py readers can detect it
+        self.root().node.attrs['swmr_active'] = True
         self._h5file.swmr_mode = True
         self._swmr_enabled = True
 
@@ -686,8 +693,9 @@ class H5Backend:
         deferred attribute writes that were skipped during SWMR.
         """
         # Clear the swmr_active flag now that writing is complete
+        # Write as plain bool (not JSON-serialized) so raw h5py readers can detect it
         if 'swmr_active' in self.root().attrs.attrs_name:
-            self.root().attrs['swmr_active'] = False
+            self.root().node.attrs['swmr_active'] = False
 
         for node in self.walk_nodes('/'):
             if 'CLASS' in node.attrs:

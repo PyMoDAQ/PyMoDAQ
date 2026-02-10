@@ -1,6 +1,9 @@
 #this is the configuration file of the pymodaq_data package
 
 [data_saving]
+    swmr_enabled = false
+    swmr_flush_interval = 1
+
     [data_saving.h5file]
     save_path = "C:\\Data"  #base path where data are automatically saved
     compression_level = 5  # for hdf5 files between 0(min) and 9 (max)
@@ -15,9 +18,8 @@
     # choose from below. This will force the datatype to be saved to
     dynamic =  [ 'float64', 'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64',]
 
-
 [general]
-hdf5_backend = 'tables'  # could be among ['tables', 'h5py', 'h5pyd'], mostly tested with tables
+hdf5_backend = ['tables', 'h5py', 'h5pyd']  # first element is the default, mostly tested with tables
 
 [plotting]
 backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend
