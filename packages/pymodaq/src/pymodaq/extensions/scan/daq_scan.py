@@ -1128,7 +1128,9 @@ class DAQScan(CustomExt):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
         self.scanner.set_scan()
         if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.connect_actuators()
             self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
+            self.modules_manager.connect_actuators(False)
 
     def stop_scan(self):
         """
