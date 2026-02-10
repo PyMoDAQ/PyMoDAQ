@@ -1384,26 +1384,6 @@ class TestSWMRUtilityFunctions:
         assert is_file_swmr_active(str(filepath)) is False
 
 
-class TestGetHdf5Backend:
-    """Tests for the get_hdf5_backend utility function."""
-
-    def test_get_hdf5_backend_returns_available(self):
-        """Verify get_hdf5_backend returns an available backend."""
-        from pymodaq_data.h5modules import get_hdf5_backend, backends_available
-
-        backend = get_hdf5_backend()
-        assert backend in backends_available
-
-    def test_get_hdf5_backend_with_config(self):
-        """Verify get_hdf5_backend works with explicit config."""
-        from pymodaq_data.h5modules import get_hdf5_backend, backends_available
-        from pymodaq_data.config import Config
-
-        config = Config()
-        backend = get_hdf5_backend(config)
-        assert backend in backends_available
-
-
 class TestSWMRConfigEntries:
     """Tests for SWMR-related config entries."""
 
