@@ -989,7 +989,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Iterable[int],
-                 distribution=DataDistribution['uniform'],
+                 distribution=DataDistribution.uniform,
                  settings_as_xml='', **kwargs):
 
         """

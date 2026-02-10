@@ -24,7 +24,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
-from pymodaq_data import data as data_mod
+from pymodaq_data import data as data_mod, DataDistribution
 from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -925,6 +925,7 @@ class DAQScan(CustomExt):
             average_axis = None
         try:
             self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
+                                             remove_navigation=self.scanner.distribution == DataDistribution.uniform,
                                              average_axis=average_axis,
                                              average_index=self.ind_average,
                                              separate_average= not self.settings['scan_options', 'average_on_top'],
