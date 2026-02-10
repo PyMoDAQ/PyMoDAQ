@@ -57,6 +57,7 @@ names = [
     'home',
     'repeat_one',
     'repeat',
+    'pause_circle',
     'extension',
     'repeat_on',
     'repeat_one_on',
