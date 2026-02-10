@@ -171,6 +171,12 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._scan_done_LED.set_as_false()
         self._scan_done_LED.clickable = False
         self._scan_done_LED.setToolTip('Scan done state')
+
+        self._file_open_LED = QLED()
+        self._file_open_LED.set_as_false()
+        self._file_open_LED.clickable = False
+        self._file_open_LED.setToolTip('H5 file open and accessible')
+
         self._statusbar.addPermanentWidget(self._status_message_label)
 
         self._statusbar.addPermanentWidget(self._n_scan_steps_sb)
@@ -178,6 +184,8 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
         self._statusbar.addPermanentWidget(self._scan_done_LED)
+        self._statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
+        self._statusbar.addPermanentWidget(self._file_open_LED)
 
     @property
     def n_scan_steps(self):
@@ -204,6 +212,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_scan_done(self, done=True):
         self._scan_done_LED.set_as(done)
+
+    def set_file_open(self, is_open: bool):
+        """Update the file-open status LED.
+
+        Parameters
+        ----------
+        is_open:
+            True (green) if the h5 file is open and accessible, False (red) otherwise.
+        """
+        self._file_open_LED.set_as(is_open)
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type, viewers_name, force)
