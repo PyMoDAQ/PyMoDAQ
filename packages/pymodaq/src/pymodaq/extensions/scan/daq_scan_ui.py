@@ -51,6 +51,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
         self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
                         menu=self.action_menu, icon_color=self.get_theme().red)
+        self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
+                        checkable=True, menu=self.action_menu,
+                        icon_checked_color=self.get_theme().orange)
         self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
 
@@ -67,12 +70,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         """If True enable main buttons to launch/stop scan"""
         self.set_action_enabled('start', enable)
         self.set_action_enabled('stop', enable)
+        self.set_action_enabled('pause', enable)
+        if enable:
+            self.set_action_checked('pause', False)
 
     def connect_things(self):
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
+        self.connect_action('pause', lambda: self.command_sig.emit(ThreadCommand('pause')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
 
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))

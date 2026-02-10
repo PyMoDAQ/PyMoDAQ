@@ -262,6 +262,7 @@ class DAQScan(CustomExt):
                 * start
                 * start_batch
                 * stop
+                * pause
                 * move_at
                 * load
                 * save
@@ -278,6 +279,8 @@ class DAQScan(CustomExt):
             self.start_scan_batch()
         elif cmd.command == 'stop':
             self.stop_scan()
+        elif cmd.command == 'pause':
+            self.pause_scan()
         elif cmd.command == 'move_at':
             self.move_to_crosshair()
         elif cmd.command == 'load':
@@ -1087,6 +1090,8 @@ class DAQScan(CustomExt):
 
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
+            self.ui.set_action_enabled('pause', True)
+            self.ui.set_action_checked('pause', False)
             self.ui.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
@@ -1150,6 +1155,17 @@ class DAQScan(CustomExt):
 
         self.ui.set_action_enabled('ini_positions', True)
         self.ui.set_action_enabled('start', True)
+        self.ui.set_action_enabled('pause', False)
+        self.ui.set_action_checked('pause', False)
+
+    def pause_scan(self):
+        """Toggle pause on the running acquisition."""
+        paused = self.ui.is_action_checked('pause')
+        self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=paused))
+        if paused:
+            self.ui.set_permanent_status('Acquisition paused')
+        else:
+            self.ui.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
         """Public method to start the scan programmatically"""
@@ -1188,6 +1204,7 @@ class DAQScanAcquisition(QObject):
         self.scanner = scanner
 
         self.stop_scan_flag = False
+        self.pause_scan_flag = False
         self.Naverage = self.scan_settings['scan_options', 'scan_average']
         self.ind_average = 0
         self.ind_scan = 0
@@ -1219,6 +1236,10 @@ class DAQScanAcquisition(QObject):
 
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
+            self.pause_scan_flag = False
+
+        elif command.command == "pause_acquisition":
+            self.pause_scan_flag = command.attribute
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
@@ -1253,6 +1274,12 @@ class DAQScanAcquisition(QObject):
 
                     if self.stop_scan_flag or self.timeout_scan_flag:
                         break
+
+                    while self.pause_scan_flag:
+                        if self.stop_scan_flag:
+                            break
+                        QtCore.QCoreApplication.processEvents()
+                        QThread.msleep(50)
 
                     #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
