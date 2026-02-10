@@ -1,6 +1,7 @@
 from . import browsing
 from .utils import register_exporter, register_exporters
 from .backends import backends_available
+from .swmr import collect_datasets, refresh_datasets, refresh_cached
 
 from pymodaq_data.config import Config
 from pymodaq_utils.logger import set_logger
