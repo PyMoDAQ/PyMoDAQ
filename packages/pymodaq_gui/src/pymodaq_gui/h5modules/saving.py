@@ -490,10 +490,13 @@ class H5Saver(H5SaverBase, QObject):
                 emits a signal of type Threadcommand in order to senf log information to a main UI
     new_file_sig: Signal
                   emits a boolean signal to let the program know when the user pressed the new file button on the UI
+    file_changed_sig: Signal
+                      emits a str (file path) whenever the active h5 file changes (browse, new, reopen)
     """
 
     status_sig = Signal(utils.ThreadCommand)
     new_file_sig = Signal(bool)
+    file_changed_sig = Signal(str)
 
     def __init__(self, *args, **kwargs):
         """
@@ -542,6 +545,7 @@ class H5Saver(H5SaverBase, QObject):
                 # Open the selected file
                 self.init_file(addhoc_file_path=file_path)
                 logger.info(f"Opened h5 file: {file_path}")
+                self.file_changed_sig.emit(file_path)
             except Exception as e:
                 logger.error(f"Could not open file {file_path}: {e}")
                 QtWidgets.QMessageBox.warning(
