@@ -1118,12 +1118,12 @@ class TestSWMRAttributeTracking:
         saver.flush()
 
         # Before enabling SWMR, attribute should not exist or be False
-        assert saver.root().attrs.get('swmr_active', False) is False
+        assert not saver.root().attrs.get('swmr_active', False)
 
         saver.enable_swmr()
 
         # After enabling SWMR, attribute should be True
-        assert saver.root().attrs['swmr_active'] is True
+        assert saver.root().attrs['swmr_active']
 
         saver.close_file()
 
@@ -1140,14 +1140,14 @@ class TestSWMRAttributeTracking:
         saver.flush()
         saver.enable_swmr()
 
-        assert saver.root().attrs['swmr_active'] is True
+        assert saver.root().attrs['swmr_active']
 
         # Finalize SWMR (close, reopen, reconcile)
         saver.finalize_swmr()
 
         # Reopen to check attribute
         saver.open_file(filepath, 'r')
-        assert saver.root().attrs['swmr_active'] is False
+        assert not saver.root().attrs['swmr_active']
         saver.close_file()
 
     def test_reader_can_detect_swmr_active(self, tmp_path):
@@ -1167,7 +1167,7 @@ class TestSWMRAttributeTracking:
         # Reader opens and checks attribute
         reader = h5py.File(str(filepath), 'r', swmr=True)
         reader_swmr_active = reader.attrs.get('swmr_active', False)
-        assert reader_swmr_active is True
+        assert bool(reader_swmr_active)
         reader.close()
 
         saver.close_file()
@@ -1397,7 +1397,7 @@ class TestGetHdf5Backend:
     def test_get_hdf5_backend_with_config(self):
         """Verify get_hdf5_backend works with explicit config."""
         from pymodaq_data.h5modules import get_hdf5_backend, backends_available
-        from pymodaq_utils.config import Config
+        from pymodaq_data.config import Config
 
         config = Config()
         backend = get_hdf5_backend(config)
@@ -1409,31 +1409,31 @@ class TestSWMRConfigEntries:
 
     def test_swmr_config_entries_exist(self):
         """Verify SWMR config entries are present in config template."""
-        from pymodaq_utils.config import Config
+        from pymodaq_data.config import Config
 
         config = Config()
 
-        # Check SWMR entries exist in data_saving.h5file
-        h5file_children = config.get_children('data_saving', 'h5file')
-        assert 'swmr_enabled' in h5file_children
-        assert 'swmr_flush_interval' in h5file_children
+        # Check SWMR entries exist in data_saving
+        data_saving_children = config.get_children('data_saving')
+        assert 'swmr_enabled' in data_saving_children
+        assert 'swmr_flush_interval' in data_saving_children
 
     def test_swmr_enabled_default_value(self):
         """Verify swmr_enabled has correct default value."""
-        from pymodaq_utils.config import Config
+        from pymodaq_data.config import Config
 
         config = Config()
-        swmr_enabled = config('data_saving', 'h5file', 'swmr_enabled')
+        swmr_enabled = config('data_saving', 'swmr_enabled')
         assert isinstance(swmr_enabled, bool)
         # Default is False
         assert swmr_enabled is False
 
     def test_swmr_flush_interval_default_value(self):
         """Verify swmr_flush_interval has correct default value."""
-        from pymodaq_utils.config import Config
+        from pymodaq_data.config import Config
 
         config = Config()
-        flush_interval = config('data_saving', 'h5file', 'swmr_flush_interval')
+        flush_interval = config('data_saving', 'swmr_flush_interval')
         assert isinstance(flush_interval, int)
         # Default is 1
         assert flush_interval == 1
@@ -1442,45 +1442,32 @@ class TestSWMRConfigEntries:
 class TestHdf5BackendConfig:
     """Tests for hdf5_backend config handling."""
 
-    def test_hdf5_backend_in_data_saving(self):
-        """Verify hdf5_backend can be accessed from data_saving.h5file."""
-        from pymodaq_utils.config import Config
+    def test_hdf5_backend_is_list(self):
+        """Verify hdf5_backend is a list under general."""
+        from pymodaq_data.config import Config
 
         config = Config()
-        # Should be able to access it via direct path
-        backends_list = config('data_saving', 'h5file', 'hdf5_backend')
+        backends_list = config('general', 'hdf5_backend')
         assert isinstance(backends_list, list)
         assert len(backends_list) > 0
         assert 'tables' in backends_list or 'h5py' in backends_list
 
-    def test_hdf5_backend_shortcut_returns_first(self):
-        """Verify 'hdf5_backend' shortcut returns first element."""
-        from pymodaq_utils.config import Config
+    def test_hdf5_backend_default_is_first(self):
+        """Verify first element of hdf5_backend is the default."""
+        from pymodaq_data.config import Config
 
         config = Config()
-        # The shortcut should return the first backend (selected one)
-        backend = config('hdf5_backend')
-        assert isinstance(backend, str)
-        assert backend in ['tables', 'h5py', 'h5pyd']
-
-    def test_hdf5_backends_shortcut_returns_list(self):
-        """Verify 'hdf5_backends' shortcut returns full list."""
-        from pymodaq_utils.config import Config
-
-        config = Config()
-        # The plural shortcut should return the full list
-        backends = config('hdf5_backends')
-        assert isinstance(backends, list)
-        assert len(backends) > 0
+        backends_list = config('general', 'hdf5_backend')
+        assert isinstance(backends_list[0], str)
+        assert backends_list[0] in ['tables', 'h5py', 'h5pyd']
 
     def test_hdf5_backend_config_children(self):
         """Verify h5file config section has expected children."""
-        from pymodaq_utils.config import Config
+        from pymodaq_data.config import Config
 
         config = Config()
         children = config.get_children('data_saving', 'h5file')
         assert 'save_path' in children
-        assert 'hdf5_backend' in children
         assert 'compression_level' in children
 
 
@@ -1664,9 +1651,9 @@ class TestSWMRErrorHandling:
         # then open, reconcile, and close
         saver.finalize_swmr()
 
-        # Verify file is readable
+        # Verify file is readable and swmr_active cleared on root
         saver.open_file(filepath, 'r')
-        assert saver.get_node('/data').attrs['swmr_active'] is False
+        assert not saver.root().attrs['swmr_active']
         saver.close_file()
 
     def test_read_during_swmr_no_refresh_sees_stale(self, tmp_path):

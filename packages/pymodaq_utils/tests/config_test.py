@@ -307,55 +307,55 @@ def test_required_config_entries():
 class TestHdf5BackendConfig:
     """Tests for hdf5_backend config special handling."""
 
-    def test_hdf5_backend_in_data_saving_h5file(self):
-        """Verify hdf5_backend is in data_saving.h5file section."""
-        config = Config()
-        h5file_children = config.get_children('data_saving', 'h5file')
-        assert 'hdf5_backend' in h5file_children
+    def test_hdf5_backend_in_general(self):
+        """Verify hdf5_backend is in general section of pymodaq_data config."""
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        general_children = config.get_children('general')
+        assert 'hdf5_backend' in general_children
 
     def test_hdf5_backend_is_list(self):
         """Verify hdf5_backend is stored as a list."""
-        config = Config()
-        backends = config('data_saving', 'h5file', 'hdf5_backend')
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        backends = config('general', 'hdf5_backend')
         assert isinstance(backends, list)
         assert len(backends) > 0
 
-    def test_hdf5_backend_shortcut_returns_string(self):
-        """Verify 'hdf5_backend' shortcut returns first element (string)."""
-        config = Config()
-        # The shortcut is handled in Config.__call__
-        backend = config('hdf5_backend')
-        assert isinstance(backend, str)
-
-    def test_hdf5_backends_shortcut_returns_list(self):
-        """Verify 'hdf5_backends' shortcut returns full list."""
-        config = Config()
-        backends = config('hdf5_backends')
-        assert isinstance(backends, list)
-        assert len(backends) > 0
+    def test_hdf5_backend_default_is_first(self):
+        """Verify first element of hdf5_backend is the default (string)."""
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        backends = config('general', 'hdf5_backend')
+        assert isinstance(backends[0], str)
+        assert backends[0] in ['tables', 'h5py', 'h5pyd']
 
     def test_hdf5_backend_contains_expected_values(self):
         """Verify hdf5_backend list contains expected backends."""
-        config = Config()
-        backends = config('hdf5_backends')
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        backends = config('general', 'hdf5_backend')
         # Should contain at least tables and h5py
         assert 'tables' in backends or 'h5py' in backends
 
     def test_swmr_config_entries(self):
-        """Verify SWMR-related config entries exist."""
-        config = Config()
-        h5file_children = config.get_children('data_saving', 'h5file')
-        assert 'swmr_enabled' in h5file_children
-        assert 'swmr_flush_interval' in h5file_children
+        """Verify SWMR-related config entries exist under data_saving."""
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        data_saving_children = config.get_children('data_saving')
+        assert 'swmr_enabled' in data_saving_children
+        assert 'swmr_flush_interval' in data_saving_children
 
     def test_swmr_enabled_is_bool(self):
         """Verify swmr_enabled is a boolean."""
-        config = Config()
-        swmr_enabled = config('data_saving', 'h5file', 'swmr_enabled')
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        swmr_enabled = config('data_saving', 'swmr_enabled')
         assert isinstance(swmr_enabled, bool)
 
     def test_swmr_flush_interval_is_int(self):
         """Verify swmr_flush_interval is an integer."""
-        config = Config()
-        flush_interval = config('data_saving', 'h5file', 'swmr_flush_interval')
+        from pymodaq_data.config import Config as DataConfig
+        config = DataConfig()
+        flush_interval = config('data_saving', 'swmr_flush_interval')
         assert isinstance(flush_interval, int)
