@@ -92,6 +92,9 @@ class DAQScan(CustomExt):
              'value': config('pymodaq', 'scan', 'average_on_top'),
              'tip': 'At the second iteration will plot the averaged scan on top (True) of the current one'
                     'or in a second panel (False)'},
+            {'title': 'Go to ini. positions:', 'name': 'go_to_ini_positions', 'type': 'bool',
+             'value': True,
+             'tip': 'Move actuators back to their initial positions when the scan ends or is stopped'},
         ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
@@ -869,7 +872,7 @@ class DAQScan(CustomExt):
                     pass
 
             if not self.batch_started:
-                if not self.dashboard.overshoot:
+                if not self.dashboard.overshoot and self.settings['scan_options', 'go_to_ini_positions']:
                     self.set_ini_positions()
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
@@ -1147,7 +1150,8 @@ class DAQScan(CustomExt):
             scan_node.attrs['scan_done'] = True
 
         if not self.dashboard.overshoot:
-            self.set_ini_positions()  # do not set ini position again in case overshoot fired
+            if self.settings['scan_options', 'go_to_ini_positions']:
+                self.set_ini_positions()  # do not set ini position again in case overshoot fired
             status = 'Data Acquisition has been stopped by user'
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
