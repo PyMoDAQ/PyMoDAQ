@@ -697,6 +697,11 @@ class H5Backend:
             raise RuntimeError('SWMR mode is only supported with the h5py backend')
         if not self._swmr_mode:
             raise RuntimeError('File was not opened with swmr_mode=True')
+        # If h5py already has SWMR active (flag got out of sync), just
+        # resynchronise without calling start_swmr_write() again.
+        if self._h5file.swmr_mode:
+            self._swmr_enabled = True
+            return
         # Mark file as being written with SWMR (for readers to detect)
         # Write as plain bool (not JSON-serialized) so raw h5py readers can detect it
         self.root().node.attrs['swmr_active'] = True
