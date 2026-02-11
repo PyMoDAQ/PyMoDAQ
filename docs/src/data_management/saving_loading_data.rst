@@ -9,10 +9,13 @@ Its structure is hierarchical (a bit as folder trees) and one can add metadata t
 For instance, the data type, shape but also some more complex info such as all the settings related to a
 module or an instrument plugin. This gives a unique file containing both data and metadata.
 
-Python wrappers around the HDF5 library (hdf5 backends) are available, such as h5py or pytables
-(default one used by PyMoDAQ). For an even easier use, PyMoDAQ also has a dedicated object
+Python wrappers around the HDF5 library (hdf5 backends) are available, such as h5py or pytables.
+The default backend is configurable (see the ``hdf5_backend`` entry in the configuration).
+For an even easier use, PyMoDAQ also has a dedicated object
 allowing a transparent use of any hdf5 backend: :ref:`H5BackendClassDescr`. It also has an object used
 for saving data: :ref:`H5SaverClassDescr` and browsing data: :ref:`H5Browser_module`.
+When using the h5py backend, SWMR (Single Writer Multiple Reader) mode can be enabled to allow
+concurrent reading of a file while a scan is writing to it.
 
 These low level objects allow to interact with PyMoDAQ's data and hdf5 file but because displaying and loading
 correctly data need a specific layout and metadata in the hdf5 file, higher level objects should be systematically

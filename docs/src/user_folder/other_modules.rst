@@ -7,10 +7,12 @@ Other Modules
 H5Saver
 -------
 
-This module is a help to save data in a hierachical hdf5 binary file through the **pytables** package. Using the ``H5Saver``
-object will make sure you can explore your datas with the H5Browser. The object can be used to: punctually save one set
-of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save multiple acquisition such as with the DAQ_Scan
-(see :ref:`daq_scan_saving`) or save on the fly with enlargeable arrays such as the :ref:`continuous_saving` mode of the DAQ_Viewer.
+This module is a help to save data in a hierarchical hdf5 binary file through one of the supported backends
+(pytables or h5py, configurable in the settings). Using the ``H5Saver`` object will make sure you can explore
+your data with the H5Browser. The object can be used to: punctually save one set of data such as with the
+DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save multiple acquisition such as with the DAQ_Scan
+(see :ref:`daq_scan_saving`) or save on the fly with enlargeable arrays such as the :ref:`continuous_saving`
+mode of the DAQ_Viewer.
 
    .. _save_settings_fig2:
 
@@ -25,7 +27,18 @@ On the possible saving options, you'll find (see :numref:`save_settings_fig2`):
 * *Save type*:
 * *Save 2D and above*: True by default, allow to save data with high dimensionality (taking a lot of memory space)
 * *Save raw data only*: True by default, will only save data not processed from the Viewer's ROIs.
-* *backend* display which backend is being used: pytables or h5py
+* *Backend*: select the hdf5 backend to use (pytables or h5py). Switching backend also controls the
+  visibility of the SWMR options (see below).
+* *SWMR options* (visible only when the h5py backend is selected):
+
+  * *Enable SWMR*: enable Single Writer Multiple Reader mode. When enabled, readers can access the file
+    while a scan is writing to it. The file is created with ``libver='latest'`` and a ``swmr_compatible``
+    attribute is set on the root group.
+  * *Flush interval*: how often to flush data for SWMR readers (in scan steps). 0 means flush only at the end.
+
+  When opening an existing file, a compatibility check is performed. If the file's SWMR state does not
+  match the current settings, a dialog is shown letting you adapt the settings or create a new file.
+
 * *Show file content* is a button that will open the ``H5Browser`` interface to explore data in the current h5 file
 * *Base path*: where will be saved all the data
 * *Base name*: indicates the base name from which the actual filename will derive
@@ -34,9 +47,10 @@ On the possible saving options, you'll find (see :numref:`save_settings_fig2`):
 * *Do Save*: Initialize the file and logging can start. A new file is created if clicked again, valid for the continuous
   saving mode of the ``DAQ_Viewer``
 * *New file* is a button that will create a new file for subsequent saving
+* *Browse file...* is a button that opens a file dialog to select an existing h5 file to append to
 * *Saving dynamic* is a list of number types that could be used for saving. Default is float 64 bits, but if your data
   are 16 bits integers, there is no use to use float, so select int16 or uint16
-* *Compression options*: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9], see *pytables* documentation.
+* *Compression options*: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9].
 
 
 

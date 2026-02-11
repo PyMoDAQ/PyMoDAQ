@@ -60,6 +60,9 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
    :caption: Default Configuration file of PyMoDAQ that will be copied on the local folder where the user can modify it
 
     [data_saving]
+        swmr_enabled = false        # enable SWMR (Single Writer Multiple Reader) mode (h5py only)
+        swmr_flush_interval = 1     # flush every N scan steps for SWMR readers (0 = only at end)
+
         [data_saving.h5file]
         save_path = "C:\\Data"  #base path where data are automatically saved
         compression_level = 5  # for hdf5 files between 0(min) and 9 (max)
@@ -71,6 +74,7 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
         pwd = "pymodaq"
 
     [general]
+    hdf5_backend = ['tables', 'h5py', 'h5pyd']  # first element is the default backend
     debug_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     check_version = true  #automatically check version at startup
 

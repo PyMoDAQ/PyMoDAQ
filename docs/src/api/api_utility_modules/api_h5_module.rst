@@ -21,21 +21,45 @@ of any of these with PyMoDAQ features.
 Low Level saving
 ----------------
 
-``H5SaverBase`` and ``H5Saver`` classes are a help to save data in a hierachical hdf5 binary file through the H5Backend
-object and allowing integration in the PyMoDAQ Framework. These objects allows the creation of a file, of the various
-nodes necessary to save PyMoDAQ's data. The saving functionalities are divided in two objects: `H5SaverBase` and ``H5Saver``. `H5SaverBase` contains everything
-needed for saving, while ``H5Saver``, inheriting `H5SaverBase`, add Qt functionality such as emitted signals. However,
-these are not specific of PyMoDAQ's data types. To save and load data, one should use higher level objects, see
-:ref:`data_saving_loading`.
+``H5SaverLowLevel`` is the base saving class providing file creation and node management.
+``H5SaverBase`` and ``H5Saver`` build on it and integrate with the PyMoDAQ Framework.
+``H5SaverBase`` adds a ``ParameterManager`` with settings for backend selection, SWMR options,
+file paths and compression. ``H5Saver`` inherits ``H5SaverBase`` and adds Qt signals
+(``new_file_sig``, ``file_changed_sig``) and a file browser dialog.
+To save and load data, one should use higher level objects, see :ref:`data_saving_loading`.
 
 .. currentmodule:: pymodaq_data.h5modules.saving
 
 .. automodule:: pymodaq_data.h5modules.saving
+   :members: H5SaverLowLevel
+
+.. currentmodule:: pymodaq_gui.h5modules.saving
+
+.. automodule:: pymodaq_gui.h5modules.saving
    :members: H5SaverBase, H5Saver
 
 
-They both inherits from the ``ParameterManager`` MixIn class that deals with Parameter and ParameterTree,
+They both inherit from the ``ParameterManager`` MixIn class that deals with Parameter and ParameterTree,
 see :numref:`saving_settings_fig`.
+
+.. _swmr_utilities:
+
+SWMR utilities
+--------------
+
+When using the h5py backend with SWMR mode enabled, the following utility functions help readers access
+the file while a scan is in progress.
+
+.. currentmodule:: pymodaq_data.h5modules
+
+.. autofunction:: open_h5_file_for_reading
+
+.. autofunction:: is_file_swmr_active
+
+.. currentmodule:: pymodaq_data.h5modules.swmr
+
+.. automodule:: pymodaq_data.h5modules.swmr
+   :members: collect_datasets, refresh_datasets, refresh_cached
 
 
 .. _data_saving_loading:
