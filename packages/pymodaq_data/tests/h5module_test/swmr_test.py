@@ -1398,25 +1398,21 @@ class TestSWMRConfigEntries:
         assert 'swmr_enabled' in data_saving_children
         assert 'swmr_flush_interval' in data_saving_children
 
-    def test_swmr_enabled_default_value(self):
-        """Verify swmr_enabled has correct default value."""
+    def test_swmr_enabled_is_bool(self):
+        """Verify swmr_enabled is a boolean (value depends on user config)."""
         from pymodaq_data.config import Config
 
         config = Config()
         swmr_enabled = config('data_saving', 'swmr_enabled')
         assert isinstance(swmr_enabled, bool)
-        # Default is False
-        assert swmr_enabled is False
 
-    def test_swmr_flush_interval_default_value(self):
-        """Verify swmr_flush_interval has correct default value."""
+    def test_swmr_flush_interval_is_int(self):
+        """Verify swmr_flush_interval is an integer (value depends on user config)."""
         from pymodaq_data.config import Config
 
         config = Config()
         flush_interval = config('data_saving', 'swmr_flush_interval')
         assert isinstance(flush_interval, int)
-        # Default is 1
-        assert flush_interval == 1
 
 
 class TestHdf5BackendConfig:
@@ -1677,6 +1673,186 @@ class TestSWMRErrorHandling:
         assert shape_after_refresh == 3
         # Note: shape_before_refresh might be 1, 2, or 3 depending on timing
         # but after refresh it must be 3
+
+        reader.close()
+        saver.close_file()
+
+
+class TestIsSwmrCompatibleProperty:
+    """Tests for the is_swmr_compatible property on H5Backend."""
+
+    def test_swmr_file_is_compatible(self, tmp_path):
+        """File created with swmr_mode=True should report is_swmr_compatible=True."""
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'swmr_compat.h5'
+        bck.open_file(filepath, 'w', 'test', swmr_mode=True)
+        assert bck.is_swmr_compatible is True
+        bck.close_file()
+
+        # Reopen in read mode and check again
+        bck.open_file(filepath, 'r')
+        assert bck.is_swmr_compatible is True
+        bck.close_file()
+
+    def test_non_swmr_file_is_not_compatible(self, tmp_path):
+        """File created without swmr_mode should report is_swmr_compatible=False."""
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'no_swmr_compat.h5'
+        bck.open_file(filepath, 'w', 'test')
+        assert bck.is_swmr_compatible is False
+        bck.close_file()
+
+    def test_is_swmr_compatible_closed_file(self, tmp_path):
+        """is_swmr_compatible should return False when no file is open."""
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'closed.h5'
+        bck.open_file(filepath, 'w', 'test')
+        bck.close_file()
+        assert bck.is_swmr_compatible is False
+
+
+class TestAttributesGet:
+    """Tests for Attributes.get() method."""
+
+    def test_get_existing_attr(self, h5_swmr):
+        """get() returns the value for an existing attribute."""
+        h5_swmr.root().attrs['test_key'] = 42
+        assert h5_swmr.root().attrs.get('test_key') == 42
+
+    def test_get_missing_attr_returns_default(self, h5_swmr):
+        """get() returns default when attribute doesn't exist."""
+        assert h5_swmr.root().attrs.get('nonexistent', 'fallback') == 'fallback'
+
+    def test_get_missing_attr_returns_none(self, h5_swmr):
+        """get() returns None by default when attribute doesn't exist."""
+        assert h5_swmr.root().attrs.get('nonexistent') is None
+
+
+class TestSetBackend:
+    """Tests for H5Backend.set_backend() method."""
+
+    def test_set_backend_h5py(self):
+        """set_backend('h5py') should set backend and library."""
+        import h5py
+        bck = H5Backend('h5py')
+        assert bck.backend == 'h5py'
+        assert bck.h5_library is h5py
+
+    @pytest.mark.skipif(not is_tables, reason='pytables not available')
+    def test_set_backend_tables(self):
+        """set_backend('tables') should set backend and library."""
+        import tables
+        bck = H5Backend('tables')
+        assert bck.backend == 'tables'
+        assert bck.h5_library is tables
+
+    def test_set_backend_invalid_raises(self):
+        """set_backend with invalid name should raise ValueError."""
+        with pytest.raises(ValueError, match='Unknown backend'):
+            H5Backend('invalid_backend')
+
+    def test_set_backend_closes_open_file(self, tmp_path):
+        """Switching backend should close any open file."""
+        bck = H5Backend('h5py')
+        filepath = tmp_path / 'backend_switch.h5'
+        bck.open_file(filepath, 'w', 'test')
+        assert bck.isopen()
+        bck.set_backend('h5py')
+        assert not bck.isopen()
+
+
+class TestSWMRUtilities:
+    """Tests for swmr.py utility functions."""
+
+    def test_collect_datasets(self, tmp_path):
+        """collect_datasets returns a dict of all datasets under a group."""
+        import h5py
+        from pymodaq_data.h5modules.swmr import collect_datasets
+
+        filepath = tmp_path / 'collect_test.h5'
+        with h5py.File(str(filepath), 'w') as f:
+            g = f.create_group('RawData')
+            g.create_dataset('data1', data=[1, 2, 3])
+            sub = g.create_group('sub')
+            sub.create_dataset('data2', data=[4, 5, 6])
+
+        with h5py.File(str(filepath), 'r') as f:
+            cache = collect_datasets(f['RawData'])
+
+        assert '/RawData/data1' in cache
+        assert '/RawData/sub/data2' in cache
+        assert len(cache) == 2
+
+    def test_collect_datasets_empty_group(self, tmp_path):
+        """collect_datasets on a group with no datasets returns empty dict."""
+        import h5py
+        from pymodaq_data.h5modules.swmr import collect_datasets
+
+        filepath = tmp_path / 'empty_group.h5'
+        with h5py.File(str(filepath), 'w') as f:
+            f.create_group('empty')
+
+        with h5py.File(str(filepath), 'r') as f:
+            cache = collect_datasets(f['empty'])
+
+        assert cache == {}
+
+    def test_refresh_datasets(self, tmp_path):
+        """refresh_datasets should not raise on a group with datasets."""
+        import h5py
+        from pymodaq_data.h5modules.swmr import refresh_datasets
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'refresh_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        # Should not raise
+        refresh_datasets(reader)
+        ds = reader['data']
+        ds.id.refresh()
+        assert ds.shape[0] == 1
+        reader.close()
+        saver.close_file()
+
+    def test_refresh_cached(self, tmp_path):
+        """refresh_cached should refresh all datasets in a cache dict."""
+        import h5py
+        from pymodaq_data.h5modules.swmr import collect_datasets, refresh_cached
+        from pymodaq_data.h5modules.saving import H5SaverLowLevel
+
+        saver = H5SaverLowLevel(backend='h5py')
+        filepath = tmp_path / 'cached_test.h5'
+        saver.init_file(file_name=filepath, swmr_mode=True)
+
+        earr = saver.create_earray(saver.root(), 'data',
+                                   dtype=np.float64, data_shape=(3,))
+        saver.flush()
+        saver.enable_swmr()
+
+        earr.append(np.array([1.0, 2.0, 3.0]))
+        saver.flush()
+
+        reader = h5py.File(str(filepath), 'r', swmr=True)
+        cache = collect_datasets(reader)
+
+        # Initial refresh
+        refresh_cached(cache)
+        assert cache['/data'].shape[0] == 1
+
+        # Write more data and refresh via cache
+        earr.append(np.array([4.0, 5.0, 6.0]))
+        saver.flush()
+        refresh_cached(cache)
+        assert cache['/data'].shape[0] == 2
 
         reader.close()
         saver.close_file()
