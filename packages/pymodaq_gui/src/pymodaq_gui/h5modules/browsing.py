@@ -202,6 +202,7 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('comment', self.add_comments)
         self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
+        self.connect_action('refresh', self.refresh_file)
         self.connect_action('quit', self.quit_fun)
         self.connect_action('about', self.show_about)
         self.connect_action('help', self.show_help)
@@ -252,11 +253,46 @@ class H5Browser(QObject, ActionManager):
         self.populate_tree()
         self.view.h5file_tree.expand_all()
 
+    def refresh_file(self):
+        """Refresh the file view to show newly written data.
+
+        In SWMR reader mode the h5py datasets are refreshed in-place so that
+        new data written by the SWMR writer becomes visible.  In non-SWMR mode
+        the file is closed and reopened to pick up external changes.
+
+        The tree is then repopulated and expanded.
+        """
+        try:
+            if not self.h5utils.isopen():
+                return
+
+            filepath = Path(self.h5utils.h5file.filename)
+
+            if self._swmr and self.h5utils.backend == 'h5py':
+                # Fast path: refresh datasets in-place then rebuild tree
+                from pymodaq_data.h5modules.swmr import refresh_datasets
+                refresh_datasets(self.h5utils.h5file)
+            else:
+                # Re-open the file to pick up changes
+                self.h5utils.close_file()
+                mode = 'r' if self._swmr else 'r+'
+                self.h5utils.open_file(filepath, mode,
+                                       swmr_mode=self._swmr)
+
+            self.data_loader = data_saving.DataLoader(self.h5utils)
+            self.populate_tree()
+            self.view.h5file_tree.expand_all()
+            logger.info('File view refreshed')
+
+        except Exception as e:
+            logger.exception(str(e))
+
     def setup_menu(self):
         menubar = self.main_window.menuBar()
         file_menu = menubar.addMenu('File')
         self.affect_to('load', file_menu)
         self.affect_to('save', file_menu)
+        self.affect_to('refresh', file_menu)
         file_menu.addSeparator()
         self.affect_to('quit', file_menu)
 
@@ -288,6 +324,9 @@ class H5Browser(QObject, ActionManager):
 
         self.add_action('load', 'Load File', 'Open', tip='Open a new file')
         self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
+        self.add_action('refresh', 'Refresh', 'refresh',
+                        tip='Refresh the file view (useful for SWMR live files)',
+                        shortcut=QtCore.Qt.Key_F5)
         self.add_action('quit', 'Quit the application', 'Exit', tip='Quit the application')
         self.add_action('about', 'About', tip='About')
         self.add_action('help', 'Help', 'Help', tip='Show documentation', shortcut=QtCore.Qt.Key_F1)
