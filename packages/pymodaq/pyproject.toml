@@ -85,11 +85,3 @@ include = [
     "/src",
 ]
 
-[tool.coverage.run]
-omit = [
-    "*/examples/*",
-    "*/resources/*"
-]
-
-[tool.ruff]
-line-length = 120
