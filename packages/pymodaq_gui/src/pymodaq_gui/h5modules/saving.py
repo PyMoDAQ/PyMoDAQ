@@ -179,6 +179,58 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
+    def _check_swmr_compatibility(self, fullpathname, update_h5):
+        """Check SWMR compatibility of an existing file and prompt user on mismatch.
+
+        Returns
+        -------
+        tuple: (swmr_mode: bool, update_h5: bool) possibly adjusted values
+        """
+        swmr_mode = (self.settings['swmr_options', 'enable_swmr']
+                     and self.settings['backend', 'backend_type'] == 'h5py')
+
+        # Only check existing files
+        if update_h5 or not Path(fullpathname).is_file():
+            return swmr_mode, update_h5
+
+        # Peek at the file with h5py to check swmr_compatible attribute
+        file_is_swmr = False
+        try:
+            import h5py
+            with h5py.File(str(fullpathname), 'r') as f:
+                file_is_swmr = bool(f.attrs.get('swmr_compatible', False))
+        except Exception:
+            return swmr_mode, update_h5
+
+        if file_is_swmr and not swmr_mode:
+            # File is SWMR but settings don't match
+            ret = QtWidgets.QMessageBox.question(
+                None, 'SWMR-compatible file',
+                'This file was created with SWMR support.\n'
+                'Do you want to switch to h5py backend and enable SWMR?',
+            )
+            if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.settings.child('backend', 'backend_type').setValue('h5py')
+                self.settings.child('swmr_options', 'enable_swmr').setValue(True)
+                swmr_mode = True
+
+        elif not file_is_swmr and swmr_mode:
+            # File is not SWMR but SWMR is enabled
+            ret = QtWidgets.QMessageBox.question(
+                None, 'File not SWMR-compatible',
+                'This file was not created with SWMR support and cannot be '
+                'opened in SWMR mode.\n\n'
+                'Click Yes to disable SWMR and append to this file.\n'
+                'Click No to create a new SWMR-compatible file instead.',
+            )
+            if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.settings.child('swmr_options', 'enable_swmr').setValue(False)
+                swmr_mode = False
+            else:
+                update_h5 = True  # force new file creation
+
+        return swmr_mode, update_h5
+
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None,
                   metadata=dict([])):
         """Initializes a new h5 file.
@@ -242,8 +294,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         fullpathname = self.h5_file_path.joinpath(self.h5_file_name)
         self.settings.child('current_h5_file').setValue(str(fullpathname))
 
-        swmr_mode = (self.settings['swmr_options', 'enable_swmr']
-                     and self.settings['backend', 'backend_type'] == 'h5py')
+        swmr_mode, update_h5 = self._check_swmr_compatibility(fullpathname, update_h5)
         super().init_file(fullpathname, new_file=update_h5, metadata=metadata,
                           swmr_mode=swmr_mode)
 

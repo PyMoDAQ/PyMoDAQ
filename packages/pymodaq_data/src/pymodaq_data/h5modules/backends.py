@@ -839,6 +839,9 @@ class H5Backend:
         except Exception as e:
             raise NodeError(str(e))
 
+        if node is None:
+            raise NodeError(f'Node {where} (name={name}) does not exist')
+
         if 'CLASS' not in self.get_attr(node):
             self.set_attr(node, 'CLASS', 'GROUP')
             return GROUP(node, self.backend)
