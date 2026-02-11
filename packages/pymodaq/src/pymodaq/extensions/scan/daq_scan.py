@@ -653,7 +653,8 @@ class DAQScan(CustomExt):
                    and self._h5saver.isopen())
         self.ui.set_file_open(is_open)
         swmr_active = is_open and self._h5saver.is_swmr_active
-        self.ui.set_swmr_status(swmr_active)
+        swmr_compatible = is_open and self._h5saver.is_swmr_compatible
+        self.ui.set_swmr_status(swmr_active, swmr_compatible)
 
     def _on_file_changed(self, file_path: str):
         """Called when H5Saver switches to a different file (e.g. browse)."""

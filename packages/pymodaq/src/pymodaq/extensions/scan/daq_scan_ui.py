@@ -240,13 +240,27 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         """
         self._file_open_LED.set_as(is_open)
 
-    def set_swmr_status(self, active: bool):
-        """Show or hide the SWMR mode indicator in the status bar."""
+    def set_swmr_status(self, active: bool, compatible: bool = False):
+        """Show or hide the SWMR mode indicator in the status bar.
+
+        Parameters
+        ----------
+        active:
+            True if SWMR mode is currently active on the file.
+        compatible:
+            True if the file was created with SWMR support.
+        """
         if active:
             self._swmr_label.setText('SWMR')
+            self._swmr_label.setToolTip('SWMR mode active')
+            self._swmr_label.setVisible(True)
+        elif compatible:
+            self._swmr_label.setText('SWMR file')
+            self._swmr_label.setToolTip('File created with SWMR support')
             self._swmr_label.setVisible(True)
         else:
             self._swmr_label.setText('')
+            self._swmr_label.setToolTip('SWMR mode status')
             self._swmr_label.setVisible(False)
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):

@@ -708,6 +708,14 @@ class H5Backend:
         """Return True if SWMR mode is currently active on the file."""
         return self._swmr_enabled
 
+    @property
+    def is_swmr_compatible(self):
+        """Return True if the open file was created with SWMR support."""
+        try:
+            return bool(self.root().attrs['swmr_compatible'])
+        except Exception:
+            return False
+
     def reconcile_swmr_attrs(self):
         """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] from actual data.
 
