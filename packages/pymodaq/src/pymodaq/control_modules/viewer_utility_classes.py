@@ -11,13 +11,13 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
-from pymodaq_utils.config import Config, get_set_local_dir
+from pymodaq_utils.config import get_set_local_dir
 from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
 from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.qt_utils import mkQApp
@@ -29,12 +29,11 @@ local_path = get_set_local_dir()
 # look for eventual calibration files
 calibs = ['None']
 if local_path.joinpath('camera_calibrations').is_dir():
-    for ind_file, file in enumerate(local_path.joinpath('camera_calibrations').iterdir()):
+    for file in local_path.joinpath('camera_calibrations').iterdir():
         if 'xml' in file.suffix:
             calibs.append(file.stem)
 
 
-config = Config()
 
 comon_parameters = [create_controller_param()]  #
 
@@ -44,9 +43,6 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
-         VALID_FOR_CONFIGURATION: False,},
-
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},

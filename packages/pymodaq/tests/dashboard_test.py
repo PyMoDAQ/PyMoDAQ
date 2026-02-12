@@ -1,13 +1,18 @@
-from pymodaq.utils.config import Config, get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path
+from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
-from pymodaq.utils.gui_utils.loader_utils import create_load_dashboard
+from pymodaq.dashboard import create_load_dashboard
 
+import qt_themes
 
 preset_path = get_set_preset_path()
-config = Config()
+config = GlobalConfig()
+
 
 @fixture
 def init_qt(qtbot):
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
     return qtbot
 
 

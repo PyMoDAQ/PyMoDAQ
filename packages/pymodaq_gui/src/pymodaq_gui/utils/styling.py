@@ -5,11 +5,11 @@ import qt_themes
 from qtpy import QtGui, QtWidgets, QtCore
 
 from pymodaq_gui.resources.material_icons import MaterialIcon
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 
 config = Config()
-theme = qt_themes.get_theme(config('style', 'theme')[0])
+theme = qt_themes.get_theme(config('gui', 'style', 'theme')[0])
 
 
 def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
@@ -54,14 +54,14 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
     elif resource_path_exists(
             MaterialIcon.resource_path(
                 icon_name,
-                style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-                fill=config('style', 'icons', 'fill')[0],
-                size=config('style', 'icons', 'size')[0])):
+                style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
+                fill=config('gui', 'style', 'icons', 'fill')[0],
+                size=config('gui', 'style', 'icons', 'size')[0])):
         icon = MaterialIcon(
             icon_name,
-            style=MaterialIcon.Style(config('style', 'icons', 'style')[0]),
-            fill=config('style', 'icons', 'fill')[0],
-            size=config('style', 'icons', 'size')[0])
+            style=MaterialIcon.Style(config('gui', 'style', 'icons', 'style')[0]),
+            fill=config('gui', 'style', 'icons', 'fill')[0],
+            size=config('gui', 'style', 'icons', 'size')[0])
         icon.set_color(create_color(icon_color))
         if icon_checked_color is not None:
             icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)

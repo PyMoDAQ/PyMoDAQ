@@ -10,10 +10,8 @@ from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_gui.utils.styling import create_font, create_icon
 
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.config import Config as ConfigUtils
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
-config_utils = ConfigUtils()
 config = Config()
 
 
@@ -41,7 +39,7 @@ class ControlModuleUI(CustomApp):
         self.config = config
         self._ini_state = False
 
-    def display_status(self, txt, wait_time=config_utils('general', 'message_status_persistence')):
+    def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
         if self.statusbar is not None:
             self.statusbar.showMessage(txt, wait_time)
 

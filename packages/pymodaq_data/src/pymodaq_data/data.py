@@ -6,7 +6,7 @@ Created the 28/10/2022
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 import numbers
 from copy import deepcopy
 
@@ -26,13 +26,14 @@ from pint.compat import upcast_type_map
 
 from multipledispatch import dispatch
 
+
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.utils import find_objects_in_list_from_attr_name_val
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.plotting.plotter.plotter import PlotterFactory
 from pymodaq_data.numpy_func import HANDLED_FUNCTIONS, HANDLED_UFUNCS, process_arguments_for_ufuncs
@@ -897,6 +898,17 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
         return DataToExport(name, data=[self])
+
+    def split_as_dte(self, name: str = 'mydte') -> DataToExport:
+        """ Convenience method to split each ndarray into a DataWithAxes object """
+        return DataToExport(name, data=[type(self)(self.labels[ind],
+                                                   source=self.source,
+                                                   dim = self.dim,
+                                                   data=[array],
+                                                   labels = [self.labels[ind]],
+                                                   axes = deepcopy(self.axes),
+                                                   units = self.units,
+                                                   ) for ind, array in enumerate(self)])
 
     def add_extra_attribute(self, **kwargs):
         for key in kwargs:
@@ -2089,7 +2101,7 @@ class DataWithAxes(DataBase, SerializableBase):
         else:
             raise ValueError(f'Cannot create a dwa from a None, should be a list of ndarray')
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend')[0], *args, viewer=None,
+    def plot(self, plotter_backend: str = config('data', 'plotting', 'backend')[0], *args, viewer=None,
              **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
         return plotter_factory.get(plotter_backend).plot(self, *args, viewer=viewer, **kwargs)
@@ -3024,7 +3036,7 @@ class DataToExport(DataLowLevel, SerializableBase):
 
         return dte, remaining_bytes
 
-    def plot(self, plotter_backend: str = config('plotting', 'backend')[0], *args, **kwargs):
+    def plot(self, plotter_backend: str = config('data', 'plotting', 'backend')[0], *args, **kwargs):
         """ Call a plotter factory and its plot method over the actual data"""
         return plotter_factory.get(plotter_backend).plot(self, *args, **kwargs)
 

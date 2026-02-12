@@ -10,12 +10,12 @@ from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.utils import ControlModule
 
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig
 
 from pymodaq.utils.data import DataActuator
 
-config = Config()
-config_viewer = daqmv.config
+config = GlobalConfig()
+config_viewer = config['pymodaq', 'viewer']
 
 
 @fixture
@@ -35,8 +35,8 @@ def ini_daq_move_ui(init_qt):
     qtbot = init_qt
     widget = QtWidgets.QWidget()
     qtbot.addWidget(widget)
-    qt_themes.set_theme(theme=config('style', 'theme')[0],
-                        style=config('style', 'style')[0])
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
 
     prog = DAQ_Move(widget)
     widget.show()

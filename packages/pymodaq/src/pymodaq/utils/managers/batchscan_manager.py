@@ -7,7 +7,6 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QMessageBox, QDialog, QDialogButtonBox
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils import config as config_mod
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.utils import Dock, file_io, DockArea

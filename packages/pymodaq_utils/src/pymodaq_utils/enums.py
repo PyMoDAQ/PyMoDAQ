@@ -6,7 +6,7 @@ if Version(platform.python_version()) < Version('3.11'):
 else:
     from enum import StrEnum   # noqa  # pylint: disable=unused-import
 
-from enum import Enum
+from enum import Enum, auto   # noqa  # pylint: disable=unused-import
 from typing import List, Union
 
 

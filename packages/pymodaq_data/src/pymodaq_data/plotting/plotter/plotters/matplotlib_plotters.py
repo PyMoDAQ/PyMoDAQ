@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     pass
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+config = configmod.GlobalConfig()
 
 PLOT_COLORS = utils.plot_colors.copy()
 PLOT_COLORS.remove((255, 255, 255))  # remove white color as plotted on white background

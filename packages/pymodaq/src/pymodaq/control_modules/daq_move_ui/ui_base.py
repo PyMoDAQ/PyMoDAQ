@@ -7,7 +7,7 @@ from typing import Union, List
 
 import qt_themes
 
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 from pymodaq.utils.data import DataActuator
@@ -17,11 +17,9 @@ from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq_gui.utils.styling import create_icon
 
-config_utils = Config()
-config = ControlModulesConfig()
+config = Config()
 
 
 class DAQ_Move_UI_Base(ControlModuleUI):
@@ -226,26 +224,26 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
-        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
 
-        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
 
-        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'))
+        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
         self.ini_actuator_pb = PushButtonIcon('cable', 'Initialization', checkable=True,
                                               tip='Start This actuator initialization')
         self.ini_state_led = QLED(readonly=True)
         self.move_done_led = QLED(readonly=True)
         self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
-                                            siPrefix=config('actuator', 'siprefix'),
+                                            siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                             )
         self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
         self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
         self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
                                           tip='Set the value of the actuator to the set absolute value',
                                           icon_color=self.get_theme().green)
-        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('actuator', 'siprefix'),
+        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'),
                                                  key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
         self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
         self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)

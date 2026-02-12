@@ -27,7 +27,7 @@ from pymodaq.control_modules.utils import ParameterControlModule
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.utils.widgets.lcd import LCD
 
-from pymodaq_utils.config import Config, get_set_local_dir
+from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
 from pymodaq_gui.h5modules.browsing import browse_data
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
@@ -55,12 +55,11 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
 from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands, LECOViewerCommands
-from pymodaq.utils.config import Config as ControlModulesConfig
+
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 
 logger = set_logger(get_module_name(__file__))
-config_utils = Config()
-config = ControlModulesConfig()
+config = Config()
 
 local_path = get_set_local_dir()
 
@@ -114,7 +113,7 @@ class DAQ_Viewer(ParameterControlModule):
         self,
         parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
-        daq_type=config("viewer", "daq_type"),
+        daq_type=config("pymodaq", "viewer", "daq_type"),
         **kwargs,
     ):
 
@@ -321,8 +320,6 @@ class DAQ_Viewer(ParameterControlModule):
     def update_plugin_config(self):
         parent_module = self.get_detector_module(self.detector)
         mod = import_module(parent_module.__package__.split('.')[0])
-        if hasattr(mod, 'config'):
-            self.plugin_config = mod.config
 
     @property
     def grab_state(self):
@@ -417,7 +414,7 @@ class DAQ_Viewer(ParameterControlModule):
 
                 hardware = DAQ_Detector(self._title, self.settings, self.detector)
                 self._hardware_thread = QThread()
-                if self.config('viewer', 'viewer_in_thread'):
+                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
                     hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
@@ -427,7 +424,7 @@ class DAQ_Viewer(ParameterControlModule):
                 self._update_settings_signal[edict].connect(hardware.update_settings)
 
                 self._hardware_thread.hardware = hardware
-                if self.config('viewer', 'viewer_in_thread'):
+                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
                     self._hardware_thread.start()
                 self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.INI_DETECTOR,
                                                          attribute=[

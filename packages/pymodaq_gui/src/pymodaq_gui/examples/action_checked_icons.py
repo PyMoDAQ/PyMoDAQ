@@ -1,5 +1,5 @@
 from pymodaq_gui.managers.action_manager import ActionManager
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 config = Config()
 import sys

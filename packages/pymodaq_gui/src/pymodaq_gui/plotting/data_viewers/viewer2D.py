@@ -16,9 +16,10 @@ from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import (Axis, DataToExport, DataFromRoi, DataRaw,
                                DataDistribution, DataWithAxes)
+from pymodaq_data.plotting.utils import PlotColors
 
 from pymodaq_gui.managers.roi_manager import ROIManager, DataDim
-from pymodaq_gui.plotting.items.roi import SimpleRectROI
+from pymodaq_gui.plotting.items.roi import SimpleRectROI, RoiInfo
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.widgets import ImageWidget
@@ -29,8 +30,7 @@ from pymodaq_gui.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq_gui.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 from pymodaq_gui.plotting.items.crosshair import Crosshair
 from pymodaq_gui.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
-from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
-
+from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
 
 logger = set_logger(get_module_name(__file__))
 
@@ -45,7 +45,7 @@ COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=
 
 
 IMAGE_TYPES = ['red', 'green', 'blue']
-COLOR_LIST = utils.plot_colors
+COLOR_LIST = PlotColors()
 crosshair_pens = make_dashed_pens(color=(255, 255, 0))
 
 
@@ -387,20 +387,23 @@ class View2D(ActionManager, QtCore.QObject):
         size: (iterable) setting the size of the ROI
         """
         if isinstance(self.roi_target, pgROI):
-            if size is not None:
-                x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
-                size = list(np.divide(list(size), [x_scaling, y_scaling]))
-                if list(self.roi_target.size()) != size:
-                    self.roi_target.setSize(size, center=(0.5, 0.5))
-
-            if pos is not None:
-                pos = self.unscale_axis(*list(pos))
-                pos = list(pos)
-                if list(self.roi_target.pos()) != pos:
-                    self.roi_target.setPos(pos)
+            self.move_scale_roi(self.roi_target, pos, size)
 
         else:
             self.roi_target.set_crosshair_position(*list(pos))
+
+    def move_scale_roi(self, roi: pgROI, pos=None, size=None):
+        if size is not None:
+            x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
+            size = list(np.divide(list(size), [x_scaling, y_scaling]))
+            if list(roi.size()) != size:
+                roi.setSize(size, center=(0.5, 0.5))
+
+        if pos is not None:
+            pos = self.unscale_axis(*list(pos))
+            pos = list(pos)
+            if list(roi.pos()) != pos:
+                roi.setPos(pos)
 
     def setup_widgets(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -503,7 +506,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('histo', self.show_hide_histogram)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('roi', self.roi_clicked)
-        self.connect_action('ROIselect', self.show_ROI_select)
+        self.connect_action('ROIselect', lambda: self.show_ROI_select())
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
         self.connect_action('legend', self.show_legend)
@@ -664,11 +667,14 @@ class View2D(ActionManager, QtCore.QObject):
             self.lineout_viewers['int'].view.remove_data_displayer('crosshair')
         logger.debug(f'Crosshair visible?: {self.crosshair.isVisible()}')
 
-    def show_ROI_select(self):
+    def show_ROI_select(self, pos=None, size=None):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
         rect = self.data_displayer.get_image('red').boundingRect()
-        self.ROIselect.setPos(rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2)
-        self.ROIselect.setSize(rect.size() * 2 / 3)
+        if size is None:
+            size = rect.size() * 2 / 3
+            pos = rect.center()-QtCore.QPointF(rect.width() * 2 / 3, rect.height() * 2 / 3)/2
+        self.ROIselect.setPos(pos)
+        self.ROIselect.setSize(size)
 
     def set_image_labels(self, labels: List[str]):
         if self.data_displayer.labels != labels:
@@ -743,7 +749,7 @@ class Viewer2D(ViewerBase):
         self.isdata = dict([])
         self._is_gradient_manually_set = False
 
-        self.view = View2D(parent)
+        self.view : View2D= View2D(parent)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)

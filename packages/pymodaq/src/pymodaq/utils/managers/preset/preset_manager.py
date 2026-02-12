@@ -3,15 +3,17 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets
+
+from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.dock import Dock
 
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq.utils import config as config_mod_pymodaq
 
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_layout_path, \
+    get_set_configurator_path, get_set_remote_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules_manager import ModuleType
 
@@ -28,9 +30,9 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 # check if preset_mode directory exists on the drive
-preset_path = config_mod_pymodaq.get_set_preset_path()
-overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
-layout_path = config_mod_pymodaq.get_set_layout_path()
+preset_path = get_set_preset_path()
+overshoot_path = get_set_overshoot_path()
+layout_path = get_set_layout_path()
 
 
 class PresetManager(ManagerBase):
@@ -195,13 +197,13 @@ class PresetManager(ManagerBase):
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
-        for file in config_mod_pymodaq.get_set_configurator_path(preset_name).iterdir():
+        for file in get_set_configurator_path(preset_name).iterdir():
             file.unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_configurator_path(preset_name).rmdir()
-        config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_configurator_path(preset_name).rmdir()
+        get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
 
     def list_control_modules_from_preset(self):

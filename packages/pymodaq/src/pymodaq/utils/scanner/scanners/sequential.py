@@ -12,7 +12,6 @@ from qtpy import QtCore, QtWidgets
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 from pymodaq_data import Q_
 
 from pymodaq_gui import utils as gutils
@@ -22,7 +21,7 @@ from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.scanner.scan_selector import Selector
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
 
 
 if TYPE_CHECKING:
