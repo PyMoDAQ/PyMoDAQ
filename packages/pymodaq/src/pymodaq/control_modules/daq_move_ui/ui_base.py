@@ -16,6 +16,7 @@ from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
 from pymodaq_gui.parameter import ParameterTree
+from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_gui.utils.styling import create_icon
 
@@ -322,15 +323,17 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
 
     def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
-        # Common actions from ControlModuleUI
-        self._setup_name_widget(toolbar=toolbar, use_label_class=True)
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
-        self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
-                                display_name='Ini. Actuator', tip='Connect to selected actuator')
-        self._setup_settings_action(toolbar=toolbar)
-        toolbar.addSeparator()
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
+                                              font_size=14, isbold=True, isitalic=True),
+                        toolbar=toolbar)
 
-        # Actuator-specific actions
+        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
+        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=toolbar,
+                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
+                        icon_checked_color=qt_themes.get_theme().green)
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
+                        toolbar=toolbar)
+        toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
 

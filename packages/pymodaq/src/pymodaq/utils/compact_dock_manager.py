@@ -44,39 +44,40 @@ class CompactDockManager(ActionManager):
         self.control_toolbar = QtWidgets.QToolBar("Controls")
         self.control_toolbar.setFloatable(False)
         self.control_toolbar.setMovable(False)
-        
-        # Create QMainWindow to enable toolbar dragging
+        self.control_toolbar.setOrientation(Qt.Orientation.Vertical)
+        # Outer container: QMainWindow (drag-drop toolbars) | CollapsibleWidget
+        # Using a plain QWidget so the collapsible sits directly beside the
+        # toolbar rows without a QMainWindow central-widget gap.
+        outer = QtWidgets.QWidget()
+        outer_layout = QtWidgets.QHBoxLayout(outer)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        self.dock.addWidget(outer)
+
+        # QMainWindow handles toolbar drag-and-drop for module rows.
         self.main_window = QtWidgets.QMainWindow()
-        self.dock.addWidget(self.main_window)
+        outer_layout.addWidget(self.main_window)
 
-        # # Create a minimal central widget to avoid empty space
-        # # Use a small but visible widget to avoid layout issues
-        # central_widget = QtWidgets.QWidget()
-        # central_widget.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Policy.MinimumExpanding,
-        #     QtWidgets.QSizePolicy.Policy.Minimum
-        # )
-        # central_widget.setLayout(QtWidgets.QVBoxLayout())
-
-        # toggle_top = QtWidgets.QPushButton("▲")
-        # self.collapsible_widget = CollapsibleWidget(
-        #     toggle_widget=toggle_top,
-        #     collapsible_widget=self.control_toolbar,
-        #     direction="bottom",
-        #     content_before_toggle=False,
-        #     parent=self.main_window
-        # )        
-        # central_widget.layout().addWidget(self.collapsible_widget)
-        # self.main_window.setCentralWidget(central_widget)
-
-        # self.main_window.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.control_toolbar)
-
-
+        # Zero-height central widget so the QMainWindow shrinks to its toolbar rows.
+        central_widget = QtWidgets.QWidget()
+        central_widget.setFixedHeight(0)
+        self.main_window.setCentralWidget(central_widget)
+        # self.main_window.centralWidget().setVisible(False)
+        # Collapsible control panel placed directly to the right of the toolbar rows.
+        # Layout when expanded:  [… actions …] [▶]
+        # Layout when collapsed:               [◀]
+        toggle_btn = QtWidgets.QPushButton("◀")
+        toggle_btn.setFixedWidth(16)
+        self.collapsible_widget = CollapsibleWidget(
+            toggle_widget=toggle_btn,
+            collapsible_widget=self.control_toolbar,
+            direction="left",
+            content_before_toggle=True,   # toolbar to the LEFT of the toggle button
+        )
+        outer_layout.addWidget(self.collapsible_widget)
 
         # Initialize ActionManager with the control toolbar
         ActionManager.__init__(self, toolbar=self.control_toolbar)
-        # Add control toolbar to the main window at the bottom
-        self.main_window.addToolBar(Qt.ToolBarArea.BottomToolBarArea, self.control_toolbar)
         # Track modules and their widgets
         self.modules: List = []  # List of DAQ_Move or DAQ_Viewer instances
         self.module_toolbars = []  # List of QToolBar objects for drag/drop (renamed to avoid ActionManager conflict)
@@ -95,67 +96,76 @@ class CompactDockManager(ActionManager):
         self.add_action('flip_orientation', flip_icon, toolbar=self.control_toolbar,
                        tip="Switch between Vertical (⇅) and Horizontal (⇆) ordering")
         self.connect_action('flip_orientation', self.flip_orientation)
+        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True, toolbar=self.control_toolbar,
+                       tip="Lock/Unlock all module actions",icon_checked='lock',icon_color='green',icon_checked_color='orange')
+        self.connect_action('lock', self.toggle_lock)
+        self.add_action('add', 'Add module', icon_name='add_circle', checkable=True, toolbar=self.control_toolbar,
+                       tip="Add a module to dashboard",icon_checked='add',icon_color='blue')
+        self.connect_action('add', self.toggle_lock)
 
+        
         # Add separator
         self.control_toolbar.addSeparator()
 
-        # Module-specific collective actions
-        if self.module_type == 'actuator':
-            self._create_actuator_actions()
-        elif self.module_type == 'detector':
-            self._create_detector_actions()
+    #     # Module-specific collective actions
+    #     if self.module_type == 'actuator':
+    #         self._create_actuator_actions()
+    #     elif self.module_type == 'detector':
+    #         self._create_detector_actions()
 
-    def _create_actuator_actions(self):
-        """Create collective actions for actuators"""
-        self.add_action('init_all', 'Init All', icon_name='cable', toolbar=self.control_toolbar,
-                       tip="Initialize all actuators")
-        self.connect_action('init_all', self.init_all_modules)
+    # def _create_actuator_actions(self):
+    #     """Create collective actions for actuators"""
+    #     self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True, toolbar=self.control_toolbar,
+    #                    tip="Lock/Unlock all actuator actions",icon_checked='lock',icon_color='green',icon_checked_color='orange')
+    #     self.connect_action('lock', self.toggle_lock)
 
-        self.add_action('deinit_all', 'Deinit All', icon_name='cable', toolbar=self.control_toolbar,
-                       tip="Deinitialize all actuators")
-        self.connect_action('deinit_all', self.deinit_all_modules)
+    # def _create_detector_actions(self):
+    #     """Create collective actions for detectors"""
 
-        self.add_action('stop_all', 'Stop All', icon_name='stop', toolbar=self.control_toolbar,
-                       tip="Emergency stop all actuators")
-        self.connect_action('stop_all', self.stop_all_modules)
+    #     self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True, toolbar=self.control_toolbar,
+    #                    tip="Lock/Unlock all actuator actions",icon_checked='lock',icon_color='green',icon_checked_color='orange')
+    #     self.connect_action('lock', self.toggle_lock)
 
-        self.add_action('home_all', 'Home All', icon_name='home2', toolbar=self.control_toolbar,
-                       tip="Move all actuators to home position")
-        self.connect_action('home_all', self.home_all_modules)
+    def _get_align_widgets(self, module) -> dict:
+        """Return the widgets that need cross-module width alignment for *module*.
 
-        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True, toolbar=self.control_toolbar,
-                       tip="Lock/Unlock all actuator actions",icon_checked='lock',icon_color='green',icon_checked_color='orange')
-        self.connect_action('lock', self.toggle_lock)
+        Returns a dict mapping a group name to the widget:
+          - ``'name'``     : the title label
+          - ``'selector'`` : the actuator combo-box or detector selector widget
+        """
+        widgets = {}
+        ui = getattr(module, 'ui', None)
+        if ui is None:
+            return widgets
+        if ui.has_action('name'):
+            widgets['name'] = ui.get_action('name').widget
+        if self.module_type == 'actuator' and hasattr(ui, 'actuators_combo'):
+            widgets['selector'] = ui.actuators_combo
+        elif self.module_type == 'detector' and ui.has_action('selector'):
+            widgets['selector'] = ui.get_action('selector').widget
+        return widgets
 
-    def _create_detector_actions(self):
-        """Create collective actions for detectors"""
-        self.add_action('init_all', 'Init All', icon_name='cable', toolbar=self.control_toolbar,
-                       tip="Initialize all detectors")
-        self.connect_action('init_all', self.init_all_modules)
+    def _update_alignment(self):
+        """Set a common fixed width for each alignment group across all modules.
 
-        self.add_action('deinit_all', 'Deinit All', icon_name='cable', toolbar=self.control_toolbar,
-                       tip="Deinitialize all detectors")
-        self.connect_action('deinit_all', self.deinit_all_modules)
+        This ensures that name labels and selector widgets are the same width
+        in every row so that the action icons line up visually.
+        """
+        groups: dict[str, list[QtWidgets.QWidget]] = {}
+        for module in self.modules:
+            for group_name, widget in self._get_align_widgets(module).items():
+                groups.setdefault(group_name, []).append(widget)
 
-        self.add_action('grab_all', 'Grab All', icon_name='videocam', toolbar=self.control_toolbar,
-                       tip="Start continuous acquisition on all detectors")
-        self.connect_action('grab_all', self.grab_all_modules)
-
-        self.add_action('stop_all', 'Stop All', icon_name='videocam_off', toolbar=self.control_toolbar,
-                       tip="Stop acquisition on all detectors")
-        self.connect_action('stop_all', self.stop_all_modules)
-
-        self.add_action('single_shot_all', 'Single All', icon_name='camera', toolbar=self.control_toolbar,
-                       tip="Trigger single acquisition on all detectors")
-        self.connect_action('single_shot_all', self.single_shot_all_modules)
-
-        self.add_action('save_all', 'Save All', icon_name='save_as', toolbar=self.control_toolbar,
-                       tip="Save data from all detectors")
-        self.connect_action('save_all', self.save_all_modules)
-
-        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True, toolbar=self.control_toolbar,
-                       tip="Lock/Unlock all actuator actions",icon_checked='lock',icon_color='green',icon_checked_color='orange')
-        self.connect_action('lock', self.toggle_lock)
+        for widgets in groups.values():
+            if not widgets:
+                continue
+            # Reset any previous constraint so sizeHint() is meaningful
+            for w in widgets:
+                w.setMinimumWidth(0)
+                w.setMaximumWidth(16777215)  # Qt's QWIDGETSIZE_MAX
+            max_width = max(w.sizeHint().width() for w in widgets)
+            for w in widgets:
+                w.setFixedWidth(max_width)
 
     def add_widget(self, widget: QtWidgets.QWidget, create_toolbar: bool = True, module=None):
         """
@@ -212,6 +222,9 @@ class CompactDockManager(ActionManager):
         self.main_window.addToolBar(self.toolbar_area, toolbar)
         self.module_toolbars.append(toolbar)
 
+        # Realign name labels and selectors so icons stay in the same column
+        self._update_alignment()
+
     def remove_widget(self, widget: QtWidgets.QWidget, module=None) -> bool:
         """
         Remove a widget and return True if dock is now empty
@@ -244,6 +257,7 @@ class CompactDockManager(ActionManager):
             self.main_window.removeToolBar(toolbar)
             toolbar.deleteLater()
 
+        self._update_alignment()
         return len(self.module_widgets) == 0
 
     def show(self, position: str = "top", relative_to: Optional[Dock] = None):
@@ -316,140 +330,9 @@ class CompactDockManager(ActionManager):
 
     # Collective Action Methods
 
-    def init_all_modules(self):
-        """Initialize all modules that are currently not initialized"""
-        action_name = 'ini_actuator' if self.module_type == 'actuator' else 'ini_detector'
-
-        # First, find all modules that need initialization
-        modules_to_init = []
-        for module in self.modules:            
-            try:
-                
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action(action_name)
-                    if action and not action.isChecked():  # Not initialized
-                        modules_to_init.append((module, action))
-            except Exception as e:
-                pass
-
-        # Now trigger them
-        for module, action in modules_to_init:
-            try:
-                action.trigger()
-                QtWidgets.QApplication.processEvents()  # Process events after each trigger
-            except Exception as e:
-                messagebox(severity='warning', title='Init Error',
-                          text=f'Failed to initialize {module.title}: {str(e)}')
-
-    def deinit_all_modules(self):
-        """Deinitialize all modules that are currently initialized (with confirmation)"""
-        action_name = 'ini_actuator' if self.module_type == 'actuator' else 'ini_detector'
-
-        # First, find all modules that need deinitialization
-        modules_to_deinit = []
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action(action_name)
-                    if action and action.isChecked():  # Currently initialized
-                        modules_to_deinit.append((module, action))
-            except Exception as e:
-                pass
-
-        if not modules_to_deinit:
-            return  # Nothing to deinitialize
-
-        # Ask for confirmation
-        ret = messagebox(severity='question', title='Confirm Deinit All',
-                        text=f'Deinitialize {len(modules_to_deinit)} initialized {self.module_type}s?')
-        if ret:  # Returns True if Ok is clicked
-            for module, action in modules_to_deinit:
-                try:
-                    action.trigger()  # This will deinitialize (uncheck the action)
-                    QtWidgets.QApplication.processEvents()  # Process events after each trigger
-                except Exception as e:
-                    messagebox(severity='warning', title='Deinit Error',
-                              text=f'Failed to deinitialize {module.title}: {str(e)}')
-
-    def stop_all_modules(self):
-        """Stop all modules by triggering their stop action"""
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action('stop')
-                    if action:
-                        action.trigger()
-                # For detectors, also uncheck the grab action if it's checked
-                if self.module_type == 'detector':
-                    grab_action = module.ui.get_action('grab')
-                    if grab_action and grab_action.isChecked():
-                        grab_action.trigger()  # This will stop the grab
-            except Exception as e:
-                messagebox(severity='warning', title='Stop Error',
-                          text=f'Failed to stop {module.title}: {str(e)}')
-
-    def home_all_modules(self):
-        """Move all actuators to home position by clicking the find home button"""
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'find_home_pb'):
-                    # find_home_pb is a PushButtonIcon, click it
-                    module.ui.find_home_pb.click()
-            except Exception as e:
-                messagebox(severity='warning', title='Home Error',
-                          text=f'Failed to home {module.title}: {str(e)}')
-
-    def grab_all_modules(self):
-        """Start continuous acquisition on all detectors by triggering the grab action"""
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action('grab')
-                    if action and not action.isChecked():  # Only trigger if not already grabbing
-                        action.trigger()
-            except Exception as e:
-                messagebox(severity='warning', title='Grab Error',
-                          text=f'Failed to start grab on {module.title}: {str(e)}')
-
-    def single_shot_all_modules(self):
-        """Trigger single acquisition on all detectors by triggering the snap action"""
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action('snap')
-                    if action:
-                        action.trigger()
-            except Exception as e:
-                messagebox(severity='warning', title='Single Shot Error',
-                          text=f'Failed to trigger single on {module.title}: {str(e)}')
-
-    def save_all_modules(self):
-        """Save data from all detectors by triggering the save_current action"""
-        for module in self.modules:
-            try:
-                if hasattr(module, 'ui') and hasattr(module.ui, 'get_action'):
-                    action = module.ui.get_action('save_current')
-                    if action:
-                        action.trigger()
-            except Exception as e:
-                messagebox(severity='warning', title='Save Error',
-                          text=f'Failed to save data from {module.title}: {str(e)}')
-
     def toggle_lock(self, checked: bool):
         """Lock/unlock all module actions"""
         self.is_locked = checked
-
-        # Update action states based on lock status
-        action_names = []
-        if self.module_type == 'actuator':
-            action_names = ['init_all', 'deinit_all', 'stop_all', 'home_all']
-        elif self.module_type == 'detector':
-            action_names = ['init_all', 'deinit_all', 'grab_all', 'stop_all',
-                           'single_shot_all', 'save_all']
-
-        # Disable/enable collective actions
-        self.set_action_enabled(action_names, not checked)
-
         # Disable/enable individual module actions
         for module in self.modules:
             try:
