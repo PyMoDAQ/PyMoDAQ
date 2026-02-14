@@ -359,8 +359,8 @@ class ManagerBase(CustomExt):
                 None,
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
-        self.do_things_for_new_creation()
         if ok and entry != '':
+            self.do_things_for_new_creation()
             if self.save_check(entry, bypass_dialog=bypass_dialog):
                 self.entries_sync.append_to_list('items', entry)
                 self.entries_sync.update_key('current', entry)
