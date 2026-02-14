@@ -409,13 +409,22 @@ def makePolygons(tri):
 
 class Data0DWithHistory:
     """Object to store scalar values and keep a history of a given length to them"""
-    def __init__(self, Nsamples=200):
+    def __init__(self, Nsamples=200, sync_x_axis=True):
         super().__init__()
         self._datas = dict([])
         self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
         self._data_length = 0
+        self._sync_x_axis = sync_x_axis
+
+    @property
+    def sync_x_axis(self) -> bool:
+        return self._sync_x_axis
+
+    @sync_x_axis.setter
+    def sync_x_axis(self, value: bool):
+        self._sync_x_axis = value
 
     @property
     def size(self):
@@ -460,7 +469,15 @@ class Data0DWithHistory:
         datas: (dict) dictionaary of floats or np.array(float)
         """
         if datas.keys() != self._datas.keys():
-            self.clear_data()
+            if self._sync_x_axis:
+                self.clear_data()
+            else:
+                # Drop channels that disappeared
+                for gone in set(self._datas.keys()) - set(datas.keys()):
+                    self._datas.pop(gone)
+                # Pad new channels with NaN so they share the current xaxis
+                for new in set(datas.keys()) - set(self._datas.keys()):
+                    self._datas[new] = np.full(self._data_length, np.nan)
 
         self._data_length += 1
 
