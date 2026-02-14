@@ -212,6 +212,10 @@ class View0D(ActionManager, QObject):
                                                                        'in a side panel', checkable=True)
         self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
+        self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
+                        'If checked, adding a new channel resets all histories so curves '
+                        'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
+                        icon_color='#F9A825', icon_checked_color='#607D8B')
 
     def _setup_widgets(self):
         self.splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -238,10 +242,12 @@ class View0D(ActionManager, QObject):
         self.connect_action('show_data_as_list', self.show_data_list)
         self.connect_action('Nhistory', self.data_displayer.update_axis, signal_name='valueChanged')
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
+        self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
         self.values_list.setVisible(False)
+        self.get_action('sync_x_axis').setChecked(True)
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
