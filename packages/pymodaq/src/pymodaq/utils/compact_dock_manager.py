@@ -181,11 +181,9 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         if create_toolbar:
             toolbar = QtWidgets.QToolBar()
             toolbar.addWidget(widget)
-            self.module_widgets.append(widget)
         else:
             toolbar = widget
-            self.module_widgets.append(widget)
-
+        self.module_widgets.append(widget)
         if module is not None:
             self.modules.append(module)
 
@@ -219,14 +217,14 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         if widget in self.module_widgets:
             idx = self.module_widgets.index(widget)
             toolbar: QtWidgets.QToolBar = self.module_toolbars[idx]
-            self.module_widgets.remove(widget)
-            self.module_toolbars.remove(toolbar)
+            # self.module_widgets.remove(widget)
+            #self.module_toolbars.remove(toolbar)
 
-            if module is not None and module in self.modules:
-                self.modules.remove(module)
+            # if module is not None and module in self.modules:
+            #     self.modules.remove(module)
 
             self.main_window.removeToolBar(toolbar)
-            toolbar.deleteLater()
+            # toolbar.deleteLater()
 
         self._update_alignment()
         return len(self.module_widgets) == 0
@@ -256,6 +254,8 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         still read status and re-initialise instruments while locked.
         """
         self.is_locked = checked
+        for toolbar in self.module_toolbars:
+            toolbar
         for module in self.modules:
             try:
                 ui = getattr(module, 'ui', None)
@@ -265,8 +265,5 @@ class CompactDockManager(QtCore.QObject, ActionManager):
                     if action_name in _LOCKABLE_ACTIONS:
                         if hasattr(ui, 'set_action_enabled'):
                             ui.set_action_enabled(action_name, not checked)
-            except Exception:
-                pass
-
             except Exception:
                 pass

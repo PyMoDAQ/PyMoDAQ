@@ -291,15 +291,13 @@ class DashBoard(CustomApp):
             for detector_module in detector_modules[:]:
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
-                detector_module.quit_fun()
+
 
                 # Remove from compact dock manager
                 if self.compact_detector_manager:
-                    is_empty = self.compact_detector_manager.remove_widget(detector_module.ui.toolbar,
+                    self.compact_detector_manager.remove_widget(detector_module.ui.toolbar,
                                                                            module=detector_module)
-                    if is_empty:
-                        self.compact_detector_manager.close()
-                        self.compact_detector_manager = None
+                detector_module.quit_fun()
 
                 # Close individual detector dock
                 dock = self.dockarea.docks.get(f"{detector_module.title}", None)
@@ -322,17 +320,16 @@ class DashBoard(CustomApp):
             for actuator_module in actuator_modules[:]:
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
-                actuator_module.quit_fun()
-                QtWidgets.QApplication.processEvents()
-
                 # Remove from compact dock manager
                 if self.compact_actuator_manager:
-                    is_empty = self.compact_actuator_manager.remove_widget(actuator_module.ui.toolbar,
+                    is_empty =self.compact_actuator_manager.remove_widget(actuator_module.ui.toolbar,
                                                                            module=actuator_module)
                     if is_empty:
                         self.compact_actuator_manager.close()
                         self.compact_actuator_manager = None
 
+                actuator_module.quit_fun()
+                
                 # Close individual actuator dock (for non-compact actuators)
                 dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
