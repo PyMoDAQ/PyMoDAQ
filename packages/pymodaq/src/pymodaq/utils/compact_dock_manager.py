@@ -12,6 +12,16 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 
+# Actions that should be locked out when the dock is in locked state.
+# Status/display actions (show_settings, show_graph, ini_*) are intentionally excluded.
+_LOCKABLE_ACTIONS = frozenset({
+    # actuator
+    'move_abs', 'move_abs_2', 'move_rel_plus', 'move_rel_minus', 'stop',
+    # detector
+    'snap', 'grab', 'save_current', 'background_snap', 'background_subtract',
+})
+
+
 class CompactDockManager(QtCore.QObject, ActionManager):
     """Manages a compact dock with vertical/horizontal widget stacking and drag/drop support"""
 
@@ -50,6 +60,7 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         self.control_toolbar = QtWidgets.QToolBar("Controls")
         self.control_toolbar.setFloatable(False)
         self.control_toolbar.setMovable(False)
+        self.control_toolbar.setOrientation(Qt.Orientation.Vertical)
 
         # ── Outer container (vertical): [module rows | collapsible]  +  [add btn] ──
         outer_container = QtWidgets.QWidget()
@@ -111,20 +122,11 @@ class CompactDockManager(QtCore.QObject, ActionManager):
 
     def _create_actions(self):
         """Create all actions using ActionManager"""
-        # Edit mode toggle
-        self.add_action('edit_mode', 'Edit', icon_name='edit', checkable=True,
+        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True,
                         toolbar=self.control_toolbar,
-                        tip='Toggle edit mode to add / remove modules',
-                        icon_checked_color='orange')
-        self.connect_action('edit_mode', self._toggle_edit_mode)
-        self.control_toolbar.addSeparator()
-
-        # Flip orientation
-        flip_icon = "⇅" if self.orientation == Qt.Orientation.Vertical else "⇆"
-        self.add_action('flip_orientation', flip_icon, toolbar=self.control_toolbar,
-                        tip="Switch between Vertical (⇅) and Horizontal (⇆) ordering")
-        self.connect_action('flip_orientation', self.flip_orientation)
-        self.control_toolbar.addSeparator()
+                        tip='Lock/Unlock all module actions',
+                        icon_checked='lock', icon_color='green', icon_checked_color='orange')
+        self.connect_action('lock', self.toggle_lock)
 
         # Module-type-specific collective actions
         if self.module_type == 'actuator':
@@ -335,13 +337,23 @@ class CompactDockManager(QtCore.QObject, ActionManager):
     # ── Collective actions ─────────────────────────────────────────────────────
 
     def toggle_lock(self, checked: bool):
-        """Lock/unlock all module actions."""
+        """Lock/unlock dangerous module actions (movement, grab, save).
+
+        Display and initialization actions are left enabled so the user can
+        still read status and re-initialise instruments while locked.
+        """
         self.is_locked = checked
         for module in self.modules:
             try:
-                if hasattr(module, 'ui'):
-                    for action_name in getattr(module.ui, 'actions_names', []):
-                        if hasattr(module.ui, 'set_action_enabled'):
-                            module.ui.set_action_enabled(action_name, not checked)
+                ui = getattr(module, 'ui', None)
+                if ui is None:
+                    continue
+                for action_name in getattr(ui, 'actions_names', []):
+                    if action_name in _LOCKABLE_ACTIONS:
+                        if hasattr(ui, 'set_action_enabled'):
+                            ui.set_action_enabled(action_name, not checked)
+            except Exception:
+                pass
+
             except Exception:
                 pass
