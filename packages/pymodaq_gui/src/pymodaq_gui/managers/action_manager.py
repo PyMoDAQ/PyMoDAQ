@@ -168,6 +168,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     action.setCheckable(checkable)
     if checkable:
         action.setChecked(checked)
+        if checked and hasattr(action, 'icon_checked'):
+            action.set_icon()
     action.setToolTip(tip)
     if toolbar is not None:
         toolbar.addAction(action)
