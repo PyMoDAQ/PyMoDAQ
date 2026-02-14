@@ -25,9 +25,6 @@ _LOCKABLE_ACTIONS = frozenset({
 class CompactDockManager(QtCore.QObject, ActionManager):
     """Manages a compact dock with vertical/horizontal widget stacking and drag/drop support"""
 
-    remove_module = Signal(object)       # emitted with the module instance to remove
-    add_module_requested = Signal()      # emitted when the + Add Module button is clicked
-
     def __init__(self, title: str, dockarea: DockArea,
                  orientation: Qt.Orientation = Qt.Orientation.Vertical,
                  module_type: str = 'actuator'):
@@ -86,7 +83,7 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         self.main_window.setCentralWidget(_central)
 
         # Collapsible control panel pinned to the right of the toolbar rows.
-        # Collapsed: [◀]    Expanded: [actions …][◀]
+        # Collapsed: [◀]    Expanded: [actions …][▶]
         toggle_btn = QtWidgets.QPushButton("◀")
         toggle_btn.setFixedWidth(16)
         self.collapsible_widget = CollapsibleWidget(
@@ -97,12 +94,6 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         )
         modules_hlay.addWidget(self.collapsible_widget)
 
-        # "+ Add Module" button – visible only in edit mode
-        self.add_btn = QtWidgets.QPushButton("+ Add Module")
-        self.add_btn.setVisible(False)
-        self.add_btn.clicked.connect(self.add_module_requested)
-        outer_vlay.addWidget(self.add_btn)
-
         # Initialize ActionManager with the control toolbar
         ActionManager.__init__(self, toolbar=self.control_toolbar)
 
@@ -110,11 +101,8 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         self.modules: List = []
         self.module_toolbars: List[QtWidgets.QToolBar] = []
         self.module_widgets: List[QtWidgets.QWidget] = []
-        self._remove_actions: List[QtWidgets.QAction] = []
-        self._spacer_actions: List[QtWidgets.QAction] = []
 
         self.is_locked = False
-        self._edit_mode = False
 
         self._create_actions()
 
@@ -135,18 +123,12 @@ class CompactDockManager(QtCore.QObject, ActionManager):
             self._create_detector_actions()
 
     def _create_actuator_actions(self):
-        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True,
-                        toolbar=self.control_toolbar,
-                        tip='Lock/Unlock all actuator actions',
-                        icon_checked='lock', icon_color='green', icon_checked_color='orange')
-        self.connect_action('lock', self.toggle_lock)
+        # TODO: Global actions for actuators
+        pass
 
     def _create_detector_actions(self):
-        self.add_action('lock', 'Lock', icon_name='lock_open_right', checkable=True,
-                        toolbar=self.control_toolbar,
-                        tip='Lock/Unlock all detector actions',
-                        icon_checked='lock', icon_color='green', icon_checked_color='orange')
-        self.connect_action('lock', self.toggle_lock)
+        # TODO: Global actions for actuators
+        pass        
 
     # ── Alignment helpers ──────────────────────────────────────────────────────
 
@@ -220,26 +202,6 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         else:
             toolbar.setOrientation(Qt.Orientation.Vertical)
 
-        # ── Spacer + remove button (far right of row, edit-mode only) ──
-        spacer = QtWidgets.QWidget()
-        spacer.setSizePolicy(
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Preferred,
-        )
-        spacer_action = toolbar.addWidget(spacer)
-        spacer_action.setVisible(self._edit_mode)
-        self._spacer_actions.append(spacer_action)
-
-        remove_action = QtWidgets.QAction("✕", toolbar)
-        remove_action.setToolTip("Remove this module")
-        remove_action.setVisible(self._edit_mode)
-        if module is not None:
-            remove_action.triggered.connect(
-                lambda _checked=False, m=module: self.remove_module.emit(m)
-            )
-        toolbar.addAction(remove_action)
-        self._remove_actions.append(remove_action)
-
         if len(self.module_toolbars) > 0:
             self.main_window.addToolBarBreak(self.toolbar_area)
 
@@ -257,12 +219,6 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         if widget in self.module_widgets:
             idx = self.module_widgets.index(widget)
             toolbar: QtWidgets.QToolBar = self.module_toolbars[idx]
-
-            toolbar.removeAction(self._spacer_actions[idx])
-            toolbar.removeAction(self._remove_actions[idx])
-            self._spacer_actions.pop(idx)
-            self._remove_actions.pop(idx)
-
             self.module_widgets.remove(widget)
             self.module_toolbars.remove(toolbar)
 
@@ -276,15 +232,7 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         return len(self.module_widgets) == 0
 
     # ── Edit mode ─────────────────────────────────────────────────────────────
-
-    def _toggle_edit_mode(self, checked: bool):
-        """Show/hide per-module remove buttons and the add-module button."""
-        self._edit_mode = checked
-        self.add_btn.setVisible(checked)
-        for act in self._remove_actions:
-            act.setVisible(checked)
-        for act in self._spacer_actions:
-            act.setVisible(checked)
+    # TODO: Implement edit mode
 
     # ── Dock positioning ───────────────────────────────────────────────────────
 
@@ -298,41 +246,6 @@ class CompactDockManager(QtCore.QObject, ActionManager):
     def close(self):
         """Close and cleanup the dock."""
         self.dock.close()
-
-    # ── Orientation flip ───────────────────────────────────────────────────────
-
-    def flip_orientation(self):
-        """Switch between vertical (⇅) and horizontal (⇆) ordering of toolbars"""
-        if self.orientation == Qt.Orientation.Vertical:
-            self.orientation = Qt.Orientation.Horizontal
-            new_toolbar_area = Qt.ToolBarArea.LeftToolBarArea
-            toolbar_orientation = Qt.Orientation.Vertical
-            new_icon = "⇆"
-        else:
-            self.orientation = Qt.Orientation.Vertical
-            new_toolbar_area = Qt.ToolBarArea.TopToolBarArea
-            toolbar_orientation = Qt.Orientation.Horizontal
-            new_icon = "⇅"
-
-        self.set_action_text('flip_orientation', new_icon)
-
-        current_toolbars = self.module_toolbars[:]
-        for toolbar in current_toolbars:
-            self.main_window.removeToolBar(toolbar)
-
-        self.toolbar_area = new_toolbar_area
-
-        for i, toolbar in enumerate(current_toolbars):
-            toolbar.setAllowedAreas(self.toolbar_area)
-            toolbar.setOrientation(toolbar_orientation)
-            if i > 0:
-                self.main_window.addToolBarBreak(self.toolbar_area)
-            self.main_window.addToolBar(self.toolbar_area, toolbar)
-            toolbar.setVisible(True)
-            toolbar.show()
-
-        self.main_window.update()
-        QtWidgets.QApplication.processEvents()
 
     # ── Collective actions ─────────────────────────────────────────────────────
 
