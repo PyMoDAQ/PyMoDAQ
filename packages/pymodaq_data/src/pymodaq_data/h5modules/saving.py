@@ -300,7 +300,8 @@ class H5SaverLowLevel(H5Backend):
         ----------
         where: group node
                where to create data group
-        group_data_type: DataDim
+        data_dim: DataDim
+            the dimensionality of the data group
         title: str, optional
                a title for this node, will be saved as metadata
         settings_as_xml: str, optional
@@ -318,11 +319,12 @@ class H5SaverLowLevel(H5Backend):
         --------
         :py:meth:`add_group`
         """
+        data_dim = enum_checker(DataDim, data_dim)
         if group_name is None:
-            group_name = DataDim.name
+            group_name = data_dim.name
         if metadata is None:
             metadata = {}
-        data_dim = enum_checker(DataDim, data_dim)
+
         metadata.update(settings=settings_as_xml)
         group = self.add_group(group_name, GroupType.data, where, title, metadata)
         return group
