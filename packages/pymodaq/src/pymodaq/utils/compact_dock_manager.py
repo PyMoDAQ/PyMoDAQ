@@ -291,6 +291,30 @@ class ModuleCompactDock(CompactDockManager):
             for w in widgets:
                 w.setFixedWidth(max_width)
 
+    # ── Collective action helper ───────────────────────────────────────────────
+
+    def _apply_to_modules(self, action_name: str, checked: bool = None):
+        """Trigger *action_name* on every module that exposes it.
+
+        Parameters
+        ----------
+        action_name:
+            Name of the action as registered in the module's ActionManager.
+        checked:
+            For checkable actions, the desired target state.  The action is
+            triggered only when its current state differs, so the connected
+            slot is always called with the correct value.
+            Pass ``None`` for non-checkable (one-shot) actions.
+        """
+        for module in self.modules:
+            if not module.ui.has_action(action_name):
+                continue
+            action = module.ui.get_action(action_name)
+            if checked is None:
+                action.trigger()
+            elif action.isChecked() != checked:
+                action.trigger()
+
     # ── Lock wiring ───────────────────────────────────────────────────────────
 
     def _apply_lock(self, locked: bool):
