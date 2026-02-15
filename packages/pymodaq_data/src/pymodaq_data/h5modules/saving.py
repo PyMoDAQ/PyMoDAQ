@@ -83,6 +83,32 @@ class H5SaverLowLevel(H5Backend):
         self._raw_group: Union[GROUP, str] = '/RawData'
         self._logger_array = None
 
+        self._flush_interval = 0
+        self._write_count = 0
+
+    def set_swmr_flush_interval(self, interval: int):
+        """Set how often to flush data for SWMR readers.
+
+        Parameters
+        ----------
+        interval: int
+            0 = flush only at end, N = every N writes
+        """
+        self._flush_interval = interval
+        self._write_count = 0
+
+    def tick_flush(self):
+        """Increment the write counter and flush if the interval is reached.
+
+        No-op if SWMR is not active or flush interval is 0.
+        To be called by data savers after each logical data write.
+        """
+        if not self.is_swmr_active or self._flush_interval <= 0:
+            return
+        self._write_count += 1
+        if self._write_count % self._flush_interval == 0:
+            self.flush()
+
     @property
     def raw_group(self):
         return self._raw_group

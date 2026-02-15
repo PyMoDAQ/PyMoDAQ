@@ -1090,8 +1090,7 @@ class DAQScan(CustomExt):
 
             if self.h5saver._swmr_mode:
                 interval = self.h5saver.settings['swmr_options', 'flush_interval']
-                for det in self.modules_manager.detectors:
-                    det._module_and_data_saver._datatoexport_saver.set_swmr_flush_interval(interval)
+                self.h5saver.set_swmr_flush_interval(interval)
 
             # mandatory to deal with multithreads
             if self.runner_thread is not None:

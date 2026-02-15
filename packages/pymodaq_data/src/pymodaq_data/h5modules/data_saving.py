@@ -962,18 +962,6 @@ class DataToExportExtendedSaver(DataToExportSaver):
         self._data_saver = DataExtendedSaver(h5saver, extended_shape)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
         self._swmr_activated = False
-        self._flush_interval = 0
-        self._write_count = 0
-
-    def set_swmr_flush_interval(self, interval: int):
-        """Set how often to flush data for SWMR readers.
-
-        Parameters
-        ----------
-        interval: int
-            0 = flush only at end, N = every N writes
-        """
-        self._flush_interval = interval
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -1025,11 +1013,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
             self._h5saver.enable_swmr()
             self._swmr_activated = True
 
-        # Periodic flush for SWMR readers
-        if self._swmr_activated and self._flush_interval > 0:
-            self._write_count += 1
-            if self._write_count % self._flush_interval == 0:
-                self._h5saver.flush()
+        self._h5saver.tick_flush()
 
 
 class DataLoader:
