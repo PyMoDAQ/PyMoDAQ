@@ -436,7 +436,7 @@ class H5SaverLowLevel(H5Backend):
                           group_type=GroupType.scan):
         """Add a new group of type given by the input argument group_type
 
-        At creation adds the attributes description and scan_done to be used elsewhere
+        At creation adds the attributes description to be used elsewhere
 
         See Also
         -------
@@ -444,7 +444,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if metadata is None:
             metadata = {}
-        metadata.update(dict(description='', scan_done=False))
+        metadata.update(dict(description=''))
         group = self.add_incremental_group(group_type, where, title, settings_as_xml, metadata)
         return group
 
@@ -455,7 +455,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if metadata is None:
             metadata = {}
-        metadata.update(dict(description='', scan_done=False))
+        metadata.update(dict(description=''))
         group = self.add_generic_group(where, title, settings_as_xml, metadata, group_type=GroupType.scan)
         return group
 
