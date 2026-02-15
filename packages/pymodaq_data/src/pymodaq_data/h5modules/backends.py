@@ -4,13 +4,13 @@ Created the 15/11/2022
 
 @author: Sebastien Weber
 """
-from typing import Union
+from typing import Union, Dict
 from enum import Enum
+from pathlib import Path
 import numpy as np
 import importlib
 from importlib import metadata
 import pickle
-from typing import Dict
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -53,6 +53,8 @@ except Exception as e:                              # pragma: no cover
 
 if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
+
+SWMR_CAPABLE_BACKENDS = frozenset({'h5py'})
 
 
 class NodeError(Exception):
@@ -721,6 +723,11 @@ class H5Backend:
         except Exception:
             return False
 
+    @property
+    def is_swmr_capable(self):
+        """Return True if the current backend supports SWMR mode."""
+        return self.backend in SWMR_CAPABLE_BACKENDS
+
     def reconcile_swmr_attrs(self):
         """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] from actual data.
 
@@ -738,6 +745,26 @@ class H5Backend:
                 if node_class in ('EARRAY', 'VLARRAY'):
                     actual_shape = node.node.shape
                     node.attrs['shape'] = actual_shape
+
+    def finalize_swmr(self, keep_open=False):
+        """End SWMR by closing the file, reopening in 'a' mode, and reconciling deferred attrs.
+
+        After SWMR mode, attrs['shape'] on EARRAY/VLARRAY nodes may be stale.
+        This method closes the file (ending SWMR), reopens it in append mode,
+        and updates all deferred attributes.
+
+        Parameters
+        ----------
+        keep_open : bool
+            If True, leaves the file open in 'a' mode after reconciling.
+            If False (default), closes the file after reconciling.
+        """
+        file_path = Path(self.file_path)
+        self.close_file()
+        self.open_file(file_path, mode='a')
+        self.reconcile_swmr_attrs()
+        if not keep_open:
+            self.close_file()
 
     def define_compression(self, compression, compression_opts):
         """Define cmpression library and level of compression
