@@ -32,6 +32,8 @@ from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.splash import get_splash_sc
 
+from pymodaq.extensions.custom_ext import CustomExt
+
 
 logger = set_logger(get_module_name(__file__))
 
@@ -115,7 +117,7 @@ class SharedUI(CustomApp):
         
         
         self._app_class_file: Union[str, Path] = None
-        self._main_application: Any = None
+        self._main_application: Union[CustomExt, Any] = None
 
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
@@ -271,7 +273,10 @@ class SharedUI(CustomApp):
         from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
 
         config_tree = TreeFromToml(config)
-        config_tree.show_dialog()
+        res = config_tree.show_dialog()
+        if res:
+            self._main_application.config_changed.emit()
+
 
     def setup_docks(self):
        pass

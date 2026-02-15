@@ -15,7 +15,7 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
-from .backends import GROUP, CARRAY, Node, EARRAY, NodeError
+from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 
@@ -51,6 +51,14 @@ class DataManagement(metaclass=ABCMeta):
         str: the future name of the node
         """
         return f'{capitalize(cls.data_type.value)}{ind:02d}'
+
+    def __getattr__(self, item):
+        """ Allows to call attributes of the underlying H5Saver object"""
+
+        if hasattr(self._h5saver, item):
+            return getattr(self._h5saver, item)
+        else:
+            raise AttributeError(item)
 
     def __enter__(self):
         return self
@@ -284,11 +292,11 @@ class DataSaverLoader(DataManagement):
     data_type = DataType['data']
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
-                 new_file=False, metadata=None):
+                 new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel()
+            h5saver_tmp = H5SaverLowLevel(save_type)
             h5saver_tmp.init_file(file_name=Path(h5saver),
                                   new_file=new_file,
                                   metadata=metadata)
@@ -758,15 +766,27 @@ class DataToExportSaver:
     h5saver: H5SaverLowLevel
 
     """
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.scan):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.custom,
+                 new_file: bool = False, metadata: dict = None):
+
         if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type=save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver))
+            h5saver_tmp = H5SaverLowLevel(save_type)
+            h5saver_tmp.init_file(file_name=Path(h5saver),
+                                  new_file=new_file,
+                                  metadata=metadata)
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(h5saver)
         self._bkg_saver = BkgSaver(h5saver)
+
+    def __getattr__(self, item):
+        """ Allows to call attributes of the underlying H5Saver object"""
+
+        if hasattr(self._h5saver, item):
+            return getattr(self._h5saver, item)
+        else:
+            raise AttributeError(item)
 
     def _get_node(self, where: Union[Node, str]) -> Node:
         return self._h5saver.get_node(where)
@@ -809,6 +829,8 @@ class DataToExportSaver:
         """
 
         dims = data.get_dim_presents()
+        if settings_as_xml != '' and 'settings' not in kwargs:
+            kwargs['settings]'] = settings_as_xml
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
             for ind, dwa in enumerate(data.get_data_from_dim(dim)):
@@ -816,6 +838,7 @@ class DataToExportSaver:
                 dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind),
                                                         dwa.name, origin=dwa.origin)
                 # dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name)
+
                 self._data_saver.add_data(dwa_group, dwa, **kwargs)
 
     def add_bkg(self, where: Union[Node, str], data: DataToExport):

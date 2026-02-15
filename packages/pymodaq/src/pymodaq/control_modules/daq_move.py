@@ -802,7 +802,7 @@ class DAQ_Move(ParameterControlModule):
         str: the unit to be displayed on the ui
         """
         if ("°" in unit or "degree" in unit) and not "°C" in unit:
-            # special cas as pint base unit for angles are radians
+            # special case as pint base unit for angles are radians
             return "°"
         elif "°C" in unit:
             return "°C"

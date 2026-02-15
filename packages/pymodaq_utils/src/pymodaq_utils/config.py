@@ -338,6 +338,18 @@ class BaseConfig(metaclass=ConfigSingleton):
             ret = copy.deepcopy(self._config)
         return ret
 
+    def to_xml_string(self) -> bytes:
+        """ Convert this object to a xml string representing it as a Parameter Tree
+
+        pymodaq_gui is necessary for this purpose
+        """
+        try:
+            from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
+            from pymodaq_gui.parameter.ioxml import parameter_to_xml_string
+            config_tree = TreeFromToml(self, capitalize=False)
+            return parameter_to_xml_string(config_tree.settings)
+        except ImportError:
+            return b''
 
     def get(self, key: Union[str, Iterable[str]], default=None):
         with self._lock.read_lock():

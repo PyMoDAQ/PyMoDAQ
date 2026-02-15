@@ -109,6 +109,8 @@ def add_text_to_elt(elt, param):
         text = str(param.value().toMSecsSinceEpoch())
     elif param_type == 'date':
         text = str(QDateTime(param.value(), QTime()).toMSecsSinceEpoch())
+    elif param_type == 'progress':
+        text = str(param.value())
     elif param_type == 'table_view':
         try:
             data = dict(classname=param.value().__class__.__name__,
@@ -348,7 +350,7 @@ def elt_to_dict(el):
     return param
 
 
-def parameter_to_xml_string(param):
+def parameter_to_xml_string(param) -> bytes:
     """ Convert  a Parameter to a XML string.
 
     Parameters
@@ -521,6 +523,8 @@ def set_txt_from_elt(el, param_dict):
                 param_value = None
             else:
                 param_value = eval(val_text)
+        elif param_type == 'progress':
+            param_value = int(val_text)
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
