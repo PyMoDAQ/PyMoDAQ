@@ -368,4 +368,21 @@ class DetectorCompactDock(ModuleCompactDock):
 
     def _create_actions(self):
         super()._create_actions()
-        # TODO: add detector-specific collective actions (e.g. snap-all, grab-all)
+        self.control_toolbar.addSeparator()
+        self.add_action('snap', 'Snap', icon_name='looks_one',
+                        toolbar=self.control_toolbar,
+                        tip='Snap all detectors')
+        self.connect_action('snap', lambda: self._apply_to_modules('snap'))
+
+        self.add_action('grab', 'Grab', icon_name='repeat',
+                        checkable=True, toolbar=self.control_toolbar,
+                        tip='Toggle grab on all detectors',
+                        icon_checked='repeat_on', icon_checked_color='green')
+        self.connect_action('grab', lambda checked: self._apply_to_modules('grab', checked))
+
+        self.add_action('show_graphs', 'Show', icon_name='bid_landscape',
+                        checkable=True, toolbar=self.control_toolbar,
+                        tip='Show/Hide graphs on all detectors',
+                        icon_checked='bid_landscape_disabled',
+                        icon_color='green', icon_checked_color='red')
+        self.connect_action('show_graphs', lambda checked: self._apply_to_modules('show_graphs', checked))
