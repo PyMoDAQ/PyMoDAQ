@@ -295,7 +295,10 @@ class DashBoard(CustomApp):
 
                 # Remove from compact dock manager
                 if self.compact_detector_manager:
-                    self.compact_detector_manager.remove_module(detector_module)
+                    is_empty = self.compact_detector_manager.remove_module(detector_module)
+                    if is_empty:
+                        self.compact_detector_manager.close()
+                        self.compact_detector_manager = None
                 detector_module.quit_fun()
 
                 # Close individual detector dock

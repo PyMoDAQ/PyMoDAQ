@@ -23,8 +23,10 @@ if TYPE_CHECKING:
 
 # Action names that should be disabled while the dock-level lock is active.
 LOCKABLE_ACTIONS = frozenset({
-    # actuator
+    # actuator — buttons
     'move_abs', 'move_abs_2', 'move_rel_plus', 'move_rel_minus', 'stop',
+    # actuator — spinboxes
+    'abs_green', 'abs_red', 'rel_move',
     # detector
     'snap', 'grab', 'save_current', 'background_snap', 'background_subtract',
 })
@@ -295,8 +297,16 @@ class ModuleCompactDock(CompactDockManager):
         """Enable/disable lockable actions on every module."""
         for module in self.modules:
             for name in LOCKABLE_ACTIONS:
-                if module.ui.has_action(name):
-                    module.ui.set_action_enabled(name, not locked)
+                if not module.ui.has_action(name):
+                    continue
+                module.ui.set_action_enabled(name, not locked)
+                # set_action_enabled calls setEnabled on the stored object, which
+                # for a WidgetActionProxy is the proxy shell (inherits QWidget.setEnabled)
+                # and does NOT forward to the wrapped widget via __getattr__.
+                # Explicitly disable the underlying widget when present.
+                widget = getattr(module.ui.get_action(name), 'widget', None)
+                if widget is not None:
+                    widget.setEnabled(not locked)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
