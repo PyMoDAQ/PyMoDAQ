@@ -176,6 +176,7 @@ class H5Browser(QObject, ActionManager):
         #self.main_window.addToolBar(self.toolbar)
 
         self._swmr = swmr
+        self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
 
         self.settings_attributes = ParameterManager()
@@ -222,6 +223,7 @@ class H5Browser(QObject, ActionManager):
         if swmr is None:
             swmr = self._swmr
         if h5file is None:
+            self._file_is_external = False
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
             if Path(h5file_path).is_file():
@@ -247,6 +249,7 @@ class H5Browser(QObject, ActionManager):
                 return
         else:
             self.h5utils.h5file = h5file
+            self._file_is_external = True
 
         self.data_loader = data_saving.DataLoader(self.h5utils)
         self.check_version()
@@ -272,6 +275,11 @@ class H5Browser(QObject, ActionManager):
                 # Fast path: refresh datasets in-place then rebuild tree
                 from pymodaq_data.h5modules.swmr import refresh_datasets
                 refresh_datasets(self.h5utils.h5file)
+            elif self._file_is_external:
+                # File handle was provided by the caller (e.g. the active scan saver).
+                # Do NOT close it — the caller owns the file.  The tree is rebuilt
+                # from the already-open handle so any flushed data becomes visible.
+                pass
             else:
                 # Re-open the file to pick up changes
                 self.h5utils.close_file()
@@ -411,7 +419,8 @@ class H5Browser(QObject, ActionManager):
         """
         """
         try:
-            self.h5utils.close_file()
+            if not self._file_is_external:
+                self.h5utils.close_file()
             if self.main_window is None:
                 self.parent_widget.close()
             else:

@@ -1166,9 +1166,13 @@ class DAQScan(CustomExt):
         """
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
-        scan_node = self.module_and_data_saver.get_last_node()
-        if scan_node is not None:
-            scan_node.attrs['scan_done'] = True
+        # In SWMR mode the scan thread is still writing; setting attributes from
+        # the main thread concurrently is unsafe.  The Scan_done handler will set
+        # scan_done after finalize_swmr returns.
+        if not self._h5saver.is_swmr_active:
+            scan_node = self.module_and_data_saver.get_last_node()
+            if scan_node is not None:
+                scan_node.attrs['scan_done'] = True
 
         if not self.dashboard.overshoot:
             if self.settings['scan_options', 'go_to_ini_positions']:
@@ -1330,6 +1334,8 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
+            # Ensure the file is closed even after an unexpected crash
+            self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
     def det_done(self, det_done_datas: data_mod.DataToExport, positions):
         """
