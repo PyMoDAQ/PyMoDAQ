@@ -250,7 +250,7 @@ class TestSWMRExtendedSaver:
 
         scan_shape = (5,)
         ext_saver = DataToExportExtendedSaver(saver, extended_shape=scan_shape)
-        ext_saver.set_swmr_flush_interval(2)
+        saver.set_swmr_flush_interval(2)
 
         # Create test data
         data_array = np.random.rand(10)
@@ -299,7 +299,7 @@ class TestSWMRExtendedSaver:
 
         scan_shape = (10,)
         ext_saver = DataToExportExtendedSaver(saver, extended_shape=scan_shape)
-        ext_saver.set_swmr_flush_interval(3)
+        saver.set_swmr_flush_interval(3)
 
         nav_axes = [Axis('scan_axis', 'mm', data=np.arange(10), index=0)]
         ext_saver.add_nav_axes(saver.raw_group, nav_axes)
@@ -748,7 +748,7 @@ class TestSWMRExtendedSaver:
 
         scan_shape = (5,)
         ext_saver = DataToExportExtendedSaver(saver, extended_shape=scan_shape)
-        ext_saver.set_swmr_flush_interval(0)  # no periodic flush
+        saver.set_swmr_flush_interval(0)  # no periodic flush
 
         nav_axes = [Axis('scan_axis', 'mm', data=np.arange(5), index=0)]
         ext_saver.add_nav_axes(saver.raw_group, nav_axes)
