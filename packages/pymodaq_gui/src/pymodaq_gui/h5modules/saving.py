@@ -24,7 +24,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_data.h5modules.backends import (
     H5Backend, backends_available, SaveType,
     GroupType, InvalidDataDimension, InvalidScanType,
-    GROUP, VLARRAY)
+    GROUP, VLARRAY, SWMR_CAPABLE_BACKENDS)
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
@@ -173,8 +173,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         self.settings.child('save_type').setValue(self.save_type.name)
 
         # Apply initial SWMR visibility based on the configured backend
-        is_h5py = self.settings['backend', 'backend_type'] == 'h5py'
-        self.settings.child('swmr_options').setOpts(visible=is_h5py)
+        self.settings.child('swmr_options').setOpts(visible=self.is_swmr_capable)
 
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
@@ -187,7 +186,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         tuple: (swmr_mode: bool, update_h5: bool) possibly adjusted values
         """
         swmr_mode = (self.settings['swmr_options', 'enable_swmr']
-                     and self.settings['backend', 'backend_type'] == 'h5py')
+                     and self.is_swmr_capable)
 
         # Only check existing files
         if update_h5 or not Path(fullpathname).is_file():
@@ -530,9 +529,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         elif param.name() == 'backend_type':
             new_backend = param.value()
-            is_h5py = new_backend == 'h5py'
-            self.settings.child('swmr_options').setOpts(visible=is_h5py)
-            if not is_h5py and self.settings['swmr_options', 'enable_swmr']:
+            swmr_capable = new_backend in SWMR_CAPABLE_BACKENDS
+            self.settings.child('swmr_options').setOpts(visible=swmr_capable)
+            if not swmr_capable and self.settings['swmr_options', 'enable_swmr']:
                 self.settings.child('swmr_options', 'enable_swmr').setValue(False)
                 self.update_status('SWMR is only supported with h5py backend, disabling.')
             self.set_backend(new_backend)

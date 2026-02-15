@@ -1020,7 +1020,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
 
         # Enable SWMR after first data point created all structure
         if (self._h5saver._swmr_mode and not self._swmr_activated
-                and self._h5saver.backend == 'h5py'):
+                and self._h5saver.is_swmr_capable):
             self._h5saver.flush()
             self._h5saver.enable_swmr()
             self._swmr_activated = True
