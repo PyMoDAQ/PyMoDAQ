@@ -835,6 +835,8 @@ class ActionManager:
         """Set the CheckedState of a given action or a list of actions"""
         if action_name in self._actions:
             self._actions[action_name].setChecked(checked)
+            if hasattr(self._actions[action_name], 'icon_checked'):
+                self._actions[action_name].set_icon()
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
