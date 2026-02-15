@@ -415,6 +415,8 @@ class DAQ_Move(ParameterControlModule):
         if not do_init:
             try:
                 self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.CLOSE))
+                QtWidgets.QApplication.processEvents()
+
                 if self.ui is not None:
                     self.ui.actuator_init = False
             except Exception as e:
