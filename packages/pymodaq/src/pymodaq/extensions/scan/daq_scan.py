@@ -1070,17 +1070,31 @@ class DAQScan(CustomExt):
 
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
+            nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
                 scan_shape = [Naverage]
                 scan_shape.extend(self.scanner.get_scan_shape())
+                for nav_axis in nav_axes:
+                    nav_axis.index += 1
+                nav_axes.insert(0, data_mod.Axis('Average',
+                                                  data=np.linspace(0, Naverage - 1, Naverage),
+                                                  index=0))
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
-            # Pre-allocate the per-point completion tracker
+            # Pre-allocate the per-point completion tracker (CARRAY: SWMR-compatible indexed writes)
             self._scan_done_array = self._h5saver.add_array(
                 scan_node, 'ScanDone', data_saving.DataType.data,
                 array_to_save=np.zeros(scan_shape, dtype=bool),
                 data_dimension=data_mod.DataDim['DataND'])
+            # Tag all dimensions as navigation so h5browser renders with proper axes
+            self._h5saver.set_attr(self._scan_done_array, 'nav_indexes',
+                                   tuple(range(len(scan_shape))))
+            self._h5saver.set_attr(self._scan_done_array, 'distribution', 'uniform')
+            # Store scan axes alongside ScanDone so h5browser can label the dimensions
+            axis_saver = data_saving.AxisSaverLoader(self._h5saver)
+            for axis in nav_axes:
+                axis_saver.add_axis(scan_node, axis)
             for det in self.modules_manager.detectors:
                 det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
