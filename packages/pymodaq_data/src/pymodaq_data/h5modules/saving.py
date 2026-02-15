@@ -121,7 +121,7 @@ class H5SaverLowLevel(H5Backend):
             fullpath = self.h5_file_path.joinpath(self.h5_file_name)
             if not fullpath.is_file():
                 new_file = True
-            elif swmr_mode and not new_file and self.backend == 'h5py':
+            elif swmr_mode and not new_file and self.is_swmr_capable:
                 # SWMR requires the file to have been created with libver='latest'
                 # (superblock v3+). Check for the marker attribute.
                 try:
@@ -159,26 +159,6 @@ class H5SaverLowLevel(H5Backend):
             file_path = Path(filename)
             if str(file_path) != '':
                 super().save_file_as(filename)
-
-    def finalize_swmr(self, keep_open=False):
-        """End SWMR by closing the file, reopening in 'a' mode, and reconciling deferred attrs.
-
-        After SWMR mode, attrs['shape'] on EARRAY/VLARRAY nodes may be stale.
-        This method closes the file (ending SWMR), reopens it in append mode,
-        and updates all deferred attributes.
-
-        Parameters
-        ----------
-        keep_open : bool
-            If True, leaves the file open in 'a' mode after reconciling.
-            If False (default), closes the file after reconciling.
-        """
-        file_path = self.h5_file_path.joinpath(self.h5_file_name)
-        self.close_file()
-        self.open_file(file_path, mode='a')
-        self.reconcile_swmr_attrs()
-        if not keep_open:
-            self.close_file()
 
     def get_set_logger(self, where: Node = None) -> VLARRAY:
         """ Retrieve or create (if absent) a logger enlargeable array to store logs
