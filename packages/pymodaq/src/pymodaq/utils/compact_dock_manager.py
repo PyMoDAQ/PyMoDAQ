@@ -351,7 +351,19 @@ class ActuatorCompactDock(ModuleCompactDock):
 
     def _create_actions(self):
         super()._create_actions()
-        # TODO: add actuator-specific collective actions (e.g. move-all, stop-all)
+        self.control_toolbar.addSeparator()
+        self.add_action('show_graph', 'Graph', icon_name='bid_landscape',
+                        checkable=True, toolbar=self.control_toolbar,
+                        tip='Show/Hide graphs on all actuators',
+                        icon_checked='bid_landscape_disabled',
+                        icon_color='green', icon_checked_color='red', checked=True)
+        self.connect_action('show_graph', lambda checked: self._apply_to_modules('show_graph', checked))
+
+        self.add_action('refresh_value', 'Refresh', icon_name='repeat',
+                        checkable=True, toolbar=self.control_toolbar,
+                        tip='Toggle continuous refresh on all actuators',
+                        icon_checked='repeat_on', icon_checked_color='green')
+        self.connect_action('refresh_value', lambda checked: self._apply_to_modules('refresh_value', checked))
 
 
 class DetectorCompactDock(ModuleCompactDock):
