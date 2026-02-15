@@ -36,9 +36,42 @@ def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, No
     return icon_color
 
 
+def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
+    """Return a new QIcon with all Normal-mode pixmaps mirrored.
+
+    Only the Normal mode is transformed; Qt derives Disabled/Active/Selected
+    variants automatically.  Both Off and On states are handled so that
+    checkable actions with two visual states work correctly.
+
+    For SVG/vector icons (e.g. MaterialIcon) ``availableSizes()`` returns an
+    empty list; the function falls back to the two standard Material sizes
+    (20 × 20 and 40 × 40) so the icon is still rendered at a usable resolution.
+    """
+    if not flip_h and not flip_v:
+        return icon
+    sx = -1.0 if flip_h else 1.0
+    sy = -1.0 if flip_v else 1.0
+    transform = QtGui.QTransform().scale(sx, sy)
+
+    new_icon = QtGui.QIcon()
+    sizes = icon.availableSizes() or [QtCore.QSize(s, s) for s in (20, 40)]
+    for size in sizes:
+        for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
+            px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
+            if not px.isNull():
+                new_icon.addPixmap(
+                    px.transformed(transform),
+                    QtGui.QIcon.Mode.Normal,
+                    state,
+                )
+    return new_icon
+
+
 def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 icon_color: Union[QtGui.QColor, bytes, str] = None,
-                icon_checked_color: Union[QtGui.QColor, bytes, str] = None):
+                icon_checked_color: Union[QtGui.QColor, bytes, str] = None,
+                flip_h: bool = False,
+                flip_v: bool = False):
     """ Create an icon from various sources by order of preference:
 
     1) icon_name is an icon
@@ -47,10 +80,23 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
     4) icon_name is a registered png in icon_library
     5) icon_name is a registered ThemeIcon
     6) icon_name is a registered StandardPixmap
+
+    Parameters
+    ----------
+    icon_name:
+        Icon source — see priority list above.
+    icon_color:
+        Colour applied to the unchecked/off-state icon (MaterialIcon only).
+    icon_checked_color:
+        Colour applied to the checked/on-state icon (MaterialIcon only).
+    flip_h:
+        Mirror the icon horizontally (left ↔ right).
+    flip_v:
+        Mirror the icon vertically (top ↔ bottom).
     """
 
     if isinstance(icon_name, QtGui.QIcon):
-        return icon_name
+        return _flip_icon(icon_name, flip_h, flip_v)
     elif resource_path_exists(
             MaterialIcon.resource_path(
                 icon_name,
@@ -78,9 +124,7 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         icon = QtWidgets.QWidget().style().standardIcon(pixmapi)
     else:
         icon = QtGui.QIcon()
-    return icon
-
-
+    return _flip_icon(icon, flip_h, flip_v)
 
 
 def resource_path_exists(path: str) -> bool:
