@@ -158,6 +158,7 @@ class DAQScan(CustomExt):
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
+        self._scan_done_array = None  # boolean CARRAY tracking per-point completion
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators)
         self.scan_parameters = None
@@ -721,11 +722,13 @@ class DAQScan(CustomExt):
             self.scanner.settings.child('scan_type').value())
         self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
             self.scanner.settings.child('scan_sub_type').value())
-        scan_node = self.module_and_data_saver.get_set_node(new=False)
-        if scan_node.attrs['scan_done']:
-            scan_name = self.module_and_data_saver.get_next_node_name()
+        # Every Start creates a new scan node; predict the name it will receive.
+        last_node = self.module_and_data_saver.get_last_node()
+        if last_node is None:
+            scan_name = (utils.capitalize(module_saving.GroupModuleType.SCAN.name.lower())
+                         + '000')
         else:
-            scan_name = scan_node.name
+            scan_name = self.module_and_data_saver.get_next_node_name()
         self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
         self.scan_attributes.child('scan_info', 'description').setValue('')
         self.h5saver.settings.child('current_scan_name').setValue(scan_name)
@@ -867,25 +870,13 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
+            self._scan_done_array = None
             try:
-                scan_node = self.module_and_data_saver.get_last_node()
-                if self._h5saver.is_swmr_active:
-                    scan_path = scan_node.path
-                    logger.info("Finalizing SWMR mode...")
-                    self._h5saver.finalize_swmr(keep_open=True)  # Keep open to set scan_done
-                    logger.info("Setting scan_done attribute...")
-                    self._h5saver.get_node(scan_path).attrs['scan_done'] = True
-                    self._h5saver.flush()
-                    self.close_file()
-                    logger.info("Scan file closed successfully")
-                else:
-                    scan_node.attrs['scan_done'] = True
-                    self.module_and_data_saver.flush()
-                    self.close_file()
-                    logger.info("Scan file closed successfully")
+                self.module_and_data_saver.flush()
+                self.close_file()
+                logger.info("Scan file closed successfully")
             except Exception as e:
-                logger.error(f"Error finalizing scan file: {e}")
-                # Try to close the file anyway
+                logger.error(f"Error closing scan file: {e}")
                 try:
                     self._h5saver.close_file()
                     self._update_file_status_led()
@@ -913,6 +904,8 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_data':
             self.module_and_data_saver.add_data(**status.attribute)
+            if self._scan_done_array is not None:
+                self._scan_done_array[status.attribute['indexes']] = True
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1072,8 +1065,7 @@ class DAQScan(CustomExt):
             if remote_manager is not None:
                 remote_manager.activate_all(False)
 
-            new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
-            scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
+            scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
@@ -1083,6 +1075,12 @@ class DAQScan(CustomExt):
                 scan_shape.extend(self.scanner.get_scan_shape())
             else:
                 scan_shape = self.scanner.get_scan_shape()
+
+            # Pre-allocate the per-point completion tracker
+            self._scan_done_array = self._h5saver.add_array(
+                scan_node, 'ScanDone', data_saving.DataType.data,
+                array_to_save=np.zeros(scan_shape, dtype=bool),
+                data_dimension=data_mod.DataDim['DataND'])
             for det in self.modules_manager.detectors:
                 det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
@@ -1166,14 +1164,6 @@ class DAQScan(CustomExt):
         """
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
-        # In SWMR mode the scan thread is still writing; setting attributes from
-        # the main thread concurrently is unsafe.  The Scan_done handler will set
-        # scan_done after finalize_swmr returns.
-        if not self._h5saver.is_swmr_active:
-            scan_node = self.module_and_data_saver.get_last_node()
-            if scan_node is not None:
-                scan_node.attrs['scan_done'] = True
-
         if not self.dashboard.overshoot:
             if self.settings['scan_options', 'go_to_ini_positions']:
                 self.set_ini_positions()  # do not set ini position again in case overshoot fired
