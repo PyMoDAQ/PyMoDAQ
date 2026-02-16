@@ -146,7 +146,8 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
                 #position = [data.m_as(self.axis_unit) for data in position.quantities]
                 position = np.full(self.shape, position.value(self.axis_unit)).tolist()
 
-        self.controller.move_rel(position=position)
+        (self.controller.
+         move_rel(position=position))
 
     def move_home(self):
         self.controller.move_home()
@@ -172,12 +173,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
 
         if data is not None:
-            position = data.get('position', [])
+            data = data.get('position', [])
 
-            self.shape = np.array(position).shape
-            position = [np.atleast_1d(position)]
+            self.shape = np.array(data).shape
+            data = [np.atleast_1d(data)]
 
-            pos = DataActuator(data=position)
+            pos = DataActuator(data=data)
             self.json = True
         elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])

@@ -104,9 +104,8 @@ class DAQ_Move(ParameterControlModule):
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
 
-    def __init__(
-        self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs
-    ) -> None:
+    def __init__(self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None,
+                 preset: Optional[str] = None,**kwargs) -> None:
         """
 
         Parameters
@@ -121,7 +120,7 @@ class DAQ_Move(ParameterControlModule):
         self.logger = set_logger(f"{logger.name}.{title}")
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
-        super().__init__(action_list=("save", "update"), **kwargs)
+        super().__init__(action_list=("save", "update"), preset=preset, **kwargs)
 
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
@@ -329,7 +328,7 @@ class DAQ_Move(ParameterControlModule):
                     ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
                 )
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value])
+                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=value)
                 )
 
         except Exception as e:
@@ -422,6 +421,8 @@ class DAQ_Move(ParameterControlModule):
                     self.ui.actuator_init = False
             except Exception as e:
                 self.logger.exception(str(e))
+            finally:
+                self.connect_leco(False)
         else:
             try:
                 hardware = DAQ_Move_Hardware(
@@ -445,6 +446,7 @@ class DAQ_Move(ParameterControlModule):
                         ],
                     )
                 )
+                self.connect_leco(True)
             except Exception as e:
                 self.logger.exception(str(e))
 

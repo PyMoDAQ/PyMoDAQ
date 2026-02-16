@@ -415,10 +415,11 @@ class ParameterControlModule(ParameterManager, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
-
+    _preset: Optional[str] = None
     listener_class: Type[ActorListener] = ActorListener
 
-    def __init__(self, **kwargs):
+    def __init__(self, preset: Optional[str] = None, **kwargs):
+        self._preset = preset
         action_list = kwargs.get("action_list", ("search", "save", "update"))
         ParameterManager.__init__(self, action_list=action_list)
         ControlModule.__init__(self)
@@ -519,26 +520,18 @@ class ParameterControlModule(ParameterManager, ControlModule):
             self._tcpclient_thread.start()
 
     def get_leco_name(self) -> str:
-        name = self.settings["main_settings", "leco", "leco_name"]
-        if name == '':
-            # take the module name as alternative
-            name = self.settings["main_settings", "module_name"]
-        if name == '':
-            # a name is required, invent one
-            name = f"viewer_{randint(0, 10000)}"
-            name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
-        return name
+        name = (self.settings["main_settings", "leco", "leco_name"] or
+                self.settings["main_settings", "module_name"] or
+                f"viewer_{randint(0, 10000)}"
+                )
+        self.settings.child("main_settings", "leco", "leco_name").setValue(name)
+        return f"{self._preset}_{name}" if self._preset else name
 
-    def get_leco_host_port(self) -> tuple:
-        host = self.settings["main_settings", "leco", "host"]
-        port = self.settings["main_settings", "leco", "port"]
-        if host == '':
-            # take the localhost as default
-            host = 'localhost'
-        if port == '':
-            # take the default port as 12300
-            port = 12300
-        return (host, port)    
+    def get_leco_host_port(self) -> tuple[str, int]:
+        host = (self.settings["main_settings", "leco", "host"] or 'localhost')
+        port = (self.settings["main_settings", "leco", "port"] or 12300)
+
+        return host, port
 
     def connect_leco(self, connect: bool) -> None:
         if connect:

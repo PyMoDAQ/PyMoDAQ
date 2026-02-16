@@ -115,13 +115,14 @@ class DAQ_Viewer(ParameterControlModule):
         parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
         daq_type=config("viewer", "daq_type"),
+        preset : Optional[str] = None,
         **kwargs,
     ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(**kwargs)
+        super().__init__(preset=preset, **kwargs)
 
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
@@ -412,6 +413,8 @@ class DAQ_Viewer(ParameterControlModule):
 
             except Exception as e:
                 self.logger.exception(str(e))
+            finally:
+                self.connect_leco(False)
         else:            
             try:
 
@@ -436,7 +439,7 @@ class DAQ_Viewer(ParameterControlModule):
                 if self.ui is not None:
                     for dock in self.ui.viewer_docks:
                         dock.setEnabled(True)
-
+                self.connect_leco(True)
             except Exception as e:
                 self.logger.exception(str(e))
 

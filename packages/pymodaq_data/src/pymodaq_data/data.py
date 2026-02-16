@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
-from typing import List, Tuple, Union, Any, Callable
+from typing import List, Tuple, Union, Any, Callable, Type
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 from collections import OrderedDict

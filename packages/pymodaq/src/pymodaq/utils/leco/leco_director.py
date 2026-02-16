@@ -106,11 +106,12 @@ class LECODirector:
             timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))
         except KeyError:
             timeout = 1000
+        timeout = int(3.6e6)
         self.timer.start(timeout)  # in milli seconds
 
     def check_actor_connection(self) -> None:
         try:
-            self.controller.ask_rpc("pong", timeout=0.1)
+            self.controller.ask_rpc("pong", timeout=500000)
         except JSONRPCError as exc:
             if exc.rpc_error.code == RECEIVER_UNKNOWN.code:
                 self.emit_status(ThreadCommand(ThreadStatus.UPDATE_UI, "do_init", args=[False]))

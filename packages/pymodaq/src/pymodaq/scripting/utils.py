@@ -1,0 +1,310 @@
+import atexit
+import xml.etree.ElementTree as ET
+from abc import ABC
+
+from concurrent.futures import Future, InvalidStateError
+from functools import cached_property
+from threading import Lock
+from typing import Optional, cast
+from xml.etree.ElementTree import Element
+
+from pyleco.directors.director import Director
+from pyleco.utils.listener import Listener
+from serializall import SerializableFactory, utils
+
+from pymodaq import Q_
+from pymodaq.utils.data import DataActuator, DataToExport
+
+
+
+sf = SerializableFactory()
+
+def compare_xml_trees(base: Element, modified: Element) -> list[tuple[list[str], bytes]]:
+    """
+    Compare two XML trees and return changes.
+
+    Returns:
+        list of tuples: (path_list, changed_element_bytes)
+    """
+
+    changes = []
+
+    def compare_elements(base_elem, modified_elem, path):
+        """Recursively compare elements"""
+        # Compare text content (strip whitespace)
+        text1 = (base_elem.text or '').strip()
+        text2 = (modified_elem.text or '').strip()
+
+        if text1 != text2:
+            # Text changed - record this element
+            changed_bytes = ET.tostring(modified_elem)
+            changes.append((path.copy(), changed_bytes))
+            return  # Don't recurse further into this branch
+
+        # Compare attributes (optional - if you want to detect attribute changes)
+        if base_elem.attrib != modified_elem.attrib:
+            changed_bytes = ET.tostring(modified_elem)
+            changes.append((path.copy(), changed_bytes))
+            return
+
+        # Compare children
+        children1 = list(base_elem)
+        children2 = list(modified_elem)
+
+        # Build tag-to-element mapping
+        children1_dict = {child.tag: child for child in children1}
+        children2_dict = {child.tag: child for child in children2}
+
+        # Recursively compare matching children
+        for tag in children1_dict.keys():
+            if tag in children2_dict:
+                compare_elements(children1_dict[tag], children2_dict[tag],
+                                 path + [tag])
+
+    # Start comparison with forced prefix: ['detector_settings', 'settings_client']
+    initial_path = [base.tag or modified.tag]
+    compare_elements(base, modified, initial_path)
+
+    return changes
+
+
+def value_to_data_actuator(value: DataActuator | int | float | str) -> DataActuator:
+    """
+    Converts any kind of convertible value into a DataActuator
+    Parameters
+    ----------
+    value: The value to convert
+
+    Returns
+    -------
+    A DataActuator object containing the value
+    """
+    if any(isinstance(value, t) for t in (int, float)):
+        return DataActuator(data=value)
+    if isinstance(value, str):
+        value = Q_(value)
+    if isinstance(value, Q_):
+        return DataActuator(data=value.magnitude, units=str(value.units))
+    return value
+
+
+class Device(ABC):
+    def __init__(self, preset, device, **kwargs) -> None:
+        self._leco_wrapper = LECOWrapper(preset, device, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return self._leco_wrapper.name
+
+    def get_settings(self) -> Future[Element]:
+        return self._leco_wrapper.get_settings()
+
+    def set_settings(self, settings: Element) -> None:
+        self._leco_wrapper.set_settings(settings)
+
+    def sign_out(self) -> None:
+        self._leco_wrapper.sign_out()
+
+
+
+class LECOWrapper:
+    """
+    Private LECOWrapper where the real control happens
+    """
+    def __init__(self, preset, device , **kwargs) -> None:
+        self._settings_lock : Lock = Lock()
+        self._settings_future : Optional[Future[Element]] = None
+        self._base : Optional[Element] = None
+
+        self._set_data_lock : Lock  = Lock()
+        self._set_data_future : Optional[Future[DataToExport]] = None
+
+        self._send_position_lock: Lock = Lock()
+        self._send_position_future: Optional[Future[DataActuator]] = None
+
+        self._move_done_lock: Lock = Lock()
+        self._move_done_future: Optional[Future[DataActuator]] = None
+
+        self._is_grabbing = False
+
+        self._preset_name: Optional[str] = preset
+        self._device_name: str = device
+        self._listener = Listener(name=self.leco_name, timeout=None)
+        self._listener.start_listen()
+
+        self._listener.register_rpc_method(self.set_director_settings)
+        self._listener.register_binary_rpc_method(self.set_data, accept_binary_input=True)
+        self._listener.register_binary_rpc_method(self.send_position, accept_binary_input=True)
+        self._listener.register_binary_rpc_method(self.set_move_done, accept_binary_input=True)
+        self._listener.register_binary_rpc_method(self.set_director_info, accept_binary_input=True)
+
+        self._communicator = self._listener.get_communicator()
+        self._director = Director(actor=self.actor_name, communicator=self._communicator, **kwargs)
+        atexit.register(self.clean)
+
+
+    @cached_property
+    def actor_name(self):
+        return f'{self._preset_name}_{self._device_name}' if self._preset_name else self._device_name
+
+    @cached_property
+    def leco_name(self):
+        return f'scripting_{self.actor_name}'
+
+    @cached_property
+    def name(self):
+        return self._device_name
+
+    def clean(self):
+        self.sign_out()
+        self._listener.close()
+        self._director.close()
+        self._communicator.close()
+
+
+    def set_remote_name(self):
+        self._director.ask_rpc('set_remote_name', name=self.leco_name)
+
+    def get_settings(self) -> Future[Element]:
+        future = Future()
+        with self._settings_lock:
+            self._settings_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="get_settings")
+
+        return future
+
+    def set_settings(self, settings: Element):
+        if self._base is not None:
+            for (path, modified) in compare_xml_trees(self._base, settings):
+                t_name, t_len = utils.str_len_to_bytes('ParameterWithPath')
+                data =  t_len + t_name + sf.get_apply_serializer(path) + sf.get_apply_serializer(modified)
+                self._director.ask_rpc(method="set_info", parameter=None, additional_payload=[data])
+
+    def sign_out(self):
+        self._director.ask_rpc('sign_out', actor='COORDINATOR')
+
+
+
+    def snap(self) -> Future[DataToExport]:
+        future = Future()
+        with self._set_data_lock:
+            self._set_data_future = future
+
+        if not self._is_grabbing:
+            self.set_remote_name()
+            self._director.ask_rpc(method="send_data_snap")
+
+        return future
+
+
+    def grab(self):
+        self.set_remote_name()
+        self._director.ask_rpc(method="send_data_grab")
+        self._is_grabbing = not self._is_grabbing
+
+
+    def stop_grab(self):
+        self._is_grabbing = False
+        self.set_remote_name()
+        self._director.ask_rpc(method="stop_grab")
+
+
+
+    def get_actuator_value(self) -> Future[DataActuator]:
+        future = Future()
+        with self._send_position_lock:
+            self._send_position_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc('get_actuator_value')
+
+        return future
+
+    def move_home(self) -> Future[DataActuator]:
+        future = Future()
+        with self._move_done_lock:
+            self._move_done_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="move_home")
+
+        return future
+
+    def move_abs(self, value: DataActuator | int | float | str ) -> Future[DataActuator]:
+        future = Future()
+        with self._move_done_lock:
+            self._move_done_future = future
+
+        value = value_to_data_actuator(value)
+        serialize = SerializableFactory().get_apply_serializer
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="move_abs", position=None, additional_payload=[serialize(value)])
+
+        return future
+
+    def move_rel(self, value: DataActuator) -> Future[DataActuator]:
+        future = Future()
+        with self._move_done_lock:
+            self._move_done_future = future
+
+        value = value_to_data_actuator(value)
+        serialize = SerializableFactory().get_apply_serializer
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="move_rel", position=None, additional_payload=[serialize(value)])
+
+        return future
+
+    def stop_move(self) -> Future[DataActuator]:
+        future = Future()
+        with self._move_done_lock:
+            self._move_done_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="stop_move")
+
+        return future
+
+
+    def set_director_settings(self, settings : bytes):
+        # Important to have two creations so they can be compared
+        # for modifications later.
+        with self._settings_lock:
+            self._base = ET.fromstring(settings)
+            self._settings_future.set_result(ET.fromstring(settings))
+
+
+
+    def set_data(self, data = None, additional_payload = None):
+        value : DataToExport = cast(DataToExport, sf.get_apply_deserializer(additional_payload[0]))
+        with self._set_data_lock:
+            try:
+                self._set_data_future.set_result(value)
+                self._set_data_future = None
+            except (InvalidStateError, AttributeError):
+                pass
+
+
+    def send_position(self, data = None, additional_payload = None):
+        value : DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
+        with self._send_position_lock:
+            try:
+                self._send_position_future.set_result(value)
+                self._send_position_future = None
+            except (InvalidStateError, AttributeError):
+                pass
+
+    def set_move_done(self, data = None, additional_payload = None):
+        value : DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
+        with self._move_done_lock:
+            try:
+                self._move_done_future.set_result(value)
+                self._move_done_future = None
+            except (InvalidStateError, AttributeError):
+                pass
+
+    def set_director_info(self, parameter = None, additional_payload = None) -> None:
+        pass
