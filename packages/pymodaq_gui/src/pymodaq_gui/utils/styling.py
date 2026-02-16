@@ -35,6 +35,77 @@ def create_color(icon_color: Union[QtGui.QColor, str]) -> Union[QtGui.QColor, No
                     icon_color = None
     return icon_color
 
+def transform_icon(icon: QtGui.QIcon, transform: QtGui.QTransform) -> QtGui.QIcon:
+    """Return a new QIcon with all pixmaps transformed by transform.
+    
+    Parameters
+    ----------
+    icon: QtGui.QIcon
+        The icon to transform.
+        
+    transform: QtGui.QTransform
+        The transform to apply to the icon.
+    """
+    new_icon = QtGui.QIcon()
+    sizes = icon.availableSizes() or [QtCore.QSize(s, s) for s in (20, 40)]
+    for size in sizes:
+        for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
+            px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
+            if not px.isNull():
+                new_icon.addPixmap(
+                    QtGui.QPixmap.fromImage(px.transformed(transform)),
+                    QtGui.QIcon.Mode.Normal,
+                    state,
+                )
+    return new_icon
+
+def _translate_icon(icon: QtGui.QIcon, x: int = 0, y: int = 0) -> QtGui.QIcon:
+    """Return a new QIcon with all pixmaps translated by x and y pixels.
+    
+    Parameters
+    ----------
+    icon: QtGui.QIcon
+        The icon to translate.
+        
+    x: int
+        The number of pixels to translate the icon in the x direction.
+        
+    y: int
+        The number of pixels to translate the icon in the y direction.
+    """
+    transform = QtGui.QTransform().translate(x, y)
+    return transform_icon(icon, transform)
+
+def _scale_icon(icon: QtGui.QIcon, scale_x: float = 1.0, scale_y: float = None) -> QtGui.QIcon:
+    """Return a new QIcon with all pixmaps scaled by scale.
+    
+    Parameters
+    ----------
+    icon: QtGui.QIcon
+        The icon to scale.
+        
+    scale: float
+        The scale factor to apply to the icon.
+    """
+    if scale_y is None:
+        scale_y = scale_x
+    transform = QtGui.QTransform().scale(scale_x, scale_y)
+    return transform_icon(icon, transform)
+
+def _rotate_icon(icon: QtGui.QIcon, angle: int = 0) -> QtGui.QIcon:
+    """Return a new QIcon with all pixmaps rotated by angle degrees.
+    
+    Parameters
+    ----------
+    icon: QtGui.QIcon
+        The icon to rotate.
+        
+    angle: int
+        The angle in degrees to rotate the icon.
+    """
+    transform = QtGui.QTransform().rotate(angle)
+    return transform_icon(icon, transform)    
+
 
 def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
     """Return a new QIcon with all Normal-mode pixmaps mirrored.
@@ -51,20 +122,7 @@ def _flip_icon(icon: QtGui.QIcon, flip_h: bool, flip_v: bool) -> QtGui.QIcon:
         return icon
     sx = -1.0 if flip_h else 1.0
     sy = -1.0 if flip_v else 1.0
-    transform = QtGui.QTransform().scale(sx, sy)
-
-    new_icon = QtGui.QIcon()
-    sizes = icon.availableSizes() or [QtCore.QSize(s, s) for s in (20, 40)]
-    for size in sizes:
-        for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
-            px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
-            if not px.isNull():
-                new_icon.addPixmap(
-                    px.transformed(transform),
-                    QtGui.QIcon.Mode.Normal,
-                    state,
-                )
-    return new_icon
+    return _scale_icon(icon, scale_x=sx, scale_y=sy)
 
 
 def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
