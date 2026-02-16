@@ -30,16 +30,20 @@ class QAction(QtQAction):
                  name='',
                  icon_checked: Union[str, QtGui.QIcon] = None,
                  icon_color: Union[QtGui.QColor, bytes, str]=None,
-                 icon_checked_color: Union[QtGui.QColor, bytes, str]=None):
+                 icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
+                 flip_h: bool = False,
+                 flip_v: bool = False):
 
         if icon_unchecked is not None:
-            self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color)
+            self.icon_unchecked = create_icon(icon_unchecked, icon_color, icon_checked_color,
+                                              flip_h=flip_h, flip_v=flip_v)
             super().__init__(self.icon_unchecked, name)
         else:
             super().__init__(name)
 
         if icon_unchecked is not None and icon_checked is not None and not isinstance(icon_checked, QtGui.QIcon):
-            icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color)
+            icon_checked = create_icon(icon_checked, icon_checked_color, icon_checked_color,
+                                       flip_h=flip_h, flip_v=flip_v)
             if isinstance(icon_unchecked, MaterialIcon):
                 self.icon_unchecked.set_icon(icon_checked, state=QtGui.QIcon.State.On)
             else:
@@ -114,7 +118,9 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               menu: QtWidgets.QMenu = None, visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
               enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
               icon_color: Union[QtGui.QColor, str] = None,
-              icon_checked_color: Union[QtGui.QColor, str] = None
+              icon_checked_color: Union[QtGui.QColor, str] = None,
+              flip_h: bool = False,
+              flip_v: bool = False,
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -153,13 +159,18 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         color to be applied (if possible) to the unchecked icon
     icon_checked_color: QtGui.QColor / str
         color to be applied to the checked icon (if any)
+    flip_h: bool
+        mirror the icon horizontally (left ↔ right)
+    flip_v: bool
+        mirror the icon vertically (top ↔ bottom)
     """
 
     if icon_name is None or icon_name == '':
         action = QAction(None, name)
     else:
         action = QAction(icon_name, name, icon_checked=icon_checked,
-                         icon_color=icon_color, icon_checked_color=icon_checked_color)
+                         icon_color=icon_color, icon_checked_color=icon_checked_color,
+                         flip_h=flip_h, flip_v=flip_v)
 
     if slot is not None:
         action.connect_to(slot)
@@ -168,6 +179,8 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     action.setCheckable(checkable)
     if checkable:
         action.setChecked(checked)
+        if checked and hasattr(action, 'icon_checked'):
+            action.set_icon()
     action.setToolTip(tip)
     if toolbar is not None:
         toolbar.addAction(action)
@@ -306,7 +319,9 @@ class ActionManager:
                    auto_toolbar=True, auto_menu=True,
                    enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
                    icon_color: Union[QtGui.QColor, bytes, str]=None,
-                   icon_checked_color: Union[QtGui.QColor, bytes, str]=None
+                   icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
+                   flip_h: bool = False,
+                   flip_v: bool = False,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -357,6 +372,10 @@ class ActionManager:
             color to be applied (if possible) to the unchecked icon
         icon_checked_color: QtGui.QColor / str
             color to be applied to the checked icon (if any)
+        flip_h: bool
+            mirror the icon horizontally (left ↔ right)
+        flip_v: bool
+            mirror the icon vertically (top ↔ bottom)
 
         See Also
         --------
@@ -383,7 +402,9 @@ class ActionManager:
                                               visible=visible, shortcut=shortcut, enabled=enabled,
                                               icon_checked=icon_checked,
                                               icon_color=icon_color,
-                                              icon_checked_color=icon_checked_color)
+                                              icon_checked_color=icon_checked_color,
+                                              flip_h=flip_h,
+                                              flip_v=flip_v)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
@@ -814,6 +835,8 @@ class ActionManager:
         """Set the CheckedState of a given action or a list of actions"""
         if action_name in self._actions:
             self._actions[action_name].setChecked(checked)
+            if hasattr(self._actions[action_name], 'icon_checked'):
+                self._actions[action_name].set_icon()
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')

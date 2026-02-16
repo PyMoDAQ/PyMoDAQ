@@ -292,20 +292,24 @@ class H5SaverLowLevel(H5Backend):
         """Get a Node starting from a given node (Group) matching the given title"""
         return self.get_node_from_attribute_match(where, 'TITLE', title)
 
-    def add_data_group(self, where, data_dim: DataDim, title='', settings_as_xml='', metadata=None):
+    def add_data_group(self, where, data_dim: DataDim, title='', settings_as_xml='', metadata=None,
+                       group_name: str = None):
         """Creates a group node at given location in the tree
 
         Parameters
         ----------
         where: group node
                where to create data group
-        group_data_type: DataDim
+        data_dim: DataDim
+            the dimensionality of the data group
         title: str, optional
                a title for this node, will be saved as metadata
         settings_as_xml: str, optional
                          XML string created from a Parameter object to be saved as metadata
         metadata: dict, optional
                   will be saved as a new metadata attribute with name: key and value: dict value
+        group_name: str, optional
+            the name of the group to create if None, the name of the DataDim enum is used (default)
 
         Returns
         -------
@@ -315,11 +319,14 @@ class H5SaverLowLevel(H5Backend):
         --------
         :py:meth:`add_group`
         """
+        data_dim = enum_checker(DataDim, data_dim)
+        if group_name is None:
+            group_name = data_dim.name
         if metadata is None:
             metadata = {}
-        data_dim = enum_checker(DataDim, data_dim)
+
         metadata.update(settings=settings_as_xml)
-        group = self.add_group(data_dim.name, 'data_dim', where, title, metadata)
+        group = self.add_group(group_name, GroupType.data, where, title, metadata)
         return group
 
     def add_incremental_group(self, group_type: Union[str, GroupType, enum.Enum], where, title='', settings_as_xml='', metadata=None):
