@@ -1101,10 +1101,10 @@ class DAQ_Move_Hardware(QObject):
                 )
 
             elif command.command == ControlToHardwareMove.MOVE_ABS:
-                self.move_abs(*command.attribute)
+                self.move_abs(command.attribute)
 
             elif command.command == ControlToHardwareMove.MOVE_REL:
-                self.move_rel(*command.attribute)
+                self.move_rel(command.attribute)
 
             elif command.command == ControlToHardwareMove.MOVE_HOME:
                 self.move_home()
