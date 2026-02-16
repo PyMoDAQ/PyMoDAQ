@@ -52,8 +52,13 @@ def transform_icon(icon: QtGui.QIcon, transform: QtGui.QTransform) -> QtGui.QIco
         for state in (QtGui.QIcon.State.Off, QtGui.QIcon.State.On):
             px = icon.pixmap(size, QtGui.QIcon.Mode.Normal, state)
             if not px.isNull():
+                if type(px) is not QtGui.QPixmap:
+                    px = QtGui.QPixmap.fromImage(px)                
+                px_transformed = px.transformed(transform)
+                if type(px) is not QtGui.QPixmap:
+                    px_transformed = QtGui.QPixmap.fromImage(px.transformed(transform))
                 new_icon.addPixmap(
-                    QtGui.QPixmap.fromImage(px.transformed(transform)),
+                    px_transformed,
                     QtGui.QIcon.Mode.Normal,
                     state,
                 )
