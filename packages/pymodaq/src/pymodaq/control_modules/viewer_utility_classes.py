@@ -3,6 +3,7 @@ from typing import Union, Iterable
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
+
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
 from easydict import EasyDict as edict
@@ -88,8 +89,10 @@ def main(plugin_file=None, init=True, title='Testing'):
     import sys
     from qtpy import QtWidgets
     from pymodaq.utils.gui_utils import DockArea
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pathlib import Path
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
+    from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+    from pymodaq.control_modules.instruments import DAQTypesEnum
 
     app = mkQApp("PyMoDAQ Viewer")
 
@@ -104,12 +107,15 @@ def main(plugin_file=None, init=True, title='Testing'):
     else:
         detector = Path(plugin_file).stem[13:]
         det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
-    prog = DAQ_Viewer(area, title=title)
-    win.show()
-    prog.daq_type = det_type
-    prog.detector = detector
+
+
+    shared_ui, daq_viewer = create_load_daq_viewer()
+    daq_viewer.detector = SelectedModule(DAQTypesEnum[det_type], detector)
+    shared_ui.show()
+
     if init:
-        prog.init_hardware_ui()
+        daq_viewer.init_hardware_ui(init)
+
 
     sys.exit(app.exec())
 
