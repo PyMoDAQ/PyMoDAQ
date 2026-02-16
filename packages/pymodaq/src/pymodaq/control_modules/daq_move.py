@@ -415,6 +415,8 @@ class DAQ_Move(ParameterControlModule):
         if not do_init:
             try:
                 self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.CLOSE))
+                QtWidgets.QApplication.processEvents()
+
                 if self.ui is not None:
                     self.ui.actuator_init = False
             except Exception as e:
@@ -568,7 +570,7 @@ class DAQ_Move(ParameterControlModule):
             data_act = self._check_data_type(status.attribute)
             if self.ui is not None:
                 self.ui.display_value(data_act)
-                if self.ui.has_action("show_graph") and self.ui.is_action_checked(
+                if self.ui.has_action("show_graph") and not self.ui.is_action_checked(
                     "show_graph"
                 ):
                     self.ui.show_data(DataToExport(name=self.title, data=[data_act]))

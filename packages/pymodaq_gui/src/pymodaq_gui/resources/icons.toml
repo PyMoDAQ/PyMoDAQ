@@ -26,6 +26,8 @@ names = [
     'deblur',
     'discover_tune',
     'do_not_disturb_on',
+    'dock_to_bottom',
+    'dock_to_left',
     'extension',
     'file_copy',
     'function',
