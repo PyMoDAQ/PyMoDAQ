@@ -1,4 +1,5 @@
 from concurrent.futures import Future
+from typing import Optional
 
 from pymodaq.scripting.utils import Device
 from pymodaq.utils.data import DataActuator, DataToExport
@@ -28,13 +29,13 @@ class Detector(Device):
     """
     Public interface to control a Detector
     """
-    def snap(self) -> Future[DataToExport]:
+    def snap(self) -> Optional[Future[DataToExport]]:
         return self._leco_wrapper.snap()
 
-    def grab(self) -> None:
-        self._leco_wrapper.grab()
+    def grab(self, keep=False) -> Optional[list[DataToExport]]:
+        return self._leco_wrapper.grab(keep=keep)
 
     def stop_grab(self) -> None:
-       self._leco_wrapper.stop_grab()
+       return self._leco_wrapper.stop_grab()
 
 

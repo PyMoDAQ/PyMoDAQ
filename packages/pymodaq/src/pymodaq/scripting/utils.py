@@ -112,18 +112,14 @@ class LECOWrapper:
     Private LECOWrapper where the real control happens
     """
     def __init__(self, preset, device , **kwargs) -> None:
-        self._settings_lock : Lock = Lock()
+        self._base_settings : Optional[Element] = None
+
         self._settings_future : Optional[Future[Element]] = None
-        self._base : Optional[Element] = None
-
-        self._set_data_lock : Lock  = Lock()
-        self._set_data_future : Optional[Future[DataToExport]] = None
-
-        self._send_position_lock: Lock = Lock()
+        self._snap_data_future : Optional[Future[DataToExport]] = None
         self._send_position_future: Optional[Future[DataActuator]] = None
-
-        self._move_done_lock: Lock = Lock()
         self._move_done_future: Optional[Future[DataActuator]] = None
+
+        self._grab_data_list : Optional[list[DataToExport]] = None
 
         self._is_grabbing = False
 
@@ -167,8 +163,7 @@ class LECOWrapper:
 
     def get_settings(self) -> Future[Element]:
         future = Future()
-        with self._settings_lock:
-            self._settings_future = future
+        self._settings_future = future
 
         self.set_remote_name()
         self._director.ask_rpc(method="get_settings")
@@ -176,8 +171,8 @@ class LECOWrapper:
         return future
 
     def set_settings(self, settings: Element):
-        if self._base is not None:
-            for (path, modified) in compare_xml_trees(self._base, settings):
+        if self._base_settings is not None:
+            for (path, modified) in compare_xml_trees(self._base_settings, settings):
                 t_name, t_len = utils.str_len_to_bytes('ParameterWithPath')
                 data =  t_len + t_name + sf.get_apply_serializer(path) + sf.get_apply_serializer(modified)
                 self._director.ask_rpc(method="set_info", parameter=None, additional_payload=[data])
@@ -187,23 +182,28 @@ class LECOWrapper:
 
 
 
-    def snap(self) -> Future[DataToExport]:
-        future = Future()
-        with self._set_data_lock:
-            self._set_data_future = future
-
+    def snap(self) -> Optional[Future[DataToExport]]:
         if not self._is_grabbing:
+            future = Future()
+            self._snap_data_future = future
             self.set_remote_name()
             self._director.ask_rpc(method="send_data_snap")
+            return future
+        return None
 
-        return future
 
 
-    def grab(self):
+    def grab(self, keep=False) -> Optional[list[DataToExport]]:
+        was_grabbing = self._is_grabbing
+
+        if not was_grabbing:
+            self._grab_data_list = [] if keep else None
+
         self.set_remote_name()
         self._director.ask_rpc(method="send_data_grab")
-        self._is_grabbing = not self._is_grabbing
+        self._is_grabbing = not was_grabbing
 
+        return None if was_grabbing else self._grab_data_list
 
     def stop_grab(self):
         self._is_grabbing = False
@@ -214,8 +214,7 @@ class LECOWrapper:
 
     def get_actuator_value(self) -> Future[DataActuator]:
         future = Future()
-        with self._send_position_lock:
-            self._send_position_future = future
+        self._send_position_future = future
 
         self.set_remote_name()
         self._director.ask_rpc('get_actuator_value')
@@ -224,8 +223,7 @@ class LECOWrapper:
 
     def move_home(self) -> Future[DataActuator]:
         future = Future()
-        with self._move_done_lock:
-            self._move_done_future = future
+        self._move_done_future = future
 
         self.set_remote_name()
         self._director.ask_rpc(method="move_home")
@@ -234,8 +232,7 @@ class LECOWrapper:
 
     def move_abs(self, value: DataActuator | int | float | str ) -> Future[DataActuator]:
         future = Future()
-        with self._move_done_lock:
-            self._move_done_future = future
+        self._move_done_future = future
 
         value = value_to_data_actuator(value)
         serialize = SerializableFactory().get_apply_serializer
@@ -247,8 +244,7 @@ class LECOWrapper:
 
     def move_rel(self, value: DataActuator) -> Future[DataActuator]:
         future = Future()
-        with self._move_done_lock:
-            self._move_done_future = future
+        self._move_done_future = future
 
         value = value_to_data_actuator(value)
         serialize = SerializableFactory().get_apply_serializer
@@ -260,8 +256,7 @@ class LECOWrapper:
 
     def stop_move(self) -> Future[DataActuator]:
         future = Future()
-        with self._move_done_lock:
-            self._move_done_future = future
+        self._move_done_future = future
 
         self.set_remote_name()
         self._director.ask_rpc(method="stop_move")
@@ -272,39 +267,43 @@ class LECOWrapper:
     def set_director_settings(self, settings : bytes):
         # Important to have two creations so they can be compared
         # for modifications later.
-        with self._settings_lock:
-            self._base = ET.fromstring(settings)
+        self._base_settings = ET.fromstring(settings)
+        try:
             self._settings_future.set_result(ET.fromstring(settings))
-
+            self._settings_future = None
+        except (InvalidStateError, AttributeError):
+            pass
 
 
     def set_data(self, data = None, additional_payload = None):
         value : DataToExport = cast(DataToExport, sf.get_apply_deserializer(additional_payload[0]))
-        with self._set_data_lock:
+        if self._is_grabbing:
+            if self._grab_data_list is not None:
+                self._grab_data_list.append(value)
+        else:
             try:
-                self._set_data_future.set_result(value)
-                self._set_data_future = None
+                self._snap_data_future.set_result(value)
+                self._snap_data_future = None
             except (InvalidStateError, AttributeError):
                 pass
+
 
 
     def send_position(self, data = None, additional_payload = None):
         value : DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
-        with self._send_position_lock:
-            try:
-                self._send_position_future.set_result(value)
-                self._send_position_future = None
-            except (InvalidStateError, AttributeError):
-                pass
+        try:
+            self._send_position_future.set_result(value)
+            self._send_position_future = None
+        except (InvalidStateError, AttributeError):
+            pass
 
     def set_move_done(self, data = None, additional_payload = None):
         value : DataActuator = cast(DataActuator, sf.get_apply_deserializer(additional_payload[0]))
-        with self._move_done_lock:
-            try:
-                self._move_done_future.set_result(value)
-                self._move_done_future = None
-            except (InvalidStateError, AttributeError):
-                pass
+        try:
+            self._move_done_future.set_result(value)
+            self._move_done_future = None
+        except (InvalidStateError, AttributeError):
+            pass
 
     def set_director_info(self, parameter = None, additional_payload = None) -> None:
         pass
