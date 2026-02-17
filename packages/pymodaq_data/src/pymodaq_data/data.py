@@ -48,7 +48,9 @@ logger = set_logger(get_module_name(__file__))
 
 def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     """
-    Take a quantity q and converts it to its reduced units, except if its dimensionless
+    Take a quantity q and converts it to its reduced units.
+    For dimensionless units it compact them
+
     Parameters
     ----------
     q: The quantity to be reduced
@@ -58,7 +60,7 @@ def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     The reduced quantity
     """
 
-    return q if q.dimensionality == {} else q.to_reduced_units()
+    return q.to_compact() if q.dimensionless else q.to_reduced_units()
 
 def check_units(units: str):
     try:

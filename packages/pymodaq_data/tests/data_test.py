@@ -5,6 +5,8 @@ Created the 28/10/2022
 @author: Sebastien Weber
 """
 import logging
+import math
+
 import numpy as np
 import pint.errors
 from pint.errors import DimensionalityError
@@ -16,7 +18,8 @@ import pymodaq_data
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
 from pymodaq_data import data as data_mod
-from pymodaq_data.data import DataDim, Q_, DataToExport
+from pymodaq_data import DataDim, Q_, DataToExport, Unit
+from pymodaq_data.data import dimensionless_aware_reduce_units
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
 
 data_processors = DataProcessorFactory()
@@ -1778,3 +1781,45 @@ class TestFuncNumpy:
         SHIFT = (10, 5)
         dwa_rolled = np.roll(dwa, shift = SHIFT)
         assert np.allclose(dwa_rolled[0], np.roll(dwa[0], shift=SHIFT))
+
+
+#For tests with custom quantities
+ureg = pint.UnitRegistry()
+ureg.define('step = []')
+Q_ = ureg.Quantity
+Unit = ureg.Unit
+
+class TestPintUnitReduction:
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., 'm'),   Q_(1., 'm'),   Q_(2., 'm')),
+        (Q_(1., '°'),   Q_(1., '°'),   Q_(2., '°')),
+        (Q_(1., 'm'),   Q_(1., 'km'),  Q_(1001., 'm')),
+        (Q_(1., 'rad'), Q_(1., 'rad'), Q_(2., 'rad')),
+    ])
+    def test_addition(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 + q2)
+        assert res.m == expected.m and res.u == expected.u
+
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., 'm'),    Q_(1., 'm'),    Q_(1., 'm**2')),
+        (Q_(1., '°'),    Q_(1., '°'),    Q_(1., '°**2')),
+        (Q_(1., 'm'),    Q_(1., 's'),    Q_(1., 'm * s')),
+        (Q_(1., 'km/s'), Q_(1., 'm/min'),Q_(60000., 'm**2 / min**2')), # May change?
+        (Q_(1., 'rad'),  Q_(1., 'rad'),  Q_(1., 'rad**2')),
+        (Q_(1., '°'),    Q_(1., 'rad'),  Q_(1., 'rad * °')), # Can't simplify
+        (Q_(1., 'step'), Q_(1., 'step'), Q_(1., Unit('step**2'))),
+        (Q_(1., 'm'),    Q_(1.),         Q_(1., 'm')),
+        (Q_(1., '°'),    Q_(1.),         Q_(1., '°')),
+        (Q_(1., 'step'), Q_(1.),         Q_(1., Unit('step'))),
+    ])
+    def test_product(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 * q2)
+        assert res.m == expected.m and res.u == expected.u
+
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., '°'),   Q_(1., '°'),   Q_(1., '')),
+        (Q_(1., 'rad'), Q_(1., 'rad'), Q_(1., '')),
+    ])
+    def test_division(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 / q2)
+        assert res.m == expected.m and res.u == expected.u
