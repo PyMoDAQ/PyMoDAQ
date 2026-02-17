@@ -106,7 +106,6 @@ class LECODirector:
             timeout = cast(int, config("network", "leco-server", "heartbeat-timeout"))
         except KeyError:
             timeout = 1000
-        timeout = int(3.6e6)
         self.timer.start(timeout)  # in milli seconds
 
     def check_actor_connection(self) -> None:
