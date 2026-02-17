@@ -45,25 +45,18 @@ class ControlModuleUI(CustomApp):
 
     # ---- Common action setup methods ----
 
-    def _setup_name_widget(self, toolbar: QtWidgets.QToolBar = None,
-                           use_label_class: bool = True) -> None:
+    def _setup_name_widget(self, toolbar: QtWidgets.QToolBar = None) -> None:
         """Add the module name label to the toolbar
 
         Parameters
         ----------
         toolbar: QToolBar
             The toolbar to add the widget to. If None, uses default toolbar.
-        use_label_class: bool
-            If True, uses LabelWithFont, otherwise uses QLabel with custom font
+
         """
-        if use_label_class:
-            self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                                  font_size=14, isbold=True, isitalic=True),
-                            toolbar=toolbar)
-        else:
-            self.add_widget('name', QtWidgets.QLabel(self.title), toolbar=toolbar)
-            self.get_action('name').widget.setFont(
-                create_font(font_name="Tahoma", font_size=14, isbold=True, isitalic=True))
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
+                                                font_size=14, isbold=True, isitalic=True),
+                        toolbar=toolbar)
 
     def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
                            action_name: str = 'init',

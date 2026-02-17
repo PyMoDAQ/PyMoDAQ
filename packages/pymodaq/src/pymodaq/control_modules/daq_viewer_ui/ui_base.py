@@ -136,7 +136,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     def setup_actions(self):
         # Common actions from ControlModuleUI
-        self._setup_name_widget(use_label_class=False)
+        self._setup_name_widget(toolbar=self.toolbar)
         self.add_widget('selector', self.selector.add_widget)
         self._setup_init_action(action_name='ini_detector', display_name='Ini. Detector',
                                 tip='Connect to selected detector')

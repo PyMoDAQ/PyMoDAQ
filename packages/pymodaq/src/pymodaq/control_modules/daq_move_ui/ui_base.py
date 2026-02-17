@@ -323,10 +323,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
 
     def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=toolbar)
-
+        self._setup_name_widget(toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
         self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=toolbar,
                         tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
