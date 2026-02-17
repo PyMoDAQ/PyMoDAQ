@@ -33,7 +33,7 @@ classifiers = [
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "scipy",
-    "tables>=3.10",
+    "h5py",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +41,7 @@ dev = [
     "hatch", 
     "flake8",
     "h5py",
+    "tables>=3.10",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
