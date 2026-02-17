@@ -140,6 +140,9 @@ class DashBoard(CustomApp):
 
     status_signal = Signal(str)
     new_preset_created = Signal()
+    config_changed = QtCore.Signal()
+    # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
+    # included in CustomExt by default but Dashboard is special with that respect
 
     settings_name = "dashboard_settings"
     _splash_sc = None
