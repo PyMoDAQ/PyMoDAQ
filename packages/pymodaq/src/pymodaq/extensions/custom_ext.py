@@ -58,7 +58,6 @@ class CustomExt(CustomApp):
         if self.dashboard is not None:
             return self.dashboard.preset_manager
 
-
     def do_things_after_preset_set(self, preset_name: str):
         """ This method is called whenever a preset entry has been set.
 
@@ -68,11 +67,12 @@ class CustomExt(CustomApp):
         Can be reimplemented to add some more evolved actions
         """
         # update modules manager
-        self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
-        self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
+        if self.dashboard is not None:
+            self.modules_manager.actuators_all = self.dashboard.modules_manager.actuators_all
+            self.modules_manager.detectors_all = self.dashboard.modules_manager.detectors_all
 
-        # show/hide dashboard
-        self.show_dashboard()
+            # show/hide dashboard
+            self.show_dashboard()
 
     @property
     def configurator(self) -> 'Configurator':
@@ -81,7 +81,8 @@ class CustomExt(CustomApp):
 
     @property
     def splash(self):
-        return self.dashboard.splash_sc
+        if self.dashboard is not None:
+            return self.dashboard.splash_sc
 
     @property
     def modules_manager(self) -> ModulesManager:
