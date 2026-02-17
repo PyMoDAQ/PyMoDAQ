@@ -278,14 +278,14 @@ class ManagerBase(CustomExt):
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action(ManagerActions.RELOAD,
                         f'Reload {self.entry_type.capitalize()}', 'refresh',
-                        tip=f'Reload the current {self.entry_type} file ("Ctrl+R")',
+                        tip=f'Reload the current {self.entry_type} file ("Ctrl+Shift+R")',
                         icon_color=self.get_theme().orange,
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_R))
         self.add_action(ManagerActions.EXECUTE,
                         f'Execute {self.entry_type.capitalize()}', 'start',
                         icon_color=self.get_theme().magenta,
-                        tip=f'Execute the current {self.entry_type} file ("Ctrl+E")',
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_E))
+                        tip=f'Execute the current {self.entry_type} file ("Ctrl+Shift+E")',
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_E))
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
                         "build_circle",
                         icon_color=self.get_theme().blue,

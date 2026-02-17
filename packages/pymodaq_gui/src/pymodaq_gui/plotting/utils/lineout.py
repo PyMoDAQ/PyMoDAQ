@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pyqtgraph import PlotCurveItem
 from qtpy.QtCore import QObject, Signal, Slot
 
-
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_gui.plotting.utils.plot_utils import Data0DWithHistory
 from pymodaq_gui.managers.roi_manager import ROIManager
 from pymodaq_gui.plotting.items.crosshair import Crosshair
@@ -18,7 +18,7 @@ from pymodaq_utils import utils
 
 logger = set_logger(get_module_name(__file__))
 IMAGE_TYPES = ['red', 'green', 'blue']
-COLOR_LIST = list(utils.plot_colors)
+COLOR_LIST = list(PlotColors())
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 
 

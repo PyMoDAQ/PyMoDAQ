@@ -4,6 +4,7 @@ import sys
 import pyqtgraph as pg
 import numpy as np
 
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 
@@ -42,7 +43,7 @@ class Viewer1DBasic(QObject):
 
         self.parent = parent
 
-        self.plot_colors = utils.plot_colors
+        self.plot_colors = PlotColors()
 
         self.data_to_export = None
         self.datas = None

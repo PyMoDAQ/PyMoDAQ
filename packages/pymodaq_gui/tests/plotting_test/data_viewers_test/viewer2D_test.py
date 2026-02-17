@@ -14,8 +14,8 @@ from pytest import fixture, approx
 import numpy as np
 import pyqtgraph as pg
 
-from pymodaq_gui.plotting.items.roi import RectROI, EllipseROI
-from pymodaq_gui.plotting.utils.plot_utils import RoiInfo, Point
+from pymodaq_gui.plotting.items.roi import RectROI, EllipseROI, RoiInfo
+from pymodaq_gui.plotting.utils.plot_utils import Point
 
 from pyqtgraph import mkPen
 

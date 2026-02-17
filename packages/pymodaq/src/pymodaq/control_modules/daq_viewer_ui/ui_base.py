@@ -20,21 +20,20 @@ from pymodaq.control_modules.ui_utils import ControlModuleUI
 
 from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
 from pymodaq_gui.utils import Dock, DockArea
-from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
 from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-from pymodaq_gui.utils.styling import create_font, create_icon
+from pymodaq_gui.utils.styling import create_icon
 from pymodaq_utils.enums import enum_checker
-from pymodaq.utils.config import Config
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
 
 viewer_factory = ViewerFactory()
 config = Config()
-config_utils = ConfigUtils()
+
 
 options = {
     'DAQ0D': [name for name in [plugin['name'] for plugin in DET_TYPES['DAQ0D']]],
@@ -136,17 +135,15 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.layout().addWidget(tree)
 
     def setup_actions(self):
-        self.add_widget('name', QtWidgets.QLabel(self.title))
-        self.get_action('name').widget.setFont(
-            create_font(font_name="Tahoma",
-                        font_size=14, isbold=True, isitalic=True))
+        # Common actions from ControlModuleUI
+        self._setup_name_widget(toolbar=self.toolbar)
         self.add_widget('selector', self.selector.add_widget)
-        self.add_action('ini_detector', 'Ini. Detector', ActionIconNames.INI, checkable=True,
-                        tip='Connect to selected detector', icon_color=self.get_theme().red,
-                        )
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
-                        checkable=True, icon_checked_color=self.get_theme().green)
+        self._setup_init_action(action_name='ini_detector', display_name='Ini. Detector',
+                                tip='Connect to selected detector')
+        self._setup_settings_action()
         self.toolbar.addSeparator()
+
+        # Detector-specific actions
         self.add_action('snap', 'Snap', ActionIconNames.SNAP, "Take a snapshot from the detector")
         self.add_action('grab', 'Grab', ActionIconNames.GRAB, "Grab data from the detector", checkable=True,
                         icon_checked=ActionIconNames.GRAB_STOP,
@@ -227,7 +224,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(not self.is_action_checked('grab'),
                             all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
 
-        if not self.config('viewer', 'allow_settings_edition'):
+        if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
             self._settings_widget.setEnabled(not self.is_action_checked('grab'))
 
     def do_init(self, do_init=True):
@@ -287,14 +284,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._ini_state = status
         self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self.set_action_enabled('selector', not status)
-
-        if status:
-            icon = create_icon(ActionIconNames.INI,
-                               icon_color=self.get_theme().green,)
-        else:
-            icon = create_icon(ActionIconNames.INI,
-                               icon_color=self.get_theme().red,)
-        self.get_action('ini_detector').set_icon(icon)
+        self.update_init_icon(status, action_name='ini_detector')
 
     def enable_actions(self, status=True, all_except=()):
         for action in self.actions_names:

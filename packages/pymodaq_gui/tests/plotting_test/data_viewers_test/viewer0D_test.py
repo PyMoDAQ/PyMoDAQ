@@ -53,8 +53,88 @@ class TestViewer0D:
 
     def test_actions(self, init_viewer0d):
         prog, qtbot = init_viewer0d
-        for action_name in ['clear', 'Nhistory', 'show_data_as_list']:
+        for action_name in ['clear', 'Nhistory', 'show_data_as_list', 'show_min_max', 'sync_x_axis']:
             assert prog.view.has_action(action_name)
+        prog.parent.deleteLater()
+
+    def test_sync_x_axis_on_by_default(self, init_viewer0d):
+        """sync_x_axis action is checked by default and Data0DWithHistory reflects it."""
+        prog, qtbot = init_viewer0d
+        assert prog.view.is_action_checked('sync_x_axis')
+        assert prog.view.data_displayer._data.sync_x_axis
+        prog.parent.deleteLater()
+
+    def test_sync_x_axis_on_resets_history_on_new_label(self, init_viewer0d):
+        """With sync ON, adding a new channel resets all histories so curves share the same x-origin."""
+        prog, qtbot = init_viewer0d
+        displayer = prog.view.data_displayer
+        N = 5
+        for _ in range(N):
+            prog.show_data(data_mod.DataRaw('data0D',
+                                            data=[np.array([1.0]), np.array([2.0])],
+                                            labels=['ch1', 'ch2']))
+        assert displayer._data.size == N
+
+        prog.show_data(data_mod.DataRaw('data0D',
+                                        data=[np.array([1.0]), np.array([2.0]), np.array([3.0])],
+                                        labels=['ch1', 'ch2', 'ch3']))
+        assert displayer._data.size == 1  # history was reset
+        prog.parent.deleteLater()
+
+    def test_sync_x_axis_off_preserves_history_on_new_label(self, init_viewer0d):
+        """With sync OFF, existing channels keep their history; the new channel is NaN-padded."""
+        prog, qtbot = init_viewer0d
+        displayer = prog.view.data_displayer
+        # toggle action off (it starts checked → trigger unchecks it)
+        prog.view.get_action('sync_x_axis').trigger()
+        assert not displayer._data.sync_x_axis
+
+        N = 5
+        for _ in range(N):
+            prog.show_data(data_mod.DataRaw('data0D',
+                                            data=[np.array([1.0]), np.array([2.0])],
+                                            labels=['ch1', 'ch2']))
+        assert displayer._data.size == N
+
+        prog.show_data(data_mod.DataRaw('data0D',
+                                        data=[np.array([1.0]), np.array([2.0]), np.array([3.0])],
+                                        labels=['ch1', 'ch2', 'ch3']))
+        assert displayer._data.size == N + 1
+        assert np.sum(np.isnan(displayer._data.datas['ch3'])) == N  # first N entries are NaN
+        prog.parent.deleteLater()
+
+    def test_smart_diff_preserves_unchanged_plot_items(self, init_viewer0d):
+        """update_display_items only adds/removes changed labels; untouched items are the same object."""
+        prog, qtbot = init_viewer0d
+        displayer = prog.view.data_displayer
+
+        prog.show_data(data_mod.DataRaw('data0D',
+                                        data=[np.array([1.0]), np.array([2.0])],
+                                        labels=['ch1', 'ch2']))
+        assert set(displayer._plot_items.keys()) == {'ch1', 'ch2'}
+        old_ch1_item = displayer._plot_items['ch1']
+
+        # Replace ch2 with ch3 — ch1 should survive untouched
+        prog.show_data(data_mod.DataRaw('data0D',
+                                        data=[np.array([1.0]), np.array([3.0])],
+                                        labels=['ch1', 'ch3']))
+        assert set(displayer._plot_items.keys()) == {'ch1', 'ch3'}
+        assert displayer._plot_items['ch1'] is old_ch1_item
+        prog.parent.deleteLater()
+
+    def test_update_colors_no_rebuild(self, init_viewer0d):
+        """update_colors updates pens in-place without removing/re-adding plot items."""
+        prog, qtbot = init_viewer0d
+        displayer = prog.view.data_displayer
+
+        prog.show_data(data_mod.DataRaw('data0D', data=[np.array([1.0])], labels=['ch1']))
+        old_item = displayer._plot_items['ch1']
+
+        from pymodaq_data.plotting.utils import PlotColors
+        new_colors = [dict(color=color) for color in PlotColors()]
+        displayer.update_colors(new_colors)
+
+        assert displayer._plot_items['ch1'] is old_item
         prog.parent.deleteLater()
 
     def test_clear_action(self, init_viewer0d):

@@ -7,7 +7,7 @@ import time
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_data.data import DataToExport
@@ -18,15 +18,13 @@ from pymodaq_gui.utils import Dock
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.config import Config as ControlModulesConfig
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
 
 logger = set_logger(get_module_name(__file__))
-config_utils = Config()
-config = ControlModulesConfig()
+config = Config()
 
 
 class ModuleType(StrEnum):
@@ -128,11 +126,11 @@ class ModulesManager(QObject, ParameterManager):
 
     @property
     def actuator_timeout(self):
-        return config('actuator', 'timeout')
+        return config('pymodaq', 'actuator', 'timeout')
 
     @property
     def detector_timeout(self):
-        return config('viewer', 'timeout')
+        return config('pymodaq', 'viewer', 'timeout')
 
     def __repr__(self):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
@@ -575,7 +573,7 @@ class ModulesManager(QObject, ParameterManager):
         while not module.initialized_state:
             QThread.msleep(1000)
             QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tstart > config('control_module_ini_polling'):  # timeout of 60sec
+            if time.perf_counter() - tstart > config('pymodaq', 'control_module_ini_polling'):  # timeout of 60sec
                 break
         return module.initialized_state
 

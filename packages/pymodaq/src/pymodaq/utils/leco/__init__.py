@@ -1,9 +1,8 @@
 from pymodaq_utils.logger import set_logger
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 logger = set_logger('pymodaq')
-config = Config()  # to ckeck for config file existence, otherwise create one
-
+config = Config()
 
 try:
     from pymodaq.utils.leco.utils import start_coordinator

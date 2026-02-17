@@ -1,6 +1,6 @@
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
-from pymodaq_utils import config as config_mod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
@@ -14,7 +14,7 @@ from pymodaq.extensions.adaptive_optim.utils import AdaptiveAlgorithm, AdaptiveC
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
+config = Config()
 
 
 EXTENSION_NAME = 'AdaptiveScan'

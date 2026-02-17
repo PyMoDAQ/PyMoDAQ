@@ -21,7 +21,7 @@ from pymodaq_gui.utils.dock import DockArea, Dock
 
 
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.extensions.pid.utils import get_models
@@ -1008,7 +1008,7 @@ if __name__ == "__main__":
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
 
     app = mkQApp("DAQ_PID")
-    preset_file_name = config("presets", f"default_preset_for_pid")
+    preset_file_name = config("utils", "presets", "default_preset_for_pid")
 
     dashboard, extension, win = load_dashboard_with_preset(preset_file_name, "DAQ_PID")
 

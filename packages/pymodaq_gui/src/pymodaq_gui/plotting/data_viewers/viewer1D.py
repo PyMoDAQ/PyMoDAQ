@@ -8,6 +8,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
 import pyqtgraph as pg
 import numpy as np
 
+import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter import utils as putils
@@ -16,7 +17,8 @@ from pymodaq_utils import utils
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
-from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
+from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, DataDim
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
@@ -24,7 +26,7 @@ from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 
 logger = set_logger(get_module_name(__file__))
 
-PLOT_COLORS = utils.PlotColors()
+PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
 
 
 class DataDisplayer(QObject):
