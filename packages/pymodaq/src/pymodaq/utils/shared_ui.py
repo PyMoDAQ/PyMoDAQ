@@ -30,7 +30,6 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.splash import get_splash_sc
 
 from pymodaq.extensions.custom_ext import CustomExt
 
@@ -119,8 +118,6 @@ class SharedUI(CustomApp):
         self._app_class_file: Union[str, Path] = None
         self._main_application: Union[CustomExt, Any] = None
 
-        self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
-
         self.setup_ui()
         self.mainwindow.setVisible(show)
         
@@ -151,12 +148,6 @@ class SharedUI(CustomApp):
 
     def show(self):
         self.mainwindow.show()
-
-    @property
-    def splash_sc(self) -> QtWidgets.QSplashScreen:
-        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
-            self._splash_sc = get_splash_sc()
-        return self._splash_sc
 
     def setup_actions(self):
         self.add_action(

@@ -8,6 +8,7 @@ from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
+from pymodaq_gui.utils.splash import get_splash_sc
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -23,6 +24,15 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     * setup_docks: mandatory
     * setup_menu: non mandatory
     * connect_things: mandatory
+
+    Attributes
+    ----------
+    splash_sc: QtWidgets.QSplashScreen
+        A splash screen to be used to display information
+    title: str
+        Get/set the app title
+    get_theme: method
+        Returns the curretn QApplication theme, see qt_themes package
 
     Parameters
     ----------
@@ -43,6 +53,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self, tree=tree)
+
+        self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
         if not (isinstance(parent, DockArea) or
                 isinstance(parent, QtWidgets.QMainWindow) or
@@ -78,6 +90,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.reference_toolbar('main', self._toolbar)
         else:
             parent.setWindowTitle(self.title)
+
+    @property
+    def splash_sc(self) -> QtWidgets.QSplashScreen:
+        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
+            self._splash_sc = get_splash_sc()
+        return self._splash_sc
 
     @property
     def title(self) -> str:

@@ -55,8 +55,6 @@ from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
-from pymodaq_gui.utils.splash import get_splash_sc
-
 from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
@@ -253,12 +251,6 @@ class DashBoard(CustomApp):
         self.configurator.execute_entry(self.configurator.entry_filename)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
-
-    @property
-    def splash_sc(self) -> QtWidgets.QSplashScreen:
-        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
-            self._splash_sc = get_splash_sc()
-        return self._splash_sc
 
     def add_status(self, txt):
         """
