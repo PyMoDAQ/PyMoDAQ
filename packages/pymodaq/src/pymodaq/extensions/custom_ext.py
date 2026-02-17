@@ -19,6 +19,7 @@ class DashBoardToolbarActions(StrEnum):
 
 class CustomExt(CustomApp):
     status_signal = QtCore.Signal(str)  # signal to be used to emit info
+    config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
                  dashboard: 'DashBoard', **kwargs):
