@@ -89,8 +89,12 @@ def value_to_data_actuator(value: DataActuator | int | float | str) -> DataActua
 
 
 class Device(ABC):
-    def __init__(self, preset, device, **kwargs) -> None:
-        self._leco_wrapper = LECOWrapper(preset, device, **kwargs)
+    def __init__(self, device, **kwargs) -> None:
+        self._leco_wrapper = LECOWrapper(device, **kwargs)
+
+    @property
+    def leco_name(self):
+        return self._leco_wrapper.leco_name
 
     @property
     def name(self) -> str:
@@ -111,7 +115,7 @@ class LECOWrapper:
     """
     Private LECOWrapper where the real control happens
     """
-    def __init__(self, preset, device , **kwargs) -> None:
+    def __init__(self, device , **kwargs) -> None:
         self._base_settings : Optional[Element] = None
 
         self._settings_future : Optional[Future[Element]] = None
@@ -123,7 +127,6 @@ class LECOWrapper:
 
         self._is_grabbing = False
 
-        self._preset_name: Optional[str] = preset
         self._device_name: str = device
         self._listener = Listener(name=self.leco_name, timeout=None)
         self._listener.start_listen()
@@ -135,17 +138,13 @@ class LECOWrapper:
         self._listener.register_binary_rpc_method(self.set_director_info, accept_binary_input=True)
 
         self._communicator = self._listener.get_communicator()
-        self._director = Director(actor=self.actor_name, communicator=self._communicator, **kwargs)
+        self._director = Director(actor=self.name, communicator=self._communicator, **kwargs)
         atexit.register(self.clean)
 
 
     @cached_property
-    def actor_name(self):
-        return f'{self._preset_name}_{self._device_name}' if self._preset_name else self._device_name
-
-    @cached_property
     def leco_name(self):
-        return f'scripting_{self.actor_name}'
+        return f'scripting_{self.name}'
 
     @cached_property
     def name(self):

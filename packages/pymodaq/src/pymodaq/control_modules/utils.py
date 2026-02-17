@@ -525,7 +525,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
                 f"viewer_{randint(0, 10000)}"
                 )
         self.settings.child("main_settings", "leco", "leco_name").setValue(name)
-        return f"{self._preset}_{name}" if self._preset else name
+        return name
 
     def get_leco_host_port(self) -> tuple[str, int]:
         host = (self.settings["main_settings", "leco", "host"] or 'localhost')
