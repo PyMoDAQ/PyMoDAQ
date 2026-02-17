@@ -1,4 +1,4 @@
-from typing import Union, TYPE_CHECKING, Dict
+from typing import Union, TYPE_CHECKING, Dict, Optional
 
 import qt_themes
 from qtpy.QtCore import QObject, QLocale
