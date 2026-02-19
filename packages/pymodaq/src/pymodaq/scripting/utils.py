@@ -257,7 +257,7 @@ class LECODeviceWrapper:
         self._move_done_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="stop_move")
+        self._director.ask_rpc(method="stop_motion")
 
         return future
 
