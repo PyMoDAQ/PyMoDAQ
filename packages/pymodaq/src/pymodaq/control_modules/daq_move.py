@@ -315,7 +315,9 @@ class DAQ_Move(ParameterControlModule):
                     self.title, data=[np.array([value])], units=self.units
                 )
             self._send_to_tcpip = send_to_tcpip
-            if value != self._current_value:
+            if value == self._current_value:
+                self.thread_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, value))
+            else:
                 if self.ui is not None:
                     self.ui.move_done = False
                 self._move_done_bool = False
