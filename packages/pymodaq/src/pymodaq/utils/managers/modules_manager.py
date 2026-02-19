@@ -472,24 +472,49 @@ class ModulesManager(QObject, ParameterManager):
         self.detectors_connected = connect
 
     def test_move_actuators(self):
-        """Do a move of selected actuator"""
+        """Open a single dialog to set target positions for all selected actuators, then move them"""
+        actuators = self.actuators
+        if not actuators:
+            return
+
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle('Move actuators to target position')
+        layout = QtWidgets.QVBoxLayout()
+        form = QtWidgets.QFormLayout()
+
+        spinboxes: dict[str, QtWidgets.QDoubleSpinBox] = {}
+        for mod in actuators:
+            spinbox = QtWidgets.QDoubleSpinBox()
+            spinbox.setRange(-1e9, 1e9)
+            spinbox.setDecimals(4)
+            spinbox.setValue(mod._current_value.value())
+            form.addRow(mod.title, spinbox)
+            spinboxes[mod.title] = spinbox
+
+        layout.addLayout(form)
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok |
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.setLayout(layout)
+
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+
         dte_act = DataToExport('Actuators', control_module='DAQ_MOVE')
-        for act in self.get_names(self.actuators):
-            pos, done = QtWidgets.QInputDialog.getDouble(None, f'Enter a target position for actuator {act}',
-                                                         'Position:')
-            if not done:
-                pos = 0.
-            dte_act.append(DataActuator(act, data=pos))
+        for mod in actuators:
+            dte_act.append(DataActuator(mod.title, data=spinboxes[mod.title].value()))
 
         self.connect_actuators()
-
         self.move_actuators(dte_act)
 
         self.settings.child('actuators_positions',
                             'positions_list').setValue(dict(all_items=[f'{dact.name}: {dact.value()}' for dact
                                                                        in dte_act],
                                                             selected=[]))
-
         self.connect_actuators(False)
 
 
@@ -525,7 +550,7 @@ class ModulesManager(QObject, ParameterManager):
         """
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
-        self.settings.child('move_done').setValue(self.move_done_flag)
+        self.settings.child('actuators_positions', 'move_done').setValue(self.move_done_flag)
 
         if mode == 'abs':
             command = 'move_abs'
@@ -593,7 +618,7 @@ class ModulesManager(QObject, ParameterManager):
 
             if len(self.move_done_positions) == len(self.actuators):
                 self.move_done_flag = True
-                self.settings.child('move_done').setValue(self.move_done_flag)
+                self.settings.child('actuators_positions', 'move_done').setValue(self.move_done_flag)
         except Exception as e:
             logger.exception(str(e))
 
