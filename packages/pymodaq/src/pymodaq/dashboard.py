@@ -298,14 +298,14 @@ class DashBoard(CustomApp):
             configuration = status.attribute
             if configuration in self.configurator.entries:
                 self.configurator.entry = configuration
-                self.configurator.execute_entry(self.configurator.entry_filename)
+                self.configurator.execute_entry_base(self.configurator.entry_filename)
         elif status.command == LECODashboardCommands.GET_PRESETS:
             self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_PRESET:
             preset = status.attribute
             if preset in self.preset_manager.entries:
                 self.preset_manager.entry = preset
-                self.preset_manager.execute_entry(self.preset_manager.entry_filename)
+                self.preset_manager.execute_entry_base(self.preset_manager.entry_filename)
 
     def add_status(self, txt):
         """
