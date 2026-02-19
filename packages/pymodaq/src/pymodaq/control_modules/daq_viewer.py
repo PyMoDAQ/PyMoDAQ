@@ -722,6 +722,7 @@ class DAQ_Viewer(ParameterControlModule):
             if len(data) != 0:
                 for dat in data:
                     dat.origin = f'{self.title} - {dat.origin}' if dat.origin is not None else f'{self.title}'
+                    dat.add_extra_attribute(parent_channel=data.name)
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):
