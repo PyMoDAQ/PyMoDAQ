@@ -64,12 +64,12 @@ class Dashboard:
     def get_devices(self) -> Future[dict[str, list[str]]]:
         return self._leco_device_wrapper.get_devices()
 
-    def get_scripting_devices(self) -> dict[str, list[Actuator | Detector]]:
+    def get_scripting_devices(self) -> dict[str, dict[str, Actuator | Detector]]:
         devices = self._leco_device_wrapper.get_devices().result()
 
         return {
-            'actuators': [Actuator(name) for name in devices['actuators']],
-            'detectors': [Detector(name) for name in devices['detectors']]
+            'actuators': { name : Actuator(name) for name in devices['actuators']},
+            'detectors': { name : Detector(name) for name in devices['detectors']}
         }
 
     def get_configurations(self) -> Future[list[str]]:
