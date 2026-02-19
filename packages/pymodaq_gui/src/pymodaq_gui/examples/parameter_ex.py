@@ -82,6 +82,9 @@ class ParameterEx(ParameterManager):
             {'title': 'bool push', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action'},
             {'title': 'A led', 'name': 'aled', 'type': 'led', 'value': False, 'tip': 'a led you cannot toggle'},
             {'title': 'A led', 'name': 'anotherled', 'type': 'led_push', 'value': True, 'tip': 'a led you can toggle'},
+            {'title': 'Action + LED', 'name': 'anactionled', 'type': 'action_led', 'value': False,
+             'tip': 'Button fires sigActivated; LED value reflects done state. label opt sets button text.',
+             'label': 'Run'},
         ]},
 
         {'title': 'DateTime:', 'name': 'datetimes', 'type': 'group', 'children': [
@@ -188,6 +191,12 @@ def main():
 
     ptree = ParameterEx()
     ptree.settings_tree.show()
+    # action_led: button fires sigActivated, which here sets the LED green then resets after 1 s
+    def _on_action_led(param):
+        param.setValue(True)
+        QtCore.QTimer.singleShot(1000, lambda: param.setValue(False))
+    ptree.settings.child('booleans', 'anactionled').sigActivated.connect(_on_action_led)
+
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
 
