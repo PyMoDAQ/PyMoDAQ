@@ -325,7 +325,7 @@ class DAQ_Move(ParameterControlModule):
                     ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
                 )
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=value)
+                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value])
                 )
 
         except Exception as e:
@@ -1098,10 +1098,10 @@ class DAQ_Move_Hardware(QObject):
                 )
 
             elif command.command == ControlToHardwareMove.MOVE_ABS:
-                self.move_abs(command.attribute)
+                self.move_abs(*command.attribute)
 
             elif command.command == ControlToHardwareMove.MOVE_REL:
-                self.move_rel(command.attribute)
+                self.move_rel(*command.attribute)
 
             elif command.command == ControlToHardwareMove.MOVE_HOME:
                 self.move_home()
