@@ -10,7 +10,7 @@ from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
 
-from pymodaq_data.data import DataToExport
+from pymodaq_data.data import DataToExport, DataSource
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
@@ -58,22 +58,18 @@ class ModulesManager(QObject, ParameterManager):
 
     params = [
         {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
-            {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
+            {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
             {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
         ]},
 
-        {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False},
-        {'title': "Detections done?", 'name': 'det_done', 'type': 'led', 'value': False},
-
-        {'title': 'Data dimensions', 'name': 'data_dimensions', 'type': 'group', 'children': [
-            {'title': "Probe detector's data", 'name': 'probe_data', 'type': 'action'},
-            {'title': 'Data0D list:', 'name': 'det_data_list0D', 'type': 'itemselect'},
-            {'title': 'Data1D list:', 'name': 'det_data_list1D', 'type': 'itemselect'},
-            {'title': 'Data2D list:', 'name': 'det_data_list2D', 'type': 'itemselect'},
-            {'title': 'DataND list:', 'name': 'det_data_listND', 'type': 'itemselect'},
+        {'title': 'Detectors data', 'name': 'data_dimensions', 'type': 'group', 'children': [
+            {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action'},
+            {'title': "Detections done?", 'name': 'det_done', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Data channels', 'name': 'data_channels', 'type': 'group', 'children': []},
         ]},
         {'title': 'Actuators positions', 'name': 'actuators_positions', 'type': 'group', 'children': [
-            {'title': "Test actuators", 'name': 'test_actuator', 'type': 'action'},
+            {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action'},
+            {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False, 'readonly': True},
             {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
         ]},
     ]
@@ -115,9 +111,6 @@ class ModulesManager(QObject, ParameterManager):
         self._detectors = []
         self._actuators = []
 
-        self.grab_done_signals = []
-        self.det_commands_signal = []
-
         self.actuators_connected = False
         self.detectors_connected = False
 
@@ -136,8 +129,6 @@ class ModulesManager(QObject, ParameterManager):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
 
     def show_only_control_modules(self, show: True):
-        self.settings.child('move_done').show(not show)
-        self.settings.child('det_done').show(not show)
         self.settings.child('data_dimensions').show(not show)
         self.settings.child('actuators_positions').show(not show)
 
@@ -324,42 +315,77 @@ class ModulesManager(QObject, ParameterManager):
         return settings
 
     def get_det_data_list(self) -> DataToExport:
-        """Do a snap of selected detectors, to get the list of all the data and processed data"""
+        """Do a snap of selected detectors, to populate the data channels tree and return the data"""
 
         if len(self.detectors) == 0:
             return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
-        else:
-            self.connect_detectors()
-            datas: DataToExport = self.grab_data()
 
-            data_list0D = datas.get_full_names('data0D')
-            data_list1D = datas.get_full_names('data1D')
-            data_list2D = datas.get_full_names('data2D')
-            data_listND = datas.get_full_names('dataND')
+        self.connect_detectors()
+        datas: DataToExport = self.grab_data(Naverage=1)
 
-            self.settings.child('data_dimensions', 'det_data_list0D').setValue(
-                dict(all_items=data_list0D, selected=[]))
-            self.settings.child('data_dimensions', 'det_data_list1D').setValue(
-                dict(all_items=data_list1D, selected=[]))
-            self.settings.child('data_dimensions', 'det_data_list2D').setValue(
-                dict(all_items=data_list2D, selected=[]))
-            self.settings.child('data_dimensions', 'det_data_listND').setValue(
-                dict(all_items=data_listND, selected=[]))
+        data_channels = self.settings.child('data_dimensions', 'data_channels')
+        data_channels.clearChildren()
 
-            self.connect_detectors(False)
-            return datas
+        for det in self.detectors:
+            det_title = det.title
+            det_data = [dwa for dwa in datas.data
+                        if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
+            raw_dwa = [dwa for dwa in det_data if dwa.source == DataSource.raw]
+            calc_dwa = [dwa for dwa in det_data if dwa.source == DataSource.calculated]
+            origin = det_title
 
-    def get_selected_probed_data(self, dim='0D'):
-        """Get the name of selected data names of a given dimensionality
+            det_children = []
+            for ind_raw, raw in enumerate(raw_dwa):
+                raw_key = f'{ind_raw}_{raw.name}'.replace(' ', '_')
+                roi_children = [
+                    {'title': dwa.name,
+                     # name must be unique across the whole tree; prefix with channel key
+                     'name': f'{raw_key}_{dwa.name}'.replace(' ', '_'),
+                     'type': 'bool', 'value': True, 'dim': dwa.dim.name}
+                    for dwa in calc_dwa
+                    if getattr(dwa, 'parent_channel', None) == raw.name
+                ]
+                det_children.append({
+                    'title': raw.name,
+                    'name': raw_key,
+                    'type': 'bool', 'value': True, 'dim': raw.dim.name,
+                    **({'children': roi_children} if roi_children else {}),
+                })
+
+            if det_children:
+                data_channels.addChild({
+                    'title': origin,
+                    'name': origin.replace(' ', '_'),
+                    'type': 'group',
+                    'children': det_children,
+                })
+
+        self.connect_detectors(False)
+        return datas
+
+    def get_probed_data_channels(self, dim: str = None) -> List[str]:
+        """Return full names (origin/channel) of probed data channels, optionally filtered by dim.
 
         Parameters
         ----------
-        dim: str
-            either '0D', '1D', '2D' or 'ND'
-        """
-        return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
+        dim: str, optional
+            One of 'Data0D', 'Data1D', 'Data2D', 'DataND'. If None, all dims are returned.
 
-    def grab_data(self, check_do_override=True, **kwargs):
+        Returns
+        -------
+        list of str
+        """
+        names = []
+        for det_param in self.settings.child('data_dimensions', 'data_channels').children():
+            for ch_param in det_param.children():
+                if dim is None or ch_param.opts.get('dim') == dim:
+                    names.append(f'{det_param.title()}/{ch_param.title()}')
+                for sub_param in ch_param.children():
+                    if dim is None or sub_param.opts.get('dim') == dim:
+                        names.append(f'{det_param.title()}/{sub_param.title()}')
+        return names
+
+    def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
         """Do a single grab of connected and selected detectors
 
         Parameter
@@ -367,14 +393,16 @@ class ModulesManager(QObject, ParameterManager):
         check_do_override: bool
             If this is True the signal emission to the DAQ_Viewers will be conditionned to the status of their internal
             override_grab_from_extension attribute
+        Naverage: int, optional
+            If provided, overrides each detector's own Naverage setting. Useful for probing data shape without averaging.
         """
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
-        self.settings.child('det_done').setValue(self.det_done_flag)
+        self.settings.child('data_dimensions', 'det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
         
-        if 'DataMixer' in self.selected_detectors_name:
+        if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
                 'DataMixer', ModuleType.Detector).settings.child(
                 'detector_settings', 'overridden_detectors').opts['limits']
@@ -382,9 +410,8 @@ class ModulesManager(QObject, ParameterManager):
             overridden_detectors = []
 
         for mod in self.detectors:
-            #if not (check_do_override and mod.override_grab_from_extension):
-            if mod.title not in overridden_detectors:    
-                kwargs.update(dict(Naverage=mod.Naverage))
+            if mod.title not in overridden_detectors:
+                kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
                 mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
 
         while not self.det_done_flag:
@@ -630,7 +657,7 @@ class ModulesManager(QObject, ParameterManager):
 
             if self._received_data == len(self.detectors):
                 self.det_done_flag = True
-                self.settings.child('det_done').setValue(self.det_done_flag)
+                self.settings.child('data_dimensions', 'det_done').setValue(self.det_done_flag)
 
 
 if __name__ == '__main__':
