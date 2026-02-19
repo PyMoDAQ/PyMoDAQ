@@ -611,17 +611,15 @@ class ModulesManager(QObject, ParameterManager):
 if __name__ == '__main__':
     import sys
 
-    app = QtWidgets.QApplication(sys.argv)
+    from pymodaq_gui.qt_utils import mkQApp
     from qtpy.QtCore import QThread
     from pymodaq.utils.gui_utils import DockArea
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
+    from pymodaq.utils.shared_ui import SharedUI
 
-    win = QtWidgets.QMainWindow()
+    app = mkQApp('ModulesManager')
     area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('pymodaq main')
 
     prog = DAQ_Viewer(area, title="Testing2D", daq_type='DAQ2D')
     prog2 = DAQ_Viewer(area, title="Testing1D", daq_type='DAQ1D')
@@ -651,7 +649,8 @@ if __name__ == '__main__':
     act2.init_hardware_ui()
 
     QtWidgets.QApplication.processEvents()
-    win.show()
+
+    win = SharedUI(area, title='ModulesManager')
 
     manager = ModulesManager(actuators=[act1, act2], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
     manager.settings_tree.show()
