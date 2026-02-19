@@ -57,19 +57,13 @@ class ModulesManager(QObject, ParameterManager):
     timeout_signal = Signal(bool)
 
     params = [
-        {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
-            {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
-            {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
-        ]},
+        {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
+        {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
 
-        {'title': 'Detectors data', 'name': 'data_dimensions', 'type': 'group', 'children': [
-            {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action'},
-            {'title': "Detections done?", 'name': 'det_done', 'type': 'led', 'value': False, 'readonly': True},
+        {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action_led', 'value': False, 'children': [
             {'title': 'Data channels', 'name': 'data_channels', 'type': 'group', 'children': []},
         ]},
-        {'title': 'Actuators positions', 'name': 'actuators_positions', 'type': 'group', 'children': [
-            {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action'},
-            {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False, 'readonly': True},
+        {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action_led', 'value': False, 'children': [
             {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
         ]},
     ]
@@ -105,8 +99,8 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_positions: DataToExport = None
         self.move_done_flag = False
 
-        self.settings.child('data_dimensions', 'probe_data').sigActivated.connect(self.get_det_data_list)
-        self.settings.child('actuators_positions', 'test_actuator').sigActivated.connect(self.test_move_actuators)
+        self.settings.child('probe_data').sigActivated.connect(self.get_det_data_list)
+        self.settings.child('test_actuator').sigActivated.connect(self.test_move_actuators)
 
         self._detectors = []
         self._actuators = []
@@ -129,8 +123,8 @@ class ModulesManager(QObject, ParameterManager):
         return f'ModulesManager of "{self.parent_name}" with control modules: {self.get_names(self.modules_all)}'
 
     def show_only_control_modules(self, show: True):
-        self.settings.child('data_dimensions').show(not show)
-        self.settings.child('actuators_positions').show(not show)
+        self.settings.child('probe_data').show(not show)
+        self.settings.child('test_actuator').show(not show)
 
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
@@ -185,14 +179,14 @@ class ModulesManager(QObject, ParameterManager):
     def set_actuators(self, actuators: list['DAQ_Move'], selected_actuators: list['DAQ_Move']):
         """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
-        self.settings.child('modules', 'actuators').setValue(dict(all_items=self.get_names(actuators),
-                                                                  selected=self.get_names(selected_actuators)))
+        self.settings.child('actuators').setValue(dict(all_items=self.get_names(actuators),
+                                                       selected=self.get_names(selected_actuators)))
 
     def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
-        self.settings.child('modules', 'detectors').setValue(dict(all_items=self.get_names(detectors),
-                                                                  selected=self.get_names(selected_detectors)))
+        self.settings.child('detectors').setValue(dict(all_items=self.get_names(detectors),
+                                                       selected=self.get_names(selected_detectors)))
 
     @property
     def detectors(self) -> List['DAQ_Viewer']:
@@ -245,34 +239,34 @@ class ModulesManager(QObject, ParameterManager):
     @property
     def detectors_name(self):
         """Get all the names of the detectors"""
-        return self.settings.child('modules', 'detectors').value()['all_items']
+        return self.settings.child('detectors').value()['all_items']
 
     @property
     def selected_detectors_name(self):
         """Get/Set the names of the selected detectors"""
-        return self.settings.child('modules', 'detectors').value()['selected']
+        return self.settings.child('detectors').value()['selected']
 
     @selected_detectors_name.setter
     def selected_detectors_name(self, detectors):
         if set(detectors).issubset(self.detectors_name):
-            self.settings.child('modules', 'detectors').setValue(dict(all_items=self.detectors_name,
-                                                                      selected=detectors))
+            self.settings.child('detectors').setValue(dict(all_items=self.detectors_name,
+                                                           selected=detectors))
 
     @property
     def actuators_name(self):
         """Get all the names of the actuators"""
-        return self.settings.child('modules', 'actuators').value()['all_items']
+        return self.settings.child('actuators').value()['all_items']
 
     @property
     def selected_actuators_name(self) -> List[str]:
         """Get/Set the names of the selected actuators"""
-        return self.settings.child('modules', 'actuators').value()['selected']
+        return self.settings.child('actuators').value()['selected']
 
     @selected_actuators_name.setter
     def selected_actuators_name(self, actuators):
         if set(actuators).issubset(self.actuators_name):
-            self.settings.child('modules', 'actuators').setValue(dict(all_items=self.actuators_name,
-                                                                      selected=actuators))
+            self.settings.child('actuators').setValue(dict(all_items=self.actuators_name,
+                                                           selected=actuators))
 
     def value_changed(self, param):
         if param.name() == 'detectors':
@@ -323,7 +317,7 @@ class ModulesManager(QObject, ParameterManager):
         self.connect_detectors()
         datas: DataToExport = self.grab_data(Naverage=1)
 
-        data_channels = self.settings.child('data_dimensions', 'data_channels')
+        data_channels = self.settings.child('probe_data', 'data_channels')
         data_channels.clearChildren()
 
         for det in self.detectors:
@@ -377,7 +371,7 @@ class ModulesManager(QObject, ParameterManager):
         list of str
         """
         names = []
-        for det_param in self.settings.child('data_dimensions', 'data_channels').children():
+        for det_param in self.settings.child('probe_data', 'data_channels').children():
             for ch_param in det_param.children():
                 if dim is None or ch_param.opts.get('dim') == dim:
                     names.append(ch_param.opts['full_name'])
@@ -400,7 +394,7 @@ class ModulesManager(QObject, ParameterManager):
         self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
         self._received_data = 0
         self.det_done_flag = False
-        self.settings.child('data_dimensions', 'det_done').setValue(self.det_done_flag)
+        self.settings.child('probe_data').setValue(self.det_done_flag)
         tzero = time.perf_counter()
         
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
@@ -539,10 +533,8 @@ class ModulesManager(QObject, ParameterManager):
         self.connect_actuators()
         self.move_actuators(dte_act)
 
-        self.settings.child('actuators_positions',
-                            'positions_list').setValue(dict(all_items=[f'{dact.name}: {dact.value()}' for dact
-                                                                       in dte_act],
-                                                            selected=[]))
+        self.settings.child('test_actuator', 'positions_list').setValue(
+            dict(all_items=[f'{dact.name}: {dact.value()}' for dact in dte_act], selected=[]))
         self.connect_actuators(False)
 
 
@@ -578,7 +570,7 @@ class ModulesManager(QObject, ParameterManager):
         """
         self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         self.move_done_flag = False
-        self.settings.child('actuators_positions', 'move_done').setValue(self.move_done_flag)
+        self.settings.child('test_actuator').setValue(self.move_done_flag)
 
         if mode == 'abs':
             command = 'move_abs'
@@ -646,7 +638,7 @@ class ModulesManager(QObject, ParameterManager):
 
             if len(self.move_done_positions) == len(self.actuators):
                 self.move_done_flag = True
-                self.settings.child('actuators_positions', 'move_done').setValue(self.move_done_flag)
+                self.settings.child('test_actuator').setValue(self.move_done_flag)
         except Exception as e:
             logger.exception(str(e))
 
@@ -658,7 +650,7 @@ class ModulesManager(QObject, ParameterManager):
 
             if self._received_data == len(self.detectors):
                 self.det_done_flag = True
-                self.settings.child('data_dimensions', 'det_done').setValue(self.det_done_flag)
+                self.settings.child('probe_data').setValue(self.det_done_flag)
 
 
 if __name__ == '__main__':
