@@ -124,12 +124,13 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def setup_docks(self):
         widget = self.parent
 
-        widget.setLayout(QVBoxLayout())
-        widget.layout().setContentsMargins(2, 2, 2, 2)
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        layout.setContentsMargins(2, 2, 2, 2)
         self._settings_widget = QWidget()
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
-        widget.layout().addWidget(self.dockarea)
+        layout.addWidget(self.dockarea)
 
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
