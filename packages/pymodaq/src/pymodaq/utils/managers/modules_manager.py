@@ -335,13 +335,13 @@ class ModulesManager(QObject, ParameterManager):
             origin = det_title
 
             det_children = []
-            for ind_raw, raw in enumerate(raw_dwa):
-                raw_key = f'{ind_raw}_{raw.name}'.replace(' ', '_')
+            for raw in raw_dwa:
+                raw_key = raw.name.replace(' ', '_')
                 roi_children = [
                     {'title': dwa.name,
-                     # name must be unique across the whole tree; prefix with channel key
-                     'name': f'{raw_key}_{dwa.name}'.replace(' ', '_'),
-                     'type': 'bool', 'value': True, 'dim': dwa.dim.name}
+                     'name': dwa.name.replace(' ', '_'),
+                     'type': 'bool', 'value': True, 'dim': dwa.dim.name,
+                     'full_name': f'{dwa.origin}/{dwa.name}'}
                     for dwa in calc_dwa
                     if getattr(dwa, 'parent_channel', None) == raw.name
                 ]
@@ -349,6 +349,7 @@ class ModulesManager(QObject, ParameterManager):
                     'title': raw.name,
                     'name': raw_key,
                     'type': 'bool', 'value': True, 'dim': raw.dim.name,
+                    'full_name': f'{raw.origin}/{raw.name}',
                     **({'children': roi_children} if roi_children else {}),
                 })
 
@@ -379,10 +380,10 @@ class ModulesManager(QObject, ParameterManager):
         for det_param in self.settings.child('data_dimensions', 'data_channels').children():
             for ch_param in det_param.children():
                 if dim is None or ch_param.opts.get('dim') == dim:
-                    names.append(f'{det_param.title()}/{ch_param.title()}')
+                    names.append(ch_param.opts['full_name'])
                 for sub_param in ch_param.children():
                     if dim is None or sub_param.opts.get('dim') == dim:
-                        names.append(f'{det_param.title()}/{sub_param.title()}')
+                        names.append(sub_param.opts['full_name'])
         return names
 
     def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
