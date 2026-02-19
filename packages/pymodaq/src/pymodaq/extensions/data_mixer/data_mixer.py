@@ -77,10 +77,6 @@ class DataMixer(CustomExt):
         splitter.addWidget(self.modules_manager.settings_tree)
         self.modules_manager.tree.header().setVisible(False)
         self.modules_manager.settings.child('modules', 'actuators').hide()
-        self.modules_manager.settings.child('move_done').hide()
-        self.modules_manager.settings.child('det_done').hide()
-        self.modules_manager.settings.child('data_dimensions',
-                                            'det_data_list0D').setOpts(height=150)
         self.modules_manager.settings.child('data_dimensions').hide()
         self.modules_manager.settings.child('actuators_positions').hide()
 

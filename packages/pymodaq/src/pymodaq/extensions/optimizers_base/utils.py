@@ -353,9 +353,9 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
     def optimize_from(self):
         self.modules_manager.get_det_data_list()
-        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
-        data0D['selected'] = data0D['all_items']
-        self.settings.child('optimizing_signal', 'optimize_0d').setValue(data0D)
+        data0D_names = self.modules_manager.get_probed_data_channels('Data0D')
+        self.settings.child('optimizing_signal', 'optimize_0d').setValue(
+            dict(all_items=data0D_names, selected=data0D_names))
 
 
 def get_optimizer_models(model_name=None):
