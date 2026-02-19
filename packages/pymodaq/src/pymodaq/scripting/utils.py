@@ -309,9 +309,11 @@ class LECODeviceWrapper:
 
 class LECODashboardWrapper:
     def __init__(self, **kwargs) -> None:
-        self._presets_future : Optional[Future[list[str]]] = None
+        self._presets_future: Optional[Future[list[str]]] = None
+        self._applied_preset_future: Optional[Future[bool]] = None
         self._configurations_future: Optional[Future[list[str]]] = None
-        self._devices_list_future : Optional[Future[dict[str, list[str]]]] = None
+        self._applied_configuration_future: Optional[Future[bool]] = None
+        self._devices_list_future: Optional[Future[dict[str, list[str]]]] = None
         self._device_name: str = 'dashboard'
         self._listener = Listener(name=self.leco_name, timeout=None)
         self._listener.start_listen()
@@ -319,6 +321,8 @@ class LECODashboardWrapper:
         self._listener.register_binary_rpc_method(self.send_devices, accept_binary_input=True)
         self._listener.register_rpc_method(self.send_configurations)
         self._listener.register_rpc_method(self.send_presets)
+        self._listener.register_rpc_method(self.applied_preset_done)
+        self._listener.register_rpc_method(self.applied_configuration_done)
 
         self._communicator = self._listener.get_communicator()
         self._director = Director(actor=self.name, communicator=self._communicator, **kwargs)
@@ -363,9 +367,14 @@ class LECODashboardWrapper:
 
         return future
 
-    def apply_configuration(self, configuration: str) -> None:
+    def apply_configuration(self, configuration: str) -> Future[bool]:
+        future = Future()
+        self._applied_configuration_future = future
+
         self.set_remote_name()
         self._director.ask_rpc(method="apply_configuration", configuration=configuration)
+
+        return future
 
     def get_presets(self) -> Future[list[str]]:
         future = Future()
@@ -376,9 +385,14 @@ class LECODashboardWrapper:
 
         return future
 
-    def apply_preset(self, preset : str) -> None:
+    def apply_preset(self, preset : str) -> Future[bool]:
+        future = Future()
+        self._applied_preset_future = future
+
         self.set_remote_name()
         self._director.ask_rpc(method="apply_preset", preset=preset)
+
+        return future
 
     def send_devices(self, data = None, additional_payload = None):
         value: dict[str, list[str]] = sf.get_apply_deserializer(additional_payload[0])
@@ -402,4 +416,16 @@ class LECODashboardWrapper:
         except (InvalidStateError, AttributeError):
             pass
 
+    def applied_preset_done(self, done: bool):
+        try:
+            self._applied_preset_future.set_result(done)
+            self._applied_preset_future = None
+        except (InvalidStateError, AttributeError):
+            pass
 
+    def applied_configuration_done(self, done: bool):
+        try:
+            self._applied_configuration_future.set_result(done)
+            self._applied_configuration_future = None
+        except (InvalidStateError, AttributeError):
+            pass

@@ -44,7 +44,6 @@ class MoveDirectorMethods(StrEnum):
     SEND_POSITION = "send_position"
     SET_MOVE_DONE = "set_move_done"
 
-
 class ViewerDirectorMethods(StrEnum):
     SET_DATA = "set_data"
 
@@ -52,3 +51,5 @@ class DashboardDirectorMethods(StrEnum):
     SEND_DEVICES = "send_devices"
     SEND_CONFIGURATIONS = "send_configurations"
     SEND_PRESETS = "send_presets"
+    APPLIED_CONFIGURATION_DONE = "applied_configuration_done"
+    APPLIED_PRESET_DONE = "applied_preset_done"

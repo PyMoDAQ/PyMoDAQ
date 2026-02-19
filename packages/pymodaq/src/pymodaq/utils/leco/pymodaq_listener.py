@@ -65,9 +65,11 @@ class LECODashboardCommands(StrEnum):
     GET_CONFIGURATIONS = 'get_configurations'
     SEND_CONFIGURATIONS = 'send_configurations'
     APPLY_CONFIGURATION = 'apply_configuration'
+    APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
     GET_PRESETS = 'get_presets'
     SEND_PRESETS = 'send_presets'
     APPLY_PRESET = 'apply_preset'
+    APPLIED_PRESET_DONE = 'applied_preset_done'
 
 class ListenerSignals(QObject):
     cmd_signal = Signal(ThreadCommand)
@@ -387,6 +389,16 @@ class ActorListener(PymodaqListener):
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_PRESETS,
                     presets=command.attribute
+                )
+            elif command.command == LECODashboardCommands.APPLIED_PRESET_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_PRESET_DONE,
+                    done=command.attribute
+                )
+            elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
+                    done=command.attribute
                 )
         else:
             raise IOError("Unknown TCP client command")

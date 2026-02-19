@@ -26,6 +26,7 @@ from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
     DashboardActorListener
+from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -211,6 +212,8 @@ class DashBoard(CustomApp):
         self.compact_actuator_manager: ActuatorCompactDock = None
         self.compact_detector_manager: DetectorCompactDock = None
 
+        self._scripted_preset_load = False
+
         self.setup_ui()
 
         logger.info("Dashboard Initialized")
@@ -257,6 +260,10 @@ class DashBoard(CustomApp):
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
+        if self._scripted_preset_load:
+            self._scripted_preset_load = False
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, True))
+
     def get_leco_name(self) -> str:
         return "dashboard"
 
@@ -293,17 +300,28 @@ class DashBoard(CustomApp):
             }
             self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
         elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
-            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, self.configurator.entries))
+            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
         elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
             configuration = status.attribute
-            if configuration in self.configurator.entries:
+            loaded = False
+            if (configuration in self.configurator.entries and
+                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            ):
+
                 self.configurator.entry = configuration
                 self.configurator.execute_entry_base(self.configurator.entry_filename)
+                loaded = True
+
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
         elif status.command == LECODashboardCommands.GET_PRESETS:
             self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
         elif status.command == LECODashboardCommands.APPLY_PRESET:
             preset = status.attribute
-            if preset in self.preset_manager.entries:
+            if preset not in self.preset_manager.entries:
+                self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, False))
+            else:
+                self._scripted_preset_load = True
                 self.preset_manager.entry = preset
                 self.preset_manager.execute_entry_base(self.preset_manager.entry_filename)
 

@@ -75,11 +75,11 @@ class Dashboard:
     def get_configurations(self) -> Future[list[str]]:
         return self._leco_device_wrapper.get_configurations()
 
-    def apply_configuration(self, configuration : str) -> None:
-        self._leco_device_wrapper.apply_configuration(configuration)
+    def apply_configuration(self, configuration : str) -> Future[bool]:
+        return self._leco_device_wrapper.apply_configuration(configuration)
 
     def get_presets(self) -> Future[list[str]]:
         return self._leco_device_wrapper.get_presets()
 
-    def apply_preset(self, preset: str) -> None:
-        self._leco_device_wrapper.apply_preset(preset)
+    def apply_preset(self, preset: str) -> Future[bool]:
+        return self._leco_device_wrapper.apply_preset(preset)
