@@ -1,2 +1,1 @@
-from .devices import Actuator
-from .devices import Detector
+from .devices import Actuator, Detector, Dashboard

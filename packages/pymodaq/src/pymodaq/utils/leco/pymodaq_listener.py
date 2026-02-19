@@ -23,7 +23,7 @@ from pymodaq.utils.leco.rpc_method_definitions import (
     ViewerMethods,
     GenericDirectorMethods,
     MoveDirectorMethods,
-    ViewerDirectorMethods,
+    ViewerDirectorMethods, DashboardMethods, DashboardDirectorMethods,
 )
 
 
@@ -59,6 +59,15 @@ class LECOViewerCommands(StrEnum):
     SNAP = 'snap'
     STOP = 'stop_grab'
 
+class LECODashboardCommands(StrEnum):
+    GET_DEVICES = 'get_devices'
+    SEND_DEVICES = 'send_devices'
+    GET_CONFIGURATIONS = 'get_configurations'
+    SEND_CONFIGURATIONS = 'send_configurations'
+    APPLY_CONFIGURATION = 'apply_configuration'
+    GET_PRESETS = 'get_presets'
+    SEND_PRESETS = 'send_presets'
+    APPLY_PRESET = 'apply_preset'
 
 class ListenerSignals(QObject):
     cmd_signal = Signal(ThreadCommand)
@@ -118,7 +127,11 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.stop_motion, name=MoveMethods.STOP_MOTION)
         self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
         self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
-
+        self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
+        self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
+        self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
+        self.register_rpc_method(self.get_presets, name=DashboardMethods.GET_PRESETS)
+        self.register_rpc_method(self.apply_preset, name=DashboardMethods.APPLY_PRESET)
     @staticmethod
     def extract_pymodaq_object(
         value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
@@ -144,11 +157,26 @@ class ActorHandler(PymodaqPipeHandler):
     def get_settings(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
+    # dashboard commands
+    def get_devices(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
+
+    def get_configurations(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_CONFIGURATIONS))
+
+    def apply_configuration(self, configuration : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
+
+    def get_presets(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_PRESETS))
+
+    def apply_preset(self, preset : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_PRESET, attribute=preset))
+
     # detector commands
     def send_data_grab(self,) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
 
-    # detector commands
     def send_data_snap(self,) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
@@ -197,6 +225,7 @@ class ActorHandler(PymodaqPipeHandler):
 # to be able to separate them later on
 MoveActorHandler = ActorHandler
 ViewerActorHandler = ActorHandler
+DashboardActorHandler = ActorHandler
 
 
 class PymodaqListener(Listener):
@@ -344,7 +373,21 @@ class ActorListener(PymodaqListener):
                     method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
                     settings=command.attribute.decode(),
                 )
-
+            elif command.command == LECODashboardCommands.SEND_DEVICES:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_DEVICES,
+                    **binary_serialization_to_kwargs(command.attribute, data_key="data")
+                )
+            elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
+                    configurations=command.attribute
+                )
+            elif command.command == LECODashboardCommands.SEND_PRESETS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_PRESETS,
+                    presets=command.attribute
+                )
         else:
             raise IOError("Unknown TCP client command")
 
@@ -362,3 +405,4 @@ class ActorListener(PymodaqListener):
 # to be able to separate them later on
 MoveActorListener = ActorListener
 ViewerActorListener = ActorListener
+DashboardActorListener = ActorListener

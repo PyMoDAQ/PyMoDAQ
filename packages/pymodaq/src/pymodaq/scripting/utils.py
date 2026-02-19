@@ -4,7 +4,6 @@ from abc import ABC
 
 from concurrent.futures import Future, InvalidStateError
 from functools import cached_property
-from threading import Lock
 from typing import Optional, cast
 from xml.etree.ElementTree import Element
 
@@ -90,28 +89,28 @@ def value_to_data_actuator(value: DataActuator | int | float | str) -> DataActua
 
 class Device(ABC):
     def __init__(self, device, **kwargs) -> None:
-        self._leco_wrapper = LECOWrapper(device, **kwargs)
+        self._leco_device_wrapper = LECODeviceWrapper(device, **kwargs)
 
     @property
     def leco_name(self):
-        return self._leco_wrapper.leco_name
+        return self._leco_device_wrapper.leco_name
 
     @property
     def name(self) -> str:
-        return self._leco_wrapper.name
+        return self._leco_device_wrapper.name
 
     def get_settings(self) -> Future[Element]:
-        return self._leco_wrapper.get_settings()
+        return self._leco_device_wrapper.get_settings()
 
     def set_settings(self, settings: Element) -> None:
-        self._leco_wrapper.set_settings(settings)
+        self._leco_device_wrapper.set_settings(settings)
 
     def sign_out(self) -> None:
-        self._leco_wrapper.sign_out()
+        self._leco_device_wrapper.sign_out()
 
 
 
-class LECOWrapper:
+class LECODeviceWrapper:
     """
     Private LECOWrapper where the real control happens
     """
@@ -306,3 +305,101 @@ class LECOWrapper:
 
     def set_director_info(self, parameter = None, additional_payload = None) -> None:
         pass
+
+
+class LECODashboardWrapper:
+    def __init__(self, **kwargs) -> None:
+        self._presets_future : Optional[Future[list[str]]] = None
+        self._configurations_future: Optional[Future[list[str]]] = None
+        self._devices_list_future : Optional[Future[dict[str, list[str]]]] = None
+        self._device_name: str = 'dashboard'
+        self._listener = Listener(name=self.leco_name, timeout=None)
+        self._listener.start_listen()
+
+        self._listener.register_binary_rpc_method(self.send_devices, accept_binary_input=True)
+        self._listener.register_rpc_method(self.send_configurations)
+        self._listener.register_rpc_method(self.send_presets)
+
+        self._communicator = self._listener.get_communicator()
+        self._director = Director(actor=self.name, communicator=self._communicator, **kwargs)
+        atexit.register(self.clean)
+
+
+    @cached_property
+    def leco_name(self):
+        return f'scripting_{self.name}'
+
+    @cached_property
+    def name(self):
+        return self._device_name
+
+    def clean(self):
+        self.sign_out()
+        self._listener.close()
+        self._director.close()
+        self._communicator.close()
+
+    def sign_out(self):
+        self._director.ask_rpc('sign_out', actor='COORDINATOR')
+
+    def set_remote_name(self):
+        self._director.ask_rpc('set_remote_name', name=self.leco_name)
+
+    def get_devices(self) -> Future[dict[str, list[str]]]:
+        future = Future()
+        self._devices_list_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="get_devices")
+
+        return future
+
+    def get_configurations(self) -> Future[list[str]]:
+        future = Future()
+        self._configurations_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="get_configurations")
+
+        return future
+
+    def apply_configuration(self, configuration: str) -> None:
+        self.set_remote_name()
+        self._director.ask_rpc(method="apply_configuration", configuration=configuration)
+
+    def get_presets(self) -> Future[list[str]]:
+        future = Future()
+        self._presets_future = future
+
+        self.set_remote_name()
+        self._director.ask_rpc(method="get_presets")
+
+        return future
+
+    def apply_preset(self, preset : str) -> None:
+        self.set_remote_name()
+        self._director.ask_rpc(method="apply_preset", preset=preset)
+
+    def send_devices(self, data = None, additional_payload = None):
+        value: dict[str, list[str]] = sf.get_apply_deserializer(additional_payload[0])
+        try:
+            self._devices_list_future.set_result(value)
+            self._devices_list_future = None
+        except (InvalidStateError, AttributeError):
+            pass
+
+    def send_configurations(self, configurations: list[str]):
+        try:
+            self._configurations_future.set_result(configurations)
+            self._configurations_future = None
+        except (InvalidStateError, AttributeError):
+            pass
+
+    def send_presets(self, presets: list[str]):
+        try:
+            self._presets_future.set_result(presets)
+            self._presets_future = None
+        except (InvalidStateError, AttributeError):
+            pass
+
+

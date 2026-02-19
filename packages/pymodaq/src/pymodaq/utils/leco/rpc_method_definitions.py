@@ -26,6 +26,12 @@ class ViewerMethods(StrEnum):
     SNAP = "send_data_snap"
     STOP = "stop_grab"
 
+class DashboardMethods(StrEnum):
+    GET_DEVICES = "get_devices"
+    GET_CONFIGURATIONS = "get_configurations"
+    APPLY_CONFIGURATION = "apply_configuration"
+    GET_PRESETS = "get_presets"
+    APPLY_PRESET = "apply_preset"
 
 # Director module methods
 class GenericDirectorMethods(StrEnum):
@@ -41,3 +47,8 @@ class MoveDirectorMethods(StrEnum):
 
 class ViewerDirectorMethods(StrEnum):
     SET_DATA = "set_data"
+
+class DashboardDirectorMethods(StrEnum):
+    SEND_DEVICES = "send_devices"
+    SEND_CONFIGURATIONS = "send_configurations"
+    SEND_PRESETS = "send_presets"

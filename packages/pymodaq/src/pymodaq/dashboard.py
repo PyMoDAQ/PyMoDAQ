@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable, Type
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -24,10 +24,12 @@ import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
+from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
+    DashboardActorListener
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
+from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val, ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
@@ -135,13 +137,14 @@ class PymodaqUpdateTableWidget(QTableWidget):
 class DashBoard(CustomApp):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger"""
-
+    _command_tcpip = Signal(ThreadCommand)
     status_signal = Signal(str)
     new_preset_created = Signal()
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
     # included in CustomExt by default but Dashboard is special with that respect
 
+    listener_class : Type[ActorListener] = DashboardActorListener
     settings_name = "dashboard_settings"
     _splash_sc = None
 
@@ -242,6 +245,8 @@ class DashBoard(CustomApp):
         self.get_toolbar('configurator').setEnabled(False)
         self.preset_manager.enable_actions(True)
 
+        self.connect_leco(connect=True)
+
     def do_things_after_preset(self, preset_name: str):
         self.configurator.preset_filename = preset_name
         self.configurator.entry = 'default'
@@ -251,6 +256,56 @@ class DashBoard(CustomApp):
         self.configurator.execute_entry(self.configurator.entry_filename)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
+
+    def get_leco_name(self) -> str:
+        return "dashboard"
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        host = config.get(("main_settings", "leco", "host"), 'localhost')
+        port = config.get(("main_settings", "leco", "port"), '12300')
+
+        return host, port
+
+    def connect_leco(self, connect: bool) -> None:
+        if connect:
+            name = self.get_leco_name()
+            host, port = self.get_leco_host_port()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = self.listener_class(name=name, host=host, port=port)
+                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
+            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+            # self._leco_client.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=["detector_settings", ""]))
+        else:
+            self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
+            try:
+                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
+
+    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
+        if status.command == LECODashboardCommands.GET_DEVICES:
+            devices = {
+                'actuators': [ actuator.get_leco_name() for actuator in self.actuators_modules],
+                'detectors': [ detector.get_leco_name() for detector in self.detector_modules]
+            }
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
+        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, self.configurator.entries))
+        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            configuration = status.attribute
+            if configuration in self.configurator.entries:
+                self.configurator.entry = configuration
+                self.configurator.execute_entry(self.configurator.entry_filename)
+        elif status.command == LECODashboardCommands.GET_PRESETS:
+            self._command_tcpip.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
+        elif status.command == LECODashboardCommands.APPLY_PRESET:
+            preset = status.attribute
+            if preset in self.preset_manager.entries:
+                self.preset_manager.entry = preset
+                self.preset_manager.execute_entry(self.preset_manager.entry_filename)
 
     def add_status(self, txt):
         """
@@ -738,6 +793,7 @@ class DashBoard(CustomApp):
         quit_fun
         """
         try:
+            self.connect_leco(connect=False)
             self.remote_timer.stop()
 
             for ext in self.extensions:
