@@ -12,6 +12,8 @@ from pathlib import Path
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
+import time
+
 import numpy as np
 from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
@@ -158,7 +160,7 @@ class DAQScan(CustomExt):
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
-        self._scan_done_array = None  # boolean CARRAY tracking per-point completion
+        self._scan_time_array = None  # float32 CARRAY: elapsed seconds since scan start (nan = not yet acquired)
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators)
         self.scan_parameters = None
@@ -870,7 +872,7 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
-            self._scan_done_array = None
+            self._scan_time_array = None
             try:
                 self.module_and_data_saver.flush()
                 self.close_file()
@@ -903,9 +905,10 @@ class DAQScan(CustomExt):
             self.ui.set_permanent_status('Timeout occurred')
 
         elif status.command == 'add_data':
+            elapsed_time = status.attribute.pop('elapsed_time', None)
             self.module_and_data_saver.add_data(**status.attribute)
-            if self._scan_done_array is not None:
-                self._scan_done_array[status.attribute['indexes']] = True
+            if self._scan_time_array is not None and elapsed_time is not None:
+                self._scan_time_array[status.attribute['indexes']] = elapsed_time
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1082,15 +1085,17 @@ class DAQScan(CustomExt):
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
-            # Pre-allocate the per-point completion tracker (CARRAY: SWMR-compatible indexed writes)
-            self._scan_done_array = self._h5saver.add_array(
-                scan_node, 'ScanDone', data_saving.DataType.data,
-                array_to_save=np.zeros(scan_shape, dtype=bool),
+            # Pre-allocate the per-point acquisition time tracker (CARRAY: SWMR-compatible indexed writes)
+            # Values are elapsed seconds since scan start; nan means the point has not been acquired yet.
+            self._scan_time_array = self._h5saver.add_array(
+                scan_node, 'ScanTime', data_saving.DataType.data,
+                array_to_save=np.full(scan_shape, np.nan, dtype=np.float32),
                 data_dimension=data_mod.DataDim['DataND'])
             # Tag all dimensions as navigation so h5browser renders with proper axes
-            self._h5saver.set_attr(self._scan_done_array, 'nav_indexes',
+            self._h5saver.set_attr(self._scan_time_array, 'nav_indexes',
                                    tuple(range(len(scan_shape))))
-            self._h5saver.set_attr(self._scan_done_array, 'distribution', 'uniform')
+            self._h5saver.set_attr(self._scan_time_array, 'distribution', 'uniform')
+            self._h5saver.set_attr(self._scan_time_array, 'units', 's')
             # Store scan axes alongside ScanDone so h5browser can label the dimensions
             axis_saver = data_saving.AxisSaverLoader(self._h5saver)
             for axis in nav_axes:
@@ -1286,6 +1291,7 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.connect_detectors()
 
             self.stop_scan_flag = False
+            self._scan_start_time = time.perf_counter()
 
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
@@ -1359,9 +1365,11 @@ class DAQScanAcquisition(QObject):
                                                   index=0))
                 self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
+            elapsed_time = float(np.float32(time.perf_counter() - self._scan_start_time))
             self.status_sig.emit(
                 utils.ThreadCommand("add_data",
-                                    dict(indexes=indexes, distribution=self.scanner.distribution)))
+                                    dict(indexes=indexes, distribution=self.scanner.distribution,
+                                         elapsed_time=elapsed_time)))
 
             self.det_done_flag = True
 
