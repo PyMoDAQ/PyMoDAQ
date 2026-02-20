@@ -1,5 +1,6 @@
 from pyqtgraph.parametertree.parameterTypes.basetypes import (
     SimpleParameter, GroupParameter, GroupParameterItem)  # to be imported from elsewhere
+from .action_led import ActionLedParameter
 from .bool import BoolPushParameter
 from .pixmap import PixmapParameter, PixmapCheckParameter
 from .slide import SliderSpinBox, SliderParameter
@@ -40,4 +41,5 @@ registerParameterType('browsepath', FileDirParameter, override=True)
 registerParameterType('text_pb', PlainTextPbParameter, override=True)
 registerParameterType("text_pattern", PatternParameter)
 
+registerParameterType('action_led', ActionLedParameter, override=True)
 registerParameterType('group', GroupParameter, override=True)
