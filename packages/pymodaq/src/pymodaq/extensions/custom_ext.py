@@ -120,10 +120,13 @@ class CustomExt(CustomApp):
                         icon_checked='visibility_off',
                         icon_checked_color=self.get_theme().red,
                         toolbar='dashboard')
+        self.get_toolbar('dashboard').addSeparator()
         if add_preset:
             self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+            self.get_toolbar('dashboard').addSeparator()
         if add_configurator:
             self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+            self.get_toolbar('dashboard').addSeparator()
 
         self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
 
