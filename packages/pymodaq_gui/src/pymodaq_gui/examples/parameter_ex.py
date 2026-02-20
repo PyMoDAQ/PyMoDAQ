@@ -13,12 +13,12 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 class ScalableGroup(GroupParameter):
     def __init__(self, **opts):
-        super().__init__(**opts)    
+        super().__init__(**opts)
 
-    def addNew(self, full_path:tuple):        
+    def addNew(self, full_path:tuple):
         # Full_path contains all the sub menus
         value = full_path[-1] # Only showing last values as a string
-        self.addChild(dict(name="ScalableParam %d" % (len(self.childs)+1), type='str', value=value, removable=True, renamable=True))
+        self.addChild(dict(name=f"ScalableParam {(len(self.childs)+1)}", type='str', value=value, removable=True, renamable=True))
 
 # Need to register a new type to properly trigger addNew
 registerParameterType('groupedit', ScalableGroup, override=True)
@@ -49,7 +49,7 @@ class ParameterEx(ParameterManager):
             {'title': 'A visible group:', 'name': 'agroup', 'type': 'group', 'children': []},
             {'title': 'An hidden group:', 'name': 'bgroup', 'type': 'group', 'children': [], 'visible': False},  # this visible option is not available in usual pyqtgraph group     
             {'title': 'An expandable group:', 'name': 'cgroup', 'type': 'groupedit', 'addText': 'Add', 'addMenu': 
-              create_nested_menu(3,3,'Menu','Sub',use_index_tracking=True)},             
+              create_nested_menu(3,3,'Menu','Sub',use_index_tracking=True)},
             {'title': 'A bool with children:', 'name': 'booleans_group', 'type': 'bool', 'value':False, 'tip': 'Any Parameter can have its own children', 'children': [
             {'title': 'A bool in a bool', 'name': 'a_bool_in_a_bool', 'type': 'bool', 'value': True},
             {'title': 'A push with children', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action','children':[
@@ -71,7 +71,7 @@ class ParameterEx(ParameterManager):
              'max': 123, 'subtype': 'linear', 'int': True},
             {'title': 'Linear Slide with suffix', 'name': 'linearslidewithsuffixandsiPrefix', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 0,
-             'max': 1e6, 'subtype': 'linear','suffix':'V','siPrefix':True},             
+             'max': 1e6, 'subtype': 'linear','suffix':'V','siPrefix':True},
             {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 1e-5,
              'max': 1e5, 'subtype': 'log','suffix':'V','siPrefix':True},
@@ -111,9 +111,9 @@ class ParameterEx(ParameterManager):
              },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
-            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': 'D:\Data', 'filetype': True,
+            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': r'D:\Data', 'filetype': True,
              'tip': 'If filetype is True select a file otherwise a directory'},
-            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': 'D:\Databis', 'filetype': False,
+            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': r'D:\Databis', 'filetype': False,
              'tip': 'If filetype is True select a file otherwise a directory'},
 
         ]},
@@ -139,7 +139,7 @@ class ParameterEx(ParameterManager):
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
-            create_text_with_pattern_parameter(),        
+            create_text_with_pattern_parameter(),
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},
         ]},
