@@ -321,33 +321,75 @@ class ModulesManager(QObject, ParameterManager):
                 det_title = det.title
                 det_data = [dwa for dwa in datas.data
                             if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
-                raw_dwa = [dwa for dwa in det_data if dwa.source == DataSource.raw]
-                calc_dwa = [dwa for dwa in det_data if dwa.source == DataSource.calculated]
-                origin = det_title
+                direct_raw = [dwa for dwa in det_data
+                              if dwa.origin == det_title and dwa.source == DataSource.raw]
+                direct_calc = [dwa for dwa in det_data
+                               if dwa.origin == det_title and dwa.source == DataSource.calculated]
 
-                det_children = []
-                for raw in raw_dwa:
-                    raw_key = raw.name.replace(' ', '_')
+                # Build ROI groups keyed by parent raw channel name.
+                # ROI output labels use the format '{roi_name}/{raw_channel}', so we can
+                # recover the parent raw channel to nest the ROI group correctly.
+                raw_names = {raw.name for raw in direct_raw}
+                roi_origins = sorted({dwa.origin for dwa in det_data if dwa.origin != det_title})
+                roi_groups_by_raw: dict[str, list] = {name: [] for name in raw_names}
+                orphan_roi_groups = []
+
+                for roi_origin in roi_origins:
+                    roi_dwas = [dwa for dwa in det_data if dwa.origin == roi_origin]
+                    roi_display = roi_origin.replace(f'{det_title} - ', '')
                     roi_children = [
                         {'title': dwa.name,
                          'name': dwa.name.replace(' ', '_'),
                          'type': 'bool', 'value': True, 'dim': dwa.dim.name,
                          'full_name': f'{dwa.origin}/{dwa.name}'}
-                        for dwa in calc_dwa
+                        for dwa in roi_dwas
+                    ]
+                    if not roi_children:
+                        continue
+                    roi_group = {
+                        'title': roi_display,
+                        'name': roi_display.replace(' ', '_'),
+                        'type': 'group',
+                        'children': roi_children,
+                    }
+                    # Determine parent raw channel from the first matching label
+                    parent_raw = next(
+                        (label.split('/', 1)[1]
+                         for dwa in roi_dwas
+                         for label in dwa.labels
+                         if '/' in label and label.split('/', 1)[1] in raw_names),
+                        None
+                    )
+                    if parent_raw:
+                        roi_groups_by_raw[parent_raw].append(roi_group)
+                    else:
+                        orphan_roi_groups.append(roi_group)
+
+                det_children = []
+                for raw in direct_raw:
+                    calc_children = [
+                        {'title': dwa.name,
+                         'name': dwa.name.replace(' ', '_'),
+                         'type': 'bool', 'value': True, 'dim': dwa.dim.name,
+                         'full_name': f'{dwa.origin}/{dwa.name}'}
+                        for dwa in direct_calc
                         if getattr(dwa, 'parent_channel', None) == raw.name
                     ]
+                    all_children = (calc_children
+                                    + roi_groups_by_raw.get(raw.name, [])
+                                    + orphan_roi_groups)
                     det_children.append({
                         'title': raw.name,
-                        'name': raw_key,
+                        'name': raw.name.replace(' ', '_'),
                         'type': 'bool', 'value': True, 'dim': raw.dim.name,
                         'full_name': f'{raw.origin}/{raw.name}',
-                        **({'children': roi_children} if roi_children else {}),
+                        **({'children': all_children} if all_children else {}),
                     })
 
                 if det_children:
                     data_channels.addChild({
-                        'title': origin,
-                        'name': origin.replace(' ', '_'),
+                        'title': det_title,
+                        'name': det_title.replace(' ', '_'),
                         'type': 'group',
                         'children': det_children,
                     })
@@ -368,13 +410,21 @@ class ModulesManager(QObject, ParameterManager):
         list of str
         """
         names = []
-        for det_param in self.settings.child('probe_data', 'data_channels').children():
+        for det_param in self.settings.child('probe_data').children():
             for ch_param in det_param.children():
+                # ch_param is a raw channel node
                 if dim is None or ch_param.opts.get('dim') == dim:
                     names.append(ch_param.opts['full_name'])
                 for sub_param in ch_param.children():
-                    if dim is None or sub_param.opts.get('dim') == dim:
-                        names.append(sub_param.opts['full_name'])
+                    if 'full_name' in sub_param.opts:
+                        # calculated child of the raw channel
+                        if dim is None or sub_param.opts.get('dim') == dim:
+                            names.append(sub_param.opts['full_name'])
+                    else:
+                        # ROI group node — iterate its children
+                        for roi_child in sub_param.children():
+                            if dim is None or roi_child.opts.get('dim') == dim:
+                                names.append(roi_child.opts['full_name'])
         return names
 
     def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
@@ -529,9 +579,6 @@ class ModulesManager(QObject, ParameterManager):
 
         self.connect_actuators()
         self.move_actuators(dte_act)
-
-        self.settings.child('test_actuator', 'positions_list').setValue(
-            dict(all_items=[f'{dact.name}: {dact.value()}' for dact in dte_act], selected=[]))
         self.connect_actuators(False)
 
         test_actuator = self.settings.child('test_actuator')
