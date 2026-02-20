@@ -139,8 +139,8 @@ class DAQScan(CustomExt):
 
         self.runner_thread: QThread = None
 
-        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
-        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
+        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
