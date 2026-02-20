@@ -12,7 +12,7 @@ from copy import deepcopy
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
-from typing import List, Tuple, Union, Any, Callable
+from typing import List, Tuple, Union, Any, Callable, Type
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 from collections import OrderedDict
@@ -46,6 +46,21 @@ plotter_factory = PlotterFactory()
 ser_factory = SerializableFactory()
 logger = set_logger(get_module_name(__file__))
 
+def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
+    """
+    Take a quantity q and converts it to its reduced units.
+    For dimensionless units it compact them
+
+    Parameters
+    ----------
+    q: The quantity to be reduced
+
+    Returns
+    -------
+    The reduced quantity
+    """
+
+    return q.to_compact() if q.dimensionless else q.to_reduced_units()
 
 def check_units(units: str):
     try:
@@ -365,7 +380,7 @@ class Axis(SerializableBase):
                             data=self.get_quantity().to(units))
 
     def to_reduced_units(self, inplace=False):
-        quantity = self.get_quantity().to_reduced_units()
+        quantity = dimensionless_aware_reduce_units(self.get_quantity())
         if inplace:
             self.data = quantity.magnitude
             self.force_units(str(quantity.units))
@@ -973,7 +988,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
             units = dwa.units
             ufunc_results = [ufunc(*zipped, **kwargs) for zipped in list(zip(*elts))]
             if isinstance(ufunc_results[0], Q_):
-                ufunc_results = [ufunc_result.to_reduced_units() for ufunc_result in ufunc_results]
+                ufunc_results = [dimensionless_aware_reduce_units(ufunc_result) for ufunc_result in ufunc_results]
                 units = str(ufunc_results[0].units)
                 ufunc_results = [ufunc_result.magnitude for ufunc_result in ufunc_results]
             dwa.data = ufunc_results

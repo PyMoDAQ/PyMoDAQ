@@ -359,8 +359,8 @@ class ManagerBase(CustomExt):
                 None,
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
+        self.do_things_for_new_creation()
         if ok and entry != '':
-            self.do_things_for_new_creation()
             if self.save_check(entry, bypass_dialog=bypass_dialog):
                 self.entries_sync.append_to_list('items', entry)
                 self.entries_sync.update_key('current', entry)
@@ -513,7 +513,7 @@ class ManagerBase(CustomExt):
 
     def update_execute_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.EXECUTE).setToolTip(
-            f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+Shift+E")')
+            f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
         return lambda: self.execute_entry_base(filename)

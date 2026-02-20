@@ -64,6 +64,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self._unit = ''
         self._ini_state = False
         self.move_toolbar = self.add_toolbar('move', 'Move')
+        self.set_toolbar(self.move_toolbar)  # Set as default so ui.toolbar returns this toolbar
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -322,10 +323,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
 
     def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
-        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=toolbar)
-
+        self._setup_name_widget(toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
         self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=toolbar,
                         tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
@@ -345,7 +343,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                         'discover_tune', "Show more controls", checkable=True,
                         toolbar=toolbar)
         self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
-                        checkable=True, icon_checked='bid_landscape_disabled',
+                        checkable=True, checked=True, icon_checked='bid_landscape_disabled',
                         icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
                         toolbar=toolbar)
         self.add_action('refresh_value', 'Refresh', 'repeat',
@@ -388,7 +386,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         if 'show_settings' in self.actions_names:
             self.connect_action('show_settings', self.show_tree)
         if 'show_graph' in self.actions_names:
-            self.connect_action('show_graph', self.show_graph)
+            self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
         if 'move_abs' in self.actions_names:
             self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
         if 'move_abs_2' in self.actions_names:
@@ -434,4 +432,4 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setVisible(show)
-        self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', False)
+        self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', True)
