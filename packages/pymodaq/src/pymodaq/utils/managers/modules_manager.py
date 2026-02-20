@@ -60,12 +60,7 @@ class ModulesManager(QObject, ParameterManager):
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
         {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
 
-        {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action_led', 'value': False, 'children': [
-            {'title': 'Data channels', 'name': 'data_channels', 'type': 'group', 'children': []},
-        ]},
-        {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action_led', 'value': False, 'children': [
-            {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
-        ]},
+        {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action_led', 'value': False, 'children': []},
     ]
 
     def __init__(self,
@@ -537,6 +532,14 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('test_actuator', 'positions_list').setValue(
             dict(all_items=[f'{dact.name}: {dact.value()}' for dact in dte_act], selected=[]))
         self.connect_actuators(False)
+
+        test_actuator = self.settings.child('test_actuator')
+        test_actuator.clearChildren()
+        for dact in self.move_done_positions:
+            test_actuator.addChild(
+                {'title': dact.name, 'name': dact.name.replace(' ', '_'),
+                 'type': 'float', 'value': dact.value(), 'readonly': True}
+            )
 
 
     def connect_and_move_actuators(self, dte_act: DataToExport, mode='abs', polling=True,
