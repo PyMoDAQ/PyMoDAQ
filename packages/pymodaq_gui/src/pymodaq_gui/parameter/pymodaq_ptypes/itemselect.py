@@ -1,9 +1,28 @@
 from copy import deepcopy
+from typing import Callable, Optional
 
 from qtpy import QtWidgets, QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.utils.widgets import ContextMenuListWidget
+
+
+def _flatten_context_spec(spec: dict, path: tuple = ()) -> list:
+    """Convert a nested dict menu spec to a flat list of (label, callback, path) tuples.
+
+    This is the canonical internal storage format used by
+    ``ContextMenuListWidget._context_actions``.
+    """
+    result = []
+    for label, value in spec.items():
+        if label is None:
+            result.append((None, None, path))
+        elif isinstance(value, dict):
+            result.extend(_flatten_context_spec(value, path=path + (label,)))
+        else:
+            result.append((label, value, path))
+    return result
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
@@ -42,12 +61,16 @@ class ItemSelect_pb(QtWidgets.QWidget):
         self.setLayout(self.hor_layout)
 
 
-class ItemSelect(QtWidgets.QListWidget):
+class ItemSelect(ContextMenuListWidget):
     def __init__(self, hasCheckbox=True):
-        QtWidgets.QListWidget.__init__(self)
+        ContextMenuListWidget.__init__(self)
         self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
         self.selItems = []  # Dummy variable to keep track of click order
         self.itemDoubleClicked.connect(self.doubleClickSelection)
+
+    def _get_selected_names(self) -> list[str]:
+        """Return checked items in checkbox mode, highlighted items otherwise."""
+        return self.get_value()['selected']
         
     def doubleClickSelection(self, item: QtWidgets.QListWidgetItem):
         """
@@ -132,7 +155,7 @@ class ItemSelect(QtWidgets.QListWidget):
             if value not in allitems_text:  # Test if object already exists
                 item = QtWidgets.QListWidgetItem(value) # Create object
                 if self.hasCheckbox:  # Add checkbox if required
-                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)      
+                    item.setFlags(item.flags() | QtCore.Qt.ItemFlag.ItemIsUserCheckable)      
                     self.select_item(item, doSelect=False)
                     # Make sure item is not selected (checkbox not appearing somehow without)
                 self.addItem(item)  # Add object to widget
@@ -171,9 +194,9 @@ class ItemSelectParameterItem(WidgetParameterItem):
 
             
         if 'dragdrop' in opts and opts['dragdrop']:        
-            w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+            w.itemselect.setDragDropMode(QtWidgets.QAbstractItemView.DragDropMode.InternalMove)
 
-        w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
 
         # w.itemselect.setMinimumHeight(opts.get('min_height', 0))
         # w.itemselect.setMaximumHeight(opts.get('height', 70))
@@ -187,7 +210,14 @@ class ItemSelectParameterItem(WidgetParameterItem):
         w.value = w.itemselect.get_value
         w.setValue = w.itemselect.set_value
         w.add_pb.clicked.connect(self.pb_buttonClicked)
-        w.remove_pb.clicked.connect(self.mb_buttonClicked)        
+        w.remove_pb.clicked.connect(self.mb_buttonClicked)
+
+        context_actions = opts.get('context_actions', [])
+        if isinstance(context_actions, dict):
+            context_actions = _flatten_context_spec(context_actions)
+        for label, callback, path in context_actions:
+            w.itemselect.addContextMenuAction(label, callback, path=path)
+
         return w
 
     def pb_buttonClicked(self):
@@ -196,7 +226,7 @@ class ItemSelectParameterItem(WidgetParameterItem):
         """
 
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
-                                                  "String value:", QtWidgets.QLineEdit.Normal)
+                                                  "String value:", QtWidgets.QLineEdit.EchoMode.Normal)
         if text in self.param.value()['all_items']:
             print('Entry already exists, please use a different name.')
             return
@@ -234,15 +264,21 @@ class ItemSelectParameterItem(WidgetParameterItem):
             --------
             optsChanged
         """
-        # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
-        
+
         self.widget.add_pb.setVisible(opts.get('show_pb', False))
         self.widget.remove_pb.setVisible(opts.get('show_mb', False))
         if 'height' in opts:
             self.widget.itemselect.setMaximumHeight(opts['height'])
         elif 'enabled' in opts:
             self.widget.setEnabled(opts['enabled'])
+        if 'context_actions' in opts:
+            actions = opts['context_actions']
+            if isinstance(actions, dict):
+                actions = _flatten_context_spec(actions)
+            self.widget.itemselect.clearContextMenuActions()
+            for label, callback, path in actions:
+                self.widget.itemselect.addContextMenuAction(label, callback, path=path)
 
     def valueChanged(self, param, val, force=False):
         super().valueChanged(param, val, force)
@@ -267,6 +303,50 @@ class ItemSelectParameter(Parameter):
         """
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
+
+    def setOpts(self, **opts):
+        """Normalise ``context_actions`` from dict to flat list before storing."""
+        if 'context_actions' in opts and isinstance(opts['context_actions'], dict):
+            opts['context_actions'] = _flatten_context_spec(opts['context_actions'])
+        super().setOpts(**opts)
+
+    def addContextMenuActions(self, spec: dict):
+        """Register multiple context menu actions from a nested dict.
+
+        Convenience wrapper that expands *spec* and calls
+        :meth:`addContextMenuAction` for each entry.  Safe to call before or
+        after the parameter tree is shown.
+        """
+        for label, callback, path in _flatten_context_spec(spec):
+            self.addContextMenuAction(label, callback, path=path)
+
+    def addContextMenuAction(
+        self,
+        label: Optional[str],
+        callback: Optional[Callable] = None,
+        *,
+        path: tuple[str, ...] = (),
+    ):
+        """Register a single context menu action on the underlying list widget.
+
+        Safe to call before or after the parameter tree is shown. Actions
+        registered before the widget is built are stored and replayed in
+        ``makeWidget``; actions registered afterwards are applied immediately
+        to all live item instances.
+
+        Parameters
+        ----------
+        label : str or None
+            Action label. ``None`` inserts a separator.
+        callback : callable, optional
+            ``callback(clicked: str | None, selected: list[str]) -> None``
+        path : tuple of str, optional
+            Submenu hierarchy (see :class:`~pymodaq_gui.utils.widgets.ContextMenuListWidget`).
+        """
+        self.opts.setdefault('context_actions', []).append((label, callback, path))
+        for item in self.items:
+            if hasattr(item, 'widget') and hasattr(item.widget, 'itemselect'):
+                item.widget.itemselect.addContextMenuAction(label, callback, path=path)
 
 
 
