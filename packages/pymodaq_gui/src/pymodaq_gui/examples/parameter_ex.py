@@ -208,7 +208,8 @@ def main():
     # context menu via setOpts (replaces the init-time actions registered in params):
     def _log_ctx(action, clicked, selected):
         print(f'[context] {action!r}  clicked={clicked!r}  selected={selected}')
-    context_actions= {
+
+    ptree.settings.child('itemss', 'items').setOpts(context_actions={
         'Probe data':   lambda cl, sel: _log_ctx('Probe data',   cl, sel),
         None: None,
         'Viewers': {
@@ -219,9 +220,7 @@ def main():
             'Export CSV':  lambda cl, sel: _log_ctx('Export CSV',  cl, sel),
             'Export JSON': lambda cl, sel: _log_ctx('Export JSON', cl, sel),
         },
-    }
-    ptree.settings.child('itemss', 'items').setOpts(context_actions=context_actions)
-    ptree.settings.child('itemss', 'itemsdragablecheckable').setOpts(context_actions=context_actions)
+    })
 
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
