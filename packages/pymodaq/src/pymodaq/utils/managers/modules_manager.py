@@ -315,47 +315,48 @@ class ModulesManager(QObject, ParameterManager):
             return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
 
         self.connect_detectors()
-        datas: DataToExport = self.grab_data(Naverage=1)
+        try:
+            datas: DataToExport = self.grab_data(Naverage=1)
 
-        data_channels = self.settings.child('probe_data', 'data_channels')
-        data_channels.clearChildren()
+            data_channels = self.settings.child('probe_data', 'data_channels')
+            data_channels.clearChildren()
 
-        for det in self.detectors:
-            det_title = det.title
-            det_data = [dwa for dwa in datas.data
-                        if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
-            raw_dwa = [dwa for dwa in det_data if dwa.source == DataSource.raw]
-            calc_dwa = [dwa for dwa in det_data if dwa.source == DataSource.calculated]
-            origin = det_title
+            for det in self.detectors:
+                det_title = det.title
+                det_data = [dwa for dwa in datas.data
+                            if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
+                raw_dwa = [dwa for dwa in det_data if dwa.source == DataSource.raw]
+                calc_dwa = [dwa for dwa in det_data if dwa.source == DataSource.calculated]
+                origin = det_title
 
-            det_children = []
-            for raw in raw_dwa:
-                raw_key = raw.name.replace(' ', '_')
-                roi_children = [
-                    {'title': dwa.name,
-                     'name': dwa.name.replace(' ', '_'),
-                     'type': 'bool', 'value': True, 'dim': dwa.dim.name,
-                     'full_name': f'{dwa.origin}/{dwa.name}'}
-                    for dwa in calc_dwa
-                    if getattr(dwa, 'parent_channel', None) == raw.name
-                ]
-                det_children.append({
-                    'title': raw.name,
-                    'name': raw_key,
-                    'type': 'bool', 'value': True, 'dim': raw.dim.name,
-                    'full_name': f'{raw.origin}/{raw.name}',
-                    **({'children': roi_children} if roi_children else {}),
-                })
+                det_children = []
+                for raw in raw_dwa:
+                    raw_key = raw.name.replace(' ', '_')
+                    roi_children = [
+                        {'title': dwa.name,
+                         'name': dwa.name.replace(' ', '_'),
+                         'type': 'bool', 'value': True, 'dim': dwa.dim.name,
+                         'full_name': f'{dwa.origin}/{dwa.name}'}
+                        for dwa in calc_dwa
+                        if getattr(dwa, 'parent_channel', None) == raw.name
+                    ]
+                    det_children.append({
+                        'title': raw.name,
+                        'name': raw_key,
+                        'type': 'bool', 'value': True, 'dim': raw.dim.name,
+                        'full_name': f'{raw.origin}/{raw.name}',
+                        **({'children': roi_children} if roi_children else {}),
+                    })
 
-            if det_children:
-                data_channels.addChild({
-                    'title': origin,
-                    'name': origin.replace(' ', '_'),
-                    'type': 'group',
-                    'children': det_children,
-                })
-
-        self.connect_detectors(False)
+                if det_children:
+                    data_channels.addChild({
+                        'title': origin,
+                        'name': origin.replace(' ', '_'),
+                        'type': 'group',
+                        'children': det_children,
+                    })
+        finally:
+            self.connect_detectors(False)
         return datas
 
     def get_probed_data_channels(self, dim: str = None) -> List[str]:
