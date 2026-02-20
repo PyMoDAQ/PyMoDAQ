@@ -60,6 +60,7 @@ class ModulesManager(QObject, ParameterManager):
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
         {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect', 'checkbox': True},
 
+        {'title': "Probe detectors", 'name': 'probe_data', 'type': 'action_led', 'value': False, 'children': []},
         {'title': "Probe actuators", 'name': 'test_actuator', 'type': 'action_led', 'value': False, 'children': []},
     ]
 
@@ -313,7 +314,7 @@ class ModulesManager(QObject, ParameterManager):
         try:
             datas: DataToExport = self.grab_data(Naverage=1)
 
-            data_channels = self.settings.child('probe_data', 'data_channels')
+            data_channels = self.settings.child('probe_data')
             data_channels.clearChildren()
 
             for det in self.detectors:
