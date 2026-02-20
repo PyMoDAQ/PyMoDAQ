@@ -111,9 +111,9 @@ class ParameterEx(ParameterManager):
              },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
-            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': r'D:\Data', 'filetype': True,
+            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': 'D:\Data', 'filetype': True,
              'tip': 'If filetype is True select a file otherwise a directory'},
-            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': r'D:\Databis', 'filetype': False,
+            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': 'D:\Databis', 'filetype': False,
              'tip': 'If filetype is True select a file otherwise a directory'},
 
         ]},
@@ -121,15 +121,7 @@ class ParameterEx(ParameterManager):
             {'title': 'Selectable items', 'name': 'items', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3', 'item4', 'item5'],
                            selected=['item2']),
-             'tip': 'Press Ctrl+click to select items in any order — right-click for context menu',
-             'context_actions': {
-                 'Probe data': lambda cl, sel: print(f'[Probe] clicked={cl!r} selected={sel}'),
-                 None: None,
-                 'Viewers': {
-                     'Show viewer': lambda cl, sel: print(f'[Show] {cl!r}'),
-                     'Hide viewer': lambda cl, sel: print(f'[Hide] {cl!r}'),
-                 },
-             }},
+             'tip': 'Press Ctrl+click  to select items in any order'},
             {'title': 'Selectable items', 'name': 'itemsbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
              'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True,},
@@ -204,23 +196,6 @@ def main():
         param.setValue(True)
         QtCore.QTimer.singleShot(1000, lambda: param.setValue(False))
     ptree.settings.child('booleans', 'anactionled').sigActivated.connect(_on_action_led)
-
-    # context menu via setOpts (replaces the init-time actions registered in params):
-    def _log_ctx(action, clicked, selected):
-        print(f'[context] {action!r}  clicked={clicked!r}  selected={selected}')
-
-    ptree.settings.child('itemss', 'items').setOpts(context_actions={
-        'Probe data':   lambda cl, sel: _log_ctx('Probe data',   cl, sel),
-        None: None,
-        'Viewers': {
-            'Show viewer': lambda cl, sel: _log_ctx('Show viewer', cl, sel),
-            'Hide viewer': lambda cl, sel: _log_ctx('Hide viewer', cl, sel),
-        },
-        'Export': {
-            'Export CSV':  lambda cl, sel: _log_ctx('Export CSV',  cl, sel),
-            'Export JSON': lambda cl, sel: _log_ctx('Export JSON', cl, sel),
-        },
-    })
 
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
