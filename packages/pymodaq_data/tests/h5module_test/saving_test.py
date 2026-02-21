@@ -76,9 +76,53 @@ class TestH5SaverLowLevel:
         #todo
         pass
 
-    def test_add_array(self, get_h5saver_lowlevel):
-        #"todo
-        pass
+    def test_add_array_default_fill_is_zero(self, get_h5saver_lowlevel):
+        h5saver = get_h5saver_lowlevel
+        assert h5saver.fill_value == 0
+        array = h5saver.add_array(h5saver.raw_group, 'TestArray', saving.DataType['data'],
+                                  data_shape=(4,), array_type=np.float64,
+                                  data_dimension='Data1D',
+                                  scan_shape=(3,), add_scan_dim=True)
+        assert np.all(array.read() == 0.0)
+
+    def test_add_array_explicit_fill_value(self, get_h5saver_lowlevel):
+        h5saver = get_h5saver_lowlevel
+        array = h5saver.add_array(h5saver.raw_group, 'TestFill', saving.DataType['data'],
+                                  data_shape=(4,), array_type=np.float64,
+                                  data_dimension='Data1D',
+                                  scan_shape=(3,), add_scan_dim=True,
+                                  fill_value=7.5)
+        assert np.all(array.read() == pytest.approx(7.5))
+
+    def test_add_array_nan_fill_value(self, get_h5saver_lowlevel):
+        h5saver = get_h5saver_lowlevel
+        array = h5saver.add_array(h5saver.raw_group, 'TestNan', saving.DataType['data'],
+                                  data_shape=(4,), array_type=np.float64,
+                                  data_dimension='Data1D',
+                                  scan_shape=(3,), add_scan_dim=True,
+                                  fill_value=np.nan)
+        assert np.all(np.isnan(array.read()))
+
+    def test_add_array_instance_fill_value_as_default(self, get_h5saver_lowlevel):
+        """Setting h5saver.fill_value acts as the default for all subsequent add_array calls."""
+        h5saver = get_h5saver_lowlevel
+        h5saver.fill_value = np.nan
+        array = h5saver.add_array(h5saver.raw_group, 'TestInstanceFill', saving.DataType['data'],
+                                  data_shape=(4,), array_type=np.float64,
+                                  data_dimension='Data1D',
+                                  scan_shape=(3,), add_scan_dim=True)
+        assert np.all(np.isnan(array.read()))
+
+    def test_add_array_explicit_fill_overrides_instance(self, get_h5saver_lowlevel):
+        """An explicit fill_value argument takes precedence over h5saver.fill_value."""
+        h5saver = get_h5saver_lowlevel
+        h5saver.fill_value = np.nan
+        array = h5saver.add_array(h5saver.raw_group, 'TestOverride', saving.DataType['data'],
+                                  data_shape=(4,), array_type=np.float64,
+                                  data_dimension='Data1D',
+                                  scan_shape=(3,), add_scan_dim=True,
+                                  fill_value=0.0)
+        assert np.all(array.read() == 0.0)
 
     def test_incremental_group(self, get_h5saver_lowlevel):
         # "todo
