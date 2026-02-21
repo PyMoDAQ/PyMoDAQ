@@ -148,7 +148,7 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config('data', 'data_saving', 'backend')[0])
+        self._h5saver = H5Saver()
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -573,7 +573,7 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('data', 'data_saving', 'backend')[0])
+            self._h5saver = H5Saver()
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)

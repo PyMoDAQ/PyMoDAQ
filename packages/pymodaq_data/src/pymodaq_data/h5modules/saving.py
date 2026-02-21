@@ -70,7 +70,9 @@ class H5SaverLowLevel(H5Backend):
         The file path
     """
 
-    def __init__(self, save_type: SaveType = 'scan', backend='tables'):
+    def __init__(self, save_type: SaveType = 'scan', backend: str = None):
+        if backend is None:
+            backend = config('data', 'data_saving', 'backend')[0]
         H5Backend.__init__(self, backend)
 
         self.save_type = enum_checker(SaveType, save_type)

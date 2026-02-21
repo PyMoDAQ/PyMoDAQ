@@ -160,18 +160,21 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         ]},
     ]
 
-    def __init__(self, save_type='scan', backend='tables'):
+    def __init__(self, save_type='scan', backend: str = None):
         """
 
         Parameters
         ----------
         save_type (str): one of ['scan', 'detector', 'logger', 'custom']
-        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend
+        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend.
+            Defaults to the first entry of config 'data_saving.backend'.
 
         See Also
         --------
         https://github.com/HDFGroup/hsds
         """
+        if backend is None:
+            backend = config('data', 'data_saving', 'backend')[0]
         H5SaverLowLevel.__init__(self, save_type, backend)
         ParameterManager.__init__(self)
 
