@@ -445,6 +445,20 @@ class VLARRAY(EARRAY):
             sh[0] += 1
             self.attrs['shape'] = tuple(sh)
 
+    def append_backend(self, data):
+        """Append one variable-length element.
+
+        VLARRAY in h5py stores variable-length arrays as individual elements
+        (one per row). EARRAY.append_backend incorrectly uses data.shape[0] as
+        the number of new rows, which would split one VL element into many rows.
+        """
+        if self.backend == 'tables':
+            self.array.append(data)
+        else:
+            old_len = self.array.len()
+            self.array.resize(old_len + 1, axis=0)
+            self.array[old_len] = data
+
 
 class StringARRAY(VLARRAY):
     def __init__(self, array, backend):
