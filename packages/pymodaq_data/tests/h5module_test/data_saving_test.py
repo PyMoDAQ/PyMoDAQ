@@ -15,20 +15,6 @@ from pymodaq_data.h5modules.data_saving import (
     DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
                                DataDim, DataDistribution)
-from pymodaq_utils.config import GlobalConfig as Config
-
-_config = Config()
-
-
-@pytest.fixture()
-def get_h5saver(tmp_path):
-    backend = _config('data', 'general', 'hdf5_backend')[0]
-    h5saver = saving.H5SaverLowLevel(backend=backend)
-    addhoc_file_path = tmp_path.joinpath('h5file.h5')
-    h5saver.init_file(file_name=addhoc_file_path)
-
-    yield h5saver
-    h5saver.close_file()
 
 
 LABEL = 'A Label'
@@ -106,13 +92,13 @@ def init_data_to_export():
 
 class TestAxisSaverLoader:
 
-    def test_init(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_init(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         axis_saver = AxisSaverLoader(h5saver)
         assert axis_saver.data_type.name == 'axis'
 
-    def test_add_axis(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_axis(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         axis_saver = AxisSaverLoader(h5saver)
         SIZE = 10
         OFFSET = -5.
@@ -135,8 +121,8 @@ class TestAxisSaverLoader:
                 assert axis_node.attrs[attr] == attrs_values[ind]
         assert axis_node.read() == pytest.approx(axis.get_data())
 
-    def test_load_axis(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_load_axis(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         axis_saver = AxisSaverLoader(h5saver)
         SIZE = 10
         OFFSET = -5.
@@ -153,8 +139,8 @@ class TestAxisSaverLoader:
         assert isinstance(axis_back, Axis)
         assert axis_back == axis
 
-    def test_add_multiple_axis(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_multiple_axis(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         axis_saver = AxisSaverLoader(h5saver)
         SIZE = 10
         OFFSET = -5.
@@ -181,13 +167,13 @@ class TestAxisSaverLoader:
 
 
 class TestDataSaverLoader:
-    def test_init(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_init(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         assert data_saver.data_type.name == 'data'
 
-    def test_add_data(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_data(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
 
@@ -204,8 +190,8 @@ class TestDataSaverLoader:
         for axis_in, axis_out in zip(data.axes, data_saver.get_axes(h5saver.raw_group)):
             assert axis_in == axis_out
 
-    def test_add_data_with_errors(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_data_with_errors(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
 
@@ -232,8 +218,8 @@ class TestDataSaverLoader:
         assert np.all(errors[0] == data_saver._error_saver.get_node_from_index('/RawData', 0).read())
         assert np.all(errors[1] == data_saver._error_saver.get_node_from_index('/RawData', 1).read())
 
-    def test_load_data(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_load_data(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
         errors = [np.random.random_sample(DATA1D.shape) for _ in range(Ndata)]
@@ -272,8 +258,8 @@ class TestDataSaverLoader:
             assert len(loaded_data.errors) == 1
             assert np.allclose(loaded_data.errors[0], errors[INDEX])
 
-    def test_load_with_bkg(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_load_with_bkg(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         bkgSaver = BkgSaver(h5saver)
 
@@ -299,8 +285,8 @@ class TestDataSaverLoader:
         assert loaded_data == data-data
 
 
-    def test_extra_attributes_and_timestamping(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_extra_attributes_and_timestamping(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataSaverLoader(h5saver)
         Ndata = 2
 
@@ -333,8 +319,8 @@ class TestDataSaverLoader:
 
 
 class TestBkgSaver:
-    def test_load_data(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_load_data(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         bkgSaver = BkgSaver(h5saver)
 
         axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='ms',
@@ -350,16 +336,16 @@ class TestBkgSaver:
 
 
 class TestDataEnlargeableSaver:
-    def test_init(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_init(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataEnlargeableSaver(h5saver)
         assert data_saver.data_type.value == 'EnlData'
         assert data_saver.data_type.name == 'data_enlargeable'
 
     @pytest.mark.parametrize('Nenl', [1, 2, 3])
     @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
-    def test_add_data(self, get_h5saver, data_array, Nenl):
-        h5saver = get_h5saver
+    def test_add_data(self, h5saver_lowlevel, data_array, Nenl):
+        h5saver = h5saver_lowlevel
 
         Ndata = 2
 
@@ -391,8 +377,8 @@ class TestDataEnlargeableSaver:
         if Nenl > 0:
             assert len(dwa_back.get_nav_axes()[0]) == 2
 
-    def test_add_data_ndviewer_0D(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_data_ndviewer_0D(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         Npts = 11
         Ndata = 1
         data_array_0D = np.linspace(0, 100, Npts)
@@ -421,8 +407,8 @@ class TestDataEnlargeableSaver:
         assert dwa_back.size == 2 * len(axis_array)
 
 
-    def test_add_data_ndviewer_1D(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_data_ndviewer_1D(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         Npts_nav = 11
         Npts_sig = 21
         Ndata = 1
@@ -455,16 +441,16 @@ class TestDataEnlargeableSaver:
 
 
 class TestDataExtendedSaver:
-    def test_init(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_init(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         EXT_SHAPE = (5, 10)
         data_saver = DataExtendedSaver(h5saver, EXT_SHAPE)
         assert data_saver.data_type.value == 'Data'
         assert data_saver.data_type.name == 'data'
         assert data_saver.extended_shape == EXT_SHAPE
 
-    def test_add_data(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_add_data(self, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
 
         EXT_SHAPE = (5, 10)
         data_saver = DataExtendedSaver(h5saver, EXT_SHAPE)
@@ -499,9 +485,9 @@ class TestDataExtendedSaver:
         (-1.0, lambda a: np.all(a == -1.0)),
         (np.nan, lambda a: np.all(np.isnan(a))),
     ])
-    def test_fill_value(self, get_h5saver, fill_value, checker):
+    def test_fill_value(self, h5saver_lowlevel, fill_value, checker):
         """Unwritten scan positions contain fill_value; written position has real data."""
-        h5saver = get_h5saver
+        h5saver = h5saver_lowlevel
         EXT_SHAPE = (5,)
         data_saver = DataExtendedSaver(h5saver, EXT_SHAPE, fill_value=fill_value)
 
@@ -522,9 +508,9 @@ class TestDataExtendedSaver:
         other = np.delete(arr, WRITE_INDEX[0], axis=0)
         assert checker(other)
 
-    def test_fill_value_defaults_to_h5saver(self, get_h5saver):
+    def test_fill_value_defaults_to_h5saver(self, h5saver_lowlevel):
         """When no fill_value given, DataExtendedSaver inherits h5saver.fill_value."""
-        h5saver = get_h5saver
+        h5saver = h5saver_lowlevel
         h5saver.fill_value = np.nan
         data_saver = DataExtendedSaver(h5saver, (3,))
 
@@ -542,8 +528,8 @@ class TestDataExtendedSaver:
 
 
 class TestDataToExportSaver:
-    def test_save(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_save(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
 
         data_saver = DataToExportSaver(h5saver)
@@ -554,8 +540,8 @@ class TestDataToExportSaver:
 
 class TestDataToExportEnlargeableSaver:
 
-    def test_save(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_save(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
@@ -576,8 +562,8 @@ class TestDataToExportEnlargeableSaver:
 
     @pytest.mark.parametrize('data_array', [DATA0D, DATA1D, DATA2D])
     @pytest.mark.parametrize('Nenl', [1, 2, 3])
-    def test_spread_data(self, get_h5saver, Nenl, data_array):
-        h5saver = get_h5saver
+    def test_spread_data(self, h5saver_lowlevel, Nenl, data_array):
+        h5saver = h5saver_lowlevel
 
         dte_saver = DataToExportEnlargeableSaver(h5saver,
                                                  enl_axis_names=['ax' for _ in range(Nenl)],
@@ -600,8 +586,8 @@ class TestDataToExportEnlargeableSaver:
 
 
 class TestDataToExportTimedSaver:
-    def test_save(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_save(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
@@ -621,8 +607,8 @@ class TestDataToExportTimedSaver:
 
 
 class TestDataToExportExtendedSaver:
-    def test_save(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_save(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
@@ -638,9 +624,9 @@ class TestDataToExportExtendedSaver:
         data_saver.add_data(det_group, data_to_export, INDEXES)
 
 
-    def test_fill_value_nan_unwritten_positions(self, get_h5saver):
+    def test_fill_value_nan_unwritten_positions(self, h5saver_lowlevel):
         """NaN fill: positions not yet written contain NaN; written position has real data."""
-        h5saver = get_h5saver
+        h5saver = h5saver_lowlevel
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         # Use float64 data so NaN can be stored (integer arrays silently cast NaN to 0)
@@ -672,8 +658,8 @@ class TestDataToExportExtendedSaver:
 
 
 class TestDataLoader:
-    def test_load_normal_data(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_load_normal_data(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
@@ -687,8 +673,8 @@ class TestDataLoader:
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(DATA2D))
 
-    def test_load_one_node(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_load_one_node(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
@@ -702,8 +688,8 @@ class TestDataLoader:
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data01'), load_all=True)
         assert len(data_loaded) == 2
 
-    def test_load_normal_data_with_bkg(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_load_normal_data_with_bkg(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
@@ -717,8 +703,8 @@ class TestDataLoader:
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(0 * DATA2D))
 
-    def test_load_enlargeable_data(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_load_enlargeable_data(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
@@ -740,8 +726,8 @@ class TestDataLoader:
             assert np.all(data_loaded[ind][0] == pytest.approx(DATA2D))
             assert np.all(data_loaded[ind][1] == pytest.approx(DATA2D))
 
-    def test_load_all(self, get_h5saver, init_data_to_export):
-        h5saver = get_h5saver
+    def test_load_all(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
@@ -759,9 +745,9 @@ class TestDataLoader:
             for data_array in dwa:
                 assert np.allclose(data_array, np.zeros(data_array.shape))
 
-    def test_load_data_from_axis_node(self, get_h5saver):
+    def test_load_data_from_axis_node(self, h5saver_lowlevel):
         """This is what happens in the h5browser to display axes in the viewers"""
-        h5saver = get_h5saver
+        h5saver = h5saver_lowlevel
         data_loader = DataLoader(h5saver)
 
         axis_saver = AxisSaverLoader(h5saver)

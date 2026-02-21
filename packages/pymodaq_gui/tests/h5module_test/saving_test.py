@@ -10,22 +10,23 @@ from datetime import datetime
 
 from pymodaq_utils import utils
 from pymodaq_data.data import DataDim
+from pymodaq_data.h5modules import backends
 
 from pymodaq_gui.h5modules import saving
 
 
-tested_backend = ['tables', 'h5py']  # , 'h5pyd']
+tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
 
-@pytest.fixture()
-def get_h5saver(qtbot):
-    h5saver = saving.H5Saver()
+@pytest.fixture(params=tested_backend)
+def h5saver(request, qtbot):
+    h5saver = saving.H5Saver(backend=request.param)
     yield h5saver
     h5saver.close_file()
 
 
 @pytest.fixture(params=tested_backend)
-def get_h5saver_scan(request, qtbot):
+def h5saver_scan(request, qtbot):
     saver = saving.H5Saver(save_type='scan', backend=request.param)
     yield saver
     saver.close_file()
@@ -42,8 +43,8 @@ def generate_random_data(shape, dtype=float):
 
 class TestH5Saver:
 
-    def test_init_file_addhoc(self, get_h5saver, tmp_path):
-        h5saver = get_h5saver
+    def test_init_file_addhoc(self, h5saver, tmp_path):
+        h5saver = h5saver
         addhoc_file_path = tmp_path.joinpath('h5file.h5')
         h5saver.init_file(update_h5=True, addhoc_file_path=addhoc_file_path,
                           metadata=dict(attr1='attr1', attr2=(10, 2)))
@@ -64,8 +65,8 @@ class TestH5Saver:
         assert h5saver.get_attr(h5saver.raw_group, 'attr1') == 'attr1'
         utils.check_vals_in_iterable(h5saver.get_attr(h5saver.raw_group, 'attr2'), (10, 2))
 
-    def test_init_file(self, get_h5saver_scan, tmp_path):
-        h5saver = get_h5saver_scan
+    def test_init_file(self, h5saver_scan, tmp_path):
+        h5saver = h5saver_scan
         datetime_now = datetime.now()
         date = datetime_now.date()
         today = f'{date.year}{date.month:02d}{date.day:02d}'
@@ -96,8 +97,8 @@ class TestH5Saver:
         utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))),
                                      sorted(['Logger', 'Scan000', 'Scan001']))
 
-    def test_load_file(self, get_h5saver_scan, tmp_path):
-        h5saver = get_h5saver_scan
+    def test_load_file(self, h5saver_scan, tmp_path):
+        h5saver = h5saver_scan
         h5saver.settings.child(('base_path')).setValue(str(tmp_path))
         h5saver.init_file(update_h5=True)
         h5saver.close_file()
@@ -106,8 +107,8 @@ class TestH5Saver:
         h5saver.load_file(file_path=file_path)
         assert h5saver.file_loaded
 
-    def test_groups(self, get_h5saver_scan, tmp_path):
-        h5saver = get_h5saver_scan
+    def test_groups(self, h5saver_scan, tmp_path):
+        h5saver = h5saver_scan
         base_path = tmp_path
         h5saver.settings.child(('base_path')).setValue(base_path)
         update_h5 = True
@@ -128,8 +129,8 @@ class TestH5Saver:
         scan_group_1 = h5saver.add_scan_group()
         assert h5saver.get_scan_index() == 2
 
-    def test_hierarchy(self, get_h5saver_scan, tmp_path):
-        h5saver = get_h5saver_scan
+    def test_hierarchy(self, h5saver_scan, tmp_path):
+        h5saver = h5saver_scan
         base_path = tmp_path
         h5saver.settings.child('base_path').setValue(base_path)
         h5saver.init_file(update_h5=True)
