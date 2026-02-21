@@ -7,6 +7,7 @@ Created the 23/11/2022
 from __future__ import annotations
 
 from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
+import time
 import xml.etree.ElementTree as ET
 
 
@@ -466,8 +467,8 @@ class ScanSaver(ModuleSaver):
     def initialize_time_array(self, extended_shape: Tuple[int]):
         self._time_saver.initialize(extended_shape)
 
-    def add_time(self, indexes: Tuple[int], elapsed_time: float):
-        self._time_saver.add_time(indexes, elapsed_time)
+    def add_time(self, indexes: Tuple[int]):
+        self._time_saver.add_time(indexes)
 
 
 class TimeModule:
@@ -493,6 +494,7 @@ class TimeModuleSaver(ModuleSaver):
         self._h5saver = None
         self._extended_shape: Tuple[int] = None
         self._datatoexport_saver: DataToExportExtendedSaver = None
+        self._start_time: float = None
 
     def update_after_h5changed(self):
         if self._extended_shape is not None:
@@ -512,14 +514,16 @@ class TimeModuleSaver(ModuleSaver):
         return group
 
     def initialize(self, extended_shape: Tuple[int]):
-        """Set up the extended saver; arrays are allocated on first add_time call."""
+        """Set up the extended saver and start the internal clock."""
         self._extended_shape = extended_shape
+        self._start_time = time.perf_counter()
         self._datatoexport_saver = DataToExportExtendedSaver(
             self._h5saver, extended_shape, fill_value=np.nan)
 
-    def add_time(self, indexes: Tuple[int], elapsed_time: float):
-        """Write elapsed seconds since scan start at the given scan indexes."""
+    def add_time(self, indexes: Tuple[int]):
+        """Record elapsed seconds since initialize() was called at the given scan indexes."""
         if self._datatoexport_saver is not None:
+            elapsed_time = float(np.float32(time.perf_counter() - self._start_time))
             dte = DataToExport('Timestamps', data=[
                 DataRaw('ElapsedTime',
                         data=[np.array([elapsed_time], dtype=np.float32)],

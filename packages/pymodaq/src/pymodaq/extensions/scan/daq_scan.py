@@ -12,7 +12,6 @@ from pathlib import Path
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
-import time
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -904,10 +903,8 @@ class DAQScan(CustomExt):
             self.ui.set_permanent_status('Timeout occurred')
 
         elif status.command == 'add_data':
-            elapsed_time = status.attribute.pop('elapsed_time', None)
             self.module_and_data_saver.add_data(**status.attribute)
-            if elapsed_time is not None:
-                self.module_and_data_saver.add_time(status.attribute['indexes'], elapsed_time)
+            self.module_and_data_saver.add_time(status.attribute['indexes'])
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1276,7 +1273,6 @@ class DAQScanAcquisition(QObject):
             self.modules_manager.connect_detectors()
 
             self.stop_scan_flag = False
-            self._scan_start_time = time.perf_counter()
 
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
@@ -1350,11 +1346,9 @@ class DAQScanAcquisition(QObject):
                                                   index=0))
                 self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
-            elapsed_time = float(np.float32(time.perf_counter() - self._scan_start_time))
             self.status_sig.emit(
                 utils.ThreadCommand("add_data",
-                                    dict(indexes=indexes, distribution=self.scanner.distribution,
-                                         elapsed_time=elapsed_time)))
+                                    dict(indexes=indexes, distribution=self.scanner.distribution)))
 
             self.det_done_flag = True
 
