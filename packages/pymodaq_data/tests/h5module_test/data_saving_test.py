@@ -490,6 +490,53 @@ class TestDataExtendedSaver:
             assert np.all(data_node[tuple(INDEXES)] == pytest.approx(data[ind]))
 
 
+    @pytest.mark.parametrize('fill_value,checker', [
+        (0.0, lambda a: np.all(a == 0.0)),
+        (-1.0, lambda a: np.all(a == -1.0)),
+        (np.nan, lambda a: np.all(np.isnan(a))),
+    ])
+    def test_fill_value(self, get_h5saver, fill_value, checker):
+        """Unwritten scan positions contain fill_value; written position has real data."""
+        h5saver = get_h5saver
+        EXT_SHAPE = (5,)
+        data_saver = DataExtendedSaver(h5saver, EXT_SHAPE, fill_value=fill_value)
+
+        # Use float64 data so NaN can be stored (integer arrays silently cast NaN to 0)
+        data_float = DATA1D.astype(np.float64)
+        data = DataWithAxes(name='mydata', data=[data_float],
+                            source='raw', dim='Data1D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(data_float.shape[0]),
+                                       label='myaxis0', units='ms', index=0)])
+
+        WRITE_INDEX = [2]
+        data_saver.add_data(h5saver.raw_group, data, indexes=WRITE_INDEX)
+
+        arr = h5saver.get_node('/RawData/Data00').read()
+        assert arr.shape == (EXT_SHAPE[0], data_float.shape[0])
+        assert np.allclose(arr[WRITE_INDEX[0]], data_float)
+        # All other scan positions should contain fill_value
+        other = np.delete(arr, WRITE_INDEX[0], axis=0)
+        assert checker(other)
+
+    def test_fill_value_defaults_to_h5saver(self, get_h5saver):
+        """When no fill_value given, DataExtendedSaver inherits h5saver.fill_value."""
+        h5saver = get_h5saver
+        h5saver.fill_value = np.nan
+        data_saver = DataExtendedSaver(h5saver, (3,))
+
+        # Use float64 data so NaN can be stored
+        data_float = DATA1D.astype(np.float64)
+        data = DataWithAxes(name='mydata', data=[data_float],
+                            source='raw', dim='Data1D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(data_float.shape[0]),
+                                       label='ax0', units='ms', index=0)])
+        data_saver.add_data(h5saver.raw_group, data, indexes=[0])
+
+        arr = h5saver.get_node('/RawData/Data00').read()
+        assert np.all(np.isnan(arr[1]))
+        assert np.all(np.isnan(arr[2]))
+
+
 class TestDataToExportSaver:
     def test_save(self, get_h5saver, init_data_to_export):
         h5saver = get_h5saver
@@ -585,6 +632,39 @@ class TestDataToExportExtendedSaver:
         INDEXES = [4, 3]
         data_saver.add_nav_axes(det_group, nav_axes)
         data_saver.add_data(det_group, data_to_export, INDEXES)
+
+
+    def test_fill_value_nan_unwritten_positions(self, get_h5saver):
+        """NaN fill: positions not yet written contain NaN; written position has real data."""
+        h5saver = get_h5saver
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+
+        # Use float64 data so NaN can be stored (integer arrays silently cast NaN to 0)
+        data_float = DATA1D.astype(np.float64)
+        data_to_export = DataToExport(name='mydata', data=[
+            DataWithAxes(name='mydata1D', data=[data_float],
+                         source='raw', dim='Data1D', distribution='uniform',
+                         axes=[Axis(data=create_axis_array(data_float.shape[0]),
+                                    label='ax0', units='ms', index=0)])
+        ])
+
+        EXT_SHAPE = (4, 3)
+        data_saver = DataToExportExtendedSaver(h5saver, extended_shape=EXT_SHAPE,
+                                               fill_value=np.nan)
+        INDEXES = [1, 2]
+        data_saver.add_data(det_group, data_to_export, INDEXES)
+
+        for node in h5saver.walk_nodes('/RawData/MyDet'):
+            if 'data_type' not in node.attrs:
+                continue
+            if node.attrs['data_type'] not in ('data', 'Data'):
+                continue
+            arr = node.read()
+            # written position should be finite
+            assert np.all(np.isfinite(arr[tuple(INDEXES)]))
+            # a different position should be NaN
+            other_idx = (0, 0)
+            assert np.all(np.isnan(arr[other_idx]))
 
 
 class TestDataLoader:

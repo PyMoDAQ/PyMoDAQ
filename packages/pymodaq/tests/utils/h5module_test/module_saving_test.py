@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
-from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType
+from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType, TimeModuleSaver
 
 from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.mocks import MockScan, MockDAQMove, MockDAQViewer
@@ -78,4 +78,71 @@ class TestScanSaver:
         node3 = scan_saver.get_set_node()
         assert node3 == node2
 
+
+class TestTimeModuleSaver:
+    def test_timestamps_initialized_with_nan(self, get_h5saver_module):
+        """All positions of the timestamp array are NaN before any data is written."""
+        h5saver = get_h5saver_module
+        ts_saver = TimeModuleSaver()
+        ts_saver.h5saver = h5saver
+
+        scan_group = h5saver.get_set_group(h5saver.raw_group, 'Scan000')
+        ts_saver.get_set_node(scan_group)
+
+        EXT_SHAPE = (4,)
+        ts_saver.initialize(EXT_SHAPE)
+        # Trigger array creation by writing one point
+        ts_saver.add_time((0,), 0.0)
+
+        node = h5saver.get_node('/RawData/Scan000/Timestamps/Data0D/CH00/Data00')
+        arr = node.read()
+        assert arr.shape == EXT_SHAPE
+        # Index 0 was written; indices 1-3 must be NaN
+        assert np.all(np.isnan(arr[1:]))
+
+    def test_timestamps_written_value(self, get_h5saver_module):
+        """Written timestamp replaces the NaN placeholder at the correct index."""
+        h5saver = get_h5saver_module
+        ts_saver = TimeModuleSaver()
+        ts_saver.h5saver = h5saver
+
+        scan_group = h5saver.get_set_group(h5saver.raw_group, 'Scan000')
+        ts_saver.get_set_node(scan_group)
+
+        EXT_SHAPE = (5,)
+        ts_saver.initialize(EXT_SHAPE)
+
+        ts_saver.add_time((2,), 3.14)
+
+        node = h5saver.get_node('/RawData/Scan000/Timestamps/Data0D/CH00/Data00')
+        arr = node.read()
+        assert np.isfinite(arr[2])
+        assert arr[2] == pytest.approx(np.float32(3.14), abs=1e-4)
+        assert np.isnan(arr[0])
+        assert np.isnan(arr[1])
+        assert np.isnan(arr[3])
+        assert np.isnan(arr[4])
+
+    def test_timestamps_multiple_writes(self, get_h5saver_module):
+        """Multiple writes populate the correct positions; unvisited stay NaN."""
+        h5saver = get_h5saver_module
+        ts_saver = TimeModuleSaver()
+        ts_saver.h5saver = h5saver
+
+        scan_group = h5saver.get_set_group(h5saver.raw_group, 'Scan000')
+        ts_saver.get_set_node(scan_group)
+
+        EXT_SHAPE = (6,)
+        ts_saver.initialize(EXT_SHAPE)
+
+        times = {1: 1.0, 3: 2.5, 5: 4.0}
+        for idx, t in times.items():
+            ts_saver.add_time((idx,), t)
+
+        node = h5saver.get_node('/RawData/Scan000/Timestamps/Data0D/CH00/Data00')
+        arr = node.read()
+        for idx, t in times.items():
+            assert arr[idx] == pytest.approx(np.float32(t), abs=1e-4)
+        for idx in [0, 2, 4]:
+            assert np.isnan(arr[idx])
 
