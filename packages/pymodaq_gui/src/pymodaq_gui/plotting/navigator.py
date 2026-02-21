@@ -63,7 +63,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.title = 'Navigator'
 
         self.status_time = 1000
-        backend = config('data', 'general', 'hdf5_backend')[0]
+        backend = config('data', 'data_saving', 'backend')[0]
         self._h5saver = H5Saver(backend=backend)
         self.dataloader = DataLoader(self._h5saver)
 

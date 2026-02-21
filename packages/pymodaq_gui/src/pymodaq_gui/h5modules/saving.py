@@ -96,66 +96,67 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     params = [
         {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveType.names(),
          'readonly': True},
-    ] + dashboard_submodules_params + \
-        [
-            {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
+    ] + dashboard_submodules_params + [
+        {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
-             'value': config('data', 'general', 'hdf5_backend')[0],
+             'value': config('data', 'data_saving', 'backend')[0],
              'limits': backends_available},
+            {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'visible': False,
+             'tooltip': 'Single Writer Multiple Reader mode (only available with h5py backend)',
+             'children': [
+                {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
+                 'value': config('data', 'data_saving', 'swmr', 'enabled'),
+                 'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
+                {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
+                 'value': config('data', 'data_saving', 'swmr', 'flush_interval'), 'min': 0,
+                 'tooltip': 'Flush every N scan steps. 0 = only at end.'},
+            ]},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
-                    'value': config('data', 'data_saving', 'hsds', 'root_url'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'root_url'), 'readonly': False},
                 {'title': 'User:', 'name': 'user', 'type': 'str',
-                    'value': config('data', 'data_saving', 'hsds', 'username'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'username'), 'readonly': False},
                 {'title': 'password:', 'name': 'password', 'type': 'str',
-                    'value': config('data', 'data_saving', 'hsds', 'pwd'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'pwd'), 'readonly': False},
             ]},
         ]},
-        {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'visible': False,
-         'tooltip': 'Single Writer Multiple Reader mode (only available with h5py backend)',
-         'children': [
-            {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
-             'value': config('data', 'data_saving', 'swmr_enabled'),
-             'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
-            {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
-             'value': config('data', 'data_saving', 'swmr_flush_interval'), 'min': 0,
-             'tooltip': 'Flush every N scan steps. 0 = only at end.'},
-        ]},        
         {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False,
          'value': False},
         {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
-            'value': False},
+         'value': False},
         {'title': 'Close file after scan:', 'name': 'close_after_scan', 'type': 'bool',
          'value': False,
          'tooltip': 'Automatically close the HDF5 file when a scan completes.'},
         {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-            'value': config('data', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
-         'readonly': True, },
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
+         'readonly': True},
         {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan',
          'readonly': True},
         {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '',
          'readonly': True},
         {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-            'value': config('data', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
          'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
          'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
-        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-         'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
-         'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
-        {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
-         'limits': {'0': 0, 'nan': np.nan}, 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
-         'tooltip': 'Value used to pre-fill scan arrays before data is written. '
-                    '"nan" is useful to distinguish unvisited points (float arrays only).'},
-        {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
-         'children': [
-            {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list',
-             'value': 'zlib', 'limits': ['zlib', 'gzip']},
-            {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
-                'value': config('data', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
+        {'title': 'Data format:', 'name': 'data_format', 'type': 'group', 'children': [
+            {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
+             'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
+             'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
+            {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
+             'limits': {'0': 0, 'nan': np.nan}, 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
+             'tooltip': 'Value used to pre-fill scan arrays before data is written. '
+                        '"nan" is useful to distinguish unvisited points (float arrays only).'},
+            {'title': 'Compression:', 'name': 'compression_options', 'type': 'group',
+             'children': [
+                {'title': 'Library:', 'name': 'h5comp_library', 'type': 'list',
+                 'value': 'zlib', 'limits': ['zlib', 'gzip']},
+                {'title': 'Level:', 'name': 'h5comp_level', 'type': 'int',
+                 'value': config('data', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
+            ]},
         ]},
     ]
 
@@ -180,7 +181,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         self.settings.child('save_type').setValue(self.save_type.name)
 
         # Apply initial SWMR visibility based on the configured backend
-        self.settings.child('swmr_options').setOpts(visible=self.is_swmr_capable)
+        self.settings.child('backend', 'swmr_options').setOpts(visible=self.is_swmr_capable)
 
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
@@ -192,7 +193,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         -------
         tuple: (swmr_mode: bool, update_h5: bool) possibly adjusted values
         """
-        swmr_mode = (self.settings['swmr_options', 'enable_swmr']
+        swmr_mode = (self.settings['backend', 'swmr_options', 'enable_swmr']
                      and self.is_swmr_capable)
 
         # Only check existing files
@@ -217,7 +218,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             )
             if ret == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.settings.child('backend', 'backend_type').setValue('h5py')
-                self.settings.child('swmr_options', 'enable_swmr').setValue(True)
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(True)
                 swmr_mode = True
 
         elif not file_is_swmr and swmr_mode:
@@ -230,7 +231,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                 'Click No to create a new SWMR-compatible file instead.',
             )
             if ret == QtWidgets.QMessageBox.StandardButton.Yes:
-                self.settings.child('swmr_options', 'enable_swmr').setValue(False)
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(False)
                 swmr_mode = False
             else:
                 update_h5 = True  # force new file creation
@@ -529,17 +530,17 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             except Exception as e:
                 self.update_status(f"The base path couldn't be set, please check your options: {str(e)}")
 
-        elif param.name() in putils.iter_children(self.settings.child('compression_options'), []):
-            compression = self.settings.child('compression_options', 'h5comp_library').value()
-            compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
+        elif param.name() in putils.iter_children(self.settings.child('data_format', 'compression_options'), []):
+            compression = self.settings.child('data_format', 'compression_options', 'h5comp_library').value()
+            compression_opts = self.settings.child('data_format', 'compression_options', 'h5comp_level').value()
             self.define_compression(compression, compression_opts)
 
         elif param.name() == 'backend_type':
             new_backend = param.value()
             swmr_capable = new_backend in SWMR_CAPABLE_BACKENDS
-            self.settings.child('swmr_options').setOpts(visible=swmr_capable)
-            if not swmr_capable and self.settings['swmr_options', 'enable_swmr']:
-                self.settings.child('swmr_options', 'enable_swmr').setValue(False)
+            self.settings.child('backend', 'swmr_options').setOpts(visible=swmr_capable)
+            if not swmr_capable and self.settings['backend', 'swmr_options', 'enable_swmr']:
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(False)
                 self.update_status('SWMR is only supported with h5py backend, disabling.')
             self.set_backend(new_backend)
 
@@ -548,7 +549,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
     @property
     def fill_value(self) -> float:
-        fill_str = self.settings['fill_value']
+        fill_str = self.settings['data_format', 'fill_value']
         return np.nan if fill_str == 'nan' else float(fill_str)
 
     @fill_value.setter
@@ -557,7 +558,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         if not hasattr(self, 'settings'):
             return
         str_val = 'nan' if (isinstance(value, float) and np.isnan(value)) else '0'
-        self.settings.child('fill_value').setValue(str_val)
+        self.settings.child('data_format', 'fill_value').setValue(str_val)
 
 
 class H5Saver(H5SaverBase, QObject):

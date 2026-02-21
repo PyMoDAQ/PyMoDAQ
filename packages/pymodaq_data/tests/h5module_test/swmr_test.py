@@ -1393,25 +1393,25 @@ class TestSWMRConfigEntries:
 
         config = Config()
 
-        # Check SWMR entries exist in data_saving
-        data_saving_children = config.get_children('data_saving')
-        assert 'swmr_enabled' in data_saving_children
-        assert 'swmr_flush_interval' in data_saving_children
+        # Check SWMR entries exist in data_saving.swmr
+        swmr_children = config.get_children('data_saving', 'swmr')
+        assert 'enabled' in swmr_children
+        assert 'flush_interval' in swmr_children
 
     def test_swmr_enabled_is_bool(self):
-        """Verify swmr_enabled is a boolean (value depends on user config)."""
+        """Verify swmr enabled is a boolean (value depends on user config)."""
         from pymodaq_data.config import Config
 
         config = Config()
-        swmr_enabled = config('data_saving', 'swmr_enabled')
+        swmr_enabled = config('data_saving', 'swmr', 'enabled')
         assert isinstance(swmr_enabled, bool)
 
     def test_swmr_flush_interval_is_int(self):
-        """Verify swmr_flush_interval is an integer (value depends on user config)."""
+        """Verify swmr flush_interval is an integer (value depends on user config)."""
         from pymodaq_data.config import Config
 
         config = Config()
-        flush_interval = config('data_saving', 'swmr_flush_interval')
+        flush_interval = config('data_saving', 'swmr', 'flush_interval')
         assert isinstance(flush_interval, int)
 
 
@@ -1419,21 +1419,21 @@ class TestHdf5BackendConfig:
     """Tests for hdf5_backend config handling."""
 
     def test_hdf5_backend_is_list(self):
-        """Verify hdf5_backend is a list under general."""
+        """Verify backend is a list directly under data_saving."""
         from pymodaq_data.config import Config
 
         config = Config()
-        backends_list = config('general', 'hdf5_backend')
+        backends_list = config('data_saving', 'backend')
         assert isinstance(backends_list, list)
         assert len(backends_list) > 0
         assert 'tables' in backends_list or 'h5py' in backends_list
 
     def test_hdf5_backend_default_is_first(self):
-        """Verify first element of hdf5_backend is the default."""
+        """Verify first element of backend list is the default."""
         from pymodaq_data.config import Config
 
         config = Config()
-        backends_list = config('general', 'hdf5_backend')
+        backends_list = config('data_saving', 'backend')
         assert isinstance(backends_list[0], str)
         assert backends_list[0] in ['tables', 'h5py', 'h5pyd']
 

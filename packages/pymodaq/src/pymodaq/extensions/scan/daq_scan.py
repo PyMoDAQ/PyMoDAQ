@@ -148,7 +148,7 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend')[0])
+        self._h5saver = H5Saver(backend=config('data', 'data_saving', 'backend')[0])
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -573,7 +573,7 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend')[0])
+            self._h5saver = H5Saver(backend=config('data', 'data_saving', 'backend')[0])
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)
@@ -1096,7 +1096,7 @@ class DAQScan(CustomExt):
             self.module_and_data_saver.initialize_time_array(scan_shape)
 
             if self.h5saver._swmr_mode:
-                interval = self.h5saver.settings['swmr_options', 'flush_interval']
+                interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
                 self.h5saver.set_swmr_flush_interval(interval)
 
             # mandatory to deal with multithreads
