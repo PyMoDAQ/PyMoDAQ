@@ -686,9 +686,10 @@ class DataExtendedSaver(DataSaverLoader):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
+        self.fill_value = fill_value
 
     def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True,
                             distribution=DataDistribution['uniform']):
@@ -715,6 +716,7 @@ class DataExtendedSaver(DataSaverLoader):
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
+                                        fill_value=self.fill_value,
                                         scan_shape=self.extended_shape,
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
@@ -980,9 +982,9 @@ class DataToExportExtendedSaver(DataToExportSaver):
         the extra shape compared to the data the h5array will have
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
-        self._data_saver = DataExtendedSaver(h5saver, extended_shape)
+        self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
         self._swmr_activated = False
 

@@ -146,6 +146,10 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
          'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
          'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
+        {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
+         'limits': ['0', 'nan'], 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
+         'tooltip': 'Value used to pre-fill scan arrays before data is written. '
+                    '"nan" is useful to distinguish unvisited points (float arrays only).'},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
          'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list',
@@ -177,6 +181,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         # Apply initial SWMR visibility based on the configured backend
         self.settings.child('swmr_options').setOpts(visible=self.is_swmr_capable)
+
+        fill_str = self.settings['fill_value']
+        self.fill_value = np.nan if fill_str == 'nan' else float(fill_str)
 
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
@@ -538,6 +545,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                 self.settings.child('swmr_options', 'enable_swmr').setValue(False)
                 self.update_status('SWMR is only supported with h5py backend, disabling.')
             self.set_backend(new_backend)
+
+        elif param.name() == 'fill_value':
+            self.fill_value = np.nan if param.value() == 'nan' else float(param.value())
 
     def update_status(self, status):
         logger.warning(status)

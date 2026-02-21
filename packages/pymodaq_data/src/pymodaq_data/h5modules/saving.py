@@ -85,6 +85,8 @@ class H5SaverLowLevel(H5Backend):
 
         self._flush_interval = 0
         self._write_count = 0
+        fill_str = config('data', 'data_saving', 'data_type', 'fill_value')
+        self.fill_value: float = np.nan if fill_str == 'nan' else float(fill_str)
 
     def set_swmr_flush_interval(self, interval: int):
         """Set how often to flush data for SWMR readers.
@@ -225,7 +227,7 @@ class H5SaverLowLevel(H5Backend):
         return array
     
     def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
-                  data_shape: tuple = None, array_type: np.dtype = None, data_dimension: DataDim = None,
+                  data_shape: tuple = None, array_type: np.dtype = None, fill_value=None, data_dimension: DataDim = None,
                   scan_shape: tuple = tuple([]), add_scan_dim=False, enlargeable: bool = False,
                   title: str = '', metadata=dict([]), ):
 
@@ -251,6 +253,8 @@ class H5SaverLowLevel(H5Backend):
             correctly the memory
         array_type: np.dtype or numpy types
             eg np.float, np.int32 ...
+        fill_value: float or int
+            value to be used to fill the array if array_to_save is None
         enlargeable: bool
             if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_string_array)
         metadata: dict
@@ -286,7 +290,8 @@ class H5SaverLowLevel(H5Backend):
                 if not(len(data_shape) == 1 and data_shape[0] == 1):  # means data are not ndarrays of scalars
                     shape.extend(data_shape)
                 if array_to_save is None:
-                    array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
+                    fill_value = self.fill_value if fill_value is None else fill_value
+                    array_to_save = np.full(shape, fill_value, dtype=np.dtype(array_type))
 
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
         self.set_attr(array, 'data_type', data_type.name)
