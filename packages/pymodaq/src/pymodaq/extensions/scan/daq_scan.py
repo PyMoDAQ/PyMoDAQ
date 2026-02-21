@@ -160,7 +160,6 @@ class DAQScan(CustomExt):
         self.extended_saver: data_saving.DataToExportExtendedSaver = None
         self.h5temp: H5Saver = None
         self.temp_path: tempfile.TemporaryDirectory = None
-        self._scan_time_array = None  # float32 CARRAY: elapsed seconds since scan start (nan = not yet acquired)
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators)
         self.scan_parameters = None
@@ -907,8 +906,8 @@ class DAQScan(CustomExt):
         elif status.command == 'add_data':
             elapsed_time = status.attribute.pop('elapsed_time', None)
             self.module_and_data_saver.add_data(**status.attribute)
-            if self._scan_time_array is not None and elapsed_time is not None:
-                self._scan_time_array[status.attribute['indexes']] = elapsed_time
+            if elapsed_time is not None:
+                self.module_and_data_saver.add_time(status.attribute['indexes'], elapsed_time)
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1085,25 +1084,11 @@ class DAQScan(CustomExt):
             else:
                 scan_shape = self.scanner.get_scan_shape()
 
-            # Pre-allocate the per-point acquisition time tracker (CARRAY: SWMR-compatible indexed writes)
-            # Values are elapsed seconds since scan start; nan means the point has not been acquired yet.
-            self._scan_time_array = self._h5saver.add_array(
-                scan_node, 'ScanTime', data_saving.DataType.data,
-                array_to_save=np.full(scan_shape, np.nan, dtype=np.float32),
-                data_dimension=data_mod.DataDim['DataND'])
-            # Tag all dimensions as navigation so h5browser renders with proper axes
-            self._h5saver.set_attr(self._scan_time_array, 'nav_indexes',
-                                   tuple(range(len(scan_shape))))
-            self._h5saver.set_attr(self._scan_time_array, 'distribution', 'uniform')
-            self._h5saver.set_attr(self._scan_time_array, 'units', 's')
-            # Store scan axes alongside ScanDone so h5browser can label the dimensions
-            axis_saver = data_saving.AxisSaverLoader(self._h5saver)
-            for axis in nav_axes:
-                axis_saver.add_axis(scan_node, axis)
             for det in self.modules_manager.detectors:
                 det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
             self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
+            self.module_and_data_saver.initialize_time_array(scan_shape)
 
             if self.h5saver._swmr_mode:
                 interval = self.h5saver.settings['swmr_options', 'flush_interval']
