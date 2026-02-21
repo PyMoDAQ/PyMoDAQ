@@ -547,7 +547,7 @@ class FourierFilterer(QObject):
         else:
             if self.raw_data is not None:
                 self.viewer1D.show_data([self.raw_data['data']])
-                self.viewer1D.x_axis = dict(data=self.raw_data['xaxis'], label='Pxls')
+                self.viewer1D.x_axis = dict(data=self.raw_data['xaxis'], label='index')
                 self.data_filtered_plot.setData(self.xaxis, self.data)
                 self.data_filtered_plot.setVisible(True)
                 self.viewer1D.ROIfft.setVisible(False)
