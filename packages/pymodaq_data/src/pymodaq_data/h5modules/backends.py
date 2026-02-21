@@ -423,8 +423,12 @@ class EARRAY(CARRAY):
         if self.backend == 'tables':
             self.array.append(data)
         else:
-            self.array.resize(self.array.len() + 1, axis=0)
-            self.array[-1] = data
+            n_new = data.shape[0]
+            old_len = self.array.len()
+            self.array.resize(old_len + n_new, axis=0)
+            # Reshape to the target slice shape in case expand_dims added an extra dim
+            target_shape = (n_new,) + tuple(self.attrs['shape'][1:])
+            self.array[old_len:old_len + n_new] = data.reshape(target_shape)
 
 
 class VLARRAY(EARRAY):
