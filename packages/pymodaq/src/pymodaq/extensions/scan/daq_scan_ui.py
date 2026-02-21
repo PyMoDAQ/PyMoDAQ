@@ -57,13 +57,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
 
+        self._toolbar.addSeparator()
+        self.add_action('show_file', 'Show file content', 'folder_data',
+                        tip='Browse the content of the current HDF5 file')
+
         self.add_action('new_file', 'New file', 'new2', menu=self.file_menu, auto_toolbar=False)
         self.add_action('load', 'Open file to append...', 'Open', menu=self.file_menu, auto_toolbar=False)
         self.file_menu.addSeparator()
         self.add_action('save', 'Save copy as...', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
         # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
         # A developer can access them programmatically or add them back to a menu as needed.
-        self.add_action('show_file', 'Show file content', '', auto_toolbar=False)
         self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
         self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
 

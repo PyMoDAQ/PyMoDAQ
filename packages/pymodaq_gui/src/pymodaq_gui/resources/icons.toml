@@ -32,6 +32,7 @@ names = [
     'dock_to_left',
     'extension',
     'file_copy',
+    'folder_data',
     'function',
     'gesture',
     'grid_off',
