@@ -65,10 +65,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install matplotlib flake8 pytest pytest-cov pytest-qt pytest-xvfb pytest-order setuptools wheel numpy h5py ${{ matrix.qt-backend }}
           cd ..
           cd ..
-          python install-packages.py -u pymodaq_gui 
+          python install-packages.py -u pymodaq_gui
+          pip install -e "packages/pymodaq_gui[dev]"
 
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder + Setup additional dependencies (Linux)
@@ -105,12 +105,12 @@ jobs:
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             mkdir ${{ github.workspace }}/coverage
-            python -X faulthandler -m pytest  --capture=no -vv --cov=pymodaq_gui
+            python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq_gui --qt-api=${{ matrix.qt-backend }}
             mv .coverage ${{ github.workspace }}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
-          else          
+          else
             workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
             mkdir ${workspace}/coverage
-            pytest -vv --cov=pymodaq_gui
+            pytest -vv --cov=pymodaq_gui --qt-api=${{ matrix.qt-backend }}
             mv .coverage ${workspace}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
           fi
 
