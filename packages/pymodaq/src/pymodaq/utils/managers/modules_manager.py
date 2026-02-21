@@ -321,49 +321,66 @@ class ModulesManager(QObject, ParameterManager):
                 det_title = det.title
                 det_data = [dwa for dwa in datas.data
                             if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
-                direct_raw = [dwa for dwa in det_data
-                              if dwa.origin == det_title and dwa.source == DataSource.raw]
-                direct_calc = [dwa for dwa in det_data
-                               if dwa.origin == det_title and dwa.source == DataSource.calculated]
 
-                # Build ROI groups keyed by parent raw channel name.
-                # ROI output labels use the format '{roi_name}/{raw_channel}', so we can
-                # recover the parent raw channel to nest the ROI group correctly.
-                raw_names = {raw.name for raw in direct_raw}
-                roi_origins = sorted({dwa.origin for dwa in det_data if dwa.origin != det_title})
-                roi_groups_by_raw: dict[str, list] = {name: [] for name in raw_names}
-                orphan_roi_groups = []
+                # In single-viewer mode raw data has origin == det_title.
+                # In multi-viewer mode (one viewer per channel) the viewer prepends its title:
+                #   raw origin  → '{det_title} - {viewer_title}'
+                #   ROI origin  → '{det_title} - {viewer_title} - {roi_name}'
+                # daq_viewer sets parent_channel = viewer_title on every datum, so we can use
+                # that to reconstruct the set of "direct" origins (no ROI suffix).
+                unique_parent_channels = {getattr(dwa, 'parent_channel', '') for dwa in det_data}
+                direct_origins = ({det_title}
+                                  | {f'{det_title} - {pc}' for pc in unique_parent_channels if pc})
+
+                direct_raw = [dwa for dwa in det_data
+                              if dwa.source == DataSource.raw and dwa.origin in direct_origins]
+                direct_calc = [dwa for dwa in det_data
+                               if dwa.source == DataSource.calculated and dwa.origin in direct_origins]
+
+                # ROI data: everything whose origin has an extra depth beyond the direct origins.
+                roi_data = [dwa for dwa in det_data if dwa.origin not in direct_origins]
+                roi_origins = sorted({dwa.origin for dwa in roi_data})
+
+                roi_groups_by_raw: dict[str, list] = {raw.name: [] for raw in direct_raw}
 
                 for roi_origin in roi_origins:
-                    roi_dwas = [dwa for dwa in det_data if dwa.origin == roi_origin]
-                    roi_display = roi_origin.replace(f'{det_title} - ', '')
+                    roi_dwas = [dwa for dwa in roi_data if dwa.origin == roi_origin]
+                    if not roi_dwas:
+                        continue
+
+                    # Strip '{det_title} - ' (and the channel prefix in multi-viewer) to get
+                    # a short display name like 'ROI_00' rather than 'Mock2D_0 - ROI_00'.
+                    roi_pc = getattr(roi_dwas[0], 'parent_channel', None)
+                    roi_display_full = roi_origin.replace(f'{det_title} - ', '', 1)
+                    if roi_pc and roi_display_full.startswith(f'{roi_pc} - '):
+                        roi_short = roi_display_full[len(f'{roi_pc} - '):]
+                    elif roi_pc and roi_display_full.startswith(roi_pc):
+                        roi_short = roi_display_full[len(roi_pc):].lstrip(' -')
+                    else:
+                        roi_short = roi_display_full  # single-viewer: already 'ROI_00'
+
+                    # Strip '_ROI_00' suffixes from child names for a cleaner display
                     roi_children = [
-                        {'title': dwa.name,
-                         'name': dwa.name.replace(' ', '_'),
+                        {'title': dwa.name.replace(f'_{roi_short}', ''),
+                         'name': dwa.name.replace(f'_{roi_short}', '').replace(' ', '_'),
                          'type': 'bool', 'value': True, 'dim': dwa.dim.name,
                          'full_name': f'{dwa.origin}/{dwa.name}'}
                         for dwa in roi_dwas
                     ]
-                    if not roi_children:
-                        continue
                     roi_group = {
-                        'title': roi_display,
-                        'name': roi_display.replace(' ', '_'),
+                        'title': roi_short,
+                        'name': roi_short.replace(' ', '_'),
                         'type': 'group',
                         'children': roi_children,
                     }
-                    # Determine parent raw channel from the first matching label
-                    parent_raw = next(
-                        (label.split('/', 1)[1]
-                         for dwa in roi_dwas
-                         for label in dwa.labels
-                         if '/' in label and label.split('/', 1)[1] in raw_names),
-                        None
-                    )
-                    if parent_raw:
-                        roi_groups_by_raw[parent_raw].append(roi_group)
-                    else:
-                        orphan_roi_groups.append(roi_group)
+
+                    # parent_channel matches raw.name (viewer title == data name set in
+                    # set_data_to_viewers), so use it directly as the grouping key.
+                    if roi_pc in roi_groups_by_raw:
+                        roi_groups_by_raw[roi_pc].append(roi_group)
+                    elif len(direct_raw) == 1:
+                        roi_groups_by_raw[direct_raw[0].name].append(roi_group)
+                    # else: ambiguous → skip to avoid duplication across channels
 
                 det_children = []
                 for raw in direct_raw:
@@ -375,9 +392,7 @@ class ModulesManager(QObject, ParameterManager):
                         for dwa in direct_calc
                         if getattr(dwa, 'parent_channel', None) == raw.name
                     ]
-                    all_children = (calc_children
-                                    + roi_groups_by_raw.get(raw.name, [])
-                                    + orphan_roi_groups)
+                    all_children = calc_children + roi_groups_by_raw.get(raw.name, [])
                     det_children.append({
                         'title': raw.name,
                         'name': raw.name.replace(' ', '_'),
