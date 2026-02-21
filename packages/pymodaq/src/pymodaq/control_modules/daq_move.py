@@ -102,7 +102,7 @@ class DAQ_Move(ParameterControlModule):
     ui: Optional[DAQ_Move_UI_Base]
 
     def __init__(self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None,
-                 preset: Optional[str] = None,**kwargs) -> None:
+                 preset: Optional[str] = None, **kwargs) -> None:
         """
 
         Parameters
