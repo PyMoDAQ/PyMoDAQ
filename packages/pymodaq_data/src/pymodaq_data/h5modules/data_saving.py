@@ -303,9 +303,9 @@ class DataSaverLoader(DataManagement):
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
-        self._axis_saver = AxisSaverLoader(h5saver)
+        self._axis_saver = AxisSaverLoader(self._h5saver)
         if not isinstance(self, ErrorSaverLoader):
-            self._error_saver = ErrorSaverLoader(h5saver)
+            self._error_saver = ErrorSaverLoader(self._h5saver)
 
     def isopen(self) -> bool:
         """ Get the opened status of the underlying hdf5 file"""
@@ -776,8 +776,8 @@ class DataToExportSaver:
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
-        self._data_saver = DataSaverLoader(h5saver)
-        self._bkg_saver = BkgSaver(h5saver)
+        self._data_saver = DataSaverLoader(self._h5saver)
+        self._bkg_saver = BkgSaver(self._h5saver)
 
     def __getattr__(self, item):
         """ Allows to call attributes of the underlying H5Saver object"""
@@ -882,7 +882,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     axis_units: str, deprecated use enl_axis_units
         the units of the enlarged axis array
     """
-    def __init__(self, h5saver: H5SaverLowLevel,
+    def __init__(self, h5saver: Union[Path, H5SaverLowLevel],
                  enl_axis_names: Iterable[str] = None,
                  enl_axis_units: Iterable[str] = None,
                  axis_name: str = 'nav axis', axis_units: str = ''):
@@ -900,8 +900,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._enl_axis_units = enl_axis_units
         self._n_enl = len(enl_axis_names)
 
-        self._data_saver = DataEnlargeableSaver(h5saver)
-        self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._data_saver = DataEnlargeableSaver(self._h5saver)
+        self._nav_axis_saver = AxisSaverLoader(self._h5saver)
 
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
@@ -980,8 +980,8 @@ class DataToExportExtendedSaver(DataToExportSaver):
 
     def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
         super().__init__(h5saver)
-        self._data_saver = DataExtendedSaver(h5saver, extended_shape)
-        self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._data_saver = DataExtendedSaver(self._h5saver, extended_shape)
+        self._nav_axis_saver = AxisSaverLoader(self._h5saver)
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
