@@ -9,6 +9,9 @@ import numpy as np
 import pytest
 
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_utils.config import GlobalConfig as Config
+
+_config = Config()
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ScanSaver, GroupModuleType, TimeModuleSaver
 
 from pymodaq_gui.parameter import Parameter
@@ -16,7 +19,8 @@ from pymodaq.control_modules.mocks import MockScan, MockDAQMove, MockDAQViewer
 
 @pytest.fixture()
 def get_h5saver_module(tmp_path):
-    h5saver = H5SaverLowLevel()
+    backend = _config('data', 'general', 'hdf5_backend')[0]
+    h5saver = H5SaverLowLevel(backend=backend)
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
     params = [{'title': 'mysaver', 'name': 'saver', 'type': 'str', 'value': 'myh5saver'}]

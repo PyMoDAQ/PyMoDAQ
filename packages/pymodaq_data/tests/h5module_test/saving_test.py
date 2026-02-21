@@ -10,15 +10,19 @@ from datetime import datetime
 
 from pymodaq_data.h5modules import saving, backends
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.data import DataDim
 
 tested_backend = ['tables', 'h5py']  # , 'h5pyd']
 
+_config = Config()
+
 
 @pytest.fixture()
 def get_h5saver_lowlevel(tmp_path):
-    h5saver = saving.H5SaverLowLevel()
+    backend = _config('data', 'general', 'hdf5_backend')[0]
+    h5saver = saving.H5SaverLowLevel(backend=backend)
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path, new_file=True)
 

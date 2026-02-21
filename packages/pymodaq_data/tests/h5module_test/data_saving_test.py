@@ -15,11 +15,15 @@ from pymodaq_data.h5modules.data_saving import (
     DataToExportEnlargeableSaver, DataExtendedSaver, DataLoader, BkgSaver, squeeze)
 from pymodaq_data.data import (Axis, DataWithAxes, DataSource, DataToExport, DataRaw,
                                DataDim, DataDistribution)
+from pymodaq_utils.config import GlobalConfig as Config
+
+_config = Config()
 
 
 @pytest.fixture()
 def get_h5saver(tmp_path):
-    h5saver = saving.H5SaverLowLevel()
+    backend = _config('data', 'general', 'hdf5_backend')[0]
+    h5saver = saving.H5SaverLowLevel(backend=backend)
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
 
