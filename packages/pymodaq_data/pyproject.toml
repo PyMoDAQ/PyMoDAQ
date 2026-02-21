@@ -40,7 +40,7 @@ dependencies = [
 dev = [
     "hatch", 
     "flake8",
-    "h5py",
+    "h5py>=2.5.0",
     "tables>=3.10",
     "pytest",
     "pytest-cov",
