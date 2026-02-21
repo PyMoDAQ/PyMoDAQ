@@ -268,6 +268,7 @@ class DAQScan(CustomExt):
                 * stop
                 * pause
                 * move_at
+                * new_file
                 * load
                 * save
                 * show_file
@@ -289,6 +290,8 @@ class DAQScan(CustomExt):
             self.pause_scan()
         elif cmd.command == 'move_at':
             self.move_to_crosshair()
+        elif cmd.command == 'new_file':
+            self.create_new_file(new_file=True)
         elif cmd.command == 'load':
             self.load_file()
         elif cmd.command == 'save':
@@ -475,6 +478,11 @@ class DAQScan(CustomExt):
 
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
+        # Opening an existing file resets the dataset metadata so the user is prompted
+        # to confirm/update it on the next scan (restores behaviour lost in past versions).
+        self._metada_dataset_set = False
+        self.update_file_settings()
+        self._update_file_status_led()
 
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings['base_path']):

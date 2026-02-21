@@ -57,13 +57,15 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
 
-        self.add_action('load', 'Load File', 'Open', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('new_file', 'New file', 'new2', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('load', 'Open file to append...', 'Open', menu=self.file_menu, auto_toolbar=False)
         self.file_menu.addSeparator()
-        self.add_action('save', 'Save file as', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
-        self.add_action('show_file', 'Show file content', '', menu=self.file_menu, auto_toolbar=False)
-        self.file_menu.addSeparator()
-        self.add_action('open_file', 'Open current file', '', menu=self.file_menu, auto_toolbar=False)
-        self.add_action('close_file', 'Close current file', '', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('save', 'Save copy as...', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
+        # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
+        # A developer can access them programmatically or add them back to a menu as needed.
+        self.add_action('show_file', 'Show file content', '', auto_toolbar=False)
+        self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
+        self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
 
         self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
@@ -85,6 +87,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('pause', lambda: self.command_sig.emit(ThreadCommand('pause')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
 
+        self.connect_action('new_file', lambda: self.command_sig.emit(ThreadCommand('new_file')))
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))
         self.connect_action('save', lambda: self.command_sig.emit(ThreadCommand('save')))
         self.connect_action('show_file', lambda: self.command_sig.emit(ThreadCommand('show_file')))
