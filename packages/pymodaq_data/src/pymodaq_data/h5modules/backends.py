@@ -1011,7 +1011,7 @@ class H5Backend:
         array.attrs['backend'] = self.backend
         return array
 
-    def add_group(self, group_name, group_type: Union[GroupType, str], where, title='', metadata=dict([])) -> GROUP:
+    def add_group(self, group_name, group_type: Union[GroupType, str], where, title='', metadata=None) -> GROUP:
         """
         Add a node in the h5 file tree of the group type
         Parameters
@@ -1026,6 +1026,8 @@ class H5Backend:
         -------
         (node): newly created group node
         """
+        if metadata is None:
+            metadata = {}
         if isinstance(where, Node):
             where = where.node
 

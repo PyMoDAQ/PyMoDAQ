@@ -46,7 +46,8 @@ try:
 
 
     from pymodaq_data.data import (DataRaw, DataWithAxes, DataToExport, Axis,
-                                   DataCalculated, DataDim, DataDistribution, DataSource, DataBase)
+                                   DataCalculated, DataDim, DataDistribution, DataSource, DataBase,
+                                   )
 
 except Exception as e:
     try:
