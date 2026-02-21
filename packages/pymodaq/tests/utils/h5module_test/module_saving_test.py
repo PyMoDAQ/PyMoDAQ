@@ -66,8 +66,8 @@ class TestScanSaver:
         assert node0.attrs['TITLE'] == 'MyScan'
         assert node0.title == 'MyScan'
         assert node0.name == 'Scan000'
-        assert len(node0.children_name()) == len(mock_scan_module.modules_manager.modules_all)
-        assert node0.children_name() == ['Actuator000', 'Detector000', 'Detector001']
+        assert len(node0.children_name())-1 == len(mock_scan_module.modules_manager.modules_all) # -1 because of the Timestamps node
+        assert node0.children_name() == ['Actuator000', 'Detector000', 'Detector001', 'Timestamps']
         assert node0.get_child('Actuator000').title == 'MyAct'
 
         node1 = scan_saver.get_set_node()
@@ -76,7 +76,7 @@ class TestScanSaver:
         node2 = scan_saver.get_set_node(new=True)
         assert node2 != node0
         assert node2.name == 'Scan001'
-        assert node2.children_name() == ['Actuator000', 'Detector000', 'Detector001']
+        assert node2.children_name() == ['Actuator000', 'Detector000', 'Detector001', 'Timestamps']
         assert node2.get_child('Actuator000').title == 'MyAct'
 
         node3 = scan_saver.get_set_node()
