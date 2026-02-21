@@ -147,7 +147,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
          'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
          'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
         {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
-         'limits': ['0', 'nan'], 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
+         'limits': {'0': 0, 'nan': np.nan}, 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
          'tooltip': 'Value used to pre-fill scan arrays before data is written. '
                     '"nan" is useful to distinguish unvisited points (float arrays only).'},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
@@ -181,9 +181,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         # Apply initial SWMR visibility based on the configured backend
         self.settings.child('swmr_options').setOpts(visible=self.is_swmr_capable)
-
-        fill_str = self.settings['fill_value']
-        self.fill_value = np.nan if fill_str == 'nan' else float(fill_str)
 
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
@@ -546,11 +543,21 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                 self.update_status('SWMR is only supported with h5py backend, disabling.')
             self.set_backend(new_backend)
 
-        elif param.name() == 'fill_value':
-            self.fill_value = np.nan if param.value() == 'nan' else float(param.value())
-
     def update_status(self, status):
         logger.warning(status)
+
+    @property
+    def fill_value(self) -> float:
+        fill_str = self.settings['fill_value']
+        return np.nan if fill_str == 'nan' else float(fill_str)
+
+    @fill_value.setter
+    def fill_value(self, value: float):
+        # Guard against calls made before ParameterManager.__init__ has run
+        if not hasattr(self, 'settings'):
+            return
+        str_val = 'nan' if (isinstance(value, float) and np.isnan(value)) else '0'
+        self.settings.child('fill_value').setValue(str_val)
 
 
 class H5Saver(H5SaverBase, QObject):
