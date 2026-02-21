@@ -872,13 +872,13 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
-            self._scan_time_array = None
             try:
                 self.module_and_data_saver.flush()
-                self.close_file()
-                logger.info("Scan file closed successfully")
+                if self._h5saver.settings['close_after_scan']:
+                    self.close_file()
+                self._update_file_status_led()
             except Exception as e:
-                logger.error(f"Error closing scan file: {e}")
+                logger.error(f"Error finalizing scan file: {e}")
                 try:
                     self._h5saver.close_file()
                     self._update_file_status_led()
