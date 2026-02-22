@@ -22,15 +22,17 @@ class CustomExt(CustomApp):
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
-                 dashboard: 'DashBoard', **kwargs):
+                 dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
         self.runner_thread : QtCore.QThread = None
         if dashboard is not None:
-            self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
-                                                   actuators=self.dashboard.actuators_modules,
-                                                   parent_name=self.__class__.__name__)
+            self._modules_manager = module_manager_class(
+                detectors=self.dashboard.detector_modules,
+                actuators=self.dashboard.actuators_modules,
+                parent_name=self.__class__.__name__)
+
             if self.preset_manager is not None:
                 self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
                 if self.preset_manager.entry_applied:
