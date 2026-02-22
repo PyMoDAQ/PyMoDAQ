@@ -137,7 +137,6 @@ class DashBoard(CustomApp):
     Main class initializing a DashBoard interface to display det and move modules and logger"""
 
     status_signal = Signal(str)
-    new_preset_created = Signal()
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
     # included in CustomExt by default but Dashboard is special with that respect
