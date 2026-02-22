@@ -505,13 +505,14 @@ class ModulesManager(QObject, ParameterManager):
         self.connect_actuators(False)
         return dte
 
-    def move_actuators(self, dte_act: DataToExport, mode='abs', polling=True) -> DataToExport:
+    def move_actuators(self, dte_act: DataToExport = None, mode='abs', polling=True) -> DataToExport:
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
 
         Parameters
         ----------
         dte_act: DataToExport
             the DataToExport of position to apply. Its length must be equal to the number of selected actuators
+            if None, just return the actual value
         mode: str
             either 'abs' for absolute positionning or 'rel' for relative
         polling: bool
@@ -523,9 +524,15 @@ class ModulesManager(QObject, ParameterManager):
         -------
         DataToExport with the selected actuators's name as key and current actuators's value as value
         """
-        self.move_done_positions = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
+        self.move_done_positions = DataToExport(name=__class__.__name__,
+                                                control_module='DAQ_Move')
         self.move_done_flag = False
         self.settings.child('move_done').setValue(self.move_done_flag)
+        if dte_act is None:
+            dte_act = DataToExport('Actuators', control_module='DAQ_Move')
+            for dact_name in self.selected_actuators_name:
+                act = self.get_mod_from_name(dact_name, ModuleType.Actuator)
+                dte_act.append(act.current_value)
 
         if mode == 'abs':
             command = 'move_abs'
