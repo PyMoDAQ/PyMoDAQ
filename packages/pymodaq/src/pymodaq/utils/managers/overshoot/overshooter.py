@@ -8,14 +8,18 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
-
+from pymodaq_data import DataDim
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
+
+from pymodaq_data import DataToExport
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+
+from pymodaq.utils.managers.modules_manager import ModulesManager
 
 from pymodaq.utils.managers.configurator.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, ConfiguratorSubEntry)
@@ -26,18 +30,57 @@ from pymodaq.utils.managers.configurator.utils import (
 
 
 
-from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.config import get_set_config_dir
 from pymodaq_gui.managers.manager_base import ManagerBase
 
 if TYPE_CHECKING:
-    from pymodaq.dashboard import DashBoard
-
+    pass
 
 logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
 
 
+def get_set_overshooter_path(subfolder: str = ''):
+    """ creates and return the config folder path for overshooter files
+    """
+    target_path = get_set_config_dir('overshooter_configs').joinpath(subfolder)
+    target_path.mkdir(parents=True, exist_ok=True)
+    return target_path
 
+
+class ModulesManager(ModulesManager):
+    """ Customized version of the ModulesManager """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.available_data = DataToExport(self.__class__.__name__)
+
+    def get_det_data_list(self) -> DataToExport:
+        """Do a snap of selected detectors and get_actuator_value of connected actuators
+        , to get the list of all the data and processed data"""
+
+        if len(self.detectors) == 0:
+            data_det = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
+        else:
+            self.connect_detectors()
+            data_det: DataToExport = self.grab_data()
+            self.connect_detectors(False)
+
+        if len(self.actuators) == 0:
+            data_act = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
+        else:
+            self.connect_actuators()
+            data_act = self.move_actuators()
+            self.connect_actuators(False)
+
+        data_list0D = data_det.get_full_names(DataDim.Data0D)
+        data_list0D.extend(data_act.get_full_names(DataDim.Data0D))
+        self.settings.child('data_dimensions', 'det_data_list0D').setValue(
+            dict(all_items=data_list0D, selected=[]))
+
+        self.available_data = data_list0D[:]
+        return data_det
 
 
 class Overshooter(ManagerBase):
@@ -55,27 +98,43 @@ class Overshooter(ManagerBase):
     entry_type = 'overshoot'
     entry_extension ='.config'
 
+
     def __init__(self,
                  dashboard: 'DashBoard' = None,
-                 preset_filename: str = 'default'):
+                 preset_filename: str = 'default',):
 
         self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
 
-        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree(),
+                         module_manager_class=ModulesManager)
         self.preset_filename = preset_filename
 
-    def show(self):
-        self.update_settings(self.dashboard.modules_manager.get_settings_all())
-        super().show()
+        if dashboard is not None:
+            self.show_hide_module_manager_settings()
+            if self.preset_manager is not None:
+                self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
+                if self.preset_manager.entry_applied:
+                    self.do_things_after_preset_set(self.preset_manager.entry)
+        else:
+            self._modules_manager = None
+
+    def show_hide_module_manager_settings(self):
+
+        to_hide = [('move_done',), ('det_done',), ('data_dimensions', 'det_data_list1D'),
+                   ('data_dimensions', 'det_data_list2D'),
+                   ('data_dimensions', 'det_data_listND'),
+                   ('actuators_positions',)]
+        for param_tuple in to_hide:
+            self.modules_manager.settings.child(*param_tuple).hide()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
         try:
-            return get_set_configurator_path(self.preset_filename)
+            return get_set_overshooter_path(self.preset_filename)
         except KeyError as e: #fallback to preset ini
-            return get_set_configurator_path(self._preset_ini)
+            return get_set_overshooter_path(self._preset_ini)
 
     @property
     def preset_filename(self) -> str:
@@ -151,18 +210,10 @@ class Overshooter(ManagerBase):
 
     @property
     def actuators(self):
-        if self.dashboard is not None:
-            return self.dashboard.modules_manager.actuators_name
-        else:
-            return [param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
-
+        return self.modules_manager.actuators_name
     @property
     def detectors(self):
-        if self.dashboard is not None:
-            return self.dashboard.modules_manager.detectors_name
-        else:
-            return [param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
-
+        return self.modules_manager.detectors_name
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
@@ -178,10 +229,6 @@ class Overshooter(ManagerBase):
         self.subentry_handler.show_dialog()
 
     def setup_docks(self):
-        self.tree.setDragEnabled(True)
-        self.tree.setAcceptDrops(False)
-        self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
-        self.tree.doubleClicked.connect(self.add_setting)
 
         self.table_out = ConfiguratorTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -190,7 +237,6 @@ class Overshooter(ManagerBase):
         #self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
         self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
-
 
         self.table_out.setModel(self.config_model)
         self.table_out.add_data_signal[str].connect(self.add_subentry)
@@ -207,8 +253,6 @@ class Overshooter(ManagerBase):
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
         vlayout_right = QtWidgets.QVBoxLayout()
-        valyout_left = QtWidgets.QVBoxLayout()
-
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
         widget_buttons.layout().addStretch()
@@ -218,11 +262,13 @@ class Overshooter(ManagerBase):
         widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
-        hlayout.addLayout(valyout_left)
+
+        hlayout.addWidget(self.modules_manager.settings_tree)
+        hlayout.addWidget(self.settings_tree)
+
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
-        valyout_left.addWidget(self.settings_tree)
         vlayout_right.addWidget(self.get_toolbar('configurations'))
         vlayout_right.addWidget(self.table_out)
 
@@ -263,21 +309,6 @@ class Overshooter(ManagerBase):
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         self.config_model.load(self.entry_filename)
-
-    def update_settings(self, settings: Union[Parameter, Path, str] = None):
-        if settings is None:
-            settings = self._get_settings_from_file()
-            if settings == '':
-                return
-        if isinstance(settings, str):
-            settings = get_set_preset_path().joinpath(f'{settings}.xml')
-        if isinstance(settings, Parameter):
-            self.populate_from_settings(settings)
-        elif isinstance(settings, Path):
-            self.populate_from_file(settings)
-            self.preset_filename = settings.stem
-        else:
-            raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
     def set_readonly_setting(self, param: Parameter = None):
         """ Set all settings as readonly but configure the VALID_FOR_CONFIGURATION option:
@@ -350,6 +381,12 @@ class Overshooter(ManagerBase):
         self.table_out.setCurrentIndex(self.table_out.model().index(0, 0))
         self.table_out.clear()
 
+    def do_things_after_preset_set(self, preset_name: str):
+        super().do_things_after_preset_set(preset_name)
+
+        self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
+        self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
+
     def remove_setting(self):
         index_0 = self.table_out.selectedIndexes()[0]
         indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
@@ -384,13 +421,16 @@ class Overshooter(ManagerBase):
 
 if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.dashboard import DashBoard, create_load_dashboard
 
     app = mkQApp('PresetManager')
     settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()
 
-    prog = Configurator()
-    prog.update_settings(settings_path)
+    shared_ui, dashboard = create_load_dashboard()
+
+    prog = Overshooter(dashboard)
+
     prog.mainwindow.show()
 
     toolbar, menu = prog.get_external_toolbar_menu()
@@ -400,4 +440,6 @@ if __name__ == "__main__":
     prog.enable_actions(True)
 
     external_ui.show()
+    shared_ui.show()
+
     sys.exit(app.exec())
