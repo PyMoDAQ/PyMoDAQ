@@ -21,12 +21,7 @@ from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.managers.modules_manager import ModulesManager
 
-from pymodaq.utils.managers.configurator.subentries import (
-    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, ConfiguratorSubEntry)
-from pymodaq.utils.managers.configurator.utils import (
-    ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
-    get_module_from_param, config_subentries_from_path, ParameterDelegate,
-    EntryActions, ModuleType)
+from pymodaq.utils.managers.overshoot.utils import PresetScalableGroupOverShoot  # noqa
 
 
 
@@ -37,7 +32,6 @@ if TYPE_CHECKING:
     pass
 
 logger = set_logger(get_module_name(__file__))
-handler_factory = SubEntryHandlerFactory()
 
 
 def get_set_overshooter_path(subfolder: str = ''):
@@ -95,19 +89,21 @@ class Overshooter(ManagerBase):
 
     """
 
-    entry_type = 'overshoot'
-    entry_extension ='.config'
+    params = [
+        {'title': 'Preset:', 'name': 'preset', 'type': 'str', 'value': ''},
+        {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot',},
+    ]
 
+    entry_type = 'overshoot'
+    entry_extension ='.xml'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  preset_filename: str = 'default',):
 
         self._preset_ini = preset_filename
-        self.subentry_handler: SubEntryHandler = None
-        self.config_model = ConfiguratorModel()
 
-        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree(),
+        super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
         self.preset_filename = preset_filename
 
@@ -151,14 +147,14 @@ class Overshooter(ManagerBase):
             self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
-        self.config_model.save(entry_path)
+        self.overshoot_model.save(entry_path)
 
-    @staticmethod
-    def format_subentries(entries: list[ConfiguratorSubEntry]):
-        return [(f'{entry.entry_type.capitalize()} for '
-                 f'{entry.module_name} - '
-                 f'{entry.setting.parameter.title()} '
-                 f'{entry.setting.value()}') for entry in entries]
+    # @staticmethod
+    # def format_subentries(entries: list[OvershootSubEntry]):
+    #     return [(f'{entry.entry_type.capitalize()} for '
+    #              f'{entry.module_name} - '
+    #              f'{entry.setting.parameter.title()} '
+    #              f'{entry.setting.value()}') for entry in entries]
 
     def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
@@ -175,7 +171,7 @@ class Overshooter(ManagerBase):
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.config_model, self.settings, self.actuators, self.detectors)
+                self.overshoot_model, self.settings, self.actuators, self.detectors)
             try:
                 if entry.module_name == ModuleType.NONE:
                     mod = None
@@ -225,27 +221,10 @@ class Overshooter(ManagerBase):
 
     def add_subentry(self, special_entry_name: str):
         self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.config_model, self.settings, self.actuators, self.detectors)
+            self.overshoot_model, self.settings, self.actuators, self.detectors)
         self.subentry_handler.show_dialog()
 
     def setup_docks(self):
-
-        self.table_out = ConfiguratorTableView(True)
-        self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.table_out.horizontalHeader().setStretchLastSection(True)
-        self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-        #self.table_out.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        self.table_out.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragDrop)
-        self.table_out.setDefaultDropAction(QtCore.Qt.DropAction.MoveAction)
-
-        self.table_out.setModel(self.config_model)
-        self.table_out.add_data_signal[str].connect(self.add_subentry)
-        self.table_out.remove_row_signal[int].connect(self.config_model.remove_data)
-        self.table_out.load_data_signal.connect(self.config_model.load)
-        self.table_out.save_data_signal.connect(self.config_model.save)
-        self.delegate = ParameterDelegate()
-        self.table_out.setItemDelegate(self.delegate)
-
         self.set_toolbar(self.add_toolbar('configurations'))
 
         vlayout = QtWidgets.QVBoxLayout()
@@ -264,14 +243,12 @@ class Overshooter(ManagerBase):
         vlayout.addWidget(hwidget)
 
         hlayout.addWidget(self.modules_manager.settings_tree)
-        hlayout.addWidget(self.settings_tree)
 
         hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
         vlayout_right.addWidget(self.get_toolbar('configurations'))
-        vlayout_right.addWidget(self.table_out)
-
+        vlayout_right.addWidget(self.settings_tree)
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
@@ -279,144 +256,32 @@ class Overshooter(ManagerBase):
                         toolbar=self.get_toolbar('main'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
                         toolbar=self.get_toolbar('main'))
-
-        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
-                        tip='Add the current Parameter item',
-                        )
-        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
-                        tip='Delete the current Configuration item ("Del")',
-                        shortcut=Qt.Key.Key_Delete)
-        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move',
-                        tip='Move UP the current Configuration item ("Ctrl+Up")',
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
-        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
-                        tip='Move Down the current Configuration item ("Ctrl+Down")',
-                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.get_toolbar('main').addSeparator()
-        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
-                        tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
 
     def connect_things(self):
-        self.connect_action(EntryActions.ADD, self.add_setting)
-        self.connect_action(EntryActions.REMOVE, self.remove_setting)
-        self.connect_action(EntryActions.UP, self.move_up_setting)
-        self.connect_action(EntryActions.DOWN, self.move_down_setting)
+
 
         self.connect_action('show_all_settings', self.display_settings)
 
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        self.config_model.load(self.entry_filename)
-
-    def set_readonly_setting(self, param: Parameter = None):
-        """ Set all settings as readonly but configure the VALID_FOR_CONFIGURATION option:
-
-        if initially readonly: VALID_FOR_CONFIGURATION is set to its value (if existing otherwise True if not specified)
-        else: VALID_FOR_CONFIGURATION is set to False
-
-        See Also
-        --------
-        pymodaq_gui.parameter.ioxml.VALID_FOR_CONFIGURATION
-        pymodaq.control_modules.move_utility_classes.params
-        pymodaq.control_modules.viewer_utility_classes.params
-
-        """
-
-
-        if not param.readonly():
-            param.setOpts(**{'readonly': True,
-                             VALID_FOR_CONFIGURATION: param.opts.get(VALID_FOR_CONFIGURATION, True)})
+        if entry.exists():
+            self.settings = entry
         else:
-            if not param.opts.get(VALID_FOR_CONFIGURATION, False):
-                param.setOpts(**{VALID_FOR_CONFIGURATION: False})
 
-        for child in param.children():
-            self.set_readonly_setting(child)
-
-    def display_settings(self, display_all: bool = True, param: Parameter = None):
-        if param is None:
-            param = self.settings
-
-        if display_all:
-            param.setOpts(visible=True)
-            if param.opts[VALID_FOR_CONFIGURATION]:
-                brush = QtGui.QBrush(QtCore.Qt.GlobalColor.green)
-                for item in param.items:
-                    for ind_col in range(item.columnCount()):
-                        item.setForeground(ind_col, brush)
-        else:
-            param.setOpts(visible=param.opts[VALID_FOR_CONFIGURATION])
-            if param.opts[VALID_FOR_CONFIGURATION]:
-                brush = QtGui.QBrush(QtCore.Qt.GlobalColor.white)
-                for item in param.items:
-                    for ind_col in range(item.columnCount()):
-                        item.setForeground(ind_col, brush)
-
-        for child in param.children():
-            self.display_settings(display_all, child)
-
-    def set_drag_mode_recursive(self, param: Parameter, movable=True, drop_enabled=True):
-        if param.opts.get(VALID_FOR_CONFIGURATION, True):
-            param.setOpts(movable=movable, dropEnabled=drop_enabled)
-        for child in param.children():
-            self.set_drag_mode_recursive(child, movable, drop_enabled)
-
-    def add_setting(self):
-        if self.tree.currentItem() is not None:
-            current_setting = self.tree.currentItem().param
-            try:
-                module, module_type = get_module_from_param(ParameterWithPath(current_setting))
-            except KeyError:
-                module = ModuleType.NONE.value
-                module_type = ModuleType.NONE
-            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS, module,
-                                         module_type, ParameterWithPath(current_setting))
-            entries = self.config_model.split_entry(entry)
-            for entry in entries:
-                self.config_model.add_data(self.config_model.rowCount(), entry)
+            self.settings = Parameter.create(title='Overshoots', name='overshoot',
+                                             type='group',
+                                             children=self.params)
 
     def do_things_for_new_creation(self):
-        self.table_out.setCurrentIndex(self.table_out.model().index(0, 0))
-        self.table_out.clear()
+        for child in self.settings.child('overshoots').children():
+            child.remove()
 
     def do_things_after_preset_set(self, preset_name: str):
         super().do_things_after_preset_set(preset_name)
 
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
-
-    def remove_setting(self):
-        index_0 = self.table_out.selectedIndexes()[0]
-        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
-        indexes.sort()
-        for index in indexes[::-1]:  #start with the highest row
-            if index != -1:
-                self.config_model.remove_data(index)
-        self.table_out.setCurrentIndex(index_0)
-
-    def move_up_setting(self):
-        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
-        indexes.sort()
-        if indexes[0] == 0:
-            return
-        else:
-            for index in indexes:  #start with the lowest row
-                if index != -1:  # means no selected row
-                    self.config_model.moveRow(QModelIndex(), index,
-                                              QModelIndex(), index-1)
-
-    def move_down_setting(self):
-        indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
-        indexes.sort()
-        if indexes[-1] + 1 == self.config_model.rowCount():
-            return
-        else:
-            for index in indexes[::-1]:  #start with the highest row
-                if index != -1:  # means no selected row
-                    self.config_model.moveRow(QModelIndex(), index,
-                                              QModelIndex(), index+2)
 
 
 if __name__ == "__main__":
