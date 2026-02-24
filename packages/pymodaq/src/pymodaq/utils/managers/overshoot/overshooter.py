@@ -147,7 +147,8 @@ class Overshooter(ManagerBase):
             self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
-        self.overshoot_model.save(entry_path)
+        pass
+        #todo implement this
 
     # @staticmethod
     # def format_subentries(entries: list[OvershootSubEntry]):
