@@ -1,0 +1,109 @@
+actuators:
+- name: excitation-shutter
+  type: discrete
+  values: [close, open]
+- name: reference-shutter
+  values: [close, open]
+  type: discrete
+- name: delay
+  type: continuous
+detectors:
+- name: camera
+  type: 1D
+scanners:
+- name: loop
+  dimension: 1D
+  actuator: delay
+dataprocessors:
+- name: data
+states:
+- name: measurement
+  transitions:
+  - event: error
+    target: error
+  - event: abort
+    target: finish
+  states:
+  - name: prepare-dark
+    actions:
+    - unit: excitation-shutter
+      action: close
+    - unit: reference-shutter
+      action: close
+    - unit: data
+      action: dark
+    transitions:
+    - event: devices-ready
+      target: measure-dark
+  - name: measure-dark
+    actions:
+    - unit: camera
+      action: start-grabbing
+    transitions:
+    - event: acquisition-done
+      target: prepare-reference
+  - name: prepare-reference
+    actions:
+    - unit: reference-shutter
+      action: open
+    - unit: data
+      action: reference
+    transitions:
+    - event: devices-ready
+      target: measure-reference
+  - name: measure-reference
+    actions:
+    - unit: camera
+      action: start-grabbing
+    transitions:
+    - event: acquisition-done
+      target: prepare-main-loop
+  - name: prepare-main-loop
+    actions:
+    - unit: loop
+      action: init-actuators
+    - unit: reference-shutter
+      action: close
+    - unit: excitation-shutter
+      action: open
+    - unit: data
+      action: absorption
+    transitions:
+    - event: devices-ready
+      target: acquisition
+  - name: acquisition
+    actions:
+    - unit: data
+      action: absorption
+    transitions:
+    - event: acquisition-done
+      target: acquisition-done
+  - name: acquisition-done
+    actions:
+    - unit: loop
+      action: advance
+    transitions:
+    - event: devices-ready
+      target: acquisition
+    - event: scan-done
+      target: finish
+- name: error
+  actions:
+  - unit: gui
+    action: display-error
+  transitions:
+  - event: ok
+    target: finish
+- name: finish
+  actions:
+  - unit: camera
+    action: stop-grabbing
+  - unit: excitation-shutter
+    action: close
+  - unit: reference-shutter
+    action: close
+  transitions:
+  - event: devices-ready
+    target: terminate
+- name: terminate
+  final: True
