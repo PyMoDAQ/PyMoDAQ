@@ -107,6 +107,8 @@ class ManagerBase(CustomExt):
     entry_type: str
     entry_extension: str
 
+    execute_action_checkable = False
+
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  **kwargs):
@@ -284,6 +286,8 @@ class ManagerBase(CustomExt):
         self.add_action(ManagerActions.EXECUTE,
                         f'Execute {self.entry_type.capitalize()}', 'start',
                         icon_color=self.get_theme().magenta,
+                        checkable=self.execute_action_checkable,
+                        icon_checked_color=QtGui.QColor(255, 0, 201),
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+Shift+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_E))
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
@@ -466,6 +470,11 @@ class ManagerBase(CustomExt):
         file : Path
             The path to the configuration file to be applied.
         """
+
+        checked = self.is_action_checked(ManagerActions.EXECUTE)
+        # you may want to use the checked state of this action in your implementation
+        # Checkable EXECUTE action is optional and dependant if the class attribute
+        # execute_action_checkable is set to True
         return False
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
