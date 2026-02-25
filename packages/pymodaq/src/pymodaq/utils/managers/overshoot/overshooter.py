@@ -3,78 +3,21 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
-from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtCore import Qt
-from qtpy.QtGui import QKeySequence
-from qtpy.QtCore import QModelIndex
+from qtpy import QtWidgets, QtCore
 
-from pymodaq_data import DataDim
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
-from pymodaq_data import DataToExport
-
 from pymodaq_gui.parameter import Parameter, ioxml
-from pymodaq_gui.parameter.utils import ParameterWithPath
 
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
-
-from pymodaq.utils.managers.modules_manager import ModulesManager
-
-from pymodaq.utils.managers.overshoot.utils import PresetScalableGroupOverShoot  # noqa
-
-
-
-from pymodaq.utils.config import get_set_config_dir
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
+    get_set_overshooter_path  # noqa
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 
 if TYPE_CHECKING:
     pass
 
 logger = set_logger(get_module_name(__file__))
-
-
-def get_set_overshooter_path(subfolder: str = ''):
-    """ creates and return the config folder path for overshooter files
-    """
-    target_path = get_set_config_dir('overshooter_configs').joinpath(subfolder)
-    target_path.mkdir(parents=True, exist_ok=True)
-    return target_path
-
-
-class ModulesManager(ModulesManager):
-    """ Customized version of the ModulesManager """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.available_data = DataToExport(self.__class__.__name__)
-
-    def get_det_data_list(self) -> DataToExport:
-        """Do a snap of selected detectors and get_actuator_value of connected actuators
-        , to get the list of all the data and processed data"""
-
-        if len(self.detectors) == 0:
-            data_det = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
-        else:
-            self.connect_detectors()
-            data_det: DataToExport = self.grab_data()
-            self.connect_detectors(False)
-
-        if len(self.actuators) == 0:
-            data_act = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
-        else:
-            self.connect_actuators()
-            data_act = self.move_actuators()
-            self.connect_actuators(False)
-
-        data_list0D = data_det.get_full_names(DataDim.Data0D)
-        data_list0D.extend(data_act.get_full_names(DataDim.Data0D))
-        self.settings.child('data_dimensions', 'det_data_list0D').setValue(
-            dict(all_items=data_list0D, selected=[]))
-
-        self.available_data = data_list0D[:]
-        return data_det
 
 
 class Overshooter(ManagerBase):
@@ -88,10 +31,10 @@ class Overshooter(ManagerBase):
     ----------
 
     """
-
+    execute_action_checkable = True
     params = [
         {'title': 'Preset:', 'name': 'preset', 'type': 'str', 'value': ''},
-        {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot',},
+        {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
     entry_type = 'overshoot'
@@ -102,7 +45,6 @@ class Overshooter(ManagerBase):
                  preset_filename: str = 'default',):
 
         self._preset_ini = preset_filename
-
         super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
         self.preset_filename = preset_filename
@@ -118,7 +60,9 @@ class Overshooter(ManagerBase):
 
     def show_hide_module_manager_settings(self):
 
-        to_hide = [('move_done',), ('det_done',), ('data_dimensions', 'det_data_list1D'),
+        to_hide = [('move_done',), ('det_done',),
+                   ('data_dimensions', 'probe_data'),
+                   ('data_dimensions', 'det_data_list1D'),
                    ('data_dimensions', 'det_data_list2D'),
                    ('data_dimensions', 'det_data_listND'),
                    ('actuators_positions',)]
@@ -147,15 +91,16 @@ class Overshooter(ManagerBase):
             self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
-        pass
-        #todo implement this
+        """ Particular implementation to save entries for this inherited Manager """
 
-    # @staticmethod
-    # def format_subentries(entries: list[OvershootSubEntry]):
-    #     return [(f'{entry.entry_type.capitalize()} for '
-    #              f'{entry.module_name} - '
-    #              f'{entry.setting.parameter.title()} '
-    #              f'{entry.setting.value()}') for entry in entries]
+        if entry_path is None:
+            entry_path = self.entry_filename
+
+        ioxml.parameter_to_xml_file(
+            self.settings,
+            entry_path,
+            overwrite=True,
+        )
 
     def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
@@ -165,45 +110,24 @@ class Overshooter(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
-        config_subentries = config_subentries_from_path(entry_path)
+        overshoot_subentries = self.settings.child('overshoots').children()
 
-        if len(config_subentries) > 0:
-            self.show_subentries(config_subentries, f'Loading Configuration: {self.entry}')
+        if len(overshoot_subentries) > 0:
+            self.show_subentries(overshoot_subentries, f'Loading Overshoot: {self.entry}')
 
-        for ind, entry in enumerate(config_subentries):
-            subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
-                self.overshoot_model, self.settings, self.actuators, self.detectors)
-            try:
-                if entry.module_name == ModuleType.NONE:
-                    mod = None
-                else:
-                    mod = self.dashboard.modules_manager.get_mod_from_name(
-                        entry.module_name, entry.module_type)
-                subentry_handler.execute_subentry(entry, module=mod, dashboard=self.dashboard)
-                self.subentries_model.set_status(ind, True)
-                QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(200)
-            except SubEntryError as e:
-                logger.exception(str(e))
-                self.subentries_model.set_status(ind, False)
+        if self.is_action_checked(ManagerActions.EXECUTE):
+            pass
+        else:
+            pass
+
+        for ind, entry in enumerate(overshoot_subentries):
+            self.subentries_model.set_status(ind, True)
+            QtWidgets.QApplication.processEvents()
+            QtCore.QThread.msleep(200)
+
 
         self.close_subentries_display(1000)
         return True
-
-    def populate_from_settings(self, settings: Parameter):
-        """
-        Initialize the configurator from a Parameter settings.
-
-        Parameters
-        ----------
-        settings : Parameter
-            Settings containing all modules configuration
-        """
-        self.settings = settings
-        self.set_readonly_setting(self.settings)
-        self.display_settings(display_all=False,
-                              param=self.settings)
-        self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
 
     @property
     def actuators(self):
@@ -211,19 +135,6 @@ class Overshooter(ManagerBase):
     @property
     def detectors(self):
         return self.modules_manager.detectors_name
-
-    def populate_from_file(self, file_path: Path):
-        """ for quick testing purpose, not meant to be used at the end"""
-        children = ioxml.XML_file_to_parameter(file_path)
-        settings = Parameter.create(
-            title="Control Modules:", name="control_modules", type="group", children=children
-        )
-        self.populate_from_settings(settings)
-
-    def add_subentry(self, special_entry_name: str):
-        self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.overshoot_model, self.settings, self.actuators, self.detectors)
-        self.subentry_handler.show_dialog()
 
     def setup_docks(self):
         self.set_toolbar(self.add_toolbar('configurations'))
@@ -258,12 +169,15 @@ class Overshooter(ManagerBase):
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
                         toolbar=self.get_toolbar('main'))
         self.get_toolbar('main').addSeparator()
+        self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
 
     def connect_things(self):
+        self.connect_action('update_data', self.update_available_data)
 
-
-        self.connect_action('show_all_settings', self.display_settings)
-
+    def update_available_data(self):
+        self.modules_manager.get_det_data_list()
+        self.settings.child('overshoots').setOpts(addList=self.modules_manager.available_data,
+                                                  configurations=self.dashboard.configurator.entries)
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         if entry.exists():
@@ -283,6 +197,8 @@ class Overshooter(ManagerBase):
 
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
+
+        self.update_available_data()
 
 
 if __name__ == "__main__":

@@ -607,7 +607,7 @@ class DAQ_Move(ParameterControlModule):
                 self.ui.move_done = True
             self._current_value = data_act
             self._move_done_bool = True
-            data_act.origin = data_act.origin if data_act.origin is not None else self.title
+            data_act.origin = data_act.origin if data_act.origin is not (None or '') else self.title
             self.move_done_signal.emit(data_act)
             if (
                 self.settings.child("main_settings", "tcpip", "tcp_connected").value()
