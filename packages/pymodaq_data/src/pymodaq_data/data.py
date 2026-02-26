@@ -2851,6 +2851,218 @@ class DataWithAxes(DataBase, SerializableBase):
         """ Get the underlying data selected from the list at index, returned as a DataWithAxes"""
         return self.deepcopy_with_new_data([self[index]])
 
+    def to_xarray(self):
+        """Convert this DataWithAxes to an xarray.Dataset.
+
+        Each array in self.data becomes a data variable (keyed by its label).
+        Each Axis becomes a coordinate on the corresponding dimension.
+        Error arrays (if present) are stored as ``<label>_error`` data variables.
+
+        Returns
+        -------
+        xr.Dataset
+
+        Raises
+        ------
+        ImportError
+            If xarray is not installed.
+        """
+        try:
+            import xarray as xr
+        except ImportError:
+            raise ImportError(
+                "xarray is required for to_xarray(). "
+                "Install it with: pip install 'pymodaq_data[xarray]'"
+            )
+
+        ndim = len(self.shape)
+
+        # --- build dim names (one per shape dimension) ---
+        dim_names = []
+        seen_dim_names = {}
+        for i in range(ndim):
+            axes_at_i = self.get_axis_from_index(i)
+            if axes_at_i and axes_at_i[0] is not None and axes_at_i[0].label:
+                base = axes_at_i[0].label
+            else:
+                base = f'dim_{i}'
+            # deduplicate
+            if base in seen_dim_names:
+                seen_dim_names[base] += 1
+                name = f'{base}_{seen_dim_names[base]}'
+            else:
+                seen_dim_names[base] = 0
+                name = base
+            dim_names.append(name)
+
+        # --- build coordinates ---
+        coords = {}
+        spread_dim_names = []
+        for axis in self.axes:
+            dim_name = dim_names[axis.index]
+            axis_data = axis.get_data()
+            if axis_data is None:
+                continue
+            if axis.spread_order > 0:
+                coord_name = f'{axis.label}_{axis.spread_order}' if axis.label else f'{dim_name}_{axis.spread_order}'
+                coord_attrs = {
+                    'units': axis.units,
+                    'pymodaq_label': axis.label,
+                    'spread_order': axis.spread_order,
+                }
+                if dim_name not in spread_dim_names:
+                    spread_dim_names.append(dim_name)
+            else:
+                coord_name = axis.label if axis.label else dim_name
+                coord_attrs = {
+                    'units': axis.units,
+                    'pymodaq_label': axis.label,
+                }
+            coords[coord_name] = xr.Variable(dim_name, axis_data, attrs=coord_attrs)
+
+        # --- build data variables ---
+        data_vars = {}
+        label_list = list(self.labels)
+        error_var_names = []
+        for i, (array, label) in enumerate(zip(self.data, label_list)):
+            var_name = label if label else f'data_{i}'
+            data_vars[var_name] = xr.Variable(dim_names, array)
+            if self.errors is not None:
+                err_name = f'{var_name}_error'
+                data_vars[err_name] = xr.Variable(dim_names, self.errors[i])
+                error_var_names.append(err_name)
+
+        # --- dataset attrs ---
+        attrs = {
+            'pymodaq_name': self.name,
+            'pymodaq_origin': self.origin,
+            'pymodaq_source': self.source.name,
+            'pymodaq_distribution': self.distribution.name,
+            'pymodaq_units': self.units,
+            'pymodaq_nav_indexes': list(self.nav_indexes),
+            'pymodaq_labels': label_list,
+        }
+        if error_var_names:
+            attrs['pymodaq_error_vars'] = error_var_names
+        if spread_dim_names:
+            attrs['pymodaq_spread_dim_names'] = spread_dim_names
+
+        return xr.Dataset(data_vars, coords=coords, attrs=attrs)
+
+    @classmethod
+    def from_xarray(cls, ds) -> 'DataWithAxes':
+        """Construct a DataWithAxes from an xarray Dataset (or DataArray).
+
+        Parameters
+        ----------
+        ds : xr.Dataset or xr.DataArray
+
+        Returns
+        -------
+        DataWithAxes
+
+        Raises
+        ------
+        ImportError
+            If xarray is not installed.
+        """
+        try:
+            import xarray as xr
+        except ImportError:
+            raise ImportError(
+                "xarray is required for from_xarray(). "
+                "Install it with: pip install 'pymodaq_data[xarray]'"
+            )
+
+        if isinstance(ds, xr.DataArray):
+            var_name = ds.name if ds.name else 'data'
+            ds = ds.to_dataset(name=var_name)
+
+        attrs = ds.attrs
+        name = attrs.get('pymodaq_name', 'from_xarray')
+        origin = attrs.get('pymodaq_origin', '')
+        source_str = attrs.get('pymodaq_source', 'raw')
+        distribution_str = attrs.get('pymodaq_distribution', 'uniform')
+        units = attrs.get('pymodaq_units', '')
+        nav_indexes = tuple(attrs.get('pymodaq_nav_indexes', []))
+        stored_labels = list(attrs.get('pymodaq_labels', []))
+        error_var_names = list(attrs.get('pymodaq_error_vars', []))
+
+        # separate error vars from regular data vars
+        regular_vars = {k: v for k, v in ds.data_vars.items() if k not in error_var_names}
+        error_vars = {k: v for k, v in ds.data_vars.items() if k in error_var_names}
+
+        # reconstruct data arrays and labels
+        data_arrays = []
+        labels = []
+        for i, (var_name, var) in enumerate(regular_vars.items()):
+            data_arrays.append(var.values)
+            label = stored_labels[i] if i < len(stored_labels) else var_name
+            labels.append(label)
+
+        # reconstruct error arrays (matched by position in error_var_names)
+        errors = None
+        if error_vars:
+            errors = [error_vars[err_name].values for err_name in error_var_names]
+
+        # reconstruct Axis objects from dims and coords
+        dim_names = list(ds.dims)
+        axes = []
+        for i, dim_name in enumerate(dim_names):
+            # find coords that live on this dimension
+            dim_coords = [
+                (cname, cvar) for cname, cvar in ds.coords.items()
+                if list(cvar.dims) == [dim_name]
+            ]
+            if dim_coords:
+                # primary coord: spread_order == 0 (or missing) comes first
+                primary = None
+                secondary = []
+                for cname, cvar in dim_coords:
+                    spread_order = int(cvar.attrs.get('spread_order', 0))
+                    axis_label = cvar.attrs.get('pymodaq_label', cname)
+                    axis_units = cvar.attrs.get('units', '')
+                    axis = Axis(
+                        label=axis_label,
+                        units=axis_units,
+                        data=cvar.values,
+                        index=i,
+                        spread_order=spread_order,
+                    )
+                    if spread_order == 0:
+                        primary = axis
+                    else:
+                        secondary.append(axis)
+                if primary is not None:
+                    axes.append(primary)
+                axes.extend(secondary)
+            else:
+                # no coord: create size-only axis
+                dim_size = ds.sizes[dim_name]
+                axes.append(Axis(label=dim_name, index=i, size=dim_size))
+
+        try:
+            source = DataSource[source_str]
+        except KeyError:
+            source = DataSource.raw
+        try:
+            distribution = DataDistribution[distribution_str]
+        except KeyError:
+            distribution = DataDistribution.uniform
+
+        return cls(
+            name=name,
+            source=source,
+            distribution=distribution,
+            data=data_arrays,
+            labels=labels,
+            units=units,
+            axes=axes,
+            nav_indexes=nav_indexes,
+            origin=origin,
+            errors=errors,
+        )
+
 
 @ser_factory.register_decorator()
 class DataRaw(DataWithAxes):
@@ -3529,6 +3741,75 @@ class DataToExport(DataLowLevel, SerializableBase):
     def append(self, dte: DataToExport):
         if isinstance(dte, DataToExport):
             self.append(dte.data)
+
+    def to_xarray(self):
+        """Convert this DataToExport to an xarray.DataTree.
+
+        The root node carries ``pymodaq_name`` in its attrs. Each DataWithAxes
+        becomes a child node whose dataset is produced by
+        ``DataWithAxes.to_xarray()``.
+
+        Returns
+        -------
+        xr.DataTree
+
+        Raises
+        ------
+        ImportError
+            If xarray is not installed.
+        """
+        try:
+            import xarray as xr
+        except ImportError:
+            raise ImportError(
+                "xarray is required for to_xarray(). "
+                "Install it with: pip install 'pymodaq_data[xarray]'"
+            )
+
+        children = {dwa.name: xr.DataTree(dataset=dwa.to_xarray()) for dwa in self}
+        root_ds = xr.Dataset(attrs={'pymodaq_name': self.name})
+        return xr.DataTree(dataset=root_ds, children=children)
+
+    @classmethod
+    def from_xarray(cls, dt, name: str = None) -> 'DataToExport':
+        """Construct a DataToExport from an xarray.DataTree or a dict of Datasets.
+
+        Parameters
+        ----------
+        dt : xr.DataTree or dict[str, xr.Dataset]
+        name : str, optional
+            Override the name; if None, read from ``dt.attrs['pymodaq_name']``.
+
+        Returns
+        -------
+        DataToExport
+
+        Raises
+        ------
+        ImportError
+            If xarray is not installed.
+        """
+        try:
+            import xarray as xr
+        except ImportError:
+            raise ImportError(
+                "xarray is required for from_xarray(). "
+                "Install it with: pip install 'pymodaq_data[xarray]'"
+            )
+
+        if isinstance(dt, xr.DataTree):
+            root_attrs = dt.dataset.attrs if dt.dataset is not None else {}
+            dte_name = name or root_attrs.get('pymodaq_name', 'from_xarray')
+            data_list = [
+                DataWithAxes.from_xarray(child.dataset)
+                for child in dt.children.values()
+            ]
+        else:
+            # dict[str, xr.Dataset] fallback
+            dte_name = name or 'from_xarray'
+            data_list = [DataWithAxes.from_xarray(ds) for ds in dt.values()]
+
+        return cls(name=dte_name, data=data_list)
 
 
 if __name__ == '__main__':
