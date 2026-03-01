@@ -101,7 +101,6 @@ class ModulesManager(ModulesManager):
         for dwa in data_det.get_data_from_dim(DataDim.Data0D):
             data_list0D.extend([f'{dwa.origin}/{dwa.name}/{label}' for label in dwa.labels])
 
-        data_list0D = data_det.get_full_names(DataDim.Data0D)
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
 

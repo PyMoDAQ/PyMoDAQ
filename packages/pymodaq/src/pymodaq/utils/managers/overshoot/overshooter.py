@@ -182,10 +182,10 @@ class Overshooter(ManagerBase):
     def create_slot(self, param: Parameter):
         return lambda dwa: self.process_data(param, dwa)
 
-    def process_dte(self, param, data: Union[DataToExport, DataWithAxes]):
-        if isinstance(data, DataWithAxes):
+    def process_data(self, param, data: Union[DataToExport, DataWithAxes]):
+        if isinstance(data, DataWithAxes):  # from DAQ_Move modules
             self.process_dwa(param, data)
-        elif isinstance(data, DataToExport):
+        elif isinstance(data, DataToExport): # from DAQ_Viewer modules
             self.process_dwa(param, data.get_data_from_name_origin(param['name'],
                                                                    param['module']))
         else:
@@ -196,9 +196,11 @@ class Overshooter(ManagerBase):
         if param['direction'] == TriggerDirection.ABOVE.name:
             if dwa[channel_index] > param['value']:
                 self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
-        else:
+        elif param['direction'] == TriggerDirection.BELOW.name:
             if dwa[channel_index] < param['value']:
                 self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
+        else:  # some later cases...
+            pass
 
     def overshoot_from_param(self, param: Parameter, dwa: DataWithAxes = None):
         return Overshoot(param['module'],
