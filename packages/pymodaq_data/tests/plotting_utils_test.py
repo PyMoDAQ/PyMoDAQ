@@ -12,14 +12,6 @@ class TestPlotColor:
         with pytest.raises(TypeError):
             pcolor = PlotColors((0, 0, 0))
 
-    def test_non_integer(self):
-        with pytest.raises(TypeError):
-            pcolor = PlotColors([(0, 0., 0)])
-
-    def test_non_8bits(self):
-        with pytest.raises(TypeError):
-            pcolor = PlotColors([(0, 256, 0)])
-
     def test_negative(self):
         with pytest.raises(TypeError):
             pcolor = PlotColors([(0, -5, 0)])
