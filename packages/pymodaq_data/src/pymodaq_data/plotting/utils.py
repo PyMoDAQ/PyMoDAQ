@@ -47,6 +47,6 @@ class PlotColors:
     def check_color(color: IterableType):
         if not isinstance(color, Iterable) and len(color) != 3:
             raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
-        for col_val in color:
-            if not (isinstance(col_val, int) and 0 <= col_val <= 255):
-                raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
+        # for col_val in color:
+        #     if not (isinstance(col_val, int) and 0 <= col_val <= 255):
+        #         raise TypeError('Colors should be a list of 3-tuple 8 bits integer (0-255)')
