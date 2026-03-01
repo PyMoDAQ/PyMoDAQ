@@ -6,7 +6,8 @@ import sys
 from qtpy import QtWidgets, QtCore
 from sympy.abc import lamda
 
-from pymodaq_data import DataWithAxes
+from pymodaq.utils.data import DataActuator
+from pymodaq_data import DataWithAxes, DataToExport
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
@@ -25,6 +26,7 @@ logger = set_logger(get_module_name(__file__))
 class Overshoot():
     module_name: str
     data_name: str
+    channel: str
     direction: TriggerDirection
     value: float
     dwa_value: float = None
@@ -44,7 +46,8 @@ class Overshooter(ManagerBase):
     """
     execute_action_checkable = True
     params = [
-        {'title': 'Preset:', 'name': 'preset', 'type': 'str', 'value': ''},
+        {'title': 'Configuration:', 'name': 'configuration', 'type': 'list',
+         'limits': [],},
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
@@ -142,6 +145,8 @@ class Overshooter(ManagerBase):
             The path to the configuration file to be applied.
         """
         overshoot_subentries = self.settings.child('overshoots').children()
+        if len(self.slots) == 0:
+            self.create_slots()
 
         if len(overshoot_subentries) > 0:
             self.show_subentries(
@@ -175,24 +180,34 @@ class Overshooter(ManagerBase):
         return True
 
     def create_slot(self, param: Parameter):
-        return lambda dwa: self.process_dwa(param, dwa)
+        return lambda dwa: self.process_data(param, dwa)
+
+    def process_dte(self, param, data: Union[DataToExport, DataWithAxes]):
+        if isinstance(data, DataWithAxes):
+            self.process_dwa(param, data)
+        elif isinstance(data, DataToExport):
+            self.process_dwa(param, data.get_data_from_name_origin(param['name'],
+                                                                   param['module']))
+        else:
+            pass
 
     def process_dwa(self, param: Parameter, dwa: DataWithAxes):
+        channel_index = dwa.labels.index(param['channel'])
         if param['direction'] == TriggerDirection.ABOVE.name:
-            if dwa > param['value']:
+            if dwa[channel_index] > param['value']:
                 self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
         else:
-            if dwa < param['value']:
+            if dwa[channel_index] < param['value']:
                 self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
 
-    @staticmethod
-    def overshoot_from_param(param: Parameter, dwa: DataWithAxes = None):
+    def overshoot_from_param(self, param: Parameter, dwa: DataWithAxes = None):
         return Overshoot(param['module'],
                          param['name'],
+                         param['channel'],
                          TriggerDirection[param['direction']],
                          param['value'],
                          dwa.value() if dwa is not None else None,
-                         param['configuration'])
+                         self.settings['configuration'])
 
     @property
     def actuators(self):
@@ -229,7 +244,7 @@ class Overshooter(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset: '),
+        self.add_widget('preset_label', QtWidgets.QLabel('Overshoots from Preset: '),
                         toolbar=self.get_toolbar('main'))
         self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
                         toolbar=self.get_toolbar('main'))
@@ -237,21 +252,16 @@ class Overshooter(ManagerBase):
         self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
 
     def connect_things(self):
-        self.connect_action('update_data', self.update_available_data_and_configurations)
+        self.connect_action('update_data', self.update_available_data)
 
     def update_configurations(self):
         configurations = self.dashboard.configurator.entries
-        for child in self.settings.child('overshoots').children():
-            child.child('configuration').setLimits(configurations)
-            # update for current overshoots subentries
-        return configurations
+        self.settings.child('configuration').setLimits(configurations)
 
-    def update_available_data_and_configurations(self):
+    def update_available_data(self):
         self.modules_manager.get_det_data_list()
         self.settings.child('overshoots').setOpts(
-            addList=self.modules_manager.available_data,
-            configurations=self.update_configurations())  # update for next overshoots subentry
-
+            addList=self.modules_manager.available_data)
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         if entry.exists():
@@ -273,7 +283,8 @@ class Overshooter(ManagerBase):
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
 
-        self.update_available_data_and_configurations()
+        self.update_available_data()
+        self.update_configurations()
 
 
 if __name__ == "__main__":

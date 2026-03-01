@@ -29,22 +29,22 @@ class TriggerDirection(StrEnum):
     BELOW = 'Below'
 
 
-def create_overshoot_param(typ: str, configurations: list[str]) -> list[dict]:
+def create_overshoot_param(typ: str) -> list[dict]:
     return [
         {'title': 'Module:', 'name': 'module', 'type': 'str', 'value': typ.split('/')[0],
          'readonly': True},
         {'title': 'DataName:', 'name': 'name', 'type': 'str', 'value': typ.split('/')[1],
          'readonly': True},
+        {'title': 'Channel:', 'name': 'channel', 'type': 'str', 'value': typ.split('/')[2],
+         'readonly': True},
         {'title': 'Trigger:', 'name': 'trigger', 'type': 'led', 'value': True},
         {'title': 'Direction:', 'name': 'direction', 'type': 'list',
          'value': TriggerDirection.ABOVE.value, 'limits': TriggerDirection.names()},
         {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0,},
-        {'title': 'Configuration:', 'name': 'configuration', 'type': 'list',
-         'limits': configurations, 'value': configurations[0]},
     ]
 
 
-class PresetScalableGroupOverShoot(GroupParameter):
+class ScalableGroupOverShoot(GroupParameter):
     """
     """
 
@@ -52,7 +52,6 @@ class PresetScalableGroupOverShoot(GroupParameter):
         opts['type'] = 'group_overshoot'
         opts['addText'] = "Add"
         opts['addList'] = []
-        opts['configurations'] = []
         super().__init__(**opts)
 
     def addNew(self, typ: str):
@@ -64,12 +63,11 @@ class PresetScalableGroupOverShoot(GroupParameter):
                  'name': f'{name_prefix}{new_index}',
                  'type': 'group',
                  'removable': True,
-                 'children': create_overshoot_param(typ,
-                                                    self.opts['configurations'])}
+                 'children': create_overshoot_param(typ)}
         self.addChild(child)
 
 
-registerParameterType('group_overshoot', PresetScalableGroupOverShoot, override=True)
+registerParameterType('group_overshoot', ScalableGroupOverShoot, override=True)
 
 
 class ModulesManager(ModulesManager):
@@ -97,9 +95,13 @@ class ModulesManager(ModulesManager):
             self.connect_actuators()
             data_act = self.move_actuators()
             self.connect_actuators(False)
+        data_det.append(data_act)
+
+        data_list0D = []
+        for dwa in data_det.get_data_from_dim(DataDim.Data0D):
+            data_list0D.extend([f'{dwa.origin}/{dwa.name}/{label}' for label in dwa.labels])
 
         data_list0D = data_det.get_full_names(DataDim.Data0D)
-        data_list0D.extend(data_act.get_full_names(DataDim.Data0D))
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
 
