@@ -742,8 +742,6 @@ class DAQScan(CustomExt):
             self.close_file()
 
             if not self.batch_started:
-                if not self.dashboard.overshoot:
-                    self.set_ini_positions()
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
 
@@ -907,7 +905,6 @@ class DAQScan(CustomExt):
             set_scan
         """
         self.ui.display_status('Starting acquisition')
-        self.dashboard.overshoot = False
         #deactivate double_clicked
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
@@ -997,6 +994,11 @@ class DAQScan(CustomExt):
         if self.modules_manager.actuators == self.scanner.actuators:
             self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
 
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+        """
+        self.stop_scan()
+
     def stop_scan(self):
         """
             Emit the command_DAQ signal "stop_acquisition".
@@ -1010,12 +1012,6 @@ class DAQScan(CustomExt):
         scan_node = self.module_and_data_saver.get_last_node()
         if scan_node is not None:
             scan_node.attrs['scan_done'] = True
-
-        if not self.dashboard.overshoot:
-            self.set_ini_positions()  # do not set ini position again in case overshoot fired
-            status = 'Data Acquisition has been stopped by user'
-        else:
-            status = 'Data Acquisition has been stopped due to overshoot'
 
         self.update_status(status)
         self.ui.set_permanent_status('')

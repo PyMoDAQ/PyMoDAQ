@@ -565,6 +565,11 @@ class GenericOptimization(CustomExt):
                         tip='Go to the double clicked position in the plot')
         logger.debug('actions set')
 
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+        """
+        self.stop_algo()
+
     def connect_things(self):
         logger.debug('connecting things')
         self.connect_action('models', self.update_model_settings_from_action,

@@ -1,20 +1,22 @@
 from dataclasses import dataclass
-
 import time
 from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
+from serializall import SerializableFactory
 
-from packages.pymodaq.tests.utils.scanner_test.scan_factory_test import actuators
+from pymodaq_utils.enums import StrEnum
+from pymodaq_utils.abstract import abstract_attribute
+
 from pymodaq_data import DataToExport
+
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
-from pymodaq_utils.abstract import abstract_attribute
-from pymodaq.utils.data import DataActuator, DataToActuators
 
+from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.utils.managers.modules_manager import ModuleType
-from pymodaq_utils.enums import StrEnum
-from serializall import SerializableFactory
+from pymodaq.extensions import ExtensionEnum
+
 
 ser_factory = SerializableFactory()
 
@@ -37,6 +39,7 @@ class SubEntryHandlerTypes(StrEnum):
     WAIT = 'Waiting Time'
     STOP = 'Stop Module'
     STOP_ALL = 'Stop All Control Modules'
+    STOP_EXTENSION = 'Stop Extension'
 
 
 @SerializableFactory.register_decorator()
@@ -101,12 +104,15 @@ class SubEntryHandler(QtCore.QObject):
                  model: 'ConfiguratorModel',
                  settings: Parameter,
                  actuators: list[str] = None,
-                 detectors: list[str] = None):
+                 detectors: list[str] = None,
+                 extensions: list[str] = None,
+                 ):
 
         super().__init__()
         self.settings: Parameter = settings
-        self.actuators: list[str] = actuators
-        self.detectors: list[str] = detectors
+        self.actuators: list[str] = actuators if actuators is not None else []
+        self.detectors: list[str] = detectors if detectors is not None else []
+        self.extensions: list[str] = extensions if extensions is not None else []
         self.model: ConfiguratorModel = model
 
     def show_dialog(self):
@@ -423,6 +429,44 @@ class StopAllSubEntryHandler(SubEntryHandler):
                module = dashboard.modules_manager.get_mod_from_name(mod_name, ModuleType.Control)
                if module.initialized_state:
                    module.stop_module()
+        except Exception as e:
+            raise SubEntryError from e
+
+
+@SubEntryHandlerFactory.register_handler()
+class StopExtensionSubEntryHandler(SubEntryHandler):
+    handler_name = SubEntryHandlerTypes.STOP_EXTENSION
+
+    def setup_widgets(self):
+        label = QtWidgets.QLabel('Stop Extension:')
+        self.extension_cb = QtWidgets.QComboBox()
+        self.extension_cb.addItems(self.extensions)
+        self.stop_bool = QtWidgets.QCheckBox()
+        self.stop_bool.setChecked(True)
+        self.widget.layout().addWidget(label)
+        self.widget.layout().addWidget(self.extension_cb)
+        self.widget.layout().addWidget(self.stop_bool)
+
+    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
+        return ConfiguratorSubEntry(
+            self.handler_name,
+            self.extension_cb.currentText(),
+            module_type=ModuleType.Other,
+            setting=ParameterWithPath(
+                parameter=Parameter.create(
+                    title= 'Stop Extension',
+                    name=''.join(self.handler_name.split(' ')),
+                    type='bool',
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
+            path=()),)
+
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
+        try:
+            if ExtensionEnum(entry.module_name) in dashboard.extensions:
+                dashboard.extensions[ExtensionEnum(entry.module_name)].stop()
         except Exception as e:
             raise SubEntryError from e
 

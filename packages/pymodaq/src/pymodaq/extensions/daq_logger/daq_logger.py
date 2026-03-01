@@ -269,6 +269,14 @@ class DAQ_Logger(CustomExt):
         for act in self.modules_manager.actuators:
             act.stop_grab()
 
+    def stop(self):
+        """ Programmatic method to stop action in the extension
+
+        Irrelevant for the DAQLogger as it doesn't do anything on the control modules
+
+        """
+        pass
+
     def set_log_type(self, log_type):
         self.settings.child('log_type').setValue(log_type)
 

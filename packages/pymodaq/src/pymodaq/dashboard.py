@@ -177,7 +177,7 @@ class DashBoard(CustomApp):
         self.pid_window = None
         self.retriever_module = None
         self.database_module = None
-        self.extensions: dict[str, CustomApp] = dict([])
+        self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
         self.preset_manager: PresetManager = None  # instanciation in do_things_after_ui_setup
         self.configurator: Configurator = None # instanciation in do_things_after_ui_setup

@@ -40,6 +40,13 @@ class CustomExt(CustomApp):
         else:
             self._modules_manager = None
 
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+
+        To be reimplemented
+        """
+        raise NotImplementedError
+
     def quit_fun(self):
         """Method to be subclassed in order to define a custom quit function
         """

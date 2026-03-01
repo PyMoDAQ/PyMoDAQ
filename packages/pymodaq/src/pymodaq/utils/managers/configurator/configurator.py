@@ -10,11 +10,11 @@ from qtpy.QtCore import QModelIndex
 
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import get_set_preset_path
+
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
-
+from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.managers.configurator.subentries import (
@@ -24,10 +24,9 @@ from pymodaq.utils.managers.configurator.utils import (
     get_module_from_param, config_subentries_from_path, ParameterDelegate,
     EntryActions, ModuleType)
 
-
-
+from pymodaq.utils.config import get_set_preset_path
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq.extensions import ExtensionEnum
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -151,19 +150,22 @@ class Configurator(ManagerBase):
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
 
     @property
-    def actuators(self):
+    def actuators(self) -> list[str]:
         if self.dashboard is not None:
             return self.dashboard.modules_manager.actuators_name
         else:
             return [param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
 
     @property
-    def detectors(self):
+    def detectors(self) -> list[str]:
         if self.dashboard is not None:
             return self.dashboard.modules_manager.detectors_name
         else:
             return [param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
 
+    @property
+    def extensions(self) -> list[str]:
+        return ExtensionEnum.values()
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
@@ -175,7 +177,7 @@ class Configurator(ManagerBase):
 
     def add_subentry(self, special_entry_name: str):
         self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.config_model, self.settings, self.actuators, self.detectors)
+            self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
         self.subentry_handler.show_dialog()
 
     def setup_docks(self):
