@@ -198,11 +198,6 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            settings_str += ioxml.parameter_to_xml_string(
-                self.dashboard.preset_manager.preset_params)
-            if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.overshoot_manager.overshoot_params)
             if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
                 settings_str += ioxml.parameter_to_xml_string(
                     self.dashboard.roi_saver.roi_presets)

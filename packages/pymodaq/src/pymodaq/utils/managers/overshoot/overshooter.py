@@ -275,6 +275,11 @@ class Overshooter(ManagerBase):
 
         self.create_slots()
 
+    def value_changed(self, param: Parameter):
+        if self.is_action_checked(ManagerActions.EXECUTE):
+            self.get_action(ManagerActions.EXECUTE).trigger()
+        self.create_slots()
+
     def do_things_for_new_creation(self):
         for child in self.settings.child('overshoots').children():
             child.remove()

@@ -154,9 +154,6 @@ class PresetManager(ManagerBase):
                     f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
                     log_type="log",
                 )
-                self.dashboard.settings.child("loaded_files", "preset_file").setValue(
-                    entry.name
-                )
                 self.dashboard.actuators_modules = actuators_modules
                 self.dashboard.detector_modules = detector_modules
 
