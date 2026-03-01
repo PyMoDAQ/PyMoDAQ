@@ -340,7 +340,7 @@ class ManagerBase(CustomExt):
             combo,
             property_map={
                 'items': {
-                    'signal': combo.items_changed,  # FROM_SYNC only
+                    'signal': combo.items_changed,  
                     'getter': combo.get_items,
                     'setter': combo.set_items,
                     'mode': SyncMode.BIDIRECTIONAL
