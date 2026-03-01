@@ -524,9 +524,10 @@ class DAQ_Viewer(ParameterControlModule):
         --------
         :meth:`stop`
         """
-        if self.ui is not None:
-            self.manage_ui_actions('grab', 'setChecked', False)
-        self.stop()
+        if self.ui is not None and self.ui.is_action_checked('grab'):
+            self.ui.get_action('grab').trigger()
+        else:
+            self.stop()
 
     def stop(self):
         """ Stop the current continuous grabbing """
