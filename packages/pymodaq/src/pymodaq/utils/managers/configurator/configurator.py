@@ -127,7 +127,7 @@ class Configurator(ManagerBase):
                 subentry_handler.execute_subentry(entry, module=mod, dashboard=self.dashboard)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(200)
+                QtCore.QThread.msleep(0)
             except SubEntryError as e:
                 logger.exception(str(e))
                 self.subentries_model.set_status(ind, False)
