@@ -5,6 +5,7 @@ from typing import Callable, TYPE_CHECKING, Union, Tuple
 
 from qtpy import QtWidgets, QtCore
 
+from packages.pymodaq.tests.utils.scanner_test.scan_factory_test import actuators
 from pymodaq_data import DataToExport
 from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
@@ -34,7 +35,8 @@ class SubEntryHandlerTypes(StrEnum):
     ACTUATOR_VALUE = 'Actuator Value'
     INIT = 'Init. Module'
     WAIT = 'Waiting Time'
-
+    STOP = 'Stop Module'
+    STOP_ALL = 'Stop All Control Modules'
 
 
 @SerializableFactory.register_decorator()
@@ -349,6 +351,69 @@ class WaitSubEntryHandler(SubEntryHandler):
         while abs(time.perf_counter() - start) < entry.setting.value():
             QtWidgets.QApplication.processEvents()
 
+
+@SubEntryHandlerFactory.register_handler()
+class StopSubEntryHandler(SubEntryHandler):
+    handler_name = SubEntryHandlerTypes.STOP
+
+    def setup_widgets(self):
+        self.module_cb = QtWidgets.QComboBox()
+        self.module_cb.addItems(self.actuators + self.detectors)
+
+        self.widget.layout().addWidget(self.module_cb)
+
+    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
+        return ConfiguratorSubEntry(
+            self.handler_name,
+            self.module_cb.currentText(),
+            module_type=ModuleType.Actuator if self.module_cb.currentText() in self.actuators else ModuleType.Detector,
+            setting=ParameterWithPath(
+                parameter=Parameter.create(
+                    title= 'Stop Module',
+                    name=''.join(self.handler_name.split(' ')),
+                    type='bool',
+                    value=True,),
+            path=()),)
+
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
+        if not module.initialized_state:
+            raise SubEntryError('Could not stop an actuator that is not initialized')
+        try:
+            dashboard.modules_manager.stop_module(entry.module_name)
+        except Exception as e:
+            raise SubEntryError from e
+
+@SubEntryHandlerFactory.register_handler()
+class StopAllSubEntryHandler(SubEntryHandler):
+    handler_name = SubEntryHandlerTypes.STOP_ALL
+
+    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
+        return ConfiguratorSubEntry(
+            self.handler_name,
+            'All',
+            module_type=ModuleType.Control,
+            setting=ParameterWithPath(
+                parameter=Parameter.create(
+                    title= 'Stop All Control Modules',
+                    name=''.join(self.handler_name.split(' ')),
+                    type='bool',
+                    value=True,),
+            path=()),)
+
+    def execute_subentry(self, entry: ConfiguratorSubEntry,
+                         module: Union['DAQ_Move', 'DAQ_Viewer'],
+                         dashboard: 'DashBoard'):
+        """ Execute the given subentry """
+        if not module.initialized_state:
+            raise SubEntryError('Could not stop an actuator that is not initialized')
+        try:
+            for mod in dashboard.modules_manager.actuators_name + dashboard.modules_manager.detectors_name:
+               dashboard.modules_manager.stop_module(mod)
+        except Exception as e:
+            raise SubEntryError from e
 
 
 if __name__ == '__main__':

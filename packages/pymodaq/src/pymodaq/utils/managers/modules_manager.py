@@ -143,6 +143,8 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('actuators_positions').show(not show)
 
     def stop_module(self, mod_name):
+        module = self.get_mod_from_name(mod_name, ModuleType.Control)
+        module.stop()
 
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):

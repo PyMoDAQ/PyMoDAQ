@@ -513,6 +513,10 @@ class DAQ_Viewer(ParameterControlModule):
         self._take_bkg = True
         self.grab_data(snap_state=True)
 
+    def stop(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_grab()
+
     def stop_grab(self):
         """ Stop the current continuous grabbing and unchecked the stop button of the UI
 
