@@ -4,9 +4,8 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets, QtCore
-from sympy.abc import lamda
 
-from pymodaq.utils.data import DataActuator
+
 from pymodaq_data import DataWithAxes, DataToExport
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
