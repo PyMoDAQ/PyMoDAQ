@@ -30,6 +30,7 @@ config = Config()
 class ModuleType(StrEnum):
     Actuator = "actuator"
     Detector = "detector"
+    Control = 'control'
     Other = 'other'
     NONE = 'None'
 
@@ -141,6 +142,8 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('data_dimensions').show(not show)
         self.settings.child('actuators_positions').show(not show)
 
+    def stop_module(self, mod_name):
+
     @classmethod
     def get_names(cls, modules:  list[Union['DAQ_Move', 'DAQ_Viewer']]):
         """Get the titles of a list of Control Modules
@@ -169,7 +172,7 @@ class ModulesManager(QObject, ParameterManager):
                 mods.append(d)
         return mods
 
-    def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
+    def get_mod_from_name(self, name, mod: ModuleType = ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
         """Getter of a given module from its name (title)
 
         Returns None is no control module with this name exists
@@ -182,9 +185,12 @@ class ModulesManager(QObject, ParameterManager):
         """
         if mod == ModuleType.Detector or mod == 'det':  #backcompat when comparing to 'det'
             modules = self._detectors
-        else:
+        elif mod == ModuleType.Actuator or mod == 'act':
             modules = self._actuators
-
+        elif mod == ModuleType.Control:
+            modules = self._detectors + self._actuators
+        else:
+            modules = []
         if name in self.get_names(modules):
             return modules[self.get_names(modules).index(name)]
         else:
