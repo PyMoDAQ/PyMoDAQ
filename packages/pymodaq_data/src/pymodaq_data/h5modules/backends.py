@@ -555,6 +555,8 @@ class H5Backend:
                 self.h5_library = h5pyd
             else:
                 raise ImportError('the h5pyd module is not present')
+        else:
+            raise ValueError(f'the backend {backend} is not supported')
 
     @property
     def h5file(self):
