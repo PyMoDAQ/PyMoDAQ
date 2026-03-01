@@ -33,6 +33,7 @@ class ModuleType(StrEnum):
     Control = 'control'
     Other = 'other'
     NONE = 'None'
+    Extension = 'Extension'
 
 
 

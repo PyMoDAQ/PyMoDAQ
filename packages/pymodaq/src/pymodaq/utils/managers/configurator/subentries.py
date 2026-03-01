@@ -115,6 +115,10 @@ class SubEntryHandler(QtCore.QObject):
         self.extensions: list[str] = extensions if extensions is not None else []
         self.model: ConfiguratorModel = model
 
+    @staticmethod
+    def get_module(entry: ConfiguratorSubEntry, dashboard: 'DashBoard'):
+        return dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
+
     def show_dialog(self):
         self.setup_ui()
 
@@ -159,7 +163,6 @@ class SubEntryHandler(QtCore.QObject):
         raise NotImplementedError
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module:Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         raise NotImplementedError
@@ -214,9 +217,9 @@ class SettingsEntryHandler(SubEntryHandler):
     use_dialog = False
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: 'DAQ_Move',
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        module = self.get_module(entry, dashboard)
         module.settings.child(*entry.setting.path[3:]).setValue(entry.setting.value())
 
 
@@ -261,9 +264,9 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: 'DAQ_Move',
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        module = self.get_module(entry, dashboard)
         if not module.initialized_state:
             raise SubEntryError('Could not move an actuator that is not initialized')
         try:
@@ -304,9 +307,9 @@ class InitSubEntryHandler(SubEntryHandler):
                                                    )))
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        module = self.get_module(entry, dashboard)
         if module.initialized_state == entry.setting.value():
             raise SubEntryError(
                 f'The {entry.module_name} module is already '
@@ -349,7 +352,6 @@ class WaitSubEntryHandler(SubEntryHandler):
                                            )))
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         start = time.perf_counter()
@@ -386,15 +388,16 @@ class StopSubEntryHandler(SubEntryHandler):
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
+        module = self.get_module(entry, dashboard)
         if not module.initialized_state:
             raise SubEntryError('Could not stop an actuator that is not initialized')
         try:
             dashboard.modules_manager.stop_module(entry.module_name)
         except Exception as e:
             raise SubEntryError from e
+
 
 @SubEntryHandlerFactory.register_handler()
 class StopAllSubEntryHandler(SubEntryHandler):
@@ -421,7 +424,6 @@ class StopAllSubEntryHandler(SubEntryHandler):
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
@@ -451,7 +453,7 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
         return ConfiguratorSubEntry(
             self.handler_name,
             self.extension_cb.currentText(),
-            module_type=ModuleType.Other,
+            module_type=ModuleType.Extension,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
                     title= 'Stop Extension',
@@ -461,7 +463,6 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
-                         module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
