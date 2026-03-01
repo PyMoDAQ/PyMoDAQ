@@ -404,7 +404,7 @@ class StopAllSubEntryHandler(SubEntryHandler):
     def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
         return ConfiguratorSubEntry(
             self.handler_name,
-            ModuleType.NONE,
+            ModuleType.NONE.value,
             module_type=ModuleType.Control,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
