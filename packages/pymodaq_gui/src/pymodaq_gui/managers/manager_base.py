@@ -199,11 +199,16 @@ class ManagerBase(CustomExt):
         self.get_action_list().setCurrentText(entry_name)
 
     @property
-    def entry_filename(self) -> Path:
+    def entry_filepath(self) -> Path:
         """ Get the full path of the current entry file """
         kwargs_to_entry_folder = {}  # reimplement if needed
         return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
             self.entry + self.entry_extension)
+
+    def entry_path_from_name(self, entry_name: str) -> Path:
+        kwargs_to_entry_folder = {}  # reimplement if needed
+        return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
+            entry_name + self.entry_extension)
 
     @property
     def entries(self) -> list[str]:
@@ -211,7 +216,7 @@ class ManagerBase(CustomExt):
         return self.list_managed_entries()
 
     @property
-    def entries_filename(self) -> list[Path]:
+    def entries_filepath(self) -> list[Path]:
         """ Get the full path of all entries file """
         return self.list_managed_entries_path()
 
@@ -379,7 +384,7 @@ class ManagerBase(CustomExt):
         if entry is not None:
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
         if entry_path.exists():
             if not bypass_dialog:
                 user_agreed = dialog(
@@ -425,7 +430,7 @@ class ManagerBase(CustomExt):
         if user_agreed:
             entries = self.entries[:]  # to get before unlinking
 
-            self.entry_filename.unlink(missing_ok=True)
+            self.entry_filepath.unlink(missing_ok=True)
             logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
 
             index = entries.index(entry)
@@ -442,7 +447,7 @@ class ManagerBase(CustomExt):
     def execute_entry_base(self, entry_path: Path = None, **kwargs):
         if entry_path is None:
             self.save_check(self.entry, bypass_dialog=True)
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
 
         if self.dashboard is None:
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
@@ -458,7 +463,7 @@ class ManagerBase(CustomExt):
     def entry_applied(self, applied: bool):
         self._entry_applied = applied
         if applied:
-            self.applied_entry.emit(self.entry_filename.stem)
+            self.applied_entry.emit(self.entry_filepath.stem)
 
     def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
@@ -479,7 +484,7 @@ class ManagerBase(CustomExt):
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
         if entry is None:
-            entry = self.entry_filename
+            entry = self.entry_filepath
 
         if isinstance(entry, str):
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')

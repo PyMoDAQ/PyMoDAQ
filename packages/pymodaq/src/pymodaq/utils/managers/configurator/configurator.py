@@ -108,6 +108,8 @@ class Configurator(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
+        if entry_path is None:
+            entry_path = self.entry_filepath
         config_subentries = config_subentries_from_path(entry_path)
 
         if len(config_subentries) > 0:
@@ -261,7 +263,7 @@ class Configurator(ManagerBase):
 
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        self.config_model.load(self.entry_filename)
+        self.config_model.load(self.entry_filepath)
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
         if settings is None:

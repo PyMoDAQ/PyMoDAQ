@@ -247,7 +247,7 @@ class DashBoard(CustomApp):
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
         self.configurator.enable_actions(True)
-        self.configurator.execute_entry(self.configurator.entry_filename)
+        self.configurator.execute_entry(self.configurator.entry_filepath)
         for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
@@ -1295,7 +1295,7 @@ class DashBoard(CustomApp):
 
     @property
     def preset_file(self) -> Path:
-        return self.preset_manager.entry_filename
+        return self.preset_manager.entry_filepath
 
     def update_init_tree(self):
         for act in self.actuators_modules:

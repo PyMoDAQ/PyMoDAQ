@@ -78,7 +78,7 @@ class PresetManager(ManagerBase):
         """ Particular implementation to save entries for this inherited Manager """
 
         if entry_path is None:
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
 
         ioxml.parameter_to_xml_file(
             self.settings,

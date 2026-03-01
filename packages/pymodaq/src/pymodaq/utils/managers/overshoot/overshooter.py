@@ -63,6 +63,8 @@ class Overshooter(ManagerBase):
         self.preset_filename = preset_filename
         self.slots: dict[str, Callable] = {}
 
+        self.overshoot_signal.connect(self.apply_config_from_overshoot)
+
         if dashboard is not None:
             self.show_hide_module_manager_settings()
             if self.preset_manager is not None:
@@ -76,6 +78,10 @@ class Overshooter(ManagerBase):
                     self.update_configurations)
         else:
             self._modules_manager = None
+
+    def apply_config_from_overshoot(self, overshoot: Overshoot):
+        self.configurator.execute_entry(
+            self.configurator.entry_path_from_name(overshoot.configuration))
 
     def show_hide_module_manager_settings(self):
 
@@ -113,7 +119,7 @@ class Overshooter(ManagerBase):
         """ Particular implementation to save entries for this inherited Manager """
 
         if entry_path is None:
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
 
         ioxml.parameter_to_xml_file(
             self.settings,
