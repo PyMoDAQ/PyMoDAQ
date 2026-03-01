@@ -20,7 +20,6 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-from pymodaq_plugins_optical_2D_shaping.field.field import ifftshift
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
