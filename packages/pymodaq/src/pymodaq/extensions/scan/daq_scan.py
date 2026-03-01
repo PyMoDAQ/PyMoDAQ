@@ -1013,7 +1013,6 @@ class DAQScan(CustomExt):
         if scan_node is not None:
             scan_node.attrs['scan_done'] = True
 
-        self.update_status(status)
         self.ui.set_permanent_status('')
 
         self.ui.set_action_enabled('ini_positions', True)
