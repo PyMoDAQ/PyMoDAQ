@@ -38,6 +38,7 @@ def create_overshoot_param(typ: str, configurations: list[str]) -> list[dict]:
         {'title': 'Trigger:', 'name': 'trigger', 'type': 'led', 'value': True},
         {'title': 'Direction:', 'name': 'direction', 'type': 'list',
          'value': TriggerDirection.ABOVE.value, 'limits': TriggerDirection.names()},
+        {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0,},
         {'title': 'Configuration:', 'name': 'configuration', 'type': 'list',
          'limits': configurations, 'value': configurations[0]},
     ]

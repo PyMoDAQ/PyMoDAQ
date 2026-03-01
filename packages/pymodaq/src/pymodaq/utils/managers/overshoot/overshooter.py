@@ -1,23 +1,34 @@
-
-from typing import Union, TYPE_CHECKING
+import dataclasses
+from typing import Union, TYPE_CHECKING, Callable
 from pathlib import Path
 import sys
 
 from qtpy import QtWidgets, QtCore
+from sympy.abc import lamda
 
+from pymodaq_data import DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
-    get_set_overshooter_path  # noqa
+    get_set_overshooter_path, TriggerDirection  # noqa
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 
 if TYPE_CHECKING:
     pass
 
 logger = set_logger(get_module_name(__file__))
+
+@dataclasses.dataclass
+class Overshoot():
+    module_name: str
+    data_name: str
+    direction: TriggerDirection
+    value: float
+    dwa_value: float = None
+    configuration: str = 'default'
 
 
 class Overshooter(ManagerBase):
@@ -40,6 +51,8 @@ class Overshooter(ManagerBase):
     entry_type = 'overshoot'
     entry_extension ='.xml'
 
+    overshoot_signal = QtCore.Signal(Overshoot)
+
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  preset_filename: str = 'default',):
@@ -48,6 +61,7 @@ class Overshooter(ManagerBase):
         super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
         self.preset_filename = preset_filename
+        self.slots: dict[str, Callable] = {}
 
         if dashboard is not None:
             self.show_hide_module_manager_settings()
@@ -55,6 +69,11 @@ class Overshooter(ManagerBase):
                 self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
                 if self.preset_manager.entry_applied:
                     self.do_things_after_preset_set(self.preset_manager.entry)
+            if self.configurator is not None:
+                self.configurator.new_entry.connect(
+                    self.update_configurations)
+                self.configurator.deleted_entry.connect(
+                    self.update_configurations)
         else:
             self._modules_manager = None
 
@@ -102,6 +121,12 @@ class Overshooter(ManagerBase):
             overwrite=True,
         )
 
+    def create_slots(self):
+        overshoot_subentries = self.settings.child('overshoots').children()
+        self.slots = {}
+        for ind, sub_entry in enumerate(overshoot_subentries):
+            self.slots[sub_entry.name()] = self.create_slot(sub_entry)
+
     def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
@@ -113,21 +138,55 @@ class Overshooter(ManagerBase):
         overshoot_subentries = self.settings.child('overshoots').children()
 
         if len(overshoot_subentries) > 0:
-            self.show_subentries(overshoot_subentries, f'Loading Overshoot: {self.entry}')
+            self.show_subentries(
+                [self.overshoot_from_param(subentry) for subentry in overshoot_subentries],
+                f'Loading Overshoot: {self.entry}')
+        for ind, sub_entry in enumerate(overshoot_subentries):
+            mod = self.modules_manager.get_mod_from_name(sub_entry['module'])
+            if mod is not None:
+                module_type = 'det'
+            else:
+                mod = self.modules_manager.get_mod_from_name(sub_entry['module'], 'act')
+                module_type = 'act'
 
-        if self.is_action_checked(ManagerActions.EXECUTE):
-            pass
-        else:
-            pass
+            if mod is not None:
+                if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry['trigger']:
+                    if module_type == 'det':
+                        mod.grab_done_signal.connect(self.slots[sub_entry.name()])
+                    else:
+                        mod.current_value_signal.connect(self.slots[sub_entry.name()])
+                else:
+                    if module_type == 'det':
+                        mod.grab_done_signal.disconnect(self.slots[sub_entry.name()])
+                    else:
+                        mod.current_value_signal.disconnect(self.slots[sub_entry.name()])
 
-        for ind, entry in enumerate(overshoot_subentries):
             self.subentries_model.set_status(ind, True)
             QtWidgets.QApplication.processEvents()
             QtCore.QThread.msleep(200)
 
-
         self.close_subentries_display(1000)
         return True
+
+    def create_slot(self, param: Parameter):
+        return lambda dwa: self.process_dwa(param, dwa)
+
+    def process_dwa(self, param: Parameter, dwa: DataWithAxes):
+        if param['direction'] == TriggerDirection.ABOVE.name:
+            if dwa > param['value']:
+                self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
+        else:
+            if dwa < param['value']:
+                self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
+
+    @staticmethod
+    def overshoot_from_param(param: Parameter, dwa: DataWithAxes = None):
+        return Overshoot(param['module'],
+                         param['name'],
+                         TriggerDirection[param['direction']],
+                         param['value'],
+                         dwa.value() if dwa is not None else None,
+                         param['configuration'])
 
     @property
     def actuators(self):
@@ -172,21 +231,31 @@ class Overshooter(ManagerBase):
         self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
 
     def connect_things(self):
-        self.connect_action('update_data', self.update_available_data)
+        self.connect_action('update_data', self.update_available_data_and_configurations)
 
-    def update_available_data(self):
+    def update_configurations(self):
+        configurations = self.dashboard.configurator.entries
+        for child in self.settings.child('overshoots').children():
+            child.child('configuration').setLimits(configurations)
+            # update for current overshoots subentries
+        return configurations
+
+    def update_available_data_and_configurations(self):
         self.modules_manager.get_det_data_list()
-        self.settings.child('overshoots').setOpts(addList=self.modules_manager.available_data,
-                                                  configurations=self.dashboard.configurator.entries)
+        self.settings.child('overshoots').setOpts(
+            addList=self.modules_manager.available_data,
+            configurations=self.update_configurations())  # update for next overshoots subentry
+
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         if entry.exists():
             self.settings = entry
         else:
-
             self.settings = Parameter.create(title='Overshoots', name='overshoot',
                                              type='group',
                                              children=self.params)
+
+        self.create_slots()
 
     def do_things_for_new_creation(self):
         for child in self.settings.child('overshoots').children():
@@ -198,7 +267,7 @@ class Overshooter(ManagerBase):
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
 
-        self.update_available_data()
+        self.update_available_data_and_configurations()
 
 
 if __name__ == "__main__":
@@ -223,5 +292,10 @@ if __name__ == "__main__":
 
     external_ui.show()
     shared_ui.show()
+
+    def print_overshoot(overshoot: Overshoot):
+        print(overshoot)
+
+    prog.overshoot_signal.connect(print_overshoot)
 
     sys.exit(app.exec())
