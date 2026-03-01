@@ -17,7 +17,7 @@
 
 
 [general]
-hdf5_backend = 'tables'  # could be among ['tables', 'h5py', 'h5pyd'], mostly tested with tables
+hdf5_backend = ['h5py', 'tables', 'h5pyd']  # could be among , mostly tested with tables
 
 [plotting]
 backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend
