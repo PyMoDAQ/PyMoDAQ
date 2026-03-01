@@ -357,10 +357,14 @@ class StopSubEntryHandler(SubEntryHandler):
     handler_name = SubEntryHandlerTypes.STOP
 
     def setup_widgets(self):
+        label = QtWidgets.QLabel('Stop Module:')
         self.module_cb = QtWidgets.QComboBox()
         self.module_cb.addItems(self.actuators + self.detectors)
-
+        self.stop_bool = QtWidgets.QCheckBox()
+        self.stop_bool.setChecked(True)
+        self.widget.layout().addWidget(label)
         self.widget.layout().addWidget(self.module_cb)
+        self.widget.layout().addWidget(self.stop_bool)
 
     def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
         return ConfiguratorSubEntry(
@@ -372,7 +376,7 @@ class StopSubEntryHandler(SubEntryHandler):
                     title= 'Stop Module',
                     name=''.join(self.handler_name.split(' ')),
                     type='bool',
-                    value=True,),
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
@@ -390,28 +394,35 @@ class StopSubEntryHandler(SubEntryHandler):
 class StopAllSubEntryHandler(SubEntryHandler):
     handler_name = SubEntryHandlerTypes.STOP_ALL
 
+    def setup_widgets(self):
+        label = QtWidgets.QLabel('Stop All Modules:')
+        self.stop_bool = QtWidgets.QCheckBox()
+        self.stop_bool.setChecked(True)
+        self.widget.layout().addWidget(label)
+        self.widget.layout().addWidget(self.stop_bool)
+
     def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
         return ConfiguratorSubEntry(
             self.handler_name,
-            'All',
+            ModuleType.NONE,
             module_type=ModuleType.Control,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
                     title= 'Stop All Control Modules',
                     name=''.join(self.handler_name.split(' ')),
                     type='bool',
-                    value=True,),
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
             path=()),)
 
     def execute_subentry(self, entry: ConfiguratorSubEntry,
                          module: Union['DAQ_Move', 'DAQ_Viewer'],
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
-        if not module.initialized_state:
-            raise SubEntryError('Could not stop an actuator that is not initialized')
         try:
-            for mod in dashboard.modules_manager.actuators_name + dashboard.modules_manager.detectors_name:
-               dashboard.modules_manager.stop_module(mod)
+            for mod_name in dashboard.modules_manager.actuators_name + dashboard.modules_manager.detectors_name:
+               module = dashboard.modules_manager.get_mod_from_name(mod_name, ModuleType.Control)
+               if module.initialized_state:
+                   module.stop_module()
         except Exception as e:
             raise SubEntryError from e
 

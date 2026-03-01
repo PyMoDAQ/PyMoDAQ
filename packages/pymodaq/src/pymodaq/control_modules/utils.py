@@ -310,7 +310,7 @@ class ControlModule(QObject):
         """Programmatic entry to grab data from detectors or current value from actuator"""
         raise NotImplementedError
 
-    def stop(self):
+    def stop_module(self):
         """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
         raise NotImplementedError
 

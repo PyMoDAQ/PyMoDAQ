@@ -282,7 +282,7 @@ class DAQ_Move(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def stop(self):
+    def stop_module(self):
         """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
         self.stop_motion()
         self.stop_grab()
