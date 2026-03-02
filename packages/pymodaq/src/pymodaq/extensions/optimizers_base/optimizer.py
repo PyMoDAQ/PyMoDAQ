@@ -294,8 +294,8 @@ class GenericOptimization(CustomExt):
         self._save_main_settings = True
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
-        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
-        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
+        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
 
         self._h5saver: H5Saver = None
         self.h5saver.settings.child('do_save').hide()
@@ -339,7 +339,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend'))
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend')[0])
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
