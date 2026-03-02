@@ -10,9 +10,11 @@ from datetime import datetime
 
 from pymodaq_data.h5modules import saving, backends
 from pymodaq_utils import utils
+from pymodaq_utils.config import GlobalConfig
 
 from pymodaq_data.data import DataDim
 
+config = GlobalConfig()
 tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
 
@@ -67,14 +69,26 @@ class TestH5SaverLowLevel:
         #todo
         pass
 
-    def test_add_array_default_fill_is_zero(self, h5saver_lowlevel):
+    def test_add_array_default_fill_is_from_config(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
-        assert h5saver.fill_value == 0
+        config_value_str = config('data', 'data_saving', 'data_type', 'fill_value')[0]
+        if config_value_str == '0':
+            config_value = 0.
+            assert h5saver.fill_value == config_value
+        elif config_value_str == 'nan':
+            config_value = np.nan
+            assert h5saver.fill_value is config_value
+        else:
+            raise ValueError
+
         array = h5saver.add_array(h5saver.raw_group, 'TestArray', saving.DataType['data'],
                                   data_dimension = DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True)
-        assert np.all(array.read() == 0.0)
+        if config_value_str == 'nan':
+            assert np.all(np.isnan(array.read()))
+        elif config_value_str == '0':
+            assert np.allclose(array.read(), config_value)
 
     def test_add_array_explicit_fill_value(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
@@ -113,7 +127,7 @@ class TestH5SaverLowLevel:
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True,
                                   fill_value=0.0)
-        assert np.all(array.read() == 0.0)
+        assert np.allclose(array.read(), 0.0)
 
     def test_incremental_group(self, h5saver_lowlevel):
         # "todo
