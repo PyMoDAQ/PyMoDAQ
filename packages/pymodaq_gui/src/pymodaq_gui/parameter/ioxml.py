@@ -76,52 +76,53 @@ def add_text_to_elt(elt, param):
     add_text_to_elt, walk_parameters_to_xml, dict_from_param
     """
     param_type = str(param.type())
+    param_val = param.value()
     if 'bool' in param_type or 'led' in param_type:
-        if param.value():
+        if param_val:
             text = '1'
         else:
             text = '0'
     elif param_type == 'itemselect':
-        if param.value() is not None:
+        if param_val is not None:
             elt.set('all_items',
-                    str(param.value()['all_items']))  # use list(eval(val_str[1:-1])) to get back a list of strings
-            text = str(param.value()['selected'])  # use list(eval(val_str[1:-1])) to get back a list of strings
+                    str(param_val['all_items']))  # use list(eval(val_str[1:-1])) to get back a list of strings
+            text = str(param_val['selected'])  # use list(eval(val_str[1:-1])) to get back a list of strings
         else:
             text = str(None)
     elif param_type == 'color':
-        text = str([param.value().red(), param.value().green(), param.value().blue(), param.value().alpha()])
+        text = str([param_val.red(), param_val.green(), param_val.blue(), param_val.alpha()])
     elif param_type == 'list':
-        if isinstance(param.value(), str):
-            text = "str('{}')".format(param.value())
-        elif isinstance(param.value(), int):
-            text = 'int({})'.format(param.value())
-        elif isinstance(param.value(), float):
-            text = 'float({})'.format(param.value())
+        if isinstance(param_val, str):
+            text = f"str({param_val!r})"    # Export repr() for hangling non-printable characters
+        elif isinstance(param_val, int):
+            text = f"int({param_val})"
+        elif isinstance(param_val, float):
+            text = f"float({param_val})"
         else:
-            text = str(param.value())
+            text = str(param_val)
     elif param_type == 'int':
-        if param.value() is True:  # known bug is True should be clearly specified here
+        if param_val is True:  # known bug is True should be clearly specified here
             val = 1
         else:
-            val = param.value()
+            val = param_val
         text = str(val)
     elif param_type == 'date_time':
-        text = str(param.value().toMSecsSinceEpoch())
+        text = str(param_val.toMSecsSinceEpoch())
     elif param_type == 'date':
-        text = str(QDateTime(param.value(), QTime()).toMSecsSinceEpoch())
+        text = str(QDateTime(param_val, QTime()).toMSecsSinceEpoch())
     elif param_type == 'progress':
-        text = str(param.value())
+        text = str(param_val)
     elif param_type == 'table_view':
         try:
-            data = dict(classname=param.value().__class__.__name__,
-                        module=param.value().__class__.__module__,
-                        data=param.value().get_data_all(),
-                        header=param.value().header)
+            data = dict(classname=param_val.__class__.__name__,
+                        module=param_val.__class__.__module__,
+                        data=param_val.get_data_all(),
+                        header=param_val.header)
             text = json.dumps(data)
         except Exception:
             text = ''
     else:
-        text = str(param.value())
+        text = str(param_val)
     elt.text = text
 
 
@@ -222,12 +223,6 @@ def dict_from_param(param):
         else:
             filetype = '0'
         opts.update(dict(filetype=filetype))
-
-    if 'patterns' in param.opts:
-        opts.update(dict(patterns=param.opts["patterns"]))
-
-    if 'completer_config' in param.opts:
-        opts.update(dict(completer_config=param.opts["completer_config"]))
 
     return opts
 
@@ -333,24 +328,10 @@ def elt_to_dict(el):
         except:
             pass
 
-    if 'patterns' in el.attrib.keys():
-        try:
-            patterns = eval(el.get('patterns'))
-            param.update(dict(patterns=patterns))
-        except:
-            pass
-
-    if 'completer_config' in el.attrib.keys():
-        try:
-            completer_config = eval(el.get('completer_config'))
-            param.update(dict(completer_config=completer_config))
-        except:
-            pass
-
     return param
 
 
-def parameter_to_xml_string(param) -> bytes:
+def parameter_to_xml_string(param):
     """ Convert  a Parameter to a XML string.
 
     Parameters
@@ -523,8 +504,6 @@ def set_txt_from_elt(el, param_dict):
                 param_value = None
             else:
                 param_value = eval(val_text)
-        elif param_type == 'progress':
-            param_value = int(val_text)
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))
@@ -555,7 +534,6 @@ def XML_file_to_parameter(file_name: Union[str, Path]) -> list:
     return params
 
 def xml_file_to_parameter_dict(file_name: Union[str, Path]) -> dict:
-    """ Return a dictionnary to create a Parameter from """
     tree = ET.parse(str(file_name))
     root = tree.getroot()
     param_dict = set_dict_from_el(root)
@@ -573,53 +551,28 @@ def XML_string_to_parameter(xml_string):
     return params
 
 
-def xml_string_to_parameter_dict(xml_string: bytes) -> dict:
-    """ Convert a xml bynary string into a dict to initialize pyqtgraph parameter object. """
+def xml_string_to_parameter_dict(xml_string) -> dict:
+    """
+        Convert a xml string into a dict to initialize pyqtgraph parameter object.
+    """
     root = ET.fromstring(xml_string)
     tree = ET.ElementTree(root)
 
     param_dict = set_dict_from_el(root)
     if len(root) > 0:
         param_dict['children'] = walk_xml_to_parameter(params=[], XML_elt=root)
+
     return param_dict
 
-def xml_string_to_parameter(xml_string: bytes) -> Parameter:
-    """
-    Convert an XML string into a Parameter object.
-
-    Parameters
-    ----------
-    xml_string: (bytes) 
-        binary string representation of a Parameter object.
-
-    See Also:
-    ---------
-    parameter_to_xml_string
-    """
+def xml_string_to_parameter(xml_string) -> Parameter:
     return Parameter.create(**xml_string_to_parameter_dict(xml_string))
-
-def xml_file_to_parameter(xml_file: Union[str, Path]) -> Parameter:
-    """
-    Convert an XML file into a Parameter object.
-
-    Parameters
-    ----------
-    xml_file: str or Path
-        path to an XML file representing a Parameter object.
-
-    See Also:
-    ---------
-    parameter_to_xml_file
-    """
-    return Parameter.create(**xml_file_to_parameter_dict(xml_file))
 
 
 def XML_string_to_pobject(xml_string) -> Parameter:
     """
     return a Parameter object from its deserialized version from a XML string
 
-    Deprecated as not symetric with parameter_to_xml_string.
-    Use xml_string_to_parameter instead.
+    Deprecated as not symetric with parameter_to_xml_string
 
     Parameters
     ----------
