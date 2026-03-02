@@ -16,12 +16,12 @@ from .daq_logger.daq_logger import DAQ_Logger
 from .pid.pid_controller import DAQ_PID
 
 from .bayesian.bayesian_optimization import BayesianOptimization
-from .bayesian.utils import OptimizerModelDefault
-
 from .adaptive_optim.adaptive_optimization import AdaptiveOptimisation
 
 from .data_mixer.data_mixer import DataMixer
 from .console import Console
+
+
 
 
 class ExtensionEnum(StrEnum):
