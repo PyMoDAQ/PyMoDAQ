@@ -720,8 +720,17 @@ class DAQ_Viewer(ParameterControlModule):
         if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
             self._received_data += 1
             if len(data) != 0:
+                viewer_title = data.name
                 for dat in data:
-                    dat.origin = f'{self.title} - {dat.origin}' if dat.origin is not None else f'{self.title}'
+                    if len(self.viewers) > 1:
+                        dat.origin = (f'{self.title} - {viewer_title} - {dat.origin}'
+                                      if dat.origin is not None
+                                      else f'{self.title} - {viewer_title}')
+                    else:
+                        dat.origin = (f'{self.title} - {dat.origin}'
+                                      if dat.origin is not None
+                                      else f'{self.title}')
+                    dat.add_extra_attribute(parent_channel=viewer_title)
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):

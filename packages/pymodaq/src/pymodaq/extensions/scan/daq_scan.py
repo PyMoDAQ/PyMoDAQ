@@ -143,8 +143,8 @@ class DAQScan(CustomExt):
 
         self.runner_thread: QThread = None
 
-        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
-        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
+        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
@@ -193,12 +193,12 @@ class DAQScan(CustomExt):
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
-        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
-        data1D = self.modules_manager.settings['data_dimensions', 'det_data_list1D']
-        data0D['selected'] = data0D['all_items']
-        data1D['selected'] = data1D['all_items']
-        self.settings.child('plot_options', 'plot_0d').setValue(data0D)
-        self.settings.child('plot_options', 'plot_1d').setValue(data1D)
+        data0D_names = self.modules_manager.get_probed_data_channels('Data0D')
+        data1D_names = self.modules_manager.get_probed_data_channels('Data1D')
+        self.settings.child('plot_options', 'plot_0d').setValue(
+            dict(all_items=data0D_names, selected=data0D_names))
+        self.settings.child('plot_options', 'plot_1d').setValue(
+            dict(all_items=data1D_names, selected=data1D_names))
 
 
 
