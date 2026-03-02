@@ -92,11 +92,11 @@ def add_text_to_elt(elt, param):
         text = str([param.value().red(), param.value().green(), param.value().blue(), param.value().alpha()])
     elif param_type == 'list':
         if isinstance(param.value(), str):
-            text = "str({})".format(repr(param.value()))
+            text = f"str({param.value()!r})"    # Export repr() for hangling non-printable characters
         elif isinstance(param.value(), int):
-            text = 'int({})'.format(param.value())
+            text = f"int({param.value()})"
         elif isinstance(param.value(), float):
-            text = 'float({})'.format(param.value())
+            text = f"float({param.value()})"
         else:
             text = str(param.value())
     elif param_type == 'int':
