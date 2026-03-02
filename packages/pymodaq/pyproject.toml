@@ -35,7 +35,7 @@ dependencies = [
     "pymodaq_gui>=5.0.32",
     "pymodaq_data>=5.0.21",
     "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins_mock>=5.0.5",
+    "pymodaq_plugins_mock>=5.0.12",
     "simple_pid",
     "qtconsole",
     "pyleco>0.3; python_version>=\"3.8\"",
