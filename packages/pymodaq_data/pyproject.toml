@@ -37,6 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+xarray = ["xarray>=2024.10"]
 dev = [
     "hatch", 
     "flake8",
