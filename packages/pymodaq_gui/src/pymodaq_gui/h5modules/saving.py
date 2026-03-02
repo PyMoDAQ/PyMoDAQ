@@ -147,7 +147,8 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
              'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
              'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
             {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
-             'limits': {'0': 0, 'nan': np.nan}, 'value': config('data', 'data_saving', 'data_type', 'fill_value'),
+             'limits': {'0': 0., 'nan': np.nan},
+             'value': 0. if config('data', 'data_saving', 'data_type', 'fill_value')[0] == '0' else np.nan,
              'tooltip': 'Value used to pre-fill scan arrays before data is written. '
                         '"nan" is useful to distinguish unvisited points (float arrays only).'},
             {'title': 'Compression:', 'name': 'compression_options', 'type': 'group',
@@ -552,16 +553,15 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
     @property
     def fill_value(self) -> float:
-        fill_str = self.settings['data_format', 'fill_value']
-        return np.nan if fill_str == 'nan' else float(fill_str)
+        return self.settings['data_format', 'fill_value']
 
     @fill_value.setter
     def fill_value(self, value: float):
         # Guard against calls made before ParameterManager.__init__ has run
         if not hasattr(self, 'settings'):
             return
-        str_val = 'nan' if (isinstance(value, float) and np.isnan(value)) else '0'
-        self.settings.child('data_format', 'fill_value').setValue(str_val)
+        val = np.nan if (isinstance(value, float) and np.isnan(value)) else 0.
+        self.settings.child('data_format', 'fill_value').setValue(val)
 
 
 class H5Saver(H5SaverBase, QObject):

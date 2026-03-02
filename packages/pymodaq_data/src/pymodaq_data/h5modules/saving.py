@@ -87,7 +87,7 @@ class H5SaverLowLevel(H5Backend):
 
         self._flush_interval = 0
         self._write_count = 0
-        fill_str = config('data', 'data_saving', 'data_type', 'fill_value')
+        fill_str = config('data', 'data_saving', 'data_type', 'fill_value')[0]
         self.fill_value: float = np.nan if fill_str == 'nan' else float(fill_str)
 
     def set_swmr_flush_interval(self, interval: int):

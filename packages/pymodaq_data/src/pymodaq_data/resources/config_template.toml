@@ -20,7 +20,7 @@ backend = ['h5py', 'tables', 'h5pyd']  # first element is the default, mostly te
     [data_saving.data_type]
     # choose from below. This will force the datatype to be saved to
     dynamic =  [ 'float64', 'uint8', 'int8', 'uint16', 'int16', 'uint32', 'int32', 'uint64', 'int64',]
-    fill_value = '0'  # value used to pre-fill scan arrays; '0' or 'nan' (nan only valid for float dtypes)
+    fill_value = ['nan', '0']  # value used to pre-fill scan arrays; '0' or 'nan' (nan only valid for float dtypes)
 
 [plotting]
 backend = ['matplotlib']  # either 'matplotlib' or 'qt' or any other custom backend
