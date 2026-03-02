@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
+
 import numpy as np
 from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
@@ -92,6 +93,9 @@ class DAQScan(CustomExt):
              'value': config('pymodaq', 'scan', 'average_on_top'),
              'tip': 'At the second iteration will plot the averaged scan on top (True) of the current one'
                     'or in a second panel (False)'},
+            {'title': 'Go to ini. positions:', 'name': 'go_to_ini_positions', 'type': 'bool',
+             'value': True,
+             'tip': 'Move actuators back to their initial positions when the scan ends or is stopped'},
         ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
@@ -144,10 +148,11 @@ class DAQScan(CustomExt):
         self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
 
-        self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend')[0])
+        self._h5saver = H5Saver()
         self._h5saver.settings.child('do_save').hide()
         self._h5saver.settings.child('custom_name').hide()
         self._h5saver.new_file_sig.connect(self.create_new_file)
+        self._h5saver.file_changed_sig.connect(self._on_file_changed)
 
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
 
@@ -261,10 +266,14 @@ class DAQScan(CustomExt):
                 * start
                 * start_batch
                 * stop
+                * pause
                 * move_at
+                * new_file
                 * load
                 * save
                 * show_file
+                * open_file
+                * close_file
                 * navigator
                 * batch
                 * viewers_changed
@@ -277,8 +286,12 @@ class DAQScan(CustomExt):
             self.start_scan_batch()
         elif cmd.command == 'stop':
             self.stop_scan()
+        elif cmd.command == 'pause':
+            self.pause_scan()
         elif cmd.command == 'move_at':
             self.move_to_crosshair()
+        elif cmd.command == 'new_file':
+            self.create_new_file(new_file=True)
         elif cmd.command == 'load':
             self.load_file()
         elif cmd.command == 'save':
@@ -289,6 +302,10 @@ class DAQScan(CustomExt):
             self.show_navigator()
         elif cmd.command == 'batch':
             self.show_batcher(self.ui.menubar)
+        elif cmd.command == 'open_file':
+            self.open_file()
+        elif cmd.command == 'close_file':
+            self.close_file()
         elif cmd.command == 'viewers_changed':
             ...
 
@@ -417,7 +434,7 @@ class DAQScan(CustomExt):
 
     def show_file_content(self):
         try:
-            self.h5saver.show_file_content()
+            self._h5saver.show_file_content()
         except Exception as e:
             logger.exception(str(e))
 
@@ -461,6 +478,11 @@ class DAQScan(CustomExt):
 
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
+        # Opening an existing file resets the dataset metadata so the user is prompted
+        # to confirm/update it on the next scan (restores behaviour lost in past versions).
+        self._metada_dataset_set = False
+        self.update_file_settings()
+        self._update_file_status_led()
 
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings['base_path']):
@@ -533,9 +555,17 @@ class DAQScan(CustomExt):
         if new_file:
             self._metada_dataset_set = False
             self.close_file()
+            # Explicitly create a new file (don't reopen existing)
+            try:
+                self._h5saver.init_file(update_h5=True)
+                logger.info(f"Created new h5 file: {self._h5saver.settings['current_h5_file']}")
+            except Exception as e:
+                logger.error(f"Could not create new h5 file: {e}")
 
-        self.module_and_data_saver.h5saver = self.h5saver  # force it for detectors to update their h5saver
+        if hasattr(self, '_module_and_data_saver'):
+            self.module_and_data_saver.h5saver = self._h5saver  # force it for detectors to update their h5saver
         res = self.update_file_settings()
+        self._update_file_status_led()
         if new_file:
             self.ui.enable_start_stop()
         return res
@@ -543,26 +573,126 @@ class DAQScan(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(backend=config('data', 'general', 'hdf5_backend'))
+            self._h5saver = H5Saver()
             self._h5saver.settings.child('do_save').hide()
             self._h5saver.settings.child('custom_name').hide()
             self._h5saver.new_file_sig.connect(self.create_new_file)
-        if self._h5saver.h5_file is None:
-            self._h5saver.init_file(update_h5=True)
-        if not self._h5saver.isopen():
-            self._h5saver.init_file(addhoc_file_path=self._h5saver.settings['current_h5_file'])
+            self._h5saver.file_changed_sig.connect(self._on_file_changed)
+        if self._h5saver.h5_file is None or not self._h5saver.isopen():
+            # Check if there's an existing file to reopen
+            current_file = self._h5saver.settings['current_h5_file']
+            if current_file and Path(current_file).exists():
+                self._try_open_existing_file(current_file)
+            else:
+                try:
+                    self._h5saver.init_file(update_h5=True)
+                except Exception as e:
+                    logger.warning(f"Could not initialize h5 file: {e}")
+            self._update_file_status_led()
         return self._h5saver
+
+    def _try_open_existing_file(self, current_file: str):
+        """Try to open an existing file, asking user what to do if locked."""
+        while True:
+            try:
+                logger.debug(f"Reopening existing h5 file: {current_file}")
+                self._h5saver.init_file(addhoc_file_path=current_file)
+                break  # Success
+            except Exception as e:
+                if 'lock' in str(e).lower() or 'errno = 0' in str(e).lower():
+                    # File is locked - ask user what to do
+                    msg = QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+                    msg.setWindowTitle("File Locked")
+                    msg.setText(f"Cannot open file:\n{current_file}\n\n"
+                                f"The file may be open in another application.")
+                    msg.setInformativeText("Close the file elsewhere and click Retry, "
+                                           "or select a different file.")
+                    retry_btn = msg.addButton("Retry", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                    new_auto_btn = msg.addButton("New File (Auto)", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+                    browse_btn = msg.addButton("Browse...", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                    msg.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+                    msg.exec()
+
+                    if msg.clickedButton() == retry_btn:
+                        continue  # Try again
+                    elif msg.clickedButton() == new_auto_btn:
+                        logger.info("User chose to create new file (auto)")
+                        self._h5saver.init_file(update_h5=True)
+                        break
+                    elif msg.clickedButton() == browse_btn:
+                        # Let user select an existing file to append to
+                        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                            None, "Select HDF5 File",
+                            str(Path(current_file).parent),
+                            "HDF5 Files (*.h5);;All Files (*)"
+                        )
+                        if file_path:
+                            logger.info(f"User selected file: {file_path}")
+                            try:
+                                self._h5saver.init_file(addhoc_file_path=file_path)
+                                break
+                            except Exception as e2:
+                                logger.warning(f"Could not open selected file: {e2}")
+                                continue  # Show dialog again
+                        else:
+                            continue  # User cancelled browse, show dialog again
+                    else:
+                        # User cancelled - leave h5_file unchanged
+                        logger.info("User cancelled file selection - keeping current file state")
+                        break
+                else:
+                    # Other error - fall back to new file
+                    logger.warning(f"Could not reopen h5 file: {e}")
+                    self._h5saver.init_file(update_h5=True)
+                    break
+        self._update_file_status_led()
 
     @h5saver.setter
     def h5saver(self, h5saver_temp: H5Saver):
         self._h5saver = h5saver_temp
 
+    def _update_file_status_led(self):
+        """Reflect the current h5 file open/accessible state in the status bar LED
+        and the SWMR mode indicator."""
+        if self.ui is None:
+            return
+        is_open = (self._h5saver is not None
+                   and self._h5saver.h5_file is not None
+                   and self._h5saver.isopen())
+        self.ui.set_file_open(is_open)
+        swmr_active = is_open and self._h5saver.is_swmr_active
+        swmr_compatible = is_open and self._h5saver.is_swmr_compatible
+        self.ui.set_swmr_status(swmr_active, swmr_compatible)
+
+    def _on_file_changed(self, file_path: str):
+        """Called when H5Saver switches to a different file (e.g. browse)."""
+        self._update_file_status_led()
+        file_name = Path(file_path).name
+        scan_name = self._h5saver.settings['current_scan_name']
+        if scan_name:
+            self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+        else:
+            self.ui.set_permanent_status(file_name)
+
+    def open_file(self):
+        """Reopen the current h5 file if it is closed."""
+        if self._h5saver is not None and not self._h5saver.isopen():
+            current_file = self._h5saver.settings['current_h5_file']
+            if current_file and Path(current_file).exists():
+                self._try_open_existing_file(current_file)
+            else:
+                logger.warning('No file to reopen')
+        self._update_file_status_led()
+
     def close_file(self):
-        self.h5saver.close_file()
+        self._h5saver.close_file()
+        self._update_file_status_led()
 
     @property
     def module_and_data_saver(self):
-        if not self._module_and_data_saver.h5saver.isopen():
+        if (self._module_and_data_saver.h5saver is None
+                or not self._module_and_data_saver.h5saver.isopen()):
             self._module_and_data_saver.h5saver = self.h5saver
         return self._module_and_data_saver
 
@@ -582,6 +712,13 @@ class DAQScan(CustomExt):
                 self.navigator.update_h5file(self.h5saver.h5_file)
                 self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
 
+            file_name = Path(self.h5saver.settings['current_h5_file']).name
+            scan_name = self.h5saver.settings['current_scan_name']
+            if scan_name:
+                self.ui.set_permanent_status(f'{file_name} | {scan_name}')
+            else:
+                self.ui.set_permanent_status(file_name)
+
             return res
 
         except Exception as e:
@@ -593,14 +730,19 @@ class DAQScan(CustomExt):
             self.scanner.settings.child('scan_type').value())
         self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
             self.scanner.settings.child('scan_sub_type').value())
-        scan_node = self.module_and_data_saver.get_set_node(new=False)
-        if scan_node.attrs['scan_done']:
-            scan_name = self.module_and_data_saver.get_next_node_name()
+        # Every Start creates a new scan node; predict the name it will receive.
+        last_node = self.module_and_data_saver.get_last_node()
+        if last_node is None:
+            scan_name = (utils.capitalize(module_saving.GroupModuleType.SCAN.name.lower())
+                         + '000')
         else:
-            scan_name = scan_node.name
+            scan_name = self.module_and_data_saver.get_next_node_name()
         self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
         self.scan_attributes.child('scan_info', 'description').setValue('')
         self.h5saver.settings.child('current_scan_name').setValue(scan_name)
+
+        file_name = Path(self.h5saver.settings['current_h5_file']).name
+        self.ui.set_permanent_status(f'{file_name} | {scan_name}')
 
         res = self.set_metadata_about_current_scan()
         return res
@@ -736,13 +878,21 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
-            scan_node = self.module_and_data_saver.get_last_node()
-            scan_node.attrs['scan_done'] = True
-            self.module_and_data_saver.flush()
-            self.close_file()
+            try:
+                self.module_and_data_saver.flush()
+                if self._h5saver.settings['close_after_scan']:
+                    self.close_file()
+                self._update_file_status_led()
+            except Exception as e:
+                logger.error(f"Error finalizing scan file: {e}")
+                try:
+                    self._h5saver.close_file()
+                    self._update_file_status_led()
+                except Exception:
+                    pass
 
             if not self.batch_started:
-                if not self.dashboard.overshoot:
+                if not self.dashboard.overshoot and self.settings['scan_options', 'go_to_ini_positions']:
                     self.set_ini_positions()
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
@@ -762,6 +912,7 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_data':
             self.module_and_data_saver.add_data(**status.attribute)
+            self.module_and_data_saver.add_time(status.attribute['indexes'])
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -921,21 +1072,32 @@ class DAQScan(CustomExt):
             if remote_manager is not None:
                 remote_manager.activate_all(False)
 
-            new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
-            scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
+            scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
+            nav_axes = self.scanner.get_nav_axes()
             if Naverage > 1:
                 scan_shape = [Naverage]
                 scan_shape.extend(self.scanner.get_scan_shape())
+                for nav_axis in nav_axes:
+                    nav_axis.index += 1
+                nav_axes.insert(0, data_mod.Axis('Average',
+                                                  data=np.linspace(0, Naverage - 1, Naverage),
+                                                  index=0))
             else:
                 scan_shape = self.scanner.get_scan_shape()
+
             for det in self.modules_manager.detectors:
                 det._module_and_data_saver = (
                     module_saving.DetectorExtendedSaver(det, scan_shape))
             self._module_and_data_saver.h5saver = self.h5saver  # force the update as the h5saver will also be set on each detectors
+            self.module_and_data_saver.initialize_time_array(scan_shape)
+
+            if self.h5saver._swmr_mode:
+                interval = self.h5saver.settings['backend', 'swmr_options', 'flush_interval']
+                self.h5saver.set_swmr_flush_interval(interval)
 
             # mandatory to deal with multithreads
             if self.runner_thread is not None:
@@ -959,6 +1121,8 @@ class DAQScan(CustomExt):
 
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
+            self.ui.set_action_enabled('pause', True)
+            self.ui.set_action_checked('pause', False)
             self.ui.set_scan_done(False)
             if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
@@ -995,7 +1159,9 @@ class DAQScan(CustomExt):
         """ Set the actuators's positions to their initial value as defined in the scanner  """
         self.scanner.set_scan()
         if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.connect_actuators()
             self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
+            self.modules_manager.connect_actuators(False)
 
     def stop_scan(self):
         """
@@ -1007,12 +1173,9 @@ class DAQScan(CustomExt):
         """
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
-        scan_node = self.module_and_data_saver.get_last_node()
-        if scan_node is not None:
-            scan_node.attrs['scan_done'] = True
-
         if not self.dashboard.overshoot:
-            self.set_ini_positions()  # do not set ini position again in case overshoot fired
+            if self.settings['scan_options', 'go_to_ini_positions']:
+                self.set_ini_positions()  # do not set ini position again in case overshoot fired
             status = 'Data Acquisition has been stopped by user'
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
@@ -1022,6 +1185,17 @@ class DAQScan(CustomExt):
 
         self.ui.set_action_enabled('ini_positions', True)
         self.ui.set_action_enabled('start', True)
+        self.ui.set_action_enabled('pause', False)
+        self.ui.set_action_checked('pause', False)
+
+    def pause_scan(self):
+        """Toggle pause on the running acquisition."""
+        paused = self.ui.is_action_checked('pause')
+        self.command_daq_signal.emit(utils.ThreadCommand('pause_acquisition', attribute=paused))
+        if paused:
+            self.ui.set_permanent_status('Acquisition paused')
+        else:
+            self.ui.set_permanent_status('Running acquisition')
 
     def do_scan(self, start_scan=True):
         """Public method to start the scan programmatically"""
@@ -1060,6 +1234,7 @@ class DAQScanAcquisition(QObject):
         self.scanner = scanner
 
         self.stop_scan_flag = False
+        self.pause_scan_flag = False
         self.Naverage = self.scan_settings['scan_options', 'scan_average']
         self.ind_average = 0
         self.ind_scan = 0
@@ -1091,6 +1266,10 @@ class DAQScanAcquisition(QObject):
 
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
+            self.pause_scan_flag = False
+
+        elif command.command == "pause_acquisition":
+            self.pause_scan_flag = command.attribute
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
@@ -1126,6 +1305,12 @@ class DAQScanAcquisition(QObject):
                     if self.stop_scan_flag or self.timeout_scan_flag:
                         break
 
+                    while self.pause_scan_flag:
+                        if self.stop_scan_flag:
+                            break
+                        QtCore.QCoreApplication.processEvents()
+                        QThread.msleep(50)
+
                     #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
 
@@ -1148,6 +1333,8 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
+            # Ensure the file is closed even after an unexpected crash
+            self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
     def det_done(self, det_done_datas: data_mod.DataToExport, positions):
         """

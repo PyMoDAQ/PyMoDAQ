@@ -666,7 +666,8 @@ class DataEnlargeableSaver(DataSaverLoader):
                     axis_array.append(np.array([axis_values[ind_axis]]))
                 else:
                     axis_array.append(axis_values[ind_axis], expand=False)
-                axis_array.attrs['size'] += 1
+                if not self._h5saver.is_swmr_active:
+                    axis_array.attrs['size'] += 1
 
 
 class DataExtendedSaver(DataSaverLoader):
@@ -685,9 +686,10 @@ class DataExtendedSaver(DataSaverLoader):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
+        self.fill_value = fill_value
 
     def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True,
                             distribution=DataDistribution['uniform']):
@@ -714,6 +716,7 @@ class DataExtendedSaver(DataSaverLoader):
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
+                                        fill_value=self.fill_value,
                                         scan_shape=self.extended_shape,
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
@@ -946,7 +949,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             axis_array: EARRAY = self._nav_axis_saver.get_node_from_index(nav_group, ind)
             axis_array.append(squeeze(np.array([axis_values[ind]])),
                               expand=False)
-            axis_array.attrs['size'] += 1
+            if not self._h5saver.is_swmr_active:
+                axis_array.attrs['size'] += 1
 
 
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
@@ -978,10 +982,11 @@ class DataToExportExtendedSaver(DataToExportSaver):
         the extra shape compared to the data the h5array will have
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
-        self._data_saver = DataExtendedSaver(self._h5saver, extended_shape)
-        self._nav_axis_saver = AxisSaverLoader(self._h5saver)
+        self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
+        self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._swmr_activated = False
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -1025,6 +1030,15 @@ class DataToExportExtendedSaver(DataToExportSaver):
                                                         self.channel_formatter(ind), dwa.name, origin=dwa.origin)
                 self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
                                           distribution=distribution)
+
+        # Enable SWMR after first data point created all structure
+        if (self._h5saver._swmr_mode and not self._swmr_activated
+                and self._h5saver.is_swmr_capable):
+            self._h5saver.flush()
+            self._h5saver.enable_swmr()
+            self._swmr_activated = True
+
+        self._h5saver.tick_flush()
 
 
 class DataLoader:
