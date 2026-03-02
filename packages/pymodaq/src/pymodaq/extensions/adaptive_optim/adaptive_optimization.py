@@ -6,7 +6,8 @@ from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq.extensions.optimizers_base.optimizer import (
     GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction, StopType)
-from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
+from pymodaq.extensions.optimizers_base.utils import find_key_in_nested_dict
+
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner
 
 from pymodaq.extensions.adaptive_optim.loss_function import LossFunctionFactory,LossDim

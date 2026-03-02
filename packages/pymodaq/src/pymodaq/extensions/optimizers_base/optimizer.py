@@ -41,9 +41,10 @@ from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.h5modules import module_saving
 
 from pymodaq.extensions.optimizers_base.utils import (
-    get_optimizer_models, OptimizerModelGeneric,
-    GenericAlgorithm, StopType, StoppingParameters,
+    StopType, StoppingParameters,
     OptimizerConfig, individual_as_dta, individual_as_dte)
+from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
+from pymodaq.extensions.optimizers_base.models import OptimizerModelGeneric, get_optimizer_models
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
