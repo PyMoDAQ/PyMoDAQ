@@ -76,50 +76,51 @@ def add_text_to_elt(elt, param):
     add_text_to_elt, walk_parameters_to_xml, dict_from_param
     """
     param_type = str(param.type())
+    param_val = param.value()
     if 'bool' in param_type or 'led' in param_type:
-        if param.value():
+        if param_val:
             text = '1'
         else:
             text = '0'
     elif param_type == 'itemselect':
-        if param.value() is not None:
+        if param_val is not None:
             elt.set('all_items',
-                    str(param.value()['all_items']))  # use list(eval(val_str[1:-1])) to get back a list of strings
-            text = str(param.value()['selected'])  # use list(eval(val_str[1:-1])) to get back a list of strings
+                    str(param_val['all_items']))  # use list(eval(val_str[1:-1])) to get back a list of strings
+            text = str(param_val['selected'])  # use list(eval(val_str[1:-1])) to get back a list of strings
         else:
             text = str(None)
     elif param_type == 'color':
-        text = str([param.value().red(), param.value().green(), param.value().blue(), param.value().alpha()])
+        text = str([param_val.red(), param_val.green(), param_val.blue(), param_val.alpha()])
     elif param_type == 'list':
-        if isinstance(param.value(), str):
-            text = f"str({param.value()!r})"    # Export repr() for hangling non-printable characters
-        elif isinstance(param.value(), int):
-            text = f"int({param.value()})"
-        elif isinstance(param.value(), float):
-            text = f"float({param.value()})"
+        if isinstance(param_val, str):
+            text = f"str({param_val!r})"    # Export repr() for hangling non-printable characters
+        elif isinstance(param_val, int):
+            text = f"int({param_val})"
+        elif isinstance(param_val, float):
+            text = f"float({param_val})"
         else:
-            text = str(param.value())
+            text = str(param_val)
     elif param_type == 'int':
-        if param.value() is True:  # known bug is True should be clearly specified here
+        if param_val is True:  # known bug is True should be clearly specified here
             val = 1
         else:
-            val = param.value()
+            val = param_val
         text = str(val)
     elif param_type == 'date_time':
-        text = str(param.value().toMSecsSinceEpoch())
+        text = str(param_val.toMSecsSinceEpoch())
     elif param_type == 'date':
-        text = str(QDateTime(param.value(), QTime()).toMSecsSinceEpoch())
+        text = str(QDateTime(param_val, QTime()).toMSecsSinceEpoch())
     elif param_type == 'table_view':
         try:
-            data = dict(classname=param.value().__class__.__name__,
-                        module=param.value().__class__.__module__,
-                        data=param.value().get_data_all(),
-                        header=param.value().header)
+            data = dict(classname=param_val.__class__.__name__,
+                        module=param_val.__class__.__module__,
+                        data=param_val.get_data_all(),
+                        header=param_val.header)
             text = json.dumps(data)
         except Exception:
             text = ''
     else:
-        text = str(param.value())
+        text = str(param_val)
     elt.text = text
 
 
