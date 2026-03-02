@@ -339,7 +339,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend'))
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend')[0])
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
