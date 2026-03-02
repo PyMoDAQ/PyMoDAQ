@@ -469,10 +469,12 @@ class ManagerBase(CustomExt):
         return False
 
     def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
+        """ Update the table given the entry argument"""
         if entry is None:
             entry = self.entry_filename
 
         if isinstance(entry, str):
+            self.entry = entry  # make sure the current entry field reflects this method argument
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
 
         self.update_entry(entry)
