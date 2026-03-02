@@ -653,11 +653,6 @@ class ModulesManager(QObject, ParameterManager):
                 if act is not None:
                     act.command_hardware.emit(
                         utils.ThreadCommand(command=command, attribute=[dact, polling]))
-            # else:
-            #     for ind, act in enumerate(self.actuators):
-            #         #getattr(act, command)(positions[ind])
-            #         act.command_hardware.emit(utils.ThreadCommand(command=command, attribute=[positions[ind], polling]))
-
         else:
             logger.error('Invalid number of positions compared to selected actuators')
             return self.move_done_positions
