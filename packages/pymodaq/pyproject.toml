@@ -62,7 +62,7 @@ dev = [
 [project.scripts]
 daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"
-daq_scan = "pymodaq.extensions.scangit a.daq_scan:main"
+daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 
