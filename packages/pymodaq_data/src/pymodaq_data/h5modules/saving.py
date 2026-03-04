@@ -70,7 +70,9 @@ class H5SaverLowLevel(H5Backend):
         The file path
     """
 
-    def __init__(self, save_type: SaveType = 'scan', backend='tables'):
+    def __init__(self, save_type: SaveType = 'scan', backend: str = None):
+        if backend is None:
+            backend = config('data', 'data_saving', 'backend')[0]
         H5Backend.__init__(self, backend)
 
         self.save_type = enum_checker(SaveType, save_type)
@@ -83,6 +85,34 @@ class H5SaverLowLevel(H5Backend):
         self._raw_group: Union[GROUP, str] = '/RawData'
         self._logger_array = None
 
+        self._flush_interval = 0
+        self._write_count = 0
+        fill_str = config('data', 'data_saving', 'data_type', 'fill_value')[0]
+        self.fill_value: float = np.nan if fill_str == 'nan' else float(fill_str)
+
+    def set_swmr_flush_interval(self, interval: int):
+        """Set how often to flush data for SWMR readers.
+
+        Parameters
+        ----------
+        interval: int
+            0 = flush only at end, N = every N writes
+        """
+        self._flush_interval = interval
+        self._write_count = 0
+
+    def tick_flush(self):
+        """Increment the write counter and flush if the interval is reached.
+
+        No-op if SWMR is not active or flush interval is 0.
+        To be called by data savers after each logical data write.
+        """
+        if not self.is_swmr_active or self._flush_interval <= 0:
+            return
+        self._write_count += 1
+        if self._write_count % self._flush_interval == 0:
+            self.flush()
+
     @property
     def raw_group(self):
         return self._raw_group
@@ -92,7 +122,7 @@ class H5SaverLowLevel(H5Backend):
         return self._h5file
 
     def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False,
-                  metadata: dict = None):
+                  metadata: dict = None, swmr_mode: bool = False):
         """Initializes a new h5 file.
 
         Parameters
@@ -105,6 +135,8 @@ class H5SaverLowLevel(H5Backend):
             If True create a new file, otherwise append to a potential existing one
         metadata: dict
             A dictionary to be saved as attributes
+        swmr_mode: bool
+            If True, prepare the file for SWMR (h5py backend only)
 
         Returns
         -------
@@ -116,14 +148,27 @@ class H5SaverLowLevel(H5Backend):
         if file_name is not None and isinstance(file_name, Path):
             self.h5_file_name = file_name.stem + ".h5"
             self.h5_file_path = file_name.parent
-            if not self.h5_file_path.joinpath(self.h5_file_name).is_file():
+            fullpath = self.h5_file_path.joinpath(self.h5_file_name)
+            if not fullpath.is_file():
                 new_file = True
+            elif swmr_mode and not new_file and self.is_swmr_capable:
+                # SWMR requires the file to have been created with libver='latest'
+                # (superblock v3+). Check for the marker attribute.
+                try:
+                    with self.h5_library.File(str(fullpath), 'r') as tmp:
+                        if not tmp.attrs.get('swmr_compatible', False):
+                            logger.info('Existing file is not SWMR-compatible, '
+                                        'creating a new file')
+                            new_file = True
+                except Exception:
+                    new_file = True
 
         else:
             return
 
         self.close_file()
-        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a', title='PyMoDAQ file')
+        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a',
+                       title='PyMoDAQ file', swmr_mode=swmr_mode)
 
         self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
         self.get_set_logger(self._raw_group)
@@ -184,7 +229,7 @@ class H5SaverLowLevel(H5Backend):
         return array
     
     def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
-                  data_shape: tuple = None, array_type: np.dtype = None, data_dimension: DataDim = None,
+                  data_shape: tuple = None, array_type: np.dtype = None, fill_value=None, data_dimension: DataDim = None,
                   scan_shape: tuple = tuple([]), add_scan_dim=False, enlargeable: bool = False,
                   title: str = '', metadata=dict([]), ):
 
@@ -210,6 +255,8 @@ class H5SaverLowLevel(H5Backend):
             correctly the memory
         array_type: np.dtype or numpy types
             eg np.float, np.int32 ...
+        fill_value: float or int
+            value to be used to fill the array if array_to_save is None
         enlargeable: bool
             if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_string_array)
         metadata: dict
@@ -245,7 +292,8 @@ class H5SaverLowLevel(H5Backend):
                 if not(len(data_shape) == 1 and data_shape[0] == 1):  # means data are not ndarrays of scalars
                     shape.extend(data_shape)
                 if array_to_save is None:
-                    array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
+                    fill_value = self.fill_value if fill_value is None else fill_value
+                    array_to_save = np.full(shape, fill_value, dtype=np.dtype(array_type))
 
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
         self.set_attr(array, 'data_type', data_type.name)
@@ -402,7 +450,7 @@ class H5SaverLowLevel(H5Backend):
                           group_type=GroupType.scan):
         """Add a new group of type given by the input argument group_type
 
-        At creation adds the attributes description and scan_done to be used elsewhere
+        At creation adds the attributes description to be used elsewhere
 
         See Also
         -------
@@ -410,7 +458,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if metadata is None:
             metadata = {}
-        metadata.update(dict(description='', scan_done=False))
+        metadata.update(dict(description=''))
         group = self.add_incremental_group(group_type, where, title, settings_as_xml, metadata)
         return group
 
@@ -421,7 +469,7 @@ class H5SaverLowLevel(H5Backend):
         """
         if metadata is None:
             metadata = {}
-        metadata.update(dict(description='', scan_done=False))
+        metadata.update(dict(description=''))
         group = self.add_generic_group(where, title, settings_as_xml, metadata, group_type=GroupType.scan)
         return group
 

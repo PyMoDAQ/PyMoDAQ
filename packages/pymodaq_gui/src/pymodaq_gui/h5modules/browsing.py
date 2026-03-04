@@ -150,6 +150,8 @@ class H5Browser(QObject, ActionManager):
         if specified load the corresponding file, otherwise open a select file dialog
     backend: str
         either 'tables, 'h5py' or 'h5pyd'
+    swmr: bool
+        if True, open the file in SWMR reading mode (h5py backend only)
 
     See Also
     --------
@@ -159,7 +161,8 @@ class H5Browser(QObject, ActionManager):
     # whatever use from the caller
     status_signal = Signal(str)
 
-    def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None, backend='tables'):
+    def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None,
+                 backend='tables', swmr=False):
         QObject.__init__(self)
         # toolbar = QtWidgets.QToolBar()
         ActionManager.__init__(self)  # , toolbar=toolbar)
@@ -172,6 +175,8 @@ class H5Browser(QObject, ActionManager):
         self.main_window.setCentralWidget(self.parent_widget)
         #self.main_window.addToolBar(self.toolbar)
 
+        self._swmr = swmr
+        self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
 
         self.settings_attributes = ParameterManager()
@@ -198,6 +203,7 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('comment', self.add_comments)
         self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
+        self.connect_action('refresh', self.refresh_file)
         self.connect_action('quit', self.quit_fun)
         self.connect_action('about', self.show_about)
         self.connect_action('help', self.show_help)
@@ -213,30 +219,87 @@ class H5Browser(QObject, ActionManager):
     def get_node_and_plot(self, with_bkg, plot_all=False):
         self.show_h5_data(item=None, with_bkg=with_bkg, plot_all=plot_all)
 
-    def load_file(self, h5file=None, h5file_path=None):
+    def load_file(self, h5file=None, h5file_path=None, swmr=None):
+        if swmr is None:
+            swmr = self._swmr
         if h5file is None:
+            self._file_is_external = False
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
             if Path(h5file_path).is_file():
                 if self.h5utils.isopen():
                     self.h5utils.close_file()
-
-                self.h5utils.open_file(h5file_path, 'r+')
+                try:
+                    self.h5utils.open_file(h5file_path, 'r', swmr_mode=swmr, locking=False)
+                except Exception as e:
+                    if not swmr:
+                        # The file may be locked by an SWMR writer — retry
+                        # with h5py backend in SWMR reader mode
+                        logger.info(f'Could not open file ({e}), retrying '
+                                    f'with h5py SWMR reader mode')
+                        self.h5utils.close_file()
+                        self.h5utils.set_backend('h5py')
+                        self.h5utils.open_file(h5file_path, 'r',
+                                               swmr_mode=True, locking=False)
+                        self._swmr = True
+                    else:
+                        raise
             else:
                 return
         else:
             self.h5utils.h5file = h5file
+            self._file_is_external = True
 
         self.data_loader = data_saving.DataLoader(self.h5utils)
         self.check_version()
         self.populate_tree()
         self.view.h5file_tree.expand_all()
 
+    def refresh_file(self):
+        """Refresh the file view to show newly written data.
+
+        In SWMR reader mode the h5py datasets are refreshed in-place so that
+        new data written by the SWMR writer becomes visible.  In non-SWMR mode
+        the file is closed and reopened to pick up external changes.
+
+        The tree is then repopulated and expanded.
+        """
+        try:
+            if not self.h5utils.isopen():
+                return
+
+            filepath = Path(self.h5utils.h5file.filename)
+
+            if self._swmr and self.h5utils.backend == 'h5py':
+                # Fast path: refresh datasets in-place then rebuild tree
+                from pymodaq_data.h5modules.swmr import refresh_datasets
+                refresh_datasets(self.h5utils.h5file)
+            elif self._file_is_external:
+                # File handle was provided by the caller (e.g. the active scan saver).
+                # Do NOT close it — the caller owns the file.  The tree is rebuilt
+                # from the already-open handle so any flushed data becomes visible.
+                pass
+            else:
+                # Re-open the file to pick up changes
+                self.h5utils.close_file()
+                mode = 'r' if self._swmr else 'r+'
+                self.h5utils.open_file(filepath, mode,
+                                       swmr_mode=self._swmr)
+
+            self.data_loader = data_saving.DataLoader(self.h5utils)
+            self.populate_tree()
+            self.view.h5file_tree.expand_all()
+            logger.info('File view refreshed')
+
+        except Exception as e:
+            logger.exception(str(e))
+
     def setup_menu(self):
         menubar = self.main_window.menuBar()
         file_menu = menubar.addMenu('File')
         self.affect_to('load', file_menu)
         self.affect_to('save', file_menu)
+        self.affect_to('refresh', file_menu)
         file_menu.addSeparator()
         self.affect_to('quit', file_menu)
 
@@ -268,6 +331,9 @@ class H5Browser(QObject, ActionManager):
 
         self.add_action('load', 'Load File', 'Open', tip='Open a new file')
         self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
+        self.add_action('refresh', 'Refresh', 'refresh',
+                        tip='Refresh the file view (useful for SWMR live files)',
+                        shortcut=QtCore.Qt.Key_F5)
         self.add_action('quit', 'Quit the application', 'Exit', tip='Quit the application')
         self.add_action('about', 'About', tip='About')
         self.add_action('help', 'Help', 'Help', tip='Show documentation', shortcut=QtCore.Qt.Key_F1)
@@ -352,7 +418,8 @@ class H5Browser(QObject, ActionManager):
         """
         """
         try:
-            self.h5utils.close_file()
+            if not self._file_is_external:
+                self.h5utils.close_file()
             if self.main_window is None:
                 self.parent_widget.close()
             else:

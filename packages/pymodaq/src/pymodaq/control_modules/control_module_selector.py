@@ -1,6 +1,7 @@
 from qtpy import QtWidgets, QtCore
 
 from pymodaq.control_modules.instruments import DET_TYPES
+from pymodaq_gui.utils.menu_utils import build_menu_from_iterable
 
 REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
 MOCK_ITEMS = {}
@@ -32,50 +33,13 @@ class ModuleSelector(QtCore.QObject):
         self.add_widget.blockSignals(True)
         try:
             self.add_menu.clear()
-            self._build_menu_from_iterable(self.add_menu, self.add_menu_entries)
+            build_menu_from_iterable(self.add_menu, self.add_menu_entries,
+                                     self._add_menu_item_selected)
         finally:
             self.add_widget.blockSignals(False)
 
-    def _build_menu_from_iterable(self, menu, items, path=()):
-        if isinstance(items, dict):
-            for key, value in items.items():
-                self._handle_menu_item(menu, key, value, path)
-        elif isinstance(items, (list, tuple)):
-            for item in items:
-                if isinstance(item, dict):
-                    for key, value in item.items():
-                        self._handle_menu_item(menu, key, value, path)
-                elif isinstance(item, str):
-                    self._add_leaf_action(menu, item, path + (item,))
-
-    def _handle_menu_item(self, menu: QtWidgets.QMenu, key, value, path):
-        """Handle a single menu item (key-value pair)"""
-        new_path = path + (key,)
-
-        if self._is_nested(value):
-            # Create submenu and recurse
-            submenu = menu.addMenu(key)
-            self._build_menu_from_iterable(submenu, value, new_path)
-        else:
-            # Create leaf action
-            self._add_leaf_action(menu, key, new_path)
-
-    def _is_nested(self, value):
-        """Check if a value represents nested structure"""
-        return isinstance(value, (dict, list, tuple)) and value  # Not empty
-
-    def _add_leaf_action(self, menu: QtWidgets.QMenu, name, path):
-        """Add a leaf action to the menu"""
-        action = menu.addAction(name)
-        action.triggered.connect(lambda checked, data=path: self._add_menu_item_selected(data))
-
-    def _add_menu_item_selected(self, path_tuple):
-        """Called when a menu item is selected from the nested add menu
-
-        To be subclassed for particular signal emission
-
-        """
-        # Call the parameter's addNew method with the selected type
+    def _add_menu_item_selected(self, name, path_tuple):
+        """Called when a menu item is selected from the nested add menu."""
         self.add_widget.setText('/'.join(path_tuple))
         self.add_widget.adjustSize()
         self.module_changed.emit(path_tuple)

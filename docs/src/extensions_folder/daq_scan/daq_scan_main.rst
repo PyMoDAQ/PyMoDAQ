@@ -201,6 +201,7 @@ can also be triggered with other buttons as described below:
 * **Init. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
 * |start|: will start the currently set scan (first it will set it then start it)
 * |stop|: stop the currently running scan (in case of a batch of scans, it will skips the current one).
+* **Pause**: toggle pause/resume on a running scan. The scan loop will wait until unpaused or stopped.
 * |goto|: when checked, allows currently actuators to be moved by double clicking on a position in the live plots
 * |log|: opens the logs in a text editor
 
@@ -210,14 +211,29 @@ There are two entries in the menu bar: *File* and *Settings*
 
 The *File* entry will let you:
 
-* load a previously saved scan file (and keep saving scans on it)
+* Load a previously saved scan file (and keep saving scans on it)
 * Save the current file in another filename than the default one
 * Load the content of the current file into the *H5Browser*
+* Open / Close the current h5 file (useful to release the file lock or reopen after closing)
 
 The *Settings* entry will let you:
 
 * display the *Navigator* see :ref:`navigator_paragrah`
 * Display and activate the *Scan Batch Manager*
+
+Status Bar
+++++++++++
+The status bar at the bottom of the window shows:
+
+* A message label with the current file name and scan name
+* Scan step counters (total steps and current step)
+* A **Scan done** LED indicator
+* A **File** LED indicator (green when the h5 file is open)
+* An **SWMR** label that shows:
+
+  * *SWMR* when SWMR mode is actively in use during a scan
+  * *SWMR file* when the opened file was created with SWMR support but SWMR is not currently active
+  * hidden when the file has no SWMR association
 
 
 
@@ -246,8 +262,10 @@ The General Settings are comprised of:
 * **Scan options** :
 
   * **N average**: Select how many scans to average. Save all individual scans.
+  * **Go to ini. positions**: when checked (default), actuators are moved back to their initial positions
+    when the scan ends or is stopped.
 
-* **Scan options** :
+* **Plotting options** :
   * **Get Data** probe selected detectors to get info on the data they are generating (including processed data from ROI)
   * **Group 0D data**: Will group all generated 0D data to be plotted on the same viewer panel (work only for 0D data)
   * **Plot 0D** shows the list of data that are 0D

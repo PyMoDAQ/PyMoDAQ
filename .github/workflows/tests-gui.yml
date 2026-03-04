@@ -69,6 +69,10 @@ jobs:
           cd ..
           python install-packages.py -d -u pymodaq_gui"
 
+      - name: Install tables (optional – no wheel for all Python versions)
+        continue-on-error: true
+        run: pip install tables
+
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder + Setup additional dependencies (Linux)
         if: runner.os == 'Linux'

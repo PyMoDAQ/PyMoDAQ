@@ -67,6 +67,10 @@ jobs:
           cd ..
           cd ..
           python install-packages.py -d -u pymodaq_data"
+
+      - name: Install tables (optional – no wheel for all Python versions)
+        continue-on-error: true
+        run: pip install tables
       
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder (Linux)

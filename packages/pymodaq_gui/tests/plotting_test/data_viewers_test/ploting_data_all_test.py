@@ -14,8 +14,11 @@ from itertools import permutations
 from pymodaq_utils import math_utils as mutils
 from pymodaq_data import data as datamod
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_data.h5modules import backends
 from pymodaq_data.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
 from pymodaq_gui.plotting.data_viewers import Viewer1D, ViewerND, Viewer2D
+
+tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
 
 @pytest.fixture(scope="module")
@@ -72,9 +75,9 @@ def get_4D():
 
     return dwa
 
-@pytest.fixture()
-def get_h5saver(tmp_path):
-    h5saver = H5SaverLowLevel()
+@pytest.fixture(params=tested_backend)
+def h5saver_lowlevel(request, tmp_path):
+    h5saver = H5SaverLowLevel(backend=request.param)
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
 
@@ -178,8 +181,8 @@ class Test1DPlot:
                 viewer.parent.close()
                 viewer.parent.deleteLater()
 
-    def test_plot_0D_1D_spread(self, qtbot, get_h5saver):
-        h5saver = get_h5saver
+    def test_plot_0D_1D_spread(self, qtbot, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataEnlargeableSaver(h5saver)
         NX = 100
         axis_array = np.linspace(-20, 50, NX)

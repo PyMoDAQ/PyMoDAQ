@@ -25,9 +25,9 @@ from pymodaq_data.data import (DataToExport, DataCalculated,
 from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFactory
 
 from pymodaq.extensions.optimizers_base.utils import (
-    GenericAlgorithm, OptimizerModelDefault, StopType, StoppingParameters,
+    StopType, StoppingParameters,
     OptimizerConfig, PredictionError)
-
+from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 
 logger = set_logger(get_module_name(__file__))
 
