@@ -66,8 +66,7 @@ jobs:
           python -m pip install --upgrade pip
           cd ..
           cd ..
-          python install-packages.py -u pymodaq_data
-          pip install -e "packages/pymodaq_data[dev]"
+          python install-packages.py -d -u pymodaq_data"
       
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder (Linux)
