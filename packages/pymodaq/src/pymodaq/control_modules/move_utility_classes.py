@@ -179,8 +179,6 @@ params = [
          'limits': ActuatorUIFactory.keys()},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
-        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
-         'value': False},
     ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]

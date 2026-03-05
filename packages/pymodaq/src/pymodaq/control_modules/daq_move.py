@@ -96,7 +96,7 @@ class DAQ_Move(ParameterControlModule):
 
     params = daq_move_params +  [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': True, 'children': H5Saver.params, 'expanded': False}]
 
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
@@ -464,9 +464,6 @@ class DAQ_Move(ParameterControlModule):
 
         if param.name() == "refresh_timeout":
             self._refresh_timer.setInterval(param.value())
-
-        elif param.name() == 'continuous_saving_opt':
-            self.settings.child('saver_settings').setOpts(visible=param.value())
 
         elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
             if param.name() == 'do_save':
