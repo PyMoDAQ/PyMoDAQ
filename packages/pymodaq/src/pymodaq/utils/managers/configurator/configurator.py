@@ -63,14 +63,47 @@ class Configurator(ManagerBase):
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
 
-        self._preset_manager_local = PresetManager()
+        if dashboard is None:
+            self._preset_manager_local = PresetManager()
+        else:
+            self._preset_manager_local = dashboard.preset_manager
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+
+
         self.get_action('preset_filename').widget.addItems(self._preset_manager_local.entries)
         self.preset_filename = preset_filename
+        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
+                         add_break=False)
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
+                                                      )
+
+    @property
+    def preset_manager(self) -> 'PresetManager':
+        return self._preset_manager_local
 
     def show(self):
-        self.update_settings(self.dashboard.modules_manager.get_settings_all())
+        """ Open the Configurator User Interface
+
+        If the Dashboard is not None and has a current preset set, the configurator preset name
+        entry will be set as readonly and the settings are taken from the modules
+        """
+        if self.dashboard is not None:
+            settings = SettingsManager().create_settings_all(
+                self.dashboard.modules_manager.actuators_all,
+                self.dashboard.modules_manager.detectors_all,
+            )
+            self.update_settings(settings)
+            self.connect_action('preset_filename', signal_name='currentTextChanged',
+                                slot=self.update_settings,
+                                connect=False)
+
+            self.get_action('preset_filename').widget.setCurrentText(self.dashboard.preset_manager.entry)
+            self.get_action('preset_filename').widget.setEnabled(False)
+
+        else:
+            self.update_settings(self._preset_manager_local.entry)
+
         super().show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
