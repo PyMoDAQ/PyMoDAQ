@@ -39,7 +39,7 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq.utils.managers.overshoot_manager import OvershootManager
 from pymodaq.utils.managers.remote_manager import RemoteManager
@@ -1376,32 +1376,9 @@ class DashBoard(CustomApp):
     def menubar(self):
         return self._menubar
 
-    def parameter_tree_changed(self, param, changes):
-        """
-        Foreach value changed, update :
-            * Viewer in case of **DAQ_type** parameter name
-            * visibility of button in case of **show_averaging** parameter name
-            * visibility of naverage in case of **live_averaging** parameter name
-            * scale of axis **else** (in 2D pymodaq type)
-
-        Once done emit the update settings signal to link the commit.
-
-
-        """
-
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = ".".join(path)
-            else:
-                childName = param.name()
-            if change == "childAdded":
-                pass
-            elif change == "value":
-                if param.name() == "log_level":
-                    logger.setLevel(param.value())
-            elif change == "parent":
-                pass
+    def value_changed(self, param: Parameter):
+        if param.name() == "log_level":
+            logger.setLevel(param.value())
 
     def show_file_attributes(self, type_info="dataset"):
         """

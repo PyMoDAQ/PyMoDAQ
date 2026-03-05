@@ -23,7 +23,7 @@ from pymodaq_gui import utils as gutils
 from serializall import SerializableFactory
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq.utils.managers.modules_manager import ModuleType
+from pymodaq.utils.managers.modules import ModuleType
 import copy
 
 logger = set_logger(get_module_name(__file__))
