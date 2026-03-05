@@ -8,9 +8,10 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
+from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import get_set_preset_path
+
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -271,7 +272,11 @@ class Configurator(ManagerBase):
                 return
         if isinstance(settings, str):
             self._preset_manager_local.entry = settings
-            settings: Parameter = self._preset_manager_local.get_all_settings()
+            preset_settings: Parameter = self._preset_manager_local.settings
+            settings = SettingsManager().create_settings_all(
+                preset_settings.child(ModuleType.Actuator.value).children(),
+                preset_settings.child(ModuleType.Detector.value).children(),
+            )
 
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
@@ -391,7 +396,7 @@ if __name__ == "__main__":
     external_ui = QtWidgets.QMainWindow()
 
     prog = Configurator()
-    prog.update_settings(None)
+    prog.update_settings('default')
     prog.mainwindow.show()
 
     toolbar, menu = prog.get_external_toolbar_menu()
