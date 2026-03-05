@@ -8,7 +8,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
-
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_preset_path
 
@@ -62,7 +62,10 @@ class Configurator(ManagerBase):
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
 
+        self._preset_manager_local = PresetManager()
+
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+        self.get_action('preset_filename').widget.addItems(self._preset_manager_local.entries)
         self.preset_filename = preset_filename
 
     def show(self):
@@ -71,23 +74,20 @@ class Configurator(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        try:
-            return get_set_configurator_path(self.preset_filename)
-        except KeyError as e: #fallback to preset ini
-            return get_set_configurator_path(self._preset_ini)
+        return get_set_configurator_path(self.preset_filename)
 
     @property
     def preset_filename(self) -> str:
         if 'preset_filename' not in self.actions_names:
             return self._preset_ini  # fallback at startup
         else:
-            return self.get_action('preset_filename').text()
+            return self.get_action('preset_filename').currentText()
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
-        if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
+        if preset_filename in self._preset_manager_local.entries_filename:
             self._preset_ini = preset_filename
-            self.get_action('preset_filename').setText(preset_filename)
+            self.get_action('preset_filename').setCurrentText(preset_filename)
             self.entries_sync.update_key('items', self.entries)
 
     def save_entries(self, entry_path: Path = None):
@@ -230,7 +230,7 @@ class Configurator(ManagerBase):
     def setup_actions(self):
         self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset: '),
                         toolbar=self.get_toolbar('main'))
-        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
+        self.add_widget('preset_filename', QtWidgets.QComboBox(), tip='Name of the current preset',
                         toolbar=self.get_toolbar('main'))
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
@@ -258,6 +258,7 @@ class Configurator(ManagerBase):
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
 
         self.connect_action('show_all_settings', self.display_settings)
+        self.connect_action('preset_filename', signal_name='currentTextChanged', slot=self.update_settings)
 
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
@@ -269,7 +270,9 @@ class Configurator(ManagerBase):
             if settings == '':
                 return
         if isinstance(settings, str):
-            settings = get_set_preset_path().joinpath(f'{settings}.xml')
+            self._preset_manager_local.entry = settings
+            settings: Parameter = self._preset_manager_local.get_all_settings()
+
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
         elif isinstance(settings, Path):
@@ -385,11 +388,10 @@ if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('PresetManager')
-    settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
     external_ui = QtWidgets.QMainWindow()
 
     prog = Configurator()
-    prog.update_settings(settings_path)
+    prog.update_settings(None)
     prog.mainwindow.show()
 
     toolbar, menu = prog.get_external_toolbar_menu()
