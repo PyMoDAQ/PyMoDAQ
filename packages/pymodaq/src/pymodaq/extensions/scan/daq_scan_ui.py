@@ -51,13 +51,24 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
         self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
                         menu=self.action_menu, icon_color=self.get_theme().red)
+        self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
+                        checkable=True, menu=self.action_menu,
+                        icon_checked_color=self.get_theme().orange)
         self.add_action('move_at', 'Move at doubleClicked', 'moving',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
 
-        self.add_action('load', 'Load File', 'Open', menu=self.file_menu, auto_toolbar=False)
+        self._toolbar.addSeparator()
+        self.add_action('show_file', 'Show file content', 'folder_data',
+                        tip='Browse the content of the current HDF5 file')
+
+        self.add_action('new_file', 'New file', 'new2', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('load', 'Open file to append...', 'Open', menu=self.file_menu, auto_toolbar=False)
         self.file_menu.addSeparator()
-        self.add_action('save', 'Save file as', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
-        self.add_action('show_file', 'Show file content', '', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('save', 'Save copy as...', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
+        # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
+        # A developer can access them programmatically or add them back to a menu as needed.
+        self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
+        self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
 
         self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
@@ -67,17 +78,24 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         """If True enable main buttons to launch/stop scan"""
         self.set_action_enabled('start', enable)
         self.set_action_enabled('stop', enable)
+        self.set_action_enabled('pause', enable)
+        if enable:
+            self.set_action_checked('pause', False)
 
     def connect_things(self):
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
+        self.connect_action('pause', lambda: self.command_sig.emit(ThreadCommand('pause')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
 
+        self.connect_action('new_file', lambda: self.command_sig.emit(ThreadCommand('new_file')))
         self.connect_action('load', lambda: self.command_sig.emit(ThreadCommand('load')))
         self.connect_action('save', lambda: self.command_sig.emit(ThreadCommand('save')))
         self.connect_action('show_file', lambda: self.command_sig.emit(ThreadCommand('show_file')))
+        self.connect_action('open_file', lambda: self.command_sig.emit(ThreadCommand('open_file')))
+        self.connect_action('close_file', lambda: self.command_sig.emit(ThreadCommand('close_file')))
         self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator')))
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
@@ -171,6 +189,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._scan_done_LED.set_as_false()
         self._scan_done_LED.clickable = False
         self._scan_done_LED.setToolTip('Scan done state')
+
+        self._file_open_LED = QLED()
+        self._file_open_LED.set_as_false()
+        self._file_open_LED.clickable = False
+        self._file_open_LED.setToolTip('H5 file open and accessible')
+
+        self._swmr_label = QtWidgets.QLabel('')
+        self._swmr_label.setToolTip('SWMR mode status')
+        self._swmr_label.setVisible(False)
+
         self._statusbar.addPermanentWidget(self._status_message_label)
 
         self._statusbar.addPermanentWidget(self._n_scan_steps_sb)
@@ -178,6 +206,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
         self._statusbar.addPermanentWidget(self._scan_done_LED)
+        self._statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
+        self._statusbar.addPermanentWidget(self._file_open_LED)
+        self._statusbar.addPermanentWidget(self._swmr_label)
 
     @property
     def n_scan_steps(self):
@@ -204,6 +235,39 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_scan_done(self, done=True):
         self._scan_done_LED.set_as(done)
+
+    def set_file_open(self, is_open: bool):
+        """Update the file-open status LED.
+
+        Parameters
+        ----------
+        is_open:
+            True (green) if the h5 file is open and accessible, False (red) otherwise.
+        """
+        self._file_open_LED.set_as(is_open)
+
+    def set_swmr_status(self, active: bool, compatible: bool = False):
+        """Show or hide the SWMR mode indicator in the status bar.
+
+        Parameters
+        ----------
+        active:
+            True if SWMR mode is currently active on the file.
+        compatible:
+            True if the file was created with SWMR support.
+        """
+        if active:
+            self._swmr_label.setText('SWMR')
+            self._swmr_label.setToolTip('SWMR mode active')
+            self._swmr_label.setVisible(True)
+        elif compatible:
+            self._swmr_label.setText('SWMR file')
+            self._swmr_label.setToolTip('File created with SWMR support')
+            self._swmr_label.setVisible(True)
+        else:
+            self._swmr_label.setText('')
+            self._swmr_label.setToolTip('SWMR mode status')
+            self._swmr_label.setVisible(False)
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type, viewers_name, force)

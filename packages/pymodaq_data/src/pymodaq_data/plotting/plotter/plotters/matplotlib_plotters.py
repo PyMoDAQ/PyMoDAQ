@@ -9,6 +9,7 @@ from pymodaq_utils import config as configmod
 from pymodaq_data.data import DataDim, DataWithAxes, DataToExport
 from pymodaq_utils import utils
 from pymodaq_data.plotting.plotter.plotter import PlotterBase, PlotterFactory
+from pymodaq_data.plotting.utils import PlotColors
 
 from matplotlib import pyplot as plt
 
@@ -18,9 +19,9 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 config = configmod.GlobalConfig()
 
-PLOT_COLORS = utils.plot_colors.copy()
+PLOT_COLORS = PlotColors()
 PLOT_COLORS.remove((255, 255, 255))  # remove white color as plotted on white background
-PLOT_COLORS = [(np.array(color) / 255).tolist() for color in PLOT_COLORS]  # translation to matplotlib
+PLOT_COLORS = PlotColors([(np.array(color) / 255).tolist() for color in PLOT_COLORS])  # translation to matplotlib
 
 
 @PlotterFactory.register()

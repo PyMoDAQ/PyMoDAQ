@@ -589,6 +589,13 @@ class Config(BaseConfig):
                     return [entry]
             else:
                 return entry
+        elif 'hdf5_backend' in args:
+            entry = super().__call__(*args)
+            if not isinstance(entry, list):
+                try:
+                    return super().__call__(*args)
+                except (KeyError, ConfigError):
+                    return [entry]                                
 
         return super().__call__(*args)
 

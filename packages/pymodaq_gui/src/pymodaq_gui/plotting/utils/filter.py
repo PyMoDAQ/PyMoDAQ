@@ -242,7 +242,7 @@ class Filter1DFromRois(Filter):
             axis = data.get_axis_from_index(0, create=False)[0]
             if axis is not None:
                 self.update_axis(axis)
-            if data is not None:                                
+            if data is not None:
                 for roi_key, roi in self._ROIs.items():
                     if roi.compute:
                         sub_data = data.deepcopy()
@@ -360,7 +360,7 @@ class Filter2DFromRois(Filter):
             else:
                 slices = self.get_slices_from_roi(roi, dwa.shape)
                 sub_data: DataFromRoi = dwa.isig[slices[0], slices[1]]
-                sub_data.name = 'Croped'
+                sub_data.name = 'Cropped'
                 sub_data.origin = roi.name
                 sub_data.labels = labels
                 sub_data_hor = sub_data.mean(0)
@@ -547,7 +547,7 @@ class FourierFilterer(QObject):
         else:
             if self.raw_data is not None:
                 self.viewer1D.show_data([self.raw_data['data']])
-                self.viewer1D.x_axis = dict(data=self.raw_data['xaxis'], label='Pxls')
+                self.viewer1D.x_axis = dict(data=self.raw_data['xaxis'], label='index')
                 self.data_filtered_plot.setData(self.xaxis, self.data)
                 self.data_filtered_plot.setVisible(True)
                 self.viewer1D.ROIfft.setVisible(False)
@@ -568,7 +568,7 @@ if __name__ == '__main__':
     tau = 27
     tau2 = 100
     ydata_gauss = 10 * gauss1D(xdata, x0, dx) + np.random.rand(len(xdata))
-    ydata_expodec = np.zeros((len(xdata)))
+    ydata_expodec = np.zeros(len(xdata))
     ydata_expodec[:50] = 10 * gauss1D(xdata[:50], x0, dx, 2)
     ydata_expodec[50:] = 10 * np.exp(-(xdata[50:] - x0) / tau)  # +10*np.exp(-(xdata[50:]-x0)/tau2)
     ydata_expodec += 2 * np.random.rand(len(xdata))
