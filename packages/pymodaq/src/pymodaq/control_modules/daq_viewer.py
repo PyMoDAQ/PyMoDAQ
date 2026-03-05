@@ -104,7 +104,7 @@ class DAQ_Viewer(ParameterControlModule):
 
     params = daq_viewer_params + [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': True, 'children': H5Saver.params, 'expanded': False}]
 
     listener_class = ViewerActorListener
     ui: Optional[DAQ_Viewer_UI]
@@ -156,13 +156,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
         self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
-        for hidden_param in ('custom_name',
-                            'current_scan_name',
-                            'current_scan_path',
-                            'current_h5_file',
-                            'new_file',
-                            'base_name'):
-            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -918,10 +911,6 @@ class DAQ_Viewer(ParameterControlModule):
                 else:
                     for viewer in self.viewers:
                         viewer.x_axis, viewer.y_axis = self.get_scaling_options()
-
-        elif param.name() == 'continuous_saving_opt':
-            self.settings.child('saver_settings').setOpts(visible=param.value())
-
 
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
