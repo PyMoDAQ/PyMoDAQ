@@ -34,6 +34,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         qt-backend: ["pyqt5", "pyqt6", "pyside6"]
     runs-on: ${{ matrix.os }}
+    env: 
+      PYTEST_QT_API: ${{ matrix.qt-backend }}     
     defaults:
       run:
         working-directory: packages/pymodaq
@@ -101,12 +103,12 @@ jobs:
         run: |
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             mkdir ${{ github.workspace }}/coverage
-            python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq --qt-api=${{ matrix.qt-backend }}
+            python -X faulthandler -m pytest --capture=no -vv --cov=pymodaq
             mv .coverage ${{ github.workspace }}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
           else
             workspace=$(echo "${{ github.workspace }}" | tr '\\' '/')
             mkdir ${workspace}/coverage
-            pytest -vv --cov=pymodaq --qt-api=${{ matrix.qt-backend }}
+            pytest -vv --cov=pymodaq
             mv .coverage ${workspace}/coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
           fi
 
