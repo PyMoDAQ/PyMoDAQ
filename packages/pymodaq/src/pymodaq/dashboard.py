@@ -969,7 +969,7 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         actuator_widgets.append(QtWidgets.QWidget())
-        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier, preset=self.preset_name)
+        mov_mod_tmp = DAQ_Move(actuator_widgets[-1], plug_name, ui_identifier=ui_identifier)
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
@@ -1063,7 +1063,6 @@ class DashBoard(CustomApp):
             widget,
             title=plug_name,
             daq_type=plug_type,
-            preset=self.preset_name
         )
 
         self.compact_detector_manager.add_module(det_mod_tmp)

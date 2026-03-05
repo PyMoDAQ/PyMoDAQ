@@ -404,11 +404,9 @@ class ParameterControlModule(ParameterManager, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
-    _preset: Optional[str] = None
     listener_class: Type[ActorListener] = ActorListener
 
-    def __init__(self, preset: Optional[str] = None, **kwargs):
-        self._preset = preset
+    def __init__(self, **kwargs):
         action_list = kwargs.get("action_list", ("search", "save", "update"))
         ParameterManager.__init__(self, action_list=action_list)
         ControlModule.__init__(self)

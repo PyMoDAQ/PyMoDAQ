@@ -146,8 +146,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
                 #position = [data.m_as(self.axis_unit) for data in position.quantities]
                 position = np.full(self.shape, position.value(self.axis_unit)).tolist()
 
-        (self.controller.
-         move_rel(position=position))
+        self.controller.move_rel(position=position)
 
     def move_home(self):
         self.controller.move_home()

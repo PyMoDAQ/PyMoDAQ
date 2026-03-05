@@ -164,7 +164,7 @@ class LECODeviceWrapper:
         self._settings_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="get_settings")
+        self._director.ask_rpc("get_settings")
 
         return future
 
@@ -173,7 +173,7 @@ class LECODeviceWrapper:
             for (path, modified) in compare_xml_trees(self._base_settings, settings):
                 t_name, t_len = utils.str_len_to_bytes('ParameterWithPath')
                 data =  t_len + t_name + sf.get_apply_serializer(path) + sf.get_apply_serializer(modified)
-                self._director.ask_rpc(method="set_info", parameter=None, additional_payload=[data])
+                self._director.ask_rpc("set_info", parameter=None, additional_payload=[data])
 
     def sign_out(self):
         self._director.ask_rpc('sign_out', actor='COORDINATOR')
@@ -185,7 +185,7 @@ class LECODeviceWrapper:
             future = Future()
             self._snap_data_future = future
             self.set_remote_name()
-            self._director.ask_rpc(method="send_data_snap")
+            self._director.ask_rpc("send_data_snap")
             return future
         return None
 
@@ -198,7 +198,7 @@ class LECODeviceWrapper:
             self._grab_data_list = [] if keep else None
 
         self.set_remote_name()
-        self._director.ask_rpc(method="send_data_grab")
+        self._director.ask_rpc("send_data_grab")
         self._is_grabbing = not was_grabbing
 
         return None if was_grabbing else self._grab_data_list
@@ -206,7 +206,7 @@ class LECODeviceWrapper:
     def stop_grab(self):
         self._is_grabbing = False
         self.set_remote_name()
-        self._director.ask_rpc(method="stop_grab")
+        self._director.ask_rpc("stop_grab")
 
 
 
@@ -224,7 +224,7 @@ class LECODeviceWrapper:
         self._move_done_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="move_home")
+        self._director.ask_rpc("move_home")
 
         return future
 
@@ -236,7 +236,7 @@ class LECODeviceWrapper:
         serialize = SerializableFactory().get_apply_serializer
 
         self.set_remote_name()
-        self._director.ask_rpc(method="move_abs", position=None, additional_payload=[serialize(value)])
+        self._director.ask_rpc("move_abs", position=None, additional_payload=[serialize(value)])
 
         return future
 
@@ -248,7 +248,7 @@ class LECODeviceWrapper:
         serialize = SerializableFactory().get_apply_serializer
 
         self.set_remote_name()
-        self._director.ask_rpc(method="move_rel", position=None, additional_payload=[serialize(value)])
+        self._director.ask_rpc("move_rel", position=None, additional_payload=[serialize(value)])
 
         return future
 
@@ -257,7 +257,7 @@ class LECODeviceWrapper:
         self._move_done_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="stop_motion")
+        self._director.ask_rpc("stop_motion")
 
         return future
 
@@ -354,7 +354,7 @@ class LECODashboardWrapper:
         self._devices_list_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="get_devices")
+        self._director.ask_rpc("get_devices")
 
         return future
 
@@ -363,7 +363,7 @@ class LECODashboardWrapper:
         self._configurations_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="get_configurations")
+        self._director.ask_rpc("get_configurations")
 
         return future
 
@@ -372,7 +372,7 @@ class LECODashboardWrapper:
         self._applied_configuration_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="apply_configuration", configuration=configuration)
+        self._director.ask_rpc("apply_configuration", configuration=configuration)
 
         return future
 
@@ -381,7 +381,7 @@ class LECODashboardWrapper:
         self._presets_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="get_presets")
+        self._director.ask_rpc("get_presets")
 
         return future
 
@@ -390,7 +390,7 @@ class LECODashboardWrapper:
         self._applied_preset_future = future
 
         self.set_remote_name()
-        self._director.ask_rpc(method="apply_preset", preset=preset)
+        self._director.ask_rpc("apply_preset", preset=preset)
 
         return future
 

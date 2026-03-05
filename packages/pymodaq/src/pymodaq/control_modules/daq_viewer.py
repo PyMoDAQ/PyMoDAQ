@@ -114,14 +114,13 @@ class DAQ_Viewer(ParameterControlModule):
         parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
         daq_type=config("pymodaq", "viewer", "daq_type"),
-        preset : Optional[str] = None,
         **kwargs,
     ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(preset=preset, **kwargs)
+        super().__init__(**kwargs)
 
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
