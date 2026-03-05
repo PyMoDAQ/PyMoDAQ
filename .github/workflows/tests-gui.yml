@@ -69,7 +69,7 @@ jobs:
           python -m pip install --upgrade pip
           cd ..
           cd ..
-          python install-packages.py -d -u pymodaq_gui"
+          python install-packages.py -d -u pymodaq_gui
 
       - name: Install tables (optional – no wheel for all Python versions)
         continue-on-error: true
