@@ -64,10 +64,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest pytest-cov pytest-xdist wheel numpy h5py
           cd ..
           cd ..
-          python install-packages.py -u pymodaq_utils
+          python install-packages.py -d -u pymodaq_utils
       
       # Create folder and set permissions on Linux
       - name: Create global pymodaq folder (Linux)
