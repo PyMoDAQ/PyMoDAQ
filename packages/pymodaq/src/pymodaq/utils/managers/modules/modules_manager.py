@@ -2,6 +2,7 @@ from typing import List, Union, TYPE_CHECKING, Optional, Sequence
 
 from qtpy.QtCore import QObject, Signal, Slot
 from qtpy import QtWidgets
+from qtpy.QtCore import QThread
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -676,7 +677,6 @@ if __name__ == '__main__':
     import sys
 
     from pymodaq_gui.qt_utils import mkQApp
-    from qtpy.QtCore import QThread
     from pymodaq.utils.gui_utils import DockArea
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
