@@ -28,7 +28,7 @@ from pymodaq.utils.managers.configurator.utils import (
 
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -59,10 +59,8 @@ class Configurator(ManagerBase):
                  dashboard: 'DashBoard' = None,
                  preset_filename: str = 'default'):
 
-        self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
-
         if dashboard is None:
             self._preset_manager_local = PresetManager()
         else:
@@ -70,13 +68,8 @@ class Configurator(ManagerBase):
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
-
-        self.get_action('preset_filename').widget.addItems(self._preset_manager_local.entries)
         self.preset_filename = preset_filename
-        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
-                         add_break=False)
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
-                                                      )
+
 
     @property
     def preset_manager(self) -> 'PresetManager':
@@ -94,13 +87,6 @@ class Configurator(ManagerBase):
                 self.dashboard.modules_manager.detectors_all,
             )
             self.update_settings(settings)
-            self.connect_action('preset_filename', signal_name='currentTextChanged',
-                                slot=self.update_settings,
-                                connect=False)
-
-            self.get_action('preset_filename').widget.setCurrentText(self.dashboard.preset_manager.entry)
-            self.get_action('preset_filename').widget.setEnabled(False)
-
         else:
             self.update_settings(self._preset_manager_local.entry)
 
@@ -110,19 +96,23 @@ class Configurator(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_configurator_path(self.preset_filename)
 
+    def set_preset_filename(self, name: str):
+        """ convenience method to be used as slot in Qt connection"""
+        self.preset_filename = name
+
     @property
     def preset_filename(self) -> str:
-        if 'preset_filename' not in self.actions_names:
-            return self._preset_ini  # fallback at startup
-        else:
-            return self.get_action('preset_filename').currentText()
+        try:
+            return self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.currentText()
+        except KeyError:  # not yet instantiated but need to be there
+            return 'default'
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
-        if preset_filename in self._preset_manager_local.entries_filename:
-            self._preset_ini = preset_filename
-            self.get_action('preset_filename').setCurrentText(preset_filename)
+        if preset_filename in self.preset_manager.entries:
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
             self.entries_sync.update_key('items', self.entries)
+            self.update_entry()
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -262,10 +252,14 @@ class Configurator(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset: '),
-                        toolbar=self.get_toolbar('main'))
-        self.add_widget('preset_filename', QtWidgets.QComboBox(), tip='Name of the current preset',
-                        toolbar=self.get_toolbar('main'))
+        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
+                        checkable=True, toolbar=self.get_toolbar('main'),
+                        tip='If Checked: display all settings (in green, settings that can be configured)'
+                            ' otherwise only configurables ones')
+
+        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow, add_break=False)
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),)
+
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
                         tip='Add the current Parameter item',
@@ -279,11 +273,7 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
-        self.get_toolbar('main').addSeparator()
-        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
-                        tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
@@ -292,8 +282,14 @@ class Configurator(ManagerBase):
         self.connect_action(EntryActions.DOWN, self.move_down_setting)
 
         self.connect_action('show_all_settings', self.display_settings)
-        self.connect_action('preset_filename', signal_name='currentTextChanged', slot=self.update_settings)
 
+        if self.dashboard is None:
+            self.preset_manager.enable_actions(True)
+            self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
+                                           ).widget.currentTextChanged.connect(self.set_preset_filename)
+        else:
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         self.config_model.load(self.entry_filename)
