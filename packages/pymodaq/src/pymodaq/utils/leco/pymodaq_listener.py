@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 
 from pymodaq_utils.enums import StrEnum
 
@@ -418,3 +419,103 @@ class ActorListener(PymodaqListener):
 MoveActorListener = ActorListener
 ViewerActorListener = ActorListener
 DashboardActorListener = ActorListener
+
+
+class LECOComponentMixin:
+    """Mixin class adding LECO network connectivity to a PyMoDAQ component.
+
+    This mixin provides the interface for connecting a PyMoDAQ module (actuator,
+    detector, or dashboard) to the LECO (Laboratory Equipment Communication
+    Orchestration) network. It manages the lifecycle of an :class:`ActorListener`
+    that runs in a background thread and bridges incoming LECO remote-procedure
+    calls to Qt signals and vice versa.
+
+    Subclasses must implement :meth:`get_leco_name`, :meth:`get_leco_host_port`,
+    and :meth:`process_leco_commands`.
+
+    The class-level signal :attr:`_leco_commands_signal` is used to forward
+    outgoing :class:`~pymodaq_utils.utils.ThreadCommand` objects to the listener's
+    queue so that they are transmitted over LECO from the Qt thread.
+    """
+
+    _leco_commands_signal = Signal(ThreadCommand)
+
+    def __init__(self, listener_class: Type[ActorListener], **kwargs):
+        """Initialize the mixin.
+
+        :param listener_class: The :class:`ActorListener` subclass to instantiate
+            when establishing a LECO connection.
+        """
+        super().__init__(**kwargs)
+        self._leco_client: Optional[ActorListener] = None
+        self._listener_class: Type[ActorListener] = listener_class
+
+    def connect_leco(self, connect: bool) -> None:
+        """Connect to or disconnect from the LECO network.
+
+        When *connect* is ``True``, an :class:`ActorListener` is created (or
+        reused if one already exists) and started.  The listener's
+        ``cmd_signal`` is wired to :meth:`process_leco_commands` so that
+        incoming LECO commands are dispatched to this component, and
+        :attr:`_leco_commands_signal` is connected to the listener's
+        :meth:`~ActorListener.queue_command` so that outgoing commands can be
+        sent from the Qt thread.
+
+        When *connect* is ``False``, a :attr:`~LECOCommands.QUIT` command is
+        emitted to stop the listener gracefully, and the signal/slot connection
+        to :meth:`~ActorListener.queue_command` is removed.
+
+        :param connect: ``True`` to establish the connection, ``False`` to
+            tear it down.
+        """
+        if connect:
+            name = self.get_leco_name()
+            host, port = self.get_leco_host_port()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = self._listener_class(name=name, host=host, port=port)
+                self._leco_client.cmd_signal.connect(self.process_leco_commands)
+            self._leco_commands_signal.connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+        else:
+            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT, ))
+            try:
+                self._leco_commands_signal.disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
+
+    def get_leco_name(self) -> str:
+        """Return the LECO component name used to register on the network.
+
+        :returns: The name string that uniquely identifies this component on the
+            LECO coordinator.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        """Return the host and port of the LECO coordinator to connect to.
+
+        :returns: A ``(host, port)`` tuple where *host* is the hostname or IP
+            address of the coordinator and *port* is its TCP port number.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def process_leco_commands(self, status: ThreadCommand) -> Optional[ThreadCommand]:
+        """Handle an incoming command forwarded from the LECO listener.
+
+        This slot is connected to the listener's ``cmd_signal`` and is called
+        whenever a remote LECO peer sends a command to this component (e.g.
+        grab, snap, move_abs).  Subclasses should dispatch on
+        ``status.command`` and take the appropriate action.
+
+        :param status: The :class:`~pymodaq_utils.utils.ThreadCommand` received
+            from the listener, carrying the command name and optional attribute
+            payload.
+        :returns: Optionally a :class:`~pymodaq_utils.utils.ThreadCommand` for
+            further processing, or ``None``.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
