@@ -37,6 +37,7 @@ class ManagerActions(StrEnum):
     RELOAD = 'reload_entry'
     EXECUTE = 'execute_entry'
     LIST = 'list_entries'
+    LABEL_EXTERNAL = 'label_external'
     LIST_EXTERNAL = 'list_entries_external'
 
 
@@ -113,8 +114,6 @@ class ManagerBase(CustomExt):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
 
-        self.external_widgets = []  # to store a reference of external widgets, see
-        # self.get_external_toolbar_menu
         self._entry_applied = False
 
         self.main_widget = QtWidgets.QWidget()
@@ -301,14 +300,12 @@ class ManagerBase(CustomExt):
         if menu is None:
             menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
 
-        self.external_widgets.append(
-            addwidget(QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-                      toolbar=toolbar,))
+        self.add_widget(ManagerActions.LABEL_EXTERNAL, QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+                        toolbar=toolbar,)
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
-
-        self.external_widgets.append(addwidget(ComboBox(), toolbar=toolbar))
-        self.sync_entries_with(self.external_widgets[-1].widget)
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar)
+        self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         self.affect_to(ManagerActions.EXECUTE, menu)
         return toolbar, menu
