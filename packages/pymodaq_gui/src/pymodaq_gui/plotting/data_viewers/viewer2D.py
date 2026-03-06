@@ -346,6 +346,14 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_image_displayer(DataDistribution['uniform'])
 
+    def set_transform(self, xaxis: Axis, yaxis: Axis):
+        tr = QtGui.QTransform()  # prepare PlotItems transformation:
+        tr.translate(xaxis.offset, yaxis.offset)
+        tr.scale(xaxis.scaling, yaxis.scaling)
+        for image_item_name in self.data_displayer.get_images():
+            self.data_displayer.get_image(image_item_name).setTransform(tr)
+        # self.ROIselect.setTransform(tr)
+
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
             if isinstance(item, SpreadImageItem) or isinstance(item, UniformImageItem):
@@ -873,13 +881,17 @@ class Viewer2D(ViewerBase):
     def update_data(self):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
+
+            self.view.display_images(self._datas)
             if self._datas.distribution.name == 'uniform':
-                self.x_axis = self._datas.get_axis_from_index(1)[0]
-                self.y_axis = self._datas.get_axis_from_index(0)[0]
+                xaxis = self._datas.get_axis_from_index(1)[0]
+                yaxis = self._datas.get_axis_from_index(0)[0]
+                self.x_axis = xaxis
+                self.y_axis = yaxis
+                self.view.set_transform(xaxis, yaxis)
             else:
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
-            self.view.display_images(self._datas)
 
             if self.view.is_action_checked('roi'):
                 self.roi_changed()
@@ -1093,7 +1105,12 @@ def main(data_distribution='uniform'):
     prog.show_data(data_to_plot)
 
     prog.view.show_roi_target(True)
-    prog.view.move_scale_roi_target((50, 40), (10, 20))
+    prog.view.move_scale_roi_target((-2, 3), (5, 7))
+
+    def print_roi(roi_info):
+        print(roi_info)
+
+    prog.roi_select_signal.connect(print_roi)
 
     button.clicked.connect(lambda: plot_data(prog, ndata.value()))
     widget_button.show()
