@@ -121,15 +121,15 @@ class SettingsManager:
 
         if module_type == ModuleType.Actuator:
             act_dict = find_dict_in_list_from_key_val(ACTUATOR_TYPES, 'name', preset_subentry['info', 'type'])
-            module_module = getattr(act_dict['module'], f'daq_move_{act_dict['name']}')
-            return getattr(module_module, f'DAQ_Move_{act_dict['name']}')
+            module_module = getattr(act_dict['module'], f"daq_move_{act_dict['name']}")
+            return getattr(module_module, f"DAQ_Move_{act_dict['name']}")
 
         elif module_type == ModuleType.Detector:
 
             det_dicts_dim = DET_TYPES[preset_subentry['info', 'dim']]
             det_dict = find_dict_in_list_from_key_val(det_dicts_dim, 'name', preset_subentry['info', 'type'])
-            module_module = getattr(det_dict['module'], f'{det_dict['type']}_{det_dict['name']}')
-            return getattr(module_module, f'DAQ{det_dict['type'][3:6]}Viewer_{det_dict['name']}')
+            module_module = getattr(det_dict['module'], f"{det_dict['type']}_{det_dict['name']}")
+            return getattr(module_module, f"DAQ{det_dict['type'][3:6]}Viewer_{det_dict['name']}")
 
         else:
             raise TypeError(f'Module type {module_type} not supported')
