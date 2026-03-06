@@ -580,3 +580,13 @@ class RoiInfo:
                               (self.origin[0] + self.size[0] / 2)),)
             else:
                 return (slice((self.origin[0]), (self.origin[0] + self.size[0])),)
+
+    @classmethod
+    def from_slices(cls, slices: IterableType[slice]) -> 'RoiInfo':
+        """ Return a ROIInfo instance from a list of slices """
+        if isinstance(slices, slice):
+            slices = [slices]
+
+        return cls(Point(*[_slice.start for _slice in slices]),
+                   size=Point(*[_slice.stop - _slice.start for _slice in slices]),
+                   roi_class=RectROI if len(slices) == 2 else LinearROI)
