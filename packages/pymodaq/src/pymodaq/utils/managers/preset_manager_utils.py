@@ -9,6 +9,8 @@ from pymodaq_gui.parameter.utils import get_param_dict_from_name
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.control_modules.daq_move import DAQ_Move
+from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 logger = set_logger(get_module_name(__file__))
 
@@ -88,7 +90,7 @@ def add_category_layers(dimension_dict, remote_items=None, mock_items=None):
 
 
 def make_move_params(typ):
-    params = daq_move_params
+    params = DAQ_Move.params
     iterative_show_pb(params)
 
     parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', typ)
@@ -111,7 +113,7 @@ def make_move_params(typ):
 
 
 def make_viewer_params(typ):
-        params = daq_viewer_params
+        params = DAQ_Viewer.params
         iterative_show_pb(params)
 
         for main_child in params:
@@ -146,16 +148,9 @@ def make_viewer_params(typ):
         iterative_show_pb(params_hardware)
 
         for main_child in params:
-            # Was this condition useful? 
-            # if main_child['name'] == 'detector_settings':
-            #     while len(main_child['children']) > 0:
-            #         for child in main_child['children']:
-            #             main_child['children'].remove(child)
-
-            #     main_child['children'].extend(params_hardware)
             if main_child['name'] == 'detector_settings':
                 main_child['children'] = params_hardware
-        controller_dict = get_param_dict_from_name(main_child['children'], 'controller_ID')
+        controller_dict = get_param_dict_from_name(params_hardware, 'controller_ID')
         controller_dict['value'] = random.randint(0, 9999)
 
         return params
