@@ -289,6 +289,8 @@ class ManagerBase(CustomExt):
                         "build_circle",
                         icon_color=self.get_theme().blue,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
+                        checkable=True,
+                        icon_checked_color=self.get_theme().cyan,
                         auto_toolbar=False, auto_menu=False)
 
     def get_external_toolbar_menu(
@@ -479,8 +481,11 @@ class ManagerBase(CustomExt):
         self.updated_entry.emit(entry.stem)
 
     def show(self):
-        self.mainwindow.show()
-        self.mainwindow.raise_()
+        if self.is_action_checked(ManagerActions.OPEN):
+            self.mainwindow.show()
+            self.mainwindow.raise_()
+        else:
+            self.mainwindow.hide()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
