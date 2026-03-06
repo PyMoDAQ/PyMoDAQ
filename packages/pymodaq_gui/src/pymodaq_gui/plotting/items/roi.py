@@ -563,6 +563,16 @@ class RoiInfo:
     def __repr__(self):
         return f'Origin: {self.origin}, Size: {self.size}, Centered: {self.centered}'
 
+    @classmethod
+    def from_slices(cls, slices: IterableType[slice]) -> 'RoiInfo':
+        """ Return a ROIInfo instance from a list of slices """
+        if isinstance(slices, slice):
+            slices = [slices]
+
+        return cls(Point(*[_slice.start for _slice in slices]),
+                   size=Point(*[_slice.stop - _slice.start for _slice in slices]),
+                   roi_class=RectROI if len(slices) == 2 else LinearROI)
+
     def to_slices(self) -> IterableType[slice]:
         """Get slices to be used directly to slice DataWithAxes"""
         if issubclass(self.roi_class, pgROI):
