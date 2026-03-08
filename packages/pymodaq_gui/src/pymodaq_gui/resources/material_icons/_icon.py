@@ -80,6 +80,7 @@ def fill_pixmap(pixmap: QtGui.QPixmap, color: QtGui.QColor) -> QtGui.QPixmap:
     """
     Return a copy of 'pixmap' filled with 'color'.
     """
+
     pixmap = QtGui.QPixmap(pixmap)
     painter = QtGui.QPainter(pixmap)
     painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_SourceIn)
