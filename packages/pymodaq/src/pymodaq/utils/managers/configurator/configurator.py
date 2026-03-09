@@ -73,7 +73,7 @@ class Configurator(ManagerBase):
 
 
     @property
-    def preset_manager(self) -> 'PresetManager':
+    def preset_manager(self) -> PresetManager:
         return self._preset_manager_local
 
     def show(self):

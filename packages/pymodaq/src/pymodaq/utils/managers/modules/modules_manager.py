@@ -6,6 +6,8 @@ from qtpy.QtCore import QThread
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq_data.data import DataDim
+from pymodaq_utils.enums import enum_checker
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
@@ -370,33 +372,35 @@ class ModulesManager(QObject, ParameterManager):
             self.connect_detectors(False)
         return datas
 
-    def get_probed_data_channels(self, dim: str = None) -> List[str]:
+    def get_probed_data_channels(self, dim: DataDim | str = None) -> List[str]:
         """Return full names (origin/channel) of probed data channels, optionally filtered by dim.
 
         Parameters
         ----------
-        dim: str, optional
+        dim: DataDim or str, optional
             One of 'Data0D', 'Data1D', 'Data2D', 'DataND'. If None, all dims are returned.
 
         Returns
         -------
         list of str
         """
+        if dim is not None and isinstance(dim, str):
+            dim = enum_checker(DataDim, dim)
         names = []
         for det_param in self.settings.child('probe_data').children():
             for ch_param in det_param.children():
                 # ch_param is a raw channel node
-                if dim is None or ch_param.opts.get('dim') == dim:
+                if dim is None or ch_param.opts.get('dim') == dim.name:
                     names.append(ch_param.opts['full_name'])
                 for sub_param in ch_param.children():
                     if 'full_name' in sub_param.opts:
                         # calculated child of the raw channel
-                        if dim is None or sub_param.opts.get('dim') == dim:
+                        if dim is None or sub_param.opts.get('dim') == dim.name:
                             names.append(sub_param.opts['full_name'])
                     else:
                         # ROI group node — iterate its children
                         for roi_child in sub_param.children():
-                            if dim is None or roi_child.opts.get('dim') == dim:
+                            if dim is None or roi_child.opts.get('dim') == dim.name:
                                 names.append(roi_child.opts['full_name'])
         return names
 

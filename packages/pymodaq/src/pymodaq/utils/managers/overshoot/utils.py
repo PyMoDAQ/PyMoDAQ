@@ -1,5 +1,6 @@
 import random
 
+from pymodaq.utils.data import DataActuator
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq_data import DataToExport, DataDim
 
@@ -70,7 +71,7 @@ class ScalableGroupOverShoot(GroupParameter):
 registerParameterType('group_overshoot', ScalableGroupOverShoot, override=True)
 
 
-class ModulesManager(ModulesManager):
+class ModulesManager(ModulesManager):  # noqa imported from Overshooter
     """ Customized version of the ModulesManager """
 
     def __init__(self, *args, **kwargs):
@@ -82,27 +83,22 @@ class ModulesManager(ModulesManager):
         """Do a snap of selected detectors and get_actuator_value of connected actuators
         , to get the list of all the data and processed data"""
 
-        if len(self.detectors) == 0:
-            data_det = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
-        else:
-            self.connect_detectors()
-            data_det: DataToExport = self.grab_data()
-            self.connect_detectors(False)
+        data_det: DataToExport = super().get_det_data_list()
 
         if len(self.actuators) == 0:
             data_act = DataToExport(name=__class__.__name__, control_module='DAQ_Move')
         else:
             self.connect_actuators()
-            data_act = self.move_actuators()
+            dte_act_to_move = DataToExport('Actuators', control_module='DAQ_MOVE')
+            for mod in self.actuators:
+                dte_act_to_move.append(mod.current_value)
+            data_act = self.move_actuators(dte_act_to_move)
             self.connect_actuators(False)
         data_det.append(data_act)
 
         data_list0D = []
         for dwa in data_det.get_data_from_dim(DataDim.Data0D):
             data_list0D.extend([f'{dwa.origin}/{dwa.name}/{label}' for label in dwa.labels])
-
-        self.settings.child('data_dimensions', 'det_data_list0D').setValue(
-            dict(all_items=data_list0D, selected=[]))
 
         self.available_data = data_list0D[:]
         return data_det

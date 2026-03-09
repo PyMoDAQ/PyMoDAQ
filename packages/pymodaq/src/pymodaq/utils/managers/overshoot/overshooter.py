@@ -12,6 +12,10 @@ from pymodaq.utils.config import get_set_preset_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
 
+
+from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
+
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
     get_set_overshooter_path, TriggerDirection  # noqa
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
@@ -59,10 +63,11 @@ class Overshooter(ManagerBase):
                  dashboard: 'DashBoard' = None,
                  preset_filename: str = 'default',):
 
-        self._preset_ini = preset_filename
+        self._configurator = Configurator(dashboard, preset_filename)
+
         super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
-        self.preset_filename = preset_filename
+
         self.slots: dict[str, Callable] = {}
 
         self.overshoot_signal.connect(self.apply_config_from_overshoot)
@@ -81,41 +86,37 @@ class Overshooter(ManagerBase):
         else:
             self._modules_manager = None
 
+    @property
+    def preset_manager(self) -> PresetManager:
+        return self.configurator.preset_manager
+
+    @property
+    def preset_filename(self) -> str:
+        return self.configurator.preset_filename
+
+    @preset_filename.setter
+    def preset_filename(self, preset_filename: str):
+        self._configurator.preset_filename = preset_filename
+        self.entries_sync.update_key('items', self.entries)
+        self.update_entry()
+
+    @property
+    def configurator(self) -> Configurator:
+        return self._configurator
+
     def apply_config_from_overshoot(self, overshoot: Overshoot):
         self.configurator.execute_entry(
             self.configurator.entry_path_from_name(overshoot.configuration))
 
     def show_hide_module_manager_settings(self):
-
-        to_hide = [('move_done',), ('det_done',),
-                   ('data_dimensions', 'probe_data'),
-                   ('data_dimensions', 'det_data_list1D'),
-                   ('data_dimensions', 'det_data_list2D'),
-                   ('data_dimensions', 'det_data_listND'),
-                   ('actuators_positions',)]
+        to_hide = [('test_actuator',), ('probe_data',),
+                   ]
         for param_tuple in to_hide:
             self.modules_manager.settings.child(*param_tuple).hide()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        try:
-            return get_set_overshooter_path(self.preset_filename)
-        except KeyError as e: #fallback to preset ini
-            return get_set_overshooter_path(self._preset_ini)
-
-    @property
-    def preset_filename(self) -> str:
-        if 'preset_filename' not in self.actions_names:
-            return self._preset_ini  # fallback at startup
-        else:
-            return self.get_action('preset_filename').text()
-
-    @preset_filename.setter
-    def preset_filename(self, preset_filename: str):
-        if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
-            self._preset_ini = preset_filename
-            self.get_action('preset_filename').setText(preset_filename)
-            self.entries_sync.update_key('items', self.entries)
+        return get_set_overshooter_path(self.preset_filename)
 
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
@@ -245,10 +246,12 @@ class Overshooter(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.add_widget('preset_label', QtWidgets.QLabel('Overshoots from Preset: '),
-                        toolbar=self.get_toolbar('main'))
-        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
-                        toolbar=self.get_toolbar('main'))
+        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow, add_break=False)
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),)
+
+        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow, add_break=False)
+        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),)
+
         self.get_toolbar('main').addSeparator()
         self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
 
@@ -256,7 +259,7 @@ class Overshooter(ManagerBase):
         self.connect_action('update_data', self.update_available_data)
 
     def update_configurations(self):
-        configurations = self.dashboard.configurator.entries
+        configurations = self.configurator.entries
         self.settings.child('configuration').setLimits(configurations)
 
     def update_available_data(self):
