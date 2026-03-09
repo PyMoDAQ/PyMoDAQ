@@ -12,7 +12,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.extensions.optimizers_base.utils import logger, individual_as_dta
 from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 from pymodaq.utils.data import DataToActuators
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.utils import get_entrypoints, find_dict_in_list_from_key_val

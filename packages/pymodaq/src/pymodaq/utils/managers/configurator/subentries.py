@@ -14,6 +14,9 @@ from pymodaq_gui.utils.widgets import SpinBox
 from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
 
 from pymodaq.utils.data import DataActuator, DataToActuators
+
+from pymodaq.utils.managers.modules.modules_manager import ModuleType
+from pymodaq_utils.enums import StrEnum
 from pymodaq.utils.managers.modules_manager import ModuleType
 from pymodaq.extensions import ExtensionEnum
 

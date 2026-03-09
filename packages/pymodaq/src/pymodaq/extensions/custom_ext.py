@@ -4,7 +4,7 @@ from qtpy import QtCore, QtWidgets
 
 from pymodaq_gui.utils import CustomApp, DockArea
 from pymodaq_utils.enums import StrEnum
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard

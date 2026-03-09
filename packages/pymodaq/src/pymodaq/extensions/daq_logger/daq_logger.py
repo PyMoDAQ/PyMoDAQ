@@ -23,7 +23,7 @@ from pymodaq_gui.utils.widgets import QLED
 
 
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
 from pymodaq.extensions.custom_ext import CustomExt
 
