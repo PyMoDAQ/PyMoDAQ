@@ -23,10 +23,8 @@ logger = set_logger(get_module_name(__file__))
 batch_path = get_set_batch_path()
 
 params = [
-    {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
-        {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect'},
-        {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect'},
-    ]},
+    {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect'},
+    {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect'},
     ]
 
 
@@ -80,8 +78,8 @@ class BatchManager(ParameterManager):
         acts = dict([])
         dets = dict([])
         for name in [child.name() for child in self.settings.child('scans').children()]:
-            acts[name] = self.settings.child('scans', name, 'modules', 'actuators').value()['selected']
-            dets[name] = self.settings.child('scans', name, 'modules', 'detectors').value()['selected']
+            acts[name] = self.settings.child('scans', name, 'actuators').value()['selected']
+            dets[name] = self.settings.child('scans', name, 'detectors').value()['selected']
         return acts, dets
 
     def set_file_batch(self, filename=None, show=True):
@@ -98,12 +96,12 @@ class BatchManager(ParameterManager):
         children = settings_tmp.child('scans').children()
 
         #self.settings = self.create_parameter(self.params)
-        actuators = children[0].child('modules', 'actuators').value()['all_items']
+        actuators = children[0].child('actuators').value()['all_items']
         if actuators != self.modules_manager.actuators_name:
             messagebox(text='The loaded actuators from the batch file do not corresponds to the dashboard actuators')
             return
 
-        detectors = children[0].child('modules', 'detectors').value()['all_items']
+        detectors = children[0].child('detectors').value()['all_items']
         if detectors != self.modules_manager.detectors_name:
             messagebox(text='The loaded detectors from the batch file do not corresponds to the dashboard detectors')
             return

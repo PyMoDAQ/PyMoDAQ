@@ -252,14 +252,18 @@ def h5tree_to_QTree(base_node, base_tree_elt=None, pixmap_items=[]):
         tooltip = []
 
         if 'origin' in node.attrs.attrs_name:
-            tooltip.append(node.attrs['origin'])
+            origin = node.attrs['origin']
+            if isinstance(origin, str):
+                tooltip.append(origin)
         elif klass == 'GROUP':
             for c in node.children().values():
                 if 'origin' in c.attrs.attrs_name:
-                    tooltip.append(c.attrs['origin'])
+                    origin = c.attrs['origin']
+                    if isinstance(origin, str):
+                        tooltip.append(origin)
                     break
 
-        if hasattr(node, 'title') and node.title:
+        if hasattr(node, 'title') and isinstance(node.title, str) and node.title:
             tooltip.append(node.title)
 
         child.setToolTip(0, '/'.join(tooltip))

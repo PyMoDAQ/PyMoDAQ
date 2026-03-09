@@ -169,7 +169,7 @@ class Viewer1DBasic(QObject):
             for item in items:
                 self.legend.removeItem(item)
 
-    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
+    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='index')):
         axis = self.plotwidget.plotItem.getAxis(axis_settings['orientation'])
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
 
@@ -179,7 +179,7 @@ class Viewer1DBasic(QObject):
 
     @x_axis.setter
     def x_axis(self, x_axis):
-        label = 'Pxls'
+        label = 'index'
         units = ''
         if isinstance(x_axis, dict):
             if 'data' in x_axis:

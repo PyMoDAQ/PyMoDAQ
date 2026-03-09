@@ -4,13 +4,13 @@ Created the 15/11/2022
 
 @author: Sebastien Weber
 """
-from typing import Union
+from typing import Union, Dict
 from enum import Enum
+from pathlib import Path
 import numpy as np
 import importlib
 from importlib import metadata
 import pickle
-from typing import Dict
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -53,6 +53,8 @@ except Exception as e:                              # pragma: no cover
 
 if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
+
+SWMR_CAPABLE_BACKENDS = frozenset({'h5py'})
 
 
 class NodeError(Exception):
@@ -410,16 +412,23 @@ class EARRAY(CARRAY):
             data = np.expand_dims(data, 1)
         self.append_backend(data)
 
-        sh = list(self.attrs['shape'])
-        sh[0] += extended_first_index
-        self.attrs['shape'] = tuple(sh)
+        if self.backend == 'h5py' and self._node.file.swmr_mode:
+            pass  # defer shape attr update until after SWMR ends
+        else:
+            sh = list(self.attrs['shape'])
+            sh[0] += extended_first_index
+            self.attrs['shape'] = tuple(sh)
 
     def append_backend(self, data):
         if self.backend == 'tables':
             self.array.append(data)
         else:
-            self.array.resize(self.array.len() + 1, axis=0)
-            self.array[-1] = data
+            n_new = data.shape[0]
+            old_len = self.array.len()
+            self.array.resize(old_len + n_new, axis=0)
+            # Reshape to the target slice shape in case expand_dims added an extra dim
+            target_shape = (n_new,) + tuple(self.attrs['shape'][1:])
+            self.array[old_len:old_len + n_new] = data.reshape(target_shape)
 
 
 class VLARRAY(EARRAY):
@@ -429,9 +438,26 @@ class VLARRAY(EARRAY):
     def append(self, data):
         self.append_backend(data)
 
-        sh = list(self.attrs['shape'])
-        sh[0] += 1
-        self.attrs['shape'] = tuple(sh)
+        if self.backend == 'h5py' and self._node.file.swmr_mode:
+            pass  # defer shape attr update until after SWMR ends
+        else:
+            sh = list(self.attrs['shape'])
+            sh[0] += 1
+            self.attrs['shape'] = tuple(sh)
+
+    def append_backend(self, data):
+        """Append one variable-length element.
+
+        VLARRAY in h5py stores variable-length arrays as individual elements
+        (one per row). EARRAY.append_backend incorrectly uses data.shape[0] as
+        the number of new rows, which would split one VL element into many rows.
+        """
+        if self.backend == 'tables':
+            self.array.append(data)
+        else:
+            old_len = self.array.len()
+            self.array.resize(old_len + 1, axis=0)
+            self.array[old_len] = data
 
 
 class StringARRAY(VLARRAY):
@@ -488,6 +514,12 @@ class Attributes(object):
     def __len__(self):
         return len(self.attrs_name)
 
+    def get(self, key, default=None):
+        """Return the attribute value for key, or default if not present."""
+        if key in self.attrs_name:
+            return self[key]
+        return default
+
     def to_dict(self) -> dict:
         """Returns attributes name/value as a dict"""
         attrs_dict = dict()
@@ -537,9 +569,25 @@ class H5Backend:
     def __init__(self, backend='tables'):
 
         self._h5file = None
-        self.backend = backend
         self.file_path = None
         self.compression = None
+        self._swmr_mode = False
+        self._swmr_enabled = False
+        self.set_backend(backend)
+
+    def set_backend(self, backend: str):
+        """Switch the active backend, closing any open file first.
+
+        Updates both ``self.backend`` (the name string) and ``self.h5_library``
+        (the imported module), which both need to be consistent for file operations.
+
+        Parameters
+        ----------
+        backend: str
+            One of ``'tables'``, ``'h5py'``, or ``'h5pyd'``.
+        """
+        if hasattr(self, '_h5file'):
+            self.close_file()
         if backend == 'tables':
             if is_tables:
                 self.h5_library = tables
@@ -556,7 +604,8 @@ class H5Backend:
             else:
                 raise ImportError('the h5pyd module is not present')
         else:
-            raise ValueError(f'the backend {backend} is not supported')
+            raise ValueError(f"Unknown backend: {backend!r}. Must be one of {backends_available}")
+        self.backend = backend
 
     @property
     def h5file(self):
@@ -590,10 +639,14 @@ class H5Backend:
                 if self.isopen():
                     self._h5file.close()
         except Exception as e:
-            print(e)  # no big deal
+            logger.warning(f"Error closing h5file: {e}")
+        finally:
+            self._swmr_enabled = False
+            self._h5file = None  # Release the file handle reference
 
-    def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', **kwargs):
+    def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', swmr_mode=False, **kwargs):
         self.file_path = fullpathname
+        self._swmr_mode = swmr_mode
         if self.backend == 'tables':
             self._h5file = self.h5_library.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
             if mode == 'w':
@@ -604,6 +657,11 @@ class H5Backend:
                 self.root().attrs['pymodaq_data_version'] = utils.get_version('pymodaq_data')
             return self._h5file
         else:
+            if swmr_mode and self.backend == 'h5py':
+                if mode == 'w':
+                    kwargs['libver'] = 'latest'
+                elif mode == 'r':
+                    kwargs['swmr'] = True
             self._h5file = self.h5_library.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
@@ -613,6 +671,8 @@ class H5Backend:
                 except importlib.metadata.PackageNotFoundError:
                     self.root().attrs['pymodaq_version'] = '0.0.0'
                 self.root().attrs['pymodaq_data_version'] = utils.get_version('pymodaq_data')
+                if swmr_mode:
+                    self.root().attrs['swmr_compatible'] = True
             return self._h5file
 
     def save_file_as(self, filenamepath='h5copy.txt'):
@@ -643,6 +703,86 @@ class H5Backend:
     def flush(self):
         if self._h5file is not None:
             self._h5file.flush()
+
+    def enable_swmr(self):
+        """Activate SWMR mode on the open h5py file.
+
+        Must be called after all groups/datasets have been created.
+        Raises RuntimeError if backend is not h5py or file was not opened with swmr_mode=True.
+        Idempotent: does nothing if already enabled.
+        """
+        if self._swmr_enabled:
+            return
+        if self.backend != 'h5py':
+            raise RuntimeError('SWMR mode is only supported with the h5py backend')
+        if not self._swmr_mode:
+            raise RuntimeError('File was not opened with swmr_mode=True')
+        # If h5py already has SWMR active (flag got out of sync), just
+        # resynchronise without calling start_swmr_write() again.
+        if self._h5file.swmr_mode:
+            self._swmr_enabled = True
+            return
+        # Mark file as being written with SWMR (for readers to detect)
+        # Write as plain bool (not JSON-serialized) so raw h5py readers can detect it
+        self.root().node.attrs['swmr_active'] = True
+        self._h5file.swmr_mode = True
+        self._swmr_enabled = True
+
+    @property
+    def is_swmr_active(self):
+        """Return True if SWMR mode is currently active on the file."""
+        return self._swmr_enabled
+
+    @property
+    def is_swmr_compatible(self):
+        """Return True if the open file was created with SWMR support."""
+        try:
+            return bool(self.root().attrs['swmr_compatible'])
+        except Exception:
+            return False
+
+    @property
+    def is_swmr_capable(self):
+        """Return True if the current backend supports SWMR mode."""
+        return self.backend in SWMR_CAPABLE_BACKENDS
+
+    def reconcile_swmr_attrs(self):
+        """Walk all EARRAY/VLARRAY nodes and update attrs['shape'] from actual data.
+
+        Called after SWMR is ended (file closed and reopened in 'a' mode) to fix
+        deferred attribute writes that were skipped during SWMR.
+        """
+        # Clear the swmr_active flag now that writing is complete
+        # Write as plain bool (not JSON-serialized) so raw h5py readers can detect it
+        if 'swmr_active' in self.root().attrs.attrs_name:
+            self.root().node.attrs['swmr_active'] = False
+
+        for node in self.walk_nodes('/'):
+            if 'CLASS' in node.attrs:
+                node_class = node.attrs['CLASS']
+                if node_class in ('EARRAY', 'VLARRAY'):
+                    actual_shape = node.node.shape
+                    node.attrs['shape'] = actual_shape
+
+    def finalize_swmr(self, keep_open=False):
+        """End SWMR by closing the file, reopening in 'a' mode, and reconciling deferred attrs.
+
+        After SWMR mode, attrs['shape'] on EARRAY/VLARRAY nodes may be stale.
+        This method closes the file (ending SWMR), reopens it in append mode,
+        and updates all deferred attributes.
+
+        Parameters
+        ----------
+        keep_open : bool
+            If True, leaves the file open in 'a' mode after reconciling.
+            If False (default), closes the file after reconciling.
+        """
+        file_path = Path(self.file_path)
+        self.close_file()
+        self.open_file(file_path, mode='a')
+        self.reconcile_swmr_attrs()
+        if not keep_open:
+            self.close_file()
 
     def define_compression(self, compression, compression_opts):
         """Define cmpression library and level of compression
@@ -756,6 +896,9 @@ class H5Backend:
                         node = where
         except Exception as e:
             raise NodeError(str(e))
+
+        if node is None:
+            raise NodeError(f'Node {where} (name={name}) does not exist')
 
         if 'CLASS' not in self.get_attr(node):
             self.set_attr(node, 'CLASS', 'GROUP')

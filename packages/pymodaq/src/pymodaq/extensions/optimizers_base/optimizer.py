@@ -41,9 +41,10 @@ from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.h5modules import module_saving
 
 from pymodaq.extensions.optimizers_base.utils import (
-    get_optimizer_models, OptimizerModelGeneric,
-    GenericAlgorithm, StopType, StoppingParameters,
+    StopType, StoppingParameters,
     OptimizerConfig, individual_as_dta, individual_as_dte)
+from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
+from pymodaq.extensions.optimizers_base.models import OptimizerModelGeneric, get_optimizer_models
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
@@ -294,8 +295,8 @@ class GenericOptimization(CustomExt):
         self._save_main_settings = True
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
-        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
-        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
+        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
 
         self._h5saver: H5Saver = None
         self.h5saver.settings.child('do_save').hide()
@@ -339,7 +340,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'general', 'hdf5_backend')[0])
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'data_saving', 'backend')[0])
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
@@ -564,11 +565,6 @@ class GenericOptimization(CustomExt):
         self.add_action(OptimizerAction.GO_TO, 'Go to ', 'move_contour', enabled=False, checkable=True,
                         tip='Go to the double clicked position in the plot')
         logger.debug('actions set')
-
-    def stop(self):
-        """ Programmatic method to stop any action in the extension
-        """
-        self.stop_algo()
 
     def connect_things(self):
         logger.debug('connecting things')

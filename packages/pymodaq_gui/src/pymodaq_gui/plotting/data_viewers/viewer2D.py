@@ -341,8 +341,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_things()
         self.prepare_ui()
 
-        self.set_axis_label('bottom', label='', units='Pxls')
-        self.set_axis_label('left', label='', units='Pxls')
+        self.set_axis_label('bottom', label='', units='index')
+        self.set_axis_label('left', label='', units='index')
 
         self.set_image_displayer(DataDistribution['uniform'])
 
@@ -700,9 +700,9 @@ class View2D(ActionManager, QtCore.QObject):
         axis = self.get_axis(position)
         return axis.axis_label, axis.axis_units
 
-    def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='Pxls'):
+    def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='index'):
         """
-        Method used to update the scaling of the right and top axes in order to translate pixels to real coordinates
+        Method used to update the scaling of the right and top axes in order to translate indices to real coordinates
         Parameters
         ----------
         position: (str) axis position either one of AXIS_POSITIONS

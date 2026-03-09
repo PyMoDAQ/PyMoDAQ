@@ -36,7 +36,7 @@ class ViewerSelector(ModuleSelector):
         self.add_widget.setText(str(value))
         self.module_changed.emit(value)
 
-    def _add_menu_item_selected(self, path_tuple):
+    def _add_menu_item_selected(self, name, path_tuple):
         """Called when a menu item is selected from the nested add menu
 
         To be subclassed for particular signal emission
