@@ -38,7 +38,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving

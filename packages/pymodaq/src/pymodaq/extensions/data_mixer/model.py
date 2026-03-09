@@ -22,7 +22,7 @@ logger = set_logger(get_module_name(__file__))
 
 if TYPE_CHECKING:
     from pymodaq.extensions.data_mixer import DataMixer
-    from pymodaq.utils.managers.modules_manager import ModulesManager
+    from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 
 class DataMixerModel:

@@ -9,7 +9,7 @@ from qtpy.QtCore import QObject, Signal
 from pymodaq_data.data import DataToExport, DataRaw, DataSource
 
 from pymodaq.utils.data import DataActuator
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
+from pymodaq.utils.managers.modules import ModulesManager, ModuleType
 
 
 # ---------------------------------------------------------------------------
