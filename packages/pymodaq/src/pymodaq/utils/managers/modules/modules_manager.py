@@ -283,7 +283,7 @@ class ModulesManager(QObject, ParameterManager):
 
             for data_dim in DataDim.names():
                 data_from_dim = datas.get_data_from_dim(data_dim)
-                if len(data_dim) != 0:
+                if len(data_from_dim) != 0:
                     data_children.append(
                         {'title': data_dim, 'name': data_dim, 'type': 'group', 'children':[
                             {'title': dwa.origin, 'name': dwa.get_full_name(), 'type': 'str',
