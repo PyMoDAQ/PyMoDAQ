@@ -302,7 +302,7 @@ class TestGetDetDataList:
 
     def test_raw_channel_in_tree(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte()
+        dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
 
@@ -311,7 +311,7 @@ class TestGetDetDataList:
 
     def test_tree_cleared_on_repopulate(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte()
+        dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
             manager.get_det_data_list()  # second call must not duplicate
