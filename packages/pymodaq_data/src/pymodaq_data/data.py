@@ -1021,7 +1021,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                     eq = False
                     break
                 if operator == '__eq__':
-                    eq = eq and np.allclose(self.quantities[ind], other.quantities[ind])
+                    eq = eq and np.allclose(self.quantities[ind], other.quantities[ind], equal_nan=True)
                 else:
                     eq = eq and np.all(getattr(self.quantities[ind], operator)(other.quantities[ind]))
             # extra attributes are not relevant as they may contain module specific data...
