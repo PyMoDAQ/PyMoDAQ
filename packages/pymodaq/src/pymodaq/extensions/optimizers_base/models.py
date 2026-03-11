@@ -13,7 +13,7 @@ from pymodaq.extensions.optimizers_base.utils import logger, individual_as_dta
 from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 from pymodaq.utils.data import DataToActuators
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
-from pymodaq_data import DataToExport
+from pymodaq_data import DataToExport, DataDim
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.utils import get_entrypoints, find_dict_in_list_from_key_val
 
@@ -193,7 +193,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
     def optimize_from(self):
         self.modules_manager.get_det_data_list()
-        data0D_names = self.modules_manager.get_probed_data_channels('Data0D')
+        data0D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data0D)
         self.settings.child('optimizing_signal', 'optimize_0d').setValue(
             dict(all_items=data0D_names, selected=data0D_names))
 

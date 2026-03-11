@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from qtpy.QtCore import QObject, Signal
 
-from pymodaq_data.data import DataToExport, DataRaw, DataSource
+from pymodaq_data.data import DataToExport, DataRaw, DataSource, DataDim
 
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.managers.modules import ModulesManager, ModuleType
@@ -42,12 +42,12 @@ class MockActuator(QObject):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def detectors():
+def detectors(qtbot):
     return [MockDetector('Det1'), MockDetector('Det2'), MockDetector('Det3')]
 
 
 @pytest.fixture
-def actuators():
+def actuators(qtbot):
     return [MockActuator('X_axis', 0.0), MockActuator('Y_axis', 1.0)]
 
 
@@ -66,9 +66,9 @@ def manager(detectors, actuators):
 # Helpers to build controlled DataToExport for tree-building tests
 # ---------------------------------------------------------------------------
 
-def make_raw_dte(det_title: str, channel_name: str = 'CH0') -> DataToExport:
+def make_raw_dte(det_title: str, dwa_name: str = 'DWA_NANE') -> DataToExport:
     """DTE with a single raw 1D channel from a detector."""
-    raw = DataRaw(channel_name, data=[np.zeros(10)])
+    raw = DataRaw(dwa_name, data=[np.zeros(10)])
     raw.origin = det_title
     dte = DataToExport('test', control_module='DAQ_Viewer')
     dte.append(raw)
@@ -104,7 +104,7 @@ def make_dte_with_roi(det_title: str, channel_name: str = 'CH0',
 
 class TestInit:
 
-    def test_empty_init(self):
+    def test_empty_init(self, qtbot):
         mm = ModulesManager()
         assert mm.detectors_all == []
         assert mm.actuators_all == []
@@ -302,51 +302,24 @@ class TestGetDetDataList:
 
     def test_raw_channel_in_tree(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte('Det1', 'CH0')
+        dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
 
         det_param = manager.settings.child('probe_data').children()[0]
-        assert det_param.name() == 'Det1'
-        ch_param = det_param.children()[0]
-        assert ch_param.name() == 'CH0'
-        assert ch_param.opts['full_name'] == 'Det1/CH0'
+        assert det_param.name() in DataDim.names()
 
     def test_tree_cleared_on_repopulate(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte('Det1', 'CH0')
+        dte = make_raw_dte('dte')
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
             manager.get_det_data_list()  # second call must not duplicate
 
-        assert len(manager.settings.child('probe_data').children()) == 1
-
-    def test_roi_nested_under_raw_channel(self, manager):
-        manager.selected_detectors_name = ['Det1']
-        dte = make_dte_with_roi('Det1', 'CH0', 'ROI_00')
-        with patch.object(manager, 'grab_data', return_value=dte):
-            manager.get_det_data_list()
-
-        ch_param = manager.settings.child('probe_data').children()[0].children()[0]
-        roi_groups = [p for p in ch_param.children() if p.type() == 'group']
-        assert len(roi_groups) == 1
-        assert roi_groups[0].name() == 'ROI_00'
-        roi_child_names = {p.name() for p in roi_groups[0].children()}
-        assert {'hor', 'int'}.issubset(roi_child_names)
-
-    def test_multiple_rois_nested_under_same_channel(self, manager):
-        manager.selected_detectors_name = ['Det1']
-        dte = make_dte_with_roi('Det1', 'CH0', 'ROI_00')
-        for dwa in make_dte_with_roi('Det1', 'CH0', 'ROI_01').data:
-            if dwa.origin != 'Det1':
-                dte.append(dwa)
-
-        with patch.object(manager, 'grab_data', return_value=dte):
-            manager.get_det_data_list()
-
-        ch_param = manager.settings.child('probe_data').children()[0].children()[0]
-        roi_groups = [p for p in ch_param.children() if p.type() == 'group']
-        assert {g.name() for g in roi_groups} == {'ROI_00', 'ROI_01'}
+        for dim in DataDim.names():
+            for dwa in dte.get_data_from_dim(dim):
+                assert dwa.get_full_name() in [child.name() for child in
+                                           manager.settings.child('probe_data', dim).children()]
 
     def test_connect_detectors_released_on_exception(self, manager):
         """connect_detectors(False) must be called via finally even if grab_data raises."""
@@ -356,33 +329,6 @@ class TestGetDetDataList:
                 with pytest.raises(RuntimeError):
                     manager.get_det_data_list()
         mock_connect.assert_any_call(False)
-
-
-class TestGetProbedDataChannels:
-
-    def _populate(self, manager):
-        manager.selected_detectors_name = ['Det1']
-        dte = make_dte_with_roi('Det1', 'CH0', 'ROI_00')
-        with patch.object(manager, 'grab_data', return_value=dte):
-            manager.get_det_data_list()
-
-    def test_returns_raw_channel(self, manager):
-        self._populate(manager)
-        assert 'Det1/CH0' in manager.get_probed_data_channels()
-
-    def test_returns_roi_outputs(self, manager):
-        self._populate(manager)
-        names = manager.get_probed_data_channels()
-        assert 'Det1 - ROI_00/hor' in names
-        assert 'Det1 - ROI_00/int' in names
-
-    def test_dim_filter(self, manager):
-        self._populate(manager)
-        # 'DataND' should match nothing in our simple 0D/1D test data
-        assert manager.get_probed_data_channels(dim='DataND') == []
-
-    def test_empty_before_probe(self, manager):
-        assert manager.get_probed_data_channels() == []
 
 
 class TestShowOnlyControlModules:

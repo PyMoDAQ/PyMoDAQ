@@ -6,11 +6,12 @@ from qtpy.QtCore import QThread
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq_utils.enums import enum_checker
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_utils.config import GlobalConfig as Config
 
-from pymodaq_data.data import DataToExport, DataSource
+from pymodaq_data.data import DataToExport, DataSource, DataDim
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
@@ -262,116 +263,39 @@ class ModulesManager(QObject, ParameterManager):
         elif param.name() == 'actuators':
             self.actuators_changed.emit(param.value()['selected'])
 
-    def get_det_data_list(self) -> DataToExport:
+    def get_det_data_list(self, add_to_this_param: Parameter = None) -> DataToExport:
         """Do a snap of selected detectors, to populate the data channels tree and return the data"""
 
         if len(self.detectors) == 0:
             return DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
 
+        if add_to_this_param is None:
+            add_to_this_param = self.settings.child('probe_data')
+
         self.connect_detectors()
         try:
             datas: DataToExport = self.grab_data(Naverage=1)
+            logger.debug(f'Acquired: {datas.get_full_names()}')
 
-            data_channels = self.settings.child('probe_data')
-            data_channels.clearChildren()
+            add_to_this_param.clearChildren()
 
-            for det in self.detectors:
-                det_title = det.title
-                det_data = [dwa for dwa in datas.data
-                            if dwa.origin == det_title or dwa.origin.startswith(f'{det_title} - ')]
+            data_children = []
 
-                # In single-viewer mode raw data has origin == det_title.
-                # In multi-viewer mode (one viewer per channel) the viewer prepends its title:
-                #   raw origin  → '{det_title} - {viewer_title}'
-                #   ROI origin  → '{det_title} - {viewer_title} - {roi_name}'
-                # daq_viewer sets parent_channel = viewer_title on every datum, so we can use
-                # that to reconstruct the set of "direct" origins (no ROI suffix).
-                unique_parent_channels = {getattr(dwa, 'parent_channel', '') for dwa in det_data}
-                direct_origins = ({det_title}
-                                  | {f'{det_title} - {pc}' for pc in unique_parent_channels if pc})
-
-                direct_raw = [dwa for dwa in det_data
-                              if dwa.source == DataSource.raw and dwa.origin in direct_origins]
-                direct_calc = [dwa for dwa in det_data
-                               if dwa.source == DataSource.calculated and dwa.origin in direct_origins]
-
-                # ROI data: everything whose origin has an extra depth beyond the direct origins.
-                roi_data = [dwa for dwa in det_data if dwa.origin not in direct_origins]
-                roi_origins = sorted({dwa.origin for dwa in roi_data})
-
-                roi_groups_by_raw: dict[str, list] = {raw.name: [] for raw in direct_raw}
-
-                for roi_origin in roi_origins:
-                    roi_dwas = [dwa for dwa in roi_data if dwa.origin == roi_origin]
-                    if not roi_dwas:
-                        continue
-
-                    # Strip '{det_title} - ' (and the channel prefix in multi-viewer) to get
-                    # a short display name like 'ROI_00' rather than 'Mock2D_0 - ROI_00'.
-                    roi_pc = getattr(roi_dwas[0], 'parent_channel', None)
-                    roi_display_full = roi_origin.replace(f'{det_title} - ', '', 1)
-                    if roi_pc and roi_display_full.startswith(f'{roi_pc} - '):
-                        roi_short = roi_display_full[len(f'{roi_pc} - '):]
-                    elif roi_pc and roi_display_full.startswith(roi_pc):
-                        roi_short = roi_display_full[len(roi_pc):].lstrip(' -')
-                    else:
-                        roi_short = roi_display_full  # single-viewer: already 'ROI_00'
-
-                    # Strip '_ROI_00' suffixes from child names for a cleaner display
-                    roi_children = [
-                        {'title': dwa.name.replace(f'_{roi_short}', ''),
-                         'name': dwa.name.replace(f'_{roi_short}', '').replace(' ', '_'),
-                         'type': 'bool', 'value': True, 'dim': dwa.dim.name,
-                         'full_name': f'{dwa.origin}/{dwa.name}'}
-                        for dwa in roi_dwas
-                    ]
-                    roi_group = {
-                        'title': roi_short,
-                        'name': roi_short.replace(' ', '_'),
-                        'type': 'group',
-                        'children': roi_children,
-                    }
-
-                    # parent_channel matches raw.name (viewer title == data name set in
-                    # set_data_to_viewers), so use it directly as the grouping key.
-                    if roi_pc in roi_groups_by_raw:
-                        roi_groups_by_raw[roi_pc].append(roi_group)
-                    elif len(direct_raw) == 1:
-                        roi_groups_by_raw[direct_raw[0].name].append(roi_group)
-                    # else: ambiguous → skip to avoid duplication across channels
-
-                det_children = []
-                for raw in direct_raw:
-                    calc_children = [
-                        {'title': dwa.name,
-                         'name': dwa.name.replace(' ', '_'),
-                         'type': 'bool', 'value': True, 'dim': dwa.dim.name,
-                         'full_name': f'{dwa.origin}/{dwa.name}'}
-                        for dwa in direct_calc
-                        if getattr(dwa, 'parent_channel', None) == raw.name
-                    ]
-                    all_children = calc_children + roi_groups_by_raw.get(raw.name, [])
-                    det_children.append({
-                        'title': raw.name,
-                        'name': raw.name.replace(' ', '_'),
-                        'type': 'bool', 'value': True, 'dim': raw.dim.name,
-                        'full_name': f'{raw.origin}/{raw.name}',
-                        **({'children': all_children} if all_children else {}),
-                    })
-
-                if det_children:
-                    data_channels.addChild({
-                        'title': det_title,
-                        'name': det_title.replace(' ', '_'),
-                        'type': 'group',
-                        'children': det_children,
-                    })
+            for data_dim in DataDim.names():
+                data_from_dim = datas.get_data_from_dim(data_dim)
+                if len(data_from_dim) != 0:
+                    data_children.append(
+                        {'title': data_dim, 'name': data_dim, 'type': 'group', 'children':[
+                            {'title': dwa.origin, 'name': dwa.get_full_name(), 'type': 'str',
+                             'value': dwa.name, 'readonly': True} for dwa in data_from_dim
+                        ]})
+            add_to_this_param.addChildren(data_children)
         finally:
             self.connect_detectors(False)
         return datas
 
-    def get_probed_data_channels(self, dim: str = None) -> List[str]:
-        """Return full names (origin/channel) of probed data channels, optionally filtered by dim.
+    def get_probed_data_full_names(self, dim: DataDim | str = None) -> List[str]:
+        """Return full names (origin/name) of probed data, optionally filtered by dim.
 
         Parameters
         ----------
@@ -383,21 +307,11 @@ class ModulesManager(QObject, ParameterManager):
         list of str
         """
         names = []
+        if dim is not None:
+            dim = enum_checker(DataDim, dim)
         for det_param in self.settings.child('probe_data').children():
-            for ch_param in det_param.children():
-                # ch_param is a raw channel node
-                if dim is None or ch_param.opts.get('dim') == dim:
-                    names.append(ch_param.opts['full_name'])
-                for sub_param in ch_param.children():
-                    if 'full_name' in sub_param.opts:
-                        # calculated child of the raw channel
-                        if dim is None or sub_param.opts.get('dim') == dim:
-                            names.append(sub_param.opts['full_name'])
-                    else:
-                        # ROI group node — iterate its children
-                        for roi_child in sub_param.children():
-                            if dim is None or roi_child.opts.get('dim') == dim:
-                                names.append(roi_child.opts['full_name'])
+            if dim is None or det_param.name() == dim.name:
+                names.extend([child.name() for child in det_param.children()])
         return names
 
     def grab_data(self, check_do_override=True, Naverage: Optional[int] = None, **kwargs):
@@ -677,46 +591,21 @@ if __name__ == '__main__':
     import sys
 
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils import DockArea
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-    from pymodaq.control_modules.daq_move import DAQ_Move
-    from pymodaq.utils.shared_ui import SharedUI
+
+    from pymodaq.dashboard import create_load_dashboard
+
 
     app = mkQApp('ModulesManager')
-    area = DockArea()
 
-    prog = DAQ_Viewer(area, title="Testing2D", daq_type='DAQ2D')
-    prog2 = DAQ_Viewer(area, title="Testing1D", daq_type='DAQ1D')
-    prog3 = DAQ_Viewer(area, title="Testing0D", daq_type='DAQ0D')
+    win, dashboard = create_load_dashboard()
+    win.show()
 
-    act1_widget = QtWidgets.QWidget()
-    act2_widget = QtWidgets.QWidget()
-    act1 = DAQ_Move(act1_widget, title='X_axis')
-    act2 = DAQ_Move(act2_widget, title='Y_axis')
-    act1.actuator = 'Mock'
-    act2.actuator = 'Mock'
+    dashboard.preset_manager.execute_entry_base()
 
-    QThread.msleep(1000)
-    prog.init_hardware_ui()
-    prog2.init_hardware_ui()
-    prog3.init_hardware_ui()
+    dashboard.modules_manager.settings_tree.show()
 
-    dock1 = Dock('actuator 1')
-    dock1.addWidget(act1_widget)
-    area.addDock(dock1)
+    dashboard.modules_manager.get_det_data_list()
 
-    dock2 = Dock('actuator 2')
-    dock2.addWidget(act2_widget)
-    area.addDock(dock2)
-
-    act1.init_hardware_ui()
-    act2.init_hardware_ui()
-
-    QtWidgets.QApplication.processEvents()
-
-    win = SharedUI(area, title='ModulesManager')
-
-    manager = ModulesManager(actuators=[act1, act2], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
-    manager.settings_tree.show()
+    print(dashboard.modules_manager.get_probed_data_full_names())
 
     sys.exit(app.exec())
