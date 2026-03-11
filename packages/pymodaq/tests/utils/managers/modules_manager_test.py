@@ -66,9 +66,9 @@ def manager(detectors, actuators):
 # Helpers to build controlled DataToExport for tree-building tests
 # ---------------------------------------------------------------------------
 
-def make_raw_dte(det_title: str, channel_name: str = 'CH0') -> DataToExport:
+def make_raw_dte(det_title: str, dwa_name: str = 'DWA_NANE') -> DataToExport:
     """DTE with a single raw 1D channel from a detector."""
-    raw = DataRaw(channel_name, data=[np.zeros(10)])
+    raw = DataRaw(dwa_name, data=[np.zeros(10)])
     raw.origin = det_title
     dte = DataToExport('test', control_module='DAQ_Viewer')
     dte.append(raw)
@@ -302,7 +302,7 @@ class TestGetDetDataList:
 
     def test_raw_channel_in_tree(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte('Det1', 'CH0')
+        dte = make_raw_dte()
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
 
@@ -311,12 +311,15 @@ class TestGetDetDataList:
 
     def test_tree_cleared_on_repopulate(self, manager):
         manager.selected_detectors_name = ['Det1']
-        dte = make_raw_dte('Det1', 'CH0')
+        dte = make_raw_dte()
         with patch.object(manager, 'grab_data', return_value=dte):
             manager.get_det_data_list()
             manager.get_det_data_list()  # second call must not duplicate
 
-        pass
+        for dim in DataDim.names():
+            for dwa in dte.get_data_from_dim(dim):
+                assert dwa.get_full_name() in [child.name() for child in
+                                           manager.settings.child('probe_data', dim).children()]
 
     def test_connect_detectors_released_on_exception(self, manager):
         """connect_detectors(False) must be called via finally even if grab_data raises."""
