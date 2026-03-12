@@ -229,14 +229,12 @@ class DashBoard(CustomApp):
         self.preset_manager.update_entry_base()
         self.preset_manager.entry = 'default'
         self.preset_manager.applied_entry.connect(self.do_things_after_preset)
-        self.configurator = Configurator(dashboard=self,
-                                         preset_filename=self.preset_manager.entry)
+        self.configurator = Configurator(dashboard=self)
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
                                                       menu=self.get_menu('preset'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
                                                     menu=self.get_menu('configurator'))
-        self.overshooter = Overshooter(dashboard=self,
-                                       preset_filename=self.preset_manager.entry)
+        self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 

@@ -57,8 +57,7 @@ class Configurator(ManagerBase):
     entry_extension ='.config'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 preset_filename: str = 'default'):
+                 dashboard: 'DashBoard' = None):
 
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
@@ -68,8 +67,6 @@ class Configurator(ManagerBase):
             self._preset_manager_local = dashboard.preset_manager
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
-
-        self.preset_filename = preset_filename
 
 
     @property
