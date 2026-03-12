@@ -1008,17 +1008,17 @@ class Viewer2D(ViewerBase):
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis.data:
                     if dwa.name == 'hor':
-                        dwa.name = f'Hlineout_{dwa.origin}'
+                        dwa.name = f'Hlineout'
                     elif dwa.name == 'ver':
-                        dwa.name = f'Vlineout_{dwa.origin}'
+                        dwa.name = f'Vlineout'
                     elif dwa.name == 'int':
-                        dwa.name = f'Integrated_{dwa.origin}'
+                        dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis)
 
                 self.measure_data_dict = dict([])
 
                 for roi_name in roi_dte_bis.get_origins():
-                    dwa = roi_dte_bis.get_data_from_name_origin(f'Integrated_{roi_name}', roi_name)
+                    dwa = roi_dte_bis.get_data_from_name_origin(f'Integrated', roi_name)
                     for ind, data_array in enumerate(dwa.data):
                             self.measure_data_dict[f'{dwa.labels[ind]}:'] = float(data_array[0])
 

@@ -15,7 +15,7 @@ from pymodaq_gui.parameter import ioxml
 from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_layout_path, \
     get_set_configurator_path, get_set_remote_path
 from pymodaq_gui.managers.manager_base import ManagerBase
-from pymodaq.utils.managers.modules_manager import ModuleType
+from pymodaq.utils.managers.modules.utils import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus

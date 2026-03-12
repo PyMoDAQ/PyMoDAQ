@@ -586,9 +586,9 @@ class Viewer1D(ViewerBase):
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis:
                     if dwa.name == 'HorData':
-                        dwa.name = f'Hlineout_{dwa.origin}'
+                        dwa.name = f'Hlineout'
                     elif dwa.name == 'IntData':
-                        dwa.name = f'Integrated_{dwa.origin}'
+                        dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis.data)
                 self.data_to_export_signal.emit(self.data_to_export)
         except AttributeError:

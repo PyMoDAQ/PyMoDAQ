@@ -13,7 +13,7 @@ from pymodaq_gui.utils import Dock, file_io, DockArea
 from pymodaq_gui.parameter import ioxml
 from pymodaq_gui.messenger import messagebox
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.scanner import Scanner
 from pymodaq.utils.scanner.scan_factory import ScannerBase
 from pymodaq.utils.config import get_set_batch_path

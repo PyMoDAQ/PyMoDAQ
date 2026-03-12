@@ -53,7 +53,7 @@ dev = [
     "pytest-qt",
     "pytest-xvfb",
     "pytest-order",
-    "qt_material_icons>=0.4.1"
+    "qt_material_icons>=0.5.0"
 ]
 
 [project.scripts]

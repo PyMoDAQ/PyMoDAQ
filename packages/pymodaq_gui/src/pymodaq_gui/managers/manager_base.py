@@ -37,6 +37,7 @@ class ManagerActions(StrEnum):
     RELOAD = 'reload_entry'
     EXECUTE = 'execute_entry'
     LIST = 'list_entries'
+    LABEL_EXTERNAL = 'label_external'
     LIST_EXTERNAL = 'list_entries_external'
 
 
@@ -113,8 +114,6 @@ class ManagerBase(CustomExt):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
 
-        self.external_widgets = []  # to store a reference of external widgets, see
-        # self.get_external_toolbar_menu
         self._entry_applied = False
 
         self.main_widget = QtWidgets.QWidget()
@@ -290,6 +289,8 @@ class ManagerBase(CustomExt):
                         "build_circle",
                         icon_color=self.get_theme().blue,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
+                        checkable=True,
+                        icon_checked_color=self.get_theme().cyan,
                         auto_toolbar=False, auto_menu=False)
 
     def get_external_toolbar_menu(
@@ -301,14 +302,12 @@ class ManagerBase(CustomExt):
         if menu is None:
             menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
 
-        self.external_widgets.append(
-            addwidget(QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-                      toolbar=toolbar,))
+        self.add_widget(ManagerActions.LABEL_EXTERNAL, QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+                        toolbar=toolbar,)
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
-
-        self.external_widgets.append(addwidget(ComboBox(), toolbar=toolbar))
-        self.sync_entries_with(self.external_widgets[-1].widget)
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar)
+        self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         self.affect_to(ManagerActions.EXECUTE, menu)
         return toolbar, menu
@@ -482,8 +481,11 @@ class ManagerBase(CustomExt):
         self.updated_entry.emit(entry.stem)
 
     def show(self):
-        self.mainwindow.show()
-        self.mainwindow.raise_()
+        if self.is_action_checked(ManagerActions.OPEN):
+            self.mainwindow.show()
+            self.mainwindow.raise_()
+        else:
+            self.mainwindow.hide()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
