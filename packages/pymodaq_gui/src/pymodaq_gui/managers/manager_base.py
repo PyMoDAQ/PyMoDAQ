@@ -223,6 +223,8 @@ class ManagerBase(CustomExt):
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
         """Returns a list of names of managed entries with 'default' as first """
         entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
+        entries.remove('default')
+        entries = ['default'] + entries  # always shows default as first
         return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
