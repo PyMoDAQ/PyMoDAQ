@@ -324,82 +324,181 @@ Part 2 – Scripting LECO-Enabled Components
 -------------------------------------------
 
 Once a component is LECO-enabled you can control it from a plain Python script
-without any PyMoDAQ GUI, by writing a **mini LECO Director**.  The scripting
-utilities live in :mod:`pymodaq.scripting`.
+without any PyMoDAQ GUI.  The scripting utilities live in
+:mod:`pymodaq.scripting`.
+
+Class Hierarchy
+~~~~~~~~~~~~~~~~
+
+The scripting layer is built around a two-tier design:
+
+* **Low-level wrappers** (in :mod:`pymodaq.scripting.utils`) manage the LECO
+  plumbing – listener, communicator, director, and callbacks.
+* **Public device classes** (in :mod:`pymodaq.scripting.devices`) expose a
+  clean Python API and hide the ``Future``-resolution callbacks from the user.
+
+The inheritance tree is::
+
+   LECOBaseWrapper
+   ├── LECODeviceWrapper          # adds settings management
+   │   ├── LECOActuatorWrapper    # move commands & position callbacks
+   │   └── LECODetectorWrapper    # snap/grab commands & data callbacks
+   └── LECODashboardWrapper       # preset/config/device-list commands
+
+   Device[WrapperT]               # generic public interface
+   ├── Actuator                   # wraps LECOActuatorWrapper
+   ├── Detector                   # wraps LECODetectorWrapper
+   └── Dashboard                  # wraps LECODashboardWrapper
 
 
-A scripting wrapper:
+``LECOBaseWrapper``
+~~~~~~~~~~~~~~~~~~~~
 
-1. Creates a :class:`pyleco.utils.listener.Listener` that registers on the
-   LECO network under a unique name (e.g. ``scripting_<device_name>``).
-2. Registers the **Director-side callback methods** on that listener so that
-   asynchronous replies from the Actor are received.
-3. Obtains a ``communicator`` from the listener and wraps it in a
+:class:`~pymodaq.scripting.utils.LECOBaseWrapper` provides all the common LECO
+infrastructure for every scripting wrapper:
+
+1. Creates a :class:`pyleco.utils.listener.Listener` registered on the LECO
+   network under ``scripting_<device_name>``.
+2. Obtains a ``communicator`` from the listener and wraps it in a
    :class:`pyleco.directors.director.Director` pointed at the target Actor.
-4. Exposes each Actor command as a Python method that:
-
-   a. Creates a :class:`~concurrent.futures.Future`.
-   b. Calls ``set_remote_name`` so the Actor knows where to reply.
-   c. Calls ``self._director.ask_rpc(method, ...)`` to send the command.
-   d. Returns the ``Future`` (caller can ``.result()`` to block).
-
-The callback methods resolve the ``Future`` when the Actor's asynchronous reply
-arrives.
-
-Writing a New Scripting Wrapper
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Here is a minimal skeleton, using the Dashboard as example:
+3. Registers a ``_clean`` shutdown hook via :func:`atexit.register`.
 
 .. code-block:: python
 
-   import atexit
-   from concurrent.futures import Future, InvalidStateError
-   from pyleco.directors.director import Director
-   from pyleco.utils.listener import Listener
-   from serializall import SerializableFactory
+   class LECOBaseWrapper:
+       def __init__(self, device_name: str, **kwargs) -> None:
+           self._device_name = device_name
 
-   sf = SerializableFactory()
-
-   class MyComponentScriptWrapper:
-       def __init__(self, actor_name: str = "my_component", **kwargs):
-           self._actor_name = actor_name
-           self._some_result_future: Future | None = None
-
-           # 1 – start a listener (the scripting side)
-           self._listener = Listener(name=f"scripting_{actor_name}", timeout=None)
+           self._listener = Listener(name=self.leco_name, timeout=None)
            self._listener.start_listen()
 
-           # 2 – register Director-side callbacks
-           self._listener.register_rpc_method(self.something_done)
-           # for binary replies use register_binary_rpc_method:
-           # self._listener.register_binary_rpc_method(self.some_data, accept_binary_input=True)
-
-           # 3 – get a communicator and a Director
            self._communicator = self._listener.get_communicator()
-           self._director = Director(actor=actor_name,
+           self._director = Director(actor=self.name,
                                      communicator=self._communicator, **kwargs)
-           atexit.register(self.close)
+           atexit.register(self._clean)
 
-       def close(self):
-           self._director.ask_rpc('sign_out', actor='COORDINATOR')
+       @cached_property
+       def leco_name(self) -> str:
+           return f'scripting_{self.name}'
+
+       @cached_property
+       def name(self) -> str:
+           return self._device_name
+
+       def _clean(self):
+           self.sign_out()
            self._listener.close()
            self._director.close()
            self._communicator.close()
 
-       def _set_remote_name(self):
-           self._director.ask_rpc('set_remote_name', name=f"scripting_{self._actor_name}")
+       def sign_out(self):
+           self._director.ask_rpc('sign_out', actor='COORDINATOR')
 
-       # ---- commands sent to the Actor ----
+       def set_remote_name(self):
+           self._director.ask_rpc('set_remote_name', name=self.leco_name)
+
+Key points:
+
+* ``leco_name`` is ``scripting_<name>`` – the name this wrapper registers on
+  the LECO network.
+* ``set_remote_name()`` must be called before any RPC that expects an
+  asynchronous reply, so the Actor knows where to send the answer.
+* ``sign_out()`` is public and can be called explicitly; ``_clean()`` is
+  called automatically at interpreter exit via :func:`atexit.register`.
+
+
+``LECODeviceWrapper``
+~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`~pymodaq.scripting.utils.LECODeviceWrapper` extends
+:class:`~pymodaq.scripting.utils.LECOBaseWrapper` with settings management
+shared by actuators and detectors.  In its ``__init__`` it registers two
+callbacks on the listener:
+
+* ``set_director_settings`` (plain RPC) – receives the XML settings bytes and
+  resolves the ``_settings_future``.
+* ``set_director_info`` (binary RPC) – placeholder for device-specific
+  information (overridden by subclasses as needed).
+
+.. code-block:: python
+
+   class LECODeviceWrapper(LECOBaseWrapper):
+       def __init__(self, device: str, **kwargs) -> None:
+           self._base_settings: Optional[Element] = None
+           self._settings_future: Optional[Future[Element]] = None
+
+           super().__init__(device, **kwargs)
+
+           self._listener.register_rpc_method(self.set_director_settings)
+           self._listener.register_binary_rpc_method(self.set_director_info,
+                                                     accept_binary_input=True)
+
+       def get_settings(self) -> Future[Element]:
+           future = Future()
+           self._settings_future = future
+           self.set_remote_name()
+           self._director.ask_rpc("get_settings")
+           return future
+
+       def set_settings(self, settings: Element):
+           # Diffs the modified tree against the original and sends only changes.
+           if self._base_settings is not None:
+               for (path, modified) in compare_xml_trees(self._base_settings, settings):
+                   ...  # serialises and sends each changed parameter
+       ...
+
+Writing a New Scripting Wrapper
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To expose a new LECO-enabled component via scripting, subclass
+:class:`~pymodaq.scripting.utils.LECOBaseWrapper` (or
+:class:`~pymodaq.scripting.utils.LECODeviceWrapper` if settings support is
+needed) and follow these steps:
+
+1. **Declare ``Future`` attributes** for each asynchronous reply your wrapper
+   expects.
+2. **Register Director-side callbacks** on ``self._listener`` in ``__init__``.
+   Use ``register_rpc_method`` for plain JSON replies and
+   ``register_binary_rpc_method`` for binary-serialised PyMoDAQ objects.
+3. **Write command methods** that create a ``Future``, call
+   ``self.set_remote_name()``, then ``self._director.ask_rpc(<command_name>)``, and
+   return the ``Future``.
+4. **Write callback methods** that deserialize the reply and resolve the
+   matching ``Future``.
+
+Minimal skeleton:
+
+.. code-block:: python
+
+   from concurrent.futures import Future, InvalidStateError
+   from serializall import SerializableFactory
+   from pymodaq.scripting.utils import LECOBaseWrapper
+
+   sf = SerializableFactory()
+
+   class MyComponentWrapper(LECOBaseWrapper):
+       def __init__(self, actor_name: str = "my_component", **kwargs) -> None:
+           self._some_result_future: Optional[Future] = None
+
+           super().__init__(actor_name, **kwargs)
+
+           # 2 – register Director-side callbacks
+           self._listener.register_rpc_method(self.something_done)
+           # for binary replies:
+           # self._listener.register_binary_rpc_method(self.some_data,
+           #                                           accept_binary_input=True)
+
+       # 3 – command methods
 
        def do_something(self, value: str) -> Future[str]:
            future = Future()
            self._some_result_future = future
-           self._set_remote_name()
+           self.set_remote_name()
+           # value should be serialized using serializall for complex values
            self._director.ask_rpc("do_something", value=value)
            return future
 
-       # ---- callbacks received from the Actor ----
+       # 4 – callback methods
 
        def something_done(self, result: str) -> None:
            try:
@@ -413,10 +512,10 @@ and deserialization:
 
 .. code-block:: python
 
-   # registration
+   # in __init__:
    self._listener.register_binary_rpc_method(self.set_data, accept_binary_input=True)
 
-   # callback
+   # callback:
    def set_data(self, data=None, additional_payload=None) -> None:
        value = sf.get_apply_deserializer(additional_payload[0])
        try:
@@ -432,7 +531,7 @@ Sending binary data to the Actor (e.g. ``move_abs`` with a ``DataActuator``):
    def move_abs(self, value: DataActuator) -> Future[DataActuator]:
        future = Future()
        self._move_done_future = future
-       self._set_remote_name()
+       self.set_remote_name()
        self._director.ask_rpc(
            "move_abs",
            position=None,
@@ -441,11 +540,52 @@ Sending binary data to the Actor (e.g. ``move_abs`` with a ``DataActuator``):
        return future
 
 
-Using the Wrapper in a Script
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The ``Device`` Public Interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With the wrapper in place, scripts are straightforward.  Calling ``.result()``
-on a ``Future`` blocks until the Actor replies:
+End-user scripts should not deal with the low-level wrappers directly.
+Instead, a :class:`~pymodaq.scripting.utils.Device` subclass wraps a wrapper
+and exposes only the user-facing methods, hiding the ``Future``-resolution
+callbacks:
+
+.. code-block:: python
+
+   from abc import ABC
+   from typing import Generic, TypeVar
+   from pymodaq.scripting.utils import LECOBaseWrapper
+
+   WrapperT = TypeVar('WrapperT', bound=LECOBaseWrapper)
+
+   class Device(ABC, Generic[WrapperT]):
+       def __init__(self, wrapper: WrapperT) -> None:
+           self._wrapper = wrapper
+
+       @property
+       def leco_name(self): return self._wrapper.leco_name
+
+       @property
+       def name(self) -> str: return self._wrapper.name
+
+       def sign_out(self) -> None: self._wrapper.sign_out()
+
+   class MyComponent(Device[MyComponentWrapper]):
+       def __init__(self, actor_name: str = "my_component", **kwargs) -> None:
+           super().__init__(MyComponentWrapper(actor_name, **kwargs))
+
+       def do_something(self, value: str) -> Future[str]:
+           return self._wrapper.do_something(value)
+
+The existing :class:`~pymodaq.scripting.devices.Actuator`,
+:class:`~pymodaq.scripting.devices.Detector`, and
+:class:`~pymodaq.scripting.devices.Dashboard` classes in
+:mod:`pymodaq.scripting.devices` follow exactly this pattern.
+
+
+Using the Public Classes in a Script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With the public classes in place, scripts are straightforward.  Calling
+``.result()`` on a ``Future`` blocks until the Actor replies:
 
 .. code-block:: python
 
@@ -455,20 +595,16 @@ on a ``Future`` blocks until the Actor replies:
    dashboard = Dashboard()
    dashboard.apply_preset('default').result()
 
-   # get all loaded modules
+   # get all loaded modules as Actuator / Detector instances
    devices = dashboard.get_scripting_devices()
    theta  = devices['actuators']['Angle']
    camera = devices['detectors']['Camera']
 
-   # blocking move, then async snaps
-   pos = theta.move_abs('90°').result()
+   # blocking move, then snap
+   pos   = theta.move_abs('90°').result()
    frame = camera.snap().result()
 
-The built-in :class:`~pymodaq.scripting.devices.Actuator`,
-:class:`~pymodaq.scripting.devices.Detector`, and
-:class:`~pymodaq.scripting.devices.Dashboard` classes in
-:mod:`pymodaq.scripting` follow exactly this pattern and cover all existing
-LECO-enabled PyMoDAQ components. To add a new component, write a wrapper
-similar to :class:`~pymodaq.scripting.utils.LECODeviceWrapper` and expose it
-through a lightweight public class (like ``Actuator`` / ``Detector``) to hide
-the method resolving ``Futures`` from users.
+``get_scripting_devices()`` calls ``get_devices()`` on the Dashboard and
+automatically wraps the returned names in :class:`~pymodaq.scripting.devices.Actuator`
+and :class:`~pymodaq.scripting.devices.Detector` instances, so the caller
+never has to manage LECO names manually.
