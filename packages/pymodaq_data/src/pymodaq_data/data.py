@@ -1021,7 +1021,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                     eq = False
                     break
                 if operator == '__eq__':
-                    eq = eq and np.allclose(self.quantities[ind], other.quantities[ind])
+                    eq = eq and np.allclose(self.quantities[ind], other.quantities[ind], equal_nan=True)
                 else:
                     eq = eq and np.all(getattr(self.quantities[ind], operator)(other.quantities[ind]))
             # extra attributes are not relevant as they may contain module specific data...
@@ -3464,9 +3464,9 @@ class DataToExport(DataLowLevel, SerializableBase):
     def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
         """Get the DataWithAxes with matching full name"""
         if deepcopy:
-            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0]).deepcopy()
+            data = self.get_data_from_name_origin('/'.join(full_name.split('/')[1:]), full_name.split('/')[0]).deepcopy()
         else:
-            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0])
+            data = self.get_data_from_name_origin('/'.join(full_name.split('/')[1:]), full_name.split('/')[0])
         return data
 
     def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> DataToExport:
