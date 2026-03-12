@@ -92,6 +92,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             parent.setWindowTitle(self.title)
 
     @property
+    def menubar(self):
+        return self._menubar
+
+    @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
         if not hasattr(self, "_splash_sc") or self._splash_sc is None:
             self._splash_sc = get_splash_sc()

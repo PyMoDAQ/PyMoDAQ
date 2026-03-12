@@ -1255,9 +1255,6 @@ class DashBoard(CustomApp):
         self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.remote_widget.setVisible(False)
 
-    @property
-    def menubar(self):
-        return self._menubar
 
     def value_changed(self, param: Parameter):
         if param.name() == "log_level":
