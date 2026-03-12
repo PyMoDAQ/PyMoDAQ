@@ -4,8 +4,8 @@ import time
 
 from enum import Enum
 
+from PyQt6.QtWidgets import QToolBar
 from qtpy.QtWidgets import QMessageBox
-from pymodaq_plugin_manager.manager import PluginManager
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import QDate, Signal
 from qtpy.QtWidgets import (
@@ -36,7 +36,6 @@ class EnumToolTip(Enum) :
     VIEWER = 'Launch an empty Viewer'
     MOVE = 'Launch an empty DAQ_Move'
     H5BROWSER = 'Launch H5Browser'
-    PLUGIN_MANAGER = 'Open plugin manager'
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
@@ -58,6 +57,9 @@ class Launcher(CustomApp):
         # init the App specific attributes
         self.raw_data = []
 
+        # Remove the default toolbar created by CustomApp
+        self.mainwindow.removeToolBar(self._toolbar)
+
         # Layout
         self.main_HBox = QHBoxLayout()
         self.launcher_VBox = QVBoxLayout()
@@ -68,7 +70,6 @@ class Launcher(CustomApp):
         self.dashboard_button = QPushButton("Dashboard")
         self.viewer_button = QPushButton("Viewer")
         self.move_button = QPushButton("Move")
-        self.plugin_manager_button = QPushButton("Plugin manager")
         self.h5browser_button = QPushButton("H5Browser")
 
         # Loader
@@ -87,13 +88,12 @@ class Launcher(CustomApp):
         '''
         subclass method from ActionManager
         '''
-        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-        self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
-        self.add_action('launch_dashboard', 'Launch empty dashboard', '', EnumToolTip.DASHBOARD.value)
-        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER.value)
-        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE.value)
-        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER.value)
-        self.add_action('launch_plugin_manager', 'Open the plugin manager', '',EnumToolTip.PLUGIN_MANAGER.value)
+        self.add_action('quit', 'Quit', 'close2', "Quit program", auto_toolbar=False)
+        self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, auto_toolbar=False)
+        self.add_action('launch_dashboard', 'Launch empty dashboard', '', EnumToolTip.DASHBOARD.value, auto_toolbar=False)
+        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER.value, auto_toolbar=False)
+        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE.value, auto_toolbar=False)
+        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER.value, auto_toolbar=False)
 
 
 
@@ -102,17 +102,12 @@ class Launcher(CustomApp):
         Configuration des layouts et widgets
         '''
         self.launcher_VBox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.box_label.setStyleSheet(
-            'QLabel { border: 1px solid white; border-radius: 10px; padding: 4px 10px; }')
-        self.box_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.set_box_label_apparence()
 
-        # Set tooltips button
-        self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD.value)
-        self.viewer_button.setToolTip(EnumToolTip.VIEWER.value)
-        self.move_button.setToolTip(EnumToolTip.MOVE.value)
-        self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER.value)
-        self.plugin_manager_button.setToolTip(EnumToolTip.PLUGIN_MANAGER.value)
+        # Set tooltip buttons
+        self.set_tooltip_button()
 
+        # Set separator between launcher and loader
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
@@ -123,19 +118,9 @@ class Launcher(CustomApp):
         self.main_HBox.addLayout(self.loader_VBox, 1)
         self.loader_VBox.addLayout(self.header_HBox)
 
-        self.launcher_VBox.addWidget(self.dashboard_button)
-        self.launcher_VBox.addWidget(self.viewer_button)
-        self.launcher_VBox.addWidget(self.move_button)
-        self.launcher_VBox.addWidget(self.h5browser_button)
-        self.launcher_VBox.addWidget(self.plugin_manager_button)
-        self.launcher_VBox.addStretch(1)
+        self.set_launcher_vbox()
 
-        self.header_HBox.addWidget(self.back_button)
-        self.header_HBox.addWidget(self.date_label)
-        self.header_HBox.addWidget(self.box_label)
-        self.header_HBox.addStretch(1)
-        self.header_HBox.addWidget(self.launch_button)
-        self.header_HBox.addWidget(self.next_button)
+        self.set_header()
 
         self.loader_VBox.addWidget(self.listView)
 
@@ -144,6 +129,8 @@ class Launcher(CustomApp):
         self.mainwindow.setCentralWidget(widget)
 
         logger.debug('docks are set')
+
+
 
     def _emit_command(self, command: str):
         cast(Any, self.command_sig).emit(ThreadCommand(command))
@@ -160,14 +147,12 @@ class Launcher(CustomApp):
         self.connect_action('launch_viewer', lambda: self.launch_empty_viewer())
         self.connect_action('launch_move', lambda: self.launch_empty_move())
         self.connect_action('launch_h5browser', lambda: self.launch_h5browser())
-        self.connect_action('launch_plugin_manager', lambda: self.start_plugin_manager())
 
         # Connect action to button
         self.dashboard_button.clicked.connect(self.get_action('launch_dashboard').trigger)
         self.viewer_button.clicked.connect(self.get_action('launch_viewer').trigger)
         self.move_button.clicked.connect(self.get_action('launch_move').trigger)
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
-        self.plugin_manager_button.clicked.connect(self.get_action('launch_plugin_manager').trigger)
 
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
@@ -195,33 +180,27 @@ class Launcher(CustomApp):
 
         logger.debug(f'Value change applied')
 
+    def set_launcher_vbox(self):
+        self.launcher_VBox.addWidget(self.dashboard_button)
+        self.launcher_VBox.addWidget(self.viewer_button)
+        self.launcher_VBox.addWidget(self.move_button)
+        self.launcher_VBox.addWidget(self.h5browser_button)
+        self.launcher_VBox.addStretch(1)
 
 
-    def start_plugin_manager(self):
-        self.win_plug_manager = QtWidgets.QMainWindow()
-        self.win_plug_manager.setWindowTitle("PyMoDAQ Plugin Manager")
-        widget = QtWidgets.QWidget()
-        self.win_plug_manager.setCentralWidget(widget)
-        self.plugin_manager = PluginManager(widget)
-        self.plugin_manager.quit_signal.connect(self.quit_fun)
-        self.plugin_manager.restart_signal.connect(self.restart_fun)
-        self.win_plug_manager.show()
 
-    def restart_fun(self, ask=False):
-        ret = False
-        if ask:
-            mssg = QMessageBox()
-            mssg.setText(
-                "You have to restart the application to take the"
-                " modifications into account!"
-            )
-            mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-            ret = mssg.exec()
+    def set_tooltip_button(self):
+        self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD.value)
+        self.viewer_button.setToolTip(EnumToolTip.VIEWER.value)
+        self.move_button.setToolTip(EnumToolTip.MOVE.value)
+        self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER.value)
 
-        if ret == QMessageBox.StandardButton.Ok or not ask:
-            self.quit_fun()
-            subprocess.call([sys.executable, str(self._app_class_file)])
+    def set_box_label_apparence(self):
+        self.box_label.setStyleSheet(
+            'QLabel { border: 1px solid white; border-radius: 10px; padding: 4px 10px; }')
+        self.box_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+
+
 
     def launch_empty_dashboard(self):
         subprocess.Popen(['dashboard'])
@@ -237,6 +216,13 @@ class Launcher(CustomApp):
     def launch_empty_logger(self):
         logger_main()
 
+    def set_header(self):
+        self.header_HBox.addWidget(self.back_button)
+        self.header_HBox.addWidget(self.date_label)
+        self.header_HBox.addWidget(self.box_label)
+        self.header_HBox.addStretch(1)
+        self.header_HBox.addWidget(self.launch_button)
+        self.header_HBox.addWidget(self.next_button)
 
 
 
