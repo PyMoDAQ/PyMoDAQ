@@ -120,6 +120,7 @@ class ManagerBase(CustomExt):
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
+        self._entry_slots = {}
 
         self.splash_subentries: Optional[SubEntriesSplash] = None
         self.subentries_model: Optional[ManagerSubEntriesModel] = None
@@ -519,15 +520,12 @@ class ManagerBase(CustomExt):
                 pass
 
     def update_actions_connection(self):
-
         for ind_file, file in enumerate(self.list_managed_entries_path()):
             self.connect_action(self.get_action_from_file(file), connect=False)
-
-            self.connect_action(
-                self.get_action_from_file(file),
-                self.create_slot_from_file(
-                    self.get_entry_folder().joinpath(file.stem + self.entry_extension)),
-            )
+            self._entry_slots[file.stem] = self.create_slot_from_file(
+                    self.get_entry_folder().joinpath(file.stem + self.entry_extension))
+            self.connect_action(self.get_action_from_file(file),
+                                self._entry_slots[file.stem])
 
     def update_execute_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.EXECUTE).setToolTip(
@@ -540,7 +538,7 @@ class ManagerBase(CustomExt):
         try:
             if menu is None:
                 menu = self.get_menu(Menu.EXTERNAL)
-
+            self.update_action_list()
             menu.clear()
             menu.addAction(self.get_action(ManagerActions.OPEN))
             menu.addSeparator()
