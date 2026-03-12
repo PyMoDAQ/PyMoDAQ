@@ -142,7 +142,7 @@ class ModulesManager(QObject, ParameterManager):
                 mods.append(d)
         return mods
 
-    def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer']:
+    def get_mod_from_name(self, name, mod=ModuleType.Detector) -> Union['DAQ_Move', 'DAQ_Viewer', None]:
         """Getter of a given module from its name (title)
 
         Returns None is no control module with this name exists
@@ -155,8 +155,12 @@ class ModulesManager(QObject, ParameterManager):
         """
         if mod == ModuleType.Detector or mod == 'det':  #backcompat when comparing to 'det'
             modules = self._detectors
-        else:
+        elif mod == ModuleType.Actuator or mod == 'act':
             modules = self._actuators
+        elif mod == ModuleType.Control:
+            modules = self._actuators + self._detectors
+        else:
+            return None
 
         if name in self.get_names(modules):
             return modules[self.get_names(modules).index(name)]
