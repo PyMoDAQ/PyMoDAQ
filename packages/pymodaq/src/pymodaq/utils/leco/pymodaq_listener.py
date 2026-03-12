@@ -446,7 +446,6 @@ class LECOComponentMixin:
         :param listener_class: The :class:`ActorListener` subclass to instantiate
             when establishing a LECO connection.
         """
-        super().__init__(**kwargs)
         self._leco_client: Optional[ActorListener] = None
         self._listener_class: Type[ActorListener] = listener_class
 
