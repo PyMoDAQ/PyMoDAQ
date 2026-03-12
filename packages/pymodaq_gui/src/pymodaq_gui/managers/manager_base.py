@@ -315,10 +315,10 @@ class ManagerBase(CustomExt):
                         toolbar=toolbar,)
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
+
         self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar)
         self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
-        self.affect_to(ManagerActions.EXECUTE, menu)
         return toolbar, menu
 
     def connect_things_base(self):
@@ -536,9 +536,11 @@ class ManagerBase(CustomExt):
     def create_slot_from_file(self, filename: Path):
         return lambda: self.execute_entry_base(filename)
 
-    def update_menu(self):
+    def update_menu(self, menu: QtWidgets.QMenu = None):
         try:
-            menu = self.get_menu(Menu.EXTERNAL)
+            if menu is None:
+                menu = self.get_menu(Menu.EXTERNAL)
+
             menu.clear()
             menu.addAction(self.get_action(ManagerActions.OPEN))
             menu.addSeparator()

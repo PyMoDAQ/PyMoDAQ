@@ -41,6 +41,7 @@ from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq_gui.managers.manager_base import Menu
 from pymodaq.utils.managers.overshoot.overshooter import Overshooter
 from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
@@ -232,8 +233,10 @@ class DashBoard(CustomApp):
         self.configurator = Configurator(dashboard=self)
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
                                                       menu=self.get_menu('preset'))
+        self.preset_manager.update_menu(self.get_menu('preset'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
                                                     menu=self.get_menu('configurator'))
+        self.configurator.update_menu(self.get_menu('configurator'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
