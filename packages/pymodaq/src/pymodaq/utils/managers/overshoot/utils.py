@@ -34,16 +34,14 @@ def create_overshoot_param(typ: str) -> list[dict]:
     return [
         {'title': 'Module:', 'name': 'module', 'type': 'str', 'value': typ.split('/')[0],
          'readonly': True},
-        {'title': 'DataName:', 'name': 'name', 'type': 'str', 'value': typ.split('/')[1],
+        {'title': 'DataName:', 'name': 'name', 'type': 'str', 'value': '/'.join(typ.split('/')[1:-1]),
          'readonly': True},
-        {'title': 'Channel:', 'name': 'channel', 'type': 'str', 'value': typ.split('/')[2],
+        {'title': 'Channel:', 'name': 'channel', 'type': 'str', 'value': typ.split('/')[-1],
          'readonly': True},
-        {'title': 'Trigger:', 'name': 'trigger', 'type': 'led', 'value': True},
         {'title': 'Direction:', 'name': 'direction', 'type': 'list',
          'value': TriggerDirection.ABOVE.value, 'limits': TriggerDirection.names()},
         {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0,},
     ]
-
 
 class ScalableGroupOverShoot(GroupParameter):
     """
@@ -62,7 +60,8 @@ class ScalableGroupOverShoot(GroupParameter):
         new_index = find_last_index(self.children(), name_prefix, format_string='02.0f')
         child = {'title': f'Overshoot {new_index}',
                  'name': f'{name_prefix}{new_index}',
-                 'type': 'group',
+                 'type': 'action_led',
+                 'value': True,
                  'removable': True,
                  'children': create_overshoot_param(typ)}
         self.addChild(child)
