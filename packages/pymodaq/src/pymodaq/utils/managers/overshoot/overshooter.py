@@ -60,31 +60,38 @@ class Overshooter(ManagerBase):
     overshoot_signal = QtCore.Signal(Overshoot)
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
+                 dashboard: 'DashBoard',
                  preset_filename: str = 'default',):
 
-        self._configurator = Configurator(dashboard, preset_filename)
+
+        self._configurator = dashboard.configurator
 
         super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
 
         self.slots: dict[str, Callable] = {}
 
+        self._overshoot_under_process = False
+
         self.overshoot_signal.connect(self.apply_config_from_overshoot)
 
-        if dashboard is not None:
-            self.show_hide_module_manager_settings()
-            if self.preset_manager is not None:
-                self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
-                if self.preset_manager.entry_applied:
-                    self.do_things_after_preset_set(self.preset_manager.entry)
-            if self.configurator is not None:
-                self.configurator.new_entry.connect(
-                    self.update_configurations)
-                self.configurator.deleted_entry.connect(
-                    self.update_configurations)
-        else:
-            self._modules_manager = None
+
+        self.show_hide_module_manager_settings()
+
+        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
+        if self.preset_manager.entry_applied:
+            self.do_things_after_preset_set(self.preset_manager.entry)
+        self.configurator.applied_entry.connect(self.updated_entry)
+        self.configurator.new_entry.connect(
+            self.update_configurations)
+        self.configurator.deleted_entry.connect(
+            self.update_configurations)
+
+
+    def child_added(self, param: Parameter, data: tuple[Parameter, int]):
+        if param is self.settings.child('overshoots'):
+            child = data[0]
+            child.sigActivated.connect(lambda parameter: child.setValue(not child.value()))
 
     @property
     def preset_manager(self) -> PresetManager:
@@ -107,6 +114,7 @@ class Overshooter(ManagerBase):
     def apply_config_from_overshoot(self, overshoot: Overshoot):
         self.configurator.execute_entry(
             self.configurator.entry_path_from_name(overshoot.configuration))
+        self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
         to_hide = [('test_actuator',), ('probe_data',),
@@ -161,7 +169,7 @@ class Overshooter(ManagerBase):
                 module_type = 'act'
 
             if mod is not None:
-                if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry['trigger']:
+                if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry.value():
                     if module_type == 'det':
                         mod.grab_done_signal.connect(self.slots[sub_entry.name()])
                     else:
@@ -193,14 +201,18 @@ class Overshooter(ManagerBase):
 
     def process_dwa(self, param: Parameter, dwa: DataWithAxes):
         channel_index = dwa.labels.index(param['channel'])
-        if param['direction'] == TriggerDirection.ABOVE.name:
-            if dwa[channel_index] > param['value']:
-                self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
-        elif param['direction'] == TriggerDirection.BELOW.name:
-            if dwa[channel_index] < param['value']:
-                self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
-        else:  # some later cases...
-            pass
+        if not self._overshoot_under_process:
+            if param['direction'] == TriggerDirection.ABOVE.name:
+                if dwa[channel_index] > param['value']:
+                    self._overshoot_under_process = True
+                    self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
+
+            elif param['direction'] == TriggerDirection.BELOW.name:
+                if dwa[channel_index] < param['value']:
+                    self._overshoot_under_process = True
+                    self.overshoot_signal.emit(self.overshoot_from_param(param, dwa))
+            else:  # some later cases...
+                pass
 
     def overshoot_from_param(self, param: Parameter, dwa: DataWithAxes = None):
         return Overshoot(param['module'],
@@ -220,6 +232,8 @@ class Overshooter(ManagerBase):
 
     def setup_docks(self):
         self.set_toolbar(self.add_toolbar('configurations'))
+
+        self.create_dashboard_toolbar()
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -246,12 +260,6 @@ class Overshooter(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow, add_break=False)
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),)
-
-        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow, add_break=False)
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),)
-
         self.get_toolbar('main').addSeparator()
         self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
 
@@ -300,24 +308,20 @@ if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import DashBoard, create_load_dashboard
 
-    app = mkQApp('PresetManager')
-    settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
+    app = mkQApp('Overshooter')
     external_ui = QtWidgets.QMainWindow()
+    external_ui.setWindowTitle(f"Overshooter")
 
     shared_ui, dashboard = create_load_dashboard()
+
 
     prog = Overshooter(dashboard)
 
     prog.mainwindow.show()
 
-    toolbar, menu = prog.get_external_toolbar_menu()
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
-
     prog.enable_actions(True)
 
     external_ui.show()
-    shared_ui.show()
 
     def print_overshoot(overshoot: Overshoot):
         print(overshoot)
