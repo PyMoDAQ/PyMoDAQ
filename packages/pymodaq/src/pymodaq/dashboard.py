@@ -247,7 +247,8 @@ class DashBoard(CustomApp):
 
     def do_things_after_preset(self, preset_name: str):
         self.configurator.preset_filename = preset_name
-        self.configurator.entry = 'default'
+        self.configurator.update_menu(self.get_menu('configurator'))
+
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
         self.get_menu('overshooter').setEnabled(True)
@@ -256,7 +257,7 @@ class DashBoard(CustomApp):
         self.overshooter.enable_actions(True)
         self.configurator.execute_entry(self.configurator.entry_filepath)
 
-        self.configurator.update_menu(self.get_menu('configurator'))
+
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)

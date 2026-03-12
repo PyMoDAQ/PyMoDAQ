@@ -110,7 +110,7 @@ class Configurator(ManagerBase):
         if preset_filename in self.preset_manager.entries:
             self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
             self.entries_sync.update_key('items', self.entries)
-            self.update_entry()
+            self.update_entry_base('default')
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
