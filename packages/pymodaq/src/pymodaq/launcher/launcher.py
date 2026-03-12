@@ -4,6 +4,7 @@ import time
 
 from enum import Enum
 
+import dashboard
 from PyQt6.QtWidgets import QToolBar
 from qtpy.QtWidgets import QMessageBox
 from qtpy import QtCore, QtWidgets
@@ -19,6 +20,8 @@ from qtpy.QtWidgets import (
 )
 
 from pymodaq.dashboard import DashBoard
+from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui import config, logger
 from pymodaq.utils.shared_ui import SharedUI
@@ -28,7 +31,7 @@ from typing import Any, cast
 from pymodaq.control_modules.daq_viewer import main as viewer_main
 from pymodaq.control_modules.daq_move import main as move_main
 from pymodaq.extensions.daq_logger import main as logger_main
-#from tests.extensions.extension_loading_test import dashboard
+
 
 
 class EnumToolTip(Enum) :
@@ -224,6 +227,20 @@ class Launcher(CustomApp):
         self.header_HBox.addWidget(self.launch_button)
         self.header_HBox.addWidget(self.next_button)
 
+    def print_presets(self):
+        presetmanager = PresetManager()
+        configurator = Configurator()
+        liste : list = presetmanager.entries
+        print("Affichage des presets :")
+        print(liste)
+
+
+        print("Affichage des configurators :")
+        print(configurator.entries)
+
+
+        self.dashboard.load
+
 
 
 def main() :
@@ -239,6 +256,8 @@ def main() :
     shared_ui.affect_application(prog)
 
     fen.show()
+
+    prog.print_presets()
 
     sys.exit(app.exec())
 
