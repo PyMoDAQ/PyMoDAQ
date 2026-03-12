@@ -26,14 +26,16 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 @dataclasses.dataclass
-class Overshoot():
+class Overshoot:
     module_name: str
     data_name: str
     channel: str
     direction: TriggerDirection
     value: float
     dwa_value: float = None
-    configuration: str = 'default'
+
+    def __repr__(self):
+        return f'Data {self.data_name} triggering {self.direction} {self.value}'
 
 
 class Overshooter(ManagerBase):
@@ -59,10 +61,7 @@ class Overshooter(ManagerBase):
 
     overshoot_signal = QtCore.Signal(Overshoot)
 
-    def __init__(self,
-                 dashboard: 'DashBoard',
-                 preset_filename: str = 'default',):
-
+    def __init__(self, dashboard: 'DashBoard'):
 
         self._configurator = dashboard.configurator
 
@@ -81,11 +80,8 @@ class Overshooter(ManagerBase):
         self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
         if self.preset_manager.entry_applied:
             self.do_things_after_preset_set(self.preset_manager.entry)
-        self.configurator.applied_entry.connect(self.updated_entry)
-        self.configurator.new_entry.connect(
-            self.update_configurations)
-        self.configurator.deleted_entry.connect(
-            self.update_configurations)
+        self.configurator.new_entry.connect(self.update_configurations)
+        self.configurator.deleted_entry.connect(self.update_configurations)
 
 
     def child_added(self, param: Parameter, data: tuple[Parameter, int]):
@@ -113,7 +109,7 @@ class Overshooter(ManagerBase):
 
     def apply_config_from_overshoot(self, overshoot: Overshoot):
         self.configurator.execute_entry(
-            self.configurator.entry_path_from_name(overshoot.configuration))
+            self.configurator.entry_path_from_name(self.settings['configuration']))
         self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
@@ -157,34 +153,36 @@ class Overshooter(ManagerBase):
             self.create_slots()
 
         if len(overshoot_subentries) > 0:
-            self.show_subentries(
-                [self.overshoot_from_param(subentry) for subentry in overshoot_subentries],
-                f'Loading Overshoot: {self.entry}')
-        for ind, sub_entry in enumerate(overshoot_subentries):
-            mod = self.modules_manager.get_mod_from_name(sub_entry['module'])
-            if mod is not None:
-                module_type = 'det'
-            else:
-                mod = self.modules_manager.get_mod_from_name(sub_entry['module'], 'act')
-                module_type = 'act'
-
-            if mod is not None:
-                if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry.value():
-                    if module_type == 'det':
-                        mod.grab_done_signal.connect(self.slots[sub_entry.name()])
-                    else:
-                        mod.current_value_signal.connect(self.slots[sub_entry.name()])
+            if self.is_action_checked(ManagerActions.EXECUTE):
+                self.show_subentries(
+                    [self.overshoot_from_param(subentry) for subentry in overshoot_subentries],
+                    f'Loading Overshoot: {self.entry}')
+            for ind, sub_entry in enumerate(overshoot_subentries):
+                mod = self.modules_manager.get_mod_from_name(sub_entry['module'])
+                if mod is not None:
+                    module_type = 'det'
                 else:
-                    if module_type == 'det':
-                        mod.grab_done_signal.disconnect(self.slots[sub_entry.name()])
+                    mod = self.modules_manager.get_mod_from_name(sub_entry['module'], 'act')
+                    module_type = 'act'
+
+                if mod is not None:
+                    if self.is_action_checked(ManagerActions.EXECUTE) and sub_entry.value():
+                        if module_type == 'det':
+                            mod.grab_done_signal.connect(self.slots[sub_entry.name()])
+                        else:
+                            mod.current_value_signal.connect(self.slots[sub_entry.name()])
                     else:
-                        mod.current_value_signal.disconnect(self.slots[sub_entry.name()])
+                        if module_type == 'det':
+                            mod.grab_done_signal.disconnect(self.slots[sub_entry.name()])
+                        else:
+                            mod.current_value_signal.disconnect(self.slots[sub_entry.name()])
+                if self.is_action_checked(ManagerActions.EXECUTE):
+                    self.subentries_model.set_status(ind, True)
+                QtWidgets.QApplication.processEvents()
+                QtCore.QThread.msleep(000)
 
-            self.subentries_model.set_status(ind, True)
-            QtWidgets.QApplication.processEvents()
-            QtCore.QThread.msleep(200)
-
-        self.close_subentries_display(1000)
+            if self.is_action_checked(ManagerActions.EXECUTE):
+                self.close_subentries_display(1000)
         return True
 
     def create_slot(self, param: Parameter):
@@ -220,8 +218,7 @@ class Overshooter(ManagerBase):
                          param['channel'],
                          TriggerDirection[param['direction']],
                          param['value'],
-                         dwa.value() if dwa is not None else None,
-                         self.settings['configuration'])
+                         dwa.value() if dwa is not None else None)
 
     @property
     def actuators(self):
@@ -276,6 +273,12 @@ class Overshooter(ManagerBase):
             addList=self.modules_manager.available_data)
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        if entry is None:
+            entry = self.entry_filepath
+        elif isinstance(entry, str):
+            self.entry = entry
+            entry = self.entry_filepath
+
         if entry.exists():
             self.settings = entry
         else:
@@ -300,6 +303,8 @@ class Overshooter(ManagerBase):
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
 
+        self.entries_sync.update_key('items', self.entries)
+        self.update_entry()
         self.update_available_data()
         self.update_configurations()
 
