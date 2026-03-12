@@ -3,8 +3,8 @@
 Making a PyMoDAQ Component Available Through LECO
 ==================================================
 
-This page is a developer guide explaining how to expose a new PyMoDAQ component
-over the `LECO`_ network.  The ``DashBoard`` class is used as a running example
+This page is a developer guide explaining how to expose an existing PyMoDAQ component
+over the PyMoDAQ intergrated `LECO`_ network.  The ``DashBoard`` class is used as a running example
 throughout.
 
 A second section covers the **scripting side**: once a component is LECO-enabled,
@@ -27,8 +27,7 @@ Architecture
 .. figure:: /image/component_leco/leco_scripting_architecture.svg
    :alt: LECO scripting architecture in PyMoDAQ
    :align: center
-   :width: 150%
-   :class: no-max-width-figure
+   :width: 100%
 
    Architecture of LECO in PyMoDAQ and of the scripting layer.  A plain Python
    script instantiates a wrapper (the Director side) that starts its own ``Listener`` and ``Director``,
@@ -117,7 +116,8 @@ However, they are generally the same names.
 
 For each new component you need one enum for incoming commands (Director →
 Actor, i.e. what your component *receives*) and one for outgoing commands
-(Actor → Director, i.e. what your component *sends back*):
+(Actor → Director, i.e. what your component *sends back*). It seems to add some
+complexity, but actually helps to understand what each component is doing:
 
 .. code-block:: python
 
@@ -600,7 +600,7 @@ With the public classes in place, scripts are straightforward.  Calling
    theta  = devices['actuators']['Angle']
    camera = devices['detectors']['Camera']
 
-   # blocking move, then snap
+   # blocking move, then sync snap
    pos   = theta.move_abs('90°').result()
    frame = camera.snap().result()
 
