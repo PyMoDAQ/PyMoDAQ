@@ -11,7 +11,7 @@ import numpy as np
 from collections import OrderedDict
 
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 

@@ -25,7 +25,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
-from pymodaq_data import data as data_mod, DataDistribution
+from pymodaq_data import data as data_mod, DataDistribution, DataDim
 from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -38,7 +38,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.scanner.scanner import Scanner
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.extensions.scan.daq_scan_ui import DAQScanUI
 from pymodaq.utils.h5modules import module_saving
@@ -193,13 +193,12 @@ class DAQScan(CustomExt):
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
-        data0D_names = self.modules_manager.get_probed_data_channels('Data0D')
-        data1D_names = self.modules_manager.get_probed_data_channels('Data1D')
+        data0D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data0D)
+        data1D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data1D)
         self.settings.child('plot_options', 'plot_0d').setValue(
             dict(all_items=data0D_names, selected=data0D_names))
         self.settings.child('plot_options', 'plot_1d').setValue(
             dict(all_items=data1D_names, selected=data1D_names))
-
 
 
     def setup_docks(self):
@@ -1359,6 +1358,7 @@ class DAQScanAcquisition(QObject):
                                     dict(indexes=indexes, distribution=self.scanner.distribution)))
 
             self.det_done_flag = True
+
 
             full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
             full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])

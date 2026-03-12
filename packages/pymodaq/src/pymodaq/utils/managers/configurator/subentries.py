@@ -11,7 +11,7 @@ from pymodaq_gui.parameter.utils import Parameter, ParameterWithPath
 from pymodaq_utils.abstract import abstract_attribute
 from pymodaq.utils.data import DataActuator, DataToActuators
 
-from pymodaq.utils.managers.modules_manager import ModuleType
+from pymodaq.utils.managers.modules.modules_manager import ModuleType
 from pymodaq_utils.enums import StrEnum
 from serializall import SerializableFactory
 

@@ -23,7 +23,7 @@ from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_data.data import DataToExport, DataCalculated, DataRaw
 from pymodaq_utils.config import GlobalConfig as Config
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.extensions.pid.utils import get_models
 from pymodaq.utils.data import DataActuator, DataToActuators
 from pymodaq.extensions.pid.actuator_controller import PIDController

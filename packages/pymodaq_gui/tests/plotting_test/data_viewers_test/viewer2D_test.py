@@ -2,7 +2,7 @@ from typing import Tuple, Any, Generator
 from pytestqt.qtbot import QtBot
 from qtpy import QtWidgets, QtCore
 
-from pymodaq_data import data as data_mod
+from pymodaq_data import data as data_mod, DataDim
 from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq_gui.plotting.data_viewers import viewer2D as v2d
 
@@ -441,18 +441,18 @@ class TestROI:
             roi.setPos((0, 0))
 
         data_to_export: data_mod.DataToExport = blocker.args[0]
-        assert len(data_to_export.get_data_from_dim('data1D')) != 0
-        assert len(data_to_export.get_data_from_dim('data0D')) != 0
+        assert len(data_to_export.get_data_from_dim(DataDim.Data1D)) != 0
+        assert len(data_to_export.get_data_from_dim(DataDim.Data0D)) != 0
 
-        assert f'Hlineout_{roi_format(index_roi)}' in data_to_export.get_names()
-        assert f'Vlineout_{roi_format(index_roi)}' in \
-               data_to_export.get_names('data1D')
-        assert f'Integrated_{roi_format(index_roi)}' in \
-               data_to_export.get_names('data0D')
+        assert f'Hlineout' in data_to_export.get_names()
+        assert f'Vlineout' in \
+               data_to_export.get_names(DataDim.Data1D)
+        assert f'Integrated' in \
+               data_to_export.get_names(DataDim.Data0D)
 
-        hlineout = data_to_export.get_data_from_name(f'Hlineout_{roi_format(index_roi)}')
-        vlineout = data_to_export.get_data_from_name(f'Vlineout_{roi_format(index_roi)}')
-        intlineout = data_to_export.get_data_from_name(f'Integrated_{roi_format(index_roi)}')
+        hlineout = data_to_export.get_data_from_name(f'Hlineout')
+        vlineout = data_to_export.get_data_from_name(f'Vlineout')
+        intlineout = data_to_export.get_data_from_name(f'Integrated')
 
         assert np.any(hlineout.data[0] == approx(np.mean(data[0], 0)))
         assert np.any(vlineout.data[0] == approx(np.mean(data[0], 1)))
@@ -475,9 +475,9 @@ class TestROI:
         assert len(data_to_export.get_data_from_dim('data1D')) != 0
         assert len(data_to_export.get_data_from_dim('data0D')) != 0
 
-        assert f'Hlineout_{roi_format(index_roi)}' in data_to_export.get_names('data1D')
-        assert f'Vlineout_{roi_format(index_roi)}' in data_to_export.get_names('data1D')
-        assert f'Integrated_{roi_format(index_roi)}' in data_to_export.get_names('data0D')
+        assert f'Hlineout' in data_to_export.get_names('data1D')
+        assert f'Vlineout' in data_to_export.get_names('data1D')
+        assert f'Integrated' in data_to_export.get_names('data0D')
 
 
     def test_show_roi(self, init_viewer2d):
