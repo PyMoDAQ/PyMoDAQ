@@ -56,7 +56,7 @@ class Overshooter(ManagerBase):
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
-    entry_type = 'overshoot'
+    entry_type = 'overshooter'
     entry_extension ='.xml'
 
     overshoot_signal = QtCore.Signal(Overshoot)
@@ -310,7 +310,7 @@ if __name__ == "__main__":
 
     prog = Overshooter(dashboard)
     prog.enable_actions(True)
-    prog.show()
+    prog.mainwindow.show()
 
     def print_overshoot(overshoot: Overshoot):
         print(overshoot)

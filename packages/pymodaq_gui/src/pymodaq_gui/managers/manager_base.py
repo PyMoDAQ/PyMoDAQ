@@ -259,7 +259,7 @@ class ManagerBase(CustomExt):
 
         # ACTIONS in Manager
         self.add_widget('entry_label', QtWidgets.QLabel(
-            f'Configuration from {self.entry_type.capitalize()}:'))
+            f'{self.entry_type.capitalize()}:'))
         self.add_widget(ManagerActions.LIST, ComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
