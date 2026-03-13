@@ -134,9 +134,9 @@ class Configurator(ManagerBase):
             entry_path = self.entry_filepath
         config_subentries = config_subentries_from_path(entry_path)
 
-        if self.preset_manager.applied_entry != self.preset_filename:
+        if self.preset_manager.applied_entry_name != self.preset_filename:
             logger.warning(f'The current configuration is referring to the prest: {self.preset_filename} '
-                           f'while the current applied preset is: {self.preset_manager.entry}')
+                           f'while the current applied preset is: {self.preset_manager.applied_entry_name}')
             return False
 
         if len(config_subentries) > 0:
@@ -295,6 +295,8 @@ class Configurator(ManagerBase):
 
         else:
             self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
+            self.preset_manager.applied_entry.connect(self.set_preset_filename)  #action slot from preset menu need this to update the list onf configurator entries
+
         self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
                                        ).widget.currentTextChanged.connect(self.set_preset_filename)
 

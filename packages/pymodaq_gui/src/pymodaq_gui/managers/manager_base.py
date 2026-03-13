@@ -508,6 +508,8 @@ class ManagerBase(CustomExt):
             self.entry = entry  # make sure the current entry field reflects this method argument
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
 
+        self.entry = entry.stem  # make sure the combo is updated (if triggered not from the combo, in particular the action slots)
+
         self._update_entry(entry)
         self.update_execute_action_tooltip(entry.stem)
         self.updated_entry.emit(entry.stem)
