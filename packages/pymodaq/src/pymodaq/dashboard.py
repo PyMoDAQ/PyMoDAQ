@@ -698,6 +698,8 @@ class DashBoard(CustomApp):
                     pass
 
             self.preset_manager.quit_fun()
+            self.configurator.quit_fun()
+            self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
             for area in areas:
