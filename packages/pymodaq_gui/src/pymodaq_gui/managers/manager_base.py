@@ -567,7 +567,13 @@ class ManagerBase(CustomExt):
             menu.addSeparator()
             load_menu = menu.addMenu(f"Load {self.entry_type.capitalize()}s")
 
-            for ind_file, file in enumerate(self.list_managed_entries_path()):
+            entries_path = self.list_managed_entries_path()
+            entries_path.sort(key=lambda x: x.stem)
+            default_index = [entry.stem for entry in entries_path].index('default')
+            default_path = entries_path.pop(default_index)
+            entries_path = [default_path] + entries_path
+            
+            for ind_file, file in enumerate(entries_path):
                 if self.has_action(self.get_action_from_file(file)):
                     load_menu.addAction(self.get_action(
                         self.get_action_from_file(file)
