@@ -110,7 +110,7 @@ class Configurator(ManagerBase):
         if preset_filename in self.preset_manager.entries:
             self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
             self.entries_sync.update_key('items', self.entries)
-            self.update_entry_base('default')
+            self.update_entry('default')
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -122,7 +122,7 @@ class Configurator(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -133,6 +133,11 @@ class Configurator(ManagerBase):
         if entry_path is None:
             entry_path = self.entry_filepath
         config_subentries = config_subentries_from_path(entry_path)
+
+        if self.preset_manager.applied_entry != self.preset_filename:
+            logger.warning(f'The current configuration is referring to the prest: {self.preset_filename} '
+                           f'while the current applied preset is: {self.preset_manager.entry}')
+            return False
 
         if len(config_subentries) > 0:
             self.show_subentries(config_subentries, f'Loading Configuration: {self.entry}')
@@ -255,9 +260,8 @@ class Configurator(ManagerBase):
                         tip='If Checked: display all settings (in green, settings that can be configured)'
                             ' otherwise only configurables ones')
 
-        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow, add_break=False)
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),)
-
+        self.create_dashboard_toolbar(add_preset=True, add_configurator=False, add_break=False)
+        self.preset_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
                         tip='Add the current Parameter item',
@@ -288,12 +292,13 @@ class Configurator(ManagerBase):
         if self.dashboard is None:
             self.preset_manager.enable_actions(True)
             self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
-                                           ).widget.currentTextChanged.connect(self.set_preset_filename)
+
         else:
             self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
+        self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
+                                       ).widget.currentTextChanged.connect(self.set_preset_filename)
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         self.config_model.load(self.entry_filepath)
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
@@ -422,19 +427,17 @@ class Configurator(ManagerBase):
 
 if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.dashboard import DashBoard, create_load_dashboard
 
     app = mkQApp('PresetManager')
-    external_ui = QtWidgets.QMainWindow()
 
-    prog = Configurator()
+    shared_ui, dashboard = create_load_dashboard()
+    shared_ui.hide()
+
+    prog = Configurator(dashboard)
     prog.update_settings('default')
     prog.mainwindow.show()
-
-    toolbar, menu = prog.get_external_toolbar_menu()
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
-
     prog.enable_actions(True)
+    prog.preset_manager.enable_actions(True)
 
-    external_ui.show()
     sys.exit(app.exec())

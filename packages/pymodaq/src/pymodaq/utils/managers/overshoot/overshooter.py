@@ -99,7 +99,7 @@ class Overshooter(ManagerBase):
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
-        self._configurator.preset_filename = preset_filename
+        self.configurator.preset_filename = preset_filename
         self.entries_sync.update_key('items', self.entries)
         self.update_entry()
 
@@ -108,7 +108,7 @@ class Overshooter(ManagerBase):
         return self._configurator
 
     def apply_config_from_overshoot(self, overshoot: Overshoot):
-        self.configurator.execute_entry(
+        self.configurator._execute_entry(
             self.configurator.entry_path_from_name(self.settings['configuration']))
         self._overshoot_under_process = False
 
@@ -140,7 +140,7 @@ class Overshooter(ManagerBase):
         for ind, sub_entry in enumerate(overshoot_subentries):
             self.slots[sub_entry.name()] = self.create_slot(sub_entry)
 
-    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -272,7 +272,7 @@ class Overshooter(ManagerBase):
         self.settings.child('overshoots').setOpts(
             addList=self.modules_manager.available_data)
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         if entry is None:
             entry = self.entry_filepath
         elif isinstance(entry, str):
@@ -304,7 +304,7 @@ class Overshooter(ManagerBase):
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
 
         self.entries_sync.update_key('items', self.entries)
-        self.update_entry()
+        self._update_entry()
         self.update_available_data()
         self.update_configurations()
 
@@ -314,19 +314,12 @@ if __name__ == "__main__":
     from pymodaq.dashboard import DashBoard, create_load_dashboard
 
     app = mkQApp('Overshooter')
-    external_ui = QtWidgets.QMainWindow()
-    external_ui.setWindowTitle(f"Overshooter")
-
     shared_ui, dashboard = create_load_dashboard()
-
+    shared_ui.hide()
 
     prog = Overshooter(dashboard)
-
-    prog.mainwindow.show()
-
     prog.enable_actions(True)
-
-    external_ui.show()
+    prog.show()
 
     def print_overshoot(overshoot: Overshoot):
         print(overshoot)

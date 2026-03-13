@@ -227,7 +227,7 @@ class DashBoard(CustomApp):
 
     def do_things_after_ui_setup(self):
         self.preset_manager = PresetManager(dashboard=self)
-        self.preset_manager.update_entry_base()
+        self.preset_manager.update_entry()
         self.preset_manager.entry = 'default'
         self.preset_manager.applied_entry.connect(self.do_things_after_preset)
         self.configurator = Configurator(dashboard=self)
@@ -246,7 +246,7 @@ class DashBoard(CustomApp):
         self.preset_manager.enable_actions(True)
 
     def do_things_after_preset(self, preset_name: str):
-        self.configurator.preset_filename = preset_name
+
         self.configurator.update_menu(self.get_menu('configurator'))
 
         self.get_menu('configurator').setEnabled(True)
@@ -255,9 +255,7 @@ class DashBoard(CustomApp):
         self.get_toolbar('overshooter').setEnabled(True)
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator.execute_entry(self.configurator.entry_filepath)
-
-
+        self.configurator._execute_entry(self.configurator.entry_filepath)
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
@@ -1375,11 +1373,11 @@ def load_dashboard_with_preset(preset_name: str,
 
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
-        dashboard.preset_manager.execute_entry_base(preset_path)
+        dashboard.preset_manager.execute_entry(preset_path)
         if configuration_name is not None:
             configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
             dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry_base(configuration_path)
+            dashboard.configurator.execute_entry(configuration_path)
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:

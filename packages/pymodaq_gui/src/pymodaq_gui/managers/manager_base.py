@@ -117,6 +117,7 @@ class ManagerBase(CustomExt):
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
 
         self._entry_applied = False
+        self._applied_entry_name: str = None
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
@@ -168,10 +169,6 @@ class ManagerBase(CustomExt):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        raise NotImplementedError
-
-    def update_entry(self, entry_path: Path):
-        """ Particular implementation to update entries for this inherited Manager """
         raise NotImplementedError
 
     def setup_ui(self):
@@ -329,12 +326,12 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
-        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry_base())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry_base())
+        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
+        self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
 
     def sync_entries_with(self, combo: ComboBox):
@@ -446,29 +443,47 @@ class ManagerBase(CustomExt):
                                         'current': current})  # deleting will update current and fire update_entry_base
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
-    def execute_entry_base(self, entry_path: Path = None, **kwargs):
-        if entry_path is None:
-            self.save_check(self.entry, bypass_dialog=True)
-            entry_path = self.entry_filepath
-
-        if self.dashboard is None:
-            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
-            return
-
-        self.entry_applied = self.execute_entry(entry_path, **kwargs)
 
     @property
     def entry_applied(self) -> bool:
+        """ Get the status of the execution of the last applied entry
+
+        If True, the :attr:`applied_entry_name` property will reflect the last successfully applied/executed entry
+        """
         return self._entry_applied
 
     @entry_applied.setter
     def entry_applied(self, applied: bool):
         self._entry_applied = applied
         if applied:
+            self._applied_entry_name = self.entry
             self.applied_entry.emit(self.entry_filepath.stem)
 
-    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
-        """Applies the entry from the given file in the manager.
+    @property
+    def applied_entry_name(self) -> str | None:
+        """ Get the name of the last entry that has been successfully applied/executed """
+        return self._applied_entry_name
+
+    def execute_entry(self, entry_path: Path = None, **kwargs):
+        """ To be called to execute the selected entry """
+        if entry_path is None:
+            self.save_check(self.entry, bypass_dialog=True)
+            entry_path = self.entry_filepath
+
+        self.update_entry(entry_path.stem)
+
+        if self.dashboard is None:
+            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
+            return
+
+        self.entry_applied = self._execute_entry(entry_path, **kwargs)
+
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
+        """Particular implementation of the entry execution for this manager
+
+        Applies the entry from the given file in the manager.
+
+        Should not be called directly, use :attr:`execute_entry` instead.
 
         To be reimplemented
 
@@ -484,7 +499,7 @@ class ManagerBase(CustomExt):
         # execute_action_checkable is set to True
         return False
 
-    def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
+    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the table given the entry argument"""
         if entry is None:
             entry = self.entry_filepath
@@ -493,9 +508,13 @@ class ManagerBase(CustomExt):
             self.entry = entry  # make sure the current entry field reflects this method argument
             entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
 
-        self.update_entry(entry)
+        self._update_entry(entry)
         self.update_execute_action_tooltip(entry.stem)
         self.updated_entry.emit(entry.stem)
+
+    def _update_entry(self, entry_path: Path):
+        """ Particular implementation to update entries for this inherited Manager """
+        raise NotImplementedError
 
     def show(self):
         if self.is_action_checked(ManagerActions.OPEN):
@@ -534,7 +553,7 @@ class ManagerBase(CustomExt):
             f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.execute_entry_base(filename)
+        return lambda: self.execute_entry(filename)
 
     def update_menu(self, menu: QtWidgets.QMenu = None):
         try:

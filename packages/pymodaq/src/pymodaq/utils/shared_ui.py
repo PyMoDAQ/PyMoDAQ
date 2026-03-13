@@ -146,8 +146,14 @@ class SharedUI(CustomApp):
                 menus.append(child)
         return menus
 
-    def show(self):
-        self.mainwindow.show()
+    def show(self, show=True):
+        if show:
+            self.mainwindow.show()
+        else:
+            self.hide()
+
+    def hide(self):
+        self.mainwindow.setVisible(False)
 
     def setup_actions(self):
         self.add_action(

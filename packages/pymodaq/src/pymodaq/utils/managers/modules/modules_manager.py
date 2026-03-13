@@ -604,7 +604,7 @@ if __name__ == '__main__':
     win, dashboard = create_load_dashboard()
     win.show()
 
-    dashboard.preset_manager.execute_entry_base()
+    dashboard.preset_manager.execute_entry()
 
     dashboard.modules_manager.settings_tree.show()
 
