@@ -260,7 +260,8 @@ class Configurator(ManagerBase):
                         tip='If Checked: display all settings (in green, settings that can be configured)'
                             ' otherwise only configurables ones')
 
-        self.create_dashboard_toolbar(add_preset=True, add_configurator=False, add_break=False)
+        self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
+                                      add_preset=True, add_configurator=False, add_break=False)
         self.preset_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',

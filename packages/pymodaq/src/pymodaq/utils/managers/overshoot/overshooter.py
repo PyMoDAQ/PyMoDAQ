@@ -228,37 +228,28 @@ class Overshooter(ManagerBase):
         return self.modules_manager.detectors_name
 
     def setup_docks(self):
-        self.set_toolbar(self.add_toolbar('configurations'))
-
-        self.create_dashboard_toolbar()
+        self.set_toolbar(self.add_toolbar('overshoots'))
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
         vlayout_right = QtWidgets.QVBoxLayout()
-        widget_buttons = QtWidgets.QWidget()
-        widget_buttons.setLayout(QtWidgets.QVBoxLayout())
-        widget_buttons.layout().addStretch()
-        move_toolbar = self.add_toolbar('move')
-        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        widget_buttons.layout().addWidget(move_toolbar)
-        widget_buttons.layout().addStretch()
-
         vlayout.addWidget(hwidget)
 
         hlayout.addWidget(self.modules_manager.settings_tree)
-
-        hlayout.addWidget(widget_buttons)
         hlayout.addLayout(vlayout_right)
 
-        vlayout_right.addWidget(self.get_toolbar('configurations'))
+        vlayout_right.addWidget(self.get_toolbar('overshoots'))
         vlayout_right.addWidget(self.settings_tree)
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
         self.get_toolbar('main').addSeparator()
         self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
+
+        self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
+                                      add_preset=True, add_configurator=True, add_break=False)
 
     def connect_things(self):
         self.connect_action('update_data', self.update_available_data)

@@ -60,8 +60,10 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
+
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.utils.managers.configurator.configurator import Configurator
+
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
 
@@ -229,7 +231,7 @@ class DashBoard(CustomApp):
         self.preset_manager = PresetManager(dashboard=self)
         self.preset_manager.update_entry()
         self.preset_manager.entry = 'default'
-        self.preset_manager.applied_entry.connect(self.do_things_after_preset)
+        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
         self.configurator = Configurator(dashboard=self)
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
                                                       menu=self.get_menu('preset'))
@@ -245,7 +247,7 @@ class DashBoard(CustomApp):
         self.get_toolbar('overshooter').setEnabled(False)
         self.preset_manager.enable_actions(True)
 
-    def do_things_after_preset(self, preset_name: str):
+    def do_things_after_preset_set(self, preset_name: str):
 
         self.configurator.update_menu(self.get_menu('configurator'))
 
@@ -259,6 +261,8 @@ class DashBoard(CustomApp):
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
+
+        self.mainwindow.show()
 
     def add_status(self, txt):
         """
@@ -1421,10 +1425,12 @@ def main():
                                                                configuration_name=args.config
                                                                )
 
+
     # If no command-line arguments are supplied, start empty
     else:
         win, dashboard = create_load_dashboard()
-        win.show()
+
+    win.show()
 
     # Run application
     sys.exit(app.exec())

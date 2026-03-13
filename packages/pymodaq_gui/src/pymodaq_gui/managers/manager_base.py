@@ -457,7 +457,7 @@ class ManagerBase(CustomExt):
         self._entry_applied = applied
         if applied:
             self._applied_entry_name = self.entry
-            self.applied_entry.emit(self.entry_filepath.stem)
+            self.applied_entry.emit(self._applied_entry_name)
 
     @property
     def applied_entry_name(self) -> str | None:
@@ -572,7 +572,7 @@ class ManagerBase(CustomExt):
             default_index = [entry.stem for entry in entries_path].index('default')
             default_path = entries_path.pop(default_index)
             entries_path = [default_path] + entries_path
-            
+
             for ind_file, file in enumerate(entries_path):
                 if self.has_action(self.get_action_from_file(file)):
                     load_menu.addAction(self.get_action(

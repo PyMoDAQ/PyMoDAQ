@@ -113,6 +113,7 @@ class CustomExt(CustomApp):
             self.runner_thread.wait()
 
     def create_dashboard_toolbar(self,
+                                 add_dashboard: bool = True,
                                  add_preset=True,
                                  add_configurator=True,
                                  add_break=True):
@@ -121,23 +122,24 @@ class CustomExt(CustomApp):
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
-        self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
-                        toolbar='dashboard')
-        self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
-                        'Show/Hide the Dashboard window', checkable=True,
-                        icon_color=self.get_theme().green,
-                        icon_checked='visibility_off',
-                        icon_checked_color=self.get_theme().red,
-                        toolbar='dashboard')
-        self.get_toolbar('dashboard').addSeparator()
+        if add_dashboard:
+            self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
+                            toolbar='dashboard')
+            self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
+                            'Show/Hide the Dashboard window', checkable=True,
+                            icon_color=self.get_theme().green,
+                            icon_checked='visibility_off',
+                            icon_checked_color=self.get_theme().red,
+                            toolbar='dashboard')
+            self.get_toolbar('dashboard').addSeparator()
+            self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
+
         if add_preset:
             self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
         if add_configurator:
             self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
-
-        self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
 
     def show_dashboard(self, show: bool = None):
         if self.dashboard is not None and self.has_action(DashBoardToolbarActions.SHOW):
