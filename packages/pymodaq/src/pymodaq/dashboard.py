@@ -41,7 +41,8 @@ from pymodaq_gui.utils.custom_app import CustomApp
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq.utils.managers.overshoot_manager import OvershootManager
+from pymodaq_gui.managers.manager_base import Menu
+from pymodaq.utils.managers.overshoot.overshooter import Overshooter
 from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
@@ -59,8 +60,10 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
+
 from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.utils.managers.configurator.configurator import Configurator
+
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
 
@@ -137,7 +140,6 @@ class DashBoard(CustomApp):
     Main class initializing a DashBoard interface to display det and move modules and logger"""
 
     status_signal = Signal(str)
-    new_preset_created = Signal()
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
     # included in CustomExt by default but Dashboard is special with that respect
@@ -151,8 +153,6 @@ class DashBoard(CustomApp):
          "limits": config("utils", "general", "debug_level"),},
         {"title": "Loaded presets", "name": "loaded_files", "type": "group",
          "children": [
-             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
-             {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True,},
@@ -180,16 +180,16 @@ class DashBoard(CustomApp):
         self.pid_window = None
         self.retriever_module = None
         self.database_module = None
-        self.extensions: dict[str, CustomApp] = dict([])
+        self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
         self.preset_manager: PresetManager = None  # instanciation in do_things_after_ui_setup
         self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None # instanciation in do_things_after_ui_setup
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
 
-        self.overshoot_manager: OvershootManager = None
 
         self.roi_saver: ROISaver = None
 
@@ -201,7 +201,6 @@ class DashBoard(CustomApp):
 
         self.modules_manager = ModulesManager()
 
-        self.overshoot = False
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
@@ -230,27 +229,40 @@ class DashBoard(CustomApp):
 
     def do_things_after_ui_setup(self):
         self.preset_manager = PresetManager(dashboard=self)
-        self.preset_manager.update_entry_base()
+        self.preset_manager.update_entry()
         self.preset_manager.entry = 'default'
-        self.preset_manager.applied_entry.connect(self.do_things_after_preset)
-        self.configurator = Configurator(dashboard=self,
-                                         preset_filename=self.preset_manager.entry)
+        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
+        self.configurator = Configurator(dashboard=self)
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
                                                       menu=self.get_menu('preset'))
+        self.preset_manager.update_menu(self.get_menu('preset'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
                                                     menu=self.get_menu('configurator'))
+        self.configurator.update_menu(self.get_menu('configurator'))
+        self.overshooter = Overshooter(dashboard=self)
+        self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
+                                                   menu=self.get_menu('overshooter'))
+
         self.get_toolbar('configurator').setEnabled(False)
+        self.get_toolbar('overshooter').setEnabled(False)
         self.preset_manager.enable_actions(True)
 
-    def do_things_after_preset(self, preset_name: str):
-        self.configurator.preset_filename = preset_name
-        self.configurator.entry = 'default'
+    def do_things_after_preset_set(self, preset_name: str):
+
+        self.configurator.update_menu(self.get_menu('configurator'))
+
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
+        self.get_menu('overshooter').setEnabled(True)
+        self.get_toolbar('overshooter').setEnabled(True)
         self.configurator.enable_actions(True)
-        self.configurator.execute_entry(self.configurator.entry_filename)
-        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+        self.overshooter.enable_actions(True)
+        self.configurator._execute_entry(self.configurator.entry_filepath)
+
+        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
+
+        self.mainwindow.show()
 
     def add_status(self, txt):
         """
@@ -423,23 +435,8 @@ class DashBoard(CustomApp):
                          add_break=False)
         self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
                          add_break=False)
-
-        self.toolbar.addSeparator()
-
-        self.add_action("new_overshoot", "New Overshoot", "",
-                        "Create a new experimental setup overshoot configuration file",
-                        auto_toolbar=False,)
-        self.add_action("modify_overshoot", "Modify Overshoot", "",
-                        "Modify an existing experimental setup overshoot configuration file",
-                        auto_toolbar=False,)
-
-        for file in get_set_overshoot_path().iterdir():
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.overshoot),
-                    file.stem,
-                    auto_toolbar=False,
-                )
+        self.add_toolbar('overshooter', 'Overshoot Toolbar', parent=self.mainwindow,
+                         add_break=False)
         self.toolbar.addSeparator()
 
         self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
@@ -465,10 +462,6 @@ class DashBoard(CustomApp):
                     "",
                     auto_toolbar=False,
                 )
-        self.add_action("activate_overshoot", "Activate overshoot", "Error",
-                        tip="if activated, apply an overshoot if one is configured",
-                        checkable=True, enabled=False,)
-
         self.toolbar.addSeparator()
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
@@ -481,19 +474,6 @@ class DashBoard(CustomApp):
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
-
-        self.connect_action("new_overshoot", self.create_overshoot)
-        self.connect_action("modify_overshoot", self.modify_overshoot)
-        self.connect_action("activate_overshoot", self.activate_overshoot)
-
-        for file in get_set_overshoot_path().iterdir():
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.overshoot),
-                    self.create_menu_slot_over(
-                        get_set_overshoot_path().joinpath(file)
-                    ),
-                )
 
         self.connect_action("save_roi", self.create_roi_file)
         self.connect_action("modify_roi", self.modify_roi)
@@ -534,9 +514,8 @@ class DashBoard(CustomApp):
         self.add_menu('preset', 'Preset', auto_menu=False)
         self.add_menu('configurator', 'Configurator', auto_menu=False)
         self.get_menu('configurator').setEnabled(False)
-
-        self.overshoot_menu = self.add_menu('overshoot', "Overshoot", auto_menu=False)
-        self.update_overshoot_menu()
+        self.add_menu('overshooter', 'Overshooter', auto_menu=False)
+        self.get_menu('overshooter').setEnabled(False)
 
         self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
         self.update_roi_menu()
@@ -551,7 +530,7 @@ class DashBoard(CustomApp):
 
         status = True
 
-        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(not status)
         settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
@@ -630,25 +609,8 @@ class DashBoard(CustomApp):
         self.logger_widget.setVisible(show)
         self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
 
-    def update_overshoot_menu(self):
-        self.overshoot_menu.clear()
-        self.overshoot_menu.addAction(self.get_action("new_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("modify_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("activate_overshoot"))
-        self.overshoot_menu.addSeparator()
-        load_overshoot_menu = self.overshoot_menu.addMenu("Load Overshoots")
-
-        for file in get_set_overshoot_path().iterdir():
-            if file.suffix == ".xml":
-                load_overshoot_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.overshoot))
-                )
-
     def create_menu_slot_roi(self, filename):
         return lambda: self.set_roi_configuration(filename)
-
-    def create_menu_slot_over(self, filename):
-        return lambda: self.set_overshoot_configuration(filename)
 
     def create_menu_slot_remote(self, filename):
         return lambda: self.set_remote_configuration(filename)
@@ -675,46 +637,9 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-
-    def create_overshoot(self):
-        try:
-            if self.preset_file is not None:
-                self.overshoot_manager.set_new_overshoot(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
-                    self.create_menu_slot_over(
-                        get_set_overshoot_path().joinpath(self.preset_file.name)
-                    ),
-                )
-        except Exception as e:
-            logger.exception(str(e))
-
     @staticmethod
     def get_action_from_file(file: Path, manager: ManagerEnums):
         return f"{file.stem}_{manager.name}"
-
-
-
-    def modify_overshoot(self):
-        try:
-            path = select_file(
-                start_path=get_set_overshoot_path(),
-                save=False,
-                ext="xml",
-            )
-            if path != "":
-                self.overshoot_manager.set_file_overshoot(path)
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
 
     def modify_roi(self):
         try:
@@ -773,6 +698,8 @@ class DashBoard(CustomApp):
                     pass
 
             self.preset_manager.quit_fun()
+            self.configurator.quit_fun()
+            self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
             for area in areas:
@@ -1257,36 +1184,6 @@ class DashBoard(CustomApp):
         else:
             return lambda: getattr(module, action["action"])()
 
-    def set_overshoot_configuration(self, filename):
-        try:
-            if not isinstance(filename, Path):
-                filename = Path(filename)
-
-            if filename.suffix == ".xml":
-                file = filename.stem
-                self.settings.child("loaded_files", "overshoot_file").setValue(file)
-                self.update_status(
-                    "Overshoot configuration ({}) has been loaded".format(file),
-                    log_type="log",
-                )
-                self.overshoot_manager.set_file_overshoot(filename, show=False)
-                self.set_action_enabled("activate_overshoot", True)
-                self.set_action_checked("activate_overshoot", False)
-                self.get_action("activate_overshoot").trigger()
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def activate_overshoot(self, status: bool):
-        try:
-            self.overshoot_manager.activate_overshoot(
-                self.detector_modules, self.actuators_modules, status
-            )
-        except Exception as e:
-            logger.warning(f"Could not load the overshoot file:\n{str(e)}")
-            self.set_action_checked("activate_overshoot", False)
-            self.set_action_enabled("activate_overshoot", False)
-
     @property
     def move_modules(self):
         """
@@ -1296,7 +1193,7 @@ class DashBoard(CustomApp):
 
     @property
     def preset_file(self) -> Path:
-        return self.preset_manager.entry_filename
+        return self.preset_manager.entry_filepath
 
     def update_init_tree(self):
         for act in self.actuators_modules:
@@ -1334,10 +1231,6 @@ class DashBoard(CustomApp):
                 logger.warning(f"Stopping the DAQScan for out of bounds")
                 self.extensions[ExtensionEnum.SCAN].stop_scan()
 
-    def stop_moves_from_overshoot(self, overshoot):
-        self.overshoot = overshoot
-        self.stop_moves()
-
     def stop_moves(self, *args, **kwargs):
         """
         Foreach module of the move module object list, stop motion.
@@ -1371,10 +1264,6 @@ class DashBoard(CustomApp):
         self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.remote_widget.setVisible(False)
 
-
-    @property
-    def menubar(self):
-        return self._menubar
 
     def value_changed(self, param: Parameter):
         if param.name() == "log_level":
@@ -1490,11 +1379,11 @@ def load_dashboard_with_preset(preset_name: str,
 
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
-        dashboard.preset_manager.execute_entry_base(preset_path)
+        dashboard.preset_manager.execute_entry(preset_path)
         if configuration_name is not None:
             configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
             dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry_base(configuration_path)
+            dashboard.configurator.execute_entry(configuration_path)
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
@@ -1538,10 +1427,12 @@ def main():
                                                                configuration_name=args.config
                                                                )
 
+
     # If no command-line arguments are supplied, start empty
     else:
         win, dashboard = create_load_dashboard()
-        win.show()
+
+    win.show()
 
     # Run application
     sys.exit(app.exec())

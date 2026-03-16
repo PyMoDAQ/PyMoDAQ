@@ -851,7 +851,10 @@ class ActionManager:
     def set_action_enabled(self, action_name: str, enabled=True):
         """Set the EnabledState of a given action or a list of actions"""
         if action_name in self._actions:
-            self._actions[action_name].setEnabled(enabled)
+            if hasattr(self._actions[action_name], 'widget'):
+                self._actions[action_name].widget.setEnabled(enabled)  # action proxy with widget
+            else:
+                self._actions[action_name].setEnabled(enabled)
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')

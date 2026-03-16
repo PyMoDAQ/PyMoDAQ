@@ -23,7 +23,7 @@ def dashboard(init_qt):
     qtbot.addWidget(shared_ui.mainwindow)
     shared_ui.show()
 
-    dashboard.preset_manager.execute_entry()
+    # dashboard.preset_manager.execute_entry()
     yield dashboard
     dashboard.quit_fun()
 

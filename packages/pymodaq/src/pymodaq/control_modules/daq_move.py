@@ -163,6 +163,12 @@ class DAQ_Move(ParameterControlModule):
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.get_actuator_value)
 
+    @property
+    def current_value(self) -> DataActuator:
+        if self._current_value.origin is None:
+            self.current_value.origin = self.title
+        return self._current_value
+
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
 
@@ -274,6 +280,11 @@ class DAQ_Move(ParameterControlModule):
             self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.STOP_MOTION))
         except Exception as e:
             self.logger.exception(str(e))
+
+    def stop_module(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_motion()
+        self.stop_grab()
 
     def move(self, move_command: MoveCommand):
         """Generic method to trigger the correct action on the actuator
@@ -597,6 +608,7 @@ class DAQ_Move(ParameterControlModule):
                 self.ui.move_done = True
             self._current_value = data_act
             self._move_done_bool = True
+            data_act.origin = data_act.origin if data_act.origin is not (None or '') else self.title
             self.move_done_signal.emit(data_act)
             if (
                 self.settings.child("main_settings", "tcpip", "tcp_connected").value()
