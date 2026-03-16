@@ -23,6 +23,6 @@ class TestGeneral:
         qtbot.addWidget(shared_ui.mainwindow)
         shared_ui.show()
 
-        dashboard.preset_manager._execute_entry()
+        dashboard.preset_manager.execute_entry()
 
         dashboard.quit_fun()
