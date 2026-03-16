@@ -118,7 +118,7 @@ def test_signals(ini_daq_viewer_ui):
 @pytestmark
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
-    IND_det_type = 2
+    IND_det_type = 1
     daq_type = DAQTypesEnum[DAQTypesEnum.names()[IND_daq_type]]
     det_name = options[daq_type.name][IND_det_type]
 

@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from importlib import import_module
 
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable, Type
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -24,10 +24,13 @@ import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
+from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
+    DashboardActorListener, LECOComponentMixin
+from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
+from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val, ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
@@ -135,10 +138,9 @@ class PymodaqUpdateTableWidget(QTableWidget):
         return QSize(width, height)
 
 
-class DashBoard(CustomApp):
+class DashBoard(CustomApp, LECOComponentMixin):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger"""
-
     status_signal = Signal(str)
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
@@ -169,7 +171,8 @@ class DashBoard(CustomApp):
         ----------
         """
 
-        super().__init__(parent)
+        CustomApp.__init__(self, parent)
+        LECOComponentMixin.__init__(self, DashboardActorListener)
 
         logger.info("Initializing Dashboard")
         self.extra_params = []
@@ -206,6 +209,8 @@ class DashBoard(CustomApp):
 
         self.compact_actuator_manager: ActuatorCompactDock = None
         self.compact_detector_manager: DetectorCompactDock = None
+
+        self._scripted_preset_load = False
 
         self.setup_ui()
 
@@ -247,10 +252,12 @@ class DashBoard(CustomApp):
         self.get_toolbar('overshooter').setEnabled(False)
         self.preset_manager.enable_actions(True)
 
+        self.connect_leco(connect=True)
+
+
     def do_things_after_preset_set(self, preset_name: str):
 
         self.configurator.update_menu(self.get_menu('configurator'))
-
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
         self.get_menu('overshooter').setEnabled(True)
@@ -262,7 +269,52 @@ class DashBoard(CustomApp):
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
-        self.mainwindow.show()
+        if self._scripted_preset_load:
+            self._scripted_preset_load = False
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, True))
+
+    def get_leco_name(self) -> str:
+        return "dashboard"
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        host = config.get(("main_settings", "leco", "host"), 'localhost')
+        port = config.get(("main_settings", "leco", "port"), '12300')
+
+        return host, port
+
+
+    def process_leco_commands(self, status: ThreadCommand) -> None:
+        if status.command == LECODashboardCommands.GET_DEVICES:
+            devices = {
+                'actuators': [ actuator.get_leco_name() for actuator in self.actuators_modules],
+                'detectors': [ detector.get_leco_name() for detector in self.detector_modules]
+            }
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
+        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
+        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            configuration = status.attribute
+            loaded = False
+            if (configuration in self.configurator.entries and
+                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            ):
+
+                self.configurator.entry = configuration
+                self.configurator.execute_entry_base(self.configurator.entry_filename)
+                loaded = True
+
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+        elif status.command == LECODashboardCommands.GET_PRESETS:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
+        elif status.command == LECODashboardCommands.APPLY_PRESET:
+            preset = status.attribute
+            if preset not in self.preset_manager.entries:
+                self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, False))
+            else:
+                self._scripted_preset_load = True
+                self.preset_manager.entry = preset
+                self.preset_manager.execute_entry_base(self.preset_manager.entry_filename)
 
     def add_status(self, txt):
         """
@@ -663,6 +715,7 @@ class DashBoard(CustomApp):
         quit_fun
         """
         try:
+            self.connect_leco(connect=False)
             self.remote_timer.stop()
 
             for ext in self.extensions:
@@ -1194,6 +1247,10 @@ class DashBoard(CustomApp):
     @property
     def preset_file(self) -> Path:
         return self.preset_manager.entry_filepath
+
+    @property
+    def preset_name(self) -> str:
+        return self.preset_manager.entry
 
     def update_init_tree(self):
         for act in self.actuators_modules:

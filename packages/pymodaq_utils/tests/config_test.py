@@ -299,6 +299,3 @@ def test_required_config_entries():
     assert 'host' in config('network', 'leco-server')
     assert 'port' in config('network', 'leco-server')
 
-    assert 'tcp-server' in config('network')
-    assert 'ip' in config('network', 'tcp-server')
-    assert 'port' in config('network', 'tcp-server')

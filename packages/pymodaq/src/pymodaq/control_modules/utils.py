@@ -21,8 +21,7 @@ from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.h5modules.saving import H5Saver
 
-from pymodaq.utils.tcp_ip.tcp_server_client import TCPClient
-from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands
+from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands, LECOComponentMixin
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.control_modules.thread_commands import ThreadStatus
 
@@ -63,28 +62,18 @@ def create_controller_param(axis_name: str = None, axis_names: Optional[list[str
 
 
 def create_remote_connection_params() -> list[dict]:
-    """Create common remote connection parameter definitions (TCP/IP and LECO)
+    """Create common remote connection parameter definitions (LECO)
 
     These parameters are shared between DAQ_Move and DAQ_Viewer control modules
-    and provide the settings for connecting to remote TCP/IP servers or LECO instances.
+    and provide the settings for connecting to LECO instances.
 
     Returns
     -------
     list of dict
-        Parameter definitions for TCP/IP and LECO remote connections
+        Parameter definitions for LECO remote connections
     """
     return [
-        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True,
-         'expanded': False, 'children': [
-            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push',
-             'label': 'Connect', 'value': False},
-            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
-             VALID_FOR_CONFIGURATION: False, 'readonly': True},
-            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-             'value': config('utils', 'network', 'tcp-server', 'ip')},
-            {'title': 'Port:', 'name': 'port', 'type': 'int',
-             'value': config('utils', 'network', 'tcp-server', 'port')},
-        ]},
+
         {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True,
          'expanded': False, 'children': [
             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push',
@@ -111,14 +100,11 @@ class ControlModule(QObject):
         This signal is emitted when the chosen hardware is correctly initialized
     command_hardware : Signal[ThreadCommand]
         This signal is used to communicate with the instrument plugin within a separate thread
-    command_tcpip : Signal[ThreadCommand]
-        This signal is used to communicate through the TCP/IP Network
     quit_signal : Signal[]
         This signal is emitted when the user requested to stop the module
     """
     init_signal = Signal(bool)
     command_hardware = Signal(ThreadCommand)
-    _command_tcpip = Signal(ThreadCommand)
     quit_signal = Signal()
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
@@ -126,15 +112,16 @@ class ControlModule(QObject):
     ui = None
 
     def __init__(self):
-        super().__init__()
+        QObject.__init__(self)
         self._title = ""
         self.config = config
         # the hardware controller instance set after initialization and to be used by other modules if they share the
         # same controller
         self.controller = None
         self._initialized_state = False
-        self._send_to_tcpip = False
-        self._tcpclient_thread = None
+        self._send_to_leco = False
+        self._send_to_leco = False
+        self._send_to_leco = False
         self._hardware_thread = None
 
         self._h5saver: Optional[H5Saver] = None
@@ -404,16 +391,14 @@ class ControlModule(QObject):
                         attr = value
 
 
-class ParameterControlModule(ParameterManager, ControlModule):
+class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)
 
-    listener_class: Type[ActorListener] = ActorListener
-
-    def __init__(self, **kwargs):
-        action_list = kwargs.get("action_list", ("search", "save", "update"))
-        ParameterManager.__init__(self, action_list=action_list)
+    def __init__(self, listener_class = Type[ActorListener], **kwargs):
+        ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
+        LECOComponentMixin.__init__(self, listener_class)
         ControlModule.__init__(self)
 
     def apply_controller_parameters(self, controller_param: Parameter):
@@ -444,19 +429,7 @@ class ParameterControlModule(ParameterManager, ControlModule):
         param: Parameter
             a given parameter whose value has been changed by user
         """
-        if param.name() == 'connect_server':
-            if param.value():
-                self.connect_tcp_ip()
-            else:
-                self._command_tcpip.emit(ThreadCommand('quit', ))
-
-        elif param.name() == 'ip_address' or param.name == 'port':
-            self._command_tcpip.emit(
-                ThreadCommand('update_connection',
-                              dict(ipaddress=self.settings['main_settings', 'tcpip', 'ip_address'],
-                                   port=self.settings['main_settings', 'tcpip', 'port'])))
-
-        elif param.name() == 'connect_leco_server':
+        if param.name() == 'connect_leco_server':
             self.connect_leco(param.value())
 
         elif param.name() == "name":
@@ -476,125 +449,57 @@ class ParameterControlModule(ParameterManager, ControlModule):
         if path is not None:
             if 'main_settings' not in path:
                 self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
-                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
                 if self.settings.child('main_settings', 'leco', 'leco_connected').value():
-                    self._command_tcpip.emit(
+                    self._leco_commands_signal.emit(
                         ThreadCommand(LECOCommands.SEND_INFO,
                                       ParameterWithPath(param, path)))
 
-    def connect_tcp_ip(self, params_state=None, client_type: str = "GRABBER") -> None:
-        """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
-
-        Use the settings: ip_address and port to specify the connection
-
-        See Also
-        --------
-        TCPServer
-        """
-        if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
-            self._tcpclient_thread = QThread()
-
-            tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
-                                  self.settings.child('main_settings', 'tcpip', 'port').value(),
-                                  params_state=params_state,
-                                  client_type=client_type)
-            tcpclient.moveToThread(self._tcpclient_thread)
-            self._tcpclient_thread.tcpclient = tcpclient
-            tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
-
-            self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
-            self._tcpclient_thread.started.connect(tcpclient.init_connection)
-
-            self._tcpclient_thread.start()
 
     def get_leco_name(self) -> str:
-        name = self.settings["main_settings", "leco", "leco_name"]
-        if name == '':
-            # take the module name as alternative
-            name = self.settings["main_settings", "module_name"]
-        if name == '':
-            # a name is required, invent one
-            name = f"viewer_{randint(0, 10000)}"
-            name = self.settings.child("main_settings", "leco", "leco_name").setValue(name)
+        name = (self.settings["main_settings", "leco", "leco_name"] or
+                self.settings["main_settings", "module_name"] or
+                f"viewer_{randint(0, 10000)}"
+                )
+        self.settings.child("main_settings", "leco", "leco_name").setValue(name)
         return name
 
-    def get_leco_host_port(self) -> tuple:
-        host = self.settings["main_settings", "leco", "host"]
-        port = self.settings["main_settings", "leco", "port"]
-        if host == '':
-            # take the localhost as default
-            host = 'localhost'
-        if port == '':
-            # take the default port as 12300
-            port = 12300
-        return (host, port)    
+    def get_leco_host_port(self) -> tuple[str, int]:
+        host = (self.settings["main_settings", "leco", "host"] or 'localhost')
+        port = (self.settings["main_settings", "leco", "port"] or 12300)
 
-    def connect_leco(self, connect: bool) -> None:
-        if connect:
-            name = self.get_leco_name()
-            host, port = self.get_leco_host_port()
-            try:
-                self._leco_client.name = name
-            except AttributeError:
-                self._leco_client = self.listener_class(name=name, host=host, port=port)
-                self._leco_client.cmd_signal.connect(self.process_tcpip_cmds)
-            self._command_tcpip[ThreadCommand].connect(self._leco_client.queue_command)
-            self._leco_client.start_listen()
-            # self._leco_client.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=["detector_settings", ""]))
-        else:
-            self._command_tcpip.emit(ThreadCommand(LECOCommands.QUIT, ))
-            try:
-                self._command_tcpip[ThreadCommand].disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+        return host, port
+
 
     @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status: ThreadCommand) -> Optional[ThreadCommand]:
-        if status.command == 'connected':
-            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
+    def process_leco_commands(self, status: ThreadCommand) -> Optional[ThreadCommand]:
+        """Process LECO commands common to all control modules.
 
-        elif status.command == 'disconnected':
-            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+        Parameters
+        ----------
+        status: ThreadCommand
+            Possible commands are:
 
-        elif status.command == LECOClientCommands.LECO_CONNECTED:
+            * :attr:`LECOClientCommands.LECO_CONNECTED`: mark the LECO connection as active in the settings.
+            * :attr:`LECOClientCommands.LECO_DISCONNECTED`: mark the LECO connection as inactive in the settings.
+            * :attr:`LECOCommands.GET_SETTINGS`: send the module settings back to the Director as an XML string.
+        Returns
+        -------
+        Optional[ThreadCommand]
+            ``None`` if the command was handled, or the original command object if it is not recognized by this
+             implementation (so subclasses can continue processing it).
+        """
+        if status.command == LECOClientCommands.LECO_CONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
-
         elif status.command == LECOClientCommands.LECO_DISCONNECTED:
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
-
-        elif status.command == 'Update_Status':
-            self.thread_status(status)
-
-        elif status.command == 'set_info':
-            """ The Director sent a parameter to be updated"""
-            path_in_settings = status.attribute.path
-            if 'move' in self.__class__.__name__.lower():
-                common_param = 'move_settings'
-            else:
-                common_param = 'detector_settings'
-            if common_param in path_in_settings:
-                param = self.settings.child(*path_in_settings)
-            elif 'settings_client' in path_in_settings:
-                param = self.settings.child(common_param, *path_in_settings[1:])
-            else:
-                param = self.settings.child(common_param, *path_in_settings)
-
-            param.setValue(status.attribute.parameter.value())
-
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""
-            if 'move' in self.__class__.__name__.lower():
-                common_param = 'move_settings'
-            else:
-                common_param = 'detector_settings'
-            self._command_tcpip.emit(
-                ThreadCommand(LECOCommands.SET_DIRECTOR_SETTINGS,
-                              ioxml.parameter_to_xml_string(
-                                  self.settings.child(common_param))))
-
+            common_param = 'move_settings' if 'move' in self.__class__.__name__.lower() else 'detector_settings'
+            settings_xml = ioxml.parameter_to_xml_string(self.settings.child(common_param))
+            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.SET_DIRECTOR_SETTINGS, settings_xml))
         else:
             # not handled
             return status
+        return None
 
 
