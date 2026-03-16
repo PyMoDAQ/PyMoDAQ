@@ -69,6 +69,7 @@ def create_extension(dashboard: 'DashBoard',
         window.setCentralWidget(dockarea)
 
     extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
+
     shared_ui = SharedUI(window)
     shared_ui.affect_application(extension)
     shared_ui.mainwindow.addToolBar(extension.get_toolbar('dashboard'))

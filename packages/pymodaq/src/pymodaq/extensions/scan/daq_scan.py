@@ -12,7 +12,6 @@ from pathlib import Path
 import tempfile
 from typing import List, Tuple, TYPE_CHECKING
 
-
 import numpy as np
 from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
@@ -891,7 +890,7 @@ class DAQScan(CustomExt):
                     pass
 
             if not self.batch_started:
-                if not self.dashboard.overshoot and self.settings['scan_options', 'go_to_ini_positions']:
+                if self.settings['scan_options', 'go_to_ini_positions']:
                     self.set_ini_positions()
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
@@ -1057,7 +1056,6 @@ class DAQScan(CustomExt):
             set_scan
         """
         self.ui.display_status('Starting acquisition')
-        self.dashboard.overshoot = False
         #deactivate double_clicked
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
@@ -1161,6 +1159,11 @@ class DAQScan(CustomExt):
             self.modules_manager.connect_actuators()
             self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
             self.modules_manager.connect_actuators(False)
+
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+        """
+        self.stop_scan()
 
     def stop_scan(self):
         """

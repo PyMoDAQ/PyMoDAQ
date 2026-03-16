@@ -377,7 +377,8 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_group(group_name, GroupType.data, where, title, metadata)
         return group
 
-    def add_incremental_group(self, group_type: Union[str, GroupType, enum.Enum], where, title='', settings_as_xml='', metadata=None):
+    def add_incremental_group(self, group_type: Union[str, GroupType, enum.Enum], where, title='', settings_as_xml='',
+                              metadata=None):
         """
         Add a node in the h5 file tree of the group type with an increment in the given name
         Parameters

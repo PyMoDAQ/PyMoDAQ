@@ -30,7 +30,7 @@ def ini_configurator(init_qt):
     configurator = Configurator()
     configurator.settings = Path(__file__).parent.joinpath('settings.xml')
 
-    configurator.update_entry_base()
+    configurator.update_entry()
     qtbot.addWidget(configurator.mainwindow)
     configurator.mainwindow.show()
     qtbot.addWidget(external_ui)

@@ -121,6 +121,13 @@ class DataMixer(CustomExt):
         self.add_action('create_computed_detectors', 'Create Computed Detectors', 'Add_Step',
                         tip='Create a DAQ_Viewer Control Module')
 
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+
+        Irrelevant for the DataMixer as it doesn't do anything on the control modules
+        """
+        pass
+
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods"""
         self.connect_action('models', self.update_model_settings_from_action, signal_name='currentTextChanged')
