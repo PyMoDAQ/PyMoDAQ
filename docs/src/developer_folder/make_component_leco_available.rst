@@ -4,7 +4,7 @@ Making a PyMoDAQ Component Available Through LECO
 ==================================================
 
 This page is a developer guide explaining how to expose an existing PyMoDAQ component
-over the PyMoDAQ intergrated `LECO`_ network.  The ``DashBoard`` class is used as a running example
+over the PyMoDAQ integrated `LECO`_ network.  The ``DashBoard`` class is used as a running example
 throughout.
 
 A second section covers the **scripting side**: once a component is LECO-enabled,
@@ -99,7 +99,7 @@ For example,  ``DashBoard`` inherits both ``CustomApp`` and
 
 .. warning::
 
-    All listeners (``DashboardActorListerner``, ``MoveActorListener``, ...)
+    All listeners (``DashboardActorListener``, ``MoveActorListener``, ...)
     are actually aliases for ``ActorListener``
 
 Step 2 – Define Command Enumerations
