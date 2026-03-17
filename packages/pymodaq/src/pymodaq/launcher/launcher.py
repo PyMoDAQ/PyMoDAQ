@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QDate, Signal, Qt
@@ -35,11 +35,14 @@ from pymodaq.extensions.daq_logger import main as logger_main
 
 logger = set_logger(get_module_name(__file__))
 
-class EnumToolTip(Enum) :
+class EnumToolTip(StrEnum) :
     DASHBOARD = 'Launch an empty Dashboard without configuration'
     VIEWER = 'Launch an empty Viewer'
     MOVE = 'Launch an empty DAQ_Move'
     H5BROWSER = 'Launch H5Browser'
+    BACK_HISTORY = 'Navigate to the back item of presets history'
+    NEXT_HISTORY = 'Navigate to the next item of presets history'
+    RESTORE = 'Restore this preset with the selected configurator'
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
@@ -70,17 +73,10 @@ class Launcher(CustomApp):
         self.h5browser_button = QPushButton("H5Browser")
 
         # Loader
-        #self.listView = TreeLayout()
-        #self.listView = QListView()
 
         # Header
-        self.box_label = QLabel("2026/03/02 at 16h45")
-        self.back_button = QPushButton("←")
-        self.next_button = QtWidgets.QAction()
-        icon = create_icon('keyboard_arrow_right')
-        self.next_button.setIcon(icon)
+        self.box_label = QLabel("2026/03/02 at 16h45") # debug only
         self.date_label = QLabel("Date :")
-        self.launch_button = QPushButton("Launch")
 
         self.setup_ui()
 
@@ -89,18 +85,18 @@ class Launcher(CustomApp):
         subclass method from ActionManager
         '''
         self.add_action('launch_dashboard', 'Launch empty dashboard', '',
-                        EnumToolTip.DASHBOARD.value, auto_toolbar=True,
+                        EnumToolTip.DASHBOARD, auto_toolbar=True,
                         toolbar='launcher')
-        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER.value, auto_toolbar=False)
-        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE.value, auto_toolbar=False)
-        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER.value, auto_toolbar=False)
+        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER, auto_toolbar=False)
+        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE, auto_toolbar=False)
+        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
 
-        self.add_action('back_config', 'Back', 'keyboard_arrow_left', '', auto_toolbar=True, toolbar='header')
+        self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True, toolbar='header')
         self.get_toolbar('header').addWidget(self.date_label)
         self.get_toolbar('header').addWidget(self.box_label)
         self.add_action('load_default_dashboard', 'Restore',
-                        'open_in_new', '', auto_toolbar=True, toolbar='header')
-        self.add_action('next_config', 'Next', 'keyboard_arrow_right', '', auto_toolbar=True, toolbar='header')
+                        'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
+        self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True, toolbar='header')
 
         # setup_actions is called after setup_docks; style the action button here once it exists.
         button = self.get_toolbar('header').widgetForAction(self.get_action('load_default_dashboard'))
@@ -140,9 +136,6 @@ class Launcher(CustomApp):
 
         self.set_header()
 
-        # /!\ TEST !!!
-
-
         widget = QWidget()
         widget.setLayout(self.main_HBox)
         self.mainwindow.setCentralWidget(widget)
@@ -159,7 +152,6 @@ class Launcher(CustomApp):
         subclass method from CustomApp
         '''
         logger.debug('connecting things')
-        # self.actions['quit'].connect(self.quit_fun)
         logger.debug('connecting done')
 
         self.connect_action('launch_dashboard', lambda: self.launch_empty_dashboard())
@@ -173,7 +165,7 @@ class Launcher(CustomApp):
         self.move_button.clicked.connect(self.get_action('launch_move').trigger)
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
 
-        # Debug
+        # Header of loader section
         self.connect_action('back_config', lambda: self.do_back())
         self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_default_preset())
         self.connect_action('next_config', lambda: self.do_next())
@@ -196,26 +188,26 @@ class Launcher(CustomApp):
             else:
                 self.settings.child('main_settings', 'something_done').setValue(False)
 
-        # if isinstance(self.dashboard, DashBoard) :
-        #     self.dashboard_button.setStyleSheet("background-color: blue")
-
         logger.debug(f'Value change applied')
 
     def set_launcher_vbox(self):
+        """ Set widgets in QVBox launcher section"""
         self.launcher_VBox.addWidget(self.dashboard_button)
         self.launcher_VBox.addWidget(self.viewer_button)
         self.launcher_VBox.addWidget(self.move_button)
         self.launcher_VBox.addWidget(self.h5browser_button)
         self.launcher_VBox.addStretch(1)
+
+        # Add a toolbar to compare button vs action approaches
         self.launcher_VBox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
 
     def set_tooltip_button(self):
-        self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD.value)
-        self.viewer_button.setToolTip(EnumToolTip.VIEWER.value)
-        self.move_button.setToolTip(EnumToolTip.MOVE.value)
-        self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER.value)
+        self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
+        self.viewer_button.setToolTip(EnumToolTip.VIEWER)
+        self.move_button.setToolTip(EnumToolTip.MOVE)
+        self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER)
 
     def set_box_label_apparence(self):
         self.box_label.setStyleSheet(
@@ -239,14 +231,6 @@ class Launcher(CustomApp):
         logger_main()
 
     def set_header(self):
-        # self.header_HBox.addWidget(self.back_button)
-        # self.header_HBox.addWidget(self.date_label)
-        # self.header_HBox.addWidget(self.box_label)
-        # self.header_HBox.addStretch(1)
-        # self.header_HBox.addWidget(self.launch_button)
-        # self.header_HBox.addWidget(self.next_button)
-
-
         self.header_HBox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
         # setup_docks runs before setup_actions, so the action may not exist yet.
         if self.has_action('load_default_dashboard'):
@@ -321,8 +305,8 @@ class Launcher(CustomApp):
 
         """
         self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
-            preset_name="Test",
-            configuration_name="Test1",
+            preset_name="default",
+            configuration_name="default",
         )
         self._dashboard_shared_ui.show()
 
@@ -400,15 +384,13 @@ def main() :
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
 
-    screen = QApplication.screenAt(QCursor.pos())
-    size = screen.size()
+    # Calculate width and height as a screen ratio
+    # screen = QApplication.screenAt(QCursor.pos())
+    # size = screen.size()
 
-    fen.resize(1000, 800)
-    print(size.width(), size.height())
+    fen.resize(800, 400)
 
     fen.show()
-
-    #prog.print_presets()
 
     sys.exit(app.exec())
 
