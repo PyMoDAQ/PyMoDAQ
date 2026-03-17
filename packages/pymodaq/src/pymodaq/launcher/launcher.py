@@ -1,10 +1,10 @@
 import subprocess
 import sys
+from enum import StrEnum
+from typing import Any, cast
 
-from enum import Enum, StrEnum
-
-from qtpy import QtCore, QtWidgets, QtGui
-from qtpy.QtCore import QDate, Signal, Qt
+from qtpy import QtCore, QtWidgets
+from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -12,26 +12,17 @@ from qtpy.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
-    QSizePolicy,
-    QApplication
 )
-from qtpy.QtGui import QCursor
 
-from pymodaq.utils.managers.configurator.utils import ConfiguratorTableView
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq.utils.managers.modules.utils import ModuleType
-from pymodaq_gui.utils import CustomApp, QSpinBox_ro
-from pymodaq_gui import config
-from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.dashboard import load_dashboard_with_preset
-from pymodaq_gui.utils.styling import create_icon
-from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
+from pymodaq.extensions.daq_logger import main as logger_main
+from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq.utils.shared_ui import SharedUI
+from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
-from typing import Any, cast
-
-from pymodaq.extensions.daq_logger import main as logger_main
 
 logger = set_logger(get_module_name(__file__))
 
@@ -61,10 +52,10 @@ class Launcher(CustomApp):
         self.preset_manager = PresetManager()
 
         # Layout
-        self.main_HBox = QHBoxLayout()
-        self.launcher_VBox = QVBoxLayout()
-        self.loader_VBox = QVBoxLayout()
-        self.header_HBox = QHBoxLayout()
+        self.main_hbox = QHBoxLayout()
+        self.launcher_vbox = QVBoxLayout()
+        self.loader_vbox = QVBoxLayout()
+        self.hbox = QHBoxLayout()
 
         # Launcher
         self.dashboard_button = QPushButton("Dashboard")
@@ -92,14 +83,14 @@ class Launcher(CustomApp):
         self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
 
         self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True, toolbar='header')
-        self.get_toolbar('header').addWidget(self.date_label)
-        self.get_toolbar('header').addWidget(self.box_label)
+        self.header_toolbar.addWidget(self.date_label)
+        self.header_toolbar.addWidget(self.box_label)
         self.add_action('load_default_dashboard', 'Restore',
                         'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
         self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True, toolbar='header')
 
         # setup_actions is called after setup_docks; style the action button here once it exists.
-        button = self.get_toolbar('header').widgetForAction(self.get_action('load_default_dashboard'))
+        button = self.header_toolbar.widgetForAction(self.get_action('load_default_dashboard'))
         if isinstance(button, QtWidgets.QToolButton):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
@@ -110,7 +101,7 @@ class Launcher(CustomApp):
         '''
         Configuration des layouts et widgets
         '''
-        self.launcher_VBox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        self.launcher_vbox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.set_box_label_apparence()
 
         # Set tooltip buttons
@@ -122,11 +113,11 @@ class Launcher(CustomApp):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         separator.setStyleSheet("color: black;")
 
-        self.main_HBox.addLayout(self.launcher_VBox)
-        self.main_HBox.addWidget(separator)
-        self.main_HBox.addLayout(self.loader_VBox, 1)
-        self.loader_VBox.addLayout(self.header_HBox)
-        self.loader_VBox.layout().addWidget(self.settings_tree)
+        self.main_hbox.addLayout(self.launcher_vbox)
+        self.main_hbox.addWidget(separator)
+        self.main_hbox.addLayout(self.loader_vbox, 1)
+        self.loader_vbox.addLayout(self.hbox)
+        self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
         self.show_preset_titles_only(self.preset_manager.entry_filename)
@@ -137,7 +128,7 @@ class Launcher(CustomApp):
         self.set_header()
 
         widget = QWidget()
-        widget.setLayout(self.main_HBox)
+        widget.setLayout(self.main_hbox)
         self.mainwindow.setCentralWidget(widget)
 
         logger.debug('docks are set')
@@ -192,14 +183,14 @@ class Launcher(CustomApp):
 
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
-        self.launcher_VBox.addWidget(self.dashboard_button)
-        self.launcher_VBox.addWidget(self.viewer_button)
-        self.launcher_VBox.addWidget(self.move_button)
-        self.launcher_VBox.addWidget(self.h5browser_button)
-        self.launcher_VBox.addStretch(1)
+        self.launcher_vbox.addWidget(self.dashboard_button)
+        self.launcher_vbox.addWidget(self.viewer_button)
+        self.launcher_vbox.addWidget(self.move_button)
+        self.launcher_vbox.addWidget(self.h5browser_button)
+        self.launcher_vbox.addStretch(1)
 
         # Add a toolbar to compare button vs action approaches
-        self.launcher_VBox.addWidget(self.add_toolbar('launcher'))
+        self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
 
@@ -231,14 +222,15 @@ class Launcher(CustomApp):
         logger_main()
 
     def set_header(self):
-        self.header_HBox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
+        self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
+        self.header_toolbar = self.get_toolbar('header')
         # setup_docks runs before setup_actions, so the action may not exist yet.
         if self.has_action('load_default_dashboard'):
-            button = self.get_toolbar('header').widgetForAction(self.get_action('load_default_dashboard'))
+            button = self.header_toolbar.widgetForAction(self.get_action('load_default_dashboard'))
             if isinstance(button, QtWidgets.QToolButton):
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
-        self.get_toolbar('header').layout().setSpacing(20)
+        self.header_toolbar.layout().setSpacing(20)
 
     @staticmethod
     def _module_display_title(module_param) -> str:
