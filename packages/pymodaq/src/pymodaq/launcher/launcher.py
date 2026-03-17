@@ -3,9 +3,8 @@ import sys
 
 from enum import Enum
 
-from PyQt6.QtGui import QIcon
 from qtpy import QtCore, QtWidgets, QtGui
-from qtpy.QtCore import QDate, Signal
+from qtpy.QtCore import QDate, Signal, Qt
 from qtpy.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -13,21 +12,28 @@ from qtpy.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
+    QApplication
 )
+from qtpy.QtGui import QCursor
 
 from pymodaq.utils.managers.configurator.utils import ConfiguratorTableView
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq_gui.utils import CustomApp
-from pymodaq_gui import config, logger
+from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq_gui.utils import CustomApp, QSpinBox_ro
+from pymodaq_gui import config
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq.dashboard import load_dashboard_with_preset
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
+from pymodaq_utils import set_logger
+from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 from typing import Any, cast
 
 from pymodaq.extensions.daq_logger import main as logger_main
 
+logger = set_logger(get_module_name(__file__))
 
 class EnumToolTip(Enum) :
     DASHBOARD = 'Launch an empty Dashboard without configuration'
@@ -88,8 +94,19 @@ class Launcher(CustomApp):
         self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER.value, auto_toolbar=False)
         self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE.value, auto_toolbar=False)
         self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER.value, auto_toolbar=False)
-        self.add_action('load_default_dashboard', 'Load a default dashboard',
-                        'keyboard_arrow_right', '', auto_toolbar=True, toolbar='header')
+
+        self.add_action('back_config', 'Back', 'keyboard_arrow_left', '', auto_toolbar=True, toolbar='header')
+        self.get_toolbar('header').addWidget(self.date_label)
+        self.get_toolbar('header').addWidget(self.box_label)
+        self.add_action('load_default_dashboard', 'Restore',
+                        'open_in_new', '', auto_toolbar=True, toolbar='header')
+        self.add_action('next_config', 'Next', 'keyboard_arrow_right', '', auto_toolbar=True, toolbar='header')
+
+        # setup_actions is called after setup_docks; style the action button here once it exists.
+        button = self.get_toolbar('header').widgetForAction(self.get_action('load_default_dashboard'))
+        if isinstance(button, QtWidgets.QToolButton):
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
 
 
 
@@ -116,7 +133,7 @@ class Launcher(CustomApp):
         self.loader_VBox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
-        self.settings = self.preset_manager.entry_filename
+        self.show_preset_titles_only(self.preset_manager.entry_filename)
 
 
         self.set_launcher_vbox()
@@ -157,8 +174,12 @@ class Launcher(CustomApp):
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
 
         # Debug
+        self.connect_action('back_config', lambda: self.do_back())
         self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_default_preset())
-        self.launch_button.clicked.connect(self.get_action('load_default_dashboard').trigger)
+        self.connect_action('next_config', lambda: self.do_next())
+
+
+
 
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
@@ -189,6 +210,7 @@ class Launcher(CustomApp):
         self.launcher_VBox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
+
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD.value)
         self.viewer_button.setToolTip(EnumToolTip.VIEWER.value)
@@ -217,19 +239,78 @@ class Launcher(CustomApp):
         logger_main()
 
     def set_header(self):
-        self.header_HBox.addWidget(self.back_button)
-        self.header_HBox.addWidget(self.date_label)
-        self.header_HBox.addWidget(self.box_label)
-        self.header_HBox.addStretch(1)
-        self.header_HBox.addWidget(self.launch_button)
-        #self.header_HBox.addWidget(self.next_button)
+        # self.header_HBox.addWidget(self.back_button)
+        # self.header_HBox.addWidget(self.date_label)
+        # self.header_HBox.addWidget(self.box_label)
+        # self.header_HBox.addStretch(1)
+        # self.header_HBox.addWidget(self.launch_button)
+        # self.header_HBox.addWidget(self.next_button)
+
 
         self.header_HBox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
+        # setup_docks runs before setup_actions, so the action may not exist yet.
+        if self.has_action('load_default_dashboard'):
+            button = self.get_toolbar('header').widgetForAction(self.get_action('load_default_dashboard'))
+            if isinstance(button, QtWidgets.QToolButton):
+                button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.get_toolbar('header').layout().setSpacing(20)
+
+    @staticmethod
+    def _module_display_title(module_param) -> str:
+        name_param = module_param.child('name')
+        if name_param is not None and name_param.value() not in (None, ''):
+            return str(name_param.value())
+
+        module_title = module_param.title()
+        if module_title:
+            return str(module_title)
+
+        return str(module_param.name())
+
+    def _build_summary_group(self, preset_settings, module_type: ModuleType, group_title: str) -> dict:
+        group_param = preset_settings.child(module_type.value)
+        children = []
+
+        if group_param is not None:
+            for ind_module, module_param in enumerate(group_param.children()):
+                children.append({
+                    'title': self._module_display_title(module_param),
+                    'name': f'{module_type.value}_title_{ind_module:02d}',
+                    'type': 'group',
+                })
+
+        return {
+            'title': group_title,
+            'name': f'{module_type.value}_summary',
+            'type': 'group',
+            'expanded': True,
+            'children': children,
+        }
+
+    def show_preset_titles_only(self, preset_source=None):
+        """Load a preset source and display only module titles in settings_tree."""
+        try:
+            if preset_source is None:
+                preset_settings = self.create_parameter(self.preset_manager.settings)
+            else:
+                preset_settings = self.create_parameter(preset_source)
+        except Exception as error:
+            logger.warning(f'Unable to load preset source {preset_source}: {error}')
+            preset_settings = self.create_parameter(self.preset_manager.settings)
+
+        self._full_preset_settings = preset_settings
+
+        self.settings = [
+            self._build_summary_group(preset_settings, ModuleType.Actuator, 'Actuators'),
+            self._build_summary_group(preset_settings, ModuleType.Detector, 'Detectors'),
+        ]
+
+        self.tree.header().hide()
+        self.tree.expandAll()
+        self.tree.setItemsExpandable(True)
 
 
-        self.test_icon = create_icon('keyboard_arrow_right')
-        self.launch_button.setIcon(self.test_icon)
-        # self.header_HBox.addWidget(self.test_icon)
 
 
     def load_dashboard_with_default_preset(self):
@@ -239,11 +320,11 @@ class Launcher(CustomApp):
         -------
 
         """
-        subprocess.Popen(load_dashboard_with_preset(
-            preset_name="default",
-            configuration_name="default",
-        ), start_new_session=True)
-        #subprocess.Popen(self._dashboard_shared_ui.show(), start_new_session=True)
+        self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
+            preset_name="Test",
+            configuration_name="Test1",
+        )
+        self._dashboard_shared_ui.show()
 
 
     def do_next(self):
@@ -262,7 +343,7 @@ class Launcher(CustomApp):
         -------
 
         """
-        print("do_next() method called")
+        print("do_back() method called")
 
     def check_disable_navigation_buttons(self):
         """
@@ -285,24 +366,24 @@ class Launcher(CustomApp):
         """
         pass
 
-    def print_presets(self):
-        if hasattr(self, '_preset_form'):
-            self.loader_VBox.removeWidget(self._preset_form)
-            self._preset_form.deleteLater()
-
-        self._preset_form = QtWidgets.QWidget()
-        self._preset_tree = TreeLayout(self._preset_form, col_counts=2, labels=["Settings"])
-        detector_action = QtGui.QAction("Grab from camera", self._preset_tree.tree)  # parent = tree
-        detector_action.triggered.connect(lambda: print("grab clicked"))
-        self._preset_tree.tree.addAction(detector_action)
-        data = [dict(name='Actuators', contents=[
-            dict(name='Theta'),
-            dict(name='Temperature'),
-            dict(name='Power')]),
-                dict(name='Detectors',
-                     contents=[dict(name='Det2D', contents=[dict(name='subfistone', contents='baby')])])]
-        self._preset_tree.populate_tree(data)
-        self.loader_VBox.addWidget(self._preset_form)
+    # def print_presets(self):
+    #     if hasattr(self, '_preset_form'):
+    #         self.loader_VBox.removeWidget(self._preset_form)
+    #         self._preset_form.deleteLater()
+    #
+    #     self._preset_form = QtWidgets.QWidget()
+    #     self._preset_tree = TreeLayout(self._preset_form, col_counts=2, labels=["Settings"])
+    #     detector_action = QtGui.QAction("Grab from camera", self._preset_tree.tree)  # parent = tree
+    #     detector_action.triggered.connect(lambda: print("grab clicked"))
+    #     self._preset_tree.tree.addAction(detector_action)
+    #     data = [dict(name='Actuators', contents=[
+    #         dict(name='Theta'),
+    #         dict(name='Temperature'),
+    #         dict(name='Power')]),
+    #             dict(name='Detectors',
+    #                  contents=[dict(name='Det2D', contents=[dict(name='subfistone', contents='baby')])])]
+    #     # self._preset_tree.populate_tree(data)
+    #     # self.loader_VBox.addWidget(self._preset_form)
 
 
 
@@ -318,6 +399,12 @@ def main() :
     shared_ui = SharedUI(fen)
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
+
+    screen = QApplication.screenAt(QCursor.pos())
+    size = screen.size()
+
+    fen.resize(1000, 800)
+    print(size.width(), size.height())
 
     fen.show()
 
