@@ -1,37 +1,32 @@
 import subprocess
 import sys
-import time
 
 from enum import Enum
 
-import dashboard
-from PyQt6.QtWidgets import QToolBar
-from qtpy.QtWidgets import QMessageBox
-from qtpy import QtCore, QtWidgets
+from PyQt6.QtGui import QIcon
+from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QDate, Signal
 from qtpy.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QListView,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
-from pymodaq.dashboard import DashBoard
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.configurator.utils import ConfiguratorTableView
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui import config, logger
 from pymodaq.utils.shared_ui import SharedUI
+from pymodaq.dashboard import load_dashboard_with_preset
+from pymodaq_gui.utils.styling import create_icon
+from pymodaq_gui.utils.widgets.tree_layout import TreeLayout
 from pymodaq_utils.utils import ThreadCommand
 from typing import Any, cast
 
-from pymodaq.control_modules.daq_viewer import main as viewer_main
-from pymodaq.control_modules.daq_move import main as move_main
 from pymodaq.extensions.daq_logger import main as logger_main
-
 
 
 class EnumToolTip(Enum) :
@@ -43,16 +38,7 @@ class EnumToolTip(Enum) :
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
     # list of dicts enabling a settings tree on the user interface
-    params = [
-        {'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-            {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
-             'value': config('data', 'data_saving', 'h5file', 'save_path')},
-            {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
-            {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
-            {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
-            {'title': 'Something done:', 'name': 'something_done', 'type': 'bool', 'value': False, 'readonly': True},
-        ]},
-    ]
+    params = []
 
     def __init__(self, mainWindow, dashboard=None):
         super().__init__(mainWindow)
@@ -62,6 +48,8 @@ class Launcher(CustomApp):
 
         # Remove the default toolbar created by CustomApp
         self.mainwindow.removeToolBar(self._toolbar)
+
+        self.preset_manager = PresetManager()
 
         # Layout
         self.main_HBox = QHBoxLayout()
@@ -76,12 +64,15 @@ class Launcher(CustomApp):
         self.h5browser_button = QPushButton("H5Browser")
 
         # Loader
-        self.listView = QListView()
+        #self.listView = TreeLayout()
+        #self.listView = QListView()
 
         # Header
         self.box_label = QLabel("2026/03/02 at 16h45")
         self.back_button = QPushButton("←")
-        self.next_button = QPushButton("→")
+        self.next_button = QtWidgets.QAction()
+        icon = create_icon('keyboard_arrow_right')
+        self.next_button.setIcon(icon)
         self.date_label = QLabel("Date :")
         self.launch_button = QPushButton("Launch")
 
@@ -91,12 +82,14 @@ class Launcher(CustomApp):
         '''
         subclass method from ActionManager
         '''
-        self.add_action('quit', 'Quit', 'close2', "Quit program", auto_toolbar=False)
-        self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, auto_toolbar=False)
-        self.add_action('launch_dashboard', 'Launch empty dashboard', '', EnumToolTip.DASHBOARD.value, auto_toolbar=False)
+        self.add_action('launch_dashboard', 'Launch empty dashboard', '',
+                        EnumToolTip.DASHBOARD.value, auto_toolbar=True,
+                        toolbar='launcher')
         self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER.value, auto_toolbar=False)
         self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE.value, auto_toolbar=False)
         self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER.value, auto_toolbar=False)
+        self.add_action('load_default_dashboard', 'Load a default dashboard',
+                        'keyboard_arrow_right', '', auto_toolbar=True, toolbar='header')
 
 
 
@@ -120,12 +113,18 @@ class Launcher(CustomApp):
         self.main_HBox.addWidget(separator)
         self.main_HBox.addLayout(self.loader_VBox, 1)
         self.loader_VBox.addLayout(self.header_HBox)
+        self.loader_VBox.layout().addWidget(self.settings_tree)
+
+        self.preset_manager.entry = 'New '
+        self.settings = self.preset_manager.entry_filename
+
 
         self.set_launcher_vbox()
 
         self.set_header()
 
-        self.loader_VBox.addWidget(self.listView)
+        # /!\ TEST !!!
+
 
         widget = QWidget()
         widget.setLayout(self.main_HBox)
@@ -157,18 +156,16 @@ class Launcher(CustomApp):
         self.move_button.clicked.connect(self.get_action('launch_move').trigger)
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
 
+        # Debug
+        self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_default_preset())
+        self.launch_button.clicked.connect(self.get_action('load_default_dashboard').trigger)
+
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         '''
         subclass method from CustomApp
         '''
-        logger.debug('settings menu')
-        if menubar is None:
-            menubar = self.mainwindow.menuBar()
-        file_menu = menubar.addMenu('File')
-        self.affect_to('quit', file_menu)
-        file_menu.addSeparator()
-        logger.debug('menu set')
+        self.add_menu('file', 'File')
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -189,8 +186,8 @@ class Launcher(CustomApp):
         self.launcher_VBox.addWidget(self.move_button)
         self.launcher_VBox.addWidget(self.h5browser_button)
         self.launcher_VBox.addStretch(1)
-
-
+        self.launcher_VBox.addWidget(self.add_toolbar('launcher'))
+        self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD.value)
@@ -225,21 +222,88 @@ class Launcher(CustomApp):
         self.header_HBox.addWidget(self.box_label)
         self.header_HBox.addStretch(1)
         self.header_HBox.addWidget(self.launch_button)
-        self.header_HBox.addWidget(self.next_button)
+        #self.header_HBox.addWidget(self.next_button)
+
+        self.header_HBox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
+
+
+        self.test_icon = create_icon('keyboard_arrow_right')
+        self.launch_button.setIcon(self.test_icon)
+        # self.header_HBox.addWidget(self.test_icon)
+
+
+    def load_dashboard_with_default_preset(self):
+        """
+        Debug : load and show dashboard with default preset and default configurator
+        Returns
+        -------
+
+        """
+        subprocess.Popen(load_dashboard_with_preset(
+            preset_name="default",
+            configuration_name="default",
+        ), start_new_session=True)
+        #subprocess.Popen(self._dashboard_shared_ui.show(), start_new_session=True)
+
+
+    def do_next(self):
+        """
+        Navigate in the next configuration
+        Returns
+        -------
+
+        """
+        print("do_next() method called")
+
+    def do_back(self):
+        """
+        Navigate in the back configuration
+        Returns
+        -------
+
+        """
+        print("do_next() method called")
+
+    def check_disable_navigation_buttons(self):
+        """
+        Check and disable navigation buttons :
+        * back button : last item of list
+        * next button : first item of list
+        Returns
+        -------
+
+        """
+        pass
+
+
+    def fill_history_list(self):
+        """
+        Fill the list with all old configurations
+        Returns
+        list : tuple : (date, preset, configurator)
+        -------
+        """
+        pass
 
     def print_presets(self):
-        presetmanager = PresetManager()
-        configurator = Configurator()
-        liste : list = presetmanager.entries
-        print("Affichage des presets :")
-        print(liste)
+        if hasattr(self, '_preset_form'):
+            self.loader_VBox.removeWidget(self._preset_form)
+            self._preset_form.deleteLater()
 
+        self._preset_form = QtWidgets.QWidget()
+        self._preset_tree = TreeLayout(self._preset_form, col_counts=2, labels=["Settings"])
+        detector_action = QtGui.QAction("Grab from camera", self._preset_tree.tree)  # parent = tree
+        detector_action.triggered.connect(lambda: print("grab clicked"))
+        self._preset_tree.tree.addAction(detector_action)
+        data = [dict(name='Actuators', contents=[
+            dict(name='Theta'),
+            dict(name='Temperature'),
+            dict(name='Power')]),
+                dict(name='Detectors',
+                     contents=[dict(name='Det2D', contents=[dict(name='subfistone', contents='baby')])])]
+        self._preset_tree.populate_tree(data)
+        self.loader_VBox.addWidget(self._preset_form)
 
-        print("Affichage des configurators :")
-        print(configurator.entries)
-
-
-        self.dashboard.load
 
 
 
@@ -257,7 +321,7 @@ def main() :
 
     fen.show()
 
-    prog.print_presets()
+    #prog.print_presets()
 
     sys.exit(app.exec())
 
