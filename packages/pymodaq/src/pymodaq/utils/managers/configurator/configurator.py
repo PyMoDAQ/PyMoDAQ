@@ -431,7 +431,7 @@ class Configurator(ManagerBase):
 
         entry = {date: {'preset': self.preset_manager.entry, 'configurator': self.entry}}
 
-        history_path = get_set_configurator_path() / "history.toml"
+        history_path = get_set_configurator_path(user=True) / "history.toml"
         print(history_path)
 
         if history_path.is_file():

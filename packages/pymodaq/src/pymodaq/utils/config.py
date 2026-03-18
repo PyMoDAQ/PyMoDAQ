@@ -16,10 +16,10 @@ def get_set_preset_path():
     return get_set_config_dir('preset_configs')
 
 
-def get_set_configurator_path(subfolder: str = ''):
+def get_set_configurator_path(subfolder: str = '', user=False):
     """ creates and return the config folder path for managers files
     """
-    target_path = get_set_config_dir('configurator_configs').joinpath(subfolder)
+    target_path = get_set_config_dir('configurator_configs', user=user).joinpath(subfolder)
     target_path.mkdir(parents=True, exist_ok=True)
     
     return target_path
