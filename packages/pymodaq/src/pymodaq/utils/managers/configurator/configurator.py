@@ -1,4 +1,3 @@
-
 from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
@@ -10,6 +9,7 @@ from qtpy.QtCore import QModelIndex
 
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq_utils.config import Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
 
@@ -155,6 +155,9 @@ class Configurator(ManagerBase):
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
+
+        self.save_new_history_entry()
+
         return True
 
     def populate_from_settings(self, settings: Parameter):
@@ -417,6 +420,33 @@ class Configurator(ManagerBase):
                     self.config_model.moveRow(QModelIndex(), index,
                                               QModelIndex(), index+2)
 
+    def save_new_history_entry(self):
+        """Implements this method from ManagerBase. Save a new history entry with preset and configurator for one time"""
+        import tomli_w
+        import tomllib
+        from datetime import datetime
+        # import pymodaq.utils.config
+        date = datetime.now().strftime("%Y-%d-%m:%H:%M:%S")
+        print(f"{date} | Preset : {self.preset_manager.entry} | configurator : {self.entry}")
+
+        entry = {date: {'preset': self.preset_manager.entry, 'configurator': self.entry}}
+
+        history_path = get_set_configurator_path() / "history.toml"
+        print(history_path)
+
+        if history_path.is_file():
+            with open(history_path, "rb") as f:
+                existing = tomllib.load(f)
+        else:
+            existing = {}
+
+        existing.update(entry)
+        with open(history_path, "wb") as f:
+            tomli_w.dump(existing, f)
+
+
+
+
 
 if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
@@ -435,4 +465,24 @@ if __name__ == "__main__":
     prog.enable_actions(True)
 
     external_ui.show()
+
+    # To develop restauration launcher functionality
+    print(prog.preset_filename)
+    presets_list = prog.preset_manager.entries
+    configurator_list = prog.entries
+    for preset in presets_list :
+        print(f"({preset})")
+        prog.set_preset_filename(preset)
+        print(prog.entries)
+
+    prog.set_preset_filename('Manip')
+    print(prog.preset_filename)
+
+    # for conf in configurator_list :
+    #     print(prog)
+    # print()
+
+
+
+    #
     sys.exit(app.exec())

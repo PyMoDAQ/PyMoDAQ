@@ -539,6 +539,10 @@ class ManagerBase(CustomExt):
         except AttributeError:  # means self.menu is not yet defined
             pass
 
+    def save_new_history_entry(self):
+        """Save a new history entry in the history file"""
+        raise NotImplementedError
+
 
 class ListView(QtWidgets.QListView):
 
