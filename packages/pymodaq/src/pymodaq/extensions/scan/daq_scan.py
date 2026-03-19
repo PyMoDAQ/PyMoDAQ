@@ -1179,12 +1179,10 @@ class DAQScan(CustomExt):
         """
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
-        if not self.dashboard.overshoot:
-            if self.settings['scan_options', 'go_to_ini_positions']:
-                self.set_ini_positions()  # do not set ini position again in case overshoot fired
-            status = 'Data Acquisition has been stopped by user'
-        else:
-            status = 'Data Acquisition has been stopped due to overshoot'
+
+        if self.settings['scan_options', 'go_to_ini_positions']:
+            self.set_ini_positions()
+        status = 'Data Acquisition has been stopped by user'
 
         self.update_status(status)
         self.ui.set_permanent_status('')
