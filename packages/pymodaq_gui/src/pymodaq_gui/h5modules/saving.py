@@ -128,9 +128,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
          'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
-        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-         'limits': config('data_saving', 'data_type', 'dynamics'),
-         'value': config('data_saving', 'data_type', 'dynamic')},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
          'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list',
