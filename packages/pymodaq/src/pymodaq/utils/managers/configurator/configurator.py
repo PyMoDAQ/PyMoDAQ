@@ -420,19 +420,17 @@ class Configurator(ManagerBase):
                     self.config_model.moveRow(QModelIndex(), index,
                                               QModelIndex(), index+2)
 
-    def save_new_history_entry(self):
+    def save_new_history_entry(self, name_history_file : str = 'history.toml'):
         """Implements this method from ManagerBase. Save a new history entry with preset and configurator for one time"""
         import tomli_w
         import tomllib
         from datetime import datetime
-        # import pymodaq.utils.config
+
         date = datetime.now().strftime("%Y-%d-%m:%H:%M:%S")
-        print(f"{date} | Preset : {self.preset_manager.entry} | configurator : {self.entry}")
 
         entry = {date: {'preset': self.preset_manager.entry, 'configurator': self.entry}}
 
-        history_path = get_set_configurator_path(user=True) / "history.toml"
-        print(history_path)
+        history_path = get_set_configurator_path(user=True) / name_history_file
 
         if history_path.is_file():
             with open(history_path, "rb") as f:

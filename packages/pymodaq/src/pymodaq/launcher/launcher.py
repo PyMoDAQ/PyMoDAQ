@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
 
 from pymodaq.dashboard import load_dashboard_with_preset
 from pymodaq.extensions.daq_logger import main as logger_main
+from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq.utils.shared_ui import SharedUI
@@ -26,7 +27,8 @@ from pymodaq_utils.utils import ThreadCommand
 
 logger = set_logger(get_module_name(__file__))
 
-class EnumToolTip(StrEnum) :
+
+class EnumToolTip(StrEnum):
     DASHBOARD = 'Launch an empty Dashboard without configuration'
     VIEWER = 'Launch an empty Viewer'
     MOVE = 'Launch an empty DAQ_Move'
@@ -34,6 +36,7 @@ class EnumToolTip(StrEnum) :
     BACK_HISTORY = 'Navigate to the back item of presets history'
     NEXT_HISTORY = 'Navigate to the next item of presets history'
     RESTORE = 'Restore this preset with the selected configurator'
+
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
@@ -66,7 +69,7 @@ class Launcher(CustomApp):
         # Loader
 
         # Header
-        self.box_label = QLabel("2026/03/02 at 16h45") # debug only
+        self.box_label = QLabel("2026/03/02 at 16h45")  # debug only
         self.date_label = QLabel("Date :")
 
         self.setup_ui()
@@ -82,20 +85,19 @@ class Launcher(CustomApp):
         self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE, auto_toolbar=False)
         self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
 
-        self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True, toolbar='header')
+        self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True,
+                        toolbar='header')
         self.header_toolbar.addWidget(self.date_label)
         self.header_toolbar.addWidget(self.box_label)
         self.add_action('load_default_dashboard', 'Restore',
                         'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
-        self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True, toolbar='header')
+        self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
+                        toolbar='header')
 
         # setup_actions is called after setup_docks; style the action button here once it exists.
         button = self.header_toolbar.widgetForAction(self.get_action('load_default_dashboard'))
         if isinstance(button, QtWidgets.QToolButton):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-
-
 
     def setup_docks(self):
         '''
@@ -122,7 +124,6 @@ class Launcher(CustomApp):
         self.preset_manager.entry = 'New '
         self.show_preset_titles_only(self.preset_manager.entry_filename)
 
-
         self.set_launcher_vbox()
 
         self.set_header()
@@ -132,8 +133,6 @@ class Launcher(CustomApp):
         self.mainwindow.setCentralWidget(widget)
 
         logger.debug('docks are set')
-
-
 
     def _emit_command(self, command: str):
         cast(Any, self.command_sig).emit(ThreadCommand(command))
@@ -158,12 +157,8 @@ class Launcher(CustomApp):
 
         # Header of loader section
         self.connect_action('back_config', lambda: self.do_back())
-        self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_default_preset())
+        self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_preset_configurator())
         self.connect_action('next_config', lambda: self.do_next())
-
-
-
-
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         '''
@@ -193,7 +188,6 @@ class Launcher(CustomApp):
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
-
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
         self.viewer_button.setToolTip(EnumToolTip.VIEWER)
@@ -205,13 +199,12 @@ class Launcher(CustomApp):
             'QLabel { border: 1px solid white; border-radius: 10px; padding: 4px 10px; }')
         self.box_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
-
-
     def launch_empty_dashboard(self):
         subprocess.Popen(['dashboard'])
 
     def launch_empty_viewer(self):
         subprocess.Popen(['daq_viewer'])
+
     def launch_empty_move(self):
         subprocess.Popen(['daq_move'])
 
@@ -286,10 +279,7 @@ class Launcher(CustomApp):
         self.tree.expandAll()
         self.tree.setItemsExpandable(True)
 
-
-
-
-    def load_dashboard_with_default_preset(self):
+    def load_dashboard_with_preset_configurator(self, preset: str = 'default', configurator: str = 'default'):
         """
         Debug : load and show dashboard with default preset and default configurator
         Returns
@@ -297,11 +287,10 @@ class Launcher(CustomApp):
 
         """
         self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
-            preset_name="default",
-            configuration_name="default",
+            preset_name=preset,
+            configuration_name=configurator,
         )
         self._dashboard_shared_ui.show()
-
 
     def do_next(self):
         """
@@ -332,7 +321,6 @@ class Launcher(CustomApp):
         """
         pass
 
-
     def fill_history_list(self):
         """
         Fill the list with all old configurations
@@ -342,29 +330,52 @@ class Launcher(CustomApp):
         """
         pass
 
-    # def print_presets(self):
-    #     if hasattr(self, '_preset_form'):
-    #         self.loader_VBox.removeWidget(self._preset_form)
-    #         self._preset_form.deleteLater()
-    #
-    #     self._preset_form = QtWidgets.QWidget()
-    #     self._preset_tree = TreeLayout(self._preset_form, col_counts=2, labels=["Settings"])
-    #     detector_action = QtGui.QAction("Grab from camera", self._preset_tree.tree)  # parent = tree
-    #     detector_action.triggered.connect(lambda: print("grab clicked"))
-    #     self._preset_tree.tree.addAction(detector_action)
-    #     data = [dict(name='Actuators', contents=[
-    #         dict(name='Theta'),
-    #         dict(name='Temperature'),
-    #         dict(name='Power')]),
-    #             dict(name='Detectors',
-    #                  contents=[dict(name='Det2D', contents=[dict(name='subfistone', contents='baby')])])]
-    #     # self._preset_tree.populate_tree(data)
-    #     # self.loader_VBox.addWidget(self._preset_form)
+    def load_history_in_dict(self, name_history_file: str = 'history.toml') -> tuple[
+        dict[str, str], list[str]]:
+        """
+        Read history file and return a dictionary with presets and configurators sorted by date.
+
+        Parameters
+        ----------
+        name_history_file : str, optional
+            Name of the history file.
+
+        Returns
+        -------
+        history : dict
+            Dictionary where keys are datetime strings and values are dictionaries
+            with 'preset' and 'configurator' entries
+            Example::
+
+                {
+                    '2026-18-03:17:07:38': {'preset': 'Manip', 'configurator': 'default'},
+                    '2026-18-03:17:06:31': {'preset': 'default', 'configurator': 'default'}
+                }
+
+        history_keys : list[str]
+            List of history dictionary keys sorted by descending date
+        """
+        import tomllib
+        from datetime import datetime
+
+        history_path = get_set_configurator_path(user=True) / name_history_file
+
+        if history_path.is_file():
+            with open(history_path, "rb") as f:
+                history = tomllib.load(f)
+        else:
+            history = {}
+
+        history_keys = sorted(
+            history.keys(),
+            key=lambda k: datetime.strptime(k, "%Y-%d-%m:%H:%M:%S"),
+            reverse=True
+        )
+
+        return history, history_keys
 
 
-
-
-def main() :
+def main():
     from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Launcher')
@@ -375,6 +386,9 @@ def main() :
     shared_ui = SharedUI(fen)
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
+    history, history_keys = prog.load_history_in_dict()
+    print(f"History : \n{history}")
+    print(f"Keys : \n{history_keys}")
 
     # Calculate width and height as a screen ratio
     # screen = QApplication.screenAt(QCursor.pos())
@@ -385,6 +399,7 @@ def main() :
     fen.show()
 
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()
