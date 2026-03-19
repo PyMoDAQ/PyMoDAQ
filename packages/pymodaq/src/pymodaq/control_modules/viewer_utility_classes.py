@@ -12,7 +12,8 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
-from pymodaq_utils.config import get_set_local_dir
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig
+
 from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
@@ -24,6 +25,7 @@ from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
+config = GlobalConfig()
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -43,6 +45,10 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Dynamic:', 'name': 'dynamic', 'type': 'list',
+         'limits': config('data','data_saving', 'data_type', 'dynamic'),
+         'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
@@ -240,7 +246,7 @@ class DAQ_Viewer_base(QObject):
         if old_controller is None and slave_controller is not None:
             old_controller = slave_controller
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['controller', 'controller_status'] == "Slave":
+        if self.settings['controller', 'controller_status'] == ControllerStatus.SLAVE:
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
@@ -413,7 +419,6 @@ class DAQ_Viewer_base(QObject):
 
             pass
 
-if __name__ == '__main__':
 
-    if __name__ == '__main__':
-        test = DAQ_Viewer_base()
+if __name__ == '__main__':
+    test = DAQ_Viewer_base()
