@@ -1,3 +1,4 @@
+from datetime import datetime
 import subprocess
 import sys
 from enum import StrEnum
@@ -67,6 +68,19 @@ class Launcher(CustomApp):
         self.h5browser_button = QPushButton("H5Browser")
 
         # Loader
+        self.history_keys = []
+        self.history = {}
+        self.history_index = 0
+
+        self.preset_name = ""
+        self.configurator_name = ""
+
+        self.preset_configurator_layout = QHBoxLayout()
+        self.preset_label = QLabel("Preset :")
+        self.preset_label_value = QLabel(self.preset_name)
+        self.configurator_label = QLabel("Configurator :")
+        self.configurator_label_value = QLabel(self.configurator_name) # combo box for the future
+
 
         # Header
         self.box_label = QLabel("2026/03/02 at 16h45")  # debug only
@@ -119,18 +133,26 @@ class Launcher(CustomApp):
         self.main_hbox.addWidget(separator)
         self.main_hbox.addLayout(self.loader_vbox, 1)
         self.loader_vbox.addLayout(self.hbox)
+        self.loader_vbox.addLayout(self.preset_configurator_layout)
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
         self.show_preset_titles_only(self.preset_manager.entry_filename)
 
         self.set_launcher_vbox()
+        self.preset_configurator_layout.addWidget(self.preset_label)
+        self.preset_configurator_layout.addWidget(self.preset_label_value)
+        self.preset_configurator_layout.addWidget(self.configurator_label)
+        self.preset_configurator_layout.addWidget(self.configurator_label_value)
 
         self.set_header()
+
 
         widget = QWidget()
         widget.setLayout(self.main_hbox)
         self.mainwindow.setCentralWidget(widget)
+
+
 
         logger.debug('docks are set')
 
@@ -165,6 +187,13 @@ class Launcher(CustomApp):
         subclass method from CustomApp
         '''
         self.add_menu('file', 'File')
+
+    def do_things_after_ui_setup(self):
+        """Non mandatory method to be subclassed in order to do things after the UI setup
+        """
+        self.history, self.history_keys = self.load_history_in_dict()
+        self.ui_refresh()
+        self.check_disable_navigation_buttons()
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -287,10 +316,30 @@ class Launcher(CustomApp):
 
         """
         self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
-            preset_name=preset,
-            configuration_name=configurator,
+            preset_name=self.preset_name,
+            configuration_name=self.configurator_name,
         )
+        # Ensure close triggers object deletion so we can react on destroyed.
+        self._dashboard_shared_ui.mainwindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self._dashboard_shared_ui.mainwindow.destroyed.connect(self._refresh_after_dashboard_close)
         self._dashboard_shared_ui.show()
+
+    def _refresh_after_dashboard_close(self):
+        """Reload history and refresh launcher widgets once the dashboard window is closed."""
+        self.history, self.history_keys = self.load_history_in_dict()
+        if not self.history_keys:
+            self.preset_name = ''
+            self.configurator_name = ''
+            self.box_label.setText('')
+            self.preset_label_value.setText(self.preset_name)
+            self.configurator_label_value.setText(self.configurator_name)
+            self.check_disable_navigation_buttons()
+            return
+
+        self.history_index = 0
+        self.ui_refresh()
+        self.check_disable_navigation_buttons()
+        
 
     def do_next(self):
         """
@@ -300,6 +349,9 @@ class Launcher(CustomApp):
 
         """
         print("do_next() method called")
+        self.history_index +=1
+        self.ui_refresh()
+        self.check_disable_navigation_buttons()
 
     def do_back(self):
         """
@@ -309,6 +361,9 @@ class Launcher(CustomApp):
 
         """
         print("do_back() method called")
+        self.history_index -= 1
+        self.ui_refresh()
+        self.check_disable_navigation_buttons()
 
     def check_disable_navigation_buttons(self):
         """
@@ -319,16 +374,32 @@ class Launcher(CustomApp):
         -------
 
         """
-        pass
+        if self.history_index < 1 :
+            self.get_action('back_config').setDisabled(True)
+        else :
+            self.get_action('back_config').setDisabled(False)
 
-    def fill_history_list(self):
-        """
-        Fill the list with all old configurations
-        Returns
-        list : tuple : (date, preset, configurator)
-        -------
-        """
-        pass
+        if self.history_index >= len(self.history_keys) -1 :
+            self.get_action('next_config').setDisabled(True)
+        else :
+            self.get_action('next_config').setDisabled(False)
+
+    def ui_refresh(self):
+        # preset and configurator
+        actual_key = self.history_keys[self.history_index]
+        self.preset_name = self.history[actual_key]['preset']
+        self.configurator_name = self.history[actual_key]['configurator']
+
+        # date label
+        date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
+        self.box_label.setText(date.strftime("%Y/%m/%d at %Hh%M"))
+
+        # preset and configurator labels
+        self.preset_label_value.setText(self.preset_name)
+        self.configurator_label_value.setText(self.configurator_name)
+
+        # tree
+
 
     def load_history_in_dict(self, name_history_file: str = 'history.toml') -> tuple[
         dict[str, str], list[str]]:
