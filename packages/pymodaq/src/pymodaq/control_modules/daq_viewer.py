@@ -837,14 +837,13 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             self.set_data_to_viewers(data, temp=True)
 
-    @Slot(DataToExport)
     def show_data(self, dte: DataToExport):
-        """Send data to their dedicated viewers
+        """ Receive data from plugins and send them to their dedicated viewers
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
         settings:
-            * create a container (OrderedDict `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
+            * create a container (DataToExport `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
             * call `_process_data`
             * do background subtraction if any
             * check refresh time (if set in the settings) to send or not data to data viewers
@@ -880,6 +879,11 @@ class DAQ_Viewer(ParameterControlModule):
             else:
                 for dwa in dte:
                     dwa.origin = self._title
+                    if self.settings['main_settings', 'dynamic'] != 'as_is':
+                        arrays = []
+                        for data_array in dwa:
+                            arrays.append(data_array.astype(self.settings['main_settings', 'dynamic'], copy=False))
+                        dwa.data = arrays
                 self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:
@@ -1009,10 +1013,12 @@ class DAQ_Viewer(ParameterControlModule):
                                                      [param.value()]))
 
         elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            if param.name() == 'do_save':
-                self.setup_continuous_saving(param.value())
-            self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
-
+            try:
+                if param.name() == 'do_save':
+                    self.setup_continuous_saving(param.value())
+                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+            except KeyError:
+                pass
         self._update_settings(param=param)
 
     def child_added(self, param, data):
