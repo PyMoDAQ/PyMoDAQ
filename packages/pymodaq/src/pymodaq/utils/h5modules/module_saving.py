@@ -457,7 +457,7 @@ class ScanSaver(ModuleSaver):
             detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
     def add_data(self, dte: DataToExport = None, indexes: Tuple[int] = None,
-                 distribution=DataDistribution['uniform'], **kwargs):
+                 distribution=DataDistribution.uniform, **kwargs):
         for detector in self._module.modules_manager.detectors:
             try:
                 detector.insert_data(indexes, where=self._module_group, distribution=distribution)

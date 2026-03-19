@@ -909,8 +909,12 @@ class DAQScan(CustomExt):
             self.ui.set_permanent_status('Timeout occurred')
 
         elif status.command == 'add_data':
+            ind_scan = status.attribute.pop('ind_scan')
             self.module_and_data_saver.add_data(**status.attribute)
             self.module_and_data_saver.add_time(status.attribute['indexes'])
+            if ind_scan == 0:  #only the h5arrays initialization can take some time and one need to make sure
+                # it is finished
+                self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1246,6 +1250,7 @@ class DAQScanAcquisition(QObject):
 
         self.move_done_flag = False
         self.det_done_flag = False
+        self._data_saved_flag = False
 
         self.det_done_datas = data_mod.DataToExport('ScanData')
 
@@ -1275,6 +1280,18 @@ class DAQScanAcquisition(QObject):
 
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
+
+        elif command.command == "data_saved":
+            self._data_saved_flag = True
+
+    def set_ini_positions(self):
+        """ Set the actuators's positions totheir initial value as defined in the scanner  """
+        try:
+            if self.scanner.scan_sub_type != 'Adaptive':
+                self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
+
+        except Exception as e:
+            logger.exception(str(e))
 
     def start_acquisition(self):
         try:
@@ -1330,11 +1347,10 @@ class DAQScanAcquisition(QObject):
 
             self.status_sig.emit(utils.ThreadCommand("Update_Status",
                                                      attribute="Acquisition has finished"))
-            self.status_sig.emit(utils.ThreadCommand("Scan_done"))
-
 
         except Exception as e:
             logger.exception(str(e))
+        finally:
             # Ensure the file is closed even after an unexpected crash
             self.status_sig.emit(utils.ThreadCommand("Scan_done"))
 
@@ -1343,11 +1359,17 @@ class DAQScanAcquisition(QObject):
 
         """
         try:
+            self._data_saved_flag = False
+
             indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
             if self.Naverage > 1:
                 indexes = [self.ind_average] + list(indexes)
             indexes = tuple(indexes)
             if self.ind_scan == 0:
+                self.status_sig.emit(utils.ThreadCommand("Update_Status",
+                                                         "Creating the arrays nodes in the h5file, please be patient"))
+                QtWidgets.QApplication.processEvents()
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 nav_axes = self.scanner.get_nav_axes()
                 if self.Naverage > 1:
                     for nav_axis in nav_axes:
@@ -1356,9 +1378,18 @@ class DAQScanAcquisition(QObject):
                                                   index=0))
                 self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
 
+
+            # async saving command sent to all concerned detector control modules
+            # because async if the first initialization takes a long time, the next async move will timeout therefore wait for the _data_saved_flag to be run
             self.status_sig.emit(
                 utils.ThreadCommand("add_data",
-                                    dict(indexes=indexes, distribution=self.scanner.distribution)))
+                                    dict(indexes=indexes, distribution=self.scanner.distribution,
+                                         ind_scan=self.ind_scan)))
+            if self.ind_scan == 0:
+                while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
+                    QThread.msleep(50)
+                    QtWidgets.QApplication.processEvents()
+                self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
 
             self.det_done_flag = True
 
@@ -1373,6 +1404,8 @@ class DAQScanAcquisition(QObject):
 
         except Exception as e:
             logger.exception(str(e))
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
 
     def timeout(self):
         """
