@@ -386,19 +386,26 @@ class Launcher(CustomApp):
 
     def ui_refresh(self):
         # preset and configurator
-        actual_key = self.history_keys[self.history_index]
-        self.preset_name = self.history[actual_key]['preset']
-        self.configurator_name = self.history[actual_key]['configurator']
+        if len(self.history_keys) > 0 :
+            actual_key = self.history_keys[self.history_index]
+            self.preset_name = self.history[actual_key]['preset']
+            self.configurator_name = self.history[actual_key]['configurator']
 
-        # date label
-        date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
-        self.box_label.setText(date.strftime("%Y/%m/%d at %Hh%M"))
+            # date label
+            date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
+            self.box_label.setText(date.strftime("%Y/%m/%d at %Hh%M"))
+
+        else :
+            self.preset_name = "default"
+            self.configurator_name = "default"
+            self.box_label.setText("-")
 
         # preset and configurator labels
         self.preset_label_value.setText(self.preset_name)
         self.configurator_label_value.setText(self.configurator_name)
 
         # tree
+
 
 
     def load_history_in_dict(self, name_history_file: str = 'history.toml') -> tuple[
