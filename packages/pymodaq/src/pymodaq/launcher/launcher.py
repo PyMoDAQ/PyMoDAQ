@@ -341,7 +341,7 @@ class Launcher(CustomApp):
         self.check_disable_navigation_buttons()
         
 
-    def do_next(self):
+    def do_back(self):
         """
         Navigate in the next configuration
         Returns
@@ -353,7 +353,7 @@ class Launcher(CustomApp):
         self.ui_refresh()
         self.check_disable_navigation_buttons()
 
-    def do_back(self):
+    def do_next(self):
         """
         Navigate in the back configuration
         Returns
@@ -375,14 +375,14 @@ class Launcher(CustomApp):
 
         """
         if self.history_index < 1 :
-            self.get_action('back_config').setDisabled(True)
-        else :
-            self.get_action('back_config').setDisabled(False)
-
-        if self.history_index >= len(self.history_keys) -1 :
             self.get_action('next_config').setDisabled(True)
         else :
             self.get_action('next_config').setDisabled(False)
+
+        if self.history_index >= len(self.history_keys) -1 :
+            self.get_action('back_config').setDisabled(True)
+        else :
+            self.get_action('back_config').setDisabled(False)
 
     def ui_refresh(self):
         # preset and configurator
