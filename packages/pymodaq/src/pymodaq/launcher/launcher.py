@@ -26,6 +26,10 @@ from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
+# Handler
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler, DirModifiedEvent, FileModifiedEvent
+
 logger = set_logger(get_module_name(__file__))
 
 
@@ -38,13 +42,22 @@ class EnumToolTip(StrEnum):
     NEXT_HISTORY = 'Navigate to the next item of presets history'
     RESTORE = 'Restore this preset with the selected configurator'
 
+class HistoryFileHandler(FileSystemEventHandler) :
+    def __init__(self, callback):
+        self.callback = callback
+
+    def on_modified(self, event: FileModifiedEvent) -> None:
+        if not event.is_directory :
+            self.callback(event.src_path)
+
+
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
     # list of dicts enabling a settings tree on the user interface
     params = []
 
-    def __init__(self, mainWindow, dashboard=None):
+    def __init__(self, mainWindow, dashboard=None, history_file_name = 'history.toml'):
         super().__init__(mainWindow)
         self.dashboard = dashboard
         # init the App specific attributes
@@ -85,6 +98,12 @@ class Launcher(CustomApp):
         # Header
         self.box_label = QLabel("2026/03/02 at 16h45")  # debug only
         self.date_label = QLabel("Date :")
+
+        self.history_file_name = history_file_name
+        self.history_file_path = get_set_configurator_path(user=True) / self.history_file_name
+
+        # History file handler (watchdog)
+        # self._handler = HistoryFileHandler(callback=self.his)
 
         self.setup_ui()
 
@@ -146,7 +165,6 @@ class Launcher(CustomApp):
         self.preset_configurator_layout.addWidget(self.configurator_label_value)
 
         self.set_header()
-
 
         widget = QWidget()
         widget.setLayout(self.main_hbox)
@@ -407,15 +425,10 @@ class Launcher(CustomApp):
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
 
-    def load_history_in_dict(self, name_history_file: str = 'history.toml') -> tuple[
+    def load_history_in_dict(self) -> tuple[
         dict[str, str], list[str]]:
         """
         Read history file and return a dictionary with presets and configurators sorted by date.
-
-        Parameters
-        ----------
-        name_history_file : str, optional
-            Name of the history file.
 
         Returns
         -------
@@ -435,10 +448,8 @@ class Launcher(CustomApp):
         import tomllib
         from datetime import datetime
 
-        history_path = get_set_configurator_path(user=True) / name_history_file
-
-        if history_path.is_file():
-            with open(history_path, "rb") as f:
+        if self.history_file_path.is_file():
+            with open(self.history_file_path, "rb") as f:
                 history = tomllib.load(f)
         else:
             history = {}
@@ -450,6 +461,9 @@ class Launcher(CustomApp):
         )
 
         return history, history_keys
+
+    def _on_history_file_modified(self, path):
+        pass
 
 
 def main():
