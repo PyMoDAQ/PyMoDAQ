@@ -403,7 +403,8 @@ class Launcher(CustomApp):
         self.configurator_label_value.setText(self.configurator_name)
 
         # tree
-
+        self.preset_manager.entry = self.preset_name
+        self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
 
     def load_history_in_dict(self, name_history_file: str = 'history.toml') -> tuple[
