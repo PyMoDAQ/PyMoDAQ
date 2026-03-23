@@ -348,7 +348,6 @@ class Launcher(CustomApp):
         -------
 
         """
-        print("do_next() method called")
         self.history_index +=1
         self.ui_refresh()
         self.check_disable_navigation_buttons()
@@ -360,7 +359,6 @@ class Launcher(CustomApp):
         -------
 
         """
-        print("do_back() method called")
         self.history_index -= 1
         self.ui_refresh()
         self.check_disable_navigation_buttons()
@@ -464,9 +462,7 @@ def main():
     shared_ui = SharedUI(fen)
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
-    history, history_keys = prog.load_history_in_dict()
-    print(f"History : \n{history}")
-    print(f"Keys : \n{history_keys}")
+
 
     # Calculate width and height as a screen ratio
     # screen = QApplication.screenAt(QCursor.pos())
