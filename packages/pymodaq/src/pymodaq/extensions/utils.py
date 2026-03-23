@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils import logger as logger_module
 
+from pymodaq.extensions.custom_ext import CustomExt
+# in older extensions, CustomExt was defined here so this import should stay here also for backcompatibility
+
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
     from pymodaq.extensions import ExtensionEnum
 
 
@@ -31,7 +33,7 @@ def get_ext_modules(path: Path):
 class Extension:
     name: str
     class_name: str
-    klass: type['CustomExt']
+    klass: type[CustomExt]
 
 
 def get_extensions() -> dict['ExtensionEnum', Extension]:
