@@ -143,9 +143,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
         {'title': 'Data format:', 'name': 'data_format', 'type': 'group', 'children': [
-            {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-             'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
-             'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
             {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
              'limits': {'0': 0., 'nan': np.nan},
              'value': 0. if config('data', 'data_saving', 'data_type', 'fill_value')[0] == '0' else np.nan,

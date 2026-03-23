@@ -65,7 +65,7 @@ class PresetManager(ManagerBase):
             entry_path.mkdir(parents=True)
         if not entry_path.joinpath(f'default{self.entry_extension}').exists():
             copy_preset()
-            self.update_entry_base()
+            self.update_entry()
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
     def do_things_for_new_creation(self):
@@ -78,7 +78,7 @@ class PresetManager(ManagerBase):
         """ Particular implementation to save entries for this inherited Manager """
 
         if entry_path is None:
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
 
         ioxml.parameter_to_xml_file(
             self.settings,
@@ -90,10 +90,12 @@ class PresetManager(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_preset_path()
 
-    def execute_entry(self, entry: Path = None, **kwargs) -> bool:
+    def _execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
 
         Returns True if the entry has been applied otherwise False
+
+        Should not be called directly, use :attr:`execute_entry` instead.
         """
         try:
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
@@ -107,7 +109,6 @@ class PresetManager(ManagerBase):
                         area.window().close()
                 else:
                     return False
-            self.update_entry(entry)
 
             if ('Moves' in [child.name() for child in self.settings.children()] or
                     'Detectors' in [child.name() for child in self.settings.children()]):
@@ -154,9 +155,6 @@ class PresetManager(ManagerBase):
                     f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
                     log_type="log",
                 )
-                self.dashboard.settings.child("loaded_files", "preset_file").setValue(
-                    entry.name
-                )
                 self.dashboard.actuators_modules = actuators_modules
                 self.dashboard.detector_modules = detector_modules
 
@@ -178,7 +176,7 @@ class PresetManager(ManagerBase):
             logger.exception(str(e))
             return False
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
         if entry.exists():
             self.settings = entry
@@ -553,7 +551,7 @@ if __name__ == '__main__':
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
 
-    prog.update_entry_base()
+    prog.update_entry()
     prog.enable_actions(True)
     prog.mainwindow.show()
     external_ui.show()

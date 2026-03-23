@@ -198,11 +198,6 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            settings_str += ioxml.parameter_to_xml_string(
-                self.dashboard.preset_manager.preset_params)
-            if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.overshoot_manager.overshoot_params)
             if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
                 settings_str += ioxml.parameter_to_xml_string(
                     self.dashboard.roi_saver.roi_presets)
@@ -273,6 +268,14 @@ class DAQ_Logger(CustomExt):
             det.stop_grab()
         for act in self.modules_manager.actuators:
             act.stop_grab()
+
+    def stop(self):
+        """ Programmatic method to stop action in the extension
+
+        Irrelevant for the DAQLogger as it doesn't do anything on the control modules
+
+        """
+        pass
 
     def set_log_type(self, log_type):
         self.settings.child('log_type').setValue(log_type)

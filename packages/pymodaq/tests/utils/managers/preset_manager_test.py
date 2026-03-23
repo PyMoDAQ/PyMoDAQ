@@ -25,7 +25,7 @@ def ini_preset(init_qt):
     external_ui = QtWidgets.QMainWindow()
 
     preset_manager = PresetManager()
-    preset_manager.update_entry_base()
+    preset_manager.update_entry()
     qtbot.addWidget(preset_manager.mainwindow)
     preset_manager.mainwindow.show()
     qtbot.addWidget(external_ui)

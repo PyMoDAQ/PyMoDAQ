@@ -137,7 +137,7 @@ class Launcher(CustomApp):
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
-        self.show_preset_titles_only(self.preset_manager.entry_filename)
+        self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
         self.set_launcher_vbox()
         self.preset_configurator_layout.addWidget(self.preset_label)

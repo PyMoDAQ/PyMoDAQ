@@ -5,6 +5,8 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 from __future__ import annotations
+
+from abc import ABC
 from importlib import import_module
 
 import os
@@ -104,7 +106,7 @@ class DAQ_Viewer(ParameterControlModule):
 
     params = daq_viewer_params + [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': True, 'children': H5Saver.params, 'expanded': False}]
 
     listener_class = ViewerActorListener
     ui: Optional[DAQ_Viewer_UI]
@@ -120,7 +122,7 @@ class DAQ_Viewer(ParameterControlModule):
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(**kwargs)
+        super().__init__(listener_class=ViewerActorListener, **kwargs)
 
         self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
@@ -156,13 +158,6 @@ class DAQ_Viewer(ParameterControlModule):
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
         self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
-        for hidden_param in ('custom_name',
-                            'current_scan_name',
-                            'current_scan_path',
-                            'current_h5_file',
-                            'new_file',
-                            'base_name'):
-            self.settings.child('saver_settings', hidden_param).setOpts(visible=False)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -409,6 +404,8 @@ class DAQ_Viewer(ParameterControlModule):
 
             except Exception as e:
                 self.logger.exception(str(e))
+            finally:
+                self.connect_leco(False)
         else:            
             try:
 
@@ -433,21 +430,21 @@ class DAQ_Viewer(ParameterControlModule):
                 if self.ui is not None:
                     for dock in self.ui.viewer_docks:
                         dock.setEnabled(True)
-
+                self.connect_leco(True)
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def snap(self, send_to_tcpip=False):
+    def snap(self, send_to_leco=False):
         """ Launch a single grab """
-        self.grab_data(False, snap_state=True, send_to_tcpip=send_to_tcpip)
+        self.grab_data(False, snap_state=True, send_to_leco=send_to_leco)
 
-    def grab(self, send_to_tcpip=False):
+    def grab(self, send_to_leco=False):
         """ Launch a continuous grab """
         if self.ui is not None:
             self.manage_ui_actions('grab', 'setChecked', not self._grabing)
-            self.grab_data(not self._grabing, snap_state=False, send_to_tcpip=send_to_tcpip)
+            self.grab_data(not self._grabing, snap_state=False, send_to_leco=send_to_leco)
 
-    def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
+    def snapshot(self, pathname=None, dosave=False, send_to_leco=False):
         """Do one single grab (snap) and eventually save the data.
 
         Parameters
@@ -456,8 +453,8 @@ class DAQ_Viewer(ParameterControlModule):
             The path where to save data
         dosave: bool
             Do save or just grab data
-        send_to_tcpip: bool
-            If True, send the grabbed data through the TCP/IP pipe
+        send_to_leco: bool
+            If True, send the grabbed data through the LECO Coordinator
         """
         try:
             self._do_save_data = dosave
@@ -465,24 +462,24 @@ class DAQ_Viewer(ParameterControlModule):
                 raise (ValueError("filepathanme has not been defined in snapshot"))
 
             self._save_file_pathname = pathname
-            self.grab_data(grab_state=False, send_to_tcpip=send_to_tcpip, snap_state=True)
+            self.grab_data(grab_state=False, send_to_leco=send_to_leco, snap_state=True)
         except Exception as e:
             self.logger.exception(str(e))
 
-    def grab_data(self, grab_state=False, send_to_tcpip=False, snap_state=False):
+    def grab_data(self, grab_state=False, send_to_leco=False, snap_state=False):
         """ Generic method to grab or snap data from the selected (and initialized) detector
 
         Parameters
         ----------
         grab_state: bool
             Defines the grab status: if True: do live grabbing if False stops the grab
-        send_to_tcpip: bool
-            If True, send the grabbed data through the TCP/IP pipe
+        send_to_leco: bool
+            If True, send the grabbed data through the LECO Coordinator
         snap_state: bool
             if True performs a single grab
         """
         self._grabing = grab_state
-        self._send_to_tcpip = send_to_tcpip
+        self._send_to_leco = send_to_leco
         self._grab_done = False
 
         if self.ui is not None:
@@ -513,6 +510,10 @@ class DAQ_Viewer(ParameterControlModule):
         self._take_bkg = True
         self.grab_data(snap_state=True)
 
+    def stop_module(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_grab()
+
     def stop_grab(self):
         """ Stop the current continuous grabbing and unchecked the stop button of the UI
 
@@ -520,9 +521,10 @@ class DAQ_Viewer(ParameterControlModule):
         --------
         :meth:`stop`
         """
-        if self.ui is not None:
-            self.manage_ui_actions('grab', 'setChecked', False)
-        self.stop()
+        if self.ui is not None and self.ui.is_action_checked('grab'):
+            self.ui.get_action('grab').trigger()
+        else:
+            self.stop()
 
     def stop(self):
         """ Stop the current continuous grabbing """
@@ -750,14 +752,13 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             self.set_data_to_viewers(data, temp=True)
 
-    @Slot(DataToExport)
     def show_data(self, dte: DataToExport):
-        """Send data to their dedicated viewers
+        """ Receive data from plugins and send them to their dedicated viewers
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
         settings:
-            * create a container (OrderedDict `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
+            * create a container (DataToExport `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
             * call `_process_data`
             * do background subtraction if any
             * check refresh time (if set in the settings) to send or not data to data viewers
@@ -775,10 +776,8 @@ class DAQ_Viewer(ParameterControlModule):
         """
         try:
             dte = dte.deepcopy()
-            if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
-            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_leco:
+                self._leco_commands_signal.emit(ThreadCommand(LECOViewerCommands.DATA_READY, dte))
             if self.ui is not None:
                 self.ui.data_ready = True
 
@@ -793,6 +792,11 @@ class DAQ_Viewer(ParameterControlModule):
             else:
                 for dwa in dte:
                     dwa.origin = self._title
+                    if self.settings['main_settings', 'dynamic'] != 'as_is':
+                        arrays = []
+                        for data_array in dwa:
+                            arrays.append(data_array.astype(self.settings['main_settings', 'dynamic'], copy=False))
+                        dwa.data = arrays
                 self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:
@@ -913,19 +917,17 @@ class DAQ_Viewer(ParameterControlModule):
                     for viewer in self.viewers:
                         viewer.x_axis, viewer.y_axis = self.get_scaling_options()
 
-        elif param.name() == 'continuous_saving_opt':
-            self.settings.child('saver_settings').setOpts(visible=param.value())
-
-
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
 
         elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            if param.name() == 'do_save':
-                self.setup_continuous_saving(param.value())
-            self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
-
+            try:
+                if param.name() == 'do_save':
+                    self.setup_continuous_saving(param.value())
+                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+            except KeyError:
+                pass
         self._update_settings(param=param)
 
     def child_added(self, param, data):
@@ -1061,47 +1063,27 @@ class DAQ_Viewer(ParameterControlModule):
         elif status.command == ThreadStatusViewer.STOP:
             self.stop_grab()
 
-    def connect_tcp_ip(self):
-        super().connect_tcp_ip(params_state=self.settings.child('detector_settings'),
-                               client_type="GRABBER")
-
     @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
-        """Receive commands from the TCP Server (if connected) and process them
+    def process_leco_commands(self, status: ThreadCommand) -> None:
+        """Receive commands from the LECO network and process them.
 
         Parameters
         ----------
         status: ThreadCommand
             Possible commands are:
-            * 'Send Data: to trigger a snapshot
-            * 'connected': show that connection is ok
-            * 'disconnected': show that connection is not OK
-            * 'Update_Status': update a status command
-            * 'set_info': receive settings from the server side and update them on this side
 
-        See Also
-        --------
-        connect_tcp_ip, TCPServer
-
+            * :attr:`LECOViewerCommands.GRAB`: start a continuous grab and later forward acquired data to LECO.
+            * :attr:`LECOViewerCommands.SNAP`: take a single snapshot and later forward the data to LECO.
+            * :attr:`LECOViewerCommands.STOP`: stop an ongoing grab.
         """
-        if super().process_tcpip_cmds(status=status) is None:
-            return
-        if 'Send Data' in status.command:
-            self.snapshot('', send_to_tcpip=True)
-        elif status.command == LECOViewerCommands.GRAB:
-            self.grab(send_to_tcpip=True)
+        if status.command == LECOViewerCommands.GRAB:
+            self.grab(send_to_leco=True)
         elif status.command ==LECOViewerCommands.SNAP:
-            self.snap( send_to_tcpip=True)
-
+            self.snap(send_to_leco=True)
         elif status.command == LECOViewerCommands.STOP:
             self.stop()
-
-        elif status.command == LECOClientCommands.LECO_CONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
-
-        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
-
+        else:
+            super().process_leco_commands(status=status)
 
 
 class DAQ_Detector(QObject):

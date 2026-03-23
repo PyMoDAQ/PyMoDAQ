@@ -449,45 +449,20 @@ class DAQ_PID(CustomExt):
         logger.debug("setting actions")
 
         self.add_widget("model_label", QtWidgets.QLabel, "Init Model:")
-        self.add_action(
-            "ini_model",
-            "Init Model",
-            "ini",
-            tip="Initialize the selected model: algo/data conversion",
-        )
+        self.add_action("ini_model", "Init Model", "ini",
+            tip="Initialize the selected model: algo/data conversion",)
         self.add_widget("model_led", QLED, toolbar=self.toolbar)
-
-        self.add_action(
-            "create_setp_actuators",
-            "Create SetPoint Actuators",
-            "Add_Step",
+        self.add_action("create_setp_actuators", "Create SetPoint Actuators", "Add_Step",
             tip="Create a DAQ_Move Control Module for each SetPoint allowing to"
-            "control them from the DashBoard, therefore within other extensions",
-        )
-
+            "control them from the DashBoard, therefore within other extensions",)
         self.add_widget("model_label", QtWidgets.QLabel, "Init PID Runner:")
-        self.add_action(
-            "ini_pid",
-            "Init the PID loop",
-            "ini",
-            tip="Init the PID thread",
-            checkable=True,
-        )
+        self.add_action("ini_pid", "Init the PID loop", "ini",
+            tip="Init the PID thread", checkable=True,)
         self.add_widget("pid_led", QLED, toolbar=self.toolbar)
-        self.add_action(
-            "run",
-            "Run The PID loop",
-            "run2",
-            tip="run or stop the pid loop",
-            checkable=True,
-        )
-        self.add_action(
-            "pause",
-            "Pause the PID loop",
-            "pause",
-            tip="Pause the PID loop",
-            checkable=True,
-        )
+        self.add_action( "run", "Run The PID loop", "run2",
+            tip="run or stop the pid loop", checkable=True,)
+        self.add_action("pause", "Pause the PID loop", "pause",
+            tip="Pause the PID loop", checkable=True,)
         self.set_action_checked("pause", True)
         self.set_action_enabled("create_setp_actuators", False)
         logger.debug("actions set")
@@ -584,17 +559,11 @@ class DAQ_PID(CustomExt):
             ThreadCommand("pause_PID", [self.is_action_checked("pause")])
         )
 
-    def stop_moves(self, overshoot):
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
         """
-        Foreach module of the move module object list, stop motion.
-
-        See Also
-        --------
-        stop_scan,  DAQ_Move_main.daq_move.stop_Motion
-        """
-        self.overshoot = overshoot
-        for mod in self.modules_manager.actuators:
-            mod.stop_Motion()
+        if self.is_action_checked("run"):
+            self.get_action('run').trigger()
 
     def set_model(self):
         model_name = self.settings["models", "model_class"]

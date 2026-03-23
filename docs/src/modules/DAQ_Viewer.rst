@@ -164,7 +164,6 @@ Main settings refers to settings common to all instrument plugin. They are mostl
   non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one
   should average, then set *Naverage* to this value
 * **Wait time (ms)**: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging
-* **Continuous saving**: useful for data logging. Will display new options below in order to set a h5 file to log live data, see :ref:`continuous_saving`.
 * **Overshoot options**: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
   detector reaches the *overshoot value*, the module will throw a ``overshoot_signal`` (boolean PyQtSignal). The overshoot manager of the
   *Dashboard* generalize this feature (see :ref:`overshoot_manager`) by triggering actions on actuators if overshoot signals are detected.
@@ -241,9 +240,9 @@ like :numref:`detector_saver_content` using PyMoDAQ's h5 browser.
 
 .. _continuous_saving:
 
-Continuous Saving
+Saver settings
 ^^^^^^^^^^^^^^^^^
-When the *continuous saving* parameter is set, new parameters are appearing on the *DAQ_Viewer* panel
+Saving parameters are accessible on the *DAQ_Viewer* panel
 (see :numref:`figure_continuous`). This is in fact the settings associated with the ``H5Saver`` object used under the hood,
 see :ref:`h5saver_module`.
 

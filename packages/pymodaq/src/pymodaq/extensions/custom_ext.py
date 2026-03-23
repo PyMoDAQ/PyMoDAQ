@@ -22,21 +22,30 @@ class CustomExt(CustomApp):
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
-                 dashboard: 'DashBoard', **kwargs):
+                 dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
         self.runner_thread : QtCore.QThread = None
         if dashboard is not None:
-            self._modules_manager = ModulesManager(detectors=self.dashboard.detector_modules,
-                                                   actuators=self.dashboard.actuators_modules,
-                                                   parent_name=self.__class__.__name__)
+            self._modules_manager = module_manager_class(
+                detectors=self.dashboard.detector_modules,
+                actuators=self.dashboard.actuators_modules,
+                parent_name=self.__class__.__name__)
+
             if self.preset_manager is not None:
                 self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
                 if self.preset_manager.entry_applied:
                     self.do_things_after_preset_set(self.preset_manager.entry)
         else:
             self._modules_manager = None
+
+    def stop(self):
+        """ Programmatic method to stop any action in the extension
+
+        To be reimplemented
+        """
+        raise NotImplementedError
 
     def quit_fun(self):
         """Method to be subclassed in order to define a custom quit function
@@ -104,6 +113,7 @@ class CustomExt(CustomApp):
             self.runner_thread.wait()
 
     def create_dashboard_toolbar(self,
+                                 add_dashboard: bool = True,
                                  add_preset=True,
                                  add_configurator=True,
                                  add_break=True):
@@ -112,23 +122,24 @@ class CustomExt(CustomApp):
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
-        self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
-                        toolbar='dashboard')
-        self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
-                        'Show/Hide the Dashboard window', checkable=True,
-                        icon_color=self.get_theme().green,
-                        icon_checked='visibility_off',
-                        icon_checked_color=self.get_theme().red,
-                        toolbar='dashboard')
-        self.get_toolbar('dashboard').addSeparator()
+        if add_dashboard:
+            self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
+                            toolbar='dashboard')
+            self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
+                            'Show/Hide the Dashboard window', checkable=True,
+                            icon_color=self.get_theme().green,
+                            icon_checked='visibility_off',
+                            icon_checked_color=self.get_theme().red,
+                            toolbar='dashboard')
+            self.get_toolbar('dashboard').addSeparator()
+            self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
+
         if add_preset:
             self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
         if add_configurator:
             self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
-
-        self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
 
     def show_dashboard(self, show: bool = None):
         if self.dashboard is not None and self.has_action(DashBoardToolbarActions.SHOW):

@@ -96,14 +96,12 @@ class DAQ_Move(ParameterControlModule):
 
     params = daq_move_params +  [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': True, 'children': H5Saver.params, 'expanded': False}]
 
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
 
-    def __init__(
-        self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs
-    ) -> None:
+    def __init__(self, parent=None, title="DAQ Move", ui_identifier: Optional[str] = None, **kwargs) -> None:
         """
 
         Parameters
@@ -118,7 +116,7 @@ class DAQ_Move(ParameterControlModule):
         self.logger = set_logger(f"{logger.name}.{title}")
         self.logger.info(f"Initializing DAQ_Move: {title}")
 
-        super().__init__(action_list=("save", "update"), **kwargs)
+        super().__init__(listener_class=MoveActorListener, action_list=("save", "update"), **kwargs)
 
         if not (
             ui_identifier is not None and ui_identifier in ActuatorUIFactory.keys()
@@ -162,6 +160,12 @@ class DAQ_Move(ParameterControlModule):
 
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.get_actuator_value)
+
+    @property
+    def current_value(self) -> DataActuator:
+        if self._current_value.origin is None:
+            self.current_value.origin = self.title
+        return self._current_value
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -275,6 +279,11 @@ class DAQ_Move(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
+    def stop_module(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_motion()
+        self.stop_grab()
+
     def move(self, move_command: MoveCommand):
         """Generic method to trigger the correct action on the actuator
 
@@ -298,7 +307,7 @@ class DAQ_Move(ParameterControlModule):
         elif move_command.move_type == "home":
             self.move_home(move_command.value)
 
-    def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_tcpip=False):
+    def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_leco=False):
         """Move the connected hardware to the absolute value
 
         Returns nothing but the move_done_signal will be send once the action is done
@@ -307,16 +316,18 @@ class DAQ_Move(ParameterControlModule):
         ----------
         value: ndarray
             The value the actuator should reach
-        send_to_tcpip: bool
-            if True, this position is send through the TCP/IP communication canal
+        send_to_leco: bool
+            if True, this position is send through the LECO communication canal
         """
         try:
             if isinstance(value, Number):
                 value = DataActuator(
                     self.title, data=[np.array([value])], units=self.units
                 )
-            self._send_to_tcpip = send_to_tcpip
-            if value != self._current_value:
+            self._send_to_leco = send_to_leco
+            if value == self._current_value:
+                self.thread_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, value))
+            else:
                 if self.ui is not None:
                     self.ui.move_done = False
                 self._move_done_bool = False
@@ -332,15 +343,15 @@ class DAQ_Move(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def move_home(self, send_to_tcpip=False):
+    def move_home(self, send_to_leco=False):
         """Move the connected actuator to its home value (if any)
 
         Parameters
         ----------
-        send_to_tcpip: bool
-            if True, this position is send through the TCP/IP communication canal
+        send_to_leco: bool
+            if True, this position is send through the LECO communication canal
         """
-        self._send_to_tcpip = send_to_tcpip
+        self._send_to_leco = send_to_leco
         try:
             if self.ui is not None:
                 self.ui.move_done = False
@@ -355,7 +366,7 @@ class DAQ_Move(ParameterControlModule):
             self.logger.exception(str(e))
 
     def move_rel(
-        self, rel_value: Union[DataActuator, numbers.Number], send_to_tcpip=False
+        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False
     ):
         """Move the connected hardware to the relative value
 
@@ -365,8 +376,8 @@ class DAQ_Move(ParameterControlModule):
         ----------
         value: float
             The relative value the actuator should reach
-        send_to_tcpip: bool
-            if True, this position is send through the TCP/IP communication canal
+        send_to_leco: bool
+            if True, this position is send through the LECO communication canal
         """
 
         try:
@@ -374,7 +385,7 @@ class DAQ_Move(ParameterControlModule):
                 rel_value = DataActuator(
                     self.title, data=[np.array([rel_value])], units=self.units
                 )
-            self._send_to_tcpip = send_to_tcpip
+            self._send_to_leco = send_to_leco
             if self.ui is not None:
                 self.ui.move_done = False
             self._move_done_bool = False
@@ -421,6 +432,8 @@ class DAQ_Move(ParameterControlModule):
                     self.ui.actuator_init = False
             except Exception as e:
                 self.logger.exception(str(e))
+            finally:
+                self.connect_leco(False)
         else:
             try:
                 hardware = DAQ_Move_Hardware(
@@ -444,6 +457,7 @@ class DAQ_Move(ParameterControlModule):
                         ],
                     )
                 )
+                self.connect_leco(True)
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -464,9 +478,6 @@ class DAQ_Move(ParameterControlModule):
 
         if param.name() == "refresh_timeout":
             self._refresh_timer.setInterval(param.value())
-
-        elif param.name() == 'continuous_saving_opt':
-            self.settings.child('saver_settings').setOpts(visible=param.value())
 
         elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
             if param.name() == 'do_save':
@@ -580,18 +591,9 @@ class DAQ_Move(ParameterControlModule):
                 self.append_data()
 
             self.current_value_signal.emit(self._current_value)
-            if (
-                    self.settings["main_settings", "tcpip", "tcp_connected"]
-                and self._send_to_tcpip
-            ):
-                self._command_tcpip.emit(ThreadCommand("position_is", data_act))
-            if (
-                self.settings["main_settings", "leco", "leco_connected"]
-                and self._send_to_tcpip
-            ):
-                self._command_tcpip.emit(
-                    ThreadCommand(LECOMoveCommands.POSITION, data_act)
-                )
+
+            if self.settings["main_settings", "leco", "leco_connected"] and self._send_to_leco:
+                self._leco_commands_signal.emit(ThreadCommand(LECOMoveCommands.POSITION, data_act))
 
         elif status.command == ThreadStatusMove.MOVE_DONE:
             data_act = self._check_data_type(status.attribute)
@@ -600,19 +602,11 @@ class DAQ_Move(ParameterControlModule):
                 self.ui.move_done = True
             self._current_value = data_act
             self._move_done_bool = True
+            data_act.origin = data_act.origin if data_act.origin is not (None or '') else self.title
             self.move_done_signal.emit(data_act)
-            if (
-                self.settings.child("main_settings", "tcpip", "tcp_connected").value()
-                and self._send_to_tcpip
-            ):
-                self._command_tcpip.emit(ThreadCommand("move_done", data_act))
-            if (
-                self.settings.child("main_settings", "leco", "leco_connected").value()
-                and self._send_to_tcpip
-            ):
-                self._command_tcpip.emit(
-                    ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act)
-                )
+
+            if self.settings.child("main_settings", "leco", "leco_connected").value() and self._send_to_leco:
+                self._leco_commands_signal.emit(ThreadCommand(LECOMoveCommands.MOVE_DONE, data_act))
 
         elif status.command == ThreadStatusMove.OUT_OF_BOUNDS:
             logger.warning(f"The Actuator {self.title} has reached its defined bounds")
@@ -659,11 +653,17 @@ class DAQ_Move(ParameterControlModule):
             data_act.force_units(self.units)
         return data_act
 
-    def get_actuator_value(self):
+    def get_actuator_value(self, send_to_leco=False):
         """Get the current actuator value via the "get_actuator_value" command send to the hardware
 
         Returns nothing but the  `move_done_signal` will be send once the action is done
+        Parameters
+        ----------
+        send_to_leco: bool
+            if True, this position is send through the LECO communication canal
         """
+        self._send_to_leco = send_to_leco
+
         try:
             self.command_hardware.emit(
                 ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE)
@@ -837,40 +837,37 @@ class DAQ_Move(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def connect_tcp_ip(self):
-        super().connect_tcp_ip(
-            params_state=self.settings.child("move_settings"), client_type="ACTUATOR"
-        )
-
     def connect_leco(self, connect: bool) -> None:
         super().connect_leco(connect)
 
-    @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
-        if super().process_tcpip_cmds(status=status) is None:
-            return
-        if LECOMoveCommands.MOVE_ABS == status.command:
-            self.move_abs(status.attribute, send_to_tcpip=True)
 
-        elif LECOMoveCommands.MOVE_REL == status.command:
-            self.move_rel(status.attribute, send_to_tcpip=True)
+    def process_leco_commands(self, status: ThreadCommand) -> None:
+        """Receive commands from the LECO network and process them.
 
-        elif LECOMoveCommands.MOVE_HOME == status.command:
-            self.move_home(send_to_tcpip=True)
+        Parameters
+        ----------
+        status: ThreadCommand
+            Possible commands are:
 
-        elif "check_position" in status.command:
-            deprecation_msg(
-                "check_position is deprecated, you should use get_actuator_value"
-            )
-            self._send_to_tcpip = True
-            self.get_actuator_value()
+            * :attr:`LECOMoveCommands.MOVE_ABS`: move to the absolute position given in ``status.attribute``.
+            * :attr:`LECOMoveCommands.MOVE_REL`: move by the relative amount given in ``status.attribute``.
+            * :attr:`LECOMoveCommands.MOVE_HOME`: move to the home position.
+            * :attr:`LECOMoveCommands.STOP`: stop any ongoing motion.
+            * :attr:`LECOMoveCommands.GET_ACTUATOR_VALUE`: read and return the current actuator position to LECO.
+        """
 
-        elif LECOMoveCommands.GET_ACTUATOR_VALUE in status.command:
-            self._send_to_tcpip = True
-            self.get_actuator_value()
-
+        if status.command == LECOMoveCommands.MOVE_ABS:
+            self.move_abs(status.attribute, send_to_leco=True)
+        elif status.command == LECOMoveCommands.MOVE_REL:
+            self.move_rel(status.attribute, send_to_leco=True)
+        elif status.command == LECOMoveCommands.MOVE_HOME:
+            self.move_home(send_to_leco=True)
+        elif status.command ==  LECOMoveCommands.GET_ACTUATOR_VALUE:
+            self.get_actuator_value(send_to_leco=True)
         elif status.command == LECOMoveCommands.STOP:
             self.stop_motion()
+        else:
+            super().process_leco_commands(status=status)
 
 
 class DAQ_Move_Hardware(QObject):
