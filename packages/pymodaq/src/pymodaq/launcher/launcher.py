@@ -103,7 +103,8 @@ class Launcher(CustomApp):
         self.history_file_path = get_set_configurator_path(user=True) / self.history_file_name
 
         # History file handler (watchdog)
-        # self._handler = HistoryFileHandler(callback=self.his)
+        self._handler = HistoryFileHandler(callback=self.history_file_path)
+        self._observer = Observer()
 
         self.setup_ui()
 
@@ -211,7 +212,6 @@ class Launcher(CustomApp):
         """
         self.history, self.history_keys = self.load_history_in_dict()
         self.ui_refresh()
-        self.check_disable_navigation_buttons()
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -356,7 +356,6 @@ class Launcher(CustomApp):
 
         self.history_index = 0
         self.ui_refresh()
-        self.check_disable_navigation_buttons()
         
 
     def do_back(self):
@@ -368,7 +367,6 @@ class Launcher(CustomApp):
         """
         self.history_index +=1
         self.ui_refresh()
-        self.check_disable_navigation_buttons()
 
     def do_next(self):
         """
@@ -379,7 +377,6 @@ class Launcher(CustomApp):
         """
         self.history_index -= 1
         self.ui_refresh()
-        self.check_disable_navigation_buttons()
 
     def check_disable_navigation_buttons(self):
         """
@@ -424,6 +421,9 @@ class Launcher(CustomApp):
         self.preset_manager.entry = self.preset_name
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
+        # Enable and disable navigation buttons
+        self.check_disable_navigation_buttons()
+
 
     def load_history_in_dict(self) -> tuple[
         dict[str, str], list[str]]:
@@ -462,8 +462,10 @@ class Launcher(CustomApp):
 
         return history, history_keys
 
-    def _on_history_file_modified(self, path):
-        pass
+    def _on_history_file_modified(self):
+        if len(self.history_keys) > 0 :
+            self.history_index = 0
+        self.ui_refresh()
 
 
 def main():
