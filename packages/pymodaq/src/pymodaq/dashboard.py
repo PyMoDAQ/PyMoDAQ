@@ -212,6 +212,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_detector_manager: DetectorCompactDock = None
 
         self._scripted_preset_load = False
+        self._requested_configuration_name = ''
 
         self.setup_ui()
 
@@ -265,7 +266,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(True)
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
+
+        self.configurator.set_preset_filename(preset_name)
+        requested_configuration = self._requested_configuration_name
+        if requested_configuration and requested_configuration in self.configurator.entries:
+            self.configurator.update_entry(requested_configuration)
+
         self.configurator._execute_entry(self.configurator.entry_filepath)
+        self._requested_configuration_name = ''
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
@@ -1437,14 +1445,10 @@ def load_dashboard_with_preset(preset_name: str,
 
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
-        dashboard.configurator.preset_filename = preset_name
+        dashboard.configurator.preset_filename = preset_path
+        dashboard.configurator.entry = configuration_name
+        dashboard._requested_configuration_name = configuration_name
         dashboard.preset_manager.execute_entry(preset_path)
-
-        # Re-apply the requested configurator after preset application callbacks have run.
-        if configuration_name in dashboard.configurator.entries:
-            dashboard.configurator.execute_entry(
-                dashboard.configurator.entry_path_from_name(configuration_name)
-            )
 
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
