@@ -43,17 +43,19 @@ class EnumToolTip(StrEnum):
     RESTORE = 'Restore this preset with the selected configurator'
 
 class HistoryFileHandler(FileSystemEventHandler) :
-    def __init__(self, callback):
+    def __init__(self, callback, watched_path):
         self.callback = callback
+        self.watched_path = str(watched_path)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
-        if not event.is_directory :
-            self.callback(event.src_path)
+        if not event.is_directory and event.src_path == self.watched_path:
+            self.callback()
 
 
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
+    history_modified_sig = Signal()
     # list of dicts enabling a settings tree on the user interface
     params = []
 
@@ -103,8 +105,18 @@ class Launcher(CustomApp):
         self.history_file_path = get_set_configurator_path(user=True) / self.history_file_name
 
         # History file handler (watchdog)
-        self._handler = HistoryFileHandler(callback=self.history_file_path)
+        self._handler = HistoryFileHandler(
+                                            callback=self._on_history_file_modified,
+                                            watched_path=self.history_file_path
+                                        )
         self._observer = Observer()
+        self._observer.schedule(
+            self._handler,
+            path=str(self.history_file_path.parent),
+            recursive=False
+        )
+        self._observer.start()
+        self.history_modified_sig.connect(self._refresh_history_ui)
 
         self.setup_ui()
 
@@ -337,25 +349,7 @@ class Launcher(CustomApp):
             preset_name=self.preset_name,
             configuration_name=self.configurator_name,
         )
-        # Ensure close triggers object deletion so we can react on destroyed.
-        self._dashboard_shared_ui.mainwindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        self._dashboard_shared_ui.mainwindow.destroyed.connect(self._refresh_after_dashboard_close)
         self._dashboard_shared_ui.show()
-
-    def _refresh_after_dashboard_close(self):
-        """Reload history and refresh launcher widgets once the dashboard window is closed."""
-        self.history, self.history_keys = self.load_history_in_dict()
-        if not self.history_keys:
-            self.preset_name = ''
-            self.configurator_name = ''
-            self.box_label.setText('')
-            self.preset_label_value.setText(self.preset_name)
-            self.configurator_label_value.setText(self.configurator_name)
-            self.check_disable_navigation_buttons()
-            return
-
-        self.history_index = 0
-        self.ui_refresh()
         
 
     def do_back(self):
@@ -463,8 +457,13 @@ class Launcher(CustomApp):
         return history, history_keys
 
     def _on_history_file_modified(self):
-        if len(self.history_keys) > 0 :
-            self.history_index = 0
+        self.history, self.history_keys = self.load_history_in_dict()
+        self.history_index = 0
+        self.history_modified_sig.emit()
+
+        print("history file is modified !")
+
+    def _refresh_history_ui(self):
         self.ui_refresh()
 
 
