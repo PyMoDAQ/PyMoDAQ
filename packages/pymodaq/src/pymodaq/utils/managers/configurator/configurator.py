@@ -68,6 +68,8 @@ class Configurator(ManagerBase):
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
+        self.max_size_history = 10 # TODO : to be integrated into the configuration file
+
 
     @property
     def preset_manager(self) -> PresetManager:
@@ -452,9 +454,18 @@ class Configurator(ManagerBase):
         else:
             existing = {}
 
-        existing.update(entry)
+
+        new_dict = {key :value for i, (key, value) in enumerate(existing.items())
+                    if i >= len(existing) - self.max_size_history + 1
+                    and (value['preset'] != entry[str(date)]['preset']
+                    or value['configurator'] != entry[str(date)]['configurator'])
+                    }
+        new_dict.update(entry)
+
+
+
         with open(history_path, "wb") as f:
-            tomli_w.dump(existing, f)
+            tomli_w.dump(new_dict, f)
 
 
 
