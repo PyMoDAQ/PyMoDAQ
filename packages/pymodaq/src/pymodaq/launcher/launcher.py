@@ -18,9 +18,11 @@ from qtpy.QtWidgets import (
 from pymodaq.dashboard import load_dashboard_with_preset
 from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq.utils.shared_ui import SharedUI
+from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
@@ -61,6 +63,7 @@ class Launcher(CustomApp):
 
     def __init__(self, mainWindow, dashboard=None, history_file_name = 'history.toml'):
         super().__init__(mainWindow)
+
         self.dashboard = dashboard
         # init the App specific attributes
         self.raw_data = []
@@ -69,6 +72,7 @@ class Launcher(CustomApp):
         self.mainwindow.removeToolBar(self._toolbar)
 
         self.preset_manager = PresetManager()
+        self.configurator = Configurator()
 
         # Layout
         self.main_hbox = QHBoxLayout()
@@ -165,6 +169,7 @@ class Launcher(CustomApp):
         self.main_hbox.addWidget(separator)
         self.main_hbox.addLayout(self.loader_vbox, 1)
         self.loader_vbox.addLayout(self.hbox)
+        self.loader_vbox.addWidget(self.add_toolbar('controls'))
         self.loader_vbox.addLayout(self.preset_configurator_layout)
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
@@ -177,7 +182,10 @@ class Launcher(CustomApp):
         self.preset_configurator_layout.addWidget(self.configurator_label)
         self.preset_configurator_layout.addWidget(self.configurator_label_value)
 
+
+
         self.set_header()
+        self.set_controls()
 
         widget = QWidget()
         widget.setLayout(self.main_hbox)
@@ -212,6 +220,8 @@ class Launcher(CustomApp):
         self.connect_action('back_config', lambda: self.do_back())
         self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_preset_configurator())
         self.connect_action('next_config', lambda: self.do_next())
+        self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
+        self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         '''
@@ -223,6 +233,15 @@ class Launcher(CustomApp):
         """Non mandatory method to be subclassed in order to do things after the UI setup
         """
         self.history, self.history_keys = self.load_history_in_dict()
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'))
+        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
+        self.preset_manager.enable_actions(True)
+        print(self.preset_manager.actions_names)
+        self.preset_manager.set_action_enabled('list_entries', False)
+        self.configurator.enable_actions(True)
+        # self.get_toolbar('preset').setEnabled(False)
+        # self.configurator = Configurator(dashboard=self.dashboard)
+
         self.ui_refresh()
 
     def value_changed(self, param):
@@ -283,6 +302,10 @@ class Launcher(CustomApp):
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self.header_toolbar.layout().setSpacing(20)
+
+    def set_controls(self):
+        self.get_toolbar('controls').addWidget(self.add_toolbar('preset', 'Preset', add_break=False))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
 
     @staticmethod
     def _module_display_title(module_param) -> str:
@@ -347,7 +370,7 @@ class Launcher(CustomApp):
         """
         self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
             preset_name=self.preset_name,
-            configuration_name=self.configurator_name,
+            configuration_name=self.configurator.entry,
         )
         self._dashboard_shared_ui.show()
         
@@ -407,6 +430,8 @@ class Launcher(CustomApp):
             self.configurator_name = "default"
             self.box_label.setText("-")
 
+        self.configurator.preset_filename = self.preset_name
+        self.configurator.entry = self.configurator_name
         # preset and configurator labels
         self.preset_label_value.setText(self.preset_name)
         self.configurator_label_value.setText(self.configurator_name)
@@ -461,10 +486,10 @@ class Launcher(CustomApp):
         self.history_index = 0
         self.history_modified_sig.emit()
 
-        print("history file is modified !")
-
     def _refresh_history_ui(self):
         self.ui_refresh()
+
+
 
 
 def main():
