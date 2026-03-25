@@ -160,6 +160,12 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
+    @staticmethod
+    def get_params_for_save_type(type : SaveType):
+        return [
+            {**p, 'value': type.name} if p['name'] == 'save_type' else p for p in H5SaverBase.params
+        ]
+
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None,
                   metadata=dict([])):
         """Initializes a new h5 file.

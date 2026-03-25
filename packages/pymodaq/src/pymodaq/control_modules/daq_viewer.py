@@ -32,7 +32,7 @@ from pymodaq_utils.config import Config, get_set_local_dir
 from pymodaq_gui.h5modules.browsing import browse_data
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-from pymodaq_data.h5modules.backends import Node
+from pymodaq_data.h5modules.backends import Node, SaveType
 from pymodaq_utils.utils import ThreadCommand
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -105,7 +105,7 @@ class DAQ_Viewer(ParameterControlModule):
 
     params = daq_viewer_params + [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': False, 'children': H5Saver.get_params_for_save_type(SaveType.detector)}]
 
     listener_class = ViewerActorListener
     ui: Optional[DAQ_Viewer_UI]
