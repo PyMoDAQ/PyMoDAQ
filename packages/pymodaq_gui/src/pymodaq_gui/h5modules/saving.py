@@ -187,6 +187,11 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
+    @staticmethod
+    def get_params_for_save_type(type : SaveType):
+        return [
+            {**p, 'value': type.name} if p['name'] == 'save_type' else p for p in H5SaverBase.params
+        ]
     def _check_swmr_compatibility(self, fullpathname, update_h5):
         """Check SWMR compatibility of an existing file and prompt user on mismatch.
 
