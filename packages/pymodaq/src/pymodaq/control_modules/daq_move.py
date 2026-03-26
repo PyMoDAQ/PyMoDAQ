@@ -28,7 +28,7 @@ from pymodaq_utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq.utils.data import DataToExport, DataActuator
-from pymodaq_data.h5modules.backends import Node
+from pymodaq_data.h5modules.backends import Node, SaveType
 
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -118,7 +118,7 @@ class DAQ_Move(ParameterControlModule):
 
     params = daq_move_params +  [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
-         'visible': False, 'children': H5Saver.params}]
+         'visible': False, 'children': H5Saver.get_params_for_save_type(SaveType.actuator)}]
 
     listener_class = MoveActorListener
     ui: Optional[DAQ_Move_UI_Base]
