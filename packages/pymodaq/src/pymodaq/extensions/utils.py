@@ -66,7 +66,7 @@ def get_extensions() -> dict['ExtensionEnum', Extension]:
                         mod_in = importlib.import_module(f'{pkg.value}.extensions.{mod}')
                         if hasattr(mod_in, 'EXTENSION_NAME'):
                             try:
-                                extend_enum(ExtensionEnum, mod_in.CLASS_NAME.upper(), mod_in.CLASS_NAME)
+                                extend_enum(ExtensionEnum, mod_in.CLASS_NAME.upper(), mod_in.EXTENSION_NAME)
                             except TypeError: #already existing no need to add it, could happen if
                                 #this function is called several times
                                 pass
