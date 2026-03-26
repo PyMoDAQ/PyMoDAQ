@@ -6,7 +6,8 @@ Created the 23/11/2022
 """
 from __future__ import annotations
 
-from typing import Union, List, Dict, Tuple, TYPE_CHECKING, Iterable
+from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
+import time
 import xml.etree.ElementTree as ET
 
 
@@ -15,20 +16,18 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq_utils.utils import capitalize
-from pymodaq_data.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
+from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
-from pymodaq_data.h5modules.backends import GROUP, CARRAY, Node, GroupType
+from pymodaq_data.h5modules.backends import GROUP, Node
 from pymodaq_data.h5modules.data_saving import (
-    DataToExportSaver, AxisSaverLoader, DataToExportEnlargeableSaver,
+    DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver)
 from pymodaq_gui.parameter import ioxml
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.daq_scan import DAQScan
+    from pymodaq.extensions.scan.daq_scan import DAQScan
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
-    from pymodaq.extensions.daq_logger.h5logging import H5Logger
-
 
 logger = set_logger(get_module_name(__file__))
 
@@ -39,6 +38,7 @@ class GroupModuleType(BaseEnum):
     SCAN = 2
     DATALOGGER = 3
     OPTIMIZER = 4
+    TIME = 5
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -376,11 +376,18 @@ class ScanSaver(ModuleSaver):
         self._module_group: GROUP = None
         self._module: DAQScan = module
         self._h5saver = None
+        self._time_saver = TimeModuleSaver()
+
+        for detector in self._module.modules_manager.detectors_all:
+            detector._module_and_data_saver = DetectorSaver(detector)
+        for actuator in self._module.modules_manager.actuators_all:
+            actuator._module_and_data_saver = ActuatorSaver(actuator)
 
     def update_after_h5changed(self):
         for module in self._module.modules_manager.modules_all:
-            if hasattr(module, 'module_and_data_saver'):
-                module.module_and_data_saver.h5saver = self.h5saver
+            if hasattr(module, '_module_and_data_saver'):
+                module._module_and_data_saver.h5saver = self.h5saver
+        self._time_saver.h5saver = self.h5saver
 
     def forget_h5(self):
         for module in self._module.modules_manager.modules_all:
@@ -413,6 +420,7 @@ class ScanSaver(ModuleSaver):
         for module in self._module.modules_manager.modules:
             module.module_and_data_saver.main_module = False
             module.module_and_data_saver.get_set_node(self._module_group)
+        self._time_saver.get_set_node(self._module_group)
         return self._module_group
 
     def _add_module(self, where: Union[Node, str] = None, metadata=None) -> Node:
@@ -449,12 +457,81 @@ class ScanSaver(ModuleSaver):
             detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
     def add_data(self, dte: DataToExport = None, indexes: Tuple[int] = None,
-                 distribution=DataDistribution['uniform'], **kwargs):
+                 distribution=DataDistribution.uniform, **kwargs):
         for detector in self._module.modules_manager.detectors:
             try:
                 detector.insert_data(indexes, where=self._module_group, distribution=distribution)
             except Exception as e:
                 logger.exception(f'Cannot insert data: {str(e)}')
+
+    def initialize_time_array(self, extended_shape: Tuple[int]):
+        self._time_saver.initialize(extended_shape)
+
+    def add_time(self, indexes: Tuple[int]):
+        self._time_saver.add_time(indexes)
+
+
+class TimeModule:
+    """Minimal module-like object used by TimeModuleSaver."""
+    title = 'Timestamps'
+
+
+class TimeModuleSaver(ModuleSaver):
+    """Saves per-scan-point elapsed time in a proper HDF5 group.
+
+    Creates a 'Timestamps/' group inside the scan node, with a Data00 CARRAY
+    of shape = scan_shape written via DataToExportExtendedSaver, so naming
+    conventions and attributes are handled identically to detector data.
+
+    Nav axes are NOT repeated here — they already live in each detector's
+    NavAxes group and share the same index convention.
+    """
+    group_type = GroupModuleType.TIME
+
+    def __init__(self):
+        self._module = TimeModule()
+        self._module_group = None
+        self._h5saver = None
+        self._extended_shape: Tuple[int] = None
+        self._datatoexport_saver: DataToExportExtendedSaver = None
+        self._start_time: float = None
+
+    def update_after_h5changed(self):
+        if self._extended_shape is not None:
+            self._datatoexport_saver = DataToExportExtendedSaver(
+                self._h5saver, self._extended_shape, fill_value=np.nan)
+
+    def _add_module(self, where=None, metadata=None) -> Node:
+        if metadata is None:
+            metadata = {}
+        if where is None:
+            where = self._h5saver.raw_group
+        # Fixed group name 'Timestamps' — no incremental index
+        group = self._h5saver.get_set_group(where, 'Timestamps', title='Timestamps')
+        self._h5saver.set_attr(group, 'type', 'time')
+        settings_xml = ET.Element('All_settings', type='group')
+        self._h5saver.set_attr(group, 'settings', ET.tostring(settings_xml))
+        return group
+
+    def initialize(self, extended_shape: Tuple[int]):
+        """Set up the extended saver and start the internal clock."""
+        self._extended_shape = extended_shape
+        self._start_time = time.perf_counter()
+        self._datatoexport_saver = DataToExportExtendedSaver(
+            self._h5saver, extended_shape, fill_value=np.nan)
+
+    def add_time(self, indexes: Tuple[int]):
+        """Record elapsed seconds since initialize() was called at the given scan indexes."""
+        if self._datatoexport_saver is not None:
+            elapsed_time = float(np.float32(time.perf_counter() - self._start_time))
+            dte = DataToExport('Timestamps', data=[
+                DataRaw('ElapsedTime',
+                        data=[np.array([elapsed_time], dtype=np.float32)],
+                        units='s')
+            ])
+            self._datatoexport_saver.add_data(
+                self._module_group, dte, indexes=indexes,
+                distribution=DataDistribution['uniform'])
 
 
 class LoggerSaver(ScanSaver):

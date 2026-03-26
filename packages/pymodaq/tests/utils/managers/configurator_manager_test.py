@@ -7,7 +7,7 @@ Created the 07/11/2023
 import pytest
 from pathlib import Path
 from qtpy import QtWidgets
-from pymodaq.utils.managers import Configurator
+from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.configurator.subentries import (
     SubEntryHandlerFactory, SubEntryHandlerTypes)
 
@@ -26,15 +26,11 @@ def ini_configurator(init_qt):
     qtbot = init_qt
 
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset Manager Menu')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    configurator = Configurator(menu=menu, toolbar=toolbar)
+    configurator = Configurator()
     configurator.settings = Path(__file__).parent.joinpath('settings.xml')
 
-    configurator.update_entry_base()
+    configurator.update_entry()
     qtbot.addWidget(configurator.mainwindow)
     configurator.mainwindow.show()
     qtbot.addWidget(external_ui)

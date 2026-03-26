@@ -17,4 +17,4 @@ if __name__ == '__main__':
     widget.show()
     widget.load(r'C:\Users\weber\Labo\Projet-Dossier candidature\Technical project\GDSII\wafer.svg')
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

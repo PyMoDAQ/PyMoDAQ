@@ -3,10 +3,14 @@ import os
 import sys
 import warnings
 
+import qt_themes
+from pyqtgraph import mkQApp as mkQApppg
+
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QLocale
+
 from pymodaq_utils import logger as logger_module
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.qvariant import QVariant
 
@@ -54,8 +58,8 @@ def setLocale():
     defines the Locale to use to convert numbers to strings representation using language/country conventions
     Default is English and US
     """
-    language = getattr(QLocale, config('style', 'language'))
-    country = getattr(QLocale, config('style', 'country'))
+    language = getattr(QLocale, config('gui', 'style', 'language'))
+    country = getattr(QLocale, config('gui', 'style', 'country'))
     QLocale.setDefault(QLocale(language, country))
 
 
@@ -65,3 +69,16 @@ def center_widget_on_screen_and_show(widget: QtWidgets.QWidget):
     cPt = QtGui.QScreen.availableGeometry(QtWidgets.QApplication.primaryScreen()).center()
     qtRect.moveCenter(cPt)
     widget.move(qtRect.topLeft())
+
+
+def start_qapplication(name='default_app') -> QtWidgets.QApplication:
+    return mkQApp(name=name)
+
+
+def mkQApp(name: str):
+    app = mkQApppg(name)
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
+    return app
+
+

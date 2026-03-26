@@ -16,14 +16,13 @@ from pymodaq_data.data import DataToExport
 
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 
 
 logger = set_logger(get_module_name(__file__))
 
 if TYPE_CHECKING:
     from pymodaq.extensions.data_mixer import DataMixer
-    from pymodaq.utils.managers.modules_manager import ModulesManager
+    from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 
 class DataMixerModel:

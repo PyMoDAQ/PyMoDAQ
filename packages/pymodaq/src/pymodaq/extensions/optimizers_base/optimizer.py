@@ -11,7 +11,7 @@ import numpy as np
 from collections import OrderedDict
 
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 
@@ -22,7 +22,7 @@ try:
 except ModuleNotFoundError:
     from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
 
-from pymodaq_utils.config import Config as ConfigUtils
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.h5modules.data_saving import DataEnlargeableSaver
 
@@ -36,21 +36,20 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.data import DataToExport, DataToActuators, DataCalculated, DataActuator
 from pymodaq.post_treatment.load_and_plot import LoaderPlotter
-from pymodaq.extensions.utils import CustomExt
+from pymodaq.extensions.custom_ext import CustomExt
 
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils import config as config_mod
 
 from pymodaq.extensions.optimizers_base.utils import (
-    get_optimizer_models, OptimizerModelGeneric,
-    GenericAlgorithm, StopType, StoppingParameters,
+    StopType, StoppingParameters,
     OptimizerConfig, individual_as_dta, individual_as_dte)
+from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
+from pymodaq.extensions.optimizers_base.models import OptimizerModelGeneric, get_optimizer_models
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
-config_utils = ConfigUtils()
+config = Config()
 
 PREDICTION_PARAMS = []  # to be subclassed in real optimizer implementations
 MODELS = get_optimizer_models()
@@ -88,7 +87,7 @@ def optimizer_params(prediction_params: list[dict]):
              {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
               'children': [
                   {'title': 'Niteration', 'name': 'niter', 'type': 'int',
-                   'value': config('optimizer', 'n_iter'), 'min': 5},
+                   'value': config('pymodaq', 'optimizer', 'n_iter'), 'min': 5},
                   {'title': 'Type:', 'name': 'stop_type', 'type': 'list',
                    'limits': StopType.values(), 'value': str(StopType.ITER),
                    'tip': StopType.ITER.tip()},
@@ -296,8 +295,8 @@ class GenericOptimization(CustomExt):
         self._save_main_settings = True
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
-        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
-        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
+        self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
 
         self._h5saver: H5Saver = None
         self.h5saver.settings.child('do_save').hide()
@@ -334,11 +333,6 @@ class GenericOptimization(CustomExt):
         if len(MODELS) == 1:
             self.get_action(OptimizerAction.INI_MODEL).trigger()
 
-
-    @property
-    def title(self):
-        return f'{self.__class__.__name__}'
-
     def ini_custom_attributes(self):
         """ Here you can reimplement specific attributes"""
         self._base_name: str = 'Optimizer'  # base name used for naming the hdf5 file
@@ -346,7 +340,7 @@ class GenericOptimization(CustomExt):
     @property
     def h5saver(self):
         if self._h5saver is None:
-            self._h5saver = H5Saver(save_type='optimizer', backend=config_utils('general', 'hdf5_backend'))
+            self._h5saver = H5Saver(save_type='optimizer', backend=config('data', 'data_saving', 'backend')[0])
             self._h5saver.settings.child('base_name').setValue('Optimizer')
         if self._h5saver.h5_file is None:
             self._h5saver.init_file(update_h5=True)
@@ -404,6 +398,8 @@ class GenericOptimization(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
+        self.create_dashboard_toolbar()
+
         self.docks['saving'] = gutils.Dock('Saving')
         self.docks['saving'].addWidget(self.h5saver.settings_tree)
         self.dockarea.addDock(self.docks['saving'])
@@ -549,7 +545,6 @@ class GenericOptimization(CustomExt):
 
     def setup_actions(self):
         logger.debug('setting actions')
-        self.add_action(OptimizerAction.QUIT, 'Quit', 'close2', "Quit program")
         combo_model = QtWidgets.QComboBox()
         combo_model.addItems([model['name'] for  model in MODELS])
         self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
@@ -573,7 +568,6 @@ class GenericOptimization(CustomExt):
 
     def connect_things(self):
         logger.debug('connecting things')
-        self.connect_action(OptimizerAction.QUIT, self.quit)
         self.connect_action('models', self.update_model_settings_from_action,
                             signal_name='currentTextChanged')
 
@@ -629,9 +623,11 @@ class GenericOptimization(CustomExt):
         self.modules_manager.connect_actuators(False)
 
 
-    def quit(self):
-        self.dockarea.parent().close()
+    def quit_fun(self):
         self.clean_h5_temp()
+
+        self.close_file()
+        super().quit_fun()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()
@@ -707,9 +703,9 @@ class GenericOptimization(CustomExt):
         for actuator in actuators:
             params.append({'title': actuator, 'name': actuator, 'type': 'group', 'children': [
                 {'title': 'min', 'name': 'min', 'type': 'float',
-                 'value': config('optimizer', 'bounds', 'actuator_min')},
+                 'value': config('pymodaq', 'optimizer', 'bounds', 'actuator_min')},
                 {'title': 'max', 'name': 'max', 'type': 'float',
-                 'value': config('optimizer', 'bounds','actuator_max')},
+                 'value': config('pymodaq', 'optimizer', 'bounds','actuator_max')},
             ]})
         self.settings.child('main_settings', 'bounds').addChildren(params)
 

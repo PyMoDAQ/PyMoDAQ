@@ -1,16 +1,17 @@
 from importlib import import_module
 from pathlib import Path
+from typing import Union
 
-from qtpy import QtCore
-
+from qtpy import QtCore, QtWidgets
+import qt_themes
 
 from pymodaq_gui.utils import CustomApp
+from pymodaq_gui.utils.widgets import LabelWithFont
+from pymodaq_gui.utils.styling import create_font, create_icon
 
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_utils.config import Config as ConfigUtils
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
-config_utils = ConfigUtils()
 config = Config()
 
 
@@ -30,13 +31,83 @@ class ControlModuleUI(CustomApp):
     """
     command_sig = QtCore.Signal(ThreadCommand)
 
+    # Common icon name for initialization action
+    INIT_ICON = 'cable'
+
     def __init__(self, parent):
         super().__init__(parent)
         self.config = config
+        self._ini_state = False
 
-    def display_status(self, txt, wait_time=config_utils('general', 'message_status_persistence')):
+    def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
         if self.statusbar is not None:
             self.statusbar.showMessage(txt, wait_time)
+
+    # ---- Common action setup methods ----
+
+    def _setup_name_widget(self, toolbar: QtWidgets.QToolBar = None) -> None:
+        """Add the module name label to the toolbar
+
+        Parameters
+        ----------
+        toolbar: QToolBar
+            The toolbar to add the widget to. If None, uses default toolbar.
+
+        """
+        self.add_widget('name', LabelWithFont(f'{self.title}', font_name="Tahoma",
+                                                font_size=14, isbold=True, isitalic=True),
+                        toolbar=toolbar)
+
+    def _setup_init_action(self, toolbar: QtWidgets.QToolBar = None,
+                           action_name: str = 'init',
+                           display_name: str = 'Initialize',
+                           tip: str = 'Connect to selected module') -> None:
+        """Add the initialization action to the toolbar
+
+        Parameters
+        ----------
+        toolbar: QToolBar
+            The toolbar to add the action to. If None, uses default toolbar.
+        action_name: str
+            The internal name for the action (e.g., 'ini_actuator', 'ini_detector')
+        display_name: str
+            The display name for the action
+        tip: str
+            Tooltip text
+        """
+        self.add_action(action_name, display_name, self.INIT_ICON, checkable=True,
+                        tip=tip, icon_color=self.get_theme().red,
+                        icon_checked_color=self.get_theme().green,
+                        toolbar=toolbar)
+
+    def _setup_settings_action(self, toolbar: QtWidgets.QToolBar = None) -> None:
+        """Add the show settings action to the toolbar
+
+        Parameters
+        ----------
+        toolbar: QToolBar
+            The toolbar to add the action to. If None, uses default toolbar.
+        """
+        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings",
+                        checkable=True, icon_checked_color=self.get_theme().green,
+                        toolbar=toolbar)
+
+    def update_init_icon(self, initialized: bool, action_name: str = 'init') -> None:
+        """Update the initialization action icon based on state
+
+        Parameters
+        ----------
+        initialized: bool
+            Whether the module is initialized
+        action_name: str
+            The name of the init action
+        """
+        if initialized:
+            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().green)
+        else:
+            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().red)
+        if self.has_action(action_name):
+            self.get_action(action_name).set_icon(icon)
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

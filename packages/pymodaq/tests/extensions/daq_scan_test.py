@@ -1,5 +1,5 @@
 from pathlib import Path
-from pymodaq_gui.utils.dock import DockArea, Dock
+from pymodaq_gui.utils.dock import DockArea
 from pymodaq.utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
@@ -20,8 +20,7 @@ def init_qt(qtbot):
 def main(qtbot):
     from qtpy import QtWidgets
     from pymodaq.dashboard import DashBoard
-    from pymodaq.extensions.daq_scan import DAQScan
-    from pymodaq.utils import gui_utils as gutils
+    from pymodaq.extensions.scan.daq_scan import DAQScan
 
     win = QtWidgets.QMainWindow()
     area = DockArea()

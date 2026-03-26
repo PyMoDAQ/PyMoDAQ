@@ -3,17 +3,19 @@ from pathlib import Path
 import sys
 
 from qtpy import QtWidgets
+
+from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.dock import Dock
 
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq.utils import config as config_mod_pymodaq
 
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_layout_path, \
+    get_set_configurator_path, get_set_remote_path
 from pymodaq_gui.managers.manager_base import ManagerBase
-from pymodaq.utils.managers.modules_manager import ModuleType
+from pymodaq.utils.managers.modules.utils import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
@@ -28,9 +30,9 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 
 # check if preset_mode directory exists on the drive
-preset_path = config_mod_pymodaq.get_set_preset_path()
-overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
-layout_path = config_mod_pymodaq.get_set_layout_path()
+preset_path = get_set_preset_path()
+overshoot_path = get_set_overshoot_path()
+layout_path = get_set_layout_path()
 
 
 class PresetManager(ManagerBase):
@@ -46,11 +48,9 @@ class PresetManager(ManagerBase):
     entry_extension ='.xml'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None):
+                 dashboard: 'DashBoard' = None):
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar)
+        super().__init__(dashboard=dashboard)
 
     ### Reimplemented Methods ####################################################
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -65,14 +65,20 @@ class PresetManager(ManagerBase):
             entry_path.mkdir(parents=True)
         if not entry_path.joinpath(f'default{self.entry_extension}').exists():
             copy_preset()
-            self.update_entry_base()
+            self.update_entry()
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
+
+    def do_things_for_new_creation(self):
+        for child in self.settings.child(ModuleType.Actuator.value).children():
+            child.remove()
+        for child in self.settings.child(ModuleType.Detector.value).children():
+            child.remove()
 
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
 
         if entry_path is None:
-            entry_path = self.entry_filename
+            entry_path = self.entry_filepath
 
         ioxml.parameter_to_xml_file(
             self.settings,
@@ -84,8 +90,12 @@ class PresetManager(ManagerBase):
         """Get the folder path where the managed entries are stored."""
         return get_set_preset_path()
 
-    def execute_entry(self, entry: Path = None, **kwargs):
+    def _execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
+
+        Returns True if the entry has been applied otherwise False
+
+        Should not be called directly, use :attr:`execute_entry` instead.
         """
         try:
             if len(self.dashboard.actuators_modules) != 0 or len(self.dashboard.detector_modules) != 0:
@@ -98,8 +108,7 @@ class PresetManager(ManagerBase):
                     for area in self.dashboard.dockarea.tempAreas:
                         area.window().close()
                 else:
-                    return
-            self.update_entry(entry)
+                    return False
 
             if ('Moves' in [child.name() for child in self.settings.children()] or
                     'Detectors' in [child.name() for child in self.settings.children()]):
@@ -139,18 +148,12 @@ class PresetManager(ManagerBase):
                      """,
                 )
                 logger.exception(str(error))
-
-                self.dashboard.quit_fun()
-                return
-
+                return False
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
                     f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
                     log_type="log",
-                )
-                self.dashboard.settings.child("loaded_files", "preset_file").setValue(
-                    entry.name
                 )
                 self.dashboard.actuators_modules = actuators_modules
                 self.dashboard.detector_modules = detector_modules
@@ -167,11 +170,13 @@ class PresetManager(ManagerBase):
                 self.dashboard.update_init_tree()
 
             logger.info(f"{self.entry_type.capitalize()} file: {entry} has been loaded")
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            return False
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Update the Manager UI after a given entry as been selected/updated """
         if entry.exists():
             self.settings = entry
@@ -190,13 +195,13 @@ class PresetManager(ManagerBase):
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
-        for file in config_mod_pymodaq.get_set_configurator_path(preset_name).iterdir():
+        for file in get_set_configurator_path(preset_name).iterdir():
             file.unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_configurator_path(preset_name).rmdir()
-        config_mod_pymodaq.get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
-        config_mod_pymodaq.get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_configurator_path(preset_name).rmdir()
+        get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
+        get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
 
     def list_control_modules_from_preset(self):
@@ -245,7 +250,6 @@ class PresetManager(ManagerBase):
         detector_modules: list[DAQ_Viewer] = []
 
         actuator_docks: list[Dock] = []
-        detector_docks_settings: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
 
@@ -274,7 +278,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].init_hardware_ui()
                             actuators_modules[-1].master = True
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = actuators_modules[-1].controller
 
@@ -293,7 +297,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -302,7 +306,7 @@ class PresetManager(ManagerBase):
                     ind_det += 1
                     plug_dim = plugin["settings"].child("info", "dim").value()
                     self.dashboard.add_det(plug_name, None,
-                                           detector_docks_settings, detector_docks_viewer, detector_modules,
+                                           detector_docks_viewer, detector_modules,
                                            plug_dim, plug_type)
                     QtWidgets.QApplication.processEvents()
 
@@ -316,7 +320,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = detector_modules[-1].controller
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
@@ -336,7 +340,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -418,7 +422,6 @@ class PresetManager(ManagerBase):
         detector_modules: list[DAQ_Viewer] = []
 
         actuator_docks: list[Dock] = []
-        detector_docks_settings: list[Dock] = []
         detector_docks_viewer: list[Dock] = []
         actuator_widgets: list[QtWidgets.QWidget] = []
 
@@ -453,7 +456,7 @@ class PresetManager(ManagerBase):
                         if plug_init:
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = actuators_modules[-1].controller
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
@@ -472,7 +475,7 @@ class PresetManager(ManagerBase):
                             actuators_modules[-1].controller = master_controller
                             actuators_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(actuators_modules[-1])
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -484,7 +487,6 @@ class PresetManager(ManagerBase):
                     self.dashboard.add_det(
                         plug_name,
                         None,
-                        detector_docks_settings,
                         detector_docks_viewer,
                         detector_modules,
                         plug_type=plug_type,
@@ -501,7 +503,7 @@ class PresetManager(ManagerBase):
                         if plug_init:
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
                             master_controller = detector_modules[-1].controller
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
@@ -520,7 +522,7 @@ class PresetManager(ManagerBase):
                             detector_modules[-1].controller = master_controller
                             detector_modules[-1].init_hardware_ui()
                             QtWidgets.QApplication.processEvents()
-                            self.dashboard.poll_init(detector_modules[-1])
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
                             QtWidgets.QApplication.processEvents()
 
                     self.subentries_model.set_status(ind_module, True)
@@ -538,17 +540,19 @@ class PresetManager(ManagerBase):
 
 
 if __name__ == '__main__':
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
+
     app = mkQApp('PresetManager')
 
+    prog = PresetManager()
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset')
+
+    toolbar, menu = prog.get_external_toolbar_menu()
     external_ui.addToolBar(toolbar)
     external_ui.menuBar().addMenu(menu)
 
-    prog = PresetManager(menu=menu, toolbar=toolbar)
-    prog.update_entry_base()
+    prog.update_entry()
+    prog.enable_actions(True)
     prog.mainwindow.show()
     external_ui.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

@@ -18,7 +18,7 @@ class SocketString:
 
     See Also
     --------
-    :class:`~pymodaq.utils.tcp_ip.mysocket.Socket`
+    :class:`~pymodaq_utils.mysocket.Socket`
     """
     def __init__(self, bytes_string: bytes):
         self._bytes_string = bytes_string

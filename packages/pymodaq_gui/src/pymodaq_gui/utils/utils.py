@@ -1,19 +1,22 @@
-import os
-
-import qt_themes
-import sys
-
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pathlib import Path
-from pymodaq_utils.config import Config
-from pymodaq_utils.logger import set_logger, get_module_name
-from pyqtgraph import mkQApp as mkQApppg
 
+from pymodaq_utils.config import GlobalConfig as Config
+from pymodaq_utils.logger import set_logger, get_module_name
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+
+def mkQApp(app_name: str):
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq_utils.utils import deprecation_msg
+    deprecation_msg("Importing mkQApp from pymodaq_gui.utils.utils is deprecated, "
+                    "please use pymodaq_gui.qt_utils module instead")
+    return mkQApp(app_name)
+
 
 def create_nested_menu(layers, items_per_layer, pattern="Menu", prefix_pattern="Sub", use_index_tracking=False):
     """
@@ -249,14 +252,18 @@ def h5tree_to_QTree(base_node, base_tree_elt=None, pixmap_items=[]):
         tooltip = []
 
         if 'origin' in node.attrs.attrs_name:
-            tooltip.append(node.attrs['origin'])
+            origin = node.attrs['origin']
+            if isinstance(origin, str):
+                tooltip.append(origin)
         elif klass == 'GROUP':
             for c in node.children().values():
                 if 'origin' in c.attrs.attrs_name:
-                    tooltip.append(c.attrs['origin'])
+                    origin = c.attrs['origin']
+                    if isinstance(origin, str):
+                        tooltip.append(origin)
                     break
 
-        if hasattr(node, 'title') and node.title:
+        if hasattr(node, 'title') and isinstance(node.title, str) and node.title:
             tooltip.append(node.title)
 
         child.setToolTip(0, '/'.join(tooltip))
@@ -332,17 +339,3 @@ def pngbinary2Qlabel(databinary, scale_height: int = None):
     return label
 
 
-def start_qapplication(name='default_app') -> QtWidgets.QApplication:
-    return mkQApp(name=name)
-
-
-def mkQApp(name: str):
-    app = mkQApppg(name)
-    qt_themes.set_theme(theme=config('style', 'theme')[0],
-                        style=config('style', 'style')[0])
-    return app
-
-
-def exec():
-    app = mkQApp('a name')
-    return app.exec() if hasattr(app, 'exec') else app.exec_()

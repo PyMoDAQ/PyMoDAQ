@@ -7,7 +7,7 @@ import numpy as np
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, Signal
 
-from pymodaq_utils.config import get_set_local_dir, Config
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_data.data import DataToExport, DataWithAxes
@@ -63,7 +63,6 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.title = 'Navigator'
 
         self.status_time = 1000
-
         self._h5saver = H5Saver()
         self.dataloader = DataLoader(self._h5saver)
 
@@ -209,7 +208,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.settings.child('image').value())
 
     def load_data(self):
-        self.h5file_path = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'),
+        self.h5file_path = str(select_file(start_path=config('data', 'data_saving', 'h5file', 'save_path'),
                                            save=False, ext='h5'))
         if self.h5file_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5file_path)

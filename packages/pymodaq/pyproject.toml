@@ -35,7 +35,7 @@ dependencies = [
     "pymodaq_gui>=5.0.32",
     "pymodaq_data>=5.0.21",
     "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins_mock>=5.0.5",
+    "pymodaq_plugins_mock>=5.0.12",
     "simple_pid",
     "qtconsole",
     "pyleco>0.3; python_version>=\"3.8\"",
@@ -60,10 +60,9 @@ dev = [
 ]
 
 [project.scripts]
-pymodaq_updater = "pymodaq.updater:main"
 daq_logger = "pymodaq.extensions.daq_logger:main"
 daq_move = "pymodaq.control_modules.daq_move:main"
-daq_scan = "pymodaq.extensions.daq_scan:main"
+daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
 

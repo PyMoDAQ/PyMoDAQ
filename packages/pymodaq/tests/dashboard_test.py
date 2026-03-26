@@ -1,33 +1,28 @@
-from pymodaq_gui.utils.dock import DockArea, Dock
-from pymodaq.utils.config import Config, get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path
+from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
-from pymodaq.utils import daq_utils as utils
+from pymodaq.dashboard import create_load_dashboard
 
-from pymodaq.utils.conftests import qtbotskip, main_modules_skip
+import qt_themes
 
 preset_path = get_set_preset_path()
-config = Config()
+config = GlobalConfig()
+
 
 @fixture
 def init_qt(qtbot):
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
     return qtbot
 
 
 class TestGeneral:
     def test_import(self, init_qt):
         qtbot = init_qt
-        from qtpy import QtWidgets
-        from pymodaq.dashboard import DashBoard
+        shared_ui, dashboard = create_load_dashboard()
+        qtbot.addWidget(shared_ui.mainwindow)
+        shared_ui.show()
 
-        win = QtWidgets.QMainWindow()
-        qtbot.addWidget(win)
-        area = DockArea()
-        win.setCentralWidget(area)
-        win.resize(1000, 500)
-        win.setWindowTitle('PyMoDAQ Dashboard')
-
-        dashboard = DashBoard(area)
-        win.show()
         dashboard.preset_manager.execute_entry()
 
         dashboard.quit_fun()

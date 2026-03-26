@@ -7,7 +7,7 @@ Created the 07/11/2023
 import pytest
 
 from qtpy import QtWidgets
-from pymodaq.utils.managers import PresetManager
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter import ioxml
@@ -23,13 +23,9 @@ def ini_preset(init_qt):
     qtbot = init_qt
 
     external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Preset Manager Menu')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    preset_manager = PresetManager(menu=menu, toolbar=toolbar)
-    preset_manager.update_entry_base()
+    preset_manager = PresetManager()
+    preset_manager.update_entry()
     qtbot.addWidget(preset_manager.mainwindow)
     preset_manager.mainwindow.show()
     qtbot.addWidget(external_ui)

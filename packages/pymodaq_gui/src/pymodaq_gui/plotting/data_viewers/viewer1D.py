@@ -8,6 +8,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt, QRectF
 import pyqtgraph as pg
 import numpy as np
 
+import pymodaq_data.plotting.utils
 from pymodaq_data.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.parameter import utils as putils
@@ -16,7 +17,8 @@ from pymodaq_utils import utils
 
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
-from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens, RoiInfo
+from pymodaq_gui.plotting.utils.plot_utils import make_dashed_pens
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq_gui.managers.roi_manager import ROIManager, LinearROI, DataDim
 from pymodaq_gui.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq_gui.plotting.widgets import PlotWidget
@@ -24,7 +26,7 @@ from pymodaq_gui.plotting.data_viewers.viewer0D import Viewer0D
 
 logger = set_logger(get_module_name(__file__))
 
-PLOT_COLORS = utils.PlotColors()
+PLOT_COLORS = pymodaq_data.plotting.utils.PlotColors()
 
 
 class DataDisplayer(QObject):
@@ -584,9 +586,9 @@ class Viewer1D(ViewerBase):
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis:
                     if dwa.name == 'HorData':
-                        dwa.name = f'Hlineout_{dwa.origin}'
+                        dwa.name = f'Hlineout'
                     elif dwa.name == 'IntData':
-                        dwa.name = f'Integrated_{dwa.origin}'
+                        dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis.data)
                 self.data_to_export_signal.emit(self.data_to_export)
         except AttributeError:
@@ -706,7 +708,7 @@ def main():
     QtWidgets.QApplication.processEvents()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_unsorted():
@@ -725,7 +727,7 @@ def main_unsorted():
     widget.show()
     prog.show_data(data)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_random():
@@ -746,7 +748,7 @@ def main_random():
     widget.show()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_extra_scatter():
@@ -775,7 +777,7 @@ def main_extra_scatter():
     widget.show()
     prog.show_data(data, scatter_dwa=scatter_dwa)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_errors():
@@ -798,7 +800,7 @@ def main_errors():
     widget.show()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_view1D():
@@ -806,7 +808,7 @@ def main_view1D():
     widget = QtWidgets.QWidget()
     prog = View1D(widget)
     widget.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_nans():
@@ -826,7 +828,7 @@ def main_nans():
     widget.show()
     prog.show_data(data)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def main_xy():
@@ -843,7 +845,7 @@ def main_xy():
                    )
     data.plot('qt')
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':  # pragma: no cover

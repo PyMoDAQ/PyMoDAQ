@@ -137,12 +137,12 @@ def main(xmlfile):
     from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
     from pathlib import Path
     from qtpy import QtWidgets
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     import sys
     app = mkQApp('BeamSteering')
     dashboard, extension, win = load_dashboard_with_preset(xmlfile, 'DAQ_PID')
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 def get_models(model_name=None):

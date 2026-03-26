@@ -131,7 +131,6 @@ class UiToMainViewer(StrEnum):
 
     DETECTOR_CHANGED = 'detector_changed'
     VIEWERS_CHANGED = 'viewers_changed'
-    DAQ_TYPE_CHANGED = 'daq_type_changed'
 
     DO_BKG = 'do_bkg'
     TAKE_BKG = 'take_bkg'

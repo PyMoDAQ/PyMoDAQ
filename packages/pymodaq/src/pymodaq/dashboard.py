@@ -7,8 +7,8 @@ import subprocess
 import logging
 from pathlib import Path
 from importlib import import_module
-from packaging import version as version_mod
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable
+
+from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable, Type
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -20,16 +20,18 @@ from qtpy.QtWidgets import (
     QDialogButtonBox,
     QMessageBox,
 )
-from time import perf_counter
 import numpy as np
 
-from pymodaq_plugin_manager.manager import PluginManager
-from pymodaq_plugin_manager.validate import get_pypi_pymodaq
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+from pymodaq.utils.gui_utils.loader_utils import create_extension
+from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
+    DashboardActorListener, LECOComponentMixin
+from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val
-from pymodaq_utils import config as configmod
+from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val, ThreadCommand
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
@@ -40,45 +42,41 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 
-from pymodaq.utils.managers.modules_manager import ModulesManager, ModuleType
-from pymodaq.utils.managers import PresetManager
-from pymodaq.utils.managers.overshoot_manager import OvershootManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq_gui.managers.manager_base import Menu
+from pymodaq.utils.managers.overshoot.overshooter import Overshooter
 from pymodaq.utils.managers.remote_manager import RemoteManager
+from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.utils.daq_utils import get_instrument_plugins
-from pymodaq.utils.leco.utils import start_coordinator
-from pymodaq.utils import config as config_mod_pymodaq
+
+from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
+                                  get_set_roi_path, get_set_remote_path, get_set_layout_path)
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
-from pymodaq_gui.utils.splash import get_splash_sc
-from pymodaq import extensions as extmod
-from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq.utils.managers import Configurator
+from pymodaq.extensions.utils import get_extensions
+from pymodaq.extensions import  ExtensionEnum
+from pymodaq.utils.shared_ui import SharedUI
 
+
+from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.utils.managers.configurator.configurator import Configurator
+
+if TYPE_CHECKING:
+    from pymodaq.extensions.custom_ext import CustomExt
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 
 get_instrument_plugins()
-extensions = extmod.get_extensions()
-
-
-local_path = configmod.get_set_local_dir()
-now = datetime.datetime.now()
-preset_path = config_mod_pymodaq.get_set_preset_path()
-configurator_path = config_mod_pymodaq.get_set_configurator_path()
-log_path = configmod.get_set_log_path()
-layout_path = config_mod_pymodaq.get_set_layout_path()
-overshoot_path = config_mod_pymodaq.get_set_overshoot_path()
-roi_path = config_mod_pymodaq.get_set_roi_path()
-remote_path = config_mod_pymodaq.get_set_remote_path()
+extensions = get_extensions()
 
 
 class ManagerEnums(BaseEnum):
@@ -140,24 +138,23 @@ class PymodaqUpdateTableWidget(QTableWidget):
         return QSize(width, height)
 
 
-class DashBoard(CustomApp):
+class DashBoard(CustomApp, LECOComponentMixin):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger"""
-
     status_signal = Signal(str)
-    new_preset_created = Signal()
+    config_changed = QtCore.Signal()
+    # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
+    # included in CustomExt by default but Dashboard is special with that respect
 
     settings_name = "dashboard_settings"
     _splash_sc = None
 
     params = [
         {"title": "Log level", "name": "log_level", "type": "list",
-         "value": config_utils("general", "debug_level")[0],
-         "limits": config_utils("general", "debug_level"),},
+         "value": config("utils", "general", "debug_level")[0],
+         "limits": config("utils", "general", "debug_level"),},
         {"title": "Loaded presets", "name": "loaded_files", "type": "group",
          "children": [
-             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
-             {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True,},
@@ -167,39 +164,39 @@ class DashBoard(CustomApp):
         {"title": "Detectors Init.", "name": "detectors", "type": "group", "children": [],},
     ]
 
-    def __init__(self, dockarea):
+    def __init__(self, parent: Union[DockArea]):
         """
 
         Parameters
         ----------
-        parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
         """
 
-        super().__init__(dockarea)
+        CustomApp.__init__(self, parent)
+        LECOComponentMixin.__init__(self, DashboardActorListener)
 
         logger.info("Initializing Dashboard")
         self.extra_params = []
-        self.preset_path = preset_path
+
         self.wait_time = 1000
-        self.scan_module = None
         self.log_module = None
         self.pid_module = None
         self.pid_window = None
         self.retriever_module = None
         self.database_module = None
-        self.extensions = dict([])
+        self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
-        self.configurator: Configurator = None
+        self.preset_manager: PresetManager = None  # instanciation in do_things_after_ui_setup
+        self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None # instanciation in do_things_after_ui_setup
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
         self.title = ""
 
-        self.overshoot_manager: OvershootManager = None
-        self.preset_manager: PresetManager = None  # instanciation in setup_docks
+
         self.roi_saver: ROISaver = None
 
-        self.remote_timer = QtCore.QTimer()
+        self.remote_timer = QtCore.QTimer(self)
         self.remote_manager = None
         self.shortcuts = dict([])
         self.joysticks = dict([])
@@ -207,21 +204,17 @@ class DashBoard(CustomApp):
 
         self.modules_manager = ModulesManager()
 
-        self.overshoot = False
         self.actuators_modules: list[DAQ_Move] = []
         self.detector_modules: list[DAQ_Viewer] = []
 
-        self.compact_actuator_dock: Dock = None
+        self.compact_actuator_manager: ActuatorCompactDock = None
+        self.compact_detector_manager: DetectorCompactDock = None
+
+        self._scripted_preset_load = False
 
         self.setup_ui()
 
-        self.mainwindow.setVisible(True)
-
         logger.info("Dashboard Initialized")
-
-        if config_utils("general", "check_version"):
-            if self.check_update(show=False):
-                sys.exit(0)
 
     @property
     def actuators_modules(self) -> list[DAQ_Move]:
@@ -240,32 +233,88 @@ class DashBoard(CustomApp):
         self.modules_manager.detectors_all = modules
 
     def do_things_after_ui_setup(self):
-        self.preset_manager = PresetManager(dashboard=self,
-                                            menu=self.get_menu('preset'),
-                                            toolbar = self.get_toolbar('preset'))
-        self.preset_manager.update_entry_base()
+        self.preset_manager = PresetManager(dashboard=self)
+        self.preset_manager.update_entry()
         self.preset_manager.entry = 'default'
-        self.preset_manager.applied_entry.connect(self.update_after_preset)
-        self.configurator = Configurator(dashboard=self,
-                                         menu=self.get_menu('configurator'),
-                                         toolbar=self.get_toolbar('configurator'),
-                                         preset_filename=self.preset_manager.entry)
-        self.get_toolbar('configurator').setEnabled(False)
+        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
+        self.configurator = Configurator(dashboard=self)
+        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
+                                                      menu=self.get_menu('preset'))
+        self.preset_manager.update_menu(self.get_menu('preset'))
+        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
+                                                    menu=self.get_menu('configurator'))
+        self.configurator.update_menu(self.get_menu('configurator'))
+        self.overshooter = Overshooter(dashboard=self)
+        self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
+                                                   menu=self.get_menu('overshooter'))
 
-    def update_after_preset(self, preset_name: str):
-        self.configurator.preset_filename = preset_name
-        self.configurator.entry = 'default'
+        self.get_toolbar('configurator').setEnabled(False)
+        self.get_toolbar('overshooter').setEnabled(False)
+        self.preset_manager.enable_actions(True)
+
+        self.connect_leco(connect=True)
+
+
+    def do_things_after_preset_set(self, preset_name: str):
+
+        self.configurator.update_menu(self.get_menu('configurator'))
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
-        self.configurator.execute_entry(self.configurator.entry_filename)
-        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+        self.get_menu('overshooter').setEnabled(True)
+        self.get_toolbar('overshooter').setEnabled(True)
+        self.configurator.enable_actions(True)
+        self.overshooter.enable_actions(True)
+        self.configurator._execute_entry(self.configurator.entry_filepath)
+
+        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
 
-    @property
-    def splash_sc(self) -> QtWidgets.QSplashScreen:
-        if not hasattr(self, "_splash_sc") or self._splash_sc is None:
-            self._splash_sc = get_splash_sc()
-        return self._splash_sc
+        if self._scripted_preset_load:
+            self._scripted_preset_load = False
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, True))
+
+    def get_leco_name(self) -> str:
+        return "dashboard"
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        host = config.get(("main_settings", "leco", "host"), 'localhost')
+        port = config.get(("main_settings", "leco", "port"), '12300')
+
+        return host, port
+
+
+    def process_leco_commands(self, status: ThreadCommand) -> None:
+        if status.command == LECODashboardCommands.GET_DEVICES:
+            devices = {
+                'actuators': [ actuator.get_leco_name() for actuator in self.actuators_modules],
+                'detectors': [ detector.get_leco_name() for detector in self.detector_modules]
+            }
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
+        elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
+            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
+        elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
+            configuration = status.attribute
+            loaded = False
+            if (configuration in self.configurator.entries and
+                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            ):
+
+                self.configurator.entry = configuration
+                self.configurator.execute_entry_base(self.configurator.entry_filename)
+                loaded = True
+
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
+        elif status.command == LECODashboardCommands.GET_PRESETS:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
+        elif status.command == LECODashboardCommands.APPLY_PRESET:
+            preset = status.attribute
+            if preset not in self.preset_manager.entries:
+                self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, False))
+            else:
+                self._scripted_preset_load = True
+                self.preset_manager.entry = preset
+                self.preset_manager.execute_entry_base(self.preset_manager.entry_filename)
 
     def add_status(self, txt):
         """
@@ -301,13 +350,18 @@ class DashBoard(CustomApp):
             for detector_module in detector_modules[:]:
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
+
+
+                # Remove from compact dock manager
+                if self.compact_detector_manager:
+                    is_empty = self.compact_detector_manager.remove_module(detector_module)
+                    if is_empty:
+                        self.compact_detector_manager.close()
+                        self.compact_detector_manager = None
                 detector_module.quit_fun()
-                dock = self.dockarea.docks.get(
-                    f"{detector_module.title} settings", None
-                )
-                if dock:
-                    dock.close()
-                dock = self.dockarea.docks.get(f"{detector_module.title} viewer", None)
+
+                # Close individual detector dock
+                dock = self.dockarea.docks.get(f"{detector_module.title}", None)
                 if dock:
                     dock.close()
         except Exception as e:
@@ -327,14 +381,20 @@ class DashBoard(CustomApp):
             for actuator_module in actuator_modules[:]:
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
+                # Remove from compact dock manager
+                if self.compact_actuator_manager:
+                    is_empty = self.compact_actuator_manager.remove_module(actuator_module)
+                    if is_empty:
+                        self.compact_actuator_manager.close()
+                        self.compact_actuator_manager = None
+
                 actuator_module.quit_fun()
-                QtWidgets.QApplication.processEvents()
-                dock = self.dockarea.docks.get(actuator_module.title, None)
+                
+                # Close individual actuator dock (for non-compact actuators)
+                dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
                     dock.removeWidgets()
                     dock.close()
-            if len(self.compact_actuator_dock.widgets) == 0:
-                self.compact_actuator_dock.close()
         except Exception as e:
             logger.exception(str(e))
 
@@ -399,188 +459,42 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self, win=None):
-        win, area = make_window(win=win, title="Scanner")
-        self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
-        self.extensions["DAQScan"] = self.scan_module
-        self.scan_module.status_signal.connect(self.add_status)
-        win.show()
-        return self.scan_module
-
-    def load_log_module(self, win=None):
-        win, area = make_window(win=win, title="Logger")
-        self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
-        self.extensions["DAQ_Logger"] = self.log_module
-        self.log_module.status_signal.connect(self.add_status)
-        win.show()
-        return self.log_module
-
-    def load_pid_module(self, win=None):
-        self.pid_window, area = make_window(win=win, title="PID Controller")
-        self.pid_module = extmod.DAQ_PID(dockarea=area, dashboard=self)
-        self.extensions["DAQ_PID"] = self.pid_module
-        self.pid_window.show()
-        return self.pid_module
-
-    def load_bayesian(self, win=None):
-        self.bayesian_window, area = make_window(win=win, title="Bayesian Optimiser")
-        self.bayesian_module = extmod.BayesianOptimization(dockarea=area, dashboard=self)
-        self.extensions["bayesian"] = self.bayesian_module
-
-        if self.bayesian_module.validate_config():
-            self.bayesian_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="Bayesian Optimisation error",
-                text=f"""
-                <p>Saved Bayesian Optimisation configuration file is not compatible anymore.</p>
-                <p>Please delete the file at <b>{self.bayesian_module.config_path}</b>.</p>
-            """,
-            )
-            self.bayesian_module.quit()
-        return self.bayesian_module
-
-    def load_adaptive(self, win=None):
-        self.adaptive_window, area = make_window(win=win, title="Adaptive Scan")
-        self.adaptive_module = extmod.AdaptiveOptimisation(dockarea=area, dashboard=self)
-        self.extensions["adaptive"] = self.adaptive_module
-
-        if self.adaptive_module.validate_config():
-            self.adaptive_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="Adaptive Optimisation error",
-                text=f"""
-                    <p>Saved Adaptive Optimisation configuration file is not compatible anymore.</p>
-                    <p>Please delete the file at <b>{self.adaptive_module.config_path}</b>.</p>
-                """,
-            )
-            self.adaptive_module.quit()
-        return self.adaptive_module
-
-    def load_datamixer(self, win=None):
-        self.datamixer_window, area = make_window(win=win, title="DataMixer")
-        self.datamixer_module = extmod.DataMixer(parent=area, dashboard=self)
-        self.extensions["datamixer"] = self.datamixer_module
-
-        if self.datamixer_module.validate_config():
-            self.datamixer_window.show()
-        else:
-            messagebox(
-                severity="critical",
-                title="DataMixer error",
-                text=f"""
-                    <p>Saved DataMixer configuration file is not compatible anymore.</p>
-                    <p>Please delete the file at <b>{self.datamixer_module.config_path}</b>.</p>
-                """,
-            )
-            self.datamixer_module.quit_fun()
-        return self.datamixer_module
-
-    def load_console(self):
-        dock_console = Dock("QtConsole")
-        self.dockarea.addDock(dock_console, "bottom")
-        qtconsole = extmod.QtConsole(
-            style_sheet=config_utils("style", "syntax_highlighting"),
-            syntax_style=config_utils("style", "syntax_highlighting"),
-            custom_banner=extmod.console.BANNER,
+    def load_extension(self, ext_enum: ExtensionEnum,
+                       win: QtWidgets.QMainWindow = None
+                       ) -> 'CustomExt':
+        shared_ui, ext_module = create_extension(
+            self, extensions[ext_enum].klass,
+            window=win,
         )
-        dock_console.addWidget(qtconsole)
-        self.extensions["qtconsole"] = qtconsole
+        self.extensions[ext_enum] = ext_module
+        ext_module.shared_ui = shared_ui
+        ext_module.status_signal.connect(self.add_status)
+        shared_ui.show()
+        ext_module.set_action_checked('show_dashboard', True)
 
-        qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
-
-        return qtconsole
-
-    def load_extension_from_name(self, name: str) -> dict:
-        return self.load_extensions_module(
-            find_dict_in_list_from_key_val(extensions, "name", name)
-        )
-
-    def load_extensions_module(self, ext: dict):
-        """Init and load an extension from a plugin package
-
-        ext: dict
-            dictionary containing info on the extension plugin package and class to be loaded,
-             it contains four
-            keys:
-
-            * pkg: the name of the plugin package
-            * module: the module name where your extension class is defined
-            * class_name: the name of the class defining the extension
-            * name: a nice name for your extension to be displayed in the menu
-
-        See Also
-        --------
-        pymodaq.extensions.utils.get_extensions
-        """
-
-        self.extension_windows.append(QtWidgets.QMainWindow())
-        area = DockArea()
-        self.extension_windows[-1].setCentralWidget(area)
-        self.extension_windows[-1].resize(1000, 500)
-        self.extension_windows[-1].setWindowTitle(ext["name"])
-        module = import_module(f"{ext['pkg']}.extensions.{ext['module']}")
-        klass = getattr(module, ext["class_name"])
-        self.extensions[ext["class_name"]] = klass(area, dashboard=self)
-        self.extension_windows[-1].show()
-        return self.extensions[ext["class_name"]]
+        return ext_module
 
     def setup_actions(self):
-        self.add_action(
-            "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
-        )
-        self.add_action("quit", "Quit", "close2", "Quit program")
-
-        self.toolbar.addSeparator()
-
-        self.add_action("config_utils", "Utils Config.", "tree", tip="Show utility configuration file",)
-        self.add_action("config", "Controls/Extensions Config.", "tree",
-                        tip="Show Control Modules and Extensions configuration file",)
-        self.add_action( "restart", "Restart", "", "Restart the Dashboard", auto_toolbar=False)
-        self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
-                        auto_toolbar=False,)
         self.add_action("load_layout", "Load Layout", "",
                         "Load the Saved Docks layout corresponding to the current preset",
                         auto_toolbar=False,)
         self.add_action("save_layout", "Save Layout", "",
                         "Save the Saved Docks layout corresponding to the current preset",
                         auto_toolbar=False,)
-        self.add_action("log_window", "Show/hide log window", "", checkable=True, auto_toolbar=False)
+        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False)
 
-        preset_toolbar = self.add_toolbar('preset', 'Preset Toolbar', parent=None)
-        config_toolbar = self.add_toolbar('configurator', 'Configurator Toolbar', parent=None)
-        self.mainwindow.addToolBar(preset_toolbar)
-        self.mainwindow.addToolBar(config_toolbar)
-
-        self.toolbar.addSeparator()
-
-        self.add_action("new_overshoot", "New Overshoot", "",
-                        "Create a new experimental setup overshoot configuration file",
-                        auto_toolbar=False,)
-        self.add_action("modify_overshoot", "Modify Overshoot", "",
-                        "Modify an existing experimental setup overshoot configuration file",
-                        auto_toolbar=False,)
-
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.overshoot),
-                    file.stem,
-                    auto_toolbar=False,
-                )
+        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('overshooter', 'Overshoot Toolbar', parent=self.mainwindow,
+                         add_break=False)
         self.toolbar.addSeparator()
 
         self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
         self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 self.add_action(
                     self.get_action_from_file(file, ManagerEnums.roi),
@@ -588,12 +502,11 @@ class DashBoard(CustomApp):
                     "",
                     auto_toolbar=False,
                 )
-
+        self.add_action('show_remote', "Show/Hide Remote", 'visibility',
+                        icon_checked='visibility_off', auto_toolbar=False)
         self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False)
         self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False)
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 self.add_action(
                     self.get_action_from_file(file, ManagerEnums.remote),
@@ -601,165 +514,77 @@ class DashBoard(CustomApp):
                     "",
                     auto_toolbar=False,
                 )
-        self.add_action("activate_overshoot", "Activate overshoot", "Error",
-                        tip="if activated, apply an overshoot if one is configured",
-                        checkable=True, enabled=False,)
-
         self.toolbar.addSeparator()
+        for ext_name in ExtensionEnum.names():
+            self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
+                            auto_toolbar=False)
 
-        self.add_action("do_scan", "Do Scans", "surfacePlot",
-                        tip="Open the DAQ Scan extension to acquire data as a function of "
-                            "one or more parameter",)
-        self.toolbar.addSeparator()
-        self.add_action("do_log", "Log data", "", auto_toolbar=False)
-        self.add_action("do_pid", "PID module", auto_toolbar=False)
-        self.add_action("console", "IPython Console", auto_toolbar=False)
-        self.add_action("bayesian", "Bayesian Optimisation", auto_toolbar=False)
-        self.add_action("adaptive", "Adaptive Scan", auto_toolbar=False)
-        self.add_action("datamixer", "DataMixer", auto_toolbar=False)
         self.add_action("configurator", "Configurator", auto_toolbar=False)
-
-        self.add_action("about", "About", "information2")
-        self.add_action("help", "Help", "help1")
-        self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
-        self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
-        self.toolbar.addSeparator()
-        self.add_action("plugin_manager", "Plugin Manager", "")
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
-        self.connect_action("log", self.show_log)
-        self.connect_action("config_utils", lambda: self.show_config(config_utils))
-        self.connect_action("config", lambda: self.show_config(config))
-        self.connect_action("quit", self.quit_fun)
-        self.connect_action("restart", self.restart_fun)
-        self.connect_action("leco", start_coordinator)
         self.connect_action("load_layout", self.load_layout_state)
         self.connect_action("save_layout", self.save_layout_state)
-        self.connect_action("log_window", self.logger_dock.setVisible)
-
-        self.connect_action("new_overshoot", self.create_overshoot)
-        self.connect_action("modify_overshoot", self.modify_overshoot)
-        self.connect_action("activate_overshoot", self.activate_overshoot)
-
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.overshoot),
-                    self.create_menu_slot_over(
-                        config_mod_pymodaq.get_set_overshoot_path().joinpath(file)
-                    ),
-                )
+        self.connect_action("show_log_widget", self.show_log_widget)
 
         self.connect_action("save_roi", self.create_roi_file)
         self.connect_action("modify_roi", self.modify_roi)
 
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 self.connect_action(
                     self.get_action_from_file(file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(
-                        config_mod_pymodaq.get_set_roi_path().joinpath(file)
-                    ),
+                    self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
                 )
-
+        self.connect_action('show_remote', self.show_remote)
         self.connect_action("new_remote", self.create_remote)
         self.connect_action("modify_remote", self.modify_remote)
-        for ind_file, file in enumerate(
-            config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 self.connect_action(
                     self.get_action_from_file(file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(
-                        config_mod_pymodaq.get_set_remote_path().joinpath(file)
-                    ),
+                    self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
                 )
-
-        self.connect_action("do_scan", lambda: self.load_scan_module())
-        self.connect_action("do_log", lambda: self.load_log_module())
-        self.connect_action("do_pid", lambda: self.load_pid_module())
-        self.connect_action("console", lambda: self.load_console())
-        self.connect_action("bayesian", lambda: self.load_bayesian())
-        self.connect_action("adaptive", lambda: self.load_adaptive())
-        self.connect_action("datamixer", lambda: self.load_datamixer())
-
-        self.connect_action("about", self.show_about)
-        self.connect_action("help", self.show_help)
-        self.connect_action("check_update", lambda: self.check_update(True))
-        self.connect_action("plugin_manager", self.start_plugin_manager)
+        for ext_name in ExtensionEnum.names():
+            self.connect_action(ExtensionEnum[ext_name],
+                                self.create_extension_slot(ExtensionEnum[ext_name]))
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """
         Create the menubar object looking like :
         """
-        menubar.clear()
+        #menubar.clear()
 
-        # %% create Settings menu
-        self.file_menu = menubar.addMenu("File")
-        self.file_menu.addAction(self.get_action("log"))
-        self.file_menu.addAction(self.get_action("config_utils"))
-        self.file_menu.addAction(self.get_action("config"))
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(self.get_action("quit"))
-        self.file_menu.addAction(self.get_action("restart"))
+        settings_menu = self.add_menu('settings', 'Settings', auto_menu=False)
+        settings_menu.addAction(self.get_action("show_log_widget"))
 
-        self.settings_menu = menubar.addMenu("Settings")
-        self.settings_menu.addAction(self.get_action("leco"))
-        docked_menu = self.settings_menu.addMenu("Docked windows")
+        docked_menu = settings_menu.addMenu("Docked windows")
         docked_menu.addAction(self.get_action("load_layout"))
         docked_menu.addAction(self.get_action("save_layout"))
 
-        docked_menu.addSeparator()
-        docked_menu.addAction(self.get_action("log_window"))
-
-        self.add_menu('preset', 'Preset', menubar)
-        self.add_menu('configurator', 'Configurator', menubar)
+        self.add_menu('preset', 'Preset', auto_menu=False)
+        self.add_menu('configurator', 'Configurator', auto_menu=False)
         self.get_menu('configurator').setEnabled(False)
+        self.add_menu('overshooter', 'Overshooter', auto_menu=False)
+        self.get_menu('overshooter').setEnabled(False)
 
-        self.overshoot_menu = menubar.addMenu("Overshoot Modes")
-        self.update_overshoot_menu()
-
-        self.roi_menu = menubar.addMenu("ROI Modes")
+        self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
         self.update_roi_menu()
 
-        self.remote_menu = menubar.addMenu("Remote/Shortcuts Control")
+        self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
         self.update_remote_menu()
 
         # extensions menu
-        self.extensions_menu = menubar.addMenu("Extensions")
-        self.extensions_menu.addAction(self.get_action("do_scan"))
-        self.extensions_menu.addAction(self.get_action("do_log"))
-        self.extensions_menu.addAction(self.get_action("do_pid"))
-        self.extensions_menu.addAction(self.get_action("console"))
-        self.extensions_menu.addAction(self.get_action("bayesian"))
-        self.extensions_menu.addAction(self.get_action("adaptive"))
-        self.extensions_menu.addAction(self.get_action("datamixer"))
-
-        # extensions from plugins
-        extensions_actions = []
-        for ext in extensions:
-            extensions_actions.append(self.extensions_menu.addAction(ext["name"]))
-            extensions_actions[-1].triggered.connect(self.create_menu_slot_ext(ext))
-
-        # help menu
-        help_menu = menubar.addMenu("?")
-        help_menu.addAction(self.get_action("about"))
-        help_menu.addAction(self.get_action("help"))
-        help_menu.addSeparator()
-        help_menu.addAction(self.get_action("check_update"))
-        help_menu.addAction(self.get_action("plugin_manager"))
+        self.extensions_menu = self.add_menu('extensions', "Extensions")
+        for ext_name in ExtensionEnum.names():
+            self.extensions_menu.addAction(self.get_action(ExtensionEnum[ext_name]))
 
         status = True
 
-        for menu in (self.overshoot_menu, self.roi_menu, self.remote_menu, self.extensions_menu):
+        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(not status)
-        self.file_menu.setEnabled(True)
-        self.settings_menu.setEnabled(True)
+        settings_menu.setEnabled(True)
         self.get_menu('preset').setEnabled(status)
 
 
@@ -770,9 +595,7 @@ class DashBoard(CustomApp):
         self.roi_menu.addSeparator()
         load_roi_menu = self.roi_menu.addMenu("Load roi configs")
 
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_roi_path().iterdir()
-        ):
+        for file in get_set_roi_path().iterdir():
             if file.suffix == ".xml":
                 load_roi_menu.addAction(
                     self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
@@ -780,81 +603,22 @@ class DashBoard(CustomApp):
 
     def update_remote_menu(self):
         self.remote_menu.clear()
-        self.remote_menu.addAction("New remote config.", self.create_remote)
-        self.remote_menu.addAction("Modify remote config.", self.modify_remote)
+        self.remote_menu.addAction(self.get_action("show_remote"))
+        self.connect_action('show_remote', self.show_remote)
+        self.remote_menu.addSeparator()
+
+        self.remote_menu.addAction(self.get_action('new_remote'))
+        self.connect_action('new_remote', self.create_remote)
+        self.remote_menu.addAction(self.get_action('modify_remote'))
+        self.connect_action('modify_remote', self.modify_remote)
         self.remote_menu.addSeparator()
         load_remote_menu = self.remote_menu.addMenu("Load remote config.")
 
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_remote_path().iterdir()
-        ):
+        for file in get_set_remote_path().iterdir():
             if file.suffix == ".xml":
                 load_remote_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.remote)
-                    )
+                    self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
                 )
-
-    def update_overshoot_menu(self):
-        self.overshoot_menu.clear()
-        self.overshoot_menu.addAction(self.get_action("new_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("modify_overshoot"))
-        self.overshoot_menu.addAction(self.get_action("activate_overshoot"))
-        self.overshoot_menu.addSeparator()
-        load_overshoot_menu = self.overshoot_menu.addMenu("Load Overshoots")
-
-        for ind_file, file in enumerate(
-                config_mod_pymodaq.get_set_overshoot_path().iterdir()
-        ):
-            if file.suffix == ".xml":
-                load_overshoot_menu.addAction(
-                    self.get_action(
-                        self.get_action_from_file(file, ManagerEnums.overshoot)
-                    )
-                )
-
-    def start_plugin_manager(self):
-        self.win_plug_manager = QtWidgets.QMainWindow()
-        self.win_plug_manager.setWindowTitle("PyMoDAQ Plugin Manager")
-        widget = QtWidgets.QWidget()
-        self.win_plug_manager.setCentralWidget(widget)
-        self.plugin_manager = PluginManager(widget)
-        self.plugin_manager.quit_signal.connect(self.quit_fun)
-        self.plugin_manager.restart_signal.connect(self.restart_fun)
-        self.win_plug_manager.show()
-
-    def create_menu_slot_ext(self, ext):
-        return lambda: self.load_extensions_module(ext)
-
-    def create_menu_slot_roi(self, filename):
-        return lambda: self.set_roi_configuration(filename)
-
-    def create_menu_slot_over(self, filename):
-        return lambda: self.set_overshoot_configuration(filename)
-
-    def create_menu_slot_remote(self, filename):
-        return lambda: self.set_remote_configuration(filename)
-
-    def create_roi_file(self):
-        try:
-            if self.preset_file is not None:
-                self.roi_saver.set_new_roi(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(
-                        config_mod_pymodaq.get_set_roi_path().joinpath(self.preset_file.name)
-                    ),
-                )
-
-
-        except Exception as e:
-            logger.exception(str(e))
 
     def create_remote(self):
         try:
@@ -868,41 +632,16 @@ class DashBoard(CustomApp):
                 self.setup_menu(self.menubar)
                 self.connect_action(
                     self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(
-                        config_mod_pymodaq.get_set_remote_path().joinpath(self.preset_file.name)
-                    ),
+                    self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
                 )
 
         except Exception as e:
             logger.exception(str(e))
-
-    def create_overshoot(self):
-        try:
-            if self.preset_file is not None:
-                self.overshoot_manager.set_new_overshoot(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.overshoot),
-                    self.create_menu_slot_over(
-                        config_mod_pymodaq.get_set_overshoot_path().joinpath(self.preset_file.name)
-                    ),
-                )
-        except Exception as e:
-            logger.exception(str(e))
-
-    @staticmethod
-    def get_action_from_file(file: Path, manager: ManagerEnums):
-        return f"{file.stem}_{manager.name}"
 
     def modify_remote(self):
         try:
             path = select_file(
-                start_path=config_mod_pymodaq.get_set_remote_path(),
+                start_path=get_set_remote_path(),
                 save=False,
                 ext="xml",
             )
@@ -914,25 +653,50 @@ class DashBoard(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def modify_overshoot(self):
-        try:
-            path = select_file(
-                start_path=config_mod_pymodaq.get_set_overshoot_path(),
-                save=False,
-                ext="xml",
-            )
-            if path != "":
-                self.overshoot_manager.set_file_overshoot(path)
+    def show_remote(self, show=True):
+        self.remote_widget.setVisible(show)
+        self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
 
-            else:  # cancel
-                pass
+    def show_log_widget(self, show=True):
+        self.logger_widget.setVisible(show)
+        self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
+
+    def create_menu_slot_roi(self, filename):
+        return lambda: self.set_roi_configuration(filename)
+
+    def create_menu_slot_remote(self, filename):
+        return lambda: self.set_remote_configuration(filename)
+
+    def create_extension_slot(self, extenum: ExtensionEnum):
+        return lambda: self.load_extension(extenum)
+
+    def create_roi_file(self):
+        try:
+            if self.preset_file is not None:
+                self.roi_saver.set_new_roi(self.preset_file.stem)
+                self.add_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+                    self.preset_file.stem,
+                    "",
+                )
+                self.setup_menu(self.menubar)
+                self.connect_action(
+                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+                    self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
+                )
+
+
         except Exception as e:
             logger.exception(str(e))
+
+    @staticmethod
+    def get_action_from_file(file: Path, manager: ManagerEnums):
+        return f"{file.stem}_{manager.name}"
 
     def modify_roi(self):
         try:
             path = select_file(
-                start_path=config_mod_pymodaq.get_set_roi_path(), save=False, ext="xml"
+                start_path=get_set_roi_path(), save=False, ext="xml"
             )
             if path != "":
                 self.roi_saver.set_file_roi(path)
@@ -951,6 +715,7 @@ class DashBoard(CustomApp):
         quit_fun
         """
         try:
+            self.connect_leco(connect=False)
             self.remote_timer.stop()
 
             for ext in self.extensions:
@@ -986,6 +751,8 @@ class DashBoard(CustomApp):
                     pass
 
             self.preset_manager.quit_fun()
+            self.configurator.quit_fun()
+            self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
             for area in areas:
@@ -1049,7 +816,7 @@ class DashBoard(CustomApp):
 
     def save_layout_state_auto(self):
         if self.preset_file is not None:
-            path = layout_path.joinpath(self.preset_file.stem + ".dock")
+            path = get_set_layout_path().joinpath(self.preset_file.stem + ".dock")
             self.save_layout_state(path)
 
     def add_move(
@@ -1073,12 +840,12 @@ class DashBoard(CustomApp):
         if ui_identifier is not None:
             pass
         elif plug_settings is None:
-            ui_identifier = config("actuator", "ui")
+            ui_identifier = config("pymodaq", "actuator", "ui")
         else:
             try:
                 ui_identifier = plug_settings["main_settings", "ui_type"]
             except KeyError:
-                ui_identifier = config("actuator", "ui")
+                ui_identifier = config("pymodaq", "actuator", "ui")
 
         is_compact = (
             ActuatorUIFactory.get(ui_identifier).is_compact
@@ -1087,19 +854,22 @@ class DashBoard(CustomApp):
         )
 
         if is_compact:
-            if self.compact_actuator_dock is None:
-                self.compact_actuator_dock = Dock("Simple Actuators")
-                self.compact_actuator_dock.layout.setSpacing(0)
-                self.compact_actuator_dock.layout.setContentsMargins(0, 0, 0, 0)
+            # Create compact manager if needed
+            if self.compact_actuator_manager is None:
+                self.compact_actuator_manager = ActuatorCompactDock(
+                    "Simple Actuators",
+                    self.dockarea,
+                    orientation=Qt.Orientation.Vertical,
+                )
+                self.compact_actuator_manager.show("top")
+            dock = None  # Compact widgets don't have individual docks
 
-            dock = self.compact_actuator_dock
-            self.dockarea.addDock(dock, "top")
         else:
             dock = Dock(plug_name, size=(150, 250))
             actuator_docks.append(dock)
 
             if len(actuator_docks) == 1:
-                self.dockarea.addDock(dock, "right", self.logger_dock)
+                self.dockarea.addDock(dock, "top")
             else:
                 self.dockarea.addDock(dock, "above", actuator_docks[-2])
         QtWidgets.QApplication.processEvents()
@@ -1109,7 +879,6 @@ class DashBoard(CustomApp):
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
-        mov_mod_tmp.manage_ui_actions("quit", "setEnabled", False)
 
         if plug_settings is not None:
             try:
@@ -1124,7 +893,12 @@ class DashBoard(CustomApp):
         QtWidgets.QApplication.processEvents()
 
         mov_mod_tmp.bounds_signal[bool].connect(self.do_stuff_from_out_bounds)
-        dock.addWidget(actuator_widgets[-1])
+
+        # Add widget to appropriate container
+        if is_compact:
+            self.compact_actuator_manager.add_module(mov_mod_tmp)
+        else:
+            dock.addWidget(actuator_widgets[-1])
 
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
@@ -1161,38 +935,46 @@ class DashBoard(CustomApp):
         actuator.master = False
         actuator.init_hardware_ui()
         QtWidgets.QApplication.processEvents()
-        self.poll_init(actuator)
+        self.modules_manager.poll_init(actuator)
         QtWidgets.QApplication.processEvents()
 
         # Update actuators modules and module manager
         self.actuators_modules.append(actuator)
 
-    def add_det(self, plug_name, plug_settings, detector_docks_settings, detector_docks_viewer,
+    def add_det(self, plug_name, plug_settings, detector_docks_viewer,
                 detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
             plug_subtype = plug_settings.child("main_settings", "detector_type").value()
-        detector_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-        detector_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
-        if len(detector_modules) == 0:
-            self.logger_dock.area.addDock(detector_docks_settings[-1], "bottom")
-            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_settings[-1])
-        else:
-            self.dockarea.addDock(detector_docks_settings[-1], "bottom", detector_docks_settings[-2])
-            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
 
+        # Create compact manager if needed
+        if self.compact_detector_manager is None:
+            self.compact_detector_manager = DetectorCompactDock(
+                "DAQ Viewer Toolbars",
+                self.dockarea,
+                orientation=Qt.Orientation.Vertical,
+            )
+            self.compact_detector_manager.show("top")
+
+        # Create individual detector dock
+        detector_docks_viewer.append(Dock(plug_name, size=(350, 350)))
+        if len(detector_modules) == 0:
+            self.dockarea.addDock(detector_docks_viewer[-1], "bottom")
+        else:
+            self.dockarea.addDock(detector_docks_viewer[-1], "right", detector_docks_viewer[-2])
+        widget = QtWidgets.QWidget()
+        detector_docks_viewer[-1].addWidget(widget)
         det_mod_tmp = DAQ_Viewer(
-            self.dockarea,
+            widget,
             title=plug_name,
             daq_type=plug_type,
-            dock_settings=detector_docks_settings[-1],
-            dock_viewer=detector_docks_viewer[-1],
         )
+
+        self.compact_detector_manager.add_module(det_mod_tmp)
         QtWidgets.QApplication.processEvents()
-        det_mod_tmp.detector = plug_subtype
+        det_mod_tmp.detector = SelectedModule(plug_type, plug_subtype)
         QtWidgets.QApplication.processEvents()
-        det_mod_tmp.manage_ui_actions("quit", "setEnabled", False)
 
         if plug_settings is not None:
             try:
@@ -1250,28 +1032,17 @@ class DashBoard(CustomApp):
             which created it
         """
         detector = self.add_det(
-            name, None, [], [], [], plug_type=daq_type, plug_subtype=instrument_name
+            name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name
         )
         detector.controller = instrument_controller
         detector.master = False
         detector.init_hardware_ui()
         QtWidgets.QApplication.processEvents()
-        self.poll_init(detector)
+        self.modules_manager.poll_init(detector)
         QtWidgets.QApplication.processEvents()
 
         # Update actuators modules and module manager
         self.detector_modules.append(detector)
-
-    def poll_init(self, module):
-        is_init = False
-        tstart = perf_counter()
-        while not is_init:
-            QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-            is_init = module.initialized_state
-            if perf_counter() - tstart > 60:  # timeout of 60sec
-                break
-        return is_init
 
     def set_roi_configuration(self, filename):
         if not isinstance(filename, Path):
@@ -1299,8 +1070,8 @@ class DashBoard(CustomApp):
             self.remote_manager.set_file_remote(filename, show=False)
             self.settings.child("loaded_files", "remote_file").setValue(filename)
             self.remote_manager.set_remote_configuration()
-            self.remote_dock.addWidget(self.remote_manager.remote_settings_tree)
-            self.remote_dock.setVisible(True)
+            self.remote_widget.layout().addWidget(self.remote_manager.remote_settings_tree)
+            self.get_action('show_remote').trigger()
 
     def activate_remote(self, remote_action, activate_all=False):
         """
@@ -1466,36 +1237,6 @@ class DashBoard(CustomApp):
         else:
             return lambda: getattr(module, action["action"])()
 
-    def set_overshoot_configuration(self, filename):
-        try:
-            if not isinstance(filename, Path):
-                filename = Path(filename)
-
-            if filename.suffix == ".xml":
-                file = filename.stem
-                self.settings.child("loaded_files", "overshoot_file").setValue(file)
-                self.update_status(
-                    "Overshoot configuration ({}) has been loaded".format(file),
-                    log_type="log",
-                )
-                self.overshoot_manager.set_file_overshoot(filename, show=False)
-                self.set_action_enabled("activate_overshoot", True)
-                self.set_action_checked("activate_overshoot", False)
-                self.get_action("activate_overshoot").trigger()
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def activate_overshoot(self, status: bool):
-        try:
-            self.overshoot_manager.activate_overshoot(
-                self.detector_modules, self.actuators_modules, status
-            )
-        except Exception as e:
-            logger.warning(f"Could not load the overshoot file:\n{str(e)}")
-            self.set_action_checked("activate_overshoot", False)
-            self.set_action_enabled("activate_overshoot", False)
-
     @property
     def move_modules(self):
         """
@@ -1505,7 +1246,11 @@ class DashBoard(CustomApp):
 
     @property
     def preset_file(self) -> Path:
-        return self.preset_manager.entry_filename
+        return self.preset_manager.entry_filepath
+
+    @property
+    def preset_name(self) -> str:
+        return self.preset_manager.entry
 
     def update_init_tree(self):
         for act in self.actuators_modules:
@@ -1539,13 +1284,9 @@ class DashBoard(CustomApp):
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
         if out_of_bounds:
             logger.warning(f"Some actuators reached their bounds")
-            if self.scan_module is not None:
+            if self.extensions[ExtensionEnum.SCAN] is not None:
                 logger.warning(f"Stopping the DAQScan for out of bounds")
-                self.scan_module.stop_scan()
-
-    def stop_moves_from_overshoot(self, overshoot):
-        self.overshoot = overshoot
-        self.stop_moves()
+                self.extensions[ExtensionEnum.SCAN].stop_scan()
 
     def stop_moves(self, *args, **kwargs):
         """
@@ -1555,136 +1296,35 @@ class DashBoard(CustomApp):
         --------
         stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
-        if self.scan_module is not None:
-            self.scan_module.stop_scan()
+        if self.extensions[ExtensionEnum.SCAN] is not None:
+            self.extensions[ExtensionEnum.SCAN].stop_scan()
 
         for mod in self.actuators_modules:
             mod.stop_motion()
 
-    def show_log(self):
-        import webbrowser
-
-        webbrowser.open(logging.getLogger("pymodaq").handlers[0].baseFilename)
-
-    def show_config(self, config):
-        from pymodaq_gui.utils.widgets.tree_toml import TreeFromToml
-
-        config_tree = TreeFromToml(config)
-        config_tree.show_dialog()
-
-
     def setup_docks(self):
         # %% create logger dock
-        self.logger_dock = Dock("Logger")
+        self.logger_widget = QtWidgets.QWidget(windowTitle='Logger')
+        self.logger_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.logger_widget.setVisible(False)
+
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
 
         splitter = QtWidgets.QSplitter(Qt.Vertical)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.logger_list)
-        self.logger_dock.addWidget(splitter)
+        self.logger_widget.layout().addWidget(splitter)
 
-        self.remote_dock = Dock("Remote controls")
-        self.dockarea.addDock(self.remote_dock, "top")
-        self.dockarea.addDock(self.logger_dock, "above", self.remote_dock)
-        self.logger_dock.setVisible(True)
-
-        self.remote_dock.setVisible(False)
+        self.remote_widget = QtWidgets.QWidget(windowTitle='Remote Manager')
+        self.remote_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.remote_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.remote_widget.setVisible(False)
 
 
-    @property
-    def menubar(self):
-        return self._menubar
-
-    def parameter_tree_changed(self, param, changes):
-        """
-        Foreach value changed, update :
-            * Viewer in case of **DAQ_type** parameter name
-            * visibility of button in case of **show_averaging** parameter name
-            * visibility of naverage in case of **live_averaging** parameter name
-            * scale of axis **else** (in 2D pymodaq type)
-
-        Once done emit the update settings signal to link the commit.
-
-
-        """
-
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = ".".join(path)
-            else:
-                childName = param.name()
-            if change == "childAdded":
-                pass
-            elif change == "value":
-                if param.name() == "log_level":
-                    logger.setLevel(param.value())
-            elif change == "parent":
-                pass
-
-    def show_about(self):
-        self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage(
-            f"PyMoDAQ version {get_version('pymodaq')}\n"
-            f"Modular Acquisition with Python\n"
-            f"Written by Sébastien Weber"
-        )
-
-    def check_update(self, show=True):
-        try:
-            packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
-            current_versions = [version_mod.parse(get_version(p)) for p in packages]
-            available_versions = [
-                version_mod.parse(get_pypi_pymodaq(p)["version"]) for p in packages
-            ]
-            new_versions = np.greater(available_versions, current_versions)
-            # Combine package and version information and select only the ones with a newer version available
-
-            packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
-            )[new_versions]
-
-            if len(packages_data) > 0:
-                # Create a QDialog window and different graphical components
-                dialog = QtWidgets.QDialog()
-                dialog.setWindowTitle("Update check")
-
-                vlayout = QtWidgets.QVBoxLayout()
-
-                message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
-                )
-                message_label.setAlignment(Qt.AlignCenter)
-
-                table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data))
-                table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
-                )
-
-                for p in packages_data:
-                    table.append_row(p[0], p[1], p[2])
-
-                # The vlayout contains the message, the table and the buttons
-                # and is connected to the dialog window
-                vlayout.addWidget(message_label)
-                vlayout.addWidget(table)
-                dialog.setLayout(vlayout)
-
-                ret = dialog.exec()
-
-            else:
-                if show:
-                    msgBox = QMessageBox()
-                    msgBox.setWindowTitle("Update check")
-                    msgBox.setText("Everything is up to date!")
-                    ret = msgBox.exec()
-        except Exception as e:
-            logger.exception("Error while checking the available PyMoDAQ version")
-
-        return False
+    def value_changed(self, param: Parameter):
+        if param.name() == "log_level":
+            logger.setLevel(param.value())
 
     def show_file_attributes(self, type_info="dataset"):
         """
@@ -1731,9 +1371,6 @@ class DashBoard(CustomApp):
         res = dialog.exec()
         return res
 
-    def show_help(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
-
     def update_status(self, txt, wait_time=0, log_type=None):
         """
         Show the txt message in the status bar with a delay of wait_time ms.
@@ -1753,28 +1390,109 @@ class DashBoard(CustomApp):
             pass
 
 
+def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle("PyMoDAQ Dashboard")
+
+    shared_ui = SharedUI(win)
+    dashboard = DashBoard(area)
+    shared_ui.affect_application(dashboard)
+    return shared_ui, dashboard
+
+
+def load_dashboard_with_preset(preset_name: str,
+                               extension_name: str = None,
+                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+
+    """ Load the Dashboard using a given preset then load an extension
+
+    Parameters
+    ----------
+    configuration_name: str
+    preset_name: str
+        The filename (without extension) defining the preset to be loaded in the Dashboard
+    extension_name: str
+        The name of the extension. Either the builtins ones:
+        * 'DAQScan'
+        * 'DAQLogger'
+        * 'DAQ_PID'
+        * 'Bayesian'
+
+        or the ones defined within a plugin
+
+    Returns
+    -------
+
+    """
+    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
+    shared_ui, dashboard = create_load_dashboard()
+
+    preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
+    preset_name = preset_path.stem
+    extension = None
+
+    if preset_name in dashboard.preset_manager.entries:
+        dashboard.preset_manager.entry = preset_name
+        dashboard.preset_manager.execute_entry(preset_path)
+        if configuration_name is not None:
+            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.entry = configuration_name
+            dashboard.configurator.execute_entry(configuration_path)
+        if extension_name in ExtensionEnum.names():
+            extension = dashboard.load_extension(ExtensionEnum[extension_name])
+        else:
+            extension = None
+
+    else:
+        msgBox = QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{preset_name}\n"
+                       f"Impossible to load the {extension_name} extension")
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
+        ret = msgBox.exec()
+    return dashboard, extension, shared_ui
+
+
+
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset, create_load_dashboard
+    from pymodaq_gui.qt_utils import mkQApp
     # Create application and main window
     app = mkQApp('Dashboard')
 
+    extensions_names = ExtensionEnum.values()
     # Command-line argument parsing
-    parser = argparse.ArgumentParser(prog="dashboard", description="PyMoDAQ dashboard")
-    parser.add_argument("-p", "--preset", metavar="PRESET_NAME", help="preset name to load")
+    parser = argparse.ArgumentParser(prog="dashboard",
+                                     description="PyMoDAQ dashboard. "
+                                                 "Command-line options only affect GUI initial state."
+                                     )
+    parser.add_argument("-p", "--preset", metavar="PRESET_NAME",
+                        help="preset name to load at startup")
+    parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
+                        help="config name to execute (ignored if no preset provided)")
+    parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
+                        help="extension name to execute (ignored if no preset provided), valid "
+                             'values are within: "' + '\" \"'.join(extensions_names) +'"')
     args = parser.parse_args()
 
     # If preset name is supplied, load dashboard with this preset
     if args.preset:
-        dashboard, extension, win = load_dashboard_with_preset(args.preset)
+        dashboard, extension, win = load_dashboard_with_preset(preset_name=args.preset,
+                                                               extension_name=args.extension,
+                                                               configuration_name=args.config
+                                                               )
+
 
     # If no command-line arguments are supplied, start empty
     else:
         win, dashboard = create_load_dashboard()
-        win.show()
+
+    win.show()
 
     # Run application
-    app.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

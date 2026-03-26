@@ -4,20 +4,22 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
-import logging
+
 import numpy as np
 import pint.errors
-from pint.errors import DimensionalityError
 import pytest
 from pytest import approx, mark
 import time
 
-import pymodaq_data
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
 from pymodaq_data import data as data_mod
-from pymodaq_data.data import DataDim, Q_
+from pymodaq_data import DataDim, Q_, DataToExport, Unit, ureg
+from pymodaq_data.data import dimensionless_aware_reduce_units
 from pymodaq_data.post_treatment.process_to_scalar import DataProcessorFactory
+
+#For tests with custom quantities
+ureg.define('step = []')
 
 data_processors = DataProcessorFactory()
 
@@ -29,7 +31,12 @@ SIZE = 1024
 DATA = OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE)
 
 DATA0D = np.array([2.7])
-DATA1D = np.arange(0, 10)
+DATA1D = np.arange(0, 10, dtype=float)
+
+DATA1D_WITH_NANS = DATA1D.copy()
+DATA1D_WITH_NANS[2] = np.nan
+DATA1D_WITH_NANS[7] = np.nan
+
 DATA2D = np.arange(0, 5*6).reshape((5, 6))
 XAXIS_GAUSSIAN = np.linspace(0, 128, endpoint=False)
 X0 = 100
@@ -503,6 +510,21 @@ class TestDataBase:
         data.append(data_bis)
         assert len(data) == Ndata + Ndatabis
         assert data.labels == labels + label_bis
+
+    def test_split_as_dte(self):
+        Ndata = 2
+        labels = [f'label{ind}' for ind in range(Ndata)]
+        dwa = init_data(data=DATA1D, Ndata=Ndata, labels=labels)
+
+        dte = dwa.split_as_dte('mydte')
+        assert isinstance(dte, DataToExport)
+        for ind, dwa_split in enumerate(dte):
+            assert isinstance(dwa_split, type(dwa))
+            assert dwa_split.name == dwa.labels[ind]
+            assert dwa_split.labels[0] == dwa.labels[ind]
+            assert dwa_split.units == dwa.units
+            for ind_axis, axis in enumerate(dwa_split.axes):
+                assert axis == dwa.axes[ind]
 
 
 class TestDataWithAxesUniform:
@@ -1763,3 +1785,67 @@ class TestFuncNumpy:
         SHIFT = (10, 5)
         dwa_rolled = np.roll(dwa, shift = SHIFT)
         assert np.allclose(dwa_rolled[0], np.roll(dwa[0], shift=SHIFT))
+
+
+
+
+class TestPintUnitReduction:
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., 'm'), Q_(1., 'm'), Q_(2., 'm')),
+        (Q_(1., '°'), Q_(1., '°'), Q_(2., '°')),
+        (Q_(1., 'm'), Q_(1., 'km'), Q_(1001., 'm')),
+        (Q_(1., 'rad'), Q_(1., 'rad'), Q_(2., 'rad')),
+    ])
+    def test_addition(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 + q2)
+        assert res.m == expected.m and res.u == expected.u
+
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., 'm'), Q_(1., 'm'), Q_(1., 'm**2')),
+        (Q_(1., '°'), Q_(1., '°'), Q_(1., '°**2')),
+        (Q_(1., 'm'), Q_(1., 's'), Q_(1., 'm * s')),
+        (Q_(1., 'km/s'), Q_(1., 'm/min'), Q_(60000., 'm**2 / min**2')), # May change?
+        (Q_(1., 'rad'), Q_(1., 'rad'), Q_(1., 'rad**2')),
+        (Q_(1., '°'), Q_(1., 'rad'), Q_(1., 'rad * °')), # Can't simplify
+        (Q_(1., 'step'), Q_(1., 'step'), Q_(1., Unit('step**2'))),
+        (Q_(1., 'm'), Q_(1.), Q_(1., 'm')),
+        (Q_(1., '°'), Q_(1.), Q_(1., '°')),
+        (Q_(1., 'step'), Q_(1.), Q_(1., Unit('step'))),
+    ])
+    def test_product(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 * q2)
+        assert res.m == expected.m and res.u == expected.u
+
+    @pytest.mark.parametrize("q1, q2, expected", [
+        (Q_(1., '°'), Q_(1., '°'), Q_(1., '')),
+        (Q_(1., 'rad'), Q_(1., 'rad'), Q_(1., '')),
+    ])
+    def test_division(self, q1, q2, expected):
+        res = dimensionless_aware_reduce_units(q1 / q2)
+        assert res.m == expected.m and res.u == expected.u
+
+class TestEq:
+
+    @pytest.mark.parametrize(
+        ('data', 'Ndata', 'name', 'eq'), [
+            (DATA1D, 1, 'data', True),
+            (DATA0D, 1, 'data', False),
+            (DATA1D, 1, 'data1', True),  # not same name is equal
+            (DATA1D, 2, 'data', False),
+            (DATA1D * 0.999, 1, 'data', False),
+            (DATA1D_WITH_NANS, 1, 'data', False),
+
+    ])
+    def test_dwa_eq(self, data, Ndata, name, eq):
+        dat1 = init_data(data=DATA1D, Ndata=1, name='data')
+        dat2 = init_data(data=data, Ndata=Ndata, name=name)
+        assert (dat1 == dat2) is eq
+
+
+    def test_dwa_with_nans_eq(self):
+        dat1 = init_data(data=DATA1D_WITH_NANS, Ndata=1, name='data')
+        dat2 = init_data(data=DATA1D_WITH_NANS, Ndata=1, name='data')
+
+        assert dat1 == dat2
+
+

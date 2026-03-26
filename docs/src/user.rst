@@ -14,6 +14,7 @@ User's Guide
    user_folder/module_manager
    user_folder/dashboard_manager
    user_folder/leco
+   user_folder/scripting
    user_folder/plugin_manager
    user_folder/backup_environments
    user_folder/other_modules

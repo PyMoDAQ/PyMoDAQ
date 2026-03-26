@@ -4,6 +4,8 @@ from typing import Union
 from qtpy.QtWidgets import QVBoxLayout, QToolBar
 from qtpy import QtWidgets
 
+import qt_themes
+
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq_gui.utils.widgets import LabelWithFont
@@ -15,15 +17,15 @@ from pymodaq_utils.config import Config
 
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 from pymodaq.control_modules.daq_move_ui.uis.simple import DAQ_Move_UI_Simple
-from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq_utils.config import GlobalConfig as Config
 from enum import Enum
 
-config = ControlModulesConfig()
+config = Config()
 
 
 class BinaryValue(Enum):
-    VALUE_ONE = config('actuator', 'binary', 'value_1')
-    VALUE_TWO = config('actuator', 'binary', 'value_2')
+    VALUE_ONE = config('pymodaq', 'actuator', 'binary', 'value_1')
+    VALUE_TWO = config('pymodaq', 'actuator', 'binary', 'value_2')
 
 
 @ActuatorUIFactory.register('Binary')
@@ -40,39 +42,8 @@ class DAQ_Move_UI_Binary(DAQ_Move_UI_Simple):
 
     is_compact = True
 
-    def setup_actions(self):
-        self.add_widget('name', LabelWithFont(f'{self.title}: ', font_name="Tahoma",
-                                              font_size=14, isbold=True, isitalic=True),
-                        toolbar=self.move_toolbar)
-
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=self.move_toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'ini', toolbar=self.move_toolbar)
-        self.add_widget('ini_led', self.ini_state_led, toolbar=self.move_toolbar)
-        self.add_widget('current', self.current_value_sb, toolbar=self.move_toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=self.move_toolbar)
-        self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",
-                        toolbar=self.move_toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'go_to_2', "Move to the other set absolute"
-                                                             " value",
-                        toolbar=self.move_toolbar)
-
-
-        self.add_action('stop', 'Stop', 'stop', "Stop Motion", toolbar=self.move_toolbar)
-
-        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_controls', 'Show Controls', 'Add_Step', "Show more controls", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('show_graph', 'Show Graph', 'graph', "Show Graph", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
-                        toolbar=self.move_toolbar)
-        self.move_toolbar.addSeparator()
-        self.add_action('show_config', 'Show Config', 'Settings', "Show PyMoDAQ Config", checkable=False,
-                        toolbar=self.move_toolbar)
-        self.add_action('quit', 'Quit the module', 'close2', toolbar=self.move_toolbar)
-        self.add_action('log', 'Show Log file', 'information2', toolbar=self.move_toolbar)
-        self.add_widget('status', self.statusbar, toolbar=self.move_toolbar)
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        self._setup_absolute_actions(toolbar)
 
     def connect_things(self):
         super().connect_things()
@@ -130,7 +101,7 @@ def main(init_qt=True):
 
     win.show()
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return prog, widget
 
 

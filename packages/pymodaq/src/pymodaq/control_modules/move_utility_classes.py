@@ -12,7 +12,7 @@ from pint.errors import OffsetUnitCalculusError
 
 
 from pymodaq_utils.utils import ThreadCommand, find_keys_from_val
-from pymodaq_utils import config as configmod
+from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum, enum_checker
 from pymodaq_utils.serialize.mysocket import Socket
@@ -23,15 +23,13 @@ from pymodaq_data.data import DataUnitError, Q_, Unit
 import pymodaq_gui.parameter.utils as putils
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq_gui.qt_utils import mkQApp
 
-from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.data import DataActuator
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusMove
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
-from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 
@@ -40,8 +38,7 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 
-config_utils = configmod.Config()
-config = ControlModulesConfig()
+config = Config()
 
 HardwareController = TypeVar("HardwareController")
 
@@ -76,7 +73,7 @@ class DataActuatorType(BaseEnum):
     DataActuator = 1
 
 
-def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
+def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
                      epsilons=None):
     if epsilons is not None:
         epsilon = epsilons
@@ -90,7 +87,7 @@ def comon_parameters(epsilon=config('actuator', 'epsilon_default'),
              'value': epsilon,
              'tip': 'Differential Value at which the controller considers it reached the target position'},
             {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
-             'value': config('actuator', 'polling_timeout_s')},
+             'value': config('pymodaq', 'actuator', 'polling_timeout_s')},
             {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
                 {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
                 {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
@@ -131,7 +128,7 @@ class MoveCommand:
 def comon_parameters_fun(is_multiaxes=False, axes_names=None,
                          axis_names: Union[List, Dict] = [],
                          master=True,
-                         epsilon: float = config('actuator', 'epsilon_default')):
+                         epsilon: float = config('pymodaq', 'actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -176,36 +173,12 @@ params = [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True,},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
-         'value': config('actuator', 'ui') if config('actuator', 'ui') in ActuatorUIFactory.keys() else
+         'value': config('pymodaq', 'actuator', 'ui') if config('pymodaq', 'actuator', 'ui') in ActuatorUIFactory.keys() else
          ActuatorUIFactory.keys()[0],
          'limits': ActuatorUIFactory.keys()},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
-         VALID_FOR_CONFIGURATION: False,},
-
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
-         'value': config('actuator', 'refresh_timeout_ms')},
-        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-              'value': config_utils('network', 'tcp-server', 'ip')},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'tcp-server', 'port')},
-         ]},
-        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config_utils('network', "leco-server", "host"),
-              "default": "localhost"},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config_utils('network', 'leco-server', 'port')},
-         ]},
-    ]},
+         'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
+    ] + create_remote_connection_params()},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
@@ -233,7 +206,7 @@ def main(plugin_file, init=True, title='test'):
     if init:
         prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 ##########################
@@ -358,9 +331,9 @@ class DAQ_Move_base(QObject):
                                           data=[np.zeros(self.data_shape, dtype=float)],
                                           units=self.axis_unit)
 
-        self.poll_timer = QTimer()
-        self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
-        self._poll_timeout = config('actuator', 'polling_timeout_s')
+        self.poll_timer = QTimer(self)
+        self.poll_timer.setInterval(config('pymodaq', 'actuator', 'polling_interval_ms'))
+        self._poll_timeout = config('pymodaq', 'actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
         self.ini_attributes()
@@ -976,184 +949,6 @@ class DAQ_Move_base(QObject):
         """Stop the actuator and emit move_done signal."""
         pass
 
-
-class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
-    """
-        ================= ==============================
-        **Attributes**      **Type**
-        *command_server*    instance of Signal
-        *x_axis*            1D numpy array
-        *y_axis*            1D numpy array
-        *data*              double precision float array
-        ================= ==============================
-
-        See Also
-        --------
-        utility_classes.DAQ_TCP_server
-    """
-    params_client = []  # parameters of a client grabber
-    command_server = Signal(list)
-    data_actuator_type = DataActuatorType.DataActuator
-
-    message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
-                    'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
-    socket_types = ["ACTUATOR"]
-    params = comon_parameters_fun() + tcp_parameters
-
-    def __init__(self, parent=None, params_state=None):
-        """
-
-        Parameters
-        ----------
-        parent
-        params_state
-        """
-        self.client_type = "ACTUATOR"
-        DAQ_Move_base.__init__(self, parent, params_state)  # initialize base class with commom attribute and methods
-        self.settings.child('bounds').hide()
-        self.settings.child('scaling').hide()
-        self.settings.child('epsilon').setValue(1)
-
-        TCPServer.__init__(self, self.client_type)
-
-    def command_to_from_client(self, command):
-        sock: Socket = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
-
-            if command == 'position_is':
-                pos = DeSerializer(sock).dwa_deserialization()
-
-                pos = self.get_position_with_scaling(pos)
-                self._current_value = pos
-                self.emit_status(ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos))
-
-            elif command == 'move_done':
-                pos = DeSerializer(sock).dwa_deserialization()
-                pos = self.get_position_with_scaling(pos)
-                self._current_value = pos
-                self.emit_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, pos))
-            else:
-                self.send_command(sock, command)
-
-    def commit_settings(self, param):
-
-        if param.name() in putils.iter_children(self.settings.child('settings_client'), []):
-            actuator_socket: Socket = \
-            [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
-            actuator_socket.check_sended_with_serializer('set_info')
-            path = putils.get_param_path(param)[2:]
-            # get the path of this param as a list starting at parent 'infos'
-
-            actuator_socket.check_sended_with_serializer(path)
-
-            # send value
-            data = ioxml.parameter_to_xml_string(param)
-            actuator_socket.check_sended_with_serializer(data)
-
-    def ini_stage(self, controller=None):
-        """
-            | Initialisation procedure of the detector updating the status dictionary.
-            |
-            | Init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
-        """
-        self.settings.child('infos').addChildren(self.params_client)
-
-        self.init_server()
-        self.controller = self.serversocket
-        self.settings.child('units').hide()
-        self.settings.child('epsilon').hide()
-
-        info = 'TCP Server actuator'
-        initialized = True
-        return info, initialized
-
-    def read_infos(self, sock: Socket = None, infos=''):
-        """Reimplemented to get the units"""
-        super().read_infos(sock, infos)
-
-        self.axis_unit = self.settings['settings_client', 'units']
-
-    def close(self):
-        """
-            Should be used to uninitialize hardware.
-
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.close_server
-        """
-        self.listening = False
-        self.close_server()
-
-    def move_abs(self, position: DataActuator):
-        """
-
-        """
-        position = self.check_bound(position)
-        self.target_value = position
-
-        position = self.set_position_with_scaling(position)
-
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.check_sended_with_serializer('move_abs')
-            sock.check_sended_with_serializer(position)
-
-    def move_rel(self, position: DataActuator):
-        position = self.check_bound(self.current_value + position) - self.current_value
-        self.target_value = position + self.current_value
-
-        position = self.set_position_relative_with_scaling(position)
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.check_sended_with_serializer('move_rel')
-            sock.check_sended_with_serializer(position)
-
-    def move_home(self):
-        """
-            Make the absolute move to original position (0).
-
-            See Also
-            --------
-            move_Abs
-        """
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-            sock.check_sended_with_serializer('move_home')
-
-    def get_actuator_value(self):
-        """
-            Get the current hardware position with scaling conversion given by get_position_with_scaling.
-
-            See Also
-            --------
-            daq_move_base.get_position_with_scaling, daq_utils.ThreadCommand
-        """
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-            self.send_command(sock, 'get_actuator_value')
-
-        return self._current_value
-
-    def stop_motion(self):
-        """
-            See Also
-            --------
-            daq_move_base.move_done
-        """
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-            self.send_command(sock, 'stop_motion')
-
-    def stop(self):
-        """
-            not implemented.
-        """
-        pass
-        return ""
 
 
 if __name__ == '__main__':

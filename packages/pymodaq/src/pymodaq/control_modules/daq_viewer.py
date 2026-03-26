@@ -5,6 +5,8 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 from __future__ import annotations
+
+from abc import ABC
 from importlib import import_module
 
 import os
@@ -18,7 +20,6 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-
 from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
 
@@ -28,12 +29,12 @@ from pymodaq.control_modules.utils import ParameterControlModule
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.utils.widgets.lcd import LCD
 
-from pymodaq_utils.config import Config, get_set_local_dir
+from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
 from pymodaq_gui.h5modules.browsing import browse_data
 from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-from pymodaq_data.h5modules.backends import Node
-from pymodaq_utils.utils import ThreadCommand
+from pymodaq_data.h5modules.backends import Node, SaveType
+from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 
 from pymodaq_gui.parameter import ioxml, Parameter
 from pymodaq_gui.parameter import utils as putils
@@ -41,10 +42,10 @@ from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_
 from pymodaq_utils import utils
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_gui.utils import DockArea, Dock
-from pymodaq_gui.utils.utils import mkQApp
+
 
 from pymodaq.utils.gui_utils import get_splash_sc
-from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
+from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
 from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
                                            DetectorError, get_viewer_plugins)
 from pymodaq.control_modules.utils import ControllerStatus
@@ -56,12 +57,11 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
 from pymodaq.utils.leco.pymodaq_listener import ViewerActorListener, LECOClientCommands, LECOViewerCommands
-from pymodaq.utils.config import Config as ControlModulesConfig
 
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 
 logger = set_logger(get_module_name(__file__))
-config_utils = Config()
-config = ControlModulesConfig()
+config = Config()
 
 local_path = get_set_local_dir()
 
@@ -104,28 +104,27 @@ class DAQ_Viewer(ParameterControlModule):
     data_saved = Signal()
     grab_status = Signal(bool)
 
-    params = daq_viewer_params
+    params = daq_viewer_params + [
+        {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
+         'visible': True, 'children': H5Saver.get_params_for_save_type(SaveType.detector), 'expanded': False}]
 
     listener_class = ViewerActorListener
     ui: Optional[DAQ_Viewer_UI]
 
     def __init__(
         self,
-        parent: Optional[DockArea] = None,
+        parent: Optional[QtWidgets.QWidget] = None,
         title: str = "Testing",
-        daq_type=config("viewer", "daq_type"),
-        dock_settings=None,
-        dock_viewer=None,
+        daq_type=config("pymodaq", "viewer", "daq_type"),
         **kwargs,
     ):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
-        super().__init__(**kwargs)
+        super().__init__(listener_class=ViewerActorListener, **kwargs)
 
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
-        self._daq_type: DAQTypesEnum = daq_type
+        self._detector = SelectedModule(daq_type=DAQTypesEnum[daq_type])
 
         self._viewer_types: List[ViewersEnum] = []
         self._viewers: List[ViewerBase] = []
@@ -133,16 +132,9 @@ class DAQ_Viewer(ParameterControlModule):
         self.override_grab_from_extension = False  # boolean allowing an extension to tell to init a grab or not
         # (see DataMixer for reasons and use case in ModulesManager and dashboard method add_det_from_extension)
 
-        if isinstance(parent, DockArea):
-            self.dockarea = parent
-        else:
-            self.dockarea = None
-
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
-                                                   dock_settings=dock_settings,
-                                                   dock_viewer=dock_viewer)
+            self.ui = DAQ_Viewer_UI(parent, title)
         else:
             self.ui = None
 
@@ -163,15 +155,9 @@ class DAQ_Viewer(ParameterControlModule):
                                           module_saving.DetectorExtendedSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
-        self.setup_continuous_saving()
 
-        self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
-        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
-        if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
-            self._detector: str = self._detectors[0]
-        else:
-            raise DetectorError('No detected Detector')
-        self.settings.child('main_settings', 'detector_type').setValue(self._detector)
+        self.settings.child('main_settings', 'DAQ_type').setValue(self._detector.module_name)
+        self.settings.child('main_settings', 'detector_type').setValue(self._detector.daq_type)
 
         self._grabing: bool = False
         self._do_bkg: bool = False
@@ -192,22 +178,29 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._do_save_data: bool = False
 
-        self._set_setting_tree()  # to activate parameters of default Mock detector
+        self.detector = self._detector
 
         self.grab_done_signal.connect(self._save_export_data)
         self.update_plugin_config()
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
+    def get_detector_module(self, detector: SelectedModule):
+        detector_module = find_dict_in_list_from_key_val(
+            DET_TYPES[detector.daq_type.name],
+            'name', detector.module_name)['module']
+        return detector_module
 
-    def setup_continuous_saving(self):
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.title} {self.detector}'
+
+    def setup_continuous_saving(self, init: bool = True):
         """Configure the objects dealing with the continuous saving mode"""
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self._h5saver_continuous = H5Saver(save_type='detector')
-        self._h5saver_continuous.show_settings(False)
-        self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
-        if self.ui is not None:
-            self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
+        if init:
+            self.module_and_data_saver = module_saving.DetectorSaver(self)
+            self._h5saver_continuous = H5Saver(save_type='detector')
+            self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
+        else:
+            self._h5saver_continuous.close_file()
+
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -219,45 +212,26 @@ class DAQ_Viewer(ParameterControlModule):
         cmd: ThreadCommand
             Possible values are:
                 * init
-                * quit
                 * grab
                 * snap
-                * stop
-                * show_log
                 * detector_changed
-                * daq_type_changed
                 * save_current
-                * save_new
                 * do_bkg
                 * take_bkg
                 * viewers_changed
-                * show_config
         """
 
         if cmd.command == UiToMainViewer.INIT:
             self.init_hardware(cmd.attribute[0])
-        elif cmd.command == UiToMainViewer.QUIT:
-            self.quit_fun()
-        elif cmd.command == UiToMainViewer.STOP:
-            self.stop()
-        elif cmd.command == UiToMainViewer.SHOW_LOG:
-            self.show_log()
         elif cmd.command == UiToMainViewer.GRAB:
             self.grab_data(cmd.attribute, snap_state=False)
         elif cmd.command == UiToMainViewer.SNAP:
             self.grab_data(False, snap_state=True)
-        elif cmd.command == UiToMainViewer.SAVE_NEW:
-            self.save_new()
         elif cmd.command == UiToMainViewer.SAVE_CURRENT:
             self.save_current()
-        elif cmd.command == UiToMainViewer.OPEN:
-            self.load_data()
         elif cmd.command == UiToMainViewer.DETECTOR_CHANGED:
-            if cmd.attribute != '':
+            if isinstance(cmd.attribute, SelectedModule):
                 self.detector_changed_from_ui(cmd.attribute)
-        elif cmd.command == UiToMainViewer.DAQ_TYPE_CHANGED:
-            if cmd.attribute != '':
-                self.daq_type_changed_from_ui(cmd.attribute)
         elif cmd.command == UiToMainViewer.TAKE_BKG:
             self.take_bkg()
         elif cmd.command == UiToMainViewer.DO_BKG:
@@ -265,9 +239,6 @@ class DAQ_Viewer(ParameterControlModule):
         elif cmd.command == UiToMainViewer.VIEWERS_CHANGED:
             self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-        elif cmd.command == UiToMainViewer.SHOW_CONFIG:
-            self.config = self.show_config(self.config)
-            self.ui.config = self.config
 
     @property
     def bkg(self) -> DataToExport:
@@ -300,57 +271,32 @@ class DAQ_Viewer(ParameterControlModule):
             self.settings.child('detector_settings', 'controller_status').setValue(
                 ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
 
-    def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
-        """ Apply changes from the selection of a different DAQTypesEnum in the UI
-
-        Parameters
-        ----------
-        daq_type: DAQTypesEnum
-        """
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
-        self._daq_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
-        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
-        self.detector = self.detectors[0]
-
     @property
     def daq_type(self) -> DAQTypesEnum:
         """Get/Set the daq_type as a DAQTypesEnum
 
         Update the detector property with the list of available detectors of a given daq_type
         """
-        return self._daq_type
-
-    @daq_type.setter
-    def daq_type(self, daq_type: DAQTypesEnum):
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
-
-        self._daq_type = daq_type
-        if self.ui is not None:
-            self.ui.daq_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
-        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
-        self.detector = self.detectors[0]
+        return self.detector.daq_type
 
     @property
     def daq_types(self) -> List[str]:
         """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
         return DAQTypesEnum.names()
 
-    def detector_changed_from_ui(self, detector: str):
+    def detector_changed_from_ui(self, detector: SelectedModule):
         self._detector = detector
+        self.settings.child('main_settings', 'DAQ_type').setValue(detector.daq_type.name)
         self.update_plugin_config()
         self._set_setting_tree()
 
     @property
-    def detector(self) -> str:
-        """:obj:`str`: Get/Set the currently selected detector among available detectors"""
+    def detector(self) -> SelectedModule:
+        """Get/Set the currently selected detector among available detectors"""
         return self._detector
 
     @detector.setter
-    def detector(self, det: str):
-        if det not in self.detectors:
-            raise ValueError(f'{det} is not a valid Detector: {self.detectors}')
+    def detector(self, det: SelectedModule):
         self._detector = det
         self.update_plugin_config()
         if self.ui is not None:
@@ -367,24 +313,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.settings.child('main_settings', 'Naverage').setValue(ngrab)
 
     def update_plugin_config(self):
-        parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self.daq_type.name], 'name', self.detector)
-        mod = import_module(parent_module['module'].__package__.split('.')[0])
-        if hasattr(mod, 'config'):
-            self.plugin_config = mod.config
-
-    def detectors_changed_from_ui(self, detectors: List[str]):
-        self._detectors = detectors
-
-    @property
-    def detectors(self) -> str:
-        """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type (DAQTypesEnum)"""
-        return self._detectors
-
-    @detectors.setter
-    def detectors(self, detectors):
-        self._detectors = detectors
-        if self.ui is not None:
-            self.ui.detectors = detectors
+        parent_module = self.get_detector_module(self.detector)
+        mod = import_module(parent_module.__package__.split('.')[0])
 
     @property
     def grab_state(self):
@@ -452,9 +382,6 @@ class DAQ_Viewer(ParameterControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-        if __name__ == '__main__':
-            self.parent.close()
-
     #  #####################################
     #  Methods for running the acquisition
 
@@ -477,12 +404,14 @@ class DAQ_Viewer(ParameterControlModule):
 
             except Exception as e:
                 self.logger.exception(str(e))
+            finally:
+                self.connect_leco(False)
         else:            
             try:
 
                 hardware = DAQ_Detector(self._title, self.settings, self.detector)
                 self._hardware_thread = QThread()
-                if self.config('viewer', 'viewer_in_thread'):
+                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
                     hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
@@ -492,7 +421,7 @@ class DAQ_Viewer(ParameterControlModule):
                 self._update_settings_signal[edict].connect(hardware.update_settings)
 
                 self._hardware_thread.hardware = hardware
-                if self.config('viewer', 'viewer_in_thread'):
+                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
                     self._hardware_thread.start()
                 self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.INI_DETECTOR,
                                                          attribute=[
@@ -501,21 +430,21 @@ class DAQ_Viewer(ParameterControlModule):
                 if self.ui is not None:
                     for dock in self.ui.viewer_docks:
                         dock.setEnabled(True)
-
+                self.connect_leco(True)
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def snap(self, send_to_tcpip=False):
+    def snap(self, send_to_leco=False):
         """ Launch a single grab """
-        self.grab_data(False, snap_state=True, send_to_tcpip=send_to_tcpip)
+        self.grab_data(False, snap_state=True, send_to_leco=send_to_leco)
 
-    def grab(self, send_to_tcpip=False):
+    def grab(self, send_to_leco=False):
         """ Launch a continuous grab """
         if self.ui is not None:
             self.manage_ui_actions('grab', 'setChecked', not self._grabing)
-            self.grab_data(not self._grabing, snap_state=False, send_to_tcpip=send_to_tcpip)
+            self.grab_data(not self._grabing, snap_state=False, send_to_leco=send_to_leco)
 
-    def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
+    def snapshot(self, pathname=None, dosave=False, send_to_leco=False):
         """Do one single grab (snap) and eventually save the data.
 
         Parameters
@@ -524,8 +453,8 @@ class DAQ_Viewer(ParameterControlModule):
             The path where to save data
         dosave: bool
             Do save or just grab data
-        send_to_tcpip: bool
-            If True, send the grabbed data through the TCP/IP pipe
+        send_to_leco: bool
+            If True, send the grabbed data through the LECO Coordinator
         """
         try:
             self._do_save_data = dosave
@@ -533,24 +462,24 @@ class DAQ_Viewer(ParameterControlModule):
                 raise (ValueError("filepathanme has not been defined in snapshot"))
 
             self._save_file_pathname = pathname
-            self.grab_data(grab_state=False, send_to_tcpip=send_to_tcpip, snap_state=True)
+            self.grab_data(grab_state=False, send_to_leco=send_to_leco, snap_state=True)
         except Exception as e:
             self.logger.exception(str(e))
 
-    def grab_data(self, grab_state=False, send_to_tcpip=False, snap_state=False):
+    def grab_data(self, grab_state=False, send_to_leco=False, snap_state=False):
         """ Generic method to grab or snap data from the selected (and initialized) detector
 
         Parameters
         ----------
         grab_state: bool
             Defines the grab status: if True: do live grabbing if False stops the grab
-        send_to_tcpip: bool
-            If True, send the grabbed data through the TCP/IP pipe
+        send_to_leco: bool
+            If True, send the grabbed data through the LECO Coordinator
         snap_state: bool
             if True performs a single grab
         """
         self._grabing = grab_state
-        self._send_to_tcpip = send_to_tcpip
+        self._send_to_leco = send_to_leco
         self._grab_done = False
 
         if self.ui is not None:
@@ -581,6 +510,10 @@ class DAQ_Viewer(ParameterControlModule):
         self._take_bkg = True
         self.grab_data(snap_state=True)
 
+    def stop_module(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_grab()
+
     def stop_grab(self):
         """ Stop the current continuous grabbing and unchecked the stop button of the UI
 
@@ -588,9 +521,10 @@ class DAQ_Viewer(ParameterControlModule):
         --------
         :meth:`stop`
         """
-        if self.ui is not None:
-            self.manage_ui_actions('grab', 'setChecked', False)
-        self.stop()
+        if self.ui is not None and self.ui.is_action_checked('grab'):
+            self.ui.get_action('grab').trigger()
+        else:
+            self.stop()
 
     def stop(self):
         """ Stop the current continuous grabbing """
@@ -604,14 +538,6 @@ class DAQ_Viewer(ParameterControlModule):
         """
         self.update_status("Timeout occurred", log_type="log")
 
-    @staticmethod
-    def load_data():
-        """Opens a H5 file in the H5Browser module
-
-        Convenience static method.
-        """
-        browse_data()
-
     def save_current(self):
         """Save current data into a h5file"""
         self._do_save_data = True
@@ -619,12 +545,6 @@ class DAQ_Viewer(ParameterControlModule):
                                                                                   ext='h5')  # see daq_utils
         self._save_export_data(self._data_to_save_export)
 
-    def save_new(self):
-        """Snap data and save them into a h5file"""
-        self._do_save_data = True
-        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
-        self.snapshot(pathname=self._save_file_pathname, dosave=True)
 
     def _init_continuous_save(self):
         """ Initialize the continuous saving H5Saver object
@@ -633,9 +553,9 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if self._h5saver_continuous.settings.child('do_save').value():
 
-            self._h5saver_continuous.settings.child('base_name').setValue('Data')
-            self._h5saver_continuous.settings.child('N_saved').show()
-            self._h5saver_continuous.settings.child('N_saved').setValue(0)
+            self.settings.child('saver_settings', 'base_name').setValue('Data')
+            self.settings.child('saver_settings', 'N_saved').show()
+            self.settings.child('saver_settings', 'N_saved').setValue(0)
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self._h5saver_continuous.init_file(update_h5=True)
 
@@ -646,7 +566,7 @@ class DAQ_Viewer(ParameterControlModule):
             self.grab_done_signal.connect(self.append_data)
         else:
             self._do_continuous_save = False
-            self._h5saver_continuous.settings.child('N_saved').hide()
+            self.settings.child('saver_settings', 'N_saved').hide()
             self.grab_done_signal.disconnect(self.append_data)
 
             try:
@@ -675,13 +595,13 @@ class DAQ_Viewer(ParameterControlModule):
             dte = self._data_to_save_export
         init_step = kwargs.pop('init_step', None)
         if init_step is None:
-            init_step = self._h5saver_continuous.settings['N_saved'] == 0
+            init_step = self.settings['saver_settings', 'N_saved'] == 0
         self._add_data_to_saver(dte,
                                 init_step=init_step,
                                 where=where,
                                 **kwargs)
 
-        self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
+        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
     def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
                     distribution=DataDistribution['uniform']):
@@ -763,7 +683,7 @@ class DAQ_Viewer(ParameterControlModule):
             (root, filename) = os.path.split(str(path))
             filename, ext = os.path.splitext(filename)
             image_path = os.path.join(root, filename + '.png')
-            self.dockarea.parent().grab().save(image_path)
+            self.parent.parent().grab().save(image_path)
 
         h5saver.close_file()
         self.data_saved.emit()
@@ -802,8 +722,11 @@ class DAQ_Viewer(ParameterControlModule):
         if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
             self._received_data += 1
             if len(data) != 0:
+                viewer_title = data.name
                 for dat in data:
-                    dat.origin = f'{self.title} - {dat.origin}' if dat.origin is not None else f'{self.title}'
+                    dat.name = '/'.join([viewer_title, dat.origin, dat.name])
+                    dat.origin = self.title
+
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):
@@ -829,14 +752,13 @@ class DAQ_Viewer(ParameterControlModule):
         if self.ui is not None:
             self.set_data_to_viewers(data, temp=True)
 
-    @Slot(DataToExport)
     def show_data(self, dte: DataToExport):
-        """Send data to their dedicated viewers
+        """ Receive data from plugins and send them to their dedicated viewers
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
         Process the data as specified in the settings, display them into the dedicated data viewers depending on the
         settings:
-            * create a container (OrderedDict `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
+            * create a container (DataToExport `_data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
             * call `_process_data`
             * do background subtraction if any
             * check refresh time (if set in the settings) to send or not data to data viewers
@@ -854,10 +776,8 @@ class DAQ_Viewer(ParameterControlModule):
         """
         try:
             dte = dte.deepcopy()
-            if self.settings['main_settings', 'tcpip', 'tcp_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
-            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
+            if self.settings['main_settings', 'leco', 'leco_connected'] and self._send_to_leco:
+                self._leco_commands_signal.emit(ThreadCommand(LECOViewerCommands.DATA_READY, dte))
             if self.ui is not None:
                 self.ui.data_ready = True
 
@@ -872,6 +792,11 @@ class DAQ_Viewer(ParameterControlModule):
             else:
                 for dwa in dte:
                     dwa.origin = self._title
+                    if self.settings['main_settings', 'dynamic'] != 'as_is':
+                        arrays = []
+                        for data_array in dwa:
+                            arrays.append(data_array.astype(self.settings['main_settings', 'dynamic'], copy=False))
+                        dwa.data = arrays
                 self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:
@@ -961,7 +886,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
-            self._h5saver_continuous.settings.child('do_save').setValue(False)
+            self.settings.child('saver_settings', 'do_save').setValue(False)
             self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
 
         elif param.name() == 'show_averaging':
@@ -992,13 +917,17 @@ class DAQ_Viewer(ParameterControlModule):
                     for viewer in self.viewers:
                         viewer.x_axis, viewer.y_axis = self.get_scaling_options()
 
-        elif param.name() == 'continuous_saving_opt':
-            self._h5saver_continuous.show_settings(param.value())
-
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.UPDATE_WAIT_TIME,
                                                      [param.value()]))
 
+        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
+            try:
+                if param.name() == 'do_save':
+                    self.setup_continuous_saving(param.value())
+                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+            except KeyError:
+                pass
         self._update_settings(param=param)
 
     def child_added(self, param, data):
@@ -1041,7 +970,8 @@ class DAQ_Viewer(ParameterControlModule):
                 for child in self.settings.child('detector_settings').children():
                     child.remove()
 
-            det_params, _class = get_viewer_plugins(self.daq_type.name, self.detector)
+            det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
+                                                    self.detector.module_name)
             self.settings.child('detector_settings').addChildren(det_params.children())
             self.settings.child('main_settings', 'module_name').setValue(self._title)
         except Exception as e:
@@ -1133,47 +1063,27 @@ class DAQ_Viewer(ParameterControlModule):
         elif status.command == ThreadStatusViewer.STOP:
             self.stop_grab()
 
-    def connect_tcp_ip(self):
-        super().connect_tcp_ip(params_state=self.settings.child('detector_settings'),
-                               client_type="GRABBER")
-
     @Slot(ThreadCommand)
-    def process_tcpip_cmds(self, status: ThreadCommand) -> None:
-        """Receive commands from the TCP Server (if connected) and process them
+    def process_leco_commands(self, status: ThreadCommand) -> None:
+        """Receive commands from the LECO network and process them.
 
         Parameters
         ----------
         status: ThreadCommand
             Possible commands are:
-            * 'Send Data: to trigger a snapshot
-            * 'connected': show that connection is ok
-            * 'disconnected': show that connection is not OK
-            * 'Update_Status': update a status command
-            * 'set_info': receive settings from the server side and update them on this side
 
-        See Also
-        --------
-        connect_tcp_ip, TCPServer
-
+            * :attr:`LECOViewerCommands.GRAB`: start a continuous grab and later forward acquired data to LECO.
+            * :attr:`LECOViewerCommands.SNAP`: take a single snapshot and later forward the data to LECO.
+            * :attr:`LECOViewerCommands.STOP`: stop an ongoing grab.
         """
-        if super().process_tcpip_cmds(status=status) is None:
-            return
-        if 'Send Data' in status.command:
-            self.snapshot('', send_to_tcpip=True)
-        elif status.command == LECOViewerCommands.GRAB:
-            self.grab(send_to_tcpip=True)
+        if status.command == LECOViewerCommands.GRAB:
+            self.grab(send_to_leco=True)
         elif status.command ==LECOViewerCommands.SNAP:
-            self.snap( send_to_tcpip=True)
-
+            self.snap(send_to_leco=True)
         elif status.command == LECOViewerCommands.STOP:
             self.stop()
-
-        elif status.command == LECOClientCommands.LECO_CONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(True)
-
-        elif status.command == LECOClientCommands.LECO_DISCONNECTED:
-            self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
-
+        else:
+            super().process_leco_commands(status=status)
 
 
 class DAQ_Detector(QObject):
@@ -1192,13 +1102,13 @@ class DAQ_Detector(QObject):
     data_detector_sig = Signal(DataToExport)
     data_detector_temp_sig = Signal(DataToExport)
 
-    def __init__(self, title, settings_parameter, detector_name):
+    def __init__(self, title, settings_parameter, detector: SelectedModule):
         super().__init__()
         self.waiting_for_data = False
         self.controller = None
         self.logger = set_logger(f'{logger.name}.{title}.detector')
         self._title = title
-        self.detector_name = detector_name
+        self.detector_name = detector.module_name
         self.detector: DAQ_Viewer_base = None
         self.controller_adress: int = None
         self.grab_state = False
@@ -1210,7 +1120,7 @@ class DAQ_Detector(QObject):
         self.hardware_averaging = False
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
-        self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
+        self.daq_type = detector.daq_type
 
     @property
     def title(self):
@@ -1478,25 +1388,20 @@ def prepare_docks(area, title):
 
 def main(init_qt=True, init_det=False):
     """ Method called to start the DAQ_Viewer in standalone mode"""
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
+    from pymodaq_gui.qt_utils import mkQApp
 
     if init_qt:  # used for the test suite
         app = mkQApp("PyMoDAQ Viewer")
 
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.show()
+    shared_ui, daq_viewer = create_load_daq_viewer()
+    shared_ui.show()
 
-    title = "Testing"
-    viewer = DAQ_Viewer(area, title="Testing", daq_type=config('viewer', 'daq_type'),
-                        **prepare_docks(area, title))
     if init_det:
-        viewer.init_hardware_ui(init_det)
+        daq_viewer.init_hardware_ui(init_det)
 
     if init_qt:
-        sys.exit(app.exec_())
-    return viewer, win
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':

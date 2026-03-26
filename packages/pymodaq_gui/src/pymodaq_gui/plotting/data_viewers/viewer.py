@@ -71,7 +71,7 @@ viewer_factory = ViewerFactory()
 
 
 class ViewerDispatcher:
-    """MixIn class to add easy control for adding multuiple data viewers in docks depending on
+    """MixIn class to add easy control for adding multiple data viewers in docks depending on
     data to be plotted
 
     Parameters
@@ -273,4 +273,4 @@ if __name__ == '__main__':
 
     prog.show_data(dte)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

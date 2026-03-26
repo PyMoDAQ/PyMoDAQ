@@ -1,3 +1,5 @@
+import sys
+
 from qtpy.QtCore import Qt
 from qtpy import QtWidgets
 
@@ -94,7 +96,7 @@ class DataPicker(CustomApp):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
     import numpy as np
 
     app = mkQApp('DataPicker')
@@ -117,7 +119,7 @@ def main():
 
     data_picker.show_data(data_to_plot)
     win.show()
-    app.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

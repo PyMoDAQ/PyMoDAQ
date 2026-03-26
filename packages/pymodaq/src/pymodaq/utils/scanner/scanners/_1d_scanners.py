@@ -10,7 +10,6 @@ import numpy as np
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 
 from pymodaq_data.data import Axis, DataDistribution
 
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
 
 
 class Scan1DBase(ScannerBase):
@@ -30,7 +29,7 @@ class Scan1DBase(ScannerBase):
 
     params = []
     n_axes = 1
-    distribution = DataDistribution['uniform']
+    distribution = DataDistribution.uniform
 
     def __init__(self, actuators: List = None, display_units=True, **_ignored):
         super().__init__(actuators=actuators, display_units=display_units)
@@ -68,7 +67,7 @@ class Scan1DLinear(Scan1DBase):
         {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': 0.1}
         ]
     n_axes = 1
-    distribution = DataDistribution['uniform']
+    distribution = DataDistribution.uniform
 
     def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
         super().__init__(actuators=actuators, display_units=display_units)
@@ -132,7 +131,7 @@ class Scan1DSparse(Scan1DBase):
         {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1', }
         ]
     n_axes = 1
-    distribution = DataDistribution['uniform']  # because in 1D it doesn't matter is spread or
+    distribution = DataDistribution.uniform  # because in 1D it doesn't matter is spread or
     # uniform, one can easily plot both types on a regulat 1D plot
 
     def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
@@ -157,10 +156,6 @@ class Scan1DSparse(Scan1DBase):
             self.get_info_from_positions(self.positions)
         except Exception as e:
             pass  # many things could happen when parsing strings
-
-    def set_settings_titles(self):
-        if len(self.actuators) == 1:
-            self.settings.child('start').setOpts(title=f'{self.actuators[0].title} start:')
 
     def evaluate_steps(self) -> int:
         """Quick evaluation of the number of steps to stop the calculation if the evaluation os above the

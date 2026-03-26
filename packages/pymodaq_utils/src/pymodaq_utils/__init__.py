@@ -18,7 +18,7 @@ try:
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
 
-    from pymodaq_utils.config import Config
+    from pymodaq_utils.config import GlobalConfig as Config
 
     #TODO: remove it as it is managed by config itself
     CONFIG = Config()  # to ckeck for config file existence, otherwise create one
@@ -26,6 +26,6 @@ try:
 
 except Exception as e:
     try:
-        logger_var.exception(str(e))
-    except Exception as e:
-        print(str(e))
+        logger_var.exception(e)
+    except Exception:
+        print(e)

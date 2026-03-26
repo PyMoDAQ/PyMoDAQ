@@ -3,6 +3,7 @@ from typing import Union, Iterable
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
+
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
 from easydict import EasyDict as edict
@@ -11,30 +12,30 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq_utils.utils import ThreadCommand, getLineInfo
 
-from pymodaq_utils.config import Config, get_set_local_dir
-from pymodaq.utils.tcp_ip.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig
+
 from pymodaq_data.data import DataToExport, DataRaw
 from pymodaq_utils.warnings import deprecation_msg
 from pymodaq_utils.serialize.mysocket import Socket
 from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq_gui.plotting.utils.plot_utils import RoiInfo
+from pymodaq_gui.plotting.items.roi import RoiInfo
 from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.control_modules.utils import create_controller_param, ControllerStatus
-from pymodaq_gui.utils.utils import mkQApp
+from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
+from pymodaq_gui.qt_utils import mkQApp
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
+config = GlobalConfig()
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
 calibs = ['None']
 if local_path.joinpath('camera_calibrations').is_dir():
-    for ind_file, file in enumerate(local_path.joinpath('camera_calibrations').iterdir()):
+    for file in local_path.joinpath('camera_calibrations').iterdir():
         if 'xml' in file.suffix:
             calibs.append(file.stem)
 
 
-config = Config()
 
 comon_parameters = [create_controller_param()]  #
 
@@ -44,9 +45,10 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config',
-         VALID_FOR_CONFIGURATION: False,},
-
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Dynamic:', 'name': 'dynamic', 'type': 'list',
+         'limits': config('data','data_saving', 'data_type', 'dynamic'),
+         'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
@@ -55,27 +57,7 @@ params = [
         {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0,
          'visible': False},
         {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
-        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
-         'value': False},
-        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
-            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
-             'value': False},
-            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False,
-             VALID_FOR_CONFIGURATION: False},
-            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-             'value': config('network', 'tcp-server', 'ip')},
-            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
-        ]},
-        {'title': 'LECO options:', 'name': 'leco', 'type': 'group', 'visible': True, 'expanded': False,
-         'children': [
-             {'title': 'Connect:', 'name': 'connect_leco_server', 'type': 'bool_push', 'label': 'Connect',
-              'value': False},
-             {'title': 'Connected?:', 'name': 'leco_connected', 'type': 'led', 'value': False,
-              VALID_FOR_CONFIGURATION: False},
-             {'title': 'Name', 'name': 'leco_name', 'type': 'str', 'value': "", 'default': ""},
-             {'title': 'Host:', 'name': 'host', 'type': 'str', 'value': config('network', "leco-server", "host"), "default": "localhost"},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'leco-server', 'port')},
-         ]},
+    ] + create_remote_connection_params() + [
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -110,8 +92,10 @@ def main(plugin_file=None, init=True, title='Testing'):
     import sys
     from qtpy import QtWidgets
     from pymodaq.utils.gui_utils import DockArea
-    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pathlib import Path
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
+    from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+    from pymodaq.control_modules.instruments import DAQTypesEnum
 
     app = mkQApp("PyMoDAQ Viewer")
 
@@ -126,14 +110,17 @@ def main(plugin_file=None, init=True, title='Testing'):
     else:
         detector = Path(plugin_file).stem[13:]
         det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
-    prog = DAQ_Viewer(area, title=title)
-    win.show()
-    prog.daq_type = det_type
-    prog.detector = detector
-    if init:
-        prog.init_hardware_ui()
 
-    sys.exit(app.exec_())
+
+    shared_ui, daq_viewer = create_load_daq_viewer()
+    daq_viewer.detector = SelectedModule(DAQTypesEnum[det_type], detector)
+    shared_ui.show()
+
+    if init:
+        daq_viewer.init_hardware_ui(init)
+
+
+    sys.exit(app.exec())
 
 
 class DAQ_Viewer_base(QObject):
@@ -259,7 +246,7 @@ class DAQ_Viewer_base(QObject):
         if old_controller is None and slave_controller is not None:
             old_controller = slave_controller
         self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['controller', 'controller_status'] == "Slave":
+        if self.settings['controller', 'controller_status'] == ControllerStatus.SLAVE:
             if old_controller is None:
                 raise Exception('no controller has been defined externally while this axe is a slave one')
             else:
@@ -433,239 +420,5 @@ class DAQ_Viewer_base(QObject):
             pass
 
 
-class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
-    """
-        ================= ==============================
-        **Attributes**      **Type**
-        *command_server*    instance of Signal
-        *x_axis*            1D numpy array
-        *y_axis*            1D numpy array
-        *data*              double precision float array
-        ================= ==============================
-
-        See Also
-        --------
-        utility_classes.DAQ_TCP_server
-    """
-    params_GRABBER = []  # parameters of a client grabber
-    command_server = Signal(list)
-
-    message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status", "Done",
-                    "Server Closed", "Info",
-                    "Infos",
-                    "Info_xml", 'x_axis', 'y_axis']
-    socket_types = ["GRABBER"]
-    params = [create_controller_param()] + tcp_parameters
-
-    def __init__(self, parent=None, params_state=None, grabber_type='2D'):
-        """
-
-        Parameters
-        ----------
-        parent
-        params_state
-        grabber_type: (str) either '0D', '1D' or '2D'
-        """
-        self.client_type = "GRABBER"
-        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with common attribute and methods
-        TCPServer.__init__(self, self.client_type)
-
-        self.x_axis = None
-        self.y_axis = None
-        self.data = None
-        self.grabber_type = grabber_type
-        self.ind_data = 0
-        self.data_mock: DataToExport = None
-
-    def command_to_from_client(self, command: str):
-        """Process the command"""
-        sock = self.find_socket_within_connected_clients(self.client_type)
-        if sock is not None:  # if client self.client_type is connected then send it the command
-
-            if command == 'x_axis':
-                raise DeprecationWarning(f'The command {command} is deprecated use the data objects')
-            elif command == 'y_axis':
-                raise DeprecationWarning(f'The command {command} is deprecated use the data objects')
-
-            else:
-                self.send_command(sock, command)
-
-        else:  # else simulate mock data
-            if command == "Send Data 0D":
-                self.set_0D_Mock_data()
-            elif command == "Send Data 1D":
-                self.set_1D_Mock_data()
-            elif command == "Send Data 2D":
-                self.set_2D_Mock_data()
-            self.process_cmds('Done')
-
-    def send_data(self, sock: Socket, data: DataToExport):
-        """
-            To match digital and labview, send again a command.
-
-            =============== ============================== ====================
-            **Parameters**   **Type**                       **Description**
-            *sock*                                          the socket receipt
-            *data*           double precision float array   the data to be sent
-            =============== ============================== ====================
-
-            See Also
-            --------
-            send_command, check_send_data
-        """
-        self.send_command(sock, 'Done')
-        sock.check_sended_with_serializer(data)
-
-    def read_data(self, sock: Socket) -> DataToExport:
-        """Read data from the socket
-        """
-        return DeSerializer(sock).dte_deserialization()
-
-    def data_ready(self, data: DataToExport):
-        """
-            Send the grabbed data signal.
-        """
-        self.dte_signal.emit(data)
-
-    def command_done(self, command_sock):
-        try:
-            sock = self.find_socket_within_connected_clients(self.client_type)
-            if sock is not None:  # if client self.client_type is connected then send it the command
-                data: DataToExport = self.read_data(sock)
-            else:
-                data = self.data_mock
-
-            if command_sock is None:
-                self.data_ready(data)
-            else:
-                self.send_data(command_sock, data)  # to be send to a client
-
-        except Exception as e:
-            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
-
-    def commit_settings(self, param):
-
-        if param.name() in iter_children(self.settings.child(('settings_client')), []):
-            grabber_socket: Socket = \
-                [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
-            grabber_socket.check_sended_with_serializer('set_info')
-
-            path = get_param_path(param)[2:]  # get the path of this param as a list starting at parent 'infos'
-            grabber_socket.check_sended_with_serializer(path)
-
-            # send value
-            data = ioxml.parameter_to_xml_string(param)
-            grabber_socket.check_sended_with_serializer(data)
-
-    def ini_detector(self, controller=None):
-        """
-            | Initialisation procedure of the detector updating the status dictionary.
-            |
-            | Init axes from image , here returns only None values (to tricky to di it with the server and not really
-             necessary for images anyway)
-
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
-        """
-        self.settings.child('infos').addChildren(self.params_GRABBER)
-
-        self.init_server()
-        self.controller = self.serversocket
-        # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-        self.x_axis = self.get_xaxis()
-        self.y_axis = self.get_yaxis()
-
-        initialized = True
-        info = "Server ready"
-        return info, initialized
-
-    def close(self):
-        """
-            Should be used to uninitialize hardware.
-
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.close_server
-        """
-        self.listening = False
-        self.close_server()
-
-    def get_xaxis(self):
-        """
-            Obtain the horizontal axis of the image.
-
-            Returns
-            -------
-            1D numpy array
-                Contains a vector of integer corresponding to the horizontal camera pixels.
-        """
-        pass
-        return self.x_axis
-
-    def get_yaxis(self):
-        """
-            Obtain the vertical axis of the image.
-
-            Returns
-            -------
-            1D numpy array
-                Contains a vector of integer corresponding to the vertical camera pixels.
-        """
-        pass
-        return self.y_axis
-
-    def grab_data(self, Naverage=1, **kwargs):
-        """
-            Start new acquisition.
-            Grabbed indice is used to keep track of the current image in the average.
-
-            ============== ========== ==============================
-            **Parameters**   **Type**  **Description**
-
-            *Naverage*        int       Number of images to average
-            ============== ========== ==============================
-
-            See Also
-            --------
-            utility_classes.DAQ_TCP_server.process_cmds
-        """
-        try:
-            self.ind_grabbed = 0  # to keep track of the current image in the average
-            self.Naverage = Naverage
-            self.process_cmds("Send Data {:s}".format(self.grabber_type))
-            # self.command_server.emit(["process_cmds","Send Data 2D"])
-
-        except Exception as e:
-            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
-
-    def stop(self):
-        """
-            not implemented.
-        """
-        pass
-        return ""
-
-    def set_0D_Mock_data(self):
-        x = np.linspace(0, 99, 100)
-        data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
-        self.ind_data += 1
-        self.data_mock = DataToExport('mocktcp',
-                                      data=[DataRaw('mock',
-                                                    data=[np.atleast_1d(np.roll(data_tmp, self.ind_data)[0])])])
-
-    def set_1D_Mock_data(self):
-        x = np.linspace(0, 99, 100)
-        data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
-        self.ind_data += 1
-        self.data_mock = DataToExport('mocktcp', data=[DataRaw('mock', data=[np.roll(data_tmp, self.ind_data)])])
-
-    def set_2D_Mock_data(self):
-        self.x_axis = np.linspace(0, 50, 50, endpoint=False)
-        self.y_axis = np.linspace(0, 30, 30, endpoint=False)
-        data_tmp = 10 * gauss2D(self.x_axis, 20, 10,
-                                      self.y_axis, 15, 7, 1) + 2 * np.random.rand(len(self.y_axis), len(self.x_axis))
-        self.data_mock = DataToExport('mocktcp', data=[DataRaw('mock', data=[data_tmp])])
-
 if __name__ == '__main__':
-    prog = DAQ_Viewer_TCP_server()
+    test = DAQ_Viewer_base()

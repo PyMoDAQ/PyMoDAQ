@@ -1,6 +1,3 @@
-
-
-from pymodaq_utils import config as config_mod, utils
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
@@ -11,12 +8,11 @@ from pymodaq.extensions.bayesian.acquisition import GenericAcquisitionFunctionFa
 
 from pymodaq.extensions.optimizers_base.optimizer import (
     GenericOptimization, OptimizationRunner, optimizer_params, OptimizerAction)
-from pymodaq.extensions.optimizers_base.utils import OptimizerModelDefault, find_key_in_nested_dict
+from pymodaq.extensions.optimizers_base.utils import find_key_in_nested_dict
 from pymodaq.extensions.optimizers_base.thread_commands import OptimizerToRunner, OptimizerThreadStatus
 
 
 logger = set_logger(get_module_name(__file__))
-config = config_mod.Config()
 
 
 EXTENSION_NAME = 'BayesianOptimization'
@@ -79,7 +75,7 @@ class BayesianOptimization(GenericOptimization):
         uparams = {child.name() : child.value() for child in utility_settings.child('options').children()}
         uparams['kind'] = kind
         self.command_runner.emit(
-            utils.ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
+            ThreadCommand(OptimizerToRunner.PREDICTION, uparams))
 
 
     def validate_config(self) -> bool:
@@ -119,24 +115,27 @@ class BayesianOptimization(GenericOptimization):
             bounds=self.format_bounds(),
             actuators=self.modules_manager.selected_actuators_name)
 
-    def thread_status(self, status: utils.ThreadCommand):
+    def thread_status(self, status: ThreadCommand):
         super().thread_status(status)
         if status.command == OptimizerThreadStatus.TRADE_OFF:
             self.settings.child('main_settings', 'prediction', 'options', 'tradeoff_actual').setValue(status.attribute)
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-    app = mkQApp('Bayesian Optimiser')
-    #preset_file_name = config('presets', f'beam_steering')
+    app = mkQApp('Bayesian Optimizer')
 
-    dashboard, extension, win = load_dashboard_with_preset('beam_steering', 'Bayesian')
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
 
-    app.exec()
+    win_ext, scan = create_extension(dashboard, BayesianOptimization)
+    win_ext.show()
 
-    return dashboard, extension, win
+    sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()

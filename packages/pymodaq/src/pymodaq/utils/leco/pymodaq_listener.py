@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 
 from pymodaq_utils.enums import StrEnum
 
@@ -23,7 +24,7 @@ from pymodaq.utils.leco.rpc_method_definitions import (
     ViewerMethods,
     GenericDirectorMethods,
     MoveDirectorMethods,
-    ViewerDirectorMethods,
+    ViewerDirectorMethods, DashboardMethods, DashboardDirectorMethods,
 )
 
 
@@ -59,6 +60,17 @@ class LECOViewerCommands(StrEnum):
     SNAP = 'snap'
     STOP = 'stop_grab'
 
+class LECODashboardCommands(StrEnum):
+    GET_DEVICES = 'get_devices'
+    SEND_DEVICES = 'send_devices'
+    GET_CONFIGURATIONS = 'get_configurations'
+    SEND_CONFIGURATIONS = 'send_configurations'
+    APPLY_CONFIGURATION = 'apply_configuration'
+    APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
+    GET_PRESETS = 'get_presets'
+    SEND_PRESETS = 'send_presets'
+    APPLY_PRESET = 'apply_preset'
+    APPLIED_PRESET_DONE = 'applied_preset_done'
 
 class ListenerSignals(QObject):
     cmd_signal = Signal(ThreadCommand)
@@ -118,7 +130,11 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.stop_motion, name=MoveMethods.STOP_MOTION)
         self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
         self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
-
+        self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
+        self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
+        self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
+        self.register_rpc_method(self.get_presets, name=DashboardMethods.GET_PRESETS)
+        self.register_rpc_method(self.apply_preset, name=DashboardMethods.APPLY_PRESET)
     @staticmethod
     def extract_pymodaq_object(
         value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
@@ -144,11 +160,26 @@ class ActorHandler(PymodaqPipeHandler):
     def get_settings(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
+    # dashboard commands
+    def get_devices(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
+
+    def get_configurations(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_CONFIGURATIONS))
+
+    def apply_configuration(self, configuration : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
+
+    def get_presets(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_PRESETS))
+
+    def apply_preset(self, preset : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_PRESET, attribute=preset))
+
     # detector commands
     def send_data_grab(self,) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
 
-    # detector commands
     def send_data_snap(self,) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
@@ -197,6 +228,7 @@ class ActorHandler(PymodaqPipeHandler):
 # to be able to separate them later on
 MoveActorHandler = ActorHandler
 ViewerActorHandler = ActorHandler
+DashboardActorHandler = ActorHandler
 
 
 class PymodaqListener(Listener):
@@ -320,7 +352,7 @@ class ActorListener(PymodaqListener):
                     value = value[0]  # for backward compatibility with attributes list
                 self.send_rpc_message_to_remote(
                     method=MoveDirectorMethods.SEND_POSITION,
-                    **binary_serialization_to_kwargs(pymodaq_object=value, data_key="position"),
+                    **binary_serialization_to_kwargs(pymodaq_object=value, data_key="data"),
                 )
 
             elif command.command == LECOMoveCommands.MOVE_DONE:
@@ -329,7 +361,7 @@ class ActorListener(PymodaqListener):
                     value = value[0]  # for backward compatibility with attributes list
                 self.send_rpc_message_to_remote(
                     method=MoveDirectorMethods.SET_MOVE_DONE,
-                    **binary_serialization_to_kwargs(value, data_key="position"),
+                    **binary_serialization_to_kwargs(value, data_key="data"),
                 )
 
             elif command.command == LECOMoveCommands.UNITS_CHANGED:
@@ -344,7 +376,31 @@ class ActorListener(PymodaqListener):
                     method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
                     settings=command.attribute.decode(),
                 )
-
+            elif command.command == LECODashboardCommands.SEND_DEVICES:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_DEVICES,
+                    **binary_serialization_to_kwargs(command.attribute, data_key="data")
+                )
+            elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
+                    configurations=command.attribute
+                )
+            elif command.command == LECODashboardCommands.SEND_PRESETS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_PRESETS,
+                    presets=command.attribute
+                )
+            elif command.command == LECODashboardCommands.APPLIED_PRESET_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_PRESET_DONE,
+                    done=command.attribute
+                )
+            elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
+                    done=command.attribute
+                )
         else:
             raise IOError("Unknown TCP client command")
 
@@ -362,3 +418,103 @@ class ActorListener(PymodaqListener):
 # to be able to separate them later on
 MoveActorListener = ActorListener
 ViewerActorListener = ActorListener
+DashboardActorListener = ActorListener
+
+
+class LECOComponentMixin:
+    """Mixin class adding LECO network connectivity to a PyMoDAQ component.
+
+    This mixin provides the interface for connecting a PyMoDAQ module (actuator,
+    detector, or dashboard) to the LECO (Laboratory Equipment Communication
+    Orchestration) network. It manages the lifecycle of an :class:`ActorListener`
+    that runs in a background thread and bridges incoming LECO remote-procedure
+    calls to Qt signals and vice versa.
+
+    Subclasses must implement :meth:`get_leco_name`, :meth:`get_leco_host_port`,
+    and :meth:`process_leco_commands`.
+
+    The class-level signal :attr:`_leco_commands_signal` is used to forward
+    outgoing :class:`~pymodaq_utils.utils.ThreadCommand` objects to the listener's
+    queue so that they are transmitted over LECO from the Qt thread.
+    """
+
+    _leco_commands_signal = Signal(ThreadCommand)
+
+    def __init__(self, listener_class: Type[ActorListener], **kwargs):
+        """Initialize the mixin.
+
+        :param listener_class: The :class:`ActorListener` subclass to instantiate
+            when establishing a LECO connection.
+        """
+        self._leco_client: Optional[ActorListener] = None
+        self._listener_class: Type[ActorListener] = listener_class
+
+    def connect_leco(self, connect: bool) -> None:
+        """Connect to or disconnect from the LECO network.
+
+        When *connect* is ``True``, an :class:`ActorListener` is created (or
+        reused if one already exists) and started.  The listener's
+        ``cmd_signal`` is wired to :meth:`process_leco_commands` so that
+        incoming LECO commands are dispatched to this component, and
+        :attr:`_leco_commands_signal` is connected to the listener's
+        :meth:`~ActorListener.queue_command` so that outgoing commands can be
+        sent from the Qt thread.
+
+        When *connect* is ``False``, a :attr:`~LECOCommands.QUIT` command is
+        emitted to stop the listener gracefully, and the signal/slot connection
+        to :meth:`~ActorListener.queue_command` is removed.
+
+        :param connect: ``True`` to establish the connection, ``False`` to
+            tear it down.
+        """
+        if connect:
+            name = self.get_leco_name()
+            host, port = self.get_leco_host_port()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = self._listener_class(name=name, host=host, port=port)
+                self._leco_client.cmd_signal.connect(self.process_leco_commands)
+            self._leco_commands_signal.connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+        else:
+            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT, ))
+            try:
+                self._leco_commands_signal.disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
+
+    def get_leco_name(self) -> str:
+        """Return the LECO component name used to register on the network.
+
+        :returns: The name string that uniquely identifies this component on the
+            LECO coordinator.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        """Return the host and port of the LECO coordinator to connect to.
+
+        :returns: A ``(host, port)`` tuple where *host* is the hostname or IP
+            address of the coordinator and *port* is its TCP port number.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def process_leco_commands(self, status: ThreadCommand) -> Optional[ThreadCommand]:
+        """Handle an incoming command forwarded from the LECO listener.
+
+        This slot is connected to the listener's ``cmd_signal`` and is called
+        whenever a remote LECO peer sends a command to this component (e.g.
+        grab, snap, move_abs).  Subclasses should dispatch on
+        ``status.command`` and take the appropriate action.
+
+        :param status: The :class:`~pymodaq_utils.utils.ThreadCommand` received
+            from the listener, carrying the command name and optional attribute
+            payload.
+        :returns: Optionally a :class:`~pymodaq_utils.utils.ThreadCommand` for
+            further processing, or ``None``.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError

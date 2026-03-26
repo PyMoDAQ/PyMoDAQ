@@ -4,6 +4,7 @@ import sys
 import pyqtgraph as pg
 import numpy as np
 
+from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 
@@ -42,7 +43,7 @@ class Viewer1DBasic(QObject):
 
         self.parent = parent
 
-        self.plot_colors = utils.plot_colors
+        self.plot_colors = PlotColors()
 
         self.data_to_export = None
         self.datas = None
@@ -168,7 +169,7 @@ class Viewer1DBasic(QObject):
             for item in items:
                 self.legend.removeItem(item)
 
-    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
+    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='index')):
         axis = self.plotwidget.plotItem.getAxis(axis_settings['orientation'])
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
 
@@ -178,7 +179,7 @@ class Viewer1DBasic(QObject):
 
     @x_axis.setter
     def x_axis(self, x_axis):
-        label = 'Pxls'
+        label = 'index'
         units = ''
         if isinstance(x_axis, dict):
             if 'data' in x_axis:
@@ -228,4 +229,4 @@ if __name__ == '__main__':  # pragma: no cover
     Form.show()
     prog.x_axis
     prog.update_labels(labels=['sig0', 'tralala', 'ouhaouh'])
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

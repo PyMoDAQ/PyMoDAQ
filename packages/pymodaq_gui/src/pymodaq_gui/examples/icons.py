@@ -38,12 +38,13 @@ class Icons():
         self.widget.layout().addLayout(layout_theme)
 
 def main():
-    app = QApplication(sys.argv)
+    from pymodaq_gui.qt_utils import mkQApp
+    app = mkQApp("Icon list")
 
     w = Icons(QWidget())
     w.widget.show()
 
-    app.exec()
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

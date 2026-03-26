@@ -8,9 +8,10 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
-
+from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
+from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import get_set_preset_path
+
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -27,7 +28,8 @@ from pymodaq.utils.managers.configurator.utils import (
 
 
 from pymodaq.utils.config import get_set_configurator_path
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq.extensions import ExtensionEnum
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -55,43 +57,60 @@ class Configurator(ManagerBase):
     entry_extension ='.config'
 
     def __init__(self,
-                 dashboard: 'DashBoard' = None,
-                 menu: QtWidgets.QMenu = None,
-                 toolbar: QtWidgets.QToolBar = None,
-                 preset_filename: str = 'default'):
+                 dashboard: 'DashBoard' = None):
 
-        self._preset_ini = preset_filename
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
+        if dashboard is None:
+            self._preset_manager_local = PresetManager()
+        else:
+            self._preset_manager_local = dashboard.preset_manager
 
-        super().__init__(dashboard=dashboard, menu=menu, toolbar=toolbar,
-                         tree=ConfiguratorParameterTree())
-        self.preset_filename = preset_filename
+        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+
+
+    @property
+    def preset_manager(self) -> PresetManager:
+        return self._preset_manager_local
 
     def show(self):
-        self.update_settings(self.dashboard.modules_manager.get_settings_all())
+        """ Open the Configurator User Interface
+
+        If the Dashboard is not None and has a current preset set, the configurator preset name
+        entry will be set as readonly and the settings are taken from the modules
+        """
+        if self.dashboard is not None:
+            settings = SettingsManager().create_settings_all(
+                self.dashboard.modules_manager.actuators_all,
+                self.dashboard.modules_manager.detectors_all,
+            )
+            self.update_settings(settings)
+        else:
+            self.update_settings(self._preset_manager_local.entry)
+
         super().show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        try:
-            return get_set_configurator_path(self.preset_filename)
-        except KeyError as e: #fallback to preset ini
-            return get_set_configurator_path(self._preset_ini)
+        return get_set_configurator_path(self.preset_filename)
+
+    def set_preset_filename(self, name: str):
+        """ convenience method to be used as slot in Qt connection"""
+        self.preset_filename = name
 
     @property
     def preset_filename(self) -> str:
-        if 'preset_filename' not in self.actions_names:
-            return self._preset_ini  # fallback at startup
-        else:
-            return self.get_action('preset_filename').text()
+        try:
+            return self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.currentText()
+        except KeyError:  # not yet instantiated but need to be there
+            return 'default'
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: str):
-        if preset_filename in [path.stem for path in get_set_preset_path().iterdir()]:
-            self._preset_ini = preset_filename
-            self.get_action('preset_filename').setText(preset_filename)
+        if preset_filename in self.preset_manager.entries:
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
             self.entries_sync.update_key('items', self.entries)
+            self.update_entry('default')
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -103,7 +122,7 @@ class Configurator(ManagerBase):
                  f'{entry.setting.parameter.title()} '
                  f'{entry.setting.value()}') for entry in entries]
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Applies the entry from the given file in the manager.
 
         Parameters:
@@ -111,7 +130,14 @@ class Configurator(ManagerBase):
         file : Path
             The path to the configuration file to be applied.
         """
+        if entry_path is None:
+            entry_path = self.entry_filepath
         config_subentries = config_subentries_from_path(entry_path)
+
+        if self.preset_manager.applied_entry_name != self.preset_filename:
+            logger.warning(f'The current configuration is referring to the prest: {self.preset_filename} '
+                           f'while the current applied preset is: {self.preset_manager.applied_entry_name}')
+            return False
 
         if len(config_subentries) > 0:
             self.show_subentries(config_subentries, f'Loading Configuration: {self.entry}')
@@ -120,20 +146,16 @@ class Configurator(ManagerBase):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(
                 self.config_model, self.settings, self.actuators, self.detectors)
             try:
-                if entry.module_name == ModuleType.NONE:
-                    mod = None
-                else:
-                    mod = self.dashboard.modules_manager.get_mod_from_name(
-                        entry.module_name, entry.module_type)
-                subentry_handler.execute_subentry(entry, module=mod, dashboard=self.dashboard)
+                subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(200)
+                QtCore.QThread.msleep(0)
             except SubEntryError as e:
                 logger.exception(str(e))
                 self.subentries_model.set_status(ind, False)
 
         self.close_subentries_display(1000)
+        return True
 
     def populate_from_settings(self, settings: Parameter):
         """
@@ -151,19 +173,22 @@ class Configurator(ManagerBase):
         self.set_drag_mode_recursive(self.settings, movable=True, drop_enabled=True)
 
     @property
-    def actuators(self):
+    def actuators(self) -> list[str]:
         if self.dashboard is not None:
             return self.dashboard.modules_manager.actuators_name
         else:
             return [param.opts['title'] for param in self.settings.child(ModuleType.Actuator).children()]
 
     @property
-    def detectors(self):
+    def detectors(self) -> list[str]:
         if self.dashboard is not None:
             return self.dashboard.modules_manager.detectors_name
         else:
             return [param.opts['title'] for param in self.settings.child(ModuleType.Detector).children()]
 
+    @property
+    def extensions(self) -> list[str]:
+        return ExtensionEnum.values()
 
     def populate_from_file(self, file_path: Path):
         """ for quick testing purpose, not meant to be used at the end"""
@@ -175,7 +200,7 @@ class Configurator(ManagerBase):
 
     def add_subentry(self, special_entry_name: str):
         self.subentry_handler = handler_factory.get_subentry_handler(special_entry_name)(
-            self.config_model, self.settings, self.actuators, self.detectors)
+            self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
         self.subentry_handler.show_dialog()
 
     def setup_docks(self):
@@ -230,10 +255,14 @@ class Configurator(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.add_widget('preset_label', QtWidgets.QLabel('Configuration from Preset: '),
-                        toolbar=self.get_toolbar('main'))
-        self.add_widget('preset_filename', QtWidgets.QLabel(''), tip='Name of the current preset',
-                        toolbar=self.get_toolbar('main'))
+        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
+                        checkable=True, toolbar=self.get_toolbar('main'),
+                        tip='If Checked: display all settings (in green, settings that can be configured)'
+                            ' otherwise only configurables ones')
+
+        self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
+                                      add_preset=True, add_configurator=False, add_break=False)
+        self.preset_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
                         tip='Add the current Parameter item',
@@ -261,9 +290,19 @@ class Configurator(ManagerBase):
 
         self.connect_action('show_all_settings', self.display_settings)
 
+        if self.dashboard is None:
+            self.preset_manager.enable_actions(True)
+            self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        self.config_model.load(self.entry_filename)
+        else:
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
+            self.preset_manager.applied_entry.connect(self.set_preset_filename)  #action slot from preset menu need this to update the list onf configurator entries
+
+        self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
+                                       ).widget.currentTextChanged.connect(self.set_preset_filename)
+
+    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        self.config_model.load(self.entry_filepath)
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
         if settings is None:
@@ -271,7 +310,13 @@ class Configurator(ManagerBase):
             if settings == '':
                 return
         if isinstance(settings, str):
-            settings = get_set_preset_path().joinpath(f'{settings}.xml')
+            self._preset_manager_local.entry = settings
+            preset_settings: Parameter = self._preset_manager_local.settings
+            settings = SettingsManager().create_settings_all(
+                preset_settings.child(ModuleType.Actuator.value).children(),
+                preset_settings.child(ModuleType.Detector.value).children(),
+            )
+
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
         elif isinstance(settings, Path):
@@ -347,6 +392,10 @@ class Configurator(ManagerBase):
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
 
+    def do_things_for_new_creation(self):
+        self.table_out.setCurrentIndex(self.table_out.model().index(0, 0))
+        self.table_out.clear()
+
     def remove_setting(self):
         index_0 = self.table_out.selectedIndexes()[0]
         indexes = list(set([index.row() for index in self.table_out.selectedIndexes()]))
@@ -380,18 +429,18 @@ class Configurator(ManagerBase):
 
 
 if __name__ == "__main__":
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
+    from pymodaq.dashboard import DashBoard, create_load_dashboard
+
     app = mkQApp('PresetManager')
-    settings_path = Path(__file__).parent.parent.parent.parent.parent.parent.joinpath('tests/utils/managers/settings.xml')
-    external_ui = QtWidgets.QMainWindow()
-    toolbar = QtWidgets.QToolBar()
-    menu = QtWidgets.QMenu('Configurator')
-    external_ui.addToolBar(toolbar)
-    external_ui.menuBar().addMenu(menu)
 
-    prog = Configurator(menu=menu, toolbar=toolbar)
-    prog.update_settings(settings_path)
+    shared_ui, dashboard = create_load_dashboard()
+    shared_ui.hide()
+
+    prog = Configurator(dashboard)
+    prog.update_settings('default')
     prog.mainwindow.show()
+    prog.enable_actions(True)
+    prog.preset_manager.enable_actions(True)
 
-    external_ui.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

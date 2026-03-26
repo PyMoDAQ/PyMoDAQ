@@ -2,6 +2,7 @@ from qtpy import QtWidgets, QtGui, QtCore
 from pyqtgraph.widgets.SpinBox import SpinBox
 
 
+
 class SpinBox(SpinBox):
     """
     In case I want to add pyqtgraph spinbox functionalities
@@ -47,8 +48,8 @@ class QSpinBox_ro(SpinBox):
 
 
 if __name__ == '__main__':
-
-    from pymodaq_gui.utils.utils import mkQApp
+    import sys
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Test Spinbox')
 
@@ -61,4 +62,4 @@ if __name__ == '__main__':
     spinbox.shortcut['Ctrl+Enter'].activatedAmbiguously.connect(lambda: print_spinbox(f'Ctrl+Enter: {spinbox.value()}'))
     spinbox.show()
 
-    app.exec()
+    sys.exit(app.exec())

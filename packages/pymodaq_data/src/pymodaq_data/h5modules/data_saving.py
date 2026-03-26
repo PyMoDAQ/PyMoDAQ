@@ -15,7 +15,7 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
-from .backends import GROUP, CARRAY, Node, EARRAY, NodeError
+from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 
@@ -51,6 +51,14 @@ class DataManagement(metaclass=ABCMeta):
         str: the future name of the node
         """
         return f'{capitalize(cls.data_type.value)}{ind:02d}'
+
+    def __getattr__(self, item):
+        """ Allows to call attributes of the underlying H5Saver object"""
+
+        if hasattr(self._h5saver, item):
+            return getattr(self._h5saver, item)
+        else:
+            raise AttributeError(item)
 
     def __enter__(self):
         return self
@@ -283,18 +291,21 @@ class DataSaverLoader(DataManagement):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path],
+                 new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel()
-            h5saver_tmp.init_file(file_name=Path(h5saver))
+            h5saver_tmp = H5SaverLowLevel(save_type)
+            h5saver_tmp.init_file(file_name=Path(h5saver),
+                                  new_file=new_file,
+                                  metadata=metadata)
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
-        self._axis_saver = AxisSaverLoader(h5saver)
+        self._axis_saver = AxisSaverLoader(self._h5saver)
         if not isinstance(self, ErrorSaverLoader):
-            self._error_saver = ErrorSaverLoader(h5saver)
+            self._error_saver = ErrorSaverLoader(self._h5saver)
 
     def isopen(self) -> bool:
         """ Get the opened status of the underlying hdf5 file"""
@@ -655,7 +666,8 @@ class DataEnlargeableSaver(DataSaverLoader):
                     axis_array.append(np.array([axis_values[ind_axis]]))
                 else:
                     axis_array.append(axis_values[ind_axis], expand=False)
-                axis_array.attrs['size'] += 1
+                if not self._h5saver.is_swmr_active:
+                    axis_array.attrs['size'] += 1
 
 
 class DataExtendedSaver(DataSaverLoader):
@@ -674,9 +686,10 @@ class DataExtendedSaver(DataSaverLoader):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
+        self.fill_value = fill_value
 
     def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True,
                             distribution=DataDistribution['uniform']):
@@ -703,6 +716,7 @@ class DataExtendedSaver(DataSaverLoader):
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
+                                        fill_value=self.fill_value,
                                         scan_shape=self.extended_shape,
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
@@ -754,15 +768,27 @@ class DataToExportSaver:
     h5saver: H5SaverLowLevel
 
     """
-    def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.scan):
+    def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.custom,
+                 new_file: bool = False, metadata: dict = None):
+
         if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type=save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver))
+            h5saver_tmp = H5SaverLowLevel(save_type)
+            h5saver_tmp.init_file(file_name=Path(h5saver),
+                                  new_file=new_file,
+                                  metadata=metadata)
             h5saver = h5saver_tmp
 
         self._h5saver = h5saver
-        self._data_saver = DataSaverLoader(h5saver)
-        self._bkg_saver = BkgSaver(h5saver)
+        self._data_saver = DataSaverLoader(self._h5saver)
+        self._bkg_saver = BkgSaver(self._h5saver)
+
+    def __getattr__(self, item):
+        """ Allows to call attributes of the underlying H5Saver object"""
+
+        if hasattr(self._h5saver, item):
+            return getattr(self._h5saver, item)
+        else:
+            raise AttributeError(item)
 
     def _get_node(self, where: Union[Node, str]) -> Node:
         return self._h5saver.get_node(where)
@@ -805,6 +831,8 @@ class DataToExportSaver:
         """
 
         dims = data.get_dim_presents()
+        if settings_as_xml != '' and 'settings' not in kwargs:
+            kwargs['settings]'] = settings_as_xml
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
             for ind, dwa in enumerate(data.get_data_from_dim(dim)):
@@ -812,6 +840,7 @@ class DataToExportSaver:
                 dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind),
                                                         dwa.name, origin=dwa.origin)
                 # dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name)
+
                 self._data_saver.add_data(dwa_group, dwa, **kwargs)
 
     def add_bkg(self, where: Union[Node, str], data: DataToExport):
@@ -856,7 +885,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     axis_units: str, deprecated use enl_axis_units
         the units of the enlarged axis array
     """
-    def __init__(self, h5saver: H5SaverLowLevel,
+    def __init__(self, h5saver: Union[Path, H5SaverLowLevel],
                  enl_axis_names: Iterable[str] = None,
                  enl_axis_units: Iterable[str] = None,
                  axis_name: str = 'nav axis', axis_units: str = ''):
@@ -874,8 +903,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         self._enl_axis_units = enl_axis_units
         self._n_enl = len(enl_axis_names)
 
-        self._data_saver = DataEnlargeableSaver(h5saver)
-        self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._data_saver = DataEnlargeableSaver(self._h5saver)
+        self._nav_axis_saver = AxisSaverLoader(self._h5saver)
 
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
@@ -920,7 +949,8 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             axis_array: EARRAY = self._nav_axis_saver.get_node_from_index(nav_group, ind)
             axis_array.append(squeeze(np.array([axis_values[ind]])),
                               expand=False)
-            axis_array.attrs['size'] += 1
+            if not self._h5saver.is_swmr_active:
+                axis_array.attrs['size'] += 1
 
 
 class DataToExportTimedSaver(DataToExportEnlargeableSaver):
@@ -952,10 +982,11 @@ class DataToExportExtendedSaver(DataToExportSaver):
         the extra shape compared to the data the h5array will have
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int]):
+    def __init__(self, h5saver: H5SaverLowLevel, extended_shape: Tuple[int], fill_value=None):
         super().__init__(h5saver)
-        self._data_saver = DataExtendedSaver(h5saver, extended_shape)
+        self._data_saver = DataExtendedSaver(h5saver, extended_shape, fill_value=fill_value)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._swmr_activated = False
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         """Used to add navigation axes related to the extended array
@@ -971,7 +1002,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Iterable[int],
-                 distribution=DataDistribution['uniform'],
+                 distribution=DataDistribution.uniform,
                  settings_as_xml='', **kwargs):
 
         """
@@ -999,6 +1030,15 @@ class DataToExportExtendedSaver(DataToExportSaver):
                                                         self.channel_formatter(ind), dwa.name, origin=dwa.origin)
                 self._data_saver.add_data(dwa_group, dwa, indexes=indexes,
                                           distribution=distribution)
+
+        # Enable SWMR after first data point created all structure
+        if (self._h5saver._swmr_mode and not self._swmr_activated
+                and self._h5saver.is_swmr_capable):
+            self._h5saver.flush()
+            self._h5saver.enable_swmr()
+            self._swmr_activated = True
+
+        self._h5saver.tick_flush()
 
 
 class DataLoader:

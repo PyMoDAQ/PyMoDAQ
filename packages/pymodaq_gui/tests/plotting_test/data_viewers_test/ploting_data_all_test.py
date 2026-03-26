@@ -14,8 +14,11 @@ from itertools import permutations
 from pymodaq_utils import math_utils as mutils
 from pymodaq_data import data as datamod
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
+from pymodaq_data.h5modules import backends
 from pymodaq_data.h5modules.data_saving import DataSaverLoader, DataEnlargeableSaver
 from pymodaq_gui.plotting.data_viewers import Viewer1D, ViewerND, Viewer2D
+
+tested_backend = [b for b in ['tables', 'h5py'] if b in backends.backends_available]
 
 
 @pytest.fixture(scope="module")
@@ -72,9 +75,9 @@ def get_4D():
 
     return dwa
 
-@pytest.fixture()
-def get_h5saver(tmp_path):
-    h5saver = H5SaverLowLevel()
+@pytest.fixture(params=tested_backend)
+def h5saver_lowlevel(request, tmp_path):
+    h5saver = H5SaverLowLevel(backend=request.param)
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
 
@@ -107,6 +110,9 @@ class Test1DPlot:
 
                 assert dwa_back == dwa_1D
 
+        viewer.parent.close()
+        viewer.parent.deleteLater()
+
     def test_plot_1D_0D_uniform(self, qtbot):
         #%%
         NX = 100
@@ -123,11 +129,17 @@ class Test1DPlot:
 
         viewer = dwa_1D.plot('qt')
         assert isinstance(viewer, Viewer1D)
+
+        qtbot.addWidget(viewer.parent)
+
         with tempfile.TemporaryDirectory() as d:
             with DataSaverLoader(Path(d).joinpath('mydatafile.h5')) as saver_loader:
                 saver_loader.add_data('/RawData', dwa_1D)
                 dwa_back = saver_loader.load_data('/RawData/Data00', load_all=True)
                 assert dwa_back == dwa_1D
+
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
 
     def test_plot_1D_0D_spread(self, qtbot):
@@ -165,8 +177,12 @@ class Test1DPlot:
                 viewer = data1D_spread.plot('qt')
                 assert isinstance(viewer, Viewer1D)
 
-    def test_plot_0D_1D_spread(self, qtbot, get_h5saver):
-        h5saver = get_h5saver
+                qtbot.addWidget(viewer.parent)
+                viewer.parent.close()
+                viewer.parent.deleteLater()
+
+    def test_plot_0D_1D_spread(self, qtbot, h5saver_lowlevel):
+        h5saver = h5saver_lowlevel
         data_saver = DataEnlargeableSaver(h5saver)
         NX = 100
         axis_array = np.linspace(-20, 50, NX)
@@ -193,6 +209,9 @@ class Test1DPlot:
         assert dwa_back.inav[2] == data_to_append
         viewer = dwa_back.plot('qt')
         assert isinstance(viewer, ViewerND)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
 class Test2DPlot:
     def test_plot_0D_2D_uniform(self, qtbot):
@@ -210,6 +229,9 @@ class Test2DPlot:
         assert data2D.dim == 'Data2D'
         viewer = data2D.plot('qt')
         assert isinstance(viewer, Viewer2D)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
     @pytest.mark.parametrize('nav_index', (0, 1))
     def test_plot_1D_1D_uniform(self, qtbot, nav_index):
@@ -228,6 +250,9 @@ class Test2DPlot:
         assert data2D.dim == 'DataND'
         viewer = data2D.plot('qt')
         assert isinstance(viewer, Viewer2D)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
     def test_plot_2D_0D_uniform(self, qtbot):
         NX = 100
@@ -245,6 +270,9 @@ class Test2DPlot:
         assert data2D.dim == 'DataND'
         viewer = data2D.plot('qt')
         assert isinstance(viewer, Viewer2D)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
     def test_plot_2D_0D_spread(self, qtbot):
         N = 100
@@ -270,6 +298,9 @@ class Test2DPlot:
 
         viewer = data2D_spread.plot('qt')
         assert isinstance(viewer, Viewer2D)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
     def test_plot_1D_1D_spread(self, qtbot):
         N = 10
@@ -297,6 +328,9 @@ class Test2DPlot:
 
         viewer = data2D_spread.plot('qt')
         assert isinstance(viewer, ViewerND)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
 class Test3DPlot:
     @pytest.mark.parametrize('nav_index', ((0,), (1,), (2,), (0, 1), (0, 2), (1, 2)))
@@ -312,6 +346,9 @@ class Test3DPlot:
         assert data3D.dim == 'DataND'
         viewer = data3D.plot('qt')
         assert isinstance(viewer, ViewerND)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
 class Test4DPlot:
     @pytest.mark.parametrize('nav_indexes',
@@ -326,6 +363,9 @@ class Test4DPlot:
         assert dwa.dim == 'DataND'
         viewer = dwa.plot('qt')
         assert isinstance(viewer, ViewerND)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()
 
     def test_plot_4D_spread(self, qtbot):
         N = 100
@@ -355,3 +395,6 @@ class Test4DPlot:
 
         viewer = dwa.plot('qt')
         assert isinstance(viewer, ViewerND)
+        qtbot.addWidget(viewer.parent)
+        viewer.parent.close()
+        viewer.parent.deleteLater()

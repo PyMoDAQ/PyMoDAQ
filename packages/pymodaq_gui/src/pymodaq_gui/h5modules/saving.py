@@ -19,12 +19,12 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_data.h5modules.backends import (
     H5Backend, backends_available, SaveType,
     GroupType, InvalidDataDimension, InvalidScanType,
-    GROUP, VLARRAY)
+    GROUP, VLARRAY, SWMR_CAPABLE_BACKENDS)
 from pymodaq_data.h5modules.saving import H5SaverLowLevel
 
 from pymodaq_gui.parameter import Parameter, ParameterTree
@@ -96,62 +96,83 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     params = [
         {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveType.names(),
          'readonly': True},
-    ] + dashboard_submodules_params + \
-        [
-            {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
+    ] + dashboard_submodules_params + [
+        {'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list',
-             'limits': backends_available, 'readonly': True},
+             'value': config('data', 'data_saving', 'backend')[0],
+             'limits': backends_available},
+            {'title': 'SWMR options:', 'name': 'swmr_options', 'type': 'group', 'visible': False,
+             'tooltip': 'Single Writer Multiple Reader mode (only available with h5py backend)',
+             'children': [
+                {'title': 'Enable SWMR:', 'name': 'enable_swmr', 'type': 'bool',
+                 'value': config('data', 'data_saving', 'swmr', 'enabled'),
+                 'tooltip': 'Enable Single Writer Multiple Reader (h5py only)'},
+                {'title': 'Flush interval:', 'name': 'flush_interval', 'type': 'int',
+                 'value': config('data', 'data_saving', 'swmr', 'flush_interval'), 'min': 0,
+                 'tooltip': 'Flush every N scan steps. 0 = only at end.'},
+            ]},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False,
              'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'root_url'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'root_url'), 'readonly': False},
                 {'title': 'User:', 'name': 'user', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'username'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'username'), 'readonly': False},
                 {'title': 'password:', 'name': 'password', 'type': 'str',
-                    'value': config('data_saving', 'hsds', 'pwd'), 'readonly': False},
+                 'value': config('data', 'data_saving', 'hsds', 'pwd'), 'readonly': False},
             ]},
         ]},
         {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False,
          'value': False},
         {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
-            'value': False},
+         'value': False},
+        {'title': 'Close file after scan:', 'name': 'close_after_scan', 'type': 'bool',
+         'value': False,
+         'tooltip': 'Automatically close the HDF5 file when a scan completes.'},
         {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-            'value': config('data_saving', 'h5file', 'save_path'), 'filetype': False,
-         'readonly': True, },
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'filetype': False,
+         'readonly': True},
         {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan',
          'readonly': True},
         {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '',
          'readonly': True},
         {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-            'value': config('data_saving', 'h5file', 'save_path'), 'readonly': True,
+         'value': config('data', 'data_saving', 'h5file', 'save_path'), 'readonly': True,
          'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '',
          'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
-        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-         'limits': config('data_saving', 'data_type', 'dynamic'),
-         'value': config('data_saving', 'data_type', 'dynamic')[0]},
-        {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group',
-         'children': [
-            {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list',
-             'value': 'zlib', 'limits': ['zlib', 'gzip']},
-            {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
-                'value': config('data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
+        {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
+        {'title': 'Data format:', 'name': 'data_format', 'type': 'group', 'children': [
+            {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
+             'limits': {'0': 0., 'nan': np.nan},
+             'value': 0. if config('data', 'data_saving', 'data_type', 'fill_value')[0] == '0' else np.nan,
+             'tooltip': 'Value used to pre-fill scan arrays before data is written. '
+                        '"nan" is useful to distinguish unvisited points (float arrays only).'},
+            {'title': 'Compression:', 'name': 'compression_options', 'type': 'group',
+             'children': [
+                {'title': 'Library:', 'name': 'h5comp_library', 'type': 'list',
+                 'value': 'zlib', 'limits': ['zlib', 'gzip']},
+                {'title': 'Level:', 'name': 'h5comp_level', 'type': 'int',
+                 'value': config('data', 'data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
+            ]},
         ]},
     ]
 
-    def __init__(self, save_type='scan', backend='tables'):
+    def __init__(self, save_type='scan', backend: str = None):
         """
 
         Parameters
         ----------
         save_type (str): one of ['scan', 'detector', 'logger', 'custom']
-        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend
+        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend.
+            Defaults to the first entry of config 'data_saving.backend'.
 
         See Also
         --------
         https://github.com/HDFGroup/hsds
         """
+        if backend is None:
+            backend = config('data', 'data_saving', 'backend')[0]
         H5SaverLowLevel.__init__(self, save_type, backend)
         ParameterManager.__init__(self)
 
@@ -160,8 +181,68 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         self.settings.child('save_type').setValue(self.save_type.name)
 
+        # Apply initial SWMR visibility based on the configured backend
+        self.settings.child('backend', 'swmr_options').setOpts(visible=self.is_swmr_capable)
+
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
+
+    @staticmethod
+    def get_params_for_save_type(type : SaveType):
+        return [
+            {**p, 'value': type.name} if p['name'] == 'save_type' else p for p in H5SaverBase.params
+        ]
+    def _check_swmr_compatibility(self, fullpathname, update_h5):
+        """Check SWMR compatibility of an existing file and prompt user on mismatch.
+
+        Returns
+        -------
+        tuple: (swmr_mode: bool, update_h5: bool) possibly adjusted values
+        """
+        swmr_mode = (self.settings['backend', 'swmr_options', 'enable_swmr']
+                     and self.is_swmr_capable)
+
+        # Only check existing files
+        if update_h5 or not Path(fullpathname).is_file():
+            return swmr_mode, update_h5
+
+        # Peek at the file with h5py to check swmr_compatible attribute
+        file_is_swmr = False
+        try:
+            import h5py
+            with h5py.File(str(fullpathname), 'r') as f:
+                file_is_swmr = bool(f.attrs.get('swmr_compatible', False))
+        except Exception:
+            return swmr_mode, update_h5
+
+        if file_is_swmr and not swmr_mode:
+            # File is SWMR but settings don't match
+            ret = QtWidgets.QMessageBox.question(
+                None, 'SWMR-compatible file',
+                'This file was created with SWMR support.\n'
+                'Do you want to switch to h5py backend and enable SWMR?',
+            )
+            if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.settings.child('backend', 'backend_type').setValue('h5py')
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(True)
+                swmr_mode = True
+
+        elif not file_is_swmr and swmr_mode:
+            # File is not SWMR but SWMR is enabled
+            ret = QtWidgets.QMessageBox.question(
+                None, 'File not SWMR-compatible',
+                'This file was not created with SWMR support and cannot be '
+                'opened in SWMR mode.\n\n'
+                'Click Yes to disable SWMR and append to this file.\n'
+                'Click No to create a new SWMR-compatible file instead.',
+            )
+            if ret == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(False)
+                swmr_mode = False
+            else:
+                update_h5 = True  # force new file creation
+
+        return swmr_mode, update_h5
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None,
                   metadata=dict([])):
@@ -226,7 +307,19 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         fullpathname = self.h5_file_path.joinpath(self.h5_file_name)
         self.settings.child('current_h5_file').setValue(str(fullpathname))
 
-        super().init_file(fullpathname, new_file=update_h5, metadata=metadata)
+        swmr_mode, update_h5 = self._check_swmr_compatibility(fullpathname, update_h5)
+        super().init_file(fullpathname, new_file=update_h5, metadata=metadata,
+                          swmr_mode=swmr_mode)
+
+        if addhoc_file_path is not None:
+            # Derive the current scan name from what already exists in the open file
+            try:
+                scan_index = self.get_scan_index() + 1
+                current_scan_name = f'Scan{scan_index:03d}'
+                self.current_scan_name = current_scan_name
+                self.settings.child('current_scan_name').setValue(current_scan_name)
+            except Exception:
+                pass
 
         self.get_set_logger(self.raw_group)
 
@@ -443,13 +536,34 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             except Exception as e:
                 self.update_status(f"The base path couldn't be set, please check your options: {str(e)}")
 
-        elif param.name() in putils.iter_children(self.settings.child('compression_options'), []):
-            compression = self.settings.child('compression_options', 'h5comp_library').value()
-            compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
+        elif param.name() in putils.iter_children(self.settings.child('data_format', 'compression_options'), []):
+            compression = self.settings.child('data_format', 'compression_options', 'h5comp_library').value()
+            compression_opts = self.settings.child('data_format', 'compression_options', 'h5comp_level').value()
             self.define_compression(compression, compression_opts)
+
+        elif param.name() == 'backend_type':
+            new_backend = param.value()
+            swmr_capable = new_backend in SWMR_CAPABLE_BACKENDS
+            self.settings.child('backend', 'swmr_options').setOpts(visible=swmr_capable)
+            if not swmr_capable and self.settings['backend', 'swmr_options', 'enable_swmr']:
+                self.settings.child('backend', 'swmr_options', 'enable_swmr').setValue(False)
+                self.update_status('SWMR is only supported with h5py backend, disabling.')
+            self.set_backend(new_backend)
 
     def update_status(self, status):
         logger.warning(status)
+
+    @property
+    def fill_value(self) -> float:
+        return self.settings['data_format', 'fill_value']
+
+    @fill_value.setter
+    def fill_value(self, value: float):
+        # Guard against calls made before ParameterManager.__init__ has run
+        if not hasattr(self, 'settings'):
+            return
+        val = np.nan if (isinstance(value, float) and np.isnan(value)) else 0.
+        self.settings.child('data_format', 'fill_value').setValue(val)
 
 
 class H5Saver(H5SaverBase, QObject):
@@ -458,10 +572,13 @@ class H5Saver(H5SaverBase, QObject):
                 emits a signal of type Threadcommand in order to senf log information to a main UI
     new_file_sig: Signal
                   emits a boolean signal to let the program know when the user pressed the new file button on the UI
+    file_changed_sig: Signal
+                      emits a str (file path) whenever the active h5 file changes (browse, new, reopen)
     """
 
     status_sig = Signal(utils.ThreadCommand)
     new_file_sig = Signal(bool)
+    file_changed_sig = Signal(str)
 
     def __init__(self, *args, **kwargs):
         """
@@ -475,6 +592,7 @@ class H5Saver(H5SaverBase, QObject):
         H5SaverBase.__init__(self, *args, **kwargs)
 
         self.settings.child('new_file').sigActivated.connect(lambda: self.emit_new_file(True))
+        self.settings.child('browse_file').sigActivated.connect(self.browse_file)
 
     def close(self):
         self.close_file()
@@ -489,17 +607,48 @@ class H5Saver(H5SaverBase, QObject):
         """
         self.new_file_sig.emit(status)
 
+    def browse_file(self):
+        """Open a file dialog to select an existing h5 file to append to."""
+        start_path = self.settings['base_path']
+        current_file = self.settings['current_h5_file']
+        if current_file:
+            start_path = str(Path(current_file).parent)
+
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Select HDF5 File",
+            start_path,
+            "HDF5 Files (*.h5);;All Files (*)"
+        )
+        if file_path:
+            try:
+                # Close current file if open
+                if self.isopen():
+                    self.close_file()
+                # Open the selected file
+                self.init_file(addhoc_file_path=file_path)
+                logger.info(f"Opened h5 file: {file_path}")
+                self.file_changed_sig.emit(file_path)
+            except Exception as e:
+                logger.error(f"Could not open file {file_path}: {e}")
+                QtWidgets.QMessageBox.warning(
+                    None, "Error",
+                    f"Could not open file:\n{file_path}\n\nError: {e}"
+                )
+
     def show_file_content(self):
         win = QtWidgets.QMainWindow()
         if not self.isopen():
-            if self.h5_file_path is not None:
-                if self.h5_file_path.exists():
-                    self.analysis_prog = browsing.H5Browser(win, h5file_path=self.h5_file_path)
+            if self.h5_file_path is not None and self.h5_file_name is not None:
+                full_path = self.h5_file_path / self.h5_file_name
+                if full_path.exists():
+                    self.analysis_prog = browsing.H5Browser(
+                        win, h5file_path=full_path, backend=self.backend)
                 else:
-                    logger.warning('The h5 file path has not been defined yet')
+                    logger.warning('The h5 file does not exist')
             else:
                 logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
-            self.analysis_prog = browsing.H5Browser(win, h5file=self.h5file)
+            self.analysis_prog = browsing.H5Browser(
+                win, h5file=self.h5file, backend=self.backend)
         win.show()

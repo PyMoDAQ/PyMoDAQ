@@ -13,16 +13,35 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager
 
 class ScalableGroup(GroupParameter):
     def __init__(self, **opts):
-        super().__init__(**opts)    
+        super().__init__(**opts)
 
-    def addNew(self, full_path:tuple):        
+    def addNew(self, full_path:tuple):
         # Full_path contains all the sub menus
         value = full_path[-1] # Only showing last values as a string
-        self.addChild(dict(name="ScalableParam %d" % (len(self.childs)+1), type='str', value=value, removable=True, renamable=True))
+        self.addChild(dict(name=f"ScalableParam {(len(self.childs)+1)}", type='str', value=value, removable=True, renamable=True))
 
 # Need to register a new type to properly trigger addNew
 registerParameterType('groupedit', ScalableGroup, override=True)
 
+def create_text_with_pattern_parameter():
+    text_params = {
+                "name": "text_with_pattern",
+                "title": "Text Editing with pattern completion (@ for users, # for languages):",
+                "type": "text_pattern",
+                "value": "",
+                "patterns": {
+                    "@": ["alice", "bob", "charlie"],
+                    "#": ["python", "javascript", "cpp"],
+                },
+                "completer_config": {
+                    "min_width": 200,
+                    "max_width": 400,
+                    "case_sensitive": False,
+                    "visual_indicator": True,
+                },
+            }
+
+    return text_params
 
 class ParameterEx(ParameterManager):
     params = [
@@ -30,7 +49,7 @@ class ParameterEx(ParameterManager):
             {'title': 'A visible group:', 'name': 'agroup', 'type': 'group', 'children': []},
             {'title': 'An hidden group:', 'name': 'bgroup', 'type': 'group', 'children': [], 'visible': False},  # this visible option is not available in usual pyqtgraph group     
             {'title': 'An expandable group:', 'name': 'cgroup', 'type': 'groupedit', 'addText': 'Add', 'addMenu': 
-              create_nested_menu(3,3,'Menu','Sub',use_index_tracking=True)},             
+              create_nested_menu(3,3,'Menu','Sub',use_index_tracking=True)},
             {'title': 'A bool with children:', 'name': 'booleans_group', 'type': 'bool', 'value':False, 'tip': 'Any Parameter can have its own children', 'children': [
             {'title': 'A bool in a bool', 'name': 'a_bool_in_a_bool', 'type': 'bool', 'value': True},
             {'title': 'A push with children', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action','children':[
@@ -52,7 +71,7 @@ class ParameterEx(ParameterManager):
              'max': 123, 'subtype': 'linear', 'int': True},
             {'title': 'Linear Slide with suffix', 'name': 'linearslidewithsuffixandsiPrefix', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 0,
-             'max': 1e6, 'subtype': 'linear','suffix':'V','siPrefix':True},             
+             'max': 1e6, 'subtype': 'linear','suffix':'V','siPrefix':True},
             {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50, 'default': 50,
              'min': 1e-5,
              'max': 1e5, 'subtype': 'log','suffix':'V','siPrefix':True},
@@ -63,6 +82,9 @@ class ParameterEx(ParameterManager):
             {'title': 'bool push', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action'},
             {'title': 'A led', 'name': 'aled', 'type': 'led', 'value': False, 'tip': 'a led you cannot toggle'},
             {'title': 'A led', 'name': 'anotherled', 'type': 'led_push', 'value': True, 'tip': 'a led you can toggle'},
+            {'title': 'Action + LED', 'name': 'anactionled', 'type': 'action_led', 'value': False,
+             'tip': 'Button fires sigActivated; LED value reflects done state. label opt sets button text.',
+             'label': 'Run'},
         ]},
 
         {'title': 'DateTime:', 'name': 'datetimes', 'type': 'group', 'children': [
@@ -89,9 +111,9 @@ class ParameterEx(ParameterManager):
              },
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
-            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': 'D:\Data', 'filetype': True,
+            {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': r'D:\Data', 'filetype': True,
              'tip': 'If filetype is True select a file otherwise a directory'},
-            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': 'D:\Databis', 'filetype': False,
+            {'title': 'Look for a dir:', 'name': 'adir', 'type': 'browsepath', 'value': r'D:\Databis', 'filetype': False,
              'tip': 'If filetype is True select a file otherwise a directory'},
 
         ]},
@@ -117,6 +139,7 @@ class ParameterEx(ParameterManager):
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
+            create_text_with_pattern_parameter(),
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},
         ]},
@@ -162,19 +185,25 @@ class ParameterEx(ParameterManager):
 
 
 def main():
-    from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.qt_utils import mkQApp
 
     app = mkQApp('Parameters')
 
     ptree = ParameterEx()
     ptree.settings_tree.show()
+    # action_led: button fires sigActivated, which here sets the LED green then resets after 1 s
+    def _on_action_led(param):
+        param.setValue(True)
+        QtCore.QTimer.singleShot(1000, lambda: param.setValue(False))
+    ptree.settings.child('booleans', 'anactionled').sigActivated.connect(_on_action_led)
+
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item3']))
 
     ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
                                                              selected=['item1', 'item3']))
 
-    app.exec()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

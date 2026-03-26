@@ -14,7 +14,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_data.data import DataRaw, Axis
-from pymodaq_utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
 
@@ -28,7 +28,7 @@ class FunctionPlotter(CustomApp):
     # list of dicts enabling the settings tree on the user interface
     params = [
             {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
-             'value': config('data_saving', 'h5file', 'save_path')},
+             'value': config('utils', 'data_saving', 'h5file', 'save_path')},
             {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
             {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
 
@@ -54,7 +54,7 @@ class FunctionPlotter(CustomApp):
         #                  self.setup_actions()  # see ActionManager MixIn class
         #                  self.setup_menu()
         #                  self.connect_things()
-        self.timer = QTimer()
+        self.timer = QTimer(self)
         self.timer.setInterval(self.settings['plot_refresh'])
         self.timer.timeout.connect(self.plot_timer)
 
@@ -153,7 +153,7 @@ def main():
     prog = FunctionPlotter(dockarea)
 
     mainwindow.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

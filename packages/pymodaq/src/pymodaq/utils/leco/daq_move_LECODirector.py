@@ -172,12 +172,12 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
 
         if data is not None:
-            position = data.get('position', [])
+            data = data.get('position', [])
 
-            self.shape = np.array(position).shape
-            position = [np.atleast_1d(position)]
+            self.shape = np.array(data).shape
+            data = [np.atleast_1d(data)]
 
-            pos = DataActuator(data=position)
+            pos = DataActuator(data=data)
             self.json = True
         elif additional_payload:
             pos = SerializableFactory().get_apply_deserializer(additional_payload[0])
@@ -210,7 +210,9 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     def close(self) -> None:
         """ Clear the content of the settings_clients setting"""
+        self.timer.stop()
         super().close()
+
 
 
 if __name__ == '__main__':

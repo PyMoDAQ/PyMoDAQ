@@ -4,7 +4,7 @@ import numpy as np
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.dock import DockArea, Dock
-from pymodaq.utils.config import Config, get_set_preset_path
+from pymodaq.utils.config import get_set_preset_path, GlobalConfig as Config
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal, QLocale
 
@@ -103,7 +103,7 @@ def main():
     win.setWindowTitle('PyMoDAQ Dashboard')
 
     dash = DashBoard(area)
-    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{config('utils', 'presets', 'default_preset_for_scan')}.xml")
     if file.exists():
         dash.preset_manager.apply_preset_to_dashboard(file)
         dash.load_scan_module()
@@ -119,7 +119,7 @@ def main():
     prog.positions_signal.connect(dash.scan_module.scanner.update_tabular_positions)
 
     mainwindow.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

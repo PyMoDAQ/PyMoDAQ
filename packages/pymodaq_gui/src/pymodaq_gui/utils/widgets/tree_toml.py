@@ -4,6 +4,7 @@ Created the 19/10/2023
 
 @author: Sebastien Weber
 """
+import sys
 from typing import Union, Any
 import datetime
 
@@ -13,7 +14,9 @@ from qtpy.QtCore import QObject, QSignalBlocker
 from pymodaq_gui.parameter.utils import get_param_path
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.managers.parameter_manager import ParameterManager
-from pymodaq_utils.config import Config, create_toml_from_dict
+from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_utils.config import GlobalConfig as Config, create_toml_from_dict
+from pymodaq_utils.utils import format_dir_path
 
 
 class TreeFromToml(ParameterManager, QObject):
@@ -33,7 +36,7 @@ class TreeFromToml(ParameterManager, QObject):
         self.start_path = (start_path,) if isinstance(start_path, str) else start_path
 
         with QSignalBlocker(self.settings):
-            self.settings.child('config_path').setValue(str(self._config.config_path))
+            self.settings.child('config_path').setValue(format_dir_path(self._config.config_path))
         self.settings.addChildren(self.dict_to_param(config(*start_path), capitalize=capitalize))
 
         self._cached_config_changes = {}
@@ -103,7 +106,7 @@ class TreeFromToml(ParameterManager, QObject):
             return param.value()
 
     @classmethod
-    def dict_to_param(cls, config: dict, capitalize=True) -> Parameter:
+    def dict_to_param(cls, config: dict, capitalize=True) -> list[Parameter]:
         params = []
         for key in config:
             if isinstance(config[key], dict):
@@ -133,3 +136,10 @@ class TreeFromToml(ParameterManager, QObject):
                     # param['show_pb'] = True # If True, this allows the user to change the limits in the list from the GUI. No need for now.
                 params.append(param)
         return params
+
+
+if __name__ == '__main__':
+    app = mkQApp("TreeToml")
+    tree_toml = TreeFromToml()
+    tree_toml.show_dialog()
+    sys.exit(app.exec())

@@ -1,7 +1,7 @@
-from pymodaq_utils.config import BaseConfig
+from pymodaq_utils.config import BaseConfig, CacheConfig
 
 
-class DataMixerConfig(BaseConfig):
+class DataMixerConfig(CacheConfig):
     """Main class to deal with configuration values for this plugin
 
     To b subclassed for real implementation if needed, see Optimizer class attribute config_saver

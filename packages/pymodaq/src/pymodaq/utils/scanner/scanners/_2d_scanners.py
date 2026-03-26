@@ -10,13 +10,12 @@ import numpy as np
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import math_utils as mutils
-from pymodaq_utils import config as configmod
 from pymodaq.utils.scanner.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -181,6 +180,25 @@ class Scan2DRandom(Scan2DLinear):
         super().set_scan()
         np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
+
+
+@ScannerFactory.register()
+class Scan2DRandomSpread(Scan2DRandom):
+    scan_subtype = 'RandomSpread'
+    distribution = DataDistribution.spread
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{act.title}_index',
+                     units=f'{act.units}',
+                     data=np.atleast_1d(self.positions[:, ind]),
+                     index=0, spread_order=ind) for ind, act in enumerate(self.actuators)]
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return (scan_index,)
+
+    def get_scan_shape(self) -> Tuple[int]:
+        return (self.positions.shape[0], )
 
 
 @ScannerFactory.register()

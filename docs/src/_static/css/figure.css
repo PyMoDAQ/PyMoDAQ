@@ -1,0 +1,4 @@
+.rst-content img {
+  max-width: none !important;
+  height: auto;
+}

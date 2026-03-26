@@ -5,8 +5,7 @@ from qtpy import QtWidgets
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import config as configmod
-from pymodaq_gui.utils.utils import start_qapplication
-
+from pymodaq_gui.qt_utils import start_qapplication
 
 from pymodaq_data.plotting.plotter.plotter import PlotterBase, PlotterFactory
 from pymodaq_data.data import DataWithAxes, DataToExport
@@ -16,7 +15,7 @@ from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase, viewer_factory
 from pymodaq_gui.utils.dock import DockArea
 
 logger = set_logger(get_module_name(__file__))
-config = configmod.Config()
+config = configmod.GlobalConfig()
 
 
 @PlotterFactory.register()

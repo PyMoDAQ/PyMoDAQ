@@ -84,5 +84,5 @@ if __name__ == '__main__':
 
     prog.navigation_changed.connect(print_positions)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 

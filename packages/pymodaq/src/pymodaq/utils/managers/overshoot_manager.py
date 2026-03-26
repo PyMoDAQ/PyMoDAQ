@@ -239,4 +239,4 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     prog = OvershootManager(True, ['det camera', 'det current'], ['Move X', 'Move Y'])
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

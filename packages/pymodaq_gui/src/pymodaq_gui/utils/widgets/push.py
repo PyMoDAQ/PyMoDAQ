@@ -2,6 +2,8 @@ from pathlib import Path
 
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import QWidget
+
+from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.spinbox import SpinBox
 
 
@@ -9,17 +11,13 @@ EDIT_PUSH_TYPES = ['abs', 'rel']
 
 
 class PushButtonIcon(QtWidgets.QPushButton):
-    def __init__(self, icon_name: str, text: str, checkable=False, tip="", menu=None):
+    def __init__(self, icon_name: str, text: str, checkable=False, tip="", menu=None,
+                 icon_color=None):
         super().__init__(text)
         self._menu = menu
+
         if icon_name != '':
-            icon = QtGui.QIcon()
-            if Path(icon_name).is_file():
-                icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Normal,
-                               QtGui.QIcon.Off)
-            else:
-                icon.addPixmap(QtGui.QPixmap(f"icons:{icon_name}.png"), QtGui.QIcon.Normal,
-                               QtGui.QIcon.Off)
+            icon = create_icon(icon_name, icon_color)
             self.setIcon(icon)
         self.setCheckable(checkable)
         self.setToolTip(tip)
@@ -141,7 +139,7 @@ def main(init_qt=True):
 
     widget.show()
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':
