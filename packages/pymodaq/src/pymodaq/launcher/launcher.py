@@ -71,8 +71,8 @@ class Launcher(CustomApp):
         # Remove the default toolbar created by CustomApp
         self.mainwindow.removeToolBar(self._toolbar)
 
-        self.preset_manager = PresetManager()
         self.configurator = Configurator()
+        self.preset_manager = self.configurator.preset_manager
 
         # Layout
         self.main_hbox = QHBoxLayout()
@@ -91,14 +91,13 @@ class Launcher(CustomApp):
         self.history = {}
         self.history_index = 0
 
-        self.preset_name = ""
-        self.configurator_name = ""
 
-        self.preset_configurator_layout = QHBoxLayout()
-        self.preset_label = QLabel("Preset :")
-        self.preset_label_value = QLabel(self.preset_name)
-        self.configurator_label = QLabel("Configurator :")
-        self.configurator_label_value = QLabel(self.configurator_name) # combo box for the future
+
+        # self.preset_configurator_layout = QHBoxLayout()
+        # self.preset_label = QLabel("Preset :")
+        # self.preset_label_value = QLabel(self.preset_name)
+        # self.configurator_label = QLabel("Configurator :")
+        # self.configurator_label_value = QLabel(self.configurator_name) # combo box for the future
 
 
         # Header
@@ -170,17 +169,17 @@ class Launcher(CustomApp):
         self.main_hbox.addLayout(self.loader_vbox, 1)
         self.loader_vbox.addLayout(self.hbox)
         self.loader_vbox.addWidget(self.add_toolbar('controls'))
-        self.loader_vbox.addLayout(self.preset_configurator_layout)
+        # self.loader_vbox.addLayout(self.preset_configurator_layout)
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
         self.set_launcher_vbox()
-        self.preset_configurator_layout.addWidget(self.preset_label)
-        self.preset_configurator_layout.addWidget(self.preset_label_value)
-        self.preset_configurator_layout.addWidget(self.configurator_label)
-        self.preset_configurator_layout.addWidget(self.configurator_label_value)
+        # self.preset_configurator_layout.addWidget(self.preset_label)
+        # self.preset_configurator_layout.addWidget(self.preset_label_value)
+        # self.preset_configurator_layout.addWidget(self.configurator_label)
+        # self.preset_configurator_layout.addWidget(self.configurator_label_value)
 
 
 
@@ -217,9 +216,9 @@ class Launcher(CustomApp):
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
 
         # Header of loader section
-        self.connect_action('back_config', lambda: self.do_back())
-        self.connect_action('load_default_dashboard', lambda: self.load_dashboard_with_preset_configurator())
-        self.connect_action('next_config', lambda: self.do_next())
+        self.connect_action('back_config', self.do_back)
+        self.connect_action('load_default_dashboard', self.load_dashboard_with_preset_configurator)
+        self.connect_action('next_config', self.do_next)
         self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
@@ -236,11 +235,8 @@ class Launcher(CustomApp):
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
         self.preset_manager.enable_actions(True)
-        print(self.preset_manager.actions_names)
         self.preset_manager.set_action_enabled('list_entries', False)
         self.configurator.enable_actions(True)
-        # self.get_toolbar('preset').setEnabled(False)
-        # self.configurator = Configurator(dashboard=self.dashboard)
 
         self.ui_refresh()
 
@@ -361,7 +357,9 @@ class Launcher(CustomApp):
         self.tree.expandAll()
         self.tree.setItemsExpandable(True)
 
-    def load_dashboard_with_preset_configurator(self, preset: str = 'default', configurator: str = 'default'):
+        # print(self.preset_manager.entry, self.configurator.preset_manager.entry, self.configurator.entry)
+
+    def load_dashboard_with_preset_configurator(self):
         """
         Debug : load and show dashboard with default preset and default configurator
         Returns
@@ -369,11 +367,11 @@ class Launcher(CustomApp):
 
         """
         self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
-            preset_name=self.preset_name,
+            preset_name=self.preset_manager.entry,
             configuration_name=self.configurator.entry,
         )
         self._dashboard_shared_ui.show()
-        
+
 
     def do_back(self):
         """
@@ -405,7 +403,7 @@ class Launcher(CustomApp):
 
         """
         if self.history_index < 1 :
-            self.get_action('next_config').setDisabled(True)
+            self.set_action_enabled('next_config', False)
         else :
             self.get_action('next_config').setDisabled(False)
 
@@ -415,33 +413,48 @@ class Launcher(CustomApp):
             self.get_action('back_config').setDisabled(False)
 
     def ui_refresh(self):
+        print("ui_refresh method calls")
         # preset and configurator
-        if len(self.history_keys) > 0 :
+        if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
-            self.preset_name = self.history[actual_key]['preset']
-            self.configurator_name = self.history[actual_key]['configurator']
+
+            self.preset_manager.entry = self.history[actual_key]['preset']
+            self.configurator.preset_filename = self.preset_manager.entry
+            QtWidgets.QApplication.processEvents()
+            self.configurator.entry = self.history[actual_key]['configurator']
 
             # date label
             date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
             self.box_label.setText(date.strftime("%Y/%m/%d at %Hh%M"))
 
-        else :
-            self.preset_name = "default"
-            self.configurator_name = "default"
+        else:
+            self.preset_manager.entry = "default"
+            self.configurator.preset_filename = "default"
+            self.configurator.update_entry("default")
             self.box_label.setText("-")
 
-        self.configurator.preset_filename = self.preset_name
-        self.configurator.entry = self.configurator_name
-        # preset and configurator labels
-        self.preset_label_value.setText(self.preset_name)
-        self.configurator_label_value.setText(self.configurator_name)
-
         # tree
-        self.preset_manager.entry = self.preset_name
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
+
+        # preset and configurator labels
+        # self.preset_label_value.setText(self.preset_name)
+        # self.configurator_label_value.setText(self.configurator_name)
+
+        # tree
+        # self.preset_manager.entry = self.preset_name
+        self.show_preset_titles_only(self.preset_manager.entry_filepath)
+
+        # Enable and disable navigation buttons
+        #self.check_disable_navigation_buttons()
+        # combo = self.configurator.get_action(ManagerActions.LIST_EXTERNAL).widget
+        # combo.update()
+        # combo.repaint()
+        # QtWidgets.QApplication.processEvents()
+        # print(self.configurator.entry)
+        # print(self.configurator.get_action_list().currentText())
 
 
     def load_history_in_dict(self) -> tuple[
@@ -504,12 +517,16 @@ def main():
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
 
-
+    widget = QtWidgets.QWidget()
+    widget.setLayout(QtWidgets.QHBoxLayout())
+    widget.layout().addWidget(prog.preset_manager.get_external_toolbar_menu()[0])
+    widget.layout().addWidget(prog.configurator.get_external_toolbar_menu()[0])
+    widget.show()
     # Calculate width and height as a screen ratio
     # screen = QApplication.screenAt(QCursor.pos())
     # size = screen.size()
 
-    fen.resize(800, 400)
+    fen.resize(850, 450)
 
     fen.show()
 
