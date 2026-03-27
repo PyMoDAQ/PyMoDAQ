@@ -18,7 +18,7 @@ from pyqtgraph import functions as fn
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QSignalBlocker, Signal, Slot
 
-from pymodaq_gui.config_saver_loader import get_set_roi_path
+from pymodaq_gui.config import get_set_roi_path
 from pymodaq_gui.parameter import (Parameter, ParameterTree,
                                    )
 from pymodaq_gui.plotting.utils import plot_utils

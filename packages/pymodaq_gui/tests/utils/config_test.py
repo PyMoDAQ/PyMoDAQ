@@ -6,7 +6,8 @@ import toml
 
 from pymodaq_utils import config as config_mod
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.config_saver_loader import ConfigSaverLoader, get_set_roi_path
+from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+from pymodaq_gui.config import get_set_layout_path, get_set_config_dir, get_set_roi_path
 
 
 class CustomConfig(config_mod.BaseConfig):
@@ -21,6 +22,13 @@ class TestGetSet:
         roi_path = get_set_roi_path()
         assert Path(roi_path) == Path(local_path).joinpath('roi_configs')
         assert Path(roi_path).is_dir()
+
+
+    def test_get_set_layout_path(self):
+        local_path = config_mod.get_set_local_dir()
+        layout_path = get_set_layout_path()
+        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
+        assert Path(layout_path).is_dir()
 
 
 class TestConfigSaverLoader:

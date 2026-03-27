@@ -4,7 +4,6 @@ import sys
 
 from qtpy import QtWidgets
 
-from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.dock import Dock
@@ -12,8 +11,8 @@ from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 
-from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_layout_path, \
-    get_set_configurator_path, get_set_remote_path
+from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_configurator_path, get_set_remote_path
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules.utils import ModuleType
 

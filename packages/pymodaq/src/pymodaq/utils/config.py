@@ -1,10 +1,7 @@
 
 from pathlib import Path
 
-try:
-    from pymodaq_gui.config_saver_loader import get_set_roi_path
-except ModuleNotFoundError:
-    from pymodaq_gui.config import get_set_roi_path
+from pymodaq_gui.config import get_set_roi_path, get_set_layout_path  # noqa
 
 from pymodaq_utils.config import (GlobalConfig, BaseConfig, ConfigError, get_set_config_dir,
                                   USER, CONFIG_BASE_PATH, get_set_local_dir)
@@ -36,12 +33,6 @@ def get_set_pid_path(user=False):
     return get_set_config_dir('pid_configs', user=user)
 
 
-def get_set_layout_path(user=False):
-    """ creates and return the config folder path for layout files
-    """
-    return get_set_config_dir('layout_configs', user=user)
-
-
 def get_set_remote_path(user=False):
     """ creates and return the config folder path for remote (shortcuts or joystick) files
     """
@@ -52,6 +43,7 @@ def get_set_overshoot_path(user=False):
     """ creates and return the config folder path for overshoot files
     """
     return get_set_config_dir('overshoot_configs', user=user)
+
 
 @GlobalConfig.register()
 class Config(BaseConfig):

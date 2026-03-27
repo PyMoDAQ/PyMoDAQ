@@ -52,7 +52,8 @@ from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveEr
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
 from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
-                                  get_set_roi_path, get_set_remote_path, get_set_layout_path)
+                                  get_set_remote_path)
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq.utils.gui_utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
