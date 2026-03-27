@@ -196,7 +196,6 @@ class ManagerBase(CustomExt):
         value = self.entries_sync.value
         value['current'] = entry_name
         self.entries_sync.set_value(value)
-        #self.get_action_list().setCurrentText(entry_name)
 
     @property
     def entry_filepath(self) -> Path:
