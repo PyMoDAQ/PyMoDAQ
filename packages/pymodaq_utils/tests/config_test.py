@@ -58,6 +58,10 @@ def test_replace_extension():
     assert replace_file_extension(test_name, 'toml') == f'{test_name}.toml'
 
 
+def test_import():
+    from pymodaq_utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir, USER,
+                                      CONFIG_BASE_PATH, get_set_local_dir)
+
 @pytest.mark.parametrize('user', [False, True])
 def test_get_set_config_dir(user):
     local_path = get_set_config_dir(user=user)
