@@ -48,7 +48,6 @@ from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI
 from pymodaq.control_modules.instruments import (DET_TYPES, DAQTypesEnum,
                                            DetectorError, get_viewer_plugins)
-from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusViewer, ControlToHardwareViewer,
                                                      UiToMainViewer)
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerBase
@@ -259,19 +258,6 @@ class DAQ_Viewer(ParameterControlModule):
         deprecation_msg('viewers_docks is a deprecated property use viewer_docks instead')
         return self.viewer_docks
 
-    @property
-    def master(self) -> bool:
-        """ Get/Set programmatically the Master/Slave status of a detector"""
-        if self.initialized_state:
-            return self.settings['detector_settings', 'controller_status'] == ControllerStatus.MASTER
-        else:
-            return True
-
-    @master.setter
-    def master(self, is_master: bool):
-        if self.initialized_state:
-            self.settings.child('detector_settings', 'controller_status').setValue(
-                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE)
 
     @property
     def daq_type(self) -> DAQTypesEnum:
@@ -509,12 +495,6 @@ class DAQ_Viewer(ParameterControlModule):
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
         self._grabing = False
-
-    @Slot()
-    def _raise_timeout(self):
-        """  Print the "timeout occurred" error message in the status bar via the update_status method.
-        """
-        self.update_status("Timeout occurred", log_type="log")
 
     def save_current(self):
         """Save current data into a h5file"""
@@ -991,7 +971,7 @@ class DAQ_Viewer(ParameterControlModule):
                 * lcd: display on the LCD panel, the content of the attribute
                 * stop: stop the grab
         """
-        super().thread_status(status, 'detector')
+        super().thread_status(status)
 
         if status.command == ThreadStatusViewer.INI_DETECTOR:
             self.update_status("detector initialized: " + str(status.attribute['initialized']))

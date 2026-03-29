@@ -48,7 +48,6 @@ from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCom
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
-from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq import Q_, Unit
 
 
@@ -218,20 +217,6 @@ class DAQ_Move(ParameterControlModule):
         elif cmd.command == UiToMainMove.REL_VALUE:
             self._relative_value = cmd.attribute
 
-    @property
-    def master(self) -> bool:
-        """Get/Set programmatically the Master/Slave status of an actuator"""
-        if self.initialized_state:
-            return self.settings["move_settings", "controller", "controller_status"] == ControllerStatus.MASTER
-        else:
-            return True
-
-    @master.setter
-    def master(self, is_master: bool):
-        if self.initialized_state:
-            self.settings.child("move_settings", "controller", "controller_status").setValue(
-                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE
-            )
 
 
     def append_data(
@@ -441,11 +426,6 @@ class DAQ_Move(ParameterControlModule):
                 self.logger.exception(str(e))
 
     @property
-    def initialized_state(self):
-        """bool: status of the actuator's initialization (init or not)"""
-        return self._initialized_state
-
-    @property
     def move_done_bool(self):
         """bool: status of the actuator's status (done or not)"""
         return self._move_done_bool
@@ -496,11 +476,6 @@ class DAQ_Move(ParameterControlModule):
                 edict(path=path, param=data[0].saveState(), change="childAdded")
             )
 
-    def raise_timeout(self):
-        """Update status with "Timeout occurred" statement and change the timeout flag."""
-        self.update_status("Timeout occurred")
-        self.wait_position_flag = False
-
     @Slot(ThreadCommand)
     def thread_status(
         self, status: ThreadCommand
@@ -526,7 +501,7 @@ class DAQ_Move(ParameterControlModule):
             * stop: stop the motion
         """
 
-        super().thread_status(status, "move")
+        super().thread_status(status)
 
         if status.command == ThreadStatusMove.INI_STAGE:
             self.update_status(
@@ -806,9 +781,6 @@ class DAQ_Move(ParameterControlModule):
 
         except Exception as e:
             self.logger.exception(str(e))
-
-    def connect_leco(self, connect: bool) -> None:
-        super().connect_leco(connect)
 
 
     def process_leco_commands(self, status: ThreadCommand) -> None:
