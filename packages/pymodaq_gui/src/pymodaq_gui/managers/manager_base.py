@@ -189,11 +189,11 @@ class ManagerBase(CustomExt):
     @property
     def entry(self) -> str:
         """ Get/Set the name of the current entry """
-        return self.get_action_list().currentText()
+        return self.entries_sync.value['current']
 
     @entry.setter
     def entry(self, entry_name: str):
-        self.get_action_list().setCurrentText(entry_name)
+        self.entries_sync.set_value({**self.entries_sync.value, 'current': entry_name})
 
     @property
     def entry_filepath(self) -> Path:
