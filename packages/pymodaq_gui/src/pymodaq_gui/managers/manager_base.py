@@ -193,9 +193,7 @@ class ManagerBase(CustomExt):
 
     @entry.setter
     def entry(self, entry_name: str):
-        value = self.entries_sync.value
-        value['current'] = entry_name
-        self.entries_sync.set_value(value)
+        self.entries_sync.set_value({**self.entries_sync.value, 'current': entry_name})
 
     @property
     def entry_filepath(self) -> Path:
