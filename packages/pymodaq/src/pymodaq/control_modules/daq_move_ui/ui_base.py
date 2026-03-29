@@ -106,6 +106,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self._ini_state = status
         self.enable_move_buttons(status)
         self.update_init_icon(status, 'ini_actuator')
+        if self.has_action('ini_actuator'):
+            self.set_action_checked('ini_actuator', status)
 
     @property
     def actuator(self):

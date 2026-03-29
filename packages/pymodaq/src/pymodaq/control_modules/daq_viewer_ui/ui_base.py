@@ -271,6 +271,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self.set_action_enabled('selector', not status)
         self.update_init_icon(status, action_name='ini_detector')
+        if self.has_action('ini_detector'):
+            self.set_action_checked('ini_detector', status)
 
 def main(init_qt=True):
     from pymodaq_gui.parameter import Parameter, ParameterTree
