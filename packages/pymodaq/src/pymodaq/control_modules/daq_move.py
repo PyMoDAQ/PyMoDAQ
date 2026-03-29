@@ -90,6 +90,7 @@ class DAQ_Move(ParameterControlModule):
     settings_name = "daq_move_settings"
     _hw_settings_name = "move_settings"
     _ui_init_attr = 'actuator_init'
+    _ini_hw_cmd = ControlToHardwareMove.INI_STAGE
 
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
@@ -394,36 +395,12 @@ class DAQ_Move(ParameterControlModule):
     def move_rel_m(self):
         self.move_rel(-self._relative_value)
 
-    def init_hardware(self, do_init=True):
-        """Init or desinit the selected instrument plugin class"""
-        if not do_init:
-            self._close_hardware()
-        else:
-            try:
-                hardware = DAQ_Move_Hardware(
-                    self._actuator_type, self._current_value, self._title
-                )
-                self._hardware_thread = QThread()
-                hardware.moveToThread(self._hardware_thread)
+    def _pre_close_hardware(self):
+        """Stop the refresh timer before closing so no more commands reach the hardware thread."""
+        self._refresh_timer.stop()
 
-                self.command_hardware[ThreadCommand].connect(hardware.queue_command)
-                hardware.status_sig[ThreadCommand].connect(self.thread_status)
-                self._update_settings_signal[edict].connect(hardware.update_settings)
-
-                self._hardware_thread.hardware = hardware
-                self._hardware_thread.start()
-                self.command_hardware.emit(
-                    ThreadCommand(
-                        ControlToHardwareMove.INI_STAGE,
-                        attribute=[
-                            self.settings.child("move_settings").saveState(),
-                            self.controller,
-                        ],
-                    )
-                )
-                self.connect_leco(True)
-            except Exception as e:
-                self.logger.exception(str(e))
+    def _create_hardware(self):
+        return DAQ_Move_Hardware(self._actuator_type, self._current_value, self._title)
 
     @property
     def move_done_bool(self):

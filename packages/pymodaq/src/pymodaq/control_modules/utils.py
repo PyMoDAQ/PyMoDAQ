@@ -208,14 +208,10 @@ class ControlModule(QObject):
             self.update_status(status.attribute)
 
         elif status.command == ThreadStatus.CLOSE:
+            # Thread teardown is now handled synchronously in _close_hardware() via
+            # wait().  This handler just updates state and UI.
             try:
                 self.update_status(status.attribute[0])
-                self._hardware_thread.quit()
-                terminated = self._hardware_thread.wait(5000)
-                if not terminated:
-                    self._hardware_thread.terminate()
-                    self._hardware_thread.wait()
-                    self.update_status('thread is locked?!', 'log')
             except Exception as e:
                 self.logger.exception(f'Wrong call to the "close" command: \n{str(e)}')
 
@@ -467,6 +463,11 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
         if self._initialized_state:
             self.init_hardware(False)
+            # The hardware worker emits status_sig(CLOSE) just before self-exiting.
+            # That signal is queued on the main thread.  Flush it now so that
+            # thread_status(CLOSE) (which calls update_status / display_status)
+            # fires while the UI is still alive, not later when it may be closed.
+            QtWidgets.QApplication.processEvents()
         self.quit_signal.emit()
         self._quit_cleanup()
         try:
@@ -479,17 +480,116 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         """Override in subclasses to add module-specific teardown before UI close."""
         pass
 
+    def _pre_close_hardware(self):
+        """Called at the very start of :meth:`_close_hardware` before the close command is sent.
+
+        Override in subclasses to stop timers or other activity that could race
+        with hardware shutdown (e.g. DAQ_Move stops its refresh timer here).
+        """
+        pass
+
     def _close_hardware(self):
-        """Send CLOSE to the hardware thread, reset the UI init state, then disconnect LECO."""
+        """Send CLOSE to the hardware thread and block until it stops.
+
+        Calls quit() on the thread (from the main thread) then wait(), making
+        quit_fun() synchronous with respect to hardware-thread teardown and
+        eliminating the race condition where a new preset was loaded before the
+        old thread had fully stopped.  
+        """
+        self._pre_close_hardware()
+        # Disconnect LECO *before* processEvents().  connect_leco(False) calls
+        # Listener.stop_listen() which joins the zmq listener thread.
+        self.connect_leco(False)
         try:
             self.command_hardware.emit(ThreadCommand('close'))
-            QtWidgets.QApplication.processEvents()
+            if self._hardware_thread is not None and self._hardware_thread.isRunning():
+                self._hardware_thread.quit()
+                if not self._hardware_thread.wait(5000):
+                    self._hardware_thread.terminate()
+                    self._hardware_thread.wait()
+                    self.logger.warning('Hardware thread did not stop cleanly; terminated.')
+            else:
+                QtWidgets.QApplication.processEvents()
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
         except Exception as e:
             self.logger.exception(str(e))
-        finally:
-            self.connect_leco(False)
+
+    # ------------------------------------------------------------------
+    # init_hardware template method
+    # ------------------------------------------------------------------
+
+    #: The ThreadCommand name sent to the hardware thread to initialise it.
+    #: Subclasses must set this to the appropriate enum value, e.g.
+    #: ``ControlToHardwareMove.INI_STAGE`` or ``ControlToHardwareViewer.INI_DETECTOR``.
+    _ini_hw_cmd: str = ''
+
+    def init_hardware(self, do_init=True):
+        """Init or deinit the selected instrument plugin.
+
+        The deinit path is handled by :meth:`_close_hardware`.
+        The init path follows a template:
+
+        1. :meth:`_create_hardware` — instantiate the hardware worker (abstract)
+        2. :meth:`_setup_hardware_thread` — move worker to thread and start it
+        3. connect common signals (``command_hardware``, ``status_sig``, ``_update_settings_signal``)
+        4. :meth:`_connect_hardware_signals` — connect module-specific extra signals
+        5. emit the ini command via :meth:`_ini_hardware_command`
+        6. :meth:`_post_hardware_init` — any post-init UI work
+        7. ``connect_leco(True)``
+        """
+        if not do_init:
+            self._close_hardware()
+            return
+        try:
+            hardware = self._create_hardware()
+            self._hardware_thread = QThread()
+            self._setup_hardware_thread(hardware)
+
+            self.command_hardware[ThreadCommand].connect(hardware.queue_command)
+            hardware.status_sig[ThreadCommand].connect(self.thread_status)
+            self._update_settings_signal[edict].connect(hardware.update_settings)
+            self._connect_hardware_signals(hardware)
+
+            self._hardware_thread.hardware = hardware
+            self.command_hardware.emit(self._ini_hardware_command())
+            self._post_hardware_init()
+            self.connect_leco(True)
+        except Exception as e:
+            self.logger.exception(str(e))
+
+    def _create_hardware(self):
+        """Instantiate and return the hardware worker object. Must be overridden."""
+        raise NotImplementedError
+
+    def _setup_hardware_thread(self, hardware):
+        """Move *hardware* to the thread and start it.
+
+        Default: always move and start. Override when the move/start should be
+        conditional (e.g. DAQ_Viewer's ``viewer_in_thread`` config option).
+        """
+        hardware.moveToThread(self._hardware_thread)
+        self._hardware_thread.start()
+
+    def _connect_hardware_signals(self, hardware):
+        """Connect module-specific signals from *hardware*. Default: no-op."""
+        pass
+
+    def _ini_hardware_command(self) -> ThreadCommand:
+        """Return the ThreadCommand that triggers hardware initialisation.
+
+        Default uses :attr:`_ini_hw_cmd` as the command name and
+        ``[hw_settings.saveState(), self.controller]`` as the attribute.
+        Override if the attribute structure differs.
+        """
+        return ThreadCommand(
+            self._ini_hw_cmd,
+            attribute=[self.settings.child(self._hw_settings_name).saveState(), self.controller],
+        )
+
+    def _post_hardware_init(self):
+        """Called after the ini command is emitted. Default: no-op."""
+        pass
 
     @property
     def master(self) -> bool:

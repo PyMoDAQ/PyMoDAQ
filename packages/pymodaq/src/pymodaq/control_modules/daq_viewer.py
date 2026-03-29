@@ -97,6 +97,7 @@ class DAQ_Viewer(ParameterControlModule):
     settings_name = 'daq_viewer_settings'
     _hw_settings_name = 'detector_settings'
     _ui_init_attr = 'detector_init'
+    _ini_hw_cmd = ControlToHardwareViewer.INI_DETECTOR
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
     grab_done_signal = Signal(DataToExport)
@@ -358,45 +359,22 @@ class DAQ_Viewer(ParameterControlModule):
     #  #####################################
     #  Methods for running the acquisition
 
-    def init_hardware(self, do_init=True):
-        """ Init the selected detector
+    def _create_hardware(self):
+        return DAQ_Detector(self._title, self.settings, self.detector)
 
-        Parameters
-        ----------
-        do_init: bool
-            If True, create a DAQ_Detector instance and move it into a separated thread, connected its signals/slots
-            to the DAQ_Viewer object (self)
-            If False, force the instrument to close and kill the Thread (still not done properly in some cases)
-        """
-        if not do_init:
-            self._close_hardware()
-        else:            
-            try:
+    def _setup_hardware_thread(self, hardware):
+        if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
+            hardware.moveToThread(self._hardware_thread)
+            self._hardware_thread.start()
 
-                hardware = DAQ_Detector(self._title, self.settings, self.detector)
-                self._hardware_thread = QThread()
-                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-                    hardware.moveToThread(self._hardware_thread)
+    def _connect_hardware_signals(self, hardware):
+        hardware.data_detector_sig[DataToExport].connect(self.show_data)
+        hardware.data_detector_temp_sig[DataToExport].connect(self.show_temp_data)
 
-                self.command_hardware[ThreadCommand].connect(hardware.queue_command)
-                hardware.data_detector_sig[DataToExport].connect(self.show_data)
-                hardware.data_detector_temp_sig[DataToExport].connect(self.show_temp_data)
-                hardware.status_sig[ThreadCommand].connect(self.thread_status)
-                self._update_settings_signal[edict].connect(hardware.update_settings)
-
-                self._hardware_thread.hardware = hardware
-                if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
-                    self._hardware_thread.start()
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.INI_DETECTOR,
-                                                         attribute=[
-                                                             self.settings.child('detector_settings').saveState(),
-                                                             self.controller]))
-                if self.ui is not None:
-                    for dock in self.ui.viewer_docks:
-                        dock.setEnabled(True)
-                self.connect_leco(True)
-            except Exception as e:
-                self.logger.exception(str(e))
+    def _post_hardware_init(self):
+        if self.ui is not None:
+            for dock in self.ui.viewer_docks:
+                dock.setEnabled(True)
 
     def snap(self, send_to_leco=False):
         """ Launch a single grab """
