@@ -5,8 +5,6 @@ from pint import DimensionalityError
 from qtpy import QtWidgets
 from typing import Union, List
 
-import qt_themes
-
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.control_modules.thread_commands import UiToMainMove
 from pymodaq.control_modules.ui_utils import ControlModuleUI
@@ -15,10 +13,8 @@ from pymodaq_data import Q_
 from pymodaq_data import DataToExport
 from pymodaq_gui.plotting.data_viewers import ViewerDispatcher
 from pymodaq_gui.utils import DockArea, QSpinBoxWithShortcut, PushButtonIcon, QLED, QSpinBox_ro
-from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
-from pymodaq_gui.utils.styling import create_icon
 
 config = Config()
 
@@ -62,7 +58,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         super().__init__(parent)
         self.title = title
         self._unit = ''
-        self._ini_state = False
         self.move_toolbar = self.add_toolbar('move', 'Move')
         self.set_toolbar(self.move_toolbar)  # Set as default so ui.toolbar returns this toolbar
 
@@ -70,8 +65,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb: QSpinBoxWithShortcut = None
         self.abs_value_sb_2: QSpinBoxWithShortcut = None
         self.abs_value_sb_bis: QSpinBoxWithShortcut = None
-        self.ini_actuator_pb: PushButtonIcon = None
-        self.ini_state_led: QLED = None
         self.move_done_led: QLED = None
         self.current_value_sb: QSpinBox_ro = None
         self.find_home_pb: PushButtonIcon = None
@@ -87,7 +80,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.graph_widget: QtWidgets.QWidget = None
         self.viewer: ViewerDispatcher = None
 
-        self._tree: ParameterTree = None
+        self._settings_widget: QtWidgets.QWidget = None
 
 
         self.setup_ui()
@@ -111,18 +104,8 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     @actuator_init.setter
     def actuator_init(self, status):
         self._ini_state = status
-        self.ini_state_led.set_as(status)
         self.enable_move_buttons(status)
-
-        if status:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().green,)
-        else:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().red,)
-        if self.has_action('ini_actuator'):
-            self.get_action('ini_actuator').set_icon(icon)
-        self.ini_actuator_pb.setIcon(icon)
+        self.update_init_icon(status, 'ini_actuator')
 
     @property
     def actuator(self):
@@ -232,9 +215,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
 
         self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.ini_actuator_pb = PushButtonIcon('cable', 'Initialization', checkable=True,
-                                              tip='Start This actuator initialization')
-        self.ini_state_led = QLED(readonly=True)
         self.move_done_led = QLED(readonly=True)
         self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
                                             siPrefix=config('pymodaq', 'actuator', 'siprefix'),
@@ -289,7 +269,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.parent.close()
         self.graph_widget.close()
         self.control_widget.close()
-        self._tree.close()
+        self._settings_widget.close()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
@@ -299,12 +279,12 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         do_init: bool
             will fire the Init button depending on the argument value and the button check state
         """
-        if do_init is not self.ini_actuator_pb.isChecked():
-            self.ini_actuator_pb.click()
+        if do_init is not self.is_action_checked('ini_actuator'):
+            self.get_action('ini_actuator').trigger()
 
-    def send_init(self, checked):
+    def send_init(self, checked: bool):
         self.actuators_combo.setEnabled(not checked)
-        self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [self.ini_actuator_pb.isChecked(),
+        self.command_sig.emit(ThreadCommand(UiToMainMove.INIT, [checked,
                                                                 self.actuators_combo.currentText()]))
 
     def emit_move_abs(self, spinbox):
@@ -319,17 +299,15 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                          units=self._unit)))
 
     def set_settings_tree(self, tree):
-        self._tree = tree
+        self._settings_widget = tree
 
 
     def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
         self._setup_name_widget(toolbar=toolbar)
         self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
-        self.add_action('ini_actuator', 'Ini. Actuator', 'cable', toolbar=toolbar,
-                        tip='Connect to selected actuator', icon_color=qt_themes.get_theme().red,
-                        icon_checked_color=qt_themes.get_theme().green)
-        self.add_action('show_settings', 'Show Settings', 'settings', "Show Settings", checkable=True,
-                        toolbar=toolbar)
+        self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
+                                display_name='Ini. Actuator', tip='Connect to selected actuator')
+        self._setup_settings_action(toolbar=toolbar)
         toolbar.addSeparator()
         self.add_widget('current', self.current_value_sb, toolbar=toolbar)
         self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
@@ -384,7 +362,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         if 'show_controls' in self.actions_names:
             self.connect_action('show_controls', self.show_controls)
         if 'show_settings' in self.actions_names:
-            self.connect_action('show_settings', self.show_tree)
+            self.connect_action('show_settings', self._show_settings)
         if 'show_graph' in self.actions_names:
             self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
         if 'move_abs' in self.actions_names:
@@ -396,7 +374,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         if 'show_config' in self.actions_names:
             self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
         if 'ini_actuator' in self.actions_names:
-            self.connect_action('ini_actuator', self.ini_actuator_pb.click)
+            self.connect_action('ini_actuator', self.send_init)
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
         self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
@@ -413,8 +391,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
         self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
 
-        self.ini_actuator_pb.clicked.connect(self.send_init)
-
         self.actuators_combo.currentTextChanged.connect(
             lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
         if 'refresh_value' in self.actions_names:
@@ -422,14 +398,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                 lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
                                                                                    do_refresh)))
 
-    def show_tree(self, show: bool = True):
-        self._tree.setVisible(show)
-        self._tree.closeEvent = lambda event: self.set_action_checked('show_settings', False)
-
     def show_controls(self, show: bool = True):
         self.control_widget.setVisible(show)
         self.control_widget.closeEvent = lambda event: self.set_action_checked('show_controls', False)
 
     def show_graph(self, show: bool = True):
         self.graph_widget.setVisible(show)
-        self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', True)
+        self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', False)

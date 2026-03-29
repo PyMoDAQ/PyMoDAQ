@@ -38,6 +38,8 @@ class ControlModuleUI(CustomApp):
         super().__init__(parent)
         self.config = config
         self._ini_state = False
+        self.statusbar = None
+        self._settings_widget = None
 
     def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
         if self.statusbar is not None:
@@ -108,6 +110,30 @@ class ControlModuleUI(CustomApp):
             icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().red)
         if self.has_action(action_name):
             self.get_action(action_name).set_icon(icon)
+
+    def enable_actions(self, status=True, all_except=()):
+        """Enable or disable all toolbar actions, optionally excluding some.
+
+        Parameters
+        ----------
+        status: bool
+            True to enable, False to disable.
+        all_except: tuple of str
+            Action names to leave unchanged.
+        """
+        for action in self.actions_names:
+            if action not in all_except:
+                self.set_action_enabled(action, status)
+
+    def _show_settings(self, show: bool = True):
+        """Slot connected to the show_settings action."""
+        self._settings_widget.setVisible(show)
+        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+
+    def show_settings(self, show=True):
+        """Programmatically show/hide the settings widget. API entry."""
+        if self.is_action_checked('show_settings') != show:
+            self.get_action('show_settings').trigger()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

@@ -10,7 +10,6 @@ from typing import List, Union
 import sys
 
 from qtpy import QtWidgets, QtGui, QtCore
-from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 
 import qt_themes
@@ -80,8 +79,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    command_sig = Signal(ThreadCommand)
-
     def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", **kwargs):
         ControlModuleUI.__init__(self, parent)
 
@@ -91,11 +88,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.title = title
 
-        self._ini_state = False
         self._data_ready = False
-
         self._detector_widget = None
-        self._settings_widget = None
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
@@ -180,10 +174,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.parent.setVisible(show)
         self.parent.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
 
-    def _show_settings(self, show: bool = True):
-        self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
-
     def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
                        viewers_name: List[str] = None, force=False):
         super().update_viewers(viewers_type)
@@ -213,11 +203,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                 self.update_viewers([sel_mod.daq_type.to_viewer_type()])
         except ValueError as e:
             pass
-
-    def show_settings(self, show=True):
-        if (self.is_action_checked('show_settings') and not show) or \
-                (not self.is_action_checked('show_settings') and show):
-            self.get_action('show_settings').trigger()
 
     def _grab(self):
         """Slot from the *grab* action"""
@@ -286,12 +271,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self.set_action_enabled('selector', not status)
         self.update_init_icon(status, action_name='ini_detector')
-
-    def enable_actions(self, status=True, all_except=()):
-        for action in self.actions_names:
-            if action not in all_except:
-                self.set_action_enabled(action, status)
-
 
 def main(init_qt=True):
     from pymodaq_gui.parameter import Parameter, ParameterTree
