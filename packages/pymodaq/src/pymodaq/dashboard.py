@@ -347,11 +347,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if detector_modules is None:
             detector_modules = []
-        try:
-            for detector_module in detector_modules[:]:
+        for detector_module in detector_modules[:]:
+            try:
                 if detector_module in self.detector_modules:
                     self.detector_modules.remove(detector_module)
-
 
                 # Remove from compact dock manager
                 if self.compact_detector_manager:
@@ -365,8 +364,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 dock = self.dockarea.docks.get(f"{detector_module.title}", None)
                 if dock:
                     dock.close()
-        except Exception as e:
-            logger.exception(str(e))
+            except Exception as e:
+                logger.exception(str(e))
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
         """
@@ -378,8 +377,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if actuator_modules is None:
             actuator_modules = []
-        try:
-            for actuator_module in actuator_modules[:]:
+        for actuator_module in actuator_modules[:]:
+            try:
                 if actuator_module in self.actuators_modules:
                     self.actuators_modules.remove(actuator_module)
                 # Remove from compact dock manager
@@ -390,14 +389,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         self.compact_actuator_manager = None
 
                 actuator_module.quit_fun()
-                
+
                 # Close individual actuator dock (for non-compact actuators)
-                dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
+                dock: Dock = self.dockarea.docks.get(actuator_module.title, None)
                 if dock:
                     dock.removeWidgets()
                     dock.close()
-        except Exception as e:
-            logger.exception(str(e))
+            except Exception as e:
+                logger.exception(str(e))
 
     def get_docks_from_modules(
         self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]
