@@ -479,10 +479,11 @@ class LECOComponentMixin:
             self._leco_client.start_listen()
         else:
             self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT, ))
-            try:
-                self._leco_commands_signal.disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+            if self._leco_client is not None:
+                try:
+                    self._leco_commands_signal.disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected
 
     def get_leco_name(self) -> str:
         """Return the LECO component name used to register on the network.
