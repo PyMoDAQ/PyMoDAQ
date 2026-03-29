@@ -461,8 +461,8 @@ class LECOComponentMixin:
         sent from the Qt thread.
 
         When *connect* is ``False``, a :attr:`~LECOCommands.QUIT` command is
-        emitted to stop the listener gracefully, and the signal/slot connection
-        to :meth:`~ActorListener.queue_command` is removed.
+        emitted to stop the listener gracefully, and both signal/slot connections
+        (to :meth:`~ActorListener.queue_command` and from ``cmd_signal``) are removed.
 
         :param connect: ``True`` to establish the connection, ``False`` to
             tear it down.
@@ -479,10 +479,15 @@ class LECOComponentMixin:
             self._leco_client.start_listen()
         else:
             self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT, ))
-            try:
-                self._leco_commands_signal.disconnect(self._leco_client.queue_command)
-            except TypeError:
-                pass  # already disconnected
+            if self._leco_client is not None:
+                try:
+                    self._leco_commands_signal.disconnect(self._leco_client.queue_command)
+                except TypeError:
+                    pass  # already disconnected    
+                try:
+                    self._leco_client.cmd_signal.disconnect(self.process_leco_commands)
+                except TypeError:
+                    pass  # already disconnected
 
     def get_leco_name(self) -> str:
         """Return the LECO component name used to register on the network.
