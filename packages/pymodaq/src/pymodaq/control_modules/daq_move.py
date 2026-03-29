@@ -89,6 +89,8 @@ class DAQ_Move(ParameterControlModule):
     """
 
     settings_name = "daq_move_settings"
+    _hw_settings_name = "move_settings"
+    _ui_init_attr = 'actuator_init'
 
     move_done_signal = Signal(DataActuator)
     current_value_signal = Signal(DataActuator)
@@ -407,33 +409,10 @@ class DAQ_Move(ParameterControlModule):
     def move_rel_m(self):
         self.move_rel(-self._relative_value)
 
-    def quit_fun(self):
-        """Programmatic quitting of the current instance of DAQ_Move
-
-        Des-init the actuator then close the UI parent widget
-        """
-        # insert anything that needs to be closed before leaving
-
-        if self._initialized_state:
-            self.init_hardware(False)
-        self.quit_signal.emit()
-        if self.ui is not None:
-            self.ui.close()
-        # self.parent.close()
-
     def init_hardware(self, do_init=True):
         """Init or desinit the selected instrument plugin class"""
         if not do_init:
-            try:
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.CLOSE))
-                QtWidgets.QApplication.processEvents()
-
-                if self.ui is not None:
-                    self.ui.actuator_init = False
-            except Exception as e:
-                self.logger.exception(str(e))
-            finally:
-                self.connect_leco(False)
+            self._close_hardware()
         else:
             try:
                 hardware = DAQ_Move_Hardware(
@@ -508,15 +487,6 @@ class DAQ_Move(ParameterControlModule):
             self.h5saver.init_file(update_h5=True)
         else:
             self.settings.child('saver_settings', 'N_saved').hide()
-
-    def param_deleted(self, param):
-        """Apply deletion of settings"""
-        if param.name() not in putils.iter_children(
-            self.settings.child("main_settings"), []
-        ):
-            self._update_settings_signal.emit(
-                edict(path=["move_settings"], param=param, change="parent")
-            )
 
     def child_added(self, param, data):
         """Apply addition of settings"""

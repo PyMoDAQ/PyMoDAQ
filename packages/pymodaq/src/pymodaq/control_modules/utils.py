@@ -8,6 +8,7 @@ from random import randint
 from typing import Optional, Type, Union
 from easydict import EasyDict as edict
 
+from qtpy import QtWidgets
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
 from pymodaq_utils.utils import ThreadCommand
@@ -16,6 +17,7 @@ from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.parameter import Parameter, ioxml
+from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 from pymodaq_gui.managers.parameter_manager import ParameterManager
@@ -396,6 +398,13 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
 
     _update_settings_signal = Signal(edict)
 
+    # Subclasses must define the name of their hardware-settings parameter group,
+    # e.g. "move_settings" for DAQ_Move and "detector_settings" for DAQ_Viewer.
+    _hw_settings_name: str = ''
+
+    # Name of the UI property that reflects the init state, e.g. 'actuator_init' / 'detector_init'.
+    _ui_init_attr: str = ''
+
     def __init__(self, listener_class = Type[ActorListener], **kwargs):
         ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
         LECOComponentMixin.__init__(self, listener_class)
@@ -410,14 +419,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             Parameter object containing the controller parameters
         """
         try:
-            if self.module_type == ControleModuleType.DAQ_VIEWER:
-                controller_settings = self.settings.child('detector_settings', 'controller')
-            elif self.module_type == ControleModuleType.DAQ_MOVE:
-                controller_settings = self.settings.child('move_settings', 'controller')
-            else:
-                raise TypeError('Unknown ControlModuleType')
+            controller_settings = self.settings.child(self._hw_settings_name, 'controller')
             controller_settings.restoreState(controller_param.saveState())
-
         except Exception as e:
             logger.exception(f'Error applying controller parameters: {str(e)}')
 
@@ -442,6 +445,41 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         else:
             # not handled
             return param
+
+    def quit_fun(self):
+        """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
+        if self._initialized_state:
+            self.init_hardware(False)
+        self.quit_signal.emit()
+        self._quit_cleanup()
+        try:
+            if self.ui is not None:
+                self.ui.close()
+        except Exception as e:
+            self.logger.exception(str(e))
+
+    def _quit_cleanup(self):
+        """Override in subclasses to add module-specific teardown before UI close."""
+        pass
+
+    def _close_hardware(self):
+        """Send CLOSE to the hardware thread, reset the UI init state, then disconnect LECO."""
+        try:
+            self.command_hardware.emit(ThreadCommand('close'))
+            QtWidgets.QApplication.processEvents()
+            if self.ui is not None and self._ui_init_attr:
+                setattr(self.ui, self._ui_init_attr, False)
+        except Exception as e:
+            self.logger.exception(str(e))
+        finally:
+            self.connect_leco(False)
+
+    def param_deleted(self, param):
+        """Propagate parameter deletion to the hardware thread."""
+        if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
+            self._update_settings_signal.emit(
+                edict(path=[self._hw_settings_name], param=param, change='parent')
+            )
 
     def _update_settings(self, param: Parameter):
         # I do not understand what it does
@@ -494,8 +532,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             self.settings.child('main_settings', 'leco', 'leco_connected').setValue(False)
         elif status.command == LECOCommands.GET_SETTINGS:
             """ The Director requested the content of the actuator settings"""
-            common_param = 'move_settings' if 'move' in self.__class__.__name__.lower() else 'detector_settings'
-            settings_xml = ioxml.parameter_to_xml_string(self.settings.child(common_param))
+            settings_xml = ioxml.parameter_to_xml_string(self.settings.child(self._hw_settings_name))
             self._leco_commands_signal.emit(ThreadCommand(LECOCommands.SET_DIRECTOR_SETTINGS, settings_xml))
         else:
             # not handled

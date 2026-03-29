@@ -96,6 +96,8 @@ class DAQ_Viewer(ParameterControlModule):
     create if one want to receive infos from the ROI
     """
     settings_name = 'daq_viewer_settings'
+    _hw_settings_name = 'detector_settings'
+    _ui_init_attr = 'detector_init'
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
     grab_done_signal = Signal(DataToExport)
@@ -360,27 +362,12 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._viewers = viewers
 
-    def quit_fun(self):
-        """ Quit the application, closing the hardware and other modules """
-
-        # insert anything that needs to be closed before leaving
-
-        if self._initialized_state:  # means  initialized
-            self.init_hardware(False)
-        self.quit_signal.emit()
-
+    def _quit_cleanup(self):
         if self._lcd is not None:
             try:
                 self._lcd.parent.close()
             except Exception as e:
                 self.logger.exception(str(e))
-
-        try:
-            if self.ui is not None:
-                self.ui.close()
-
-        except Exception as e:
-            self.logger.exception(str(e))
 
     #  #####################################
     #  Methods for running the acquisition
@@ -396,16 +383,7 @@ class DAQ_Viewer(ParameterControlModule):
             If False, force the instrument to close and kill the Thread (still not done properly in some cases)
         """
         if not do_init:
-            try:
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.CLOSE))
-                QtWidgets.QApplication.processEvents()
-                if self.ui is not None:
-                    self.ui.detector_init = False
-
-            except Exception as e:
-                self.logger.exception(str(e))
-            finally:
-                self.connect_leco(False)
+            self._close_hardware()
         else:            
             try:
 
@@ -943,17 +921,6 @@ class DAQ_Viewer(ParameterControlModule):
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
             self._update_settings_signal.emit(edict(path=putils.get_param_path(param)[1:], param=data[0],
                                                     change='childAdded'))
-
-    def param_deleted(self, param):
-        """ Remove a child from the settings attribute
-
-        Parameters
-        ----------
-        param: Parameter
-            a given parameter whose value has been changed by user
-        """
-        if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
-            self._update_settings_signal.emit(edict(path=['detector_settings'], param=param, change='parent'))
 
     def _set_setting_tree(self):
         """Apply the specific settings of the selected detector (plugin)
