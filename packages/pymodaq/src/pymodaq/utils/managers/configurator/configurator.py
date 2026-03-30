@@ -9,8 +9,8 @@ from qtpy.QtCore import QModelIndex
 
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq_utils.config import Config
 from pymodaq_utils.logger import set_logger, get_module_name
+from pymodaq.utils.config import Config
 
 
 from pymodaq_gui.parameter import Parameter, ioxml
@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
+
+config = Config()
 
 
 class Configurator(ManagerBase):
@@ -68,7 +70,9 @@ class Configurator(ManagerBase):
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
-        self.max_size_history = 10 # TODO : to be integrated into the configuration file
+
+        self.max_history_size = config('launcher', 'max_history_size')
+        print(f"max history size : {self.max_history_size}")
 
 
     @property
@@ -456,7 +460,7 @@ class Configurator(ManagerBase):
 
 
         new_dict = {key :value for i, (key, value) in enumerate(existing.items())
-                    if i >= len(existing) - self.max_size_history + 1
+                    if i >= len(existing) - self.max_history_size + 1
                     and (value['preset'] != entry[str(date)]['preset']
                     or value['configurator'] != entry[str(date)]['configurator'])
                     }

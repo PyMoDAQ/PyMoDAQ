@@ -30,6 +30,8 @@ from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
+from pymodaq_utils.config import GlobalConfig
+
 logger = set_logger(get_module_name(__file__))
 
 
