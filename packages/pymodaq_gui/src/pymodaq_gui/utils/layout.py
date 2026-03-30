@@ -1,15 +1,15 @@
 import pickle
 
-from pymodaq_utils import config as config_mod
+from pymodaq_gui.config import get_set_layout_path
 from pymodaq_gui.utils.file_io import select_file
 
 
-def load_layout_state(dockarea, file=None):
+def load_layout_state(dockarea, file=None, user=False):
     """
         Load and restore a dockarea layout state from the select_file obtained pathname file.
     """
     if file is None:
-        file = select_file(start_path=config_mod.get_set_layout_path(), save=False, ext='dock')
+        file = select_file(start_path=get_set_layout_path(user=user), save=False, ext='dock')
     if file is not None:
         with open(str(file), 'rb') as f:
             dockstate = pickle.load(f)
@@ -18,7 +18,7 @@ def load_layout_state(dockarea, file=None):
     return file
 
 
-def save_layout_state(dockarea, file=None):
+def save_layout_state(dockarea, file=None, user=False):
     """
         Save the current layout state in the select_file obtained pathname file.
         Once done dump the pickle.
@@ -28,7 +28,7 @@ def save_layout_state(dockarea, file=None):
     if 'float' in dockstate:
         dockstate['float'] = []
     if file is None:
-        file = select_file(start_path=config_mod.get_set_layout_path(), save=True, ext='dock')
+        file = select_file(start_path=get_set_layout_path(user=user), save=True, ext='dock')
     if file is not None:
         with open(str(file), 'wb') as f:
             pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)

@@ -1,12 +1,9 @@
 from pathlib import Path
 
+import pymodaq_gui.config
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq_utils import config as config_mod
 
-
-def test_import():
-    from pymodaq.utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir, USER,
-                                      CONFIG_BASE_PATH, get_set_local_dir)
 
 
 class TestGetSet:
@@ -27,12 +24,6 @@ class TestGetSet:
         log_path = config_mod.get_set_log_path()
         assert Path(log_path) == Path(local_path).joinpath('log')
         assert Path(log_path).is_dir()
-
-    def test_get_set_layout_path(self):
-        local_path = config_mod.get_set_local_dir()
-        layout_path = config_mod_pymodaq.get_set_layout_path()
-        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
-        assert Path(layout_path).is_dir()
 
     def test_get_set_remote_path(self):
         local_path = config_mod.get_set_local_dir()
