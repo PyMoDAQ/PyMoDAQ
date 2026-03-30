@@ -1,6 +1,6 @@
-from datetime import datetime
 import subprocess
 import sys
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, cast
 
@@ -14,23 +14,21 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from watchdog.events import FileSystemEventHandler, FileModifiedEvent
+# Handler
+from watchdog.observers import Observer
 
 from pymodaq.dashboard import load_dashboard_with_preset
 from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.modules.utils import ModuleType
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
-
-# Handler
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, DirModifiedEvent, FileModifiedEvent
 
 logger = set_logger(get_module_name(__file__))
 
@@ -90,15 +88,6 @@ class Launcher(CustomApp):
         self.history_keys = []
         self.history = {}
         self.history_index = 0
-
-
-
-        # self.preset_configurator_layout = QHBoxLayout()
-        # self.preset_label = QLabel("Preset :")
-        # self.preset_label_value = QLabel(self.preset_name)
-        # self.configurator_label = QLabel("Configurator :")
-        # self.configurator_label_value = QLabel(self.configurator_name) # combo box for the future
-
 
         # Header
         self.box_label = QLabel("2026/03/02 at 16h45")  # debug only
@@ -169,19 +158,12 @@ class Launcher(CustomApp):
         self.main_hbox.addLayout(self.loader_vbox, 1)
         self.loader_vbox.addLayout(self.hbox)
         self.loader_vbox.addWidget(self.add_toolbar('controls'))
-        # self.loader_vbox.addLayout(self.preset_configurator_layout)
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.preset_manager.entry = 'New '
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
         self.set_launcher_vbox()
-        # self.preset_configurator_layout.addWidget(self.preset_label)
-        # self.preset_configurator_layout.addWidget(self.preset_label_value)
-        # self.preset_configurator_layout.addWidget(self.configurator_label)
-        # self.preset_configurator_layout.addWidget(self.configurator_label_value)
-
-
 
         self.set_header()
         self.set_controls()
@@ -357,7 +339,6 @@ class Launcher(CustomApp):
         self.tree.expandAll()
         self.tree.setItemsExpandable(True)
 
-        # print(self.preset_manager.entry, self.configurator.preset_manager.entry, self.configurator.entry)
 
     def load_dashboard_with_preset_configurator(self):
         """
@@ -413,7 +394,6 @@ class Launcher(CustomApp):
             self.set_action_enabled('back_config', True)
 
     def ui_refresh(self):
-        print("ui_refresh method calls")
         # preset and configurator
         if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
@@ -439,22 +419,9 @@ class Launcher(CustomApp):
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
 
-        # preset and configurator labels
-        # self.preset_label_value.setText(self.preset_name)
-        # self.configurator_label_value.setText(self.configurator_name)
-
         # tree
-        # self.preset_manager.entry = self.preset_name
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
-        # Enable and disable navigation buttons
-        #self.check_disable_navigation_buttons()
-        # combo = self.configurator.get_action(ManagerActions.LIST_EXTERNAL).widget
-        # combo.update()
-        # combo.repaint()
-        # QtWidgets.QApplication.processEvents()
-        # print(self.configurator.entry)
-        # print(self.configurator.get_action_list().currentText())
 
 
     def load_history_in_dict(self) -> tuple[
@@ -517,11 +484,6 @@ def main():
     prog = Launcher(fen)
     shared_ui.affect_application(prog)
 
-    widget = QtWidgets.QWidget()
-    widget.setLayout(QtWidgets.QHBoxLayout())
-    widget.layout().addWidget(prog.preset_manager.get_external_toolbar_menu()[0])
-    widget.layout().addWidget(prog.configurator.get_external_toolbar_menu()[0])
-    widget.show()
     # Calculate width and height as a screen ratio
     # screen = QApplication.screenAt(QCursor.pos())
     # size = screen.size()
