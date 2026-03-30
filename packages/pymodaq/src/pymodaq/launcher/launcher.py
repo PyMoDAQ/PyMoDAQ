@@ -405,12 +405,12 @@ class Launcher(CustomApp):
         if self.history_index < 1 :
             self.set_action_enabled('next_config', False)
         else :
-            self.get_action('next_config').setDisabled(False)
+            self.set_action_enabled('next_config', True)
 
         if self.history_index >= len(self.history_keys) -1 :
-            self.get_action('back_config').setDisabled(True)
+            self.set_action_enabled('back_config', False)
         else :
-            self.get_action('back_config').setDisabled(False)
+            self.set_action_enabled('back_config', True)
 
     def ui_refresh(self):
         print("ui_refresh method calls")
