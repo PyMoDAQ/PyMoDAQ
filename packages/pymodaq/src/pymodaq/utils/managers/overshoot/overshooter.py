@@ -263,13 +263,7 @@ class Overshooter(ManagerBase):
         self.settings.child('overshoots').setOpts(
             addList=self.modules_manager.available_data)
 
-    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        if entry is None:
-            entry = self.entry_filepath
-        elif isinstance(entry, str):
-            self.entry = entry
-            entry = self.entry_filepath
-
+    def _update_entry(self, entry: Path):
         if entry.exists():
             self.settings = entry
         else:
@@ -295,7 +289,7 @@ class Overshooter(ManagerBase):
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name
 
         self.entries_sync.update_key('items', self.entries)
-        self._update_entry()
+        self.update_entry()
         self.update_available_data()
         self.update_configurations()
 

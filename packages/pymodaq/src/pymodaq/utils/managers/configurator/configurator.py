@@ -314,7 +314,7 @@ class Configurator(ManagerBase):
         self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
                                        ).widget.currentTextChanged.connect(self.set_preset_filename)
 
-    def _update_entry(self, entry: Union[str, Path] = None, **kwargs):
+    def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
 
     def update_settings(self, settings: Union[Parameter, Path, str] = None):
