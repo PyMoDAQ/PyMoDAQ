@@ -7,8 +7,8 @@ Created the 28/10/2022
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-import numbers
 from copy import deepcopy
+import numbers
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
@@ -909,6 +909,16 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
                         for data_array in self.data]
             else:
                 return [float(np.mean(data_array)) for data_array in self.data]
+
+    def equal_to(self, other: 'DataBase', epsilon: Union[float, Q_])-> bool:
+        """ Check if two data object are equal within epsilon """
+        if isinstance(epsilon, numbers.Number):
+            epsilon = Q_(epsilon, self.units)
+        try:
+            return bool(np.all([np.abs(self.quantities[ind] - other.quantities[ind])
+                                <= epsilon for ind in range(len(self))]))
+        except pint.errors.DimensionalityError as e:
+            return False
 
     def as_dte(self, name: str = 'mydte') -> DataToExport:
         """Convenience method to wrap the DataWithAxes object into a DataToExport"""
