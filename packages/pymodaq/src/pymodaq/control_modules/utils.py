@@ -27,14 +27,8 @@ from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHardware,
                                                      ControleModuleType, ControllerStatus)  # noqa: F401
 
-
-
 config = Config()
 logger = set_logger(get_module_name(__file__))
-
-
-
-
 
 def create_controller_param(axis_name: str = None, axis_names: Optional[list[str]] = None) -> dict:
     controller_param = {'title': 'Controller:', 'name': 'controller', 'type': 'group', 'children': [
@@ -51,8 +45,6 @@ def create_controller_param(axis_name: str = None, axis_names: Optional[list[str
                                              'value': axis_name,
                                              VALID_FOR_CONFIGURATION: False})
     return controller_param
-
-
 def create_remote_connection_params() -> list[dict]:
     """Create common remote connection parameter definitions (LECO)
 
@@ -79,10 +71,6 @@ def create_remote_connection_params() -> list[dict]:
              'value': config('utils', 'network', 'leco-server', 'port')},
         ]},
     ]
-
-
-
-
 class ControlModule(QObject):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
 
@@ -170,8 +158,6 @@ class ControlModule(QObject):
         """Get back info (using the ThreadCommand object) from the hardware
 
         And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
-
-
         Parameters
         ----------
         status: ThreadCommand
@@ -333,8 +319,6 @@ class ControlModule(QObject):
                         attr(value)
                     else:
                         attr = value
-
-
 class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
     """Base class for a control module with parameters."""
 
@@ -613,8 +597,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                     self._leco_commands_signal.emit(
                         ThreadCommand(LECOCommands.SEND_INFO,
                                       ParameterWithPath(param, path)))
-
-
     def get_leco_name(self) -> str:
         name = (self.settings["main_settings", "leco", "leco_name"] or
                 self.settings["main_settings", "module_name"] or
@@ -628,8 +610,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         port = (self.settings["main_settings", "leco", "port"] or 12300)
 
         return host, port
-
-
     @Slot(ThreadCommand)
     def process_leco_commands(self, status: ThreadCommand) -> Optional[ThreadCommand]:
         """Process LECO commands common to all control modules.
@@ -660,8 +640,6 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             # not handled
             return status
         return None
-
-
 class DAQ_Hardware_Base(QObject):
     """Abstract base shared by DAQ_Move_Hardware and DAQ_Viewer_Hardware.
 
@@ -672,14 +650,12 @@ class DAQ_Hardware_Base(QObject):
     Subclasses must implement:
         ini_hardware(params_state, controller) -> edict
         close() -> str
-    and set class attributes:
-        _kind: str               e.g. 'actuator' or 'detector'
+    and set class attribute:
         _plugin_settings_key: str  e.g. 'move_settings' or 'detector_settings'
     """
 
     status_sig = Signal(ThreadCommand)
 
-    _kind: str = 'hardware'
     _plugin_settings_key: str = ''
 
     def __init__(self, title: str, plugin_name: str) -> None:

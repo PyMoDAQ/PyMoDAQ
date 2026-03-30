@@ -803,7 +803,6 @@ class DAQ_Move_Hardware(DAQ_Hardware_Base):
     ================== ========================
     """
 
-    _kind = 'actuator'
     _plugin_settings_key = 'move_settings'
 
     def __init__(self, actuator_type, position: DataActuator, title="actuator"):

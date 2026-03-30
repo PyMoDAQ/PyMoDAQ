@@ -360,7 +360,7 @@ class DAQ_Viewer(ParameterControlModule):
     #  Methods for running the acquisition
 
     def _create_hardware(self):
-        return DAQ_Detector(self._title, self.settings, self.detector)
+        return DAQ_Viewer_Hardware(self._title, self.settings, self.detector)
 
     def _setup_hardware_thread(self, hardware):
         if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
@@ -1011,7 +1011,7 @@ class DAQ_Viewer(ParameterControlModule):
             super().process_leco_commands(status=status)
 
 
-class DAQ_Detector(DAQ_Hardware_Base):
+class DAQ_Viewer_Hardware(DAQ_Hardware_Base):
     """ Worker class to control the instrument plugin
 
     Attributes
@@ -1026,7 +1026,6 @@ class DAQ_Detector(DAQ_Hardware_Base):
     data_detector_sig = Signal(DataToExport)
     data_detector_temp_sig = Signal(DataToExport)
 
-    _kind = 'detector'
     _plugin_settings_key = 'detector_settings'
 
     def __init__(self, title, settings_parameter, detector: SelectedModule):
