@@ -72,7 +72,6 @@ class Configurator(ManagerBase):
 
 
         self.max_history_size = config('launcher', 'max_history_size')
-        print(f"max history size : {self.max_history_size}")
 
 
     @property
