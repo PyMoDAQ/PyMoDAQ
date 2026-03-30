@@ -337,7 +337,7 @@ class ManagerBase(CustomExt):
             combo,
             property_map={
                 'items': {
-                    'signal': combo.items_changed,  
+                    'signal': combo.items_changed,
                     'getter': combo.get_items,
                     'setter': combo.set_items,
                     'mode': SyncMode.BIDIRECTIONAL
@@ -366,12 +366,11 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         self.do_things_for_new_creation()
-        if ok and entry != '':
-            if self.save_check(entry, bypass_dialog=bypass_dialog):
-                self.entries_sync.append_to_list('items', entry)
-                self.entries_sync.update_key('current', entry)
-                self.update_action_list()
-                self.new_entry.emit(entry)
+        if ok and entry != '' and self.save_check(entry, bypass_dialog=bypass_dialog):
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
+            self.update_action_list()
+            self.new_entry.emit(entry)
 
     def do_things_for_new_creation(self):
         """ To be reimplemented if needed """
@@ -382,8 +381,7 @@ class ManagerBase(CustomExt):
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
             entry_path = self.entry_filepath
-        if entry_path.exists():
-            if not bypass_dialog:
+        if entry_path.exists() and not bypass_dialog:
                 user_agreed = dialog(
                     title='Overwrite confirmation',
                     message='File exist do you want to overwrite it ?',
