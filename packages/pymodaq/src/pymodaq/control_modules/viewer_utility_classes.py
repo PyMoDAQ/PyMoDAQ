@@ -333,7 +333,6 @@ class DAQ_Viewer_base(QObject):
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
-            QtWidgets.QApplication.processEvents()
         else:
             print(status)
 

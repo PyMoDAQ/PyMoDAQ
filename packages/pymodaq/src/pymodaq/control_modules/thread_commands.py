@@ -1,6 +1,16 @@
 from pymodaq_utils.enums import StrEnum
 
 
+class ControleModuleType(StrEnum):
+    DAQ_MOVE = 'DAQ_Move'
+    DAQ_VIEWER = 'DAQ_Viewer'
+
+
+class ControllerStatus(StrEnum):
+    MASTER = 'Master'
+    SLAVE = 'Slave'
+
+
 class ThreadStatus(StrEnum):
     """ Allowed Generic commands sent from a plugin using the method: emit_status
 
@@ -18,6 +28,14 @@ class ThreadStatus(StrEnum):
     RAISE_TIMEOUT = 'raise_timeout'
     SHOW_SPLASH = 'show_splash'
     CLOSE_SPLASH = 'close_splash'
+    INI_HARDWARE = 'ini_hardware'   # unified replacement for INI_STAGE / INI_DETECTOR
+    STOP = 'stop'                   # unified replacement for ThreadStatusMove.STOP / ThreadStatusViewer.STOP
+
+
+class ControlToHardware(StrEnum):
+    """Commands common to both DAQ_Move_Hardware and DAQ_Viewer_Hardware workers."""
+    INI_HARDWARE = 'ini_hardware'
+    CLOSE        = 'close'
 
 
 class ThreadStatusMove(StrEnum):
@@ -29,12 +47,12 @@ class ThreadStatusMove(StrEnum):
     --------
     DAQ_Move.thread_status
     """
-    INI_STAGE = 'ini_stage'
+    INI_STAGE = 'ini_stage'         # deprecated: use ThreadStatus.INI_HARDWARE
     GET_ACTUATOR_VALUE = 'get_actuator_value'
     MOVE_DONE = 'move_done'
     OUT_OF_BOUNDS = 'outofbounds'
     SET_ALLOWED_VALUES = 'set_allowed_values'
-    STOP = 'stop'
+    STOP = 'stop'                   # deprecated: use ThreadStatus.STOP
     UNITS = 'units'
 
 
@@ -47,12 +65,12 @@ class ThreadStatusViewer(StrEnum):
     --------
     DAQ_Viewer.thread_status
     """
-    INI_DETECTOR = 'ini_detector'
+    INI_DETECTOR = 'ini_detector'   # deprecated: use ThreadStatus.INI_HARDWARE
     GRAB = 'grab'
     GRAB_STOPPED = 'grab_stopped'
     INI_LCD = 'init_lcd'
     LCD = 'lcd'
-    STOP = 'stop'
+    STOP = 'stop'                   # deprecated: use ThreadStatus.STOP
     UPDATE_CHANNELS = 'update_channels'
 
 
@@ -74,7 +92,7 @@ class ControlToHardwareMove(StrEnum):
     CLOSE = 'close'
 
 class ControlToHardwareViewer(StrEnum):
-    """ Allowed commands sent from a DAQ_Viewer to its DAQ_Detector in another thread
+    """ Allowed commands sent from a DAQ_Viewer to its DAQ_Viewer_Hardware in another thread
      using the method: command_hardware
 
     Valid only for DAQ_Viewer command_hardware commands

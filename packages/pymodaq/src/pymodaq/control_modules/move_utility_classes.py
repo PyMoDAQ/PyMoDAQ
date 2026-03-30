@@ -458,7 +458,6 @@ class DAQ_Move_base(QObject):
                 self.settings.child('controller', 'axis').setValue(name)
             elif isinstance(limits, dict):
                 self.settings.child('controller', 'axis').setValue(limits[name])
-            QtWidgets.QApplication.processEvents()
             self.axis_unit = self.axis_unit
             self.settings.child('epsilon').setValue(self.epsilon)
             if self.controller is not None:
@@ -477,7 +476,6 @@ class DAQ_Move_base(QObject):
     @axis_names.setter
     def axis_names(self, names: Union[List, Dict]):
         self.settings.child('controller', 'axis').setLimits(names)
-        QtWidgets.QApplication.processEvents()
 
     @property
     def axis_value(self) -> int:
@@ -680,7 +678,6 @@ class DAQ_Move_base(QObject):
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
-            QtWidgets.QApplication.processEvents()
         else:
             print(status)
 
