@@ -198,9 +198,7 @@ class ManagerBase(CustomExt):
     @property
     def entry_filepath(self) -> Path:
         """ Get the full path of the current entry file """
-        kwargs_to_entry_folder = {}  # reimplement if needed
-        return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-            self.entry + self.entry_extension)
+        return self.entry_path_from_name(self.entry)
 
     def entry_path_from_name(self, entry_name: str) -> Path:
         kwargs_to_entry_folder = {}  # reimplement if needed
@@ -500,13 +498,13 @@ class ManagerBase(CustomExt):
         return False
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        """ Update the table given the entry argument"""
+        """ Load and display the given entry """
         if entry is None:
+            if self.entry is None:
+                return
             entry = self.entry_filepath
-
-        if isinstance(entry, str):
-            self.entry = entry  # make sure the current entry field reflects this method argument
-            entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
+        elif isinstance(entry, str):
+            entry = self.entry_path_from_name(entry)
 
         self.entry = entry.stem  # make sure the combo is updated (if triggered not from the combo, in particular the action slots)
 
