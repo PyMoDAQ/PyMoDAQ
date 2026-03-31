@@ -101,6 +101,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def statusbar(self) -> QtWidgets.QStatusBar | None:
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
 
+    def update_status(self, message: str, laps_ms = 500):
+        self.statusbar.showMessage(message, laps_ms)
+
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
         if not hasattr(self, "_splash_sc") or self._splash_sc is None:
