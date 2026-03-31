@@ -81,7 +81,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.move_rel_minus_pb: PushButtonIcon = None
         self.stop_pb: PushButtonIcon = None
         self.get_value_pb: PushButtonIcon = None
-        self.statusbar: QtWidgets.QStatusBar = None
 
         self.control_widget: QtWidgets.QWidget = None
         self.graph_widget: QtWidgets.QWidget = None
@@ -249,7 +248,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
         self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
         self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
-        self.statusbar = QtWidgets.QStatusBar()
+
         self.statusbar.setMaximumHeight(30)
 
         self.graph_widget = QtWidgets.QWidget()
