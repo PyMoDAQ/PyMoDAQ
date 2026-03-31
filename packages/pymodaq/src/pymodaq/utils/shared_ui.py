@@ -40,6 +40,7 @@ config =  Config()
 
 
 class MenuNames(StrEnum):
+    FILE = 'file'
     SETTINGS = 'settings'
     HELP = 'help'
 
@@ -132,8 +133,11 @@ class SharedUI(CustomApp):
         if isinstance(app, CustomApp):
             for menu in app.menus:
                 if menu.title() in menus_dict: # two main menus with identical names (titles)
+                    #adds the app menu action to the shared ui menu
                     menus_dict[menu.title()].addSeparator()
                     menus_dict[menu.title()].addActions(menu.actions())
+                    #then remove the app menu from the menubar
+                    self.menubar.removeAction(menu.menuAction())
                 else:
                     self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
                                             menu)
@@ -195,14 +199,18 @@ class SharedUI(CustomApp):
         Create the menubar object looking like :
         """
        # menubar.clear()
+        # %% create File menu
+        file_menu = self.add_menu(MenuNames.FILE, 'File', menubar)
+        file_menu.addAction(self.get_action("log"))
+        file_menu.addSeparator()
+        file_menu.addAction(self.get_action("quit"))
+        file_menu.addAction(self.get_action("restart"))
 
         # %% create Settings menu
         settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
-        settings_menu.addAction(self.get_action("log"))
+
         settings_menu.addAction(self.get_action("config"))
-        settings_menu.addSeparator()
-        settings_menu.addAction(self.get_action("quit"))
-        settings_menu.addAction(self.get_action("restart"))
+
 
 
         settings_menu.addAction(self.get_action("leco"))
