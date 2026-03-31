@@ -72,6 +72,7 @@ class Configurator(ManagerBase):
 
 
         self.max_history_size = config('launcher', 'max_history_size')
+        self.keep_duplicates_items_history = config('launcher', 'keep_duplicates')
 
 
     @property
@@ -457,11 +458,11 @@ class Configurator(ManagerBase):
         else:
             existing = {}
 
-
-        new_dict = {key :value for i, (key, value) in enumerate(existing.items())
+        new_dict = {key: value for i, (key, value) in enumerate(existing.items())
                     if i >= len(existing) - self.max_history_size + 1
-                    and (value['preset'] != entry[str(date)]['preset']
-                    or value['configurator'] != entry[str(date)]['configurator'])
+                    and (self.keep_duplicates_items_history
+                         or (value['preset'] != entry[str(date)]['preset']
+                             or value['configurator'] != entry[str(date)]['configurator']))
                     }
         new_dict.update(entry)
 
