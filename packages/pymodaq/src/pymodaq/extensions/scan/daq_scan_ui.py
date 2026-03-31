@@ -137,9 +137,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         splitter_v_widget.setSizes([400, 400])
         splitter_widget.addWidget(settings_widget)
 
-
-        self._statusbar = QtWidgets.QStatusBar()
-        self.mainwindow.setStatusBar(self._statusbar)
         self.populate_status_bar()
 
         self.settings_toolbox = QtWidgets.QToolBox()
@@ -199,16 +196,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._swmr_label.setToolTip('SWMR mode status')
         self._swmr_label.setVisible(False)
 
-        self._statusbar.addPermanentWidget(self._status_message_label)
+        self.statusbar.addPermanentWidget(self._status_message_label)
 
-        self._statusbar.addPermanentWidget(self._n_scan_steps_sb)
-        self._statusbar.addPermanentWidget(self._indice_scan_sb)
-        self._statusbar.addPermanentWidget(self._indice_average_sb)
+        self.statusbar.addPermanentWidget(self._n_scan_steps_sb)
+        self.statusbar.addPermanentWidget(self._indice_scan_sb)
+        self.statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
-        self._statusbar.addPermanentWidget(self._scan_done_LED)
-        self._statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
-        self._statusbar.addPermanentWidget(self._file_open_LED)
-        self._statusbar.addPermanentWidget(self._swmr_label)
+        self.statusbar.addPermanentWidget(self._scan_done_LED)
+        self.statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
+        self.statusbar.addPermanentWidget(self._file_open_LED)
+        self.statusbar.addPermanentWidget(self._swmr_label)
 
     @property
     def n_scan_steps(self):
@@ -219,7 +216,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._n_scan_steps_sb.setValue(nsteps)
 
     def display_status(self, status: str, wait_time=1000):
-        self._statusbar.showMessage(status, wait_time)
+        self.statusbar.showMessage(status, wait_time)
         
     def set_permanent_status(self, status: str):
         self._status_message_label.setText(status)
