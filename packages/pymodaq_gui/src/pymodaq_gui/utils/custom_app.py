@@ -72,12 +72,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.dockarea: DockArea = None
             self.mainwindow: QtWidgets.QMainWindow = None
 
+
         self._title: str = ''
         self.title = title
 
         self.docks: Dict[str, Dock] = dict([])
-        self.statusbar = None
+        self._statusbar = QtWidgets.QStatusBar()
         self._menubar: QtWidgets.QMenuBar = None
+
         if toolbar is None:
             toolbar = QtWidgets.QToolBar(self.title)
         self.set_toolbar(toolbar) # create self._toolbar
@@ -86,7 +88,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.mainwindow.setWindowTitle(self.title)
             self.mainwindow.addToolBar(self._toolbar)
             self._menubar = self.mainwindow.menuBar()
-            self.statusbar = self.mainwindow.statusBar()
+            self.mainwindow.setStatusBar(self._statusbar)
             self.reference_toolbar('main', self._toolbar)
         else:
             parent.setWindowTitle(self.title)
@@ -94,6 +96,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     @property
     def menubar(self):
         return self._menubar
+
+    @property
+    def statusbar(self):
+        return self._statusbar
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:
