@@ -33,7 +33,7 @@ class ThreadStatus(StrEnum):
 
 
 class ControlToHardware(StrEnum):
-    """Commands common to both DAQ_Move_Hardware and DAQ_Viewer_Hardware workers."""
+    """Commands common to both ActuatorWorker and DetectorWorker workers."""
     INI_HARDWARE = 'ini_hardware'
     CLOSE        = 'close'
 
@@ -76,7 +76,7 @@ class ThreadStatusViewer(StrEnum):
 
 
 class ControlToHardwareMove(StrEnum):
-    """ Allowed commands sent from a DAQ_Move to its DAQ_Move_Hardware in another thread
+    """ Allowed commands sent from a DAQ_Move to its ActuatorWorker in another thread
      using the method: command_hardware
 
     Valid only for DAQ_Move command_hardware commands
@@ -92,7 +92,7 @@ class ControlToHardwareMove(StrEnum):
     CLOSE = 'close'
 
 class ControlToHardwareViewer(StrEnum):
-    """ Allowed commands sent from a DAQ_Viewer to its DAQ_Viewer_Hardware in another thread
+    """ Allowed commands sent from a DAQ_Viewer to its DetectorWorker in another thread
      using the method: command_hardware
 
     Valid only for DAQ_Viewer command_hardware commands

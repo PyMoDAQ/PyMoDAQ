@@ -152,8 +152,8 @@ class DataMixer(CustomExt):
     def create_computed_detectors(self):
         try:
             self.dashboard.add_det_from_extension('DataMixer', 'DAQ0D', 'DataMixer', self)
-            self.dashboard.modules_manager.get_mod_from_name(
-                'DataMixer', 'det').settings.child('detector_settings', 'overridden_detectors').setOpts(
+            datamixer_mod = self.dashboard.modules_manager.get_mod_from_name('DataMixer', 'det')
+            datamixer_mod.settings.child(datamixer_mod._hw_settings_name, 'overridden_detectors').setOpts(
                 limits=self.modules_manager.selected_detectors_name)
             self.set_action_enabled('create_computed_detectors', False)
             #self.dashboard.override_det_from_extension(self.modules_manager.selected_detectors_name)

@@ -324,12 +324,17 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
 
     _update_settings_signal = Signal(edict)
 
-    # Subclasses must define the name of their hardware-settings parameter group,
-    # e.g. "move_settings" for DAQ_Move and "detector_settings" for DAQ_Viewer.
-    _hw_settings_name: str = ''
+    # Subclasses set _hw_kind to the short module kind name (e.g. 'actuator', 'detector').
+    # The full settings key is derived automatically as "<kind>_settings".
+    _hw_kind: str = ''
 
-    # Name of the UI property that reflects the init state, e.g. 'actuator_init' / 'detector_init'.
-    _ui_init_attr: str = ''
+    @property
+    def _hw_settings_name(self) -> str:
+        return f"{self._hw_kind}_settings"
+
+    @property
+    def _ui_init_attr(self) -> str:
+        return f"{self._hw_kind}_init"
 
     def __init__(self, listener_class = Type[ActorListener], **kwargs):
         ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
@@ -640,8 +645,131 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             # not handled
             return status
         return None
-class DAQ_Hardware_Base(QObject):
-    """Abstract base shared by DAQ_Move_Hardware and DAQ_Viewer_Hardware.
+class PluginBase(QObject):
+    """Common base class for DAQ_Move_base and DAQ_Viewer_base.
+
+    Provides the shared __init__ scaffold (settings tree, param restore, parent link),
+    emit_status, send_param_status, update_settings, is_master, and
+    ini_controller_init (master/slave pattern).
+
+    Subclasses call super().__init__() then add their specific state, and call
+    self.ini_attributes() at the appropriate point in their own __init__.
+    """
+
+    params = []
+
+    def __init__(self, parent=None, params_state=None):
+        QObject.__init__(self)
+        self.parent_parameters_path = []
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
+        if params_state is not None:
+            if isinstance(params_state, dict):
+                self.settings.restoreState(params_state)
+            elif isinstance(params_state, Parameter):
+                self.settings.restoreState(params_state.saveState())
+        self.settings.sigTreeStateChanged.connect(self.send_param_status)
+        self.parent = parent
+        self.status = edict(info="", controller=None, initialized=False)
+        self.controller = None
+        if parent is not None:
+            self._title = parent.title
+        else:
+            self._title = "myplugin"
+        # Note: ini_attributes() is NOT called here; each subclass calls it
+        # after setting up its own state.
+
+    @property
+    def is_master(self) -> bool:
+        """True when this plugin is the controller master."""
+        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
+
+    def ini_attributes(self):
+        """Hook called at the end of each subclass __init__ for plugin-specific setup."""
+        pass
+
+    def commit_settings(self, param: Parameter):
+        """Hook called after every settings change; override to push changes to hardware."""
+        pass
+
+    def emit_status(self, status: ThreadCommand):
+        """Emit *status* back to the parent worker thread signal, or print if standalone."""
+        if self.parent is not None:
+            self.parent.status_sig.emit(status)
+        else:
+            print(status)
+
+    def ini_controller_init(self, old_controller=None, new_controller=None,
+                            slave_controller=None):
+        """Handle master/slave controller initialization.
+
+        Parameters
+        ----------
+        old_controller:
+            An already-initialized controller coming from a previously initialized plugin
+            (Slave case). Deprecated alias: pass via *slave_controller* instead.
+        new_controller:
+            The freshly created controller instance (Master case).
+        slave_controller:
+            Preferred keyword for the Slave controller; takes precedence over
+            *old_controller* when provided.
+        """
+        if old_controller is None and slave_controller is not None:
+            old_controller = slave_controller
+        self.status.update(edict(info="", controller=None, initialized=False))
+        if not self.is_master:
+            if old_controller is None:
+                raise Exception('no controller has been defined externally while this is a slave one')
+            controller = old_controller
+        else:
+            controller = new_controller
+        self.controller = controller
+        return controller
+
+    def send_param_status(self, param, changes):
+        """Forward settings-tree changes to the main GUI via the parent status signal."""
+        for param, change, data in changes:
+            path = self.settings.childPath(param)
+            if change == 'childAdded':
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path,
+                                                [data[0].saveState(), data[1]], change]))
+            elif change in ('value', 'limits', 'options'):
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
+                                               [self.parent_parameters_path + path, data, change]))
+            elif change == 'parent':
+                pass
+
+    @Slot(edict)
+    def update_settings(self, settings_parameter_dict):
+        """Receive a settings change from the GUI and apply it to the local settings tree."""
+        try:
+            path = settings_parameter_dict['path']
+            param = settings_parameter_dict['param']
+            change = settings_parameter_dict['change']
+            try:
+                self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
+            except Exception:
+                pass
+            if change == 'value':
+                self.settings.child(*path[1:]).setValue(param.value())
+            elif change == 'childAdded':
+                child = Parameter.create(name='tmp')
+                child.restoreState(param.saveState())
+                self.settings.child(*path[1:]).addChild(child)
+                param = child
+            elif change == 'parent':
+                children = putils.get_param_from_name(self.settings, param.name())
+                if children is not None:
+                    path = putils.get_param_path(children)
+                    self.settings.child(*path[1:-1]).removeChild(children)
+            self.settings.sigTreeStateChanged.connect(self.send_param_status)
+            self.commit_settings(param)
+        except Exception as e:
+            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
+
+
+class HardwareWorkerBase(QObject):
+    """Abstract base shared by ActuatorWorker and DetectorWorker.
 
     Provides common signals, a unified plugin reference, shared update_settings
     dispatch, and a queue_command handler for the commands that both
@@ -651,12 +779,19 @@ class DAQ_Hardware_Base(QObject):
         ini_hardware(params_state, controller) -> edict
         close() -> str
     and set class attribute:
-        _plugin_settings_key: str  e.g. 'move_settings' or 'detector_settings'
+        _kind: str  e.g. 'actuator' or 'detector'
+    The settings key is derived automatically as "<kind>_settings".
     """
 
     status_sig = Signal(ThreadCommand)
 
-    _plugin_settings_key: str = ''
+    # Subclasses set _kind to 'actuator' or 'detector'.
+    # _plugin_settings_key is derived automatically as "<kind>_settings".
+    _kind: str = ''
+
+    @property
+    def _plugin_settings_key(self) -> str:
+        return f"{self._kind}_settings"
 
     def __init__(self, title: str, plugin_name: str) -> None:
         super().__init__()

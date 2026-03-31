@@ -1163,7 +1163,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                                 val
                                 * 1
                                 * module.settings.child(
-                                    "move_settings", "epsilon"
+                                    module._hw_settings_name, "epsilon"
                                 ).value()
                             )
 

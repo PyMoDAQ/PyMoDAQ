@@ -139,7 +139,7 @@ class LECODirector:
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
         """ Write the value of a param updated from the actor to here in the
-        Parameter with path: ('move_settings', 'settings_client')
+        Parameter with path: ('actuator_settings', 'settings_client')
         """
         GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
         assert additional_payload

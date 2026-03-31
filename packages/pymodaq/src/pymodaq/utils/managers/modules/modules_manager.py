@@ -1,4 +1,5 @@
 from typing import List, Union, TYPE_CHECKING, Optional, Sequence
+from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 
 from qtpy.QtCore import QObject, Signal, Slot
 from qtpy import QtWidgets
@@ -338,7 +339,7 @@ class ModulesManager(QObject, ParameterManager):
         if check_do_override and 'DataMixer' in self.selected_detectors_name:
             overridden_detectors = self.get_mod_from_name(
                 'DataMixer', ModuleType.Detector).settings.child(
-                'detector_settings', 'overridden_detectors').opts['limits']
+                DETECTOR_SETTINGS_KEY, 'overridden_detectors').opts['limits']
         else:
             overridden_detectors = []
 

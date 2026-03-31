@@ -1,4 +1,7 @@
+import warnings
 from typing import Union, TYPE_CHECKING
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
+from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 from pathlib import Path
 import sys
 
@@ -369,23 +372,37 @@ class PresetManager(ManagerBase):
             if plug["type"] == "det":
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "detector_settings", "controller_ID"
+                        "params", DETECTOR_SETTINGS_KEY, "controller_ID"
                     ]
                     plug["status"] = plug["value"][
-                        "params", "detector_settings", "controller_status"
+                        "params", DETECTOR_SETTINGS_KEY, "controller_status"
                     ]
                 except KeyError as e:
                     raise DetectorError
             else:
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID"
+                        "params", ACTUATOR_SETTINGS_KEY, "multiaxes", "controller_ID"
                     ]
                     plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status"
+                        "params", ACTUATOR_SETTINGS_KEY, "multiaxes", "multi_status"
                     ]
-                except KeyError as e:
-                    raise ActuatorError
+                except KeyError:
+                    try:
+                        warnings.warn(
+                            "'move_settings' is deprecated and will be removed in a future version. "
+                            "Use 'actuator_settings' instead. Please resave your preset.",
+                            DeprecationWarning,
+                            stacklevel=2,
+                        )
+                        plug["ID"] = plug["value"][
+                            "params", "move_settings", "multiaxes", "controller_ID"
+                        ]
+                        plug["status"] = plug["value"][
+                            "params", "move_settings", "multiaxes", "multi_status"
+                        ]
+                    except KeyError as e:
+                        raise ActuatorError
 
         IDs = list(set([plug["ID"] for plug in plugins]))
         # %%

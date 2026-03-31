@@ -1,4 +1,5 @@
 import abc
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from typing import List,  Optional
 import tempfile
 from pathlib import Path
@@ -107,7 +108,7 @@ def optimizer_params(prediction_params: list[dict]):
              {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
              {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
          ]},
-        {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
+        {'title': 'Actuator settings:', 'name': ACTUATOR_SETTINGS_KEY, 'expanded': True, 'type': 'group',
          'visible': False, 'children': [
             {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
 

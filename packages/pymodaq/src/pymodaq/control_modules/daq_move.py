@@ -37,7 +37,7 @@ from pymodaq_gui.qt_utils import mkQApp
 
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.control_modules.instruments import ACTUATOR_TYPES, ACTUATOR_NAMES
-from pymodaq.control_modules.utils import ParameterControlModule, DAQ_Hardware_Base
+from pymodaq.control_modules.utils import ParameterControlModule, HardwareWorkerBase
 
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusMove, ControlToHardware,
                                                      ControlToHardwareMove, UiToMainMove,
@@ -88,8 +88,7 @@ class DAQ_Move(ParameterControlModule):
     """
 
     settings_name = "daq_move_settings"
-    _hw_settings_name = "move_settings"
-    _ui_init_attr = 'actuator_init'
+    _hw_kind = 'actuator'
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
 
     move_done_signal = Signal(DataActuator)
@@ -400,7 +399,7 @@ class DAQ_Move(ParameterControlModule):
         self._refresh_timer.stop()
 
     def _create_hardware(self):
-        return DAQ_Move_Hardware(self._actuator_type, self._current_value, self._title)
+        return ActuatorWorker(self._actuator_type, self._current_value, self._title)
 
     @property
     def move_done_bool(self):
@@ -665,11 +664,11 @@ class DAQ_Move(ParameterControlModule):
     @property
     def units(self):
         """Get/Set the units for the controller"""
-        return self.settings["move_settings", "units"]
+        return self.settings[self._hw_settings_name, "units"]
 
     @units.setter
     def units(self, unit: str):
-        self.settings.child("move_settings", "units").setValue(unit)
+        self.settings.child(self._hw_settings_name, "units").setValue(unit)
         if self.ui is not None and config("pymodaq", "actuator", "display_units"):
             unit = self.get_unit_to_display(unit)
             self.ui.set_unit_as_suffix(unit)
@@ -681,13 +680,13 @@ class DAQ_Move(ParameterControlModule):
     @property
     def axis_names(self) -> Union[List, Dict]:
         """ Get the names of all possible axis"""
-        return self.settings.child('move_settings', 'controller', 'axis').opts['limits']
+        return self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
 
     @property
     def axis_name(self) -> str:
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
-        val = self.settings['move_settings', 'controller', 'axis']
+        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
+        val = self.settings[self._hw_settings_name, 'controller', 'axis']
         if isinstance(limits, list):
             return val
         elif isinstance(limits, dict):
@@ -699,7 +698,7 @@ class DAQ_Move(ParameterControlModule):
     @axis_name.setter
     def axis_name(self, name: str):
         """ Get/Set the current axis"""
-        limits = self.settings.child('move_settings', 'controller', 'axis').opts['limits']
+        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
         if name in limits:
             if isinstance(limits, list):
                 value = name
@@ -707,7 +706,7 @@ class DAQ_Move(ParameterControlModule):
                 value = limits[name]
             else:
                 return
-            self.settings.child('move_settings', 'controller', 'axis').setValue(value)
+            self.settings.child(self._hw_settings_name, 'controller', 'axis').setValue(value)
 
     @staticmethod
     def get_unit_to_display(unit: str) -> str:
@@ -740,7 +739,7 @@ class DAQ_Move(ParameterControlModule):
         self.settings.child("main_settings", "move_type").setValue(self._actuator_type)
         self.settings.child("main_settings", "module_name").setValue(self._title)
         try:
-            for child in self.settings.child("move_settings").children():
+            for child in self.settings.child(self._hw_settings_name).children():
                 child.remove()
             parent_module = utils.find_dict_in_list_from_key_val(
                 ACTUATOR_TYPES, "name", self._actuator_type
@@ -751,10 +750,10 @@ class DAQ_Move(ParameterControlModule):
             )
             params = getattr(class_, "params")
             move_params = Parameter.create(
-                name="move_settings", type="group", children=params
+                name=self._hw_settings_name, type="group", children=params
             )
 
-            self.settings.child("move_settings").addChildren(move_params.children())
+            self.settings.child(self._hw_settings_name).addChildren(move_params.children())
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -789,7 +788,7 @@ class DAQ_Move(ParameterControlModule):
             super().process_leco_commands(status=status)
 
 
-class DAQ_Move_Hardware(DAQ_Hardware_Base):
+class ActuatorWorker(HardwareWorkerBase):
     """Worker class mediating between DAQ_Move and the actuator plugin instance.
 
     ================== ========================
@@ -803,7 +802,7 @@ class DAQ_Move_Hardware(DAQ_Hardware_Base):
     ================== ========================
     """
 
-    _plugin_settings_key = 'move_settings'
+    _kind = 'actuator'
 
     def __init__(self, actuator_type, position: DataActuator, title="actuator"):
         super().__init__(title, actuator_type)

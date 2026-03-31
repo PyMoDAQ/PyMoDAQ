@@ -24,7 +24,7 @@ from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.control_modules.utils import ParameterControlModule, DAQ_Hardware_Base
+from pymodaq.control_modules.utils import ParameterControlModule, HardwareWorkerBase
 
 from pymodaq_gui.utils.file_io import select_file
 from pymodaq_gui.utils.widgets.lcd import LCD
@@ -95,8 +95,7 @@ class DAQ_Viewer(ParameterControlModule):
     create if one want to receive infos from the ROI
     """
     settings_name = 'daq_viewer_settings'
-    _hw_settings_name = 'detector_settings'
-    _ui_init_attr = 'detector_init'
+    _hw_kind = 'detector'
     _ini_hw_cmd = ControlToHardware.INI_HARDWARE
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer is used for a custom module
 
@@ -360,7 +359,7 @@ class DAQ_Viewer(ParameterControlModule):
     #  Methods for running the acquisition
 
     def _create_hardware(self):
-        return DAQ_Viewer_Hardware(self._title, self.settings, self.detector)
+        return DetectorWorker(self._title, self.settings, self.detector)
 
     def _setup_hardware_thread(self, hardware):
         if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
@@ -891,13 +890,13 @@ class DAQ_Viewer(ParameterControlModule):
         """
 
         try:
-            if len(self.settings.child('detector_settings').children()) > 0:
-                for child in self.settings.child('detector_settings').children():
+            if len(self.settings.child(self._hw_settings_name).children()) > 0:
+                for child in self.settings.child(self._hw_settings_name).children():
                     child.remove()
 
             det_params, _class = get_viewer_plugins(self.detector.daq_type.name,
                                                     self.detector.module_name)
-            self.settings.child('detector_settings').addChildren(det_params.children())
+            self.settings.child(self._hw_settings_name).addChildren(det_params.children())
             self.settings.child('main_settings', 'module_name').setValue(self._title)
         except Exception as e:
             self.logger.exception(str(e))
@@ -942,7 +941,7 @@ class DAQ_Viewer(ParameterControlModule):
         ----------
         status: ThreadCommand
             The info returned from the hardware, the command (str) can be either:
-                * ini_detector: update the status with "detector initialized" value and init state if attribute not null.
+                * ini_hardware: update the status with "Viewer initialized" value and init state if attribute not null.
                 * grab : emit grab_status(True)
                 * grab_stopped: emit grab_status(False)
                 * init_lcd: display a LCD panel
@@ -952,7 +951,7 @@ class DAQ_Viewer(ParameterControlModule):
         super().thread_status(status)
 
         if status.command == ThreadStatus.INI_HARDWARE or status.command == ThreadStatusViewer.INI_DETECTOR:
-            self.update_status("detector initialized: " + str(status.attribute['initialized']))
+            self.update_status("Viewer initialized: " + str(status.attribute['initialized']))
             if self.ui is not None:
                 self.ui.detector_init = status.attribute['initialized']
             if status.attribute['initialized']:
@@ -1011,7 +1010,7 @@ class DAQ_Viewer(ParameterControlModule):
             super().process_leco_commands(status=status)
 
 
-class DAQ_Viewer_Hardware(DAQ_Hardware_Base):
+class DetectorWorker(HardwareWorkerBase):
     """ Worker class to control the instrument plugin
 
     Attributes
@@ -1026,7 +1025,7 @@ class DAQ_Viewer_Hardware(DAQ_Hardware_Base):
     data_detector_sig = Signal(DataToExport)
     data_detector_temp_sig = Signal(DataToExport)
 
-    _plugin_settings_key = 'detector_settings'
+    _kind = 'detector'
 
     def __init__(self, title, settings_parameter, detector: SelectedModule):
         super().__init__(title, detector.module_name)

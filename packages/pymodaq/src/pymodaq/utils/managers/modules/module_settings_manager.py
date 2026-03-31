@@ -1,4 +1,7 @@
+import warnings
 from typing import TYPE_CHECKING, Type
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
+from pymodaq.control_modules.viewer_utility_classes import HW_SETTINGS_KEY as DETECTOR_SETTINGS_KEY
 from importlib import import_module
 
 
@@ -104,11 +107,20 @@ class SettingsManager:
 
         if module_type == ModuleType.Actuator:
             params = DAQ_Move.params
-            params_actuator = find_dict_in_list_from_key_val(params, 'name', 'move_settings')
+            params_actuator = find_dict_in_list_from_key_val(params, 'name', ACTUATOR_SETTINGS_KEY)
+            if params_actuator is None:
+                params_actuator = find_dict_in_list_from_key_val(params, 'name', 'move_settings')
+                if params_actuator is not None:
+                    warnings.warn(
+                        "'move_settings' is deprecated and will be removed in a future version. "
+                        f"Use '{ACTUATOR_SETTINGS_KEY}' instead. Please resave your preset.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
             params_actuator['children'] = module.params
         elif module_type == ModuleType.Detector:
             params = DAQ_Viewer.params
-            params_actuator = find_dict_in_list_from_key_val(params, 'name', 'detector_settings')
+            params_actuator = find_dict_in_list_from_key_val(params, 'name', DETECTOR_SETTINGS_KEY)
             params_actuator['children'] = module.params
         else:
             params = []
