@@ -37,8 +37,8 @@ logger = set_logger(get_module_name(__file__))
 
 class EnumToolTip(StrEnum):
     DASHBOARD = 'Launch an empty Dashboard without configuration'
-    VIEWER = 'Launch an empty Viewer'
-    MOVE = 'Launch an empty DAQ_Move'
+    DAQ_VIEWER = 'Launch an empty Viewer'
+    DAQ_MOVE = 'Launch an empty DAQ_Move'
     H5BROWSER = 'Launch H5Browser'
     BACK_HISTORY = 'Navigate to the back item of presets history'
     NEXT_HISTORY = 'Navigate to the next item of presets history'
@@ -82,8 +82,8 @@ class Launcher(CustomApp):
 
         # Launcher
         self.dashboard_button = QPushButton("Dashboard")
-        self.viewer_button = QPushButton("Viewer")
-        self.move_button = QPushButton("Move")
+        self.viewer_button = QPushButton("DAQ Viewer")
+        self.move_button = QPushButton("DAQ Move")
         self.h5browser_button = QPushButton("H5Browser")
 
         # Loader
@@ -119,10 +119,10 @@ class Launcher(CustomApp):
         subclass method from ActionManager
         '''
         self.add_action('launch_dashboard', 'Launch empty dashboard', '',
-                        EnumToolTip.DASHBOARD, auto_toolbar=True,
-                        toolbar='launcher')
-        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.VIEWER, auto_toolbar=False)
-        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.MOVE, auto_toolbar=False)
+                        EnumToolTip.DASHBOARD, auto_toolbar=True
+                        )
+        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.DAQ_VIEWER, auto_toolbar=False)
+        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.DAQ_MOVE, auto_toolbar=False)
         self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
 
         self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True,
@@ -236,20 +236,25 @@ class Launcher(CustomApp):
 
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
-        self.launcher_vbox.addWidget(self.dashboard_button)
-        self.launcher_vbox.addWidget(self.viewer_button)
-        self.launcher_vbox.addWidget(self.move_button)
-        self.launcher_vbox.addWidget(self.h5browser_button)
+        
+        for button in [self.dashboard_button, self.viewer_button, self.move_button, self.h5browser_button]:
+            button.setMinimumWidth(140)
+            button.setMinimumHeight(28)
+            button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+            self.launcher_vbox.addWidget(button)
+        
         self.launcher_vbox.addStretch(1)
 
         # Add a toolbar to compare button vs action approaches
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
+        self.launcher_vbox.setSpacing(10)
+
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
-        self.viewer_button.setToolTip(EnumToolTip.VIEWER)
-        self.move_button.setToolTip(EnumToolTip.MOVE)
+        self.viewer_button.setToolTip(EnumToolTip.DAQ_VIEWER)
+        self.move_button.setToolTip(EnumToolTip.DAQ_MOVE)
         self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER)
 
     def set_box_label_apparence(self):
@@ -476,20 +481,21 @@ def main():
 
     app = mkQApp('Launcher')
 
-    fen = QtWidgets.QMainWindow()
-    fen.setWindowTitle('Launcher')
+    win = QtWidgets.QMainWindow()
+    win.setWindowTitle('Launcher')
 
-    shared_ui = SharedUI(fen)
-    prog = Launcher(fen)
+    shared_ui = SharedUI(win)
+    prog = Launcher(win)
+    # print(prog.dashboard_button.size())
     shared_ui.affect_application(prog)
 
     # Calculate width and height as a screen ratio
     # screen = QApplication.screenAt(QCursor.pos())
     # size = screen.size()
 
-    fen.resize(850, 450)
+    win.resize(850, 450)
 
-    fen.show()
+    win.show()
 
     sys.exit(app.exec())
 
