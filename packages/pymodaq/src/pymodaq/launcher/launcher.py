@@ -85,6 +85,8 @@ class Launcher(CustomApp):
         self.viewer_button = QPushButton("DAQ Viewer")
         self.move_button = QPushButton("DAQ Move")
         self.h5browser_button = QPushButton("H5Browser")
+        self.shortcut_label = QLabel("Shortcuts :")
+        self.extension_label = QLabel("Extensions :")
 
         # Loader
         self.history_keys = []
@@ -236,7 +238,6 @@ class Launcher(CustomApp):
 
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
-        self.shortcut_label = QLabel("Shortcuts :")
         self.launcher_vbox.addWidget(self.shortcut_label)
         for button in [self.dashboard_button, self.viewer_button, self.move_button, self.h5browser_button]:
             button.setMinimumWidth(140)
@@ -256,6 +257,7 @@ class Launcher(CustomApp):
         # add a toolbar for future extension feature
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
+        self.get_toolbar('launcher').addWidget(self.extension_label)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
