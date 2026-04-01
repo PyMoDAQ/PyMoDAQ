@@ -13,6 +13,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QComboBox,
 )
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 # Handler
@@ -94,7 +95,8 @@ class Launcher(CustomApp):
         self.history_index = 0
 
         # Header
-        self.box_label = QLabel("2026/03/02 at 16h45")  # debug only
+        self.date_combo_box = QComboBox()
+        self.date_combo_box.setMinimumSize(QtCore.QSize(146, 25)) # set minimum size to ensure consistent UI layout when history file is empty vs non-empty
         self.date_label = QLabel("Date :")
 
         self.history_file_name = history_file_name
@@ -130,7 +132,7 @@ class Launcher(CustomApp):
         self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True,
                         toolbar='header')
         self.header_toolbar.addWidget(self.date_label)
-        self.header_toolbar.addWidget(self.box_label)
+        self.header_toolbar.addWidget(self.date_combo_box)
         self.add_action('load_default_dashboard', 'Restore',
                         'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
         self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
@@ -146,7 +148,6 @@ class Launcher(CustomApp):
         Configuration des layouts et widgets
         '''
         self.launcher_vbox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-        self.set_box_label_apparence()
 
         # Set tooltip buttons
         self.set_tooltip_button()
@@ -208,6 +209,8 @@ class Launcher(CustomApp):
         self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
+        self.date_combo_box.currentIndexChanged.connect(self._on_date_combo_box_changed)
+
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         '''
         subclass method from CustomApp
@@ -265,10 +268,6 @@ class Launcher(CustomApp):
         self.move_button.setToolTip(EnumToolTip.DAQ_MOVE)
         self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER)
 
-    def set_box_label_apparence(self):
-        self.box_label.setStyleSheet(
-            'QLabel { border: 1px solid white; border-radius: 10px; padding: 4px 10px; }')
-        self.box_label.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
     def launch_empty_dashboard(self):
         subprocess.Popen(['dashboard'])
@@ -425,13 +424,16 @@ class Launcher(CustomApp):
 
             # date label
             date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
-            self.box_label.setText(date.strftime("%Y/%m/%d at %Hh%M"))
+            self.date_combo_box.blockSignals(True)
+            self.date_combo_box.clear()
+            self.date_combo_box.addItems([datetime.strptime(i, "%Y-%d-%m:%H:%M:%S").strftime("%Y/%m/%d at %Hh%M") for i in self.history_keys])
+            self.date_combo_box.setCurrentText(date.strftime("%Y/%m/%d at %Hh%M"))
+            self.date_combo_box.blockSignals(False)
 
         else:
             self.preset_manager.entry = "default"
             self.configurator.preset_filename = "default"
             self.configurator.update_entry("default")
-            self.box_label.setText("-")
 
         # tree
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
@@ -442,6 +444,9 @@ class Launcher(CustomApp):
         # tree
         self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
+
+    def _on_date_combo_box_changed(self, index) :
+        self.do_navigate(index)
 
 
     def load_history_in_dict(self) -> tuple[
