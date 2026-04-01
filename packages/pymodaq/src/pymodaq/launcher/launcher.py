@@ -309,7 +309,6 @@ class Launcher(CustomApp):
         module_title = module_param.title()
         if module_title:
             return str(module_title)
-
         return str(module_param.name())
 
     def _build_summary_group(self, preset_settings, module_type: ModuleType, group_title: str) -> dict:
@@ -318,8 +317,16 @@ class Launcher(CustomApp):
 
         if group_param is not None:
             for ind_module, module_param in enumerate(group_param.children()):
+                # Get plugin name from 'info' -> 'type'
+                plugin_name = ""
+                info_param = module_param.child('info')
+                if info_param is not None:
+                    type_param = info_param.child('type')
+                    if type_param is not None:
+                        plugin_name = str(type_param.value())
+                
                 children.append({
-                    'title': self._module_display_title(module_param),
+                    'title': f"{self._module_display_title(module_param)} ({plugin_name})",
                     'name': f'{module_type.value}_title_{ind_module:02d}',
                     'type': 'group',
                 })
