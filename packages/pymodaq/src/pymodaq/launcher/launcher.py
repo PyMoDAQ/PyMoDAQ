@@ -202,9 +202,9 @@ class Launcher(CustomApp):
         self.h5browser_button.clicked.connect(self.get_action('launch_h5browser').trigger)
 
         # Header of loader section
-        self.connect_action('back_config', lambda: self.do_navigate(1))
+        self.connect_action('back_config', lambda: self.do_navigate(self.history_index + 1))
         self.connect_action('load_default_dashboard', self.load_dashboard_with_preset_configurator)
-        self.connect_action('next_config', lambda: self.do_navigate(-1))
+        self.connect_action('next_config', lambda: self.do_navigate(self.history_index-1))
         self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
@@ -376,21 +376,22 @@ class Launcher(CustomApp):
         self._dashboard_shared_ui.show()
 
 
-    def do_navigate(self, offset: int):
+    def do_navigate(self, index: int):
         """
-        Navigate in history items by offset.
+        Navigate in history items by index.
 
         Parameters
         ----------
-        offset : int
-            Value to increment history index
+        index : int
+            Value of index to go in history
         Notes
         -----
         Design by contract: caller must ensure the resulting index stays
         within valid history bounds.
-        Precondition: 0 <= self.history_index + offset < len(self.history)
+        Precondition: 0 <= self.history_index + index < len(self.history)
         """
-        self.history_index += offset
+        assert 0 <= index < len(self.history)
+        self.history_index = index
         self.ui_refresh()
 
     def check_disable_navigation_buttons(self):
