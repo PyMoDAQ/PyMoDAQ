@@ -153,7 +153,7 @@ class Launcher(CustomApp):
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("color: black;")
+        separator.setStyleSheet("color: white;")
 
         self.main_hbox.addLayout(self.launcher_vbox)
         self.main_hbox.addWidget(separator)
@@ -236,20 +236,26 @@ class Launcher(CustomApp):
 
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
-        
+        self.shortcut_label = QLabel("Shortcuts :")
+        self.launcher_vbox.addWidget(self.shortcut_label)
         for button in [self.dashboard_button, self.viewer_button, self.move_button, self.h5browser_button]:
             button.setMinimumWidth(140)
             button.setMinimumHeight(28)
             button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
             self.launcher_vbox.addWidget(button)
-        
-        self.launcher_vbox.addStretch(1)
-
-        # Add a toolbar to compare button vs action approaches
-        self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
-        self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
         self.launcher_vbox.setSpacing(10)
+
+        # add horizontal separator to delimit shortcuts area and extensions area
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setStyleSheet("color: white;")
+        self.launcher_vbox.addWidget(separator)
+
+        # add a toolbar for future extension feature
+        self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
+        self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
