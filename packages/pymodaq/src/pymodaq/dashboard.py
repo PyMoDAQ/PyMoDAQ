@@ -76,6 +76,8 @@ config = Config()
 
 get_instrument_plugins()
 extensions = get_extensions()
+print(type(extensions))
+print(extensions)
 
 
 class ManagerEnums(BaseEnum):
