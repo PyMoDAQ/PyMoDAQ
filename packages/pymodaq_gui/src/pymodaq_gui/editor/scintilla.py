@@ -104,7 +104,7 @@ class Editor(CustomApp):
 
 if __name__ == '__main__':
     app = mkQApp('QScintilla')
-    from pymodaq.utils.shared_ui import SharedUI
+    from pymodaq_gui.shared_ui import SharedUI
 
     win, area = make_window(area=False, title="QScintilla Example")
 
