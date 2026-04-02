@@ -56,6 +56,11 @@ dev = [
     "qt_material_icons>=0.5.0"
 ]
 
+editor = [
+    "pyqt6",
+    "QScintilla"
+]
+
 [project.scripts]
 h5browser = "pymodaq_gui.h5modules.h5browser:main"
 parameter_example = "pymodaq_gui.examples.parameter_ex:main"
