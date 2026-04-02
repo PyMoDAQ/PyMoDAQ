@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, cast
 
+
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import (
@@ -14,6 +15,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QComboBox,
+    QToolBar
 )
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 # Handler
@@ -74,6 +76,7 @@ class Launcher(CustomApp):
 
         self.configurator = Configurator()
         self.preset_manager = self.configurator.preset_manager
+        self._launcher_preset_external_combo = None
 
         # Layout
         self.main_hbox = QHBoxLayout()
@@ -223,11 +226,34 @@ class Launcher(CustomApp):
         self.history, self.history_keys = self.load_history_in_dict()
         self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
+        self._sync_launcher_preset_to_configurator()
         self.preset_manager.enable_actions(True)
-        self.preset_manager.set_action_enabled('list_entries', False)
+        self.preset_manager.set_action_enabled('list_entries', True)
         self.configurator.enable_actions(True)
 
         self.ui_refresh()
+
+    def _sync_launcher_preset_to_configurator(self):
+        """Reconnect the launcher preset external combo to configurator preset updates."""
+        preset_action = self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL)
+        preset_combo = preset_action.widget
+
+        # If a previous combo was connected, disconnect it to avoid duplicate slot calls.
+        if self._launcher_preset_external_combo is not None:
+            try:
+                self._launcher_preset_external_combo.currentTextChanged.disconnect(
+                    self.configurator.set_preset_filename
+                )
+            except (TypeError, RuntimeError):
+                pass
+
+        try:
+            preset_combo.currentTextChanged.disconnect(self.configurator.set_preset_filename)
+        except (TypeError, RuntimeError):
+            pass
+
+        preset_combo.currentTextChanged.connect(self.configurator.set_preset_filename)
+        self._launcher_preset_external_combo = preset_combo
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -440,9 +466,6 @@ class Launcher(CustomApp):
 
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
-
-        # tree
-        self.show_preset_titles_only(self.preset_manager.entry_filepath)
 
 
     def _on_date_combo_box_changed(self, index) :
