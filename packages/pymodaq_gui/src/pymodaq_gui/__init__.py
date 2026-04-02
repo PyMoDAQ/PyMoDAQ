@@ -2,6 +2,7 @@ import importlib.util
 import os
 import sys
 import pkgutil
+from qtpy import QtWidgets
 
 def set_and_check_qt_backend_or_die(config):
     wanted_backend = config('gui', 'qtbackend', 'backend')[0]
@@ -23,7 +24,6 @@ def set_and_check_qt_backend_or_die(config):
     if backend_found:
         # environment variable is set
         os.environ['QT_API'] = backend
-        os.environ['FORCE_QT_API'] = 'True'
         try:
             import qtpy
             logger.info(f"{qtpy.API_NAME} Qt backend loaded")
@@ -80,7 +80,6 @@ if not isinstance(config('gui', 'qtbackend', 'backend'), list): #True for old us
 logger.info(f"Trying to set Qt backend to: {config('gui', 'qtbackend', 'backend')[0]}")
 set_and_check_qt_backend_or_die(config)
 
-from qtpy import QtWidgets
 
 from pymodaq_gui.qt_utils import setLocale
 
