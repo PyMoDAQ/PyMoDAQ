@@ -1420,6 +1420,7 @@ def main():
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
+
     app = mkQApp('DAQScan')
 
     win, dashboard = create_load_dashboard()
@@ -1427,6 +1428,9 @@ def main():
 
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
+
+    preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
+    dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())
 
