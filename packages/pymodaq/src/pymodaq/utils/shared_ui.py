@@ -90,62 +90,6 @@ class SharedUI(SharedUI):
     def setup_docks(self):
        super().setup_docks()
 
-    def check_update(self, show=True):
-        try:
-            packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
-            current_versions = [version_mod.parse(get_version(p)) for p in packages]
-            available_versions = [
-                version_mod.parse(get_pypi_pymodaq(p)["version"]) for p in packages
-            ]
-            new_versions = np.greater(available_versions, current_versions)
-            # Combine package and version information and select only the ones with a newer version available
-
-            packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
-            )[new_versions]
-
-            if len(packages_data) > 0:
-                # Create a QDialog window and different graphical components
-                dialog = QtWidgets.QDialog()
-                dialog.setWindowTitle("Update check")
-
-                vlayout = QtWidgets.QVBoxLayout()
-
-                message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
-                )
-                message_label.setAlignment(Qt.AlignCenter)
-
-                table = PymodaqUpdateTableWidget()
-                table.setRowCount(len(packages_data))
-                table.setColumnCount(3)
-                table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
-                )
-
-                for p in packages_data:
-                    table.append_row(p[0], p[1], p[2])
-
-                # The vlayout contains the message, the table and the buttons
-                # and is connected to the dialog window
-                vlayout.addWidget(message_label)
-                vlayout.addWidget(table)
-                dialog.setLayout(vlayout)
-
-                ret = dialog.exec()
-
-            else:
-                if show:
-                    msgBox = QMessageBox()
-                    msgBox.setWindowTitle("Update check")
-                    msgBox.setText("Everything is up to date!")
-                    ret = msgBox.exec()
-        except Exception as e:
-            logger.exception("Error while checking the available PyMoDAQ version")
-
-        return False
-
-
 
 def main():
     from pymodaq_gui.qt_utils import mkQApp
