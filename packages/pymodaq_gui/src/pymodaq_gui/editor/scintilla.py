@@ -1,12 +1,15 @@
 from enum import IntEnum
 import sys
 
+from pymodaq.utils.gui_utils.widgets.window import make_window
 from pymodaq_gui.qt_utils import mkQApp
 
 from qtpy import QtGui, QtCore, QtWidgets
-from qtpy.Qsci import QsciScintilla
+from qtpy.Qsci import QsciScintilla, QsciLexerPython
 
 from qt_themes import get_theme
+
+from pymodaq_gui.utils.custom_app import CustomApp
 
 
 class Symbols(IntEnum):
@@ -16,39 +19,32 @@ class Symbols(IntEnum):
     RedArrow = 3
 
 
-class CustomMainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super(CustomMainWindow, self).__init__()
+class Editor(CustomApp):
+    def __init__(self, parent: QtWidgets.QMainWindow):
+        super().__init__(parent)
+        self._editor: QsciScintilla = None
 
-        # Window setup
-        # --------------
+        self.setup_ui()
 
-        # 1. Define the geometry of the main window
-        self.setGeometry(300, 300, 800, 400)
-        self.setWindowTitle("QScintilla Test")
+    def do_things_after_ui_setup(self):
+        self.setup_editor()
+
+    def setup_docks(self):
 
         # 2. Create frame and layout
-        self._frm = QtWidgets.QFrame(self)
-        self._frm.setStyleSheet("QWidget { background-color: #ffeaeaea }")
+        self._frm = QtWidgets.QFrame()
+        self.mainwindow.setCentralWidget(self._frm)
         self._lyt = QtWidgets.QVBoxLayout()
         self._frm.setLayout(self._lyt)
-        self.setCentralWidget(self._frm)
-        self._myFont = QtGui.QFont()
-        self._myFont.setPointSize(14)
 
-        # 3. Place a button
-        self._btn = QtWidgets.QPushButton("Qsci")
-        self._btn.setFixedWidth(50)
-        self._btn.setFixedHeight(50)
-        self._btn.clicked.connect(self._btn_action)
-        self._btn.setFont(self._myFont)
-        self._lyt.addWidget(self._btn)
-
-        # QScintilla editor setup
-        # ------------------------
-
+    def setup_editor(self):
         # ! Make instance of QsciScintilla class!
         self._editor = QsciScintilla()
+        self._lexer = QsciLexerPython(self._editor)
+        self._editor.setLexer(self._lexer)
+        self._editor.setUtf8(True)  # Set encoding to UTF-8
+        # self._editor.setFont(self._myFont)
+
         self._editor.setText("This\n")  # Line 1
         self._editor.append("is\n")  # Line 2
         self._editor.append("a\n")  # Line 3
@@ -60,9 +56,7 @@ class CustomMainWindow(QtWidgets.QMainWindow):
         self._editor.append("some\n")  # Line 9
         self._editor.append("basic\n")  # Line 10
         self._editor.append("functions.")  # Line 11
-        self._editor.setLexer(None)
-        self._editor.setUtf8(True)  # Set encoding to UTF-8
-        self._editor.setFont(self._myFont)
+
 
         # ! Add editor to layout !
         self._lyt.addWidget(self._editor)
@@ -100,13 +94,27 @@ class CustomMainWindow(QtWidgets.QMainWindow):
             else:
                 self._editor.markerDelete(line_nr, Symbols.RedDot)
 
-    def _btn_action(self):
-        print("Hello World!")
+    def setup_actions(self):
+        pass
+
+    def connect_things(self):
+        pass
+
 
 
 if __name__ == '__main__':
     app = mkQApp('QScintilla')
-    myGUI = CustomMainWindow()
-    myGUI.show()
+    from pymodaq.utils.shared_ui import SharedUI
+
+    win, area = make_window(area=False, title="QScintilla Example")
+
+    editor = Editor(win)
+
+    shared_ui = SharedUI(win)
+
+    shared_ui.affect_application(editor)
+
+    shared_ui.show()
+
     sys.exit(app.exec_())
 
