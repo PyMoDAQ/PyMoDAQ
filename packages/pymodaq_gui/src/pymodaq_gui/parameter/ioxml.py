@@ -494,6 +494,8 @@ def set_txt_from_elt(el, param_dict):
                 param_value = eval(val_text)
             except Exception:
                 param_value = val_text  # for back compatibility
+        elif param_type == 'progress':
+            param_value = int(val_text)
         elif param_type == 'table_view':
             data_dict = json.loads(val_text)
             mod = importlib.import_module(data_dict['module'])

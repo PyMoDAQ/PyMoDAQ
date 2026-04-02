@@ -123,7 +123,9 @@ class H5SaverLowLevel(H5Backend):
 
     def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False,
                   metadata: dict = None, swmr_mode: bool = False):
-        """Initializes a new h5 file.
+        """Initializes a new h5 file,
+
+        Should have an extension with h5 in it.
 
         Parameters
         ----------
@@ -146,7 +148,10 @@ class H5SaverLowLevel(H5Backend):
         datetime_now = datetime.datetime.now()
 
         if file_name is not None and isinstance(file_name, Path):
-            self.h5_file_name = file_name.stem + ".h5"
+            if 'h5' not in file_name.suffix:
+                self.h5_file_name = file_name.stem + ".h5"
+            else:
+                self.h5_file_name = file_name.name
             self.h5_file_path = file_name.parent
             fullpath = self.h5_file_path.joinpath(self.h5_file_name)
             if not fullpath.is_file():
