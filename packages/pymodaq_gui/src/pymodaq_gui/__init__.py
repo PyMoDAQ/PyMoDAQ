@@ -24,6 +24,11 @@ def set_and_check_qt_backend_or_die(config):
         # environment variable is set
         os.environ['QT_API'] = backend
         os.environ['FORCE_QT_API'] = 'True'
+
+        pyqtgraph_backend_names = ['PySide2', 'PySide6', 'PyQt5', 'PyQt6']
+        index =  [backend.lower() for backend in pyqtgraph_backend_names].index(backend)
+        os.environ['PYQTGRAPH_QT_LIB'] = pyqtgraph_backend_names[index]
+
         try:
             import qtpy
             logger.info(f"{qtpy.API_NAME} Qt backend loaded")
