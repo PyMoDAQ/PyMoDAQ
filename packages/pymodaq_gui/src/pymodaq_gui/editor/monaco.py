@@ -1,3 +1,6 @@
+import pymodaq_gui
+
+
 from qtpy.QtWidgets import QApplication
 from qtmonaco import Monaco
 
