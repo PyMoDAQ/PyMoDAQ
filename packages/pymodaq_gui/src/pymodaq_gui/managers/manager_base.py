@@ -460,13 +460,16 @@ class ManagerBase(CustomExt):
         """ Get the name of the last entry that has been successfully applied/executed """
         return self._applied_entry_name
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: str | Path = None, **kwargs):
         """ To be called to execute the selected entry """
         if entry_path is None:
             self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filepath
 
-        self.update_entry(entry_path.stem)
+        if isinstance(entry_path, str):
+            entry_path = self.entry_path_from_name(entry_path)
+
+        self.update_entry(entry_path)
 
         if self.dashboard is None:
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")

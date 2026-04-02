@@ -10,6 +10,8 @@ from typing import List, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
+from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -272,14 +274,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
                                                                               viewers=self.viewers)))
 
 def main():
+    app = mkQApp('DAQScan')
 
-    app = QtWidgets.QApplication(sys.argv)
-
-    win = QtWidgets.QMainWindow()
-    dockarea = DockArea()
-    win.setCentralWidget(dockarea)
-    win.resize(1000, 500)
-    win.setWindowTitle('DAQScan Extension')
+    win, dockarea = make_window(title='DAQScan Extension')
 
     prog = DAQScanUI(dockarea)
     win.show()
