@@ -94,6 +94,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()
 
+    def create_app_toolbar(self):
+        self.add_toolbar(self.__class__.__name__.lower(),
+                         self.__class__.__name__,
+                         self.mainwindow,
+                         add_break=True)
+
     @property
     def menubar(self):
         return self._menubar
