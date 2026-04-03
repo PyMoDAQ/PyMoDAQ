@@ -1403,11 +1403,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
 
 def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
+
+    win, area = make_window(title='PyMoDAQ Dashboard')
     win.resize(1000, 500)
-    win.setWindowTitle("PyMoDAQ Dashboard")
 
     shared_ui = SharedUI(win)
     dashboard = DashBoard(area)
