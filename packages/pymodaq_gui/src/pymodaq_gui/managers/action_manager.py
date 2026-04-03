@@ -458,7 +458,7 @@ class ActionManager:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
         return widget
 
-    def add_menu(self, short_name: str, title: str, menu: QtWidgets.QMenu = None,
+    def add_menu(self, short_name: str, title: str, menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
                  icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True) -> QtWidgets.QMenu:
         """Create and add a menu to a parent menu
 
@@ -468,7 +468,7 @@ class ActionManager:
             the name as referenced in the dict self._menus
         title: str
             Displayed title of the menu
-        menu: QMenu, optional
+        menu: QMenu, str, optional
             a parent menu where this menu should be added. If None, uses the default menu
         icon_name: str / Path / QtGui.QIcon / enum name, optional
             str/Path: the png file name/path to produce the icon
@@ -489,8 +489,10 @@ class ActionManager:
         if auto_menu:
             if menu is None:
                 menu = self._menu
+        if isinstance(menu, str):
+            menu = self.get_menu(menu)
 
-        new_menu = QtWidgets.QMenu(title)
+        new_menu = QtWidgets.QMenu(title, parent=menu)
 
         # Set icon if provided
         if icon_name and icon_name != '':
