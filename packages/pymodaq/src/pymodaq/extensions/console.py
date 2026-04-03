@@ -91,7 +91,7 @@ class Console(CustomExt):
              'mods': self.modules_manager,
              'np': np})
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.create_dashboard_toolbar()
         self.mainwindow.setCentralWidget(self.console)
 
