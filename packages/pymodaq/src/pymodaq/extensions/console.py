@@ -113,7 +113,7 @@ def main():
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, Console)
+    win_ext, console = create_extension(dashboard, Console)
     win_ext.show()
 
     sys.exit(app.exec())
