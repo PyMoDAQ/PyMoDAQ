@@ -172,14 +172,10 @@ class ManagerBase(CustomExt):
         raise NotImplementedError
 
     def setup_ui(self):
-        self.setup_docks()
+        self.setup_docks_and_widgets()
+        self.setup_menus_and_toolbars()
         self.setup_actions_base()
         self.setup_actions()
-
-        try:
-            self.setup_menu(self._menubar)
-        except TypeError:
-            self.setup_menu()  # for backcompatibility
 
         self.connect_things_base()
         self.connect_things()
@@ -236,7 +232,7 @@ class ManagerBase(CustomExt):
             self.create_entry('default', bypass_dialog=True)
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """Sets up the widgets for the manager.
 
         Eventually, this can be reimplemented in subclasses to add more/different widgets/docks...
@@ -252,6 +248,9 @@ class ManagerBase(CustomExt):
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
         return f"{file.stem}_{self.manager_name}"
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar(self.manager_name.lower(), self.manager_name, self.mainwindow, add_break=False)
 
     def setup_actions_base(self):
 

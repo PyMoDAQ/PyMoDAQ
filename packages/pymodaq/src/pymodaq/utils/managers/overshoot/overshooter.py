@@ -227,8 +227,8 @@ class Overshooter(ManagerBase):
     def detectors(self):
         return self.modules_manager.detectors_name
 
-    def setup_docks(self):
-        self.set_toolbar(self.add_toolbar('overshoots'))
+    def setup_docks_and_widgets(self):
+        self.add_toolbar('overshoots', 'Overshoots')
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
@@ -245,8 +245,8 @@ class Overshooter(ManagerBase):
         self.main_widget.setLayout(vlayout)
 
     def setup_actions(self):
-        self.get_toolbar('main').addSeparator()
-        self.add_action('update_data', 'Update Data', 'refresh', toolbar=self.get_toolbar('main'))
+        self.toolbar.addSeparator()
+        self.add_action('update_data', 'Update Data', 'refresh')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_preset=True, add_configurator=True, add_break=False)

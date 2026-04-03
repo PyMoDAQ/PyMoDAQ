@@ -203,7 +203,7 @@ class Configurator(ManagerBase):
             self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
         self.subentry_handler.show_dialog()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.tree.setDragEnabled(True)
         self.tree.setAcceptDrops(False)
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
@@ -238,7 +238,7 @@ class Configurator(ManagerBase):
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
         widget_buttons.layout().addStretch()
-        move_toolbar = self.add_toolbar('move')
+        move_toolbar = self.add_toolbar('move', 'Move')
         move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
         widget_buttons.layout().addWidget(move_toolbar)
         widget_buttons.layout().addStretch()
@@ -256,7 +256,7 @@ class Configurator(ManagerBase):
 
     def setup_actions(self):
         self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
+                        checkable=True,
                         tip='If Checked: display all settings (in green, settings that can be configured)'
                             ' otherwise only configurables ones')
 
@@ -276,11 +276,8 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
-        self.get_toolbar('main').addSeparator()
-        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
-                        tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+        self.toolbar.addSeparator()
+
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
