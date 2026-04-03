@@ -128,7 +128,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def setup_ui(self):
         self.setup_docks_and_widgets()
 
-        self.setup_menus_and_toolbars()  # see ActionManager MixIn class
+        self.setup_menus_and_toolbars(self.menubar)  # see ActionManager MixIn class
 
         self.setup_actions()  # see ActionManager MixIn class
 
@@ -172,7 +172,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         raise NotImplementedError
 
-    def setup_menus_and_toolbars(self):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """Non-mandatory method to be subclassed in order to create menus and toolbars
 
         create menu and toolbar for actions defined in setup_actions, for instance:
