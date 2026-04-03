@@ -63,8 +63,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.title = title
         self._unit = ''
         self._ini_state = False
-        self.move_toolbar = self.add_toolbar('move', 'Move')
-        self.set_toolbar(self.move_toolbar)  # Set as default so ui.toolbar returns this toolbar
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -218,9 +216,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setOpts(siPrefix=show)
         self.rel_value_sb.setOpts(siPrefix=show)
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
-        self.parent.layout().addWidget(self.move_toolbar)
+
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
@@ -258,6 +256,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.graph_widget.layout().addWidget(dockarea)
         self.viewer = ViewerDispatcher(dockarea)
         self.actuator_init = False
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar('move', 'Move')
+        self.parent.layout().insertWidget(0, self.get_toolbar('move'))
 
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
         widget.setLayout(QtWidgets.QVBoxLayout())
