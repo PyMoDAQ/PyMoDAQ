@@ -275,7 +275,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if requested_configuration and requested_configuration in self.configurator.entries:
             self.configurator.update_entry(requested_configuration)
 
-        self.configurator._execute_entry(self.configurator.entry_filepath)
+        self.configurator.execute_entry(self.configurator.entry_filepath)
         self._requested_configuration_name = ''
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
