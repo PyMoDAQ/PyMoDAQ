@@ -9,6 +9,7 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.splash import get_splash_sc
+from pymodaq_utils.warnings import deprecation_msg
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -125,12 +126,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         return qt_themes.get_theme(name)
 
     def setup_ui(self):
-        self.setup_docks()
+        self.setup_docks_and_widgets()
 
-        try:
-            self.setup_menu(self._menubar)
-        except TypeError:
-            self.setup_menu()  # for backcompatibility
+        self.setup_menus_and_toolbars()  # see ActionManager MixIn class
 
         self.setup_actions()  # see ActionManager MixIn class
 
@@ -149,8 +147,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         pass
 
-    def setup_docks(self):
-        """Mandatory method to be subclassed to setup the docks layout
+    def setup_docks_and_widgets(self):
+        """Mandatory method to be subclassed to setup the docks layout and/or widgets
 
         Examples
         --------
@@ -161,29 +159,60 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         See Also
         --------
-        pyqtgraph.dockarea.Dock
+        """
+
+        try:
+            self.setup_docks()
+            deprecation_msg('You should not call setup_docks anymore, use `setup_docks_and_widgets` instead')
+        except NotImplementedError:
+            raise NotImplementedError('You must reimplement the method setup_docks_and_widgets')
+
+    def setup_docks(self):
+        """ deprecated, see setup_docks_and_widgets
         """
         raise NotImplementedError
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """Non mandatory method to be subclassed in order to create a menubar
+    def setup_menus_and_toolbars(self):
+        """Non-mandatory method to be subclassed in order to create menus and toolbars
 
-        create menu for actions contained into the self._actions, for instance:
+        create menu and toolbar for actions defined in setup_actions, for instance:
 
         Examples
         --------
-        >>>file_menu = self._menubar.addMenu('File')
-        >>>self.affect_to('load', file_menu)
-        >>>self.affect_to('save', file_menu)
+        >>>file_menu = self.add_menu('file_menu', 'File', self.menubar)
+        >>>submenu = self.add_menu('submenu', 'ASubMenu', 'file_menu')
+        >>>file_toolbar = self.add_toolbar('file_toolbar', 'File', self.mainwindow)
 
-        >>>file_menu.addSeparator()
-        >>>self.affect_to('quit', file_menu)
 
         See Also
         --------
         pymodaq.utils.managers.action_manager.ActionManager
         """
+        self.setup_menu(self.menubar)
+
+    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+        """ Deprecated, use `setup_menus_and_toolbars`
+
+        """
         pass
+
+    def setup_actions(self):
+        """Method where to create actions to be subclassed. Mandatory
+
+        Examples
+        --------
+        >>> self.add_action('quit', 'Quit', 'close2', "Quit program")
+        >>> self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True)
+        >>> self.add_action('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
+        >>> self.add_action('save', 'Save' 'SaveAs', "Save current data", checkable=False)
+
+        >>>self.affect_to('load', file_menu)
+        >>>self.affect_to('save', file_menu)
+
+        >>>file_menu.addSeparator()
+        >>>self.affect_to('quit', file_menu)
+        """
+        raise NotImplementedError
 
     def connect_things(self):
         """Connect actions and/or other widgets signal to methods"""
