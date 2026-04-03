@@ -41,6 +41,7 @@ config =  Config()
 class MenuNames(StrEnum):
     FILE = 'file'
     SETTINGS = 'settings'
+    TOOLS = 'tools'
     HELP = 'help'
 
 
@@ -132,14 +133,17 @@ class SharedUI(CustomApp):
         if isinstance(app, CustomApp):
             for menu in app.menus:
                 if menu.title() in menus_dict: # two main menus with identical names (titles)
-                    #adds the app menu action to the shared ui menu
-                    menus_dict[menu.title()].addSeparator()
-                    menus_dict[menu.title()].addActions(menu.actions())
-                    #then remove the app menu from the menubar
-                    self.menubar.removeAction(menu.menuAction())
-                else:
+                    self._merge_menus(menu, menus_dict[menu.title()])
+                elif menu.parent() == app.menubar:
                     self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
                                             menu)
+                else:
+                    pass
+
+    def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
+        menu.addSeparator()
+        menu.addActions(menu_to_merge.actions())
+        menu_to_merge.parent().removeAction(menu_to_merge.menuAction())
 
     @staticmethod
     def _get_menus_from_widget(widget: QtWidgets.QWidget) -> list[QtWidgets.QMenu]:
@@ -158,26 +162,63 @@ class SharedUI(CustomApp):
     def hide(self):
         self.mainwindow.setVisible(False)
 
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
+        Create the menubar object land toolbars:
+        """
+
+        if menubar is None:
+            menubar = self.menubar
+
+        self.add_toolbar('runtime', 'Runtime', add_break=False)
+        help_toolbar = self.add_toolbar('help_toolbar', 'Help', add_break=False)
+        help_toolbar.setVisible(False)
+
+        # %% create File menu
+        self.add_menu(MenuNames.FILE, 'File', menubar)
+
+        # %% create tools menu
+        self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
+        self.add_menu('toolbars', 'Toolbars', MenuNames.TOOLS)
+
+        # help menu
+        self.add_menu(MenuNames.HELP, '?', menubar)
+
+        self.toolbar.setVisible(False)
+
     def setup_actions(self):
-        self.add_action(
-            "log", "Log File", "", "Show Log File in default editor", auto_toolbar=False
-        )
+
+
+        self.add_action("log", "Log File", "", "Show Log File in default editor", auto_toolbar=False,
+                        menu=MenuNames.FILE)
+
         self.add_action("quit", "Quit", "close", "Quit program",
-                        icon_color=self.get_theme().red)
+                        icon_color=self.get_theme().red, toolbar='runtime',
+                        menu = MenuNames.FILE)
 
         self.toolbar.addSeparator()
 
         self.add_action("config", "Config.", "account_tree",
-                        tip="Show all configuration files",)
-        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False)
+                        tip="Show all configuration files", toolbar='help_toolbar',
+                        menu=MenuNames.TOOLS)
 
-        self.add_action("about", "About", "info",
-                        icon_color=self.get_theme().cyan)
-        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow)
+        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False,
+                         menu=MenuNames.FILE)
+
+        self.add_action("about", "About", "info", icon_color=self.get_theme().cyan,
+                        toolbar='help_toolbar', menu=MenuNames.HELP)
+        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow,
+                        toolbar='help_toolbar', menu=MenuNames.HELP)
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
-        self.add_action("check_update", "Check Updates", "", auto_toolbar=False)
+
+        self.get_menu(MenuNames.HELP).addSeparator()
+        self.add_action("check_update", "Check Updates", "", auto_toolbar=False,
+                        menu=MenuNames.HELP)
         self.toolbar.addSeparator()
 
+        for toolbar_name in self.toolbars_names:
+            if toolbar_name != '_default':
+                self.get_menu('toolbars').addAction(self.get_toolbar(toolbar_name).toggleViewAction())
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
@@ -185,38 +226,9 @@ class SharedUI(CustomApp):
         self.connect_action("quit", self.quit_fun)
         self.connect_action("restart", self.restart_fun)
 
-
         self.connect_action("about", self.show_about)
         self.connect_action("help", self.show_help)
         self.connect_action("check_update", lambda: self.check_update(True))
-
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """
-        Create the menubar object looking like :
-        """
-       # menubar.clear()
-        # %% create File menu
-        file_menu = self.add_menu(MenuNames.FILE, 'File', menubar)
-        file_menu.addAction(self.get_action("log"))
-        file_menu.addSeparator()
-        file_menu.addAction(self.get_action("quit"))
-        file_menu.addAction(self.get_action("restart"))
-
-        # %% create Settings menu
-        settings_menu = self.add_menu(MenuNames.SETTINGS, 'Settings', menubar)
-
-        settings_menu.addAction(self.get_action("config"))
-
-        # help menu
-        help_menu = self.add_menu(MenuNames.HELP, '?', menubar)
-        help_menu.addAction(self.get_action("about"))
-        help_menu.addAction(self.get_action("help"))
-        help_menu.addSeparator()
-        help_menu.addAction(self.get_action("check_update"))
-
-        settings_menu.setEnabled(True)
-
 
     def quit_fun(self):
         """
@@ -265,7 +277,7 @@ class SharedUI(CustomApp):
         if res and hasattr(self._main_application, 'config_changed'):
                 self._main_application.config_changed.emit()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
        pass
 
     def add_toolbar(self, short_name: str, title: str = '',
