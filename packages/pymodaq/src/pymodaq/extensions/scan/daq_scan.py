@@ -200,10 +200,7 @@ class DAQScan(CustomExt):
             dict(all_items=data1D_names, selected=data1D_names))
 
 
-    def setup_docks(self):
-        self.mainwindow.removeToolBar(self.toolbar)  # hides it
-
-        self.create_dashboard_toolbar()
+    def setup_docks_and_widgets(self):
 
         self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
                                         ['General Settings', 'Save Settings'])
@@ -219,8 +216,16 @@ class DAQScan(CustomExt):
 
         self.ui.enable_start_stop(False)
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        pass
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.mainwindow.removeToolBar(self.toolbar)  # hides it
+
+        self.create_dashboard_toolbar()
+
+        for ind_menu, menu in enumerate(self.ui.menus):
+            self.reference_menu(self.ui.menus_names[ind_menu], menu)
+
+        for ind_toolbar, toolbar in enumerate(self.ui.toolbars):
+            self.reference_toolbar(self.ui.toolbars_names[ind_toolbar], toolbar)
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
@@ -1429,8 +1434,8 @@ def main():
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
 
-    preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
-    dashboard.preset_manager.execute_entry(preset_file_name)
+    # preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
+    # dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())
 

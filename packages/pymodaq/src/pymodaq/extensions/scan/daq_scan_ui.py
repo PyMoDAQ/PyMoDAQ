@@ -11,6 +11,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
 from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.shared_ui import MenuNames
 from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -37,43 +38,43 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def __init__(self, parent):
         CustomApp.__init__(self, parent)
-        self.setup_docks()
+        self.setup_docks_and_widgets()
         ViewerDispatcher.__init__(self, self.dockarea, title='Scanner',
                                   next_to_dock=self.dock_command)
 
-        self.setup_menu(self._menubar)
+        self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()
         self.connect_things()
 
     def setup_actions(self):
-        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu=self.action_menu)
+        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
         self.set_action_enabled('ini_positions', False)
         self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
-                        menu=self.action_menu, icon_color=self.get_theme().green)
-        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu='actions')
         self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
-                        menu=self.action_menu, icon_color=self.get_theme().red)
+                        menu='actions', icon_color=self.get_theme().red)
         self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
-                        checkable=True, menu=self.action_menu,
+                        checkable=True, menu='actions',
                         icon_checked_color=self.get_theme().orange)
         self.add_action('move_at', 'Move at doubleClicked', 'moving',
-                        "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
+                        "Move to positions where you double clicked", checkable=True, menu='actions')
 
         self._toolbar.addSeparator()
         self.add_action('show_file', 'Show file content', 'folder_data',
                         tip='Browse the content of the current HDF5 file')
 
-        self.add_action('new_file', 'New file', 'new2', menu=self.file_menu, auto_toolbar=False)
-        self.add_action('load', 'Open file to append...', 'Open', menu=self.file_menu, auto_toolbar=False)
-        self.file_menu.addSeparator()
-        self.add_action('save', 'Save copy as...', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
+        self.add_action('new_file', 'New file', 'new2', menu=MenuNames.FILE, auto_toolbar=False)
+        self.add_action('load', 'Open file to append...', 'Open', menu=MenuNames.FILE, auto_toolbar=False)
+        self.get_menu(MenuNames.FILE).addSeparator()
+        self.add_action('save', 'Save copy as...', 'SaveAs', menu=MenuNames.FILE, auto_toolbar=False)
         # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
         # A developer can access them programmatically or add them back to a menu as needed.
         self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
         self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
 
-        self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
-        self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
+        self.add_action('navigator', 'Show Navigator', '', menu=MenuNames.TOOLS, auto_toolbar=False)
+        self.add_action('batch', 'Show Batch Scanner', '', menu=MenuNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
     def enable_start_stop(self, enable=True):
@@ -101,22 +102,24 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator')))
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        self.file_menu = menubar.addMenu('File')
-        self._extensions_menu = menubar.addMenu('Extensions')
-        self.action_menu = menubar.addMenu('Actions')
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
+        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menubar)
+        self.add_menu('actions', 'Actions', menubar)
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
+        self.add_toolbar('command_toolbar', 'Command')
+
         self.dock_command = Dock('Scan Command')
         self.dockarea.addDock(self.dock_command)
 
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
         self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self._toolbar)
+        widget_command.layout().addWidget(self.toolbar)
 
-        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         widget_command.layout().addWidget(splitter_widget)
         splitter_widget.addWidget(splitter_v_widget)
         self.module_widget = QtWidgets.QWidget()
@@ -273,24 +276,3 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
                                                                               viewers=self.viewers)))
 
-def main():
-    app = mkQApp('DAQScan')
-
-    win, dockarea = make_window(title='DAQScan Extension')
-
-    prog = DAQScanUI(dockarea)
-    win.show()
-
-
-    def print_command_sig(cmd_sig):
-        print(cmd_sig)
-        prog.display_status(str(cmd_sig))
-
-    prog.command_sig.connect(print_command_sig)
-    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
-
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()
