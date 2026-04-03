@@ -526,7 +526,8 @@ class ActionManager:
 
     def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
                     toolbar: QtWidgets.QToolBar = None,
-                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True) -> QtWidgets.QToolBar:
+                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
+                    before: QtWidgets.QToolBar = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 
         Parameters
@@ -544,7 +545,8 @@ class ActionManager:
         add_break: bool, optional
             If True, a toolbar break is added in the given area before adding the toolbar, valid only for a
             QMainWindow parent
-
+        before: QToolbar, optional
+            if specified, the new toolbar will be inserted before this toolbar
         Returns
         -------
         QtWidgets.QToolBar
@@ -562,7 +564,10 @@ class ActionManager:
             toolbar.setParent(parent)
 
         if isinstance(parent, QtWidgets.QMainWindow):
-            parent.addToolBar(area, toolbar)
+            if before is None:
+                parent.addToolBar(area, toolbar)
+            else:
+                parent.insertToolBar(before, toolbar)
         self._toolbars[short_name] = toolbar
         return toolbar
 
