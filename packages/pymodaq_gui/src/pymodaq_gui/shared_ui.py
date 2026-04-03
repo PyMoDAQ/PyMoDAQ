@@ -41,6 +41,7 @@ config =  Config()
 class MenuNames(StrEnum):
     FILE = 'file'
     SETTINGS = 'settings'
+    VIEW = 'view'
     TOOLS = 'tools'
     HELP = 'help'
 
@@ -129,6 +130,8 @@ class SharedUI(CustomApp):
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
         self.title = app.title
+
+        #handle menus and merge them if necessary
         menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
         if isinstance(app, CustomApp):
             for menu in app.menus:
@@ -139,6 +142,9 @@ class SharedUI(CustomApp):
                                             menu)
                 else:
                     pass
+
+        # move the runtime toolbar at the beginning
+        self.mainwindow.insertToolBar(app.toolbar, self.get_toolbar('runtime'))
 
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.addSeparator()
@@ -170,16 +176,15 @@ class SharedUI(CustomApp):
         if menubar is None:
             menubar = self.menubar
 
-        self.add_toolbar('runtime', 'Runtime', add_break=False)
-        help_toolbar = self.add_toolbar('help_toolbar', 'Help', add_break=False)
+        self.add_toolbar('runtime', 'Runtime', self.mainwindow, add_break=False)
+        help_toolbar = self.add_toolbar('help_toolbar', 'Help', self.mainwindow, add_break=False)
         help_toolbar.setVisible(False)
 
-        # %% create File menu
         self.add_menu(MenuNames.FILE, 'File', menubar)
+        self.add_menu(MenuNames.VIEW, 'View', menubar)
+        self.add_menu('toolbars', 'Toolbars', MenuNames.VIEW)
 
-        # %% create tools menu
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
-        self.add_menu('toolbars', 'Toolbars', MenuNames.TOOLS)
 
         # help menu
         self.add_menu(MenuNames.HELP, '?', menubar)
@@ -195,15 +200,12 @@ class SharedUI(CustomApp):
         self.add_action("quit", "Quit", "close", "Quit program",
                         icon_color=self.get_theme().red, toolbar='runtime',
                         menu = MenuNames.FILE)
-
-        self.toolbar.addSeparator()
+        self.add_action( "restart", "Restart", "replay", "Restart the app", toolbar='runtime',
+                         menu=MenuNames.FILE)
 
         self.add_action("config", "Config.", "account_tree",
                         tip="Show all configuration files", toolbar='help_toolbar',
                         menu=MenuNames.TOOLS)
-
-        self.add_action( "restart", "Restart", "", "Restart the affected app", auto_toolbar=False,
-                         menu=MenuNames.FILE)
 
         self.add_action("about", "About", "info", icon_color=self.get_theme().cyan,
                         toolbar='help_toolbar', menu=MenuNames.HELP)
@@ -279,12 +281,6 @@ class SharedUI(CustomApp):
 
     def setup_docks_and_widgets(self):
        pass
-
-    def add_toolbar(self, short_name: str, title: str = '',
-                    toolbar: QtWidgets.QToolBar = None,
-                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True) -> QtWidgets.QToolBar:
-        return super().add_toolbar(short_name, title, self.mainwindow,
-                                   toolbar, area, add_break)
 
     def show_about(self):
         self.splash_sc.setVisible(True)
