@@ -41,6 +41,7 @@ from pymodaq_gui.messenger import messagebox, dialog
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.shared_ui import MenuNames
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
@@ -261,14 +262,15 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.configurator.update_menu(self.get_menu('configurator'))
         self.get_menu('configurator').setEnabled(True)
         self.get_toolbar('configurator').setEnabled(True)
+
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
+
+        self.get_menu('extensions').setEnabled(True)
+
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator._execute_entry(self.configurator.entry_filepath)
-
-        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
-            menu.setEnabled(True)
+        self.configurator.execute_entry(self.configurator.entry_filepath)
 
         if self._scripted_preset_load:
             self._scripted_preset_load = False
@@ -475,14 +477,40 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         return ext_module
 
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
+        Create the menubar object looking like :
+        """
+        self.add_menu(MenuNames.VIEW, 'View', menubar)
+
+        self.add_menu('docked', 'Docked', MenuNames.VIEW)
+
+        self.add_menu('preset', 'Preset', menubar)
+        self.add_menu('configurator', 'Configurator', menubar)
+        self.get_menu('configurator').setEnabled(False)
+
+        self.add_menu('overshooter', 'Overshooter', menubar)
+        self.get_menu('overshooter').setEnabled(False)
+
+        # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
+        # self.update_roi_menu()
+
+        # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
+        # self.update_remote_menu()
+
+        # extensions menu
+        self.extensions_menu = self.add_menu('extensions', "Extensions", menubar)
+        self.get_menu('extensions').setEnabled(False)
+
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
                         "Load the Saved Docks layout corresponding to the current preset",
-                        auto_toolbar=False,)
+                        auto_toolbar=False, menu='docked')
         self.add_action("save_layout", "Save Layout", "",
                         "Save the Saved Docks layout corresponding to the current preset",
-                        auto_toolbar=False,)
-        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False)
+                        auto_toolbar=False, menu='docked')
+        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
+                        menu=MenuNames.VIEW)
 
         self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
                          add_break=False)
@@ -492,33 +520,35 @@ class DashBoard(CustomApp, LECOComponentMixin):
                          add_break=False)
         self.toolbar.addSeparator()
 
-        self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
-        self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False)
+        # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
+        #                 menu='roi')
+        # self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False,
+        #                 menu='roi')
 
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.roi),
-                    file.stem,
-                    "",
-                    auto_toolbar=False,
-                )
-        self.add_action('show_remote', "Show/Hide Remote", 'visibility',
-                        icon_checked='visibility_off', auto_toolbar=False)
-        self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False)
-        self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False)
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.remote),
-                    file.stem,
-                    "",
-                    auto_toolbar=False,
-                )
+        # for file in get_set_roi_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.add_action(
+        #             self.get_action_from_file(file, ManagerEnums.roi),
+        #             file.stem,
+        #             "",
+        #             auto_toolbar=False,
+        #         )
+        # self.add_action('show_remote', "Show/Hide Remote", 'visibility',
+        #                 icon_checked='visibility_off', auto_toolbar=False, menu='remote')
+        # self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False, menu='remote')
+        # self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False, menu='remote')
+        # for file in get_set_remote_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.add_action(
+        #             self.get_action_from_file(file, ManagerEnums.remote),
+        #             file.stem,
+        #             "",
+        #             auto_toolbar=False,
+        #         )
         self.toolbar.addSeparator()
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
-                            auto_toolbar=False)
+                            auto_toolbar=False, menu='extensions')
 
         self.add_action("configurator", "Configurator", auto_toolbar=False)
 
@@ -528,167 +558,125 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
 
-        self.connect_action("save_roi", self.create_roi_file)
-        self.connect_action("modify_roi", self.modify_roi)
-
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
-                )
-        self.connect_action('show_remote', self.show_remote)
-        self.connect_action("new_remote", self.create_remote)
-        self.connect_action("modify_remote", self.modify_remote)
+        # self.connect_action("save_roi", self.create_roi_file)
+        # self.connect_action("modify_roi", self.modify_roi)
+        #
+        # for file in get_set_roi_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.connect_action(
+        #             self.get_action_from_file(file, ManagerEnums.roi),
+        #             self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
+        #         )
+        # self.connect_action('show_remote', self.show_remote)
+        # self.connect_action("new_remote", self.create_remote)
+        # self.connect_action("modify_remote", self.modify_remote)
         
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
-                )
+        # for file in get_set_remote_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.connect_action(
+        #             self.get_action_from_file(file, ManagerEnums.remote),
+        #             self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
+        #         )
         for ext_name in ExtensionEnum.names():
             self.connect_action(ExtensionEnum[ext_name],
                                 self.create_extension_slot(ExtensionEnum[ext_name]))
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """
-        Create the menubar object looking like :
-        """
-        #menubar.clear()
-
-        settings_menu = self.add_menu('settings', 'Settings', auto_menu=False)
-        settings_menu.addAction(self.get_action("show_log_widget"))
-
-        docked_menu = settings_menu.addMenu("Docked windows")
-        docked_menu.addAction(self.get_action("load_layout"))
-        docked_menu.addAction(self.get_action("save_layout"))
-
-        self.add_menu('preset', 'Preset', auto_menu=False)
-        self.add_menu('configurator', 'Configurator', auto_menu=False)
-        self.get_menu('configurator').setEnabled(False)
-        self.add_menu('overshooter', 'Overshooter', auto_menu=False)
-        self.get_menu('overshooter').setEnabled(False)
-
-        self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
-        self.update_roi_menu()
-
-        self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
-        self.update_remote_menu()
-
-        # extensions menu
-        self.extensions_menu = self.add_menu('extensions', "Extensions")
-        for ext_name in ExtensionEnum.names():
-            self.extensions_menu.addAction(self.get_action(ExtensionEnum[ext_name]))
-
-        status = True
-
-        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
-            menu.setEnabled(not status)
-        settings_menu.setEnabled(True)
-        self.get_menu('preset').setEnabled(status)
-
-
-    def update_roi_menu(self):
-        self.roi_menu.clear()
-        self.roi_menu.addAction(self.get_action("save_roi"))
-        self.roi_menu.addAction(self.get_action("modify_roi"))
-        self.roi_menu.addSeparator()
-        load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                load_roi_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-                )
-
-    def update_remote_menu(self):
-        self.remote_menu.clear()
-        self.remote_menu.addAction(self.get_action("show_remote"))
-        self.connect_action('show_remote', self.show_remote)
-        self.remote_menu.addSeparator()
-
-        self.remote_menu.addAction(self.get_action('new_remote'))
-        self.connect_action('new_remote', self.create_remote)
-        self.remote_menu.addAction(self.get_action('modify_remote'))
-        self.connect_action('modify_remote', self.modify_remote)
-        self.remote_menu.addSeparator()
-        load_remote_menu = self.remote_menu.addMenu("Load remote config.")
-
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                load_remote_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
-                )
-
-    def create_remote(self):
-        try:
-            if self.preset_file is not None:
-                self.remote_manager.set_new_remote(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
-                )
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def modify_remote(self):
-        try:
-            path = select_file(
-                start_path=get_set_remote_path(),
-                save=False,
-                ext="xml",
-            )
-            if path != "":
-                self.remote_manager.set_file_remote(path)
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
-
-    def show_remote(self, show=True):
-        self.remote_widget.setVisible(show)
-        self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
+    # def update_roi_menu(self):
+    #     self.roi_menu.addSeparator()
+    #     load_roi_menu = self.roi_menu.addMenu("Load roi configs")
+    #
+    #     for file in get_set_roi_path().iterdir():
+    #         if file.suffix == ".xml":
+    #             load_roi_menu.addAction(
+    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
+    #             )
+    #
+    # def update_remote_menu(self):
+    #     self.remote_menu.addAction(self.get_action("show_remote"))
+    #     self.connect_action('show_remote', self.show_remote)
+    #     self.remote_menu.addSeparator()
+    #
+    #     self.remote_menu.addAction(self.get_action('new_remote'))
+    #     self.connect_action('new_remote', self.create_remote)
+    #     self.remote_menu.addAction(self.get_action('modify_remote'))
+    #     self.connect_action('modify_remote', self.modify_remote)
+    #     self.remote_menu.addSeparator()
+    #     load_remote_menu = self.remote_menu.addMenu("Load remote config.")
+    #
+    #     for file in get_set_remote_path().iterdir():
+    #         if file.suffix == ".xml":
+    #             load_remote_menu.addAction(
+    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
+    #             )
+    #
+    # def create_remote(self):
+    #     try:
+    #         if self.preset_file is not None:
+    #             self.remote_manager.set_new_remote(self.preset_file.stem)
+    #             self.add_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+    #                 self.preset_file.stem,
+    #                 "",
+    #             )
+    #             self.setup_menu(self.menubar)
+    #             self.connect_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+    #                 self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
+    #             )
+    #
+    #     except Exception as e:
+    #         logger.exception(str(e))
+    #
+    # def modify_remote(self):
+    #     try:
+    #         path = select_file(
+    #             start_path=get_set_remote_path(),
+    #             save=False,
+    #             ext="xml",
+    #         )
+    #         if path != "":
+    #             self.remote_manager.set_file_remote(path)
+    #
+    #         else:  # cancel
+    #             pass
+    #     except Exception as e:
+    #         logger.exception(str(e))
+    #
+    # def show_remote(self, show=True):
+    #     self.remote_widget.setVisible(show)
+    #     self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
 
     def show_log_widget(self, show=True):
         self.logger_widget.setVisible(show)
         self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
 
-    def create_menu_slot_roi(self, filename):
-        return lambda: self.set_roi_configuration(filename)
-
-    def create_menu_slot_remote(self, filename):
-        return lambda: self.set_remote_configuration(filename)
+    # def create_menu_slot_roi(self, filename):
+    #     return lambda: self.set_roi_configuration(filename)
+    #
+    # def create_menu_slot_remote(self, filename):
+    #     return lambda: self.set_remote_configuration(filename)
 
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
 
-    def create_roi_file(self):
-        try:
-            if self.preset_file is not None:
-                self.roi_saver.set_new_roi(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
-                )
-
-
-        except Exception as e:
-            logger.exception(str(e))
+    # def create_roi_file(self):
+    #     try:
+    #         if self.preset_file is not None:
+    #             self.roi_saver.set_new_roi(self.preset_file.stem)
+    #             self.add_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+    #                 self.preset_file.stem,
+    #                 "",
+    #             )
+    #             self.setup_menu(self.menubar)
+    #             self.connect_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+    #                 self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
+    #             )
+    #
+    #
+    #     except Exception as e:
+    #         logger.exception(str(e))
 
     @staticmethod
     def get_action_from_file(file: Path, manager: ManagerEnums):
@@ -1303,7 +1291,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         for mod in self.actuators_modules:
             mod.stop_motion()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         # %% create logger dock
         self.logger_widget = QtWidgets.QWidget(windowTitle='Logger')
         self.logger_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -1312,7 +1300,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
 
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter = QtWidgets.QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.logger_list)
         self.logger_widget.layout().addWidget(splitter)
@@ -1435,11 +1423,13 @@ def load_dashboard_with_preset(preset_name: str,
 
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
-        dashboard.preset_manager.execute_entry(preset_path)
+        QtWidgets.QApplication().processEvents()
         if configuration_name is not None:
-            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(
+                f'{configuration_name}.config')
             dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry(configuration_path)
+        dashboard.preset_manager.execute_entry(preset_path)
+
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
