@@ -10,10 +10,12 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Slot, QDate, QThread, QTimer
 
 from pymodaq.utils import data as data_mod
+from pymodaq.utils.gui_utils.widgets.window import make_window
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_data.data import DataRaw, Axis
+from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.config import GlobalConfig as Config
 
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
@@ -28,7 +30,7 @@ class FunctionPlotter(CustomApp):
     # list of dicts enabling the settings tree on the user interface
     params = [
             {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
-             'value': config('utils', 'data_saving', 'h5file', 'save_path')},
+             'value': config('data', 'data_saving', 'h5file', 'save_path')},
             {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
             {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
 
@@ -60,7 +62,7 @@ class FunctionPlotter(CustomApp):
 
         self.ind_plot = 0
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """
         subclass method from CustomApp
         """
@@ -71,36 +73,37 @@ class FunctionPlotter(CustomApp):
         # settings_tree is an inherited property of the ParameterManager base class
 
         # create a dock containing a viewer object
-        dock_viewer = Dock('Viewer dock', size=(350, 350))
-        self.dockarea.addDock(dock_viewer, 'right', self.dock_settings)  # add this dock to the right of the settings one
+        self.dock_viewer = Dock('Viewer dock', size=(350, 350))
+        self.dockarea.addDock(self.dock_viewer, 'right', self.dock_settings)  # add this dock to the right of the settings one
         viewer_widget = QtWidgets.QWidget()
         self.viewer = Viewer1D(viewer_widget)
-        dock_viewer.addWidget(viewer_widget)
+        self.dock_viewer.addWidget(viewer_widget)
 
         logger.debug('docks are set')
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar(self.__class__.__name__.lower(),
+                         self.__class__.__name__,
+                         self.mainwindow, add_break=False)
 
     def setup_actions(self):
         """
         subclass method from ActionManager
         """
         logger.debug('setting actions')
-        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-        # toolbar is an inherited property of the ActionManager base class
 
-        self.add_action('show', 'Show/hide', 'read2', "Show Hide Viewer", checkable=True, toolbar=self.toolbar)
-        self.add_action('plot', 'Plot', 'snap', "Plot", checkable=False, toolbar=self.toolbar)
-        self.add_action('plot_seq', 'Plot Sequence', 'camera', "Plot functions", checkable=True, toolbar=self.toolbar)
-        self.add_action('save', 'Save', 'SaveAs', "Save current function", checkable=False, toolbar=self.toolbar)
+        self.add_action('show', 'Show/hide', 'read2', "Show Hide Viewer",
+                        checkable=True, checked=True)
+        self.add_action('plot', 'Plot', 'snap', "Plot", checkable=False)
+        self.add_action('plot_seq', 'Plot Sequence', 'camera', "Plot functions", checkable=True)
+        self.add_action('save', 'Save', 'SaveAs', "Save current function", checkable=False)
         logger.debug('actions set')
 
     def connect_things(self):
-        self.connect_action('quit', self.quit)
         self.connect_action('plot', self.plot)
+        self.connect_action('show', lambda show: self.dock_viewer.setVisible(show))
 
         self.connect_action('plot_seq', self.plot_all)
-
-    def quit(self):
-        self.mainwindow.close()
 
     def plot(self):
         function_str = self.settings['functions']
@@ -145,14 +148,15 @@ class FunctionPlotter(CustomApp):
 
 def main():
     import sys
-    app = QtWidgets.QApplication(sys.argv)
-    mainwindow = QtWidgets.QMainWindow()
-    dockarea = DockArea()
-    mainwindow.setCentralWidget(dockarea)
+    from pymodaq.utils.shared_ui import SharedUI
 
-    prog = FunctionPlotter(dockarea)
+    app = mkQApp(FunctionPlotter.__name__)
+    win, area = make_window(title=FunctionPlotter.__name__)
 
-    mainwindow.show()
+    prog = FunctionPlotter(area)
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(prog)
+
     sys.exit(app.exec())
 
 
