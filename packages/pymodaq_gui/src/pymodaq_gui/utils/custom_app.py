@@ -81,15 +81,15 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self._menubar: QtWidgets.QMenuBar = None
 
-        if toolbar is None:
-            toolbar = QtWidgets.QToolBar(self.title)
-        self.set_toolbar(toolbar) # create self._toolbar
+        if toolbar is not None:
+            self.set_toolbar(toolbar)
+            self.reference_toolbar('main', self._toolbar)
 
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self.title)
-            self.mainwindow.addToolBar(self._toolbar)
+            if toolbar is not None:
+                self.mainwindow.addToolBar(self._toolbar)
             self._menubar = self.mainwindow.menuBar()
-            self.reference_toolbar('main', self._toolbar)
         else:
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()

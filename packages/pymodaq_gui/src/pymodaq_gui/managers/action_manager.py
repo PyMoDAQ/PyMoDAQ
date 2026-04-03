@@ -1,7 +1,8 @@
 import warnings
 from collections.abc import Iterable
+from collections import OrderedDict
 from pathlib import Path
-from typing import Callable, Iterable as IterableType, Union
+from typing import Callable, Iterable as IterableType, Union, OrderedDict as OrderedDictType
 
 from multipledispatch import dispatch
 from qtpy import QtCore, QtGui, QtWidgets
@@ -272,27 +273,12 @@ class ActionManager:
         The menu to use as default
     """
     def __init__(self, toolbar: QtWidgets.QToolBar = None, menu: QtWidgets.QMenu = None):
-        self._actions: dict[str, QAction] = {}
-        self._menus: dict[str, QtWidgets.QMenu] = {}
-        self._toolbars: dict[str, QtWidgets.QToolBar] = {}
+        self._actions: OrderedDictType[str, QAction] = OrderedDict([])
+        self._menus: OrderedDictType[str, QtWidgets.QMenu] = OrderedDict([])
+        self._toolbars: OrderedDictType[str, QtWidgets.QToolBar] = OrderedDict([])
 
-        # Store defaults in dicts
-        if menu is not None:
-            self._menus['_default'] = menu
-        if toolbar is not None:
-            self._toolbars['_default'] = toolbar
-
-        #self.setup_actions()
-
-    @property
-    def _menu(self) -> QtWidgets.QMenu:
-        """Get the default menu (backward compatibility)"""
-        return self._menus.get('_default', None)
-
-    @property
-    def _toolbar(self) -> QtWidgets.QToolBar:
-        """Get the default toolbar (backward compatibility)"""
-        return self._toolbars.get('_default', None)
+        self._toolbar = toolbar
+        self._menu = menu
 
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
@@ -507,6 +493,8 @@ class ActionManager:
 
         # Store reference
         self._menus[short_name] = new_menu
+        if len(self._menus) == 1:
+            self.set_menu(new_menu)
 
         return new_menu
 
@@ -569,6 +557,8 @@ class ActionManager:
             else:
                 parent.insertToolBar(before, toolbar)
         self._toolbars[short_name] = toolbar
+        if len(self._toolbars) == 1:
+            self.set_toolbar(toolbar)
         return toolbar
 
     def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
@@ -581,7 +571,7 @@ class ActionManager:
         """
         if isinstance(toolbar, str):
             toolbar = self.get_toolbar(toolbar)
-        self._toolbars['_default'] = toolbar
+        self._toolbar = toolbar
 
     def set_menu(self, menu):
         """Set the default menu
@@ -591,7 +581,7 @@ class ActionManager:
         menu: QtWidgets.QMenu
             The menu to set as default
         """
-        self._menus['_default'] = menu
+        self._menu = menu
 
     def set_action_text(self, action_name: str, text: str):
         """Convenience method to set the displayed text on an action

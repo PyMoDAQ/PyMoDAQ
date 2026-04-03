@@ -43,6 +43,7 @@ class MenuNames(StrEnum):
     SETTINGS = 'settings'
     VIEW = 'view'
     TOOLS = 'tools'
+    TOOLBARS = 'toolbars'
     HELP = 'help'
 
 
@@ -135,7 +136,7 @@ class SharedUI(CustomApp):
         menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
         if isinstance(app, CustomApp):
             for menu in app.menus:
-                if menu.title() in menus_dict: # two main menus with identical names (titles)
+                if menu.title() in menus_dict: # two  menus with identical names (titles)
                     self._merge_menus(menu, menus_dict[menu.title()])
                 elif menu.parent() == app.menubar:
                     self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
@@ -143,8 +144,8 @@ class SharedUI(CustomApp):
                 else:
                     pass
 
-        # move the runtime toolbar at the beginning
-        self.mainwindow.insertToolBar(app.toolbar, self.get_toolbar('runtime'))
+        for toolbar in app.toolbars:
+            self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.addSeparator()
@@ -180,16 +181,15 @@ class SharedUI(CustomApp):
         help_toolbar = self.add_toolbar('help_toolbar', 'Help', self.mainwindow, add_break=False)
         help_toolbar.setVisible(False)
 
-        self.add_menu(MenuNames.FILE, 'File', menubar)
-        self.add_menu(MenuNames.VIEW, 'View', menubar)
-        self.add_menu('toolbars', 'Toolbars', MenuNames.VIEW)
+        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
+        self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), menubar)
+        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), MenuNames.VIEW)
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
 
         # help menu
         self.add_menu(MenuNames.HELP, '?', menubar)
 
-        self.toolbar.setVisible(False)
 
     def setup_actions(self):
 
@@ -218,9 +218,8 @@ class SharedUI(CustomApp):
                         menu=MenuNames.HELP)
         self.toolbar.addSeparator()
 
-        for toolbar_name in self.toolbars_names:
-            if toolbar_name != '_default':
-                self.get_menu('toolbars').addAction(self.get_toolbar(toolbar_name).toggleViewAction())
+        for toolbar in self.toolbars:
+            self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
     def connect_things(self):
         self.connect_action("log", self.show_log)
