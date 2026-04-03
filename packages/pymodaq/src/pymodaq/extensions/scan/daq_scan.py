@@ -123,7 +123,7 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
-        self.ui: DAQScanUI = DAQScanUI(dockarea)
+
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
 
@@ -168,8 +168,10 @@ class DAQScan(CustomExt):
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
 
-        self.setup_ui()
+        self.ui: DAQScanUI = DAQScanUI(dockarea, toolbar=self.toolbar)
         self.ui.command_sig.connect(self.process_ui_cmds)
+
+        self.do_things_after_ui_setup()
 
         self.create_dataset_settings()
 
@@ -182,6 +184,27 @@ class DAQScan(CustomExt):
         if self.dashboard.preset_manager.entry_applied:
             self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
+
+    def do_things_after_ui_setup(self):
+        self.create_dashboard_toolbar()
+
+        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
+                                        ['General Settings', 'Save Settings'])
+
+        self.ui.set_scanner_settings(self.scanner.parent_widget)
+        self.ui.set_modules_settings(self.modules_manager.settings_tree)
+
+        self.plotting_settings_tree = ParameterTree()
+        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
+        self.ui.set_plotting_settings(self.plotting_settings_tree)
+
+        for ind_menu, menu in enumerate(self.ui.menus):
+            self.reference_menu(self.ui.menus_names[ind_menu], menu)
+
+        for ind_toolbar, toolbar in enumerate(self.ui.toolbars):
+            self.reference_toolbar(self.ui.toolbars_names[ind_toolbar], toolbar)
+
+        self.ui.enable_start_stop(False)
 
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
         """ Get the main toolbar widget to be eventually added in the main window toolbararea
@@ -198,34 +221,6 @@ class DAQScan(CustomExt):
             dict(all_items=data0D_names, selected=data0D_names))
         self.settings.child('plot_options', 'plot_1d').setValue(
             dict(all_items=data1D_names, selected=data1D_names))
-
-
-    def setup_docks_and_widgets(self):
-
-        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
-                                        ['General Settings', 'Save Settings'])
-
-        self.ui.set_scanner_settings(self.scanner.parent_widget)
-        self.ui.set_modules_settings(self.modules_manager.settings_tree)
-
-        self.plotting_settings_tree = ParameterTree()
-        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
-        self.ui.set_plotting_settings(self.plotting_settings_tree)
-
-    def setup_actions(self):
-
-        self.ui.enable_start_stop(False)
-
-    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.mainwindow.removeToolBar(self.toolbar)  # hides it
-
-        self.create_dashboard_toolbar()
-
-        for ind_menu, menu in enumerate(self.ui.menus):
-            self.reference_menu(self.ui.menus_names[ind_menu], menu)
-
-        for ind_toolbar, toolbar in enumerate(self.ui.toolbars):
-            self.reference_toolbar(self.ui.toolbars_names[ind_toolbar], toolbar)
 
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
