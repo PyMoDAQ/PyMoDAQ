@@ -103,10 +103,7 @@ class DAQ_Logger(CustomExt):
 
         logger.debug('actions set')
 
-    def setup_docks(self):
-
-        self.create_dashboard_toolbar()
-
+    def setup_docks_and_widgets(self):
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -140,11 +137,10 @@ class DAQ_Logger(CustomExt):
         self.connect_action('grab_all', self.start_all)
         self.connect_action('stop_all', self.stop_all)
 
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         """
-        file_menu = menubar.addMenu('File')
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         if param.name() == 'log_type':
@@ -513,8 +509,6 @@ def main():
 
     win_ext, logger = create_extension(dashboard, DAQ_Logger)
     win_ext.show()
-
-    logger.preset_manager.execute_entry(config("pymodaq", "presets", "default_preset_for_logger"))
 
     sys.exit(app.exec())
 
