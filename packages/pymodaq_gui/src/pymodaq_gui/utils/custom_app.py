@@ -127,12 +127,12 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def setup_ui(self):
         self.setup_docks()
 
-        self.setup_actions()  # see ActionManager MixIn class
-
         try:
             self.setup_menu(self._menubar)
         except TypeError:
             self.setup_menu()  # for backcompatibility
+
+        self.setup_actions()  # see ActionManager MixIn class
 
         self.connect_things()
 
