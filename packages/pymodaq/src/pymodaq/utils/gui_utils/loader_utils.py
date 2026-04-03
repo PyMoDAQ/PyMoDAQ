@@ -42,13 +42,15 @@ def create_load_daq_move(ui_identifier='Original') -> tuple[SharedUI, 'DAQ_Move'
 
 def create_load_daq_viewer() -> tuple[SharedUI, 'DAQ_Viewer']:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-
+    win, area = make_window(area=False, title='DAQ_Viewer')
     widget = QtWidgets.QWidget()
+    win.setCentralWidget(widget)
     daq_viewer = DAQ_Viewer(widget, title="test")
 
-    shared_ui = SharedUI(widget)
-    shared_ui.affect_application(daq_viewer)
-    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=daq_viewer.ui.toolbar, add_break=True)
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(daq_viewer.ui)
+    shared_ui.add_toolbar('viewer', 'Viewer', win,
+                          toolbar=daq_viewer.ui.toolbar, add_break=False)
 
     return shared_ui, daq_viewer
 
