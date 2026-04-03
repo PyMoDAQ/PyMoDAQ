@@ -258,7 +258,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.actuator_init = False
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_toolbar('move', 'Move')
+        self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
 
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
