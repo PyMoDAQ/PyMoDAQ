@@ -74,8 +74,6 @@ class DAQ_Move(ParameterControlModule):
 
     Attributes
     ----------
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen actuator is correctly initialized
     move_done_signal: Signal[str, DataActuator]
         This signal is emitted when the chosen actuator finished its action. It gives the actuator's name and current
         value
