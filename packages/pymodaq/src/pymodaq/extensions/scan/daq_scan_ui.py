@@ -217,9 +217,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     def n_scan_steps(self, nsteps: int):
         self._n_scan_steps_sb.setValue(nsteps)
 
-    def display_status(self, status: str, wait_time=1000):
-        self.statusbar.showMessage(status, wait_time)
-        
     def set_permanent_status(self, status: str):
         self._status_message_label.setText(status)
 
@@ -284,7 +281,7 @@ def main():
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
-        prog.display_status(str(cmd_sig))
+        prog.update_status(str(cmd_sig))
 
     prog.command_sig.connect(print_command_sig)
     prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])

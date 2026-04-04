@@ -326,7 +326,7 @@ def main(init_qt=True):
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
-        prog.display_status(str(cmd_sig))
+        prog.update_status(str(cmd_sig))
         if cmd_sig.command == UiToMainViewer.INIT:
             prog.detector_init = cmd_sig.attribute[0]
         elif cmd_sig.command == UiToMainViewer.SNAP:

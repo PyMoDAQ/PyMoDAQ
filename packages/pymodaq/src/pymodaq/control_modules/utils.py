@@ -288,7 +288,7 @@ class ControlModule(QObject):
             if True, log the message in the logger
         """
         if self.ui is not None:
-            self.ui.display_status(txt)
+            self.ui.update_status(txt)
         self.status_sig.emit(txt)
         if log:
             self.logger.info(txt)

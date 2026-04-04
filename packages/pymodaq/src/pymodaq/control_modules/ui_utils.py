@@ -40,10 +40,6 @@ class ControlModuleUI(CustomApp):
         self._ini_state = False
         self._settings_widget = None
 
-    def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
-        if self.statusbar is not None:
-            self.statusbar.showMessage(txt, wait_time)
-
     # ---- Common action setup methods ----
 
     def _setup_name_widget(self, toolbar: QtWidgets.QToolBar = None) -> None:
