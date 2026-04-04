@@ -337,6 +337,40 @@ class DashBoard(CustomApp, LECOComponentMixin):
         except Exception as e:
             logger.exception(str(e))
 
+    def _remove_module_list(self, modules, module_list, compact_manager_attr,
+                            remove_dock_widgets=False):
+        """Remove a list of control modules, clean up compact manager and docks.
+
+        Parameters
+        ----------
+        modules: list
+            Modules to remove.
+        module_list: list
+            The dashboard-level list (self.actuators_modules or self.detector_modules)
+            from which modules are removed.
+        compact_manager_attr: str
+            Name of the compact manager attribute on self.
+        remove_dock_widgets: bool
+            Whether to call dock.removeWidgets() before dock.close() (needed for actuators).
+        """
+        for module in modules[:]:
+            try:
+                if module in module_list:
+                    module_list.remove(module)
+                compact_manager = getattr(self, compact_manager_attr)
+                if compact_manager:
+                    if compact_manager.remove_module(module):
+                        compact_manager.close()
+                        setattr(self, compact_manager_attr, None)
+                module.quit_fun()
+                dock = self.dockarea.docks.get(module.title, None)
+                if dock:
+                    if remove_dock_widgets:
+                        dock.removeWidgets()
+                    dock.close()
+            except Exception as e:
+                logger.exception(str(e))
+
     def remove_detectors(self, detector_modules: List[DAQ_Viewer] = None):
         """
         Remove the given list of detectors from the dashboard.
@@ -347,25 +381,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if detector_modules is None:
             detector_modules = []
-        for detector_module in detector_modules[:]:
-            try:
-                if detector_module in self.detector_modules:
-                    self.detector_modules.remove(detector_module)
-
-                # Remove from compact dock manager
-                if self.compact_detector_manager:
-                    is_empty = self.compact_detector_manager.remove_module(detector_module)
-                    if is_empty:
-                        self.compact_detector_manager.close()
-                        self.compact_detector_manager = None
-                detector_module.quit_fun()
-
-                # Close individual detector dock
-                dock = self.dockarea.docks.get(f"{detector_module.title}", None)
-                if dock:
-                    dock.close()
-            except Exception as e:
-                logger.exception(str(e))
+        self._remove_module_list(detector_modules, self.detector_modules,
+                                 'compact_detector_manager')
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
         """
@@ -377,26 +394,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if actuator_modules is None:
             actuator_modules = []
-        for actuator_module in actuator_modules[:]:
-            try:
-                if actuator_module in self.actuators_modules:
-                    self.actuators_modules.remove(actuator_module)
-                # Remove from compact dock manager
-                if self.compact_actuator_manager:
-                    is_empty = self.compact_actuator_manager.remove_module(actuator_module)
-                    if is_empty:
-                        self.compact_actuator_manager.close()
-                        self.compact_actuator_manager = None
-
-                actuator_module.quit_fun()
-
-                # Close individual actuator dock (for non-compact actuators)
-                dock: Dock = self.dockarea.docks.get(actuator_module.title, None)
-                if dock:
-                    dock.removeWidgets()
-                    dock.close()
-            except Exception as e:
-                logger.exception(str(e))
+        self._remove_module_list(actuator_modules, self.actuators_modules,
+                                 'compact_actuator_manager', remove_dock_widgets=True)
 
     def get_docks_from_modules(
         self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]
@@ -809,6 +808,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             path = get_set_layout_path().joinpath(self.preset_file.stem + ".dock")
             self.save_layout_state(path)
 
+
     def add_move(
             self,
             plug_name: str = None,
@@ -893,6 +893,28 @@ class DashBoard(CustomApp, LECOComponentMixin):
         actuators_modules.append(mov_mod_tmp)
         return mov_mod_tmp
 
+    def init_module(self, module, controller=None):
+        """Initialize a control module, optionally wiring it to an existing controller.
+
+        Parameters
+        ----------
+        module: DAQ_Move or DAQ_Viewer
+        controller: object, optional
+            If given, assigned to module.controller before init (slave mode).
+        """
+        if controller is not None:
+            module.controller = controller
+        module.init_hardware_ui()
+        QtWidgets.QApplication.processEvents()
+        self.modules_manager.poll_init(module)
+        QtWidgets.QApplication.processEvents()
+
+    def _finalize_extension_module(self, module, instrument_controller, module_list):
+        """Finalize a module added from an extension: wire controller, init, append to list."""
+        module.master = False
+        self.init_module(module, controller=instrument_controller)
+        module_list.append(module)
+
     def add_move_from_extension(
         self, name: str, instrument_name: str, instrument_controller: Any,
             ui_identifier = None,
@@ -921,15 +943,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         actuator = self.add_move(name, None, instrument_name, [], [], [],
                                  ui_identifier=ui_identifier,
                                  **kwargs)
-        actuator.controller = instrument_controller
-        actuator.master = False
-        actuator.init_hardware_ui()
-        QtWidgets.QApplication.processEvents()
-        self.modules_manager.poll_init(actuator)
-        QtWidgets.QApplication.processEvents()
-
-        # Update actuators modules and module manager
-        self.actuators_modules.append(actuator)
+        self._finalize_extension_module(actuator, instrument_controller, self.actuators_modules)
 
     def add_det(self, plug_name, plug_settings, detector_docks_viewer,
                 detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
@@ -1024,15 +1038,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         detector = self.add_det(
             name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name
         )
-        detector.controller = instrument_controller
-        detector.master = False
-        detector.init_hardware_ui()
-        QtWidgets.QApplication.processEvents()
-        self.modules_manager.poll_init(detector)
-        QtWidgets.QApplication.processEvents()
-
-        # Update actuators modules and module manager
-        self.detector_modules.append(detector)
+        self._finalize_extension_module(detector, instrument_controller, self.detector_modules)
 
     def set_roi_configuration(self, filename):
         if not isinstance(filename, Path):
@@ -1242,34 +1248,24 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def preset_name(self) -> str:
         return self.preset_manager.entry
 
-    def update_init_tree(self):
-        for act in self.actuators_modules:
-            name = "".join(act.title.split())  # remove empty spaces
-            if act.title not in [
-                ac.title()
-                for ac in putils.iter_children_params(
-                    self.settings.child("actuators"), []
+    def _update_init_tree_for(self, modules, settings_key):
+        for mod in modules:
+            name = "".join(mod.title.split())  # remove empty spaces
+            if mod.title not in [
+                child.title()
+                for child in putils.iter_children_params(
+                    self.settings.child(settings_key), []
                 )
             ]:
-                self.settings.child("actuators").addChild(
-                    {"title": act.title, "name": name, "type": "led", "value": False}
+                self.settings.child(settings_key).addChild(
+                    {"title": mod.title, "name": name, "type": "led", "value": False}
                 )
                 QtWidgets.QApplication.processEvents()
-            self.settings.child("actuators", name).setValue(act.initialized_state)
+            self.settings.child(settings_key, name).setValue(mod.initialized_state)
 
-        for det in self.detector_modules:
-            name = "".join(det.title.split())  # remove empty spaces
-            if det.title not in [
-                de.title()
-                for de in putils.iter_children_params(
-                    self.settings.child("detectors"), []
-                )
-            ]:
-                self.settings.child("detectors").addChild(
-                    {"title": det.title, "name": name, "type": "led", "value": False}
-                )
-                QtWidgets.QApplication.processEvents()
-            self.settings.child("detectors", name).setValue(det.initialized_state)
+    def update_init_tree(self):
+        self._update_init_tree_for(self.actuators_modules, "actuators")
+        self._update_init_tree_for(self.detector_modules, "detectors")
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
         if out_of_bounds:
