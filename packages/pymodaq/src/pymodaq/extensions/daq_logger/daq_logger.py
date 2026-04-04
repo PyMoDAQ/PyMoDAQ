@@ -511,8 +511,10 @@ def main():
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, DAQ_Logger)
+    win_ext, logger = create_extension(dashboard, DAQ_Logger)
     win_ext.show()
+
+    logger.preset_manager.execute_entry(config("pymodaq", "presets", "default_preset_for_logger"))
 
     sys.exit(app.exec())
 

@@ -254,12 +254,13 @@ def main():
 
     app = mkQApp('Data Mixer')
 
-
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, DataMixer)
+    win_ext, data_mixer = create_extension(dashboard, DataMixer)
     win_ext.show()
+
+    data_mixer.preset_manager.execute_entry(config("pymodaq", "presets", "default_preset_for_datamixer"))
 
     sys.exit(app.exec())
 

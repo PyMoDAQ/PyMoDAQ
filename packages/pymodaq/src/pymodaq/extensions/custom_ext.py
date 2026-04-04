@@ -146,5 +146,6 @@ class CustomExt(CustomApp):
             if show is None:
                 show = self.is_action_checked(DashBoardToolbarActions.SHOW)
             self.dashboard.mainwindow.setVisible(show)
+            self.dashboard.mainwindow.setWindowTitle('Dashboard')
             self.dashboard.mainwindow.closeEvent = lambda event: self.set_action_checked(DashBoardToolbarActions.SHOW,
                                                                                          False)

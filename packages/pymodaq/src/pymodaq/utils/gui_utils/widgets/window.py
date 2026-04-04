@@ -4,14 +4,14 @@ from pymodaq_gui.utils import DockArea
 
 
 def make_window(
-    area:DockArea=None,
-    win:QMainWindow=None,
-    title="Module",
-    flags=(
-        Qt.WindowType.Window
-        | Qt.WindowType.WindowTitleHint
-        | Qt.WindowType.WindowMinimizeButtonHint
-        | Qt.WindowType.WindowMaximizeButtonHint
+    area: DockArea | None | bool = None,
+    win: QMainWindow = None,
+    title: str = "Module",
+    flags: Qt.WindowType= (
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowMinimizeButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
     ),
 ) -> tuple[QMainWindow, DockArea]:
     """
@@ -19,7 +19,7 @@ def make_window(
 
     Args:
         area (DockArea): DockArea widget to use as central widget.
-                                   Defaults to a new DockArea instance.
+                                   Defaults to a new DockArea instance except if area is False
         win (QMainWindow): Main window object to configure.
                                      Defaults to a new QMainWindow instance.
         title (str, optional): Window title text. Defaults to "Module".
@@ -34,6 +34,8 @@ def make_window(
     # Check if area parameter was provided, create new one if None
     if area is None:
         area = DockArea()
+    elif area is False:
+        area = None
 
     # Check if win parameter was provided, create new one if None
     if win is None:
@@ -43,7 +45,8 @@ def make_window(
     win.setWindowFlags(flags)
 
     # Set the DockArea as the main content widget of the window
-    win.setCentralWidget(area)
+    if area is not None:
+        win.setCentralWidget(area)
 
     # Set the text displayed in the window's title bar
     win.setWindowTitle(title)

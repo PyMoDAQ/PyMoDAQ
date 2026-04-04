@@ -294,6 +294,10 @@ class DAQ_Move(ParameterControlModule):
         elif move_command.move_type == "home":
             self.move_home(move_command.value)
 
+    @property
+    def epsilon(self) -> float:
+        return self.settings['move_settings', 'epsilon']
+
     def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_leco=False):
         """Move the connected hardware to the absolute value
 
@@ -301,7 +305,7 @@ class DAQ_Move(ParameterControlModule):
 
         Parameters
         ----------
-        value: ndarray
+        value: ndarray or DataActuator
             The value the actuator should reach
         send_to_leco: bool
             if True, this position is send through the LECO communication canal
@@ -312,7 +316,7 @@ class DAQ_Move(ParameterControlModule):
                     self.title, data=[np.array([value])], units=self.units
                 )
             self._send_to_leco = send_to_leco
-            if value == self._current_value:
+            if value.equal_to(self._current_value, self.epsilon):
                 self.thread_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, value))
             else:
                 if self.ui is not None:

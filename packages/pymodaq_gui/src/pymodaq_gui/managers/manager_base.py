@@ -189,18 +189,16 @@ class ManagerBase(CustomExt):
     @property
     def entry(self) -> str:
         """ Get/Set the name of the current entry """
-        return self.get_action_list().currentText()
+        return self.entries_sync.value['current']
 
     @entry.setter
     def entry(self, entry_name: str):
-        self.get_action_list().setCurrentText(entry_name)
+        self.entries_sync.set_value({**self.entries_sync.value, 'current': entry_name})
 
     @property
     def entry_filepath(self) -> Path:
         """ Get the full path of the current entry file """
-        kwargs_to_entry_folder = {}  # reimplement if needed
-        return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-            self.entry + self.entry_extension)
+        return self.entry_path_from_name(self.entry)
 
     def entry_path_from_name(self, entry_name: str) -> Path:
         kwargs_to_entry_folder = {}  # reimplement if needed
@@ -339,7 +337,7 @@ class ManagerBase(CustomExt):
             combo,
             property_map={
                 'items': {
-                    'signal': combo.items_changed,  
+                    'signal': combo.items_changed,
                     'getter': combo.get_items,
                     'setter': combo.set_items,
                     'mode': SyncMode.BIDIRECTIONAL
@@ -368,12 +366,11 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         self.do_things_for_new_creation()
-        if ok and entry != '':
-            if self.save_check(entry, bypass_dialog=bypass_dialog):
-                self.entries_sync.append_to_list('items', entry)
-                self.entries_sync.update_key('current', entry)
-                self.update_action_list()
-                self.new_entry.emit(entry)
+        if ok and entry != '' and self.save_check(entry, bypass_dialog=bypass_dialog):
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
+            self.update_action_list()
+            self.new_entry.emit(entry)
 
     def do_things_for_new_creation(self):
         """ To be reimplemented if needed """
@@ -384,8 +381,7 @@ class ManagerBase(CustomExt):
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
             entry_path = self.entry_filepath
-        if entry_path.exists():
-            if not bypass_dialog:
+        if entry_path.exists() and not bypass_dialog:
                 user_agreed = dialog(
                     title='Overwrite confirmation',
                     message='File exist do you want to overwrite it ?',
@@ -464,13 +460,16 @@ class ManagerBase(CustomExt):
         """ Get the name of the last entry that has been successfully applied/executed """
         return self._applied_entry_name
 
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: str | Path = None, **kwargs):
         """ To be called to execute the selected entry """
         if entry_path is None:
             self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filepath
 
-        self.update_entry(entry_path.stem)
+        if isinstance(entry_path, str):
+            entry_path = self.entry_path_from_name(entry_path)
+
+        self.update_entry(entry_path)
 
         if self.dashboard is None:
             logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
@@ -500,13 +499,13 @@ class ManagerBase(CustomExt):
         return False
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        """ Update the table given the entry argument"""
+        """ Load and display the given entry """
         if entry is None:
+            if self.entry is None:
+                return
             entry = self.entry_filepath
-
-        if isinstance(entry, str):
-            self.entry = entry  # make sure the current entry field reflects this method argument
-            entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
+        elif isinstance(entry, str):
+            entry = self.entry_path_from_name(entry)
 
         self.entry = entry.stem  # make sure the combo is updated (if triggered not from the combo, in particular the action slots)
 

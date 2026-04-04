@@ -526,6 +526,16 @@ class TestDataBase:
             for ind_axis, axis in enumerate(dwa_split.axes):
                 assert axis == dwa.axes[ind]
 
+    @pytest.mark.parametrize('epsilon, equal',
+                             ([1, True], [1.0, True], [0.1, False], [Q_(0.5, 'm'), True], [Q_(0.5, 's'), False]))
+    def test_equal_to(self, epsilon, equal):
+        Ndata = 2
+        labels = [f'label{ind}' for ind in range(Ndata)]
+        dwa_1 = init_data(data=mutils.normalize(DATA1D), Ndata=Ndata, labels=labels, units='m')
+        dwa_2 = init_data(data=mutils.normalize(DATA1D) * 0.8, Ndata=Ndata, labels=labels, units='m')
+
+        assert dwa_1.equal_to(dwa_2, epsilon=epsilon) is equal
+
 
 class TestDataWithAxesUniform:
     def test_init(self):

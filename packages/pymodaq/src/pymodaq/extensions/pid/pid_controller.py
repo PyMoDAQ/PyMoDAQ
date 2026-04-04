@@ -975,11 +975,18 @@ class PIDRunner(QObject):
 if __name__ == "__main__":
     import sys
     from pymodaq_gui.qt_utils import mkQApp
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import create_load_dashboard
+    from pymodaq.utils.gui_utils.loader_utils import create_extension
 
     app = mkQApp("DAQ_PID")
-    preset_file_name = config("utils", "presets", "default_preset_for_pid")
 
-    dashboard, extension, win = load_dashboard_with_preset(preset_file_name, "DAQ_PID")
+    win, dashboard = create_load_dashboard()
+    win.mainwindow.setVisible(False)
+
+    win_ext, scan = create_extension(dashboard, DAQ_PID)
+    win_ext.show()
+
+    preset_file_name = config("pymodaq", "presets", "default_preset_for_pid")
+    dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())
