@@ -732,28 +732,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 except TypeError:
                     pass
 
-            for module in self.actuators_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except Exception:
-                    pass
+            # Removing control modules
+            self.remove_actuators(self.actuators_modules)
+            self.remove_detectors(self.detector_modules)
 
-            for module in self.detector_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except Exception:
-                    pass
-
+            # Removing managers
             self.preset_manager.quit_fun()
             self.configurator.quit_fun()
             self.overshooter.quit_fun()
 
+            # Removing dock areas (I don't know what this is for)
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
@@ -766,6 +754,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
             if self.pid_window is not None:
                 self.pid_window.close()
+
+            QtWidgets.QApplication.processEvents()
 
         except Exception as e:
             logger.exception(str(e))
@@ -1283,10 +1273,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
         if out_of_bounds:
-            logger.warning(f"Some actuators reached their bounds")
-            if self.extensions[ExtensionEnum.SCAN] is not None:
-                logger.warning(f"Stopping the DAQScan for out of bounds")
-                self.extensions[ExtensionEnum.SCAN].stop_scan()
+            logger.warning("Some actuators reached their bounds")
+            if self.extensions[ExtensionEnum.SCANNER] is not None:
+                logger.warning("Stopping the DAQScan for out of bounds")
+                self.extensions[ExtensionEnum.SCANNER].stop_scan()
 
     def stop_moves(self, *args, **kwargs):
         """
