@@ -81,20 +81,13 @@ class DAQ_Move_UI_Base(ControlModuleUI):
 
         self._settings_widget: QtWidgets.QWidget = None
 
-
         self.setup_ui()
 
         self.enable_move_buttons(False)
 
-    def show_data(self, data: DataToExport):
-        self.viewer.show_data(data)
-
-    def display_value(self, value: DataActuator):
-        try:
-            self.current_value_sb.setValue(value.value(self._unit))
-        except DimensionalityError as e:
-            value.force_units(self._unit)
-            self.current_value_sb.setValue(value.value())
+    # -------------------------------------------------------------------------
+    # Properties
+    # -------------------------------------------------------------------------
 
     @property
     def actuator_init(self):
@@ -133,6 +126,192 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     @move_done.setter
     def move_done(self, status):
         self.move_done_led.set_as(status)
+
+    # -------------------------------------------------------------------------
+    # UI Construction
+    # -------------------------------------------------------------------------
+
+    def setup_docks(self):
+        self.parent.setLayout(QtWidgets.QHBoxLayout())
+        self.parent.layout().addWidget(self.move_toolbar)
+        self.control_widget = QtWidgets.QWidget()
+
+        self.actuators_combo = QComboBox()
+        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
+        self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
+
+        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
+        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
+
+        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
+        self.move_done_led = QLED(readonly=True)
+        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
+                                            siPrefix=config('pymodaq', 'actuator', 'siprefix'),
+                                            )
+        self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
+        self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
+        self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
+                                          tip='Set the value of the actuator to the set absolute value',
+                                          icon_color=self.get_theme().green)
+        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'),
+                                                 key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
+        self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
+        self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
+        self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
+
+        self.statusbar.setMaximumHeight(30)
+
+        self.graph_widget = QtWidgets.QWidget()
+        self.graph_widget.setLayout(QtWidgets.QHBoxLayout())
+        self.graph_widget.layout().setContentsMargins(0, 0, 0, 0)
+        dockarea = DockArea()
+        self.graph_widget.layout().addWidget(dockarea)
+        self.viewer = ViewerDispatcher(dockarea)
+        self.actuator_init = False
+
+    def populate_control_ui(self,  widget: QtWidgets.QWidget):
+        widget.setLayout(QtWidgets.QVBoxLayout())
+        container_widget = QtWidgets.QWidget()
+        widget.layout().addWidget(container_widget)
+        widget.layout().addStretch()
+
+        container_widget.setLayout(QtWidgets.QGridLayout())
+        container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
+
+        container_widget.layout().addWidget(self.find_home_pb, 0, 1)
+
+        container_widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
+        container_widget.layout().addWidget(self.move_abs_pb, 1, 1)
+        container_widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
+        container_widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
+
+        container_widget.layout().addWidget(self.rel_value_sb, 3, 0)
+
+        container_widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
+        container_widget.layout().addWidget(self.stop_pb, 4, 0)
+
+        container_widget.layout().addWidget(self.get_value_pb, 4, 1)
+        container_widget.layout().setContentsMargins(0, 0, 0, 0)
+        widget.setVisible(False)
+
+    def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
+        self._setup_name_widget(toolbar=toolbar)
+        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
+        self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
+                                display_name='Ini. Actuator', tip='Connect to selected actuator')
+        self._setup_settings_action(toolbar=toolbar)
+        toolbar.addSeparator()
+        self.add_widget('current', self.current_value_sb, toolbar=toolbar)
+        self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
+
+        self._setup_move_actions(toolbar)
+
+        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
+                        toolbar=toolbar, icon_color=self.get_theme().red)
+        toolbar.addSeparator()
+        self.add_action('show_controls', 'Show Controls',
+                        'discover_tune', "Show more controls", checkable=True,
+                        toolbar=toolbar)
+        self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
+                        checkable=True, checked=True, icon_checked='bid_landscape_disabled',
+                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
+                        toolbar=toolbar)
+        self.add_action('refresh_value', 'Refresh', 'repeat',
+                        "Refresh Value Continuously", checkable=True,
+                        toolbar=toolbar, icon_checked='repeat_on',
+                        icon_checked_color=self.get_theme().green)
+        self.add_widget('status', self.statusbar, toolbar=toolbar)
+
+    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
+        """ to be reimplemented in dedicated UI class
+
+        either: self._setup_absolute_actions(), self._setup_relative_actions(), ...
+        """
+        pass
+
+    def _setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_widget('abs_green', self.abs_value_sb, toolbar=toolbar)
+        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar)
+
+    def _setup_absolute_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_action('move_abs', 'Move Abs', 'step',
+                        "Move to the set absolute value",
+                        icon_color=self.get_theme().green,
+                        toolbar=toolbar)
+        self.add_action('move_abs_2', 'Move Abs', 'step',
+                        "Move to the other set absolute value",
+                        icon_color=self.get_theme().red,
+                        toolbar=toolbar)
+
+    def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
+        self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
+        self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
+                        toolbar=toolbar)
+        self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
+                        toolbar=toolbar)
+
+    def connect_things(self):
+        self._connect_common_actions()
+
+        if 'show_controls' in self.actions_names:
+            self.connect_action('show_controls', self.show_controls)
+        if 'show_graph' in self.actions_names:
+            self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
+        if 'move_abs' in self.actions_names:
+            self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
+        if 'move_abs_2' in self.actions_names:
+            self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
+        if 'stop' in self.actions_names:
+            self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+        if 'show_config' in self.actions_names:
+            self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
+
+        self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
+        self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
+        self.abs_value_sb_2.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_2))
+        self.abs_value_sb_bis.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
+        self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(
+            ThreadCommand(UiToMainMove.REL_VALUE, self.rel_value_sb.value())))
+        self.move_rel_plus_pb.clicked.connect(lambda: self.emit_move_rel('+'))
+        self.move_rel_minus_pb.clicked.connect(lambda: self.emit_move_rel('-'))
+        self.rel_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_rel('+'))
+        self.rel_value_sb.shortcut["Ctrl+Shift+E"].activated.connect(lambda: self.emit_move_rel('-'))
+
+        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.FIND_HOME, )))
+        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
+
+        self.actuators_combo.currentTextChanged.connect(
+            lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
+        if 'refresh_value' in self.actions_names:
+            self.connect_action('refresh_value',
+                                lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
+                                                                                   do_refresh)))
+
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
+
+    def do_init(self, do_init=True):
+        """Programmatically press the Init button
+        API entry
+        Parameters
+        ----------
+        do_init: bool
+            will fire the Init button depending on the argument value and the button check state
+        """
+        if do_init is not self.is_action_checked('ini_actuator'):
+            self.get_action('ini_actuator').trigger()
+
+    def show_data(self, data: DataToExport):
+        self.viewer.show_data(data)
+
+    def display_value(self, value: DataActuator):
+        try:
+            self.current_value_sb.setValue(value.value(self._unit))
+        except DimensionalityError as e:
+            value.force_units(self._unit)
+            self.current_value_sb.setValue(value.value())
 
     def enable_move_buttons(self, status):
         self.abs_value_sb.setEnabled(status)
@@ -203,85 +382,12 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setOpts(siPrefix=show)
         self.rel_value_sb.setOpts(siPrefix=show)
 
-    def setup_docks(self):
-        self.parent.setLayout(QtWidgets.QHBoxLayout())
-        self.parent.layout().addWidget(self.move_toolbar)
-        self.control_widget = QtWidgets.QWidget()
+    def set_settings_tree(self, tree):
+        self._settings_widget = tree
 
-        self.actuators_combo = QComboBox()
-        self.abs_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
-
-        self.abs_value_sb_2 = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
-
-        self.abs_value_sb_bis = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'))
-        self.move_done_led = QLED(readonly=True)
-        self.current_value_sb = QSpinBox_ro(font_size=20, min_height=27,
-                                            siPrefix=config('pymodaq', 'actuator', 'siprefix'),
-                                            )
-        self.find_home_pb = PushButtonIcon('home', 'Find Home', icon_color=self.get_theme().magenta)
-        self.move_rel_plus_pb = PushButtonIcon('step_out', 'Set Rel. (+)', icon_color=self.get_theme().yellow)
-        self.move_abs_pb = PushButtonIcon('step', 'Set Abs.',
-                                          tip='Set the value of the actuator to the set absolute value',
-                                          icon_color=self.get_theme().green)
-        self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'),
-                                                 key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
-        self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
-        self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
-        self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
-
-        self.statusbar.setMaximumHeight(30)
-
-        self.graph_widget = QtWidgets.QWidget()
-        self.graph_widget.setLayout(QtWidgets.QHBoxLayout())
-        self.graph_widget.layout().setContentsMargins(0, 0, 0, 0)
-        dockarea = DockArea()
-        self.graph_widget.layout().addWidget(dockarea)
-        self.viewer = ViewerDispatcher(dockarea)
-        self.actuator_init = False
-
-    def populate_control_ui(self,  widget: QtWidgets.QWidget):
-        widget.setLayout(QtWidgets.QVBoxLayout())
-        container_widget = QtWidgets.QWidget()
-        widget.layout().addWidget(container_widget)
-        widget.layout().addStretch()
-
-        container_widget.setLayout(QtWidgets.QGridLayout())
-        container_widget.layout().addWidget(LabelWithFont('Abs. Value'), 0, 0)
-
-        container_widget.layout().addWidget(self.find_home_pb, 0, 1)
-
-        container_widget.layout().addWidget(self.abs_value_sb_bis, 1, 0)
-        container_widget.layout().addWidget(self.move_abs_pb, 1, 1)
-        container_widget.layout().addWidget(LabelWithFont('Rel. Increment'), 2, 0)
-        container_widget.layout().addWidget(self.move_rel_plus_pb, 2, 1)
-
-        container_widget.layout().addWidget(self.rel_value_sb, 3, 0)
-
-        container_widget.layout().addWidget(self.move_rel_minus_pb, 3, 1)
-        container_widget.layout().addWidget(self.stop_pb, 4, 0)
-
-        container_widget.layout().addWidget(self.get_value_pb, 4, 1)
-        container_widget.layout().setContentsMargins(0, 0, 0, 0)
-        widget.setVisible(False)
-
-    def close(self):
-        self.parent.close()
-        self.graph_widget.close()
-        self.control_widget.close()
-        self._settings_widget.close()
-
-    def do_init(self, do_init=True):
-        """Programmatically press the Init button
-        API entry
-        Parameters
-        ----------
-        do_init: bool
-            will fire the Init button depending on the argument value and the button check state
-        """
-        if do_init is not self.is_action_checked('ini_actuator'):
-            self.get_action('ini_actuator').trigger()
+    # -------------------------------------------------------------------------
+    # Slots / Event Handlers
+    # -------------------------------------------------------------------------
 
     def send_init(self, checked: bool):
         self.actuators_combo.setEnabled(not checked)
@@ -299,105 +405,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
             DataActuator(data=self.rel_value_sb.value() * (1 if sign == '+' else -1),
                          units=self._unit)))
 
-    def set_settings_tree(self, tree):
-        self._settings_widget = tree
-
-
-    def setup_actions_in_toolbar(self, toolbar: QtWidgets.QToolBar):
-        self._setup_name_widget(toolbar=toolbar)
-        self.add_widget('actuators_combo', self.actuators_combo, toolbar=toolbar)
-        self._setup_init_action(toolbar=toolbar, action_name='ini_actuator',
-                                display_name='Ini. Actuator', tip='Connect to selected actuator')
-        self._setup_settings_action(toolbar=toolbar)
-        toolbar.addSeparator()
-        self.add_widget('current', self.current_value_sb, toolbar=toolbar)
-        self.add_widget('move_done', self.move_done_led, toolbar=toolbar)
-
-        self._setup_move_actions(toolbar)
-
-        self.add_action('stop', 'Stop', 'stop_circle', "Stop Motion",
-                        toolbar=toolbar, icon_color=self.get_theme().red)
-        toolbar.addSeparator()
-        self.add_action('show_controls', 'Show Controls',
-                        'discover_tune', "Show more controls", checkable=True,
-                        toolbar=toolbar)
-        self.add_action('show_graph', 'Show Graph', 'bid_landscape', 'Show/Hide the Graph Widget',
-                        checkable=True, checked=True, icon_checked='bid_landscape_disabled',
-                        icon_color=self.get_theme().green, icon_checked_color=self.get_theme().red,
-                        toolbar=toolbar)
-        self.add_action('refresh_value', 'Refresh', 'repeat',
-                        "Refresh Value Continuously", checkable=True,
-                        toolbar=toolbar, icon_checked='repeat_on',
-                        icon_checked_color=self.get_theme().green)
-        self.add_widget('status', self.statusbar, toolbar=toolbar)
-
-    def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
-        """ to be reimplemented in dedicated UI class
-
-        either: self._setup_absolute_actions(), self._setup_relative_actions(), ...
-        """
-        pass
-
-    def _setup_absolute_spinbox_actions(self, toolbar: QtWidgets.QToolBar):
-        self.add_widget('abs_green', self.abs_value_sb, toolbar=toolbar)
-        self.add_widget('abs_red', self.abs_value_sb_2, toolbar=toolbar)
-
-    def _setup_absolute_actions(self, toolbar: QtWidgets.QToolBar):
-        self.add_action('move_abs', 'Move Abs', 'step',
-                        "Move to the set absolute value",
-                        icon_color=self.get_theme().green,
-                        toolbar=toolbar)
-        self.add_action('move_abs_2', 'Move Abs', 'step',
-                        "Move to the other set absolute value",
-                        icon_color=self.get_theme().red,
-                        toolbar=toolbar)
-
-    def _setup_relative_actions(self, toolbar: QtWidgets.QToolBar):
-        self.add_widget('rel_move', self.rel_value_sb, toolbar=toolbar)
-        self.add_action('move_rel_plus', 'Set Rel. (+)', 'step_out',
-                        toolbar=toolbar)
-        self.add_action('move_rel_minus', 'Set Rel. (-)', 'step_into',
-                        toolbar=toolbar)
-
-    def connect_things(self):
-        if 'show_controls' in self.actions_names:
-            self.connect_action('show_controls', self.show_controls)
-        if 'show_settings' in self.actions_names:
-            self.connect_action('show_settings', self._show_settings)
-        if 'show_graph' in self.actions_names:
-            self.connect_action('show_graph', lambda checked: self.show_graph(not checked))
-        if 'move_abs' in self.actions_names:
-            self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
-        if 'move_abs_2' in self.actions_names:
-            self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
-        if 'stop' in self.actions_names:
-            self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
-        if 'show_config' in self.actions_names:
-            self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
-        if 'ini_actuator' in self.actions_names:
-            self.connect_action('ini_actuator', self.send_init)
-
-        self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
-        self.abs_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb))
-        self.abs_value_sb_2.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_2))
-        self.abs_value_sb_bis.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
-        self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(
-            ThreadCommand(UiToMainMove.REL_VALUE, self.rel_value_sb.value())))
-        self.move_rel_plus_pb.clicked.connect(lambda: self.emit_move_rel('+'))
-        self.move_rel_minus_pb.clicked.connect(lambda: self.emit_move_rel('-'))
-        self.rel_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_rel('+'))
-        self.rel_value_sb.shortcut["Ctrl+Shift+E"].activated.connect(lambda: self.emit_move_rel('-'))
-
-        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.FIND_HOME, )))
-        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
-        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
-
-        self.actuators_combo.currentTextChanged.connect(
-            lambda act: self.command_sig.emit(ThreadCommand(UiToMainMove.ACTUATOR_CHANGED, act)))
-        if 'refresh_value' in self.actions_names:
-            self.connect_action('refresh_value',
-                                lambda do_refresh: self.command_sig.emit(ThreadCommand(UiToMainMove.LOOP_GET_VALUE,
-                                                                                   do_refresh)))
+    # -------------------------------------------------------------------------
+    # Visibility / Lifecycle
+    # -------------------------------------------------------------------------
 
     def show_controls(self, show: bool = True):
         self.control_widget.setVisible(show)
@@ -406,3 +416,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
     def show_graph(self, show: bool = True):
         self.graph_widget.setVisible(show)
         self.graph_widget.closeEvent = lambda event: self.set_action_checked('show_graph', False)
+
+    def close(self):
+        self.parent.close()
+        self.graph_widget.close()
+        self.control_widget.close()
+        super().close()

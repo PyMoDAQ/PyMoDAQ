@@ -162,11 +162,97 @@ class DAQ_Move(ParameterControlModule):
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.get_actuator_value)
 
+    # -------------------------------------------------------------------------
+    # Properties
+    # -------------------------------------------------------------------------
+
     @property
     def current_value(self) -> DataActuator:
         if self._current_value.origin is None:
             self.current_value.origin = self.title
         return self._current_value
+
+    @property
+    def epsilon(self) -> float:
+        return self.settings[self._hw_settings_name, 'epsilon']
+
+    @property
+    def move_done_bool(self):
+        """bool: status of the actuator's status (done or not)"""
+        return self._move_done_bool
+
+    @property
+    def actuator(self):
+        """str: the selected actuator's type"""
+        return self._actuator_type
+
+    @actuator.setter
+    def actuator(self, act_type):
+        if act_type in ACTUATOR_NAMES:
+            self._actuator_type = act_type
+            self.update_plugin_config()
+            if self.ui is not None:
+                self.ui.actuator = act_type
+            self._reload_plugin_settings()
+        else:
+            raise ActuatorError(
+                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
+            )
+
+    @property
+    def actuators(self) -> List[str]:
+        """Get the list of possible actuators"""
+        return ACTUATOR_NAMES
+
+    @property
+    def units(self):
+        """Get/Set the units for the controller"""
+        return self.settings[self._hw_settings_name, "units"]
+
+    @units.setter
+    def units(self, unit: str):
+        self.settings.child(self._hw_settings_name, "units").setValue(unit)
+        if self.ui is not None and config("pymodaq", "actuator", "display_units"):
+            unit = self.get_unit_to_display(unit)
+            self.ui.set_unit_as_suffix(unit)
+            self.ui.set_unit_prefix(
+                config("pymodaq", "actuator", "siprefix")
+                and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units"))
+            )
+
+    @property
+    def axis_names(self) -> Union[List, Dict]:
+        """ Get the names of all possible axis"""
+        return self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
+
+    @property
+    def axis_name(self) -> str:
+        """ Get/Set the current axis"""
+        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
+        val = self.settings[self._hw_settings_name, 'controller', 'axis']
+        if isinstance(limits, list):
+            return val
+        elif isinstance(limits, dict):
+            return find_keys_from_val(limits, val=val)[0]
+        else:
+            TypeError('Unknown limits type')
+
+    @axis_name.setter
+    def axis_name(self, name: str):
+        """ Get/Set the current axis"""
+        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
+        if name in limits:
+            if isinstance(limits, list):
+                value = name
+            elif isinstance(limits, dict):
+                value = limits[name]
+            else:
+                return
+            self.settings.child(self._hw_settings_name, 'controller', 'axis').setValue(value)
+
+    # -------------------------------------------------------------------------
+    # UI command processing
+    # -------------------------------------------------------------------------
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -217,59 +303,20 @@ class DAQ_Move(ParameterControlModule):
         elif cmd.command == UiToMainMove.REL_VALUE:
             self._relative_value = cmd.attribute
 
+    # -------------------------------------------------------------------------
+    # Hardware lifecycle hooks
+    # -------------------------------------------------------------------------
 
+    def _pre_close_hardware(self):
+        """Stop the refresh timer before closing so no more commands reach the hardware thread."""
+        self._refresh_timer.stop()
 
-    def append_data(
-        self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None
-    ):
-        """Appends current DataToExport to an ActuatorEnlargeableSaver
+    def _create_hardware(self):
+        return ActuatorWorker(self._actuator_type, self._current_value, self._title)
 
-        Parameters
-        ----------
-        dte: DataToExport, optional
-        where: Node or str
-        See Also
-        --------
-        ActuatorEnlargeableSaver
-        """
-        if dte is None:
-            dte = DataToExport(name=self.title, data=[self._current_value])
-        self._add_data_to_saver(dte, where=where)
-        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
-
-    def _add_data_to_saver(self, data: DataToExport, where=None, **kwargs):
-        """Adds DataToExport data to the current node using the declared module_and_data_saver
-
-        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
-
-        Parameters
-        ----------
-        data: DataToExport
-            The data to be saved
-        kwargs: dict
-            Other named parameters to be passed as is to the module_and_data_saver
-
-        See Also
-        --------
-        DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
-
-        """
-        # todo: test this for logging
-
-        node = self.module_and_data_saver.get_set_node(where)
-        self.module_and_data_saver.add_data(node, data, **kwargs)
-
-    def stop_motion(self):
-        """Stop any motion"""
-        try:
-            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.STOP_MOTION))
-        except Exception as e:
-            self.logger.exception(str(e))
-
-    def stop_module(self):
-        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
-        self.stop_motion()
-        self.stop_grab()
+    # -------------------------------------------------------------------------
+    # Acquisition API
+    # -------------------------------------------------------------------------
 
     def move(self, move_command: MoveCommand):
         """Generic method to trigger the correct action on the actuator
@@ -293,10 +340,6 @@ class DAQ_Move(ParameterControlModule):
             self.move_rel(move_command.value)
         elif move_command.move_type == "home":
             self.move_home(move_command.value)
-
-    @property
-    def epsilon(self) -> float:
-        return self.settings['move_settings', 'epsilon']
 
     def move_abs(self, value: Union[DataActuator, numbers.Number], send_to_leco=False):
         """Move the connected hardware to the absolute value
@@ -398,32 +441,74 @@ class DAQ_Move(ParameterControlModule):
     def move_rel_m(self):
         self.move_rel(-self._relative_value)
 
-    def _pre_close_hardware(self):
-        """Stop the refresh timer before closing so no more commands reach the hardware thread."""
-        self._refresh_timer.stop()
+    def get_actuator_value(self, send_to_leco=False):
+        """Get the current actuator value via the "get_actuator_value" command send to the hardware
 
-    def _create_hardware(self):
-        return ActuatorWorker(self._actuator_type, self._current_value, self._title)
+        Returns nothing but the  `move_done_signal` will be send once the action is done
+        Parameters
+        ----------
+        send_to_leco: bool
+            if True, this position is send through the LECO communication canal
+        """
+        self._send_to_leco = send_to_leco
 
-    @property
-    def move_done_bool(self):
-        """bool: status of the actuator's status (done or not)"""
-        return self._move_done_bool
+        try:
+            self.command_hardware.emit(
+                ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE)
+            )
 
-    def value_changed(self, param: Parameter):
-        """Apply changes of value in the settings"""
-        super().value_changed(param=param)
-        path = self.settings.childPath(param)
+        except Exception as e:
+            self.logger.exception(str(e))
 
-        if param.name() == "refresh_timeout":
-            self._refresh_timer.setInterval(param.value())
+    def get_continuous_actuator_value(self, get_value=True):
+        """Start the continuous getting of the actuator's value
 
-        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
-            if param.name() == 'do_save':
-                self.setup_continuous_saving(param.value())
-            self.h5saver.settings.child(*path[1:]).setValue(param.value())
+        Parameters
+        ----------
+        get_value: bool
+            if True start the timer to periodically fetch the actuator's value, else stop it
 
-        self._update_settings(param=param)
+        Notes
+        -----
+        The current timer period is set by the refresh value *'refresh_timeout'* in the actuator main settings.
+        """
+        if get_value:
+            self._refresh_timer.setInterval(
+                self.settings["main_settings", "refresh_timeout"]
+            )
+            self._refresh_timer.start()
+        else:
+            self._refresh_timer.stop()
+
+    def grab(self):
+        if self.ui is not None:
+            self.manage_ui_actions("refresh_value", "setChecked", False)
+        self.get_continuous_actuator_value(False)
+
+    def stop_motion(self):
+        """Stop any motion"""
+        try:
+            self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.STOP_MOTION))
+        except Exception as e:
+            self.logger.exception(str(e))
+
+    def stop_module(self):
+        """ Programmatic entry to stop the Control module either moving, polling or grabbing"""
+        self.stop_motion()
+        self.stop_grab()
+
+    def stop_grab(self):
+        """Stop value polling. Mandatory
+
+        First uncheck the ui action if ui is not None, then stop the polling
+        """
+        if self.ui is not None:
+            self.manage_ui_actions("refresh_value", "setChecked", False)
+        self.get_continuous_actuator_value(False)
+
+    # -------------------------------------------------------------------------
+    # Saving
+    # -------------------------------------------------------------------------
 
     def setup_continuous_saving(self, init: bool = True):
         """Configure the objects dealing with the continuous saving mode"""
@@ -448,13 +533,143 @@ class DAQ_Move(ParameterControlModule):
         else:
             self.settings.child('saver_settings', 'N_saved').hide()
 
-    def child_added(self, param, data):
-        """Apply addition of settings"""
-        path = self.settings.childPath(param)
-        if "main_settings" not in path:
-            self._update_settings_signal.emit(
-                edict(path=path, param=data[0].saveState(), change="childAdded")
-            )
+    def append_data(
+        self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None
+    ):
+        """Appends current DataToExport to an ActuatorEnlargeableSaver
+
+        Parameters
+        ----------
+        dte: DataToExport, optional
+        where: Node or str
+        See Also
+        --------
+        ActuatorEnlargeableSaver
+        """
+        if dte is None:
+            dte = DataToExport(name=self.title, data=[self._current_value])
+        self._add_data_to_saver(dte, where=where)
+        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
+
+    def _add_data_to_saver(self, data: DataToExport, where=None, **kwargs):
+        """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
+
+        Parameters
+        ----------
+        data: DataToExport
+            The data to be saved
+        kwargs: dict
+            Other named parameters to be passed as is to the module_and_data_saver
+
+        See Also
+        --------
+        DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
+
+        """
+        # todo: test this for logging
+
+        node = self.module_and_data_saver.get_set_node(where)
+        self.module_and_data_saver.add_data(node, data, **kwargs)
+
+    # -------------------------------------------------------------------------
+    # Settings / Plugin management
+    # -------------------------------------------------------------------------
+
+    def update_plugin_config(self):
+        parent_module = utils.find_dict_in_list_from_key_val(
+            ACTUATOR_TYPES, "name", self.actuator
+        )
+        mod = import_module(parent_module["module"].__package__.split(".")[0])
+
+    @staticmethod
+    def get_unit_to_display(unit: str) -> str:
+        """Get the unit to be displayed in the UI
+
+        If the controller units are in mm the displayed unit will be m
+        because m is the base unit, then the user could ask for mm, km, µm...
+        only issue is when the usual displayed unit is not the base one, then add cases below
+
+        Parameters
+        ----------
+        unit: str
+
+        Returns
+        -------
+        str: the unit to be displayed on the ui
+        """
+        if ("°" in unit or "degree" in unit) and not "°C" in unit:
+            # special case as pint base unit for angles are radians
+            return "°"
+        elif "°C" in unit:
+            return "°C"
+        else:
+            for key in config("pymodaq", "actuator", "allowed_units"):
+                if key in unit:
+                    return config("pymodaq", "actuator", "allowed_units", key)
+            return str(Q_(1, unit).to_base_units().units)
+
+    def _load_plugin_params(self):
+        parent_module = utils.find_dict_in_list_from_key_val(
+            ACTUATOR_TYPES, "name", self._actuator_type
+        )
+        class_ = getattr(
+            getattr(parent_module["module"], "daq_move_" + self._actuator_type),
+            "DAQ_Move_" + self._actuator_type,
+        )
+        params = getattr(class_, "params")
+        return Parameter.create(name=self._hw_settings_name, type="group", children=params)
+
+    def _reload_plugin_settings(self):
+        """Reload plugin settings, also updating the move_type in main_settings."""
+        self.settings.child("main_settings", "move_type").setValue(self._actuator_type)
+        super()._reload_plugin_settings()
+
+    def _module_value_changed(self, param: Parameter):
+        """Handle actuator-specific parameter changes."""
+        if param.name() == "refresh_timeout":
+            self._refresh_timer.setInterval(param.value())
+        elif param.name() in putils.iter_children(self.settings.child('saver_settings'), []):
+            path = self.settings.childPath(param)
+            if param.name() == 'do_save':
+                self.setup_continuous_saving(param.value())
+            self.h5saver.settings.child(*path[1:]).setValue(param.value())
+
+    # -------------------------------------------------------------------------
+    # Thread status handler
+    # -------------------------------------------------------------------------
+
+    def _check_data_type(
+        self, data_act: Union[list, np.ndarray, Number, DataActuator]
+    ) -> DataActuator:
+        """Make sure the data is a DataActuator
+
+        Mostly to make sure DAQ_Move is backcompatible with old style plugins
+        """
+        if isinstance(data_act, list):  # backcompatibility
+            if isinstance(data_act[0], Number):
+                data_act = DataActuator(
+                    data=[np.atleast_1d(val) for val in data_act], units=self.units
+                )
+            elif isinstance(data_act[0], np.ndarray):
+                data_act = DataActuator(data=data_act, units=self.units)
+            elif isinstance(data_act[0], DataActuator):
+                data_act = data_act[0]
+            else:
+                raise TypeError("Unknown data type")
+        elif isinstance(data_act, np.ndarray):  # backcompatibility
+            data_act = DataActuator(data=[data_act], units=self.units)
+        data_act.name = (
+            self.title
+        )  # for the DataActuator name to be the title of the DAQ_Move
+        if (
+            not Unit(self.units).is_compatible_with(Unit(data_act.units))
+            and data_act.units == ""
+        ):  # this happens if the units have not been specified in
+            # the plugin
+            data_act.force_units(self.units)
+        return data_act
 
     @Slot(ThreadCommand)
     def thread_status(
@@ -547,221 +762,9 @@ class DAQ_Move(ParameterControlModule):
         elif status.command == ThreadStatusMove.UNITS:
             self.units = status.attribute
 
-    def _check_data_type(
-        self, data_act: Union[list, np.ndarray, Number, DataActuator]
-    ) -> DataActuator:
-        """Make sure the data is a DataActuator
-
-        Mostly to make sure DAQ_Move is backcompatible with old style plugins
-        """
-        if isinstance(data_act, list):  # backcompatibility
-            if isinstance(data_act[0], Number):
-                data_act = DataActuator(
-                    data=[np.atleast_1d(val) for val in data_act], units=self.units
-                )
-            elif isinstance(data_act[0], np.ndarray):
-                data_act = DataActuator(data=data_act, units=self.units)
-            elif isinstance(data_act[0], DataActuator):
-                data_act = data_act[0]
-            else:
-                raise TypeError("Unknown data type")
-        elif isinstance(data_act, np.ndarray):  # backcompatibility
-            data_act = DataActuator(data=[data_act], units=self.units)
-        data_act.name = (
-            self.title
-        )  # for the DataActuator name to be the title of the DAQ_Move
-        if (
-            not Unit(self.units).is_compatible_with(Unit(data_act.units))
-            and data_act.units == ""
-        ):  # this happens if the units have not been specified in
-            # the plugin
-            data_act.force_units(self.units)
-        return data_act
-
-    def get_actuator_value(self, send_to_leco=False):
-        """Get the current actuator value via the "get_actuator_value" command send to the hardware
-
-        Returns nothing but the  `move_done_signal` will be send once the action is done
-        Parameters
-        ----------
-        send_to_leco: bool
-            if True, this position is send through the LECO communication canal
-        """
-        self._send_to_leco = send_to_leco
-
-        try:
-            self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE)
-            )
-
-        except Exception as e:
-            self.logger.exception(str(e))
-
-    def grab(self):
-        if self.ui is not None:
-            self.manage_ui_actions("refresh_value", "setChecked", False)
-        self.get_continuous_actuator_value(False)
-
-    def stop_grab(self):
-        """Stop value polling. Mandatory
-
-        First uncheck the ui action if ui is not None, then stop the polling
-        """
-        if self.ui is not None:
-            self.manage_ui_actions("refresh_value", "setChecked", False)
-        self.get_continuous_actuator_value(False)
-
-    def get_continuous_actuator_value(self, get_value=True):
-        """Start the continuous getting of the actuator's value
-
-        Parameters
-        ----------
-        get_value: bool
-            if True start the timer to periodically fetch the actuator's value, else stop it
-
-        Notes
-        -----
-        The current timer period is set by the refresh value *'refresh_timeout'* in the actuator main settings.
-        """
-        if get_value:
-            self._refresh_timer.setInterval(
-                self.settings["main_settings", "refresh_timeout"]
-            )
-            self._refresh_timer.start()
-        else:
-            self._refresh_timer.stop()
-
-    @property
-    def actuator(self):
-        """str: the selected actuator's type
-
-        Returns
-        -------
-
-        """
-        return self._actuator_type
-
-    @actuator.setter
-    def actuator(self, act_type):
-        if act_type in ACTUATOR_NAMES:
-            self._actuator_type = act_type
-            self.update_plugin_config()
-            if self.ui is not None:
-                self.ui.actuator = act_type
-            self.update_settings()
-        else:
-            raise ActuatorError(
-                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
-            )
-
-    @property
-    def actuators(self) -> List[str]:
-        """Get the list of possible actuators"""
-        return ACTUATOR_NAMES
-
-    def update_plugin_config(self):
-        parent_module = utils.find_dict_in_list_from_key_val(
-            ACTUATOR_TYPES, "name", self.actuator
-        )
-        mod = import_module(parent_module["module"].__package__.split(".")[0])
-
-    @property
-    def units(self):
-        """Get/Set the units for the controller"""
-        return self.settings[self._hw_settings_name, "units"]
-
-    @units.setter
-    def units(self, unit: str):
-        self.settings.child(self._hw_settings_name, "units").setValue(unit)
-        if self.ui is not None and config("pymodaq", "actuator", "display_units"):
-            unit = self.get_unit_to_display(unit)
-            self.ui.set_unit_as_suffix(unit)
-            self.ui.set_unit_prefix(
-                config("pymodaq", "actuator", "siprefix")
-                and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units"))
-            )
-
-    @property
-    def axis_names(self) -> Union[List, Dict]:
-        """ Get the names of all possible axis"""
-        return self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
-
-    @property
-    def axis_name(self) -> str:
-        """ Get/Set the current axis"""
-        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
-        val = self.settings[self._hw_settings_name, 'controller', 'axis']
-        if isinstance(limits, list):
-            return val
-        elif isinstance(limits, dict):
-            return find_keys_from_val(limits, val=val)[0]
-        else:
-            TypeError('Unknown limits type')
-
-
-    @axis_name.setter
-    def axis_name(self, name: str):
-        """ Get/Set the current axis"""
-        limits = self.settings.child(self._hw_settings_name, 'controller', 'axis').opts['limits']
-        if name in limits:
-            if isinstance(limits, list):
-                value = name
-            elif isinstance(limits, dict):
-                value = limits[name]
-            else:
-                return
-            self.settings.child(self._hw_settings_name, 'controller', 'axis').setValue(value)
-
-    @staticmethod
-    def get_unit_to_display(unit: str) -> str:
-        """Get the unit to be displayed in the UI
-
-        If the controller units are in mm the displayed unit will be m
-        because m is the base unit, then the user could ask for mm, km, µm...
-        only issue is when the usual displayed unit is not the base one, then add cases below
-
-        Parameters
-        ----------
-        unit: str
-
-        Returns
-        -------
-        str: the unit to be displayed on the ui
-        """
-        if ("°" in unit or "degree" in unit) and not "°C" in unit:
-            # special case as pint base unit for angles are radians
-            return "°"
-        elif "°C" in unit:
-            return "°C"
-        else:
-            for key in config("pymodaq", "actuator", "allowed_units"):
-                if key in unit:
-                    return config("pymodaq", "actuator", "allowed_units", key)
-            return str(Q_(1, unit).to_base_units().units)
-
-    def update_settings(self):
-        self.settings.child("main_settings", "move_type").setValue(self._actuator_type)
-        self.settings.child("main_settings", "module_name").setValue(self._title)
-        try:
-            for child in self.settings.child(self._hw_settings_name).children():
-                child.remove()
-            parent_module = utils.find_dict_in_list_from_key_val(
-                ACTUATOR_TYPES, "name", self._actuator_type
-            )
-            class_ = getattr(
-                getattr(parent_module["module"], "daq_move_" + self._actuator_type),
-                "DAQ_Move_" + self._actuator_type,
-            )
-            params = getattr(class_, "params")
-            move_params = Parameter.create(
-                name=self._hw_settings_name, type="group", children=params
-            )
-
-            self.settings.child(self._hw_settings_name).addChildren(move_params.children())
-
-        except Exception as e:
-            self.logger.exception(str(e))
-
+    # -------------------------------------------------------------------------
+    # LECO
+    # -------------------------------------------------------------------------
 
     def process_leco_commands(self, status: ThreadCommand) -> None:
         """Receive commands from the LECO network and process them.
@@ -1010,7 +1013,7 @@ class ActuatorWorker(HardwareWorkerBase):
     def stop_motion(self):
         """Stop hardware motion."""
         self.status_sig.emit(
-            ThreadCommand(command="Update_Status", attribute=["Motion stoping", "log"])
+            ThreadCommand(command=ThreadStatus.UPDATE_STATUS, attribute="Motion stopping")
         )
         self.motion_stopped = True
         assert self.plugin is not None

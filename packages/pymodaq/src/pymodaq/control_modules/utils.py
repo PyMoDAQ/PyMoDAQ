@@ -416,27 +416,44 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         except Exception as e:
             self.logger.exception(f'Error applying controller parameters: {str(e)}')
 
-    def value_changed(self, param: Parameter) -> Optional[Parameter]:
-        """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
+    def value_changed(self, param: Parameter):
+        """Handle any settings value change.
 
-        Parameters
-        ----------
-        param: Parameter
-            a given parameter whose value has been changed by user
+        Template method that runs in three steps:
+
+        1. Handle parameters common to all control modules (LECO connection).
+        2. Call :meth:`_module_value_changed` so subclasses can handle their
+           own parameters without overriding this method.
+        3. Propagate non-``main_settings`` changes to the hardware thread via
+           ``_update_settings_signal`` and, when LECO is connected, via
+           ``_leco_commands_signal``.
         """
         if param.name() == 'connect_leco_server':
             self.connect_leco(param.value())
-
         elif param.name() == "name":
-            name = param.value()
             try:
-                self._leco_client.name = name
+                self._leco_client.name = param.value()
             except AttributeError:
                 pass
 
-        else:
-            # not handled
-            return param
+        self._module_value_changed(param)
+
+        path = self.settings.childPath(param)
+        if path is not None and 'main_settings' not in path:
+            self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
+            if self.settings.child('main_settings', 'leco', 'leco_connected').value():
+                self._leco_commands_signal.emit(
+                    ThreadCommand(LECOCommands.SEND_INFO, ParameterWithPath(param, path)))
+
+    def _module_value_changed(self, param: Parameter):
+        """Override in subclasses to handle module-specific parameter changes.
+
+        Called from :meth:`value_changed` after LECO params are handled and
+        before hardware-thread propagation.  Do *not* call ``super()`` or
+        emit ``_update_settings_signal`` for non-``main_settings`` params —
+        the base :meth:`value_changed` does that automatically.
+        """
+        pass
 
     def quit_fun(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
@@ -480,7 +497,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         # Listener.stop_listen() which joins the zmq listener thread.
         self.connect_leco(False)
         try:
-            self.command_hardware.emit(ThreadCommand('close'))
+            self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))
             if self._hardware_thread is not None and self._hardware_thread.isRunning():
                 self._hardware_thread.quit()
                 if not self._hardware_thread.wait(5000):
@@ -592,16 +609,39 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
                 edict(path=[self._hw_settings_name], param=param, change='parent')
             )
 
-    def _update_settings(self, param: Parameter):
-        # I do not understand what it does
+    def child_added(self, param, data):
+        """Propagate child addition to the hardware thread."""
         path = self.settings.childPath(param)
-        if path is not None:
-            if 'main_settings' not in path:
-                self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
-                if self.settings.child('main_settings', 'leco', 'leco_connected').value():
-                    self._leco_commands_signal.emit(
-                        ThreadCommand(LECOCommands.SEND_INFO,
-                                      ParameterWithPath(param, path)))
+        if path is not None and 'main_settings' not in path:
+            self._update_settings_signal.emit(
+                edict(path=path, param=data[0], change='childAdded')
+            )
+
+    def _load_plugin_params(self) -> Optional[Parameter]:
+        """Return the plugin-specific Parameter tree to populate the hw settings subtree.
+
+        Override in subclasses to return the Parameter loaded from the plugin class.
+        The base implementation returns None (no children added).
+        """
+        return None
+
+    def _reload_plugin_settings(self):
+        """Clear the hw settings subtree and repopulate it from the current plugin.
+
+        Sets ``main_settings/module_name``, clears all children of the
+        ``_hw_settings_name`` group, then calls :meth:`_load_plugin_params` and
+        adds the returned Parameter's children.
+        """
+        self.settings.child('main_settings', 'module_name').setValue(self._title)
+        try:
+            for child in self.settings.child(self._hw_settings_name).children():
+                child.remove()
+            plugin_params = self._load_plugin_params()
+            if plugin_params is not None:
+                self.settings.child(self._hw_settings_name).addChildren(plugin_params.children())
+        except Exception as e:
+            self.logger.exception(str(e))
+
     def get_leco_name(self) -> str:
         name = (self.settings["main_settings", "leco", "leco_name"] or
                 self.settings["main_settings", "module_name"] or

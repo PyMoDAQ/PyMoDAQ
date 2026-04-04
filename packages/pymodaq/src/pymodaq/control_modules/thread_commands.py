@@ -89,7 +89,7 @@ class ControlToHardwareMove(StrEnum):
     MOVE_REL = 'move_rel'
     MOVE_HOME = 'move_home'
     GET_ACTUATOR_VALUE = 'get_actuator_value'
-    CLOSE = 'close'
+    CLOSE = 'close'             # deprecated: use ControlToHardware.CLOSE
 
 class ControlToHardwareViewer(StrEnum):
     """ Allowed commands sent from a DAQ_Viewer to its DetectorWorker in another thread
@@ -107,7 +107,7 @@ class ControlToHardwareViewer(StrEnum):
     UPDATE_SCANNER = 'update_scanner'  # may be deprecated
     CROSSHAIR = 'crosshair'
     UPDATE_WAIT_TIME = 'update_wait_time'
-    CLOSE = 'close'
+    CLOSE = 'close'             # deprecated: use ControlToHardware.CLOSE
 
 
 class UiToMainMove(StrEnum):
