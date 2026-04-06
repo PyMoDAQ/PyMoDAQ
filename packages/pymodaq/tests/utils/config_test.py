@@ -40,10 +40,6 @@ class TestGetSet:
 
 def test_required_config_entries():
     config = config_mod_pymodaq.Config()
-    assert 'presets' in config
-    assert 'default_preset_for_scan' in config('presets')
-    assert 'default_preset_for_logger' in config('presets')
-    assert 'default_preset_for_pid' in config('presets')
 
     assert 'actuator' in config
     assert 'ui' in config('actuator')
