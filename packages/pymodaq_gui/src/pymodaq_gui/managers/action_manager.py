@@ -277,8 +277,15 @@ class ActionManager:
         self._menus: OrderedDictType[str, QtWidgets.QMenu] = OrderedDict([])
         self._toolbars: OrderedDictType[str, QtWidgets.QToolBar] = OrderedDict([])
 
-        self._toolbar = toolbar
-        self._menu = menu
+        self._toolbar: QtWidgets.QToolBar = None
+        self._menu: QtWidgets.QMenu = None
+
+        if toolbar is not None:
+            self.reference_toolbar('default', toolbar)
+            self.set_toolbar(toolbar)
+        if menu is not None:
+            self.reference_menu('default', menu)
+            self.set_menu(menu)
 
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
@@ -726,7 +733,7 @@ class ActionManager:
             if len(self.toolbars_names) != 0:
                 self._toolbar = self.toolbars[0]
             else:
-                raise ValueError('No default QToolbar has been set')
+                self._toolbar = self.add_toolbar('default', 'Default')
         return self._toolbar
 
     @property
@@ -736,7 +743,7 @@ class ActionManager:
             if len(self.menus_names) != 0:
                 self._menu = self.menus[0]
             else:
-                raise ValueError('No default QMenu has been set')
+                self._menu = self.add_menu('default', 'Default')
         return self._menu
 
     def affect_to(self, action_name: Union[str, QAction, WidgetActionProxy], obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]):
