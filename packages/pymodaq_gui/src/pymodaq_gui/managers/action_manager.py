@@ -297,9 +297,11 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name: str = '', name: str = '', icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
+    def add_action(self, short_name: str = '', name: str = '',
+                   icon_name: Union[str, Path, QtGui.QIcon] = '', tip='',
                    checkable=False,
-                   checked=False, toolbar: Union[str, QtWidgets.QToolBar, None]=None,
+                   checked=False,
+                   toolbar: Union[str, QtWidgets.QToolBar, None]=None,
                    menu: Union[str, QtWidgets.QMenu, None] = None,
                    visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
                    auto_toolbar=True, auto_menu=False,
@@ -368,23 +370,22 @@ class ActionManager:
         affect_to, pymodaq.resources.QtDesigner_Ressources.icon_library,
         pymodaq.utils.managers.action_manager.add_action
         """
-        if auto_toolbar:
+        if toolbar is not None or auto_toolbar:
             if toolbar is None:
-                toolbar = self._toolbar
+                toolbar = self.toolbar
             elif isinstance(toolbar, str):
                 toolbar = self.get_toolbar(toolbar)
             elif not isinstance(toolbar, QtWidgets.QToolBar):
                 raise TypeError(f'toolbar must be either None, a string, or QToolBar, got {type(toolbar)}')
 
-        if auto_menu:
+        if menu is not None or auto_menu:
             if menu is None:
-                menu = self._menu
+                menu = self.menu
             elif isinstance(menu, str):
                 menu = self.get_menu(menu)
             elif not isinstance(menu, QtWidgets.QMenu):
                 raise TypeError(f'menu must be either None, a string, or QMenu, got {type(menu)}')
-        else:
-            menu = None
+
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
                                               checked=checked, toolbar=toolbar, menu=menu,
                                               visible=visible, shortcut=shortcut, enabled=enabled,
@@ -722,23 +723,20 @@ class ActionManager:
     def toolbar(self) -> QtWidgets.QToolBar:
         """Get the default toolbar"""
         if self._toolbar is None:
-            if len(self.toolbars_names) == 0:
-                self._toolbar = self.create_object_toolbar()
-            else:
+            if len(self.toolbars_names) != 0:
                 self._toolbar = self.toolbars[0]
+            else:
+                raise ValueError('No default QToolbar has been set')
         return self._toolbar
-
-    def create_object_toolbar(self,
-                              parent: QtWidgets.QMainWindow = None,
-                              add_break: bool = True) -> QtWidgets.QToolBar:
-        return self.add_toolbar(self.__class__.__name__.lower(),
-                                self.__class__.__name__,
-                                parent,
-                                add_break=add_break)
 
     @property
     def menu(self) -> QtWidgets.QMenu:
         """Get the default menu"""
+        if self._menu is None:
+            if len(self.menus_names) != 0:
+                self._menu = self.menus[0]
+            else:
+                raise ValueError('No default QMenu has been set')
         return self._menu
 
     def affect_to(self, action_name: Union[str, QAction, WidgetActionProxy], obj: Union[QtWidgets.QToolBar, QtWidgets.QMenu]):

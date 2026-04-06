@@ -190,6 +190,52 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         """
         self.setup_menu(menubar)
 
+    def create_object_toolbar(self, add_break: bool = True) -> QtWidgets.QToolBar:
+        return self.add_toolbar(self.__class__.__name__.lower(),
+                                self.__class__.__name__,
+                                self.mainwindow,
+                                add_break=add_break)
+
+    def create_object_menu(self,
+                           menu: str | QtWidgets.QMenuBar | QtWidgets.QMenu = None,
+                           icon_name = '',
+                           auto_menu=True
+                           ) -> QtWidgets.QMenu:
+        if menu is None:
+            menu = self.menubar
+        return self.add_menu(self.__class__.__name__.lower(),
+                             self.__class__.__name__,
+                             menu,
+                             icon_name=icon_name,
+                             auto_menu=auto_menu)
+
+    @property
+    def toolbar(self) -> QtWidgets.QToolBar:
+        """ Get the default toolbar
+
+        Reimplemented from ActionManager
+        """
+
+        if self._toolbar is None:
+            if len(self.toolbars_names) == 0:
+                self._toolbar = self.create_object_toolbar()
+            else:
+                self._toolbar = self.toolbars[0]
+        return self._toolbar
+
+    @property
+    def menu(self) -> QtWidgets.QMenu:
+        """Get the default menu
+
+        Reimplemented from ActionManager
+        """
+        if self._menu is None:
+            if len(self.menus_names) == 0:
+                self._menu = self.create_object_toolbar()
+            else:
+                self._menu = self.menus[0]
+        return self._menu
+
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """ Deprecated, use `setup_menus_and_toolbars`
 
