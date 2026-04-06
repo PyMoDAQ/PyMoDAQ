@@ -17,7 +17,7 @@ from qtpy.QtWidgets import (
 )
 import numpy as np
 
-from pymodaq_plugin_manager.validate import get_pypi_pymodaq
+from pymodaq_utils.packages import get_pypi_pymodaq
 
 from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_gui.utils import DockArea
