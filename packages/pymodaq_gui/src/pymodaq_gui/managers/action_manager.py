@@ -302,7 +302,7 @@ class ActionManager:
                    checked=False, toolbar: Union[str, QtWidgets.QToolBar, None]=None,
                    menu: Union[str, QtWidgets.QMenu, None] = None,
                    visible=True, shortcut: Union[str, QtCore.Qt.Key, QtGui.QKeySequence]=None,
-                   auto_toolbar=True, auto_menu=True,
+                   auto_toolbar=True, auto_menu=False,
                    enabled=True, icon_checked: Union[str, Path, QtGui.QIcon] = None,
                    icon_color: Union[QtGui.QColor, bytes, str]=None,
                    icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
@@ -383,6 +383,8 @@ class ActionManager:
                 menu = self.get_menu(menu)
             elif not isinstance(menu, QtWidgets.QMenu):
                 raise TypeError(f'menu must be either None, a string, or QMenu, got {type(menu)}')
+        else:
+            menu = None
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
                                               checked=checked, toolbar=toolbar, menu=menu,
                                               visible=visible, shortcut=shortcut, enabled=enabled,
@@ -429,7 +431,7 @@ class ActionManager:
         """
         if auto_toolbar:
             if toolbar is None:
-                toolbar = self._toolbar
+                toolbar = self.toolbar
             elif isinstance(toolbar, str):
                 toolbar = self.get_toolbar(toolbar)
             elif not isinstance(toolbar, QtWidgets.QToolBar):
@@ -557,8 +559,6 @@ class ActionManager:
             else:
                 parent.insertToolBar(before, toolbar)
         self._toolbars[short_name] = toolbar
-        if len(self._toolbars) == 1:
-            self.set_toolbar(toolbar)
         return toolbar
 
     def set_toolbar(self, toolbar: Union[QtWidgets.QToolBar, str]):
@@ -721,7 +721,20 @@ class ActionManager:
     @property
     def toolbar(self) -> QtWidgets.QToolBar:
         """Get the default toolbar"""
+        if self._toolbar is None:
+            if len(self.toolbars_names) == 0:
+                self._toolbar = self.create_object_toolbar()
+            else:
+                self._toolbar = self.toolbars[0]
         return self._toolbar
+
+    def create_object_toolbar(self,
+                              parent: QtWidgets.QMainWindow = None,
+                              add_break: bool = True) -> QtWidgets.QToolBar:
+        return self.add_toolbar(self.__class__.__name__.lower(),
+                                self.__class__.__name__,
+                                parent,
+                                add_break=add_break)
 
     @property
     def menu(self) -> QtWidgets.QMenu:
