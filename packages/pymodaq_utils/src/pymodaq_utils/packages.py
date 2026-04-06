@@ -8,7 +8,9 @@ from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
-from pymodaq_plugin_manager.validate import logger
+from pymodaq_utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
 
 
 def get_pypi_package_list(match_name: Union[str, list[str]] = None,
