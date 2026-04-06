@@ -40,8 +40,6 @@ class CustomExt(CustomApp):
         else:
             self._modules_manager = None
 
-        self.create_app_toolbar()
-
     def stop(self):
         """ Programmatic method to stop any action in the extension
 

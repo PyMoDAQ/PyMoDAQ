@@ -53,7 +53,6 @@ class DataPicker(CustomApp):
                         menu='actions')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.create_app_toolbar()
         self.add_menu('actions', 'Actions', self.menubar)
 
     def connect_things(self):
