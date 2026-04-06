@@ -7,14 +7,14 @@ Created the 27/06/2022
 
 import numpy as np
 from qtpy import QtWidgets
-from qtpy.QtCore import Slot, QDate, QThread, QTimer
+from qtpy.QtCore import QDate, QTimer
 
 from pymodaq.utils import data as data_mod
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.dock import DockArea, Dock
-from pymodaq_data.data import DataRaw, Axis
+from pymodaq_gui.utils.dock import Dock
+from pymodaq_data.data import DataRaw
 from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.config import GlobalConfig as Config
 

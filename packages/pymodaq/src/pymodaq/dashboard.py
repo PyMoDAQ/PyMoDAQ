@@ -6,9 +6,8 @@ import datetime
 import subprocess
 import logging
 from pathlib import Path
-from importlib import import_module
 
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable, Type
+from typing import Union, List, Any, TYPE_CHECKING, Sequence
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -16,46 +15,37 @@ from qtpy.QtCore import Qt, QThread, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
-    QLabel,
     QDialogButtonBox,
     QMessageBox,
 )
-import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
-    DashboardActorListener, LECOComponentMixin
+from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
 from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val, ThreadCommand
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
-from pymodaq_gui.messenger import messagebox, dialog
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuNames
 
-from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq_gui.managers.manager_base import Menu
 from pymodaq.utils.managers.overshoot.overshooter import Overshooter
-from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
-from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
-                                  get_set_remote_path)
 from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -65,8 +55,6 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
-
-from pymodaq.utils.config import Config as ControlModulesConfig
 from pymodaq.utils.managers.configurator.configurator import Configurator
 
 if TYPE_CHECKING:

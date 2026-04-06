@@ -5,30 +5,26 @@ import logging
 from packaging import version as version_mod
 import subprocess
 import sys
-from typing import Optional, Union, Any
+from typing import Union, Any
 
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QThread, Signal, QSize
+from qtpy.QtCore import Qt, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QLabel,
     QMessageBox,
 )
-from time import perf_counter
 import numpy as np
 
-from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
-from pymodaq.utils.gui_utils.widgets.window import make_window
-from pymodaq_gui.managers.action_manager import QAction
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_gui.utils import DockArea
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq.utils.leco.utils import start_coordinator
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
 

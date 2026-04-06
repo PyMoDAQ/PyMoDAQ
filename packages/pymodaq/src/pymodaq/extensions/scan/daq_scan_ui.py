@@ -4,20 +4,17 @@ Created the 06/12/2022
 
 @author: Sebastien Weber
 """
-import sys
 from typing import List, TYPE_CHECKING
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
-from pymodaq.utils.gui_utils.widgets.window import make_window
 from pymodaq_gui.utils.shared_ui import MenuNames
-from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.utils import CustomApp
-from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher

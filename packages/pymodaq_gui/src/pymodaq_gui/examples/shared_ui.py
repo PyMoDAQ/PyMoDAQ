@@ -1,5 +1,3 @@
-import sys
-
 from qtpy import QtWidgets
 
 from pymodaq_gui.utils.custom_app import CustomApp
@@ -54,7 +52,7 @@ class MyApp(CustomApp):
 
 def main():
     from pymodaq_gui.utils.utils import mkQApp
-    from pymodaq.utils.gui_utils.widgets.window import make_window
+    from pymodaq_gui.utils.widgets.window import make_window
     from pymodaq_gui.utils.shared_ui import SharedUI
 
     qtapp = mkQApp('SharedUI')

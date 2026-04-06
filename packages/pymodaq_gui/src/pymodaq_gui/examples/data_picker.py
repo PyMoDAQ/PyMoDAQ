@@ -5,7 +5,7 @@ from qtpy import QtWidgets
 
 from typing import Optional
 
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_data.data import DataRaw, Axis
 from pymodaq_gui.utils.shared_ui import SharedUI
 

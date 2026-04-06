@@ -55,7 +55,7 @@ class MyApp(CustomApp):
 
 def test_shared_ui_custom(qtbot):
     import qt_themes
-    from pymodaq.utils.gui_utils.widgets.window import make_window
+    from pymodaq_gui.utils.widgets.window import make_window
     from pymodaq_gui.utils.shared_ui import SharedUI
 
     qt_themes.set_theme('dracula')

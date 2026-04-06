@@ -1,15 +1,9 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from pathlib import Path
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QMessageBox, QMainWindow
 
-
-from pymodaq.utils.gui_utils import DockArea
-from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
 
