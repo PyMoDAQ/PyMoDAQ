@@ -194,7 +194,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         --------
         pymodaq.utils.managers.action_manager.ActionManager
         """
-        self.setup_menu(self.menubar)
+        self.setup_menu(menubar)
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """ Deprecated, use `setup_menus_and_toolbars`
