@@ -1437,7 +1437,7 @@ def load_dashboard_with_preset(preset_name: str,
     -------
 
     """
-    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
+    from pymodaq.utils.config import get_set_preset_path
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
@@ -1445,12 +1445,11 @@ def load_dashboard_with_preset(preset_name: str,
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
+        # Defer configuration selection to do_things_after_preset_set so the configurator
+        # is executed only once after preset loading.
+        dashboard._requested_configuration_name = configuration_name or ''
         dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry(preset_path)
-        if configuration_name is not None:
-            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
-            dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry(configuration_path)
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
