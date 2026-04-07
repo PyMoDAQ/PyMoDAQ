@@ -1,6 +1,7 @@
 from typing import Union, TYPE_CHECKING, Dict, Optional
 
 import qt_themes
+from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
@@ -18,32 +19,81 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     Inherits the MixIns ActionManager and ParameterManager classes. You have to subclass some methods and make
     concrete implementation of a given number of methods:
 
-    * setup_actions: mandatory, see :class:`pymodaq.utils.managers.action_manager.ActionManager`
+    * setup_docks_and_widgets: to code the widget layout of your Application using Docks (and the DockArea)
+      or other widgets
+    * setup_menus_and_toolbars: to create the menus and the toolbar associated with actions (see setup_actions)
+    * setup_actions:  add actions (see :class:`pymodaq_gui.managers.action_manager.ActionManager`) or widgets and optionally add them
+      to toolbar and menu
+    * connect_things: to connect signals and slots. Either from actions
+      (:meth:`pymodaq_gui.managers.action_manager.ActionManager.connect_action`)
+      or direct signal connection
+
+    Other methods to reimplement, related to Parameter management
+
     * value_changed: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
     * child_added: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
     * param_deleted: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
-    * setup_docks: mandatory
-    * setup_menu: non mandatory
-    * connect_things: mandatory
+
+    Depending on the object type, the mainwindow and dockarea attributes may be None
+
+    if parent is:
+
+    * None or QWidget, the attributes will be
+        * parent = QWidget
+        * maindow = None
+        * dockarea = None
+    * DockArea, the attributes will be
+        * parent = DockArea
+        * maindow = QMainWindow
+        * dockarea = DockArea
+    * QMainWindow, the attributes will be
+        * parent = QMainWindow
+        * maindow = QMainWindow
+        * dockarea = None
+
 
     Attributes
     ----------
-    splash_sc: QtWidgets.QSplashScreen
-        A splash screen to be used to display information
     title: str
         Get/set the app title
+    parent: QWidget, QMainWindow or DockArea
+    mainwindow: QMainWindow
+        the parent QMainWindow
+    dockarea: DockArea
+        The underlying DockArea (as central widget of the QMainWindow)
+    menubar: QMenuBar
+        The QMainWindow menubar
+    statusbar: QStatusBar
+        The QMainWindow statusbar
+    splash_sc: QtWidgets.QSplashScreen
+        A splash screen to be used to display information
     get_theme: method
-        Returns the curretn QApplication theme, see qt_themes package
+        Returns the current QApplication theme, see qt_themes package
+
 
     Parameters
     ----------
-    parent: DockArea or QtWidget
+    parent: None, QWidget, QMainWindow or DockArea
+
+
+    tree: ParameterTree
+        an optional Custom ParameterTree
+    title: str
+        The title of the Application instance
+    toolbar: QTtWidgets.QToolbar
+        a toolbar from another parent application
+    create_app_toolbar: bool
+        If True (default) will create a default toolbar with the name of the application as reference and title
+    add_toolbar_break: bool
+        If True, will add a break in the QToolbarArea before adding the toolbar
+    create_app_menu: bool
+        If True (default is False) will create a default menu in the menubar with the name of the
+        application as reference and title
 
     See Also
     --------
     :class:`pymodaq.utils.managers.action_manager.ActionManager`,
     :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`,
-    :class:`pymodaq.utils.managers.modules_manager.ModulesManager`,
     """
 
     log_signal = QtCore.Signal(str)
@@ -53,6 +103,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
                  tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
                  create_app_toolbar: bool = True, add_toolbar_break=True,
                  create_app_menu: bool = False):
+
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self, tree=tree)
@@ -133,7 +184,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.mainwindow.setWindowTitle(self._title)
 
     @staticmethod
-    def get_theme(name: str = None):
+    def get_theme(name: str = None) -> Theme:
         return qt_themes.get_theme(name)
 
     def setup_ui(self):
@@ -148,18 +199,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.do_things_after_ui_setup()
 
     def quit_fun(self):
-        """Method to be subclassed in order to define a custom quit function
+        """Method to be reimplemented in order to define a custom quit function
         """
         if self.mainwindow is not None:
             self.mainwindow.close()
 
     def do_things_after_ui_setup(self):
-        """Non mandatory method to be subclassed in order to do things after the UI setup
+        """ Method to be reimplemented in order to do things after the UI setup
         """
         pass
 
     def setup_docks_and_widgets(self):
-        """Mandatory method to be subclassed to setup the docks layout and/or widgets
+        """ Method to be reimplemented to set up the docks layout and/or widgets
 
         Examples
         --------
@@ -171,17 +222,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         See Also
         --------
         """
-
-        try:
-            self.setup_docks()
+        if hasattr(self, 'setup_docks'):
+            self.setup_docks()  # for backcompatibility
             deprecation_msg('You should not call setup_docks anymore, use `setup_docks_and_widgets` instead')
-        except NotImplementedError:
-            raise NotImplementedError('You must reimplement the method setup_docks_and_widgets')
 
     def setup_docks(self):
         """ deprecated, see setup_docks_and_widgets
         """
-        raise NotImplementedError
+        pass
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """Non-mandatory method to be subclassed in order to create menus and toolbars
@@ -199,7 +247,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         --------
         pymodaq.utils.managers.action_manager.ActionManager
         """
-        self.setup_menu(menubar)
+        self.setup_menu(menubar)  # for back-compatibility
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
         """ Deprecated, use `setup_menus_and_toolbars`
@@ -208,24 +256,26 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         pass
 
     def setup_actions(self):
-        """Method where to create actions to be subclassed. Mandatory
+        """Method where to create actions.
+
+        To be reimplemented
 
         Examples
         --------
-        >>> self.add_action('quit', 'Quit', 'close2', "Quit program")
-        >>> self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True)
+        >>> self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, menu='file_menu')
         >>> self.add_action('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
         >>> self.add_action('save', 'Save' 'SaveAs', "Save current data", checkable=False)
 
-        >>>self.affect_to('load', file_menu)
-        >>>self.affect_to('save', file_menu)
+        >>>self.affect_to('load', 'file_menu')
+        >>>self.affect_to('save', 'file_menu')
 
-        >>>file_menu.addSeparator()
-        >>>self.affect_to('quit', file_menu)
         """
-        raise NotImplementedError
+        pass
 
     def connect_things(self):
-        """Connect actions and/or other widgets signal to methods"""
-        raise NotImplementedError
+        """Connect actions and/or other widgets signal to methods
+
+        To be reimplemented
+        """
+        pass
 
