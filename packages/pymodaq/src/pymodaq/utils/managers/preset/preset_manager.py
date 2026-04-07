@@ -352,37 +352,23 @@ class PresetManager(ManagerBase):
             if plug["type"] == "det":
                 try:
                     plug["ID"] = plug["value"][
-                        "params", DETECTOR_SETTINGS_KEY, "controller_ID"
+                        "params", "detector_settings", "controller_ID"
                     ]
                     plug["status"] = plug["value"][
-                        "params", DETECTOR_SETTINGS_KEY, "controller_status"
+                        "params", "detector_settings", "controller_status"
                     ]
                 except KeyError as e:
                     raise DetectorError
             else:
                 try:
                     plug["ID"] = plug["value"][
-                        "params", ACTUATOR_SETTINGS_KEY, "multiaxes", "controller_ID"
+                        "params", "move_settings", "multiaxes", "controller_ID"
                     ]
                     plug["status"] = plug["value"][
-                        "params", ACTUATOR_SETTINGS_KEY, "multiaxes", "multi_status"
+                        "params", "move_settings", "multiaxes", "multi_status"
                     ]
-                except KeyError:
-                    try:
-                        warnings.warn(
-                            "'move_settings' is deprecated and will be removed in a future version. "
-                            "Use 'actuator_settings' instead. Please resave your preset.",
-                            DeprecationWarning,
-                            stacklevel=2,
-                        )
-                        plug["ID"] = plug["value"][
-                            "params", "move_settings", "multiaxes", "controller_ID"
-                        ]
-                        plug["status"] = plug["value"][
-                            "params", "move_settings", "multiaxes", "multi_status"
-                        ]
-                    except KeyError as e:
-                        raise ActuatorError
+                except KeyError as e:
+                    raise ActuatorError
 
         plugins_sorted = self._group_plugins_by_id(plugins)
 
