@@ -101,7 +101,7 @@ class SharedUI(CustomApp):
     """
 
     def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
-                 show=True, title: str = None):
+                 show=True, title: str = None,):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -111,7 +111,8 @@ class SharedUI(CustomApp):
             parent.setCentralWidget(widget)
             self.central_widget = widget
             
-        super().__init__(parent, title = title)
+        super().__init__(parent, title = title,
+                         create_app_toolbar=False)
         
         
         self._app_class_file: Union[str, Path] = None

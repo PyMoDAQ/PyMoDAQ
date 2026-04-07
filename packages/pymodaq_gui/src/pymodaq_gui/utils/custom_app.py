@@ -50,7 +50,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget] = None,
-                 tree: ParameterTree = None, title: str = None, toolbar=None):
+                 tree: ParameterTree = None, title: str = None, toolbar: QtWidgets.QToolBar=None,
+                 create_app_toolbar: bool = True, add_toolbar_break=True,
+                 create_app_menu: bool = False):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self, tree=tree)
@@ -82,17 +84,26 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self._menubar: QtWidgets.QMenuBar = None
 
         if toolbar is not None:
+            create_app_toolbar = True  # force the app toolbar to be the given one
+        if create_app_toolbar:
+            self.add_toolbar(self.__class__.__name__.lower(),
+                             self.__class__.__name__,
+                             self.mainwindow,
+                             toolbar,
+                             add_break=add_toolbar_break)
             self.set_toolbar(toolbar)
-            self.reference_toolbar('main', self._toolbar)
 
         if self.mainwindow is not None:
             self.mainwindow.setWindowTitle(self.title)
-            if toolbar is not None:
-                self.mainwindow.addToolBar(self._toolbar)
             self._menubar = self.mainwindow.menuBar()
         else:
             parent.setWindowTitle(self.title)
             self._statusbar = QtWidgets.QStatusBar()
+
+        if create_app_menu:
+            self.add_menu(self.__class__.__name__.lower(),
+                          self.__class__.__name__,
+                          self.menubar if self.mainwindow is not None else None)
 
     @property
     def menubar(self):
@@ -189,25 +200,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         pymodaq.utils.managers.action_manager.ActionManager
         """
         self.setup_menu(menubar)
-
-    def create_object_toolbar(self, add_break: bool = True) -> QtWidgets.QToolBar:
-        return self.add_toolbar(self.__class__.__name__.lower(),
-                                self.__class__.__name__,
-                                self.mainwindow,
-                                add_break=add_break)
-
-    def create_object_menu(self,
-                           menu: str | QtWidgets.QMenuBar | QtWidgets.QMenu = None,
-                           icon_name = '',
-                           auto_menu=True
-                           ) -> QtWidgets.QMenu:
-        if menu is None:
-            menu = self.menubar
-        return self.add_menu(self.__class__.__name__.lower(),
-                             self.__class__.__name__,
-                             menu,
-                             icon_name=icon_name,
-                             auto_menu=auto_menu)
 
     @property
     def toolbar(self) -> QtWidgets.QToolBar:
