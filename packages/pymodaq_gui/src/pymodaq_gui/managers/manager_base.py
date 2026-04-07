@@ -462,7 +462,6 @@ class ManagerBase(CustomExt):
 
     def execute_entry(self, entry_path: str | Path = None, **kwargs):
         """ To be called to execute the selected entry """
-        print(f"manager base execute entry {entry_path}")
         if entry_path is None:
             self.save_check(self.entry, bypass_dialog=True)
             entry_path = self.entry_filepath
