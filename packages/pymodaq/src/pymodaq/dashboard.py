@@ -1415,7 +1415,7 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_preset(preset_name: str,
                                extension_name: str = None,
-                               configuration_name: str = 'default')  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -1446,11 +1446,11 @@ def load_dashboard_with_preset(preset_name: str,
 
     if preset_name in dashboard.preset_manager.entries:
         dashboard.preset_manager.entry = preset_name
-        dashboard.configurator.preset_filename = preset_path
-        dashboard.configurator.entry = configuration_name
-        dashboard._requested_configuration_name = configuration_name
         dashboard.preset_manager.execute_entry(preset_path)
-
+        if configuration_name is not None:
+            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
+            dashboard.configurator.entry = configuration_name
+            dashboard.configurator.execute_entry(configuration_path)
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
