@@ -1445,8 +1445,6 @@ def load_dashboard_with_preset(preset_name: str,
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
-        # Defer configuration selection to do_things_after_preset_set so the configurator
-        # is executed only once after preset loading.
         dashboard._requested_configuration_name = configuration_name or ''
         dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry(preset_path)
