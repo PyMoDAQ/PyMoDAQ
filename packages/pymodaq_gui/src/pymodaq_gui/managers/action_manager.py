@@ -464,7 +464,7 @@ class ActionManager:
             the name as referenced in the dict self._menus
         title: str
             Displayed title of the menu
-        menu: QMenu, str, optional
+        menu: QMenuBar, QMenu, str, optional
             a parent menu where this menu should be added. If None, uses the default menu
         icon_name: str / Path / QtGui.QIcon / enum name, optional
             str/Path: the png file name/path to produce the icon
