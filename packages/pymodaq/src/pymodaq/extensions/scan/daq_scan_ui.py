@@ -19,10 +19,11 @@ from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-
+from pymodaq_gui.parameter import ParameterTree
 
 if TYPE_CHECKING:
-    from pymodaq_gui.parameter import ParameterTree
+
+    from pymodaq.extensions.scan.daq_scan import DAQScan
 
 logger = set_logger(get_module_name(__file__))
 
@@ -42,6 +43,63 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()
         self.connect_things()
+
+    def enable_start_stop(self, enable=True):
+        """If True enable main buttons to launch/stop scan"""
+        self.set_action_enabled('start', enable)
+        self.set_action_enabled('stop', enable)
+        self.set_action_enabled('pause', enable)
+        if enable:
+            self.set_action_checked('pause', False)
+
+    def setup_docks_and_widgets(self):
+        self.dock_command = Dock('Scan Command')
+        self.dockarea.addDock(self.dock_command)
+
+        widget_command = QtWidgets.QWidget()
+        widget_command.setLayout(QtWidgets.QVBoxLayout())
+        self.dock_command.addWidget(widget_command)
+        widget_command.layout().addWidget(self.toolbar)
+
+        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        widget_command.layout().addWidget(splitter_widget)
+        splitter_widget.addWidget(splitter_v_widget)
+        self.module_widget = QtWidgets.QWidget()
+        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.module_widget.setMinimumWidth(220)
+        self.module_widget.setMaximumWidth(400)
+
+        self.plotting_widget = QtWidgets.QWidget()
+        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.plotting_widget.setMinimumWidth(220)
+        self.plotting_widget.setMaximumWidth(400)
+
+        self.plotting_settings_tree = ParameterTree()
+        self.plotting_widget.layout().addWidget(self.plotting_settings_tree)
+
+        settings_widget = QtWidgets.QWidget()
+        settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        settings_widget.setMinimumWidth(220)
+
+        splitter_v_widget.addWidget(self.module_widget)
+        splitter_v_widget.addWidget(self.plotting_widget)
+
+        splitter_v_widget.setSizes([400, 400])
+        splitter_widget.addWidget(settings_widget)
+
+        self.populate_status_bar()
+
+        self.settings_toolbox = QtWidgets.QToolBox()
+        settings_widget.layout().addWidget(self.settings_toolbox)
+        self.scanner_widget = QtWidgets.QWidget()
+        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
+        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menubar)
+        self.add_menu('actions', 'Actions', menubar)
 
     def setup_actions(self):
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
@@ -74,14 +132,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('batch', 'Show Batch Scanner', '', menu=MenuNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
-    def enable_start_stop(self, enable=True):
-        """If True enable main buttons to launch/stop scan"""
-        self.set_action_enabled('start', enable)
-        self.set_action_enabled('stop', enable)
-        self.set_action_enabled('pause', enable)
-        if enable:
-            self.set_action_checked('pause', False)
-
     def connect_things(self):
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
@@ -99,51 +149,25 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator')))
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
-    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
-        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menubar)
-        self.add_menu('actions', 'Actions', menubar)
+    def finalize_ui(self, app: 'DAQScan'):
+        app.create_dashboard_toolbar()
 
-    def setup_docks_and_widgets(self):
-        self.dock_command = Dock('Scan Command')
-        self.dockarea.addDock(self.dock_command)
+        self.populate_toolbox_widget([app.settings_tree,
+                                      app._h5saver.settings_tree],
+                                     ['General Settings', 'Save Settings'])
 
-        widget_command = QtWidgets.QWidget()
-        widget_command.setLayout(QtWidgets.QVBoxLayout())
-        self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self.toolbar)
+        self.set_scanner_settings(app.scanner.parent_widget)
+        self.set_modules_settings(app.modules_manager.settings_tree)
 
-        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
-        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
-        widget_command.layout().addWidget(splitter_widget)
-        splitter_widget.addWidget(splitter_v_widget)
-        self.module_widget = QtWidgets.QWidget()
-        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.module_widget.setMinimumWidth(220)
-        self.module_widget.setMaximumWidth(400)
+        self.plotting_settings_tree.setParameters(app.settings.child('plot_options'))
 
-        self.plotting_widget = QtWidgets.QWidget()
-        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.plotting_widget.setMinimumWidth(220)
-        self.plotting_widget.setMaximumWidth(400)
+        for ind_menu, menu in enumerate(self.menus):
+            app.reference_menu(self.menus_names[ind_menu], menu)
 
-        settings_widget = QtWidgets.QWidget()
-        settings_widget.setLayout(QtWidgets.QVBoxLayout())
-        settings_widget.setMinimumWidth(220)
+        for ind_toolbar, toolbar in enumerate(self.toolbars):
+            app.reference_toolbar(self.toolbars_names[ind_toolbar], toolbar)
 
-        splitter_v_widget.addWidget(self.module_widget)
-        splitter_v_widget.addWidget(self.plotting_widget)
-
-        splitter_v_widget.setSizes([400, 400])
-        splitter_widget.addWidget(settings_widget)
-
-        self.populate_status_bar()
-
-        self.settings_toolbox = QtWidgets.QToolBox()
-        settings_widget.layout().addWidget(self.settings_toolbox)
-        self.scanner_widget = QtWidgets.QWidget()
-        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+        self.enable_start_stop(False)
 
     def add_settings_toolbox_widget(self, widget: QtWidgets.QWidget, name: str):
         """Add a widget, usaually a ParameterTree to the SettingsToolbox"""
@@ -169,9 +193,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_modules_settings(self, settings_widget):
         self.module_widget.layout().addWidget(settings_widget)
-
-    def set_plotting_settings(self, settings_plotting):
-        self.plotting_widget.layout().addWidget(settings_plotting)
 
     def populate_status_bar(self):
         self._status_message_label = QtWidgets.QLabel('Initializing')

@@ -170,8 +170,8 @@ class DAQScan(CustomExt):
 
         self.ui: DAQScanUI = DAQScanUI(dockarea, toolbar=self.toolbar)
         self.ui.command_sig.connect(self.process_ui_cmds)
-
-        self.do_things_after_ui_setup()
+        self.ui.finalize_ui(self)
+        self.connect_things()
 
         self.create_dataset_settings()
 
@@ -184,27 +184,6 @@ class DAQScan(CustomExt):
         if self.dashboard.preset_manager.entry_applied:
             self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
-
-    def do_things_after_ui_setup(self):
-        self.create_dashboard_toolbar()
-
-        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
-                                        ['General Settings', 'Save Settings'])
-
-        self.ui.set_scanner_settings(self.scanner.parent_widget)
-        self.ui.set_modules_settings(self.modules_manager.settings_tree)
-
-        self.plotting_settings_tree = ParameterTree()
-        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
-        self.ui.set_plotting_settings(self.plotting_settings_tree)
-
-        for ind_menu, menu in enumerate(self.ui.menus):
-            self.reference_menu(self.ui.menus_names[ind_menu], menu)
-
-        for ind_toolbar, toolbar in enumerate(self.ui.toolbars):
-            self.reference_toolbar(self.ui.toolbars_names[ind_toolbar], toolbar)
-
-        self.ui.enable_start_stop(False)
 
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
         """ Get the main toolbar widget to be eventually added in the main window toolbararea
