@@ -9,15 +9,15 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QDate, QTimer
 
-from pymodaq.utils import data as data_mod
-from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.dock import Dock
-from pymodaq_data.data import DataRaw
-from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_utils.config import GlobalConfig as Config
 
+from pymodaq_data.data import DataRaw, Axis
+
+from pymodaq_gui.utils.widgets.window import make_window
+from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.dock import Dock
+from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_gui.plotting.data_viewers.viewer1D import Viewer1D
 
 
@@ -47,15 +47,25 @@ class FunctionPlotter(CustomApp):
     ]
 
     def __init__(self, dockarea):
+        """ Example of a CustomApplication to plot mathematical functions
+
+        One need to reimplement several methods:
+
+        * setup_docks_and_widgets()  # (mandatory) create the UI skeleton
+        * setup_menus_and_toolbars(self.menubar)  # (optional) create menus and toolbars and add them to main_window
+        * setup_actions()  # (mandatory) create and add actions to various menus and toolbars
+        * connect_things()  # (mandatory) connect actions and other signals
+        * do_things_after_ui_setup()  # (optional) post setup ui stuff if needed
+
+        """
+
+
         super().__init__(dockarea)
 
         # init the object parameters
         self.raw_data = []
-        self.setup_ui()  # will trigger:
-        #                  self.setup_docks()
-        #                  self.setup_actions()  # see ActionManager MixIn class
-        #                  self.setup_menu()
-        #                  self.connect_things()
+        self.setup_ui()
+
         self.timer = QTimer(self)
         self.timer.setInterval(self.settings['plot_refresh'])
         self.timer.timeout.connect(self.plot_timer)
@@ -82,9 +92,7 @@ class FunctionPlotter(CustomApp):
         logger.debug('docks are set')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_toolbar(self.__class__.__name__.lower(),
-                         self.__class__.__name__,
-                         self.mainwindow, add_break=False)
+        pass
 
     def setup_actions(self):
         """
@@ -115,9 +123,8 @@ class FunctionPlotter(CustomApp):
         self.viewer.show_data(DataRaw(name=function_str,
                                       data=[function_vals],
                                       labels=[function_str],
-                                      axes=[
-                                          data_mod.Axis(
-                                              data=x, label='An axis', units='arb. units')],
+                                      axes=[Axis(
+                                          data=x, label='An axis', units='arb. units')],
                                       )
                               )
 
@@ -148,7 +155,7 @@ class FunctionPlotter(CustomApp):
 
 def main():
     import sys
-    from pymodaq.utils.shared_ui import SharedUI
+    from pymodaq_gui.utils.shared_ui import SharedUI
 
     app = mkQApp(FunctionPlotter.__name__)
     win, area = make_window(title=FunctionPlotter.__name__)
