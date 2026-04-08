@@ -1415,7 +1415,7 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_preset(preset_name: str,
                                extension_name: str = None,
-                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                               configuration_name: str = 'default')  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given preset then load an extension
 
