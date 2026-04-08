@@ -106,11 +106,15 @@ class Configurator(ManagerBase):
             return 'default'
 
     @preset_filename.setter
-    def preset_filename(self, preset_filename: str):
-        if preset_filename in self.preset_manager.entries:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
+    def preset_filename(self, preset_filename: Union[str, Path] = 'default'):
+        # Accept both str and Path inputs and normalize to preset stem.
+        preset_name = Path(preset_filename).stem if isinstance(preset_filename, Path) else str(preset_filename)
+        if preset_name in self.preset_manager.entries:
+            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_name)
             self.entries_sync.update_key('items', self.entries)
-            self.update_entry('default')
+            # Keep current configurator selection when still valid for this preset.
+            target_entry = self.entry if self.entry in self.entries else 'default'
+            self.update_entry(target_entry)
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)

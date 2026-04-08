@@ -143,6 +143,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger"""
     status_signal = Signal(str)
+    new_preset_created = Signal()
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
     # included in CustomExt by default but Dashboard is special with that respect
@@ -156,6 +157,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
          "limits": config("utils", "general", "debug_level"),},
         {"title": "Loaded presets", "name": "loaded_files", "type": "group",
          "children": [
+             {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True,},
@@ -212,6 +215,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_detector_manager: DetectorCompactDock = None
 
         self._scripted_preset_load = False
+        self._requested_configuration_name = ''
 
         self.setup_ui()
 
@@ -265,7 +269,14 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(True)
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator._execute_entry(self.configurator.entry_filepath)
+
+        self.configurator.set_preset_filename(preset_name)
+        requested_configuration = self._requested_configuration_name
+        if requested_configuration and requested_configuration in self.configurator.entries:
+            self.configurator.update_entry(requested_configuration)
+
+        self.configurator.execute_entry(self.configurator.entry_filepath)
+        self._requested_configuration_name = ''
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
@@ -1404,7 +1415,7 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
 
 def load_dashboard_with_preset(preset_name: str,
                                extension_name: str = None,
-                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+                               configuration_name: str = 'default')  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
     """ Load the Dashboard using a given preset then load an extension
 
@@ -1426,7 +1437,7 @@ def load_dashboard_with_preset(preset_name: str,
     -------
 
     """
-    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
+    from pymodaq.utils.config import get_set_preset_path
     shared_ui, dashboard = create_load_dashboard()
 
     preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
@@ -1434,12 +1445,9 @@ def load_dashboard_with_preset(preset_name: str,
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
+        dashboard._requested_configuration_name = configuration_name or ''
         dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry(preset_path)
-        if configuration_name is not None:
-            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
-            dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry(configuration_path)
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
@@ -1483,12 +1491,10 @@ def main():
                                                                configuration_name=args.config
                                                                )
 
-
     # If no command-line arguments are supplied, start empty
     else:
         win, dashboard = create_load_dashboard()
-
-    win.show()
+        win.show()
 
     # Run application
     sys.exit(app.exec())
