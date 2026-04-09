@@ -157,7 +157,7 @@ class DAQ_Logger(CustomExt):
         if logger_interface == 'H5 File':
             self.logger = H5Logger(self.modules_manager)
         elif logger_interface == 'SQL DataBase':
-            self.logger = DataBaseLogger(self.dashboard.preset_file.stem)
+            self.logger = DataBaseLogger(self.dashboard.experiment_file.stem)
         else:
             return
 
@@ -194,9 +194,9 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.roi_saver.roi_presets)
+            # if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
+            #     settings_str += ioxml.parameter_to_xml_string(
+            #         self.dashboard.roi_saver.roi_presets)
             settings_str += ioxml.parameter_to_xml_string(self.settings)
             settings_str += ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'

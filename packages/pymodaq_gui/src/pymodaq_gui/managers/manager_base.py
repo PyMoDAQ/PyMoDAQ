@@ -223,7 +223,7 @@ class ManagerBase(CustomExt):
 
         Example:
         --------
-        [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
+        [path for path in get_set_experiment_path().iterdir() if path.suffix == self.entry_extension]
         """
         entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
         if not entry_path.exists():

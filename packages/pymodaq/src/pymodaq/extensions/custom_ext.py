@@ -8,7 +8,7 @@ from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
-    from pymodaq.utils.managers.preset.preset_manager import PresetManager
+    from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
     from pymodaq.utils.managers.configurator.configurator import Configurator
 
 
@@ -33,10 +33,10 @@ class CustomExt(CustomApp):
                 actuators=self.dashboard.actuators_modules,
                 parent_name=self.__class__.__name__)
 
-            if self.preset_manager is not None:
-                self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
-                if self.preset_manager.entry_applied:
-                    self.do_things_after_preset_set(self.preset_manager.entry)
+            if self.experiment_manager is not None:
+                self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
+                if self.experiment_manager.entry_applied:
+                    self.do_things_after_experiment_set(self.experiment_manager.entry)
         else:
             self._modules_manager = None
 
@@ -63,12 +63,12 @@ class CustomExt(CustomApp):
         return self.toolbar
 
     @property
-    def preset_manager(self) -> 'PresetManager':
+    def experiment_manager(self) -> Union['ExperimentManager', None]:
         if self.dashboard is not None:
-            return self.dashboard.preset_manager
+            return self.dashboard.experiment_manager
 
-    def do_things_after_preset_set(self, preset_name: str):
-        """ This method is called whenever a preset entry has been set.
+    def do_things_after_experiment_set(self, experiment_name: str):
+        """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
@@ -114,11 +114,11 @@ class CustomExt(CustomApp):
 
     def create_dashboard_toolbar(self,
                                  add_dashboard: bool = True,
-                                 add_preset=True,
+                                 add_experiment=True,
                                  add_configurator=True,
                                  add_break=True):
         """ Creates and add a toolbar named dashboard containing means to show/hide the dashboard and optionally
-        to display the preset and configurator manager in this toolbar """
+        to display the experiment and configurator manager in this toolbar """
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
@@ -134,8 +134,8 @@ class CustomExt(CustomApp):
             self.get_toolbar('dashboard').addSeparator()
             self.connect_action(DashBoardToolbarActions.SHOW, self.show_dashboard)
 
-        if add_preset:
-            self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+        if add_experiment:
+            self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
         if add_configurator:
             self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))

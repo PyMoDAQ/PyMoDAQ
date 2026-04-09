@@ -36,7 +36,7 @@ Then you'll find modules for:
 * :ref:`Extension module<extensions>`: contains the main extension of the DashBoard: ``DAQ_Scan``, ``DAQ_Logger``,
   ``PID`` and ``H5Browser``
 * Post-Treatment modules: utilities to process PyMoDAQ's data
-* Resources module: contains the UI icons, templates for configuration and presets
+* Resources module: contains the UI icons, templates for configuration and experiments
 * Utils module: contains all utility modules, see :numref:`utils_module_hierarchy`.
 
 .. _utils_module_hierarchy:
@@ -52,7 +52,7 @@ in some other programs to use their features. Below is a short description of wh
 * db: module related to data logging towards database (postgresql for instance)
 * gui_utils: usefull UI widgets and related objects to build quickly and nicely user interfaces
 * h5modules: everything related to the saving and browsing of data in hdf5 files
-* managers: integrated objects managing various thing, for instance, control modules, presets, roi... In general they
+* managers: integrated objects managing various thing, for instance, control modules, experiments, roi... In general they
   have a specific UI (that you can incorporate in your main UI) and the code to interact with whatever is related to it.
 * parameter: extensions of the pyqtgraph Parameter introducing other widgets and Parameter types. Includes also
   serializers from/to Parameter to/from XML

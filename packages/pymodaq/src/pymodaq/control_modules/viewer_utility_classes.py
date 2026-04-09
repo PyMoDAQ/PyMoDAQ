@@ -229,7 +229,7 @@ class DAQ_Viewer_base(QObject):
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here
-            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+            * if it is Slave: use an already initialized controller (defined in the experiment of the dashboard)
 
         Parameters
         ----------

@@ -181,7 +181,7 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        if self.dashboard.preset_manager.entry_applied:
+        if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
 
@@ -208,8 +208,8 @@ class DAQScan(CustomExt):
         self.ui.set_action_enabled('ini_positions',
                                        self.scanner.actuators == self.modules_manager.actuators)
 
-    def do_things_after_preset_set(self, preset_name: str):
-        """ This method is called whenever a preset entry has been set.
+    def do_things_after_experiment_set(self, experiment_name: str):
+        """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
@@ -217,7 +217,7 @@ class DAQScan(CustomExt):
         Can be reimplemented to add some more evolved actions
         """
 
-        super().do_things_after_preset_set(preset_name)
+        super().do_things_after_experiment_set(experiment_name)
         self.ui.enable_start_stop(True)
 
         # set the module saver type and applies its h5saver to submodules

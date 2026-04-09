@@ -8,13 +8,13 @@ from qtpy import QtWidgets, QtCore
 
 from pymodaq_data import DataWithAxes, DataToExport
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_experiment_path
 
 from pymodaq_gui.parameter import Parameter, ioxml
 
 
 from pymodaq.utils.managers.configurator.configurator import Configurator
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
     get_set_overshooter_path, TriggerDirection  # noqa
@@ -77,9 +77,9 @@ class Overshooter(ManagerBase):
 
         self.show_hide_module_manager_settings()
 
-        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
-        if self.preset_manager.entry_applied:
-            self.do_things_after_preset_set(self.preset_manager.entry)
+        self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
+        if self.experiment_manager.entry_applied:
+            self.do_things_after_experiment_set(self.experiment_manager.entry)
         self.configurator.new_entry.connect(self.update_configurations)
         self.configurator.deleted_entry.connect(self.update_configurations)
 
@@ -90,16 +90,16 @@ class Overshooter(ManagerBase):
             child.sigActivated.connect(lambda parameter: child.setValue(not child.value()))
 
     @property
-    def preset_manager(self) -> PresetManager:
-        return self.configurator.preset_manager
+    def experiment_manager(self) -> ExperimentManager:
+        return self.configurator.experiment_manager
 
     @property
-    def preset_filename(self) -> str:
-        return self.configurator.preset_filename
+    def experiment_filename(self) -> str:
+        return self.configurator.experiment_filename
 
-    @preset_filename.setter
-    def preset_filename(self, preset_filename: str):
-        self.configurator.preset_filename = preset_filename
+    @experiment_filename.setter
+    def experiment_filename(self, experiment_filename: str):
+        self.configurator.experiment_filename = experiment_filename
         self.entries_sync.update_key('items', self.entries)
         self.update_entry()
 
@@ -120,7 +120,7 @@ class Overshooter(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_overshooter_path(self.preset_filename)
+        return get_set_overshooter_path(self.experiment_filename)
 
     def save_entries(self, entry_path: Path = None):
         """ Particular implementation to save entries for this inherited Manager """
@@ -249,7 +249,7 @@ class Overshooter(ManagerBase):
         self.add_action('update_data', 'Update Data', 'refresh')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
-                                      add_preset=True, add_configurator=True, add_break=False)
+                                      add_experiment=True, add_configurator=True, add_break=False)
 
     def connect_things(self):
         self.connect_action('update_data', self.update_available_data)
@@ -282,8 +282,8 @@ class Overshooter(ManagerBase):
         for child in self.settings.child('overshoots').children():
             child.remove()
 
-    def do_things_after_preset_set(self, preset_name: str):
-        super().do_things_after_preset_set(preset_name)
+    def do_things_after_experiment_set(self, experiment_name: str):
+        super().do_things_after_experiment_set(experiment_name)
 
         self.modules_manager.selected_actuators_name = self.modules_manager.actuators_name
         self.modules_manager.selected_detectors_name = self.modules_manager.detectors_name

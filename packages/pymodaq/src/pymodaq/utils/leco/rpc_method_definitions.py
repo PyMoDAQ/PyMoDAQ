@@ -30,8 +30,8 @@ class DashboardMethods(StrEnum):
     GET_DEVICES = "get_devices"
     GET_CONFIGURATIONS = "get_configurations"
     APPLY_CONFIGURATION = "apply_configuration"
-    GET_PRESETS = "get_presets"
-    APPLY_PRESET = "apply_preset"
+    GET_EXPERIMENTS = "get_experiments"
+    APPLY_EXPERIMENT = "apply_experiment"
 
 # Director module methods
 class GenericDirectorMethods(StrEnum):
@@ -50,6 +50,6 @@ class ViewerDirectorMethods(StrEnum):
 class DashboardDirectorMethods(StrEnum):
     SEND_DEVICES = "send_devices"
     SEND_CONFIGURATIONS = "send_configurations"
-    SEND_PRESETS = "send_presets"
+    SEND_EXPERIMENTS = "send_experiments"
     APPLIED_CONFIGURATION_DONE = "applied_configuration_done"
-    APPLIED_PRESET_DONE = "applied_preset_done"
+    APPLIED_EXPERIMENT_DONE = "applied_experiment_done"

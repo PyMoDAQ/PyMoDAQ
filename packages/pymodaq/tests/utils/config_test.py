@@ -7,11 +7,11 @@ from pymodaq_utils import config as config_mod
 
 
 class TestGetSet:
-    def test_get_set_preset_path(self):
+    def test_get_set_experiment_path(self):
         local_path = config_mod.get_set_local_dir()
-        preset_path = config_mod_pymodaq.get_set_preset_path()
-        assert Path(preset_path) == Path(local_path).joinpath('preset_configs')
-        assert Path(preset_path).is_dir()
+        experiment_path = config_mod_pymodaq.get_set_experiment_path()
+        assert Path(experiment_path) == Path(local_path).joinpath('experiments')
+        assert Path(experiment_path).is_dir()
 
     def test_get_set_pid_path(self):
         local_path = config_mod.get_set_local_dir()

@@ -153,7 +153,7 @@ Main settings refers to settings common to all instrument plugin. They are mostl
 
 * **DAQ type**: readonly string recalling the DAQ type used
 * **Detector type**: readonly string recalling the selected plugin
-* **Detector Name**: readonly string recalling the given name of the detector (from the preset)
+* **Detector Name**: readonly string recalling the given name of the detector (from the experiment)
 * **Controller ID**: integer used to deal with a controller controlling multiple hardware, see :ref:`multiple_hardware`
 * **Show data and process**: boolean for plotting (or not data in the data viewer)
 * **Refresh time**: integer used to slow down the refreshing of the display (but not of the eventual saving...)

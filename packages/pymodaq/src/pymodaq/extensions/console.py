@@ -83,8 +83,8 @@ class Console(CustomExt):
 
         self.setup_ui()
 
-    def do_things_after_preset_set(self, preset: str):
-        super().do_things_after_preset_set(preset)
+    def do_things_after_experiment_set(self, experiment: str):
+        super().do_things_after_experiment_set(experiment)
 
         self.console.push_variables(
             {'dashboard': self.dashboard,
