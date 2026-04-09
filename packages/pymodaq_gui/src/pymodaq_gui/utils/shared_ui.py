@@ -145,8 +145,7 @@ class SharedUI(CustomApp):
             self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
-        menu.addSeparator()
-        menu.addActions(menu_to_merge.actions())
+        menu.insertActions(menu.actions()[0], menu_to_merge.actions())
         menu_to_merge.parent().removeAction(menu_to_merge.menuAction())
 
     @staticmethod
@@ -179,10 +178,15 @@ class SharedUI(CustomApp):
         help_toolbar.setVisible(False)
 
         self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
+        self.get_menu(MenuNames.FILE).addSeparator()
+
         self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), menubar)
+        self.get_menu(MenuNames.VIEW).addSeparator()
+
         self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), MenuNames.VIEW)
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
+        self.get_menu(MenuNames.TOOLS).addSeparator()
 
         # help menu
         self.add_menu(MenuNames.HELP, '?', menubar)
@@ -191,8 +195,8 @@ class SharedUI(CustomApp):
     def setup_actions(self):
 
 
-        self.add_action("log", "Log File", "", "Show Log File in default editor", auto_toolbar=False,
-                        menu=MenuNames.FILE)
+        self.add_action("log", "Log File", "description", "Show Log File in default editor", auto_toolbar=False,
+                        menu=MenuNames.TOOLS)
 
         self.add_action("quit", "Quit", "close", "Quit program",
                         icon_color=self.get_theme().red, toolbar='runtime',
@@ -200,18 +204,18 @@ class SharedUI(CustomApp):
         self.add_action( "restart", "Restart", "replay", "Restart the app", toolbar='runtime',
                          menu=MenuNames.FILE)
 
-        self.add_action("config", "Config.", "account_tree",
+        self.add_action("config", "Preferences.", "handyman",
                         tip="Show all configuration files", toolbar='help_toolbar',
                         menu=MenuNames.TOOLS)
 
         self.add_action("about", "About", "info", icon_color=self.get_theme().cyan,
                         toolbar='help_toolbar', menu=MenuNames.HELP)
-        self.add_action("help", "Help", "help", icon_color=self.get_theme().yellow,
+        self.add_action("help", "Documentation", "language", icon_color=self.get_theme().yellow,
                         toolbar='help_toolbar', menu=MenuNames.HELP)
         self.get_action("help").setShortcut(QtGui.QKeySequence("F1"))
 
         self.get_menu(MenuNames.HELP).addSeparator()
-        self.add_action("check_update", "Check Updates", "", auto_toolbar=False,
+        self.add_action("check_update", "Check Updates", "update", auto_toolbar=False,
                         menu=MenuNames.HELP)
         self.toolbar.addSeparator()
 
