@@ -37,10 +37,10 @@ class SharedUI(SharedUI):
 
         super().setup_actions()
 
-        self.add_action("leco", "Run Leco Coordinator", "", "Run a Coordinator on this localhost",
+        self.add_action("leco", "Run Leco Coordinator", "router", "Run a Coordinator on this localhost",
                         auto_toolbar=False, menu=MenuNames.TOOLS)
         self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
-                        auto_toolbar=False, menu=MenuNames.HELP)
+                        auto_toolbar=False, menu=MenuNames.TOOLS)
 
     def connect_things(self):
         super().connect_things()
