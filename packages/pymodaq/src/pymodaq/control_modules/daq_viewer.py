@@ -1210,9 +1210,9 @@ class DAQ_Detector(QObject):
                     cmd(command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
-        """ Initialize an instrument plugin class and tries to apply preset settings
+        """ Initialize an instrument plugin class and tries to apply experiment settings
 
-        When the instrument is initialized from the Dashboard using a Preset, tries to apply the preset
+        When the instrument is initialized from the Dashboard using an Experiment, tries to apply the experiment
         settings to the instrument instance
 
         Parameters

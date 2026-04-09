@@ -4,9 +4,11 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+
 from random import randint
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, TYPE_CHECKING
 from easydict import EasyDict as edict
+from qtpy import QtWidgets
 
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
@@ -25,10 +27,15 @@ from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommand
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
 from pymodaq.control_modules.thread_commands import ThreadStatus
 
+if TYPE_CHECKING:
+    from .daq_move_ui.ui_base import DAQ_Move_UI_Base
+    from .daq_viewer_ui.ui_base import DAQ_Viewer_UI
 
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
+
+
 
 
 class ControleModuleType(StrEnum):
@@ -113,6 +120,9 @@ class ControlModule(QObject):
 
     def __init__(self):
         QObject.__init__(self)
+
+        self.ui: Union['DAQ_Move_UI_Base', 'DAQ_Viewer_UI'] = None
+
         self._title = ""
         self.config = config
         # the hardware controller instance set after initialization and to be used by other modules if they share the

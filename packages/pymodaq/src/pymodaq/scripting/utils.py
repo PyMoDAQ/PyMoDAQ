@@ -299,8 +299,8 @@ class LECODetectorWrapper(LECODeviceWrapper):
 
 class LECODashboardWrapper(LECOBaseWrapper):
     def __init__(self, **kwargs) -> None:
-        self._presets_future: Optional[Future[list[str]]] = None
-        self._applied_preset_future: Optional[Future[bool]] = None
+        self._experiments_future: Optional[Future[list[str]]] = None
+        self._applied_experiment_future: Optional[Future[bool]] = None
         self._configurations_future: Optional[Future[list[str]]] = None
         self._applied_configuration_future: Optional[Future[bool]] = None
         self._devices_list_future: Optional[Future[dict[str, list[str]]]] = None
@@ -309,8 +309,8 @@ class LECODashboardWrapper(LECOBaseWrapper):
 
         self._listener.register_binary_rpc_method(self.send_devices, accept_binary_input=True)
         self._listener.register_rpc_method(self.send_configurations)
-        self._listener.register_rpc_method(self.send_presets)
-        self._listener.register_rpc_method(self.applied_preset_done)
+        self._listener.register_rpc_method(self.send_experiments)
+        self._listener.register_rpc_method(self.applied_experiment_done)
         self._listener.register_rpc_method(self.applied_configuration_done)
 
     def get_devices(self) -> Future[dict[str, list[str]]]:
@@ -340,18 +340,18 @@ class LECODashboardWrapper(LECOBaseWrapper):
 
         return future
 
-    def get_presets(self) -> Future[list[str]]:
+    def get_experiments(self) -> Future[list[str]]:
         future = Future()
-        self._presets_future = future
+        self._experiments_future = future
 
         self.set_remote_name()
         self._director.ask_rpc("get_presets")
 
         return future
 
-    def apply_preset(self, preset: str) -> Future[bool]:
+    def apply_experiment(self, preset: str) -> Future[bool]:
         future = Future()
-        self._applied_preset_future = future
+        self._applied_experiment_future = future
 
         self.set_remote_name()
         self._director.ask_rpc("apply_preset", preset=preset)
@@ -373,17 +373,17 @@ class LECODashboardWrapper(LECOBaseWrapper):
         except (InvalidStateError, AttributeError):
             pass
 
-    def send_presets(self, presets: list[str]):
+    def send_experiments(self, presets: list[str]):
         try:
-            self._presets_future.set_result(presets)
-            self._presets_future = None
+            self._experiments_future.set_result(presets)
+            self._experiments_future = None
         except (InvalidStateError, AttributeError):
             pass
 
-    def applied_preset_done(self, done: bool):
+    def applied_experiment_done(self, done: bool):
         try:
-            self._applied_preset_future.set_result(done)
-            self._applied_preset_future = None
+            self._applied_experiment_future.set_result(done)
+            self._applied_experiment_future = None
         except (InvalidStateError, AttributeError):
             pass
 

@@ -1,7 +1,7 @@
 .. _api-managers:
 
 API of the various managers, special classes easing the use of various things such as
-QActions and toolbars, Parameters, ControlModules, Presets, Configurations, ROIs...
+QActions and toolbars, Parameters, ControlModules, Experiments, Configurations, ROIs...
 
 
 GUI Managers
@@ -76,12 +76,12 @@ API of the various managers, special classes easing the experimental orchestrati
 .. currentmodule:: pymodaq.utils.managers
 
 .. autosummary::
-    preset.preset_manager::PresetManager
+    experiment.experiment_manager::ExperimentManager
     configurator.configurator::Configurator
 
-.. currentmodule:: pymodaq.utils.managers.preset.preset_manager
+.. currentmodule:: pymodaq.utils.experiment.experiment_manager
 
-.. autoclass:: PresetManager
+.. autoclass:: ExperimentManager
 
 .. py:currentmodule:: pymodaq.utils.managers.configurator.configurator
 

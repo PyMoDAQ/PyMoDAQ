@@ -384,7 +384,7 @@ class GenericOptimization(CustomExt):
     def config_path(self) -> Path:
         return self.optimizer_config.config_path
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """
         to be subclassed to setup the docks layout
         for instance:
@@ -398,7 +398,6 @@ class GenericOptimization(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
-        self.create_dashboard_toolbar()
 
         self.docks['saving'] = gutils.Dock('Saving')
         self.docks['saving'].addWidget(self.h5saver.settings_tree)
@@ -456,21 +455,11 @@ class GenericOptimization(CustomExt):
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        '''
-        to be subclassed
-        create menu for actions contained into the self.actions_manager, for instance:
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
 
-        For instance:
-
-        file_menu = self.menubar.addMenu('File')
-        self.actions_manager.affect_to('load', file_menu)
-        self.actions_manager.affect_to('save', file_menu)
-
-        file_menu.addSeparator()
-        self.actions_manager.affect_to('quit', file_menu)
-        '''
-        pass
+        """
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
