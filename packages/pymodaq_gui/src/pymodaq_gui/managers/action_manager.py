@@ -454,7 +454,7 @@ class ActionManager:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
         return widget
 
-    def add_menu(self, short_name: str, title: str,
+    def add_menu(self, short_name: str, title: str = '',
                  parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
                  icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True,
                  menu: QtWidgets.QMenu = None) -> QtWidgets.QMenu:
@@ -464,8 +464,9 @@ class ActionManager:
         ----------
         short_name: str
             the name as referenced in the dict self._menus
-        title: str
-            Displayed title of the menu
+        title: str, optional
+            Displayed title of the menu. When *menu* is also provided and *title*
+            is non-empty, the title overrides the instance's own title.
         parent_menu: QMenuBar, QMenu, str, optional
             the parent menu or menubar where this menu should be added. If None, uses the default menu
         icon_name: str / Path / QtGui.QIcon / enum name, optional
@@ -476,8 +477,6 @@ class ActionManager:
             if True add this menu to the defined parent menu
         menu: QMenu, optional
             an existing QMenu instance to register instead of creating a new one.
-            Useful for passing custom subclasses. When provided,
-            *title* is ignored (the instance already has a title).
 
         Returns
         -------
@@ -489,7 +488,7 @@ class ActionManager:
         add_action, get_menu
         """
         if auto_menu and parent_menu is None:
-                parent_menu = self._menu
+            parent_menu = self._menu
         if isinstance(parent_menu, str):
             parent_menu = self.get_menu(parent_menu)
 
@@ -497,6 +496,8 @@ class ActionManager:
             new_menu = QtWidgets.QMenu(title, parent=parent_menu)
         else:
             new_menu = menu
+            if title:
+                new_menu.setTitle(title)
 
         # Set icon if provided
         if icon_name and icon_name != '':
