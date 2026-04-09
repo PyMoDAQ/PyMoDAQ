@@ -64,9 +64,11 @@ class ParameterTreeWidget(ActionManager):
 
         # self.tree.setMinimumWidth(150)
         # self.tree.setMinimumHeight(300)
-        toggle_top = QtWidgets.QPushButton("▼")
+
+        toggle_btn = QtWidgets.QPushButton("▼")
+        toggle_btn.setFixedHeight(16)
         self.collapsible_widget = CollapsibleWidget(
-            toggle_widget=toggle_top,
+            toggle_widget=toggle_btn,
             collapsible_widget=self.toolbar,
             direction="top",
             content_before_toggle=False,
