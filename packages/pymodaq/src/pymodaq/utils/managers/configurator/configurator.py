@@ -106,16 +106,10 @@ class Configurator(ManagerBase):
             return 'default'
 
     @preset_filename.setter
-    def preset_filename(self, preset_filename: Union[str, Path] = 'default'):
-        preset_name = Path(preset_filename).stem if isinstance(preset_filename, Path) else str(preset_filename)
-        if preset_name in self.preset_manager.entries:
-            self.preset_manager.entries_sync.update_key('current', preset_name)
-            current_entry = self.entries_sync.value.get('current', 'default')
-            if current_entry in self.entries:
-                target_entry = current_entry
-            else:
-                target_entry = 'default'
-            self.entries_sync.set_value({**self.entries_sync.value, 'items': self.entries, 'current': target_entry})
+    def preset_filename(self, preset_filename: str):
+        if preset_filename in self.preset_manager.entries:
+            self.preset_manager.entries_sync.update_key('current', preset_filename)
+            self.entries_sync.set_value({**self.entries_sync.value, 'items': self.entries, 'current': self.entry})
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)

@@ -143,7 +143,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger"""
     status_signal = Signal(str)
-    new_preset_created = Signal()
     config_changed = QtCore.Signal()
     # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
     # included in CustomExt by default but Dashboard is special with that respect
@@ -215,7 +214,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_detector_manager: DetectorCompactDock = None
 
         self._scripted_preset_load = False
-        self._requested_configuration_name = ''
 
         self.setup_ui()
 
@@ -269,15 +267,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.get_toolbar('overshooter').setEnabled(True)
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
-
-        self.configurator.set_preset_filename(preset_name)
-
-        requested_configuration = self._requested_configuration_name
-        if requested_configuration and requested_configuration in self.configurator.entries:
-            self.configurator.update_entry(requested_configuration)
-
-        self.configurator.entry_applied = self.configurator.execute_entry(self.configurator.entry_filepath)
-        self._requested_configuration_name = ''
+        self.configurator.execute_entry(self.configurator.entry_filepath)
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
             menu.setEnabled(True)
@@ -1446,13 +1436,10 @@ def load_dashboard_with_preset(preset_name: str,
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
-        dashboard._requested_configuration_name = configuration_name or 'default'
         dashboard.preset_manager.entry = preset_name
+        if configuration_name is not None:
+            dashboard.configurator.entry = configuration_name
         dashboard.preset_manager.execute_entry(preset_path)
-        if extension_name in ExtensionEnum.names():
-            extension = dashboard.load_extension(ExtensionEnum[extension_name])
-        else:
-            extension = None
 
     else:
         msgBox = QMessageBox()
@@ -1495,7 +1482,7 @@ def main():
     # If no command-line arguments are supplied, start empty
     else:
         win, dashboard = create_load_dashboard()
-        win.show()
+    win.show()
 
     # Run application
     sys.exit(app.exec())
