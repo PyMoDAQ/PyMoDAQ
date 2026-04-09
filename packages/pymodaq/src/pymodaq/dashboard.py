@@ -473,11 +473,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu('docked', 'Docked', MenuNames.VIEW)
 
-        self.add_menu('preset', 'Preset', menubar)
-        self.add_menu('configurator', 'Configurator', menubar)
+        self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
+        self.add_menu('preset', 'Preset', MenuNames.TOOLS)
+        self.add_menu('configurator', 'Configurator', MenuNames.TOOLS)
         self.get_menu('configurator').setEnabled(False)
 
-        self.add_menu('overshooter', 'Overshooter', menubar)
+        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS)
         self.get_menu('overshooter').setEnabled(False)
 
         # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
@@ -487,7 +488,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         # self.update_remote_menu()
 
         # extensions menu
-        self.extensions_menu = self.add_menu('extensions', "Extensions", menubar)
+        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuNames.TOOLS)
         self.get_menu('extensions').setEnabled(False)
 
     def setup_actions(self):
@@ -500,11 +501,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
                         menu=MenuNames.VIEW)
 
-        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
+        self.add_toolbar('preset', 'Preset', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
+        self.add_toolbar('configurator', 'Configurator', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('overshooter', 'Overshoot Toolbar', parent=self.mainwindow,
+        self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
         self.toolbar.addSeparator()
 
