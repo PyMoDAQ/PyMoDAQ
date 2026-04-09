@@ -355,7 +355,7 @@ class DAQ_PID(CustomExt):
         self.set_action_enabled("run", enable)
         self.set_action_enabled("pause", enable)
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         to be subclassed
         create menu for actions contained into the self.actions_manager, for instance:
@@ -369,7 +369,7 @@ class DAQ_PID(CustomExt):
         file_menu.addSeparator()
         self.actions_manager.affect_to('quit', file_menu)
         """
-        pass
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         """to be subclassed for actions to perform when one of the param's value in self.settings is changed
@@ -448,7 +448,6 @@ class DAQ_PID(CustomExt):
 
     def setup_actions(self):
         logger.debug("setting actions")
-
         self.add_widget("model_label", QtWidgets.QLabel, "Init Model:")
         self.add_action("ini_model", "Init Model", "ini",
             tip="Initialize the selected model: algo/data conversion",)
@@ -468,9 +467,7 @@ class DAQ_PID(CustomExt):
         self.set_action_enabled("create_setp_actuators", False)
         logger.debug("actions set")
 
-    def setup_docks(self):
-        self.create_dashboard_toolbar()
-
+    def setup_docks_and_widgets(self):
         logger.debug("settings the extension docks")
         self.dock_pid = Dock("PID controller", self.dock_area)
         self.dock_area.addDock(self.dock_pid)
@@ -985,8 +982,5 @@ if __name__ == "__main__":
 
     win_ext, scan = create_extension(dashboard, DAQ_PID)
     win_ext.show()
-
-    preset_file_name = config("pymodaq", "presets", "default_preset_for_pid")
-    dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())

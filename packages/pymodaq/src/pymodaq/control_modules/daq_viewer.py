@@ -1090,7 +1090,16 @@ class DetectorWorker(HardwareWorkerBase):
             self._dispatch_custom_command(command)
 
     def ini_hardware(self, params_state=None, controller=None):
-        """Initialize an instrument plugin class and try to apply preset settings."""
+        """ Initialize an instrument plugin class and tries to apply experiment settings
+
+        When the instrument is initialized from the Dashboard using an Experiment, tries to apply the experiment
+        settings to the instrument instance
+
+        Parameters
+        ----------
+        params_state: dict
+        controller: wrapper
+        """
         try:
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
             det_params, class_ = get_viewer_plugins(self.daq_type.name, self.plugin_name)

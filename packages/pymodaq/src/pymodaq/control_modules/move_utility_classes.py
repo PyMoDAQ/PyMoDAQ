@@ -252,7 +252,7 @@ class DAQ_Move_base(PluginBase):
     ----------
     parent : ActuatorWorker
     params_state : Parameter
-            pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the preset)
+            pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the experiment)
     Attributes
     ----------
     move_done_signal: Signal
@@ -505,7 +505,7 @@ class DAQ_Move_base(PluginBase):
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here
-            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+            * if it is Slave: use an already initialized controller (defined in the experiment of the dashboard)
 
         Parameters
         ----------

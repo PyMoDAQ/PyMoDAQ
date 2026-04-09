@@ -103,10 +103,7 @@ class DAQ_Logger(CustomExt):
 
         logger.debug('actions set')
 
-    def setup_docks(self):
-
-        self.create_dashboard_toolbar()
-
+    def setup_docks_and_widgets(self):
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -140,11 +137,10 @@ class DAQ_Logger(CustomExt):
         self.connect_action('grab_all', self.start_all)
         self.connect_action('stop_all', self.stop_all)
 
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         """
-        file_menu = menubar.addMenu('File')
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         if param.name() == 'log_type':
@@ -161,7 +157,7 @@ class DAQ_Logger(CustomExt):
         if logger_interface == 'H5 File':
             self.logger = H5Logger(self.modules_manager)
         elif logger_interface == 'SQL DataBase':
-            self.logger = DataBaseLogger(self.dashboard.preset_file.stem)
+            self.logger = DataBaseLogger(self.dashboard.experiment_file.stem)
         else:
             return
 
@@ -198,9 +194,9 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.roi_saver.roi_presets)
+            # if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
+            #     settings_str += ioxml.parameter_to_xml_string(
+            #         self.dashboard.roi_saver.roi_presets)
             settings_str += ioxml.parameter_to_xml_string(self.settings)
             settings_str += ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'
@@ -513,8 +509,6 @@ def main():
 
     win_ext, logger = create_extension(dashboard, DAQ_Logger)
     win_ext.show()
-
-    logger.preset_manager.execute_entry(config("pymodaq", "presets", "default_preset_for_logger"))
 
     sys.exit(app.exec())
 

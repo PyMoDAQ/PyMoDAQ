@@ -93,8 +93,8 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
-        self.setup_docks()
-
+        self.setup_docks_and_widgets()
+        self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()  # see ActionManager MixIn class
         self.update_viewers([self.selector.selected_module.daq_type.to_viewer_type()])
         self.connect_things()
@@ -147,7 +147,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     # UI Construction
     # -------------------------------------------------------------------------
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         widget = self.parent
 
         layout = QVBoxLayout()
@@ -157,6 +157,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
         layout.addWidget(self.dockarea)
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar('viewer', 'DAQViewer')
 
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)

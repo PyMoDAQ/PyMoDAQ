@@ -9,7 +9,7 @@ from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
 
 
@@ -44,13 +44,9 @@ class Configurator(ManagerBase):
     Main class managing the configuration of control modules from a Dashboard in terms
     of their settings and actuator's value.
 
-    This class provides a GUI to create, modify and save configurations for different presets (DashBoard state)
+    This class provides a GUI to create, modify and save configurations for different experiments (DashBoard state)
     controlling various modules (actuators, detectors...).
 
-    Parameters
-    ----------
-    preset_filename : str, optional
-        Name of the preset file to load at startup
     """
 
     entry_type = 'configurator'
@@ -62,21 +58,21 @@ class Configurator(ManagerBase):
         self.subentry_handler: SubEntryHandler = None
         self.config_model = ConfiguratorModel()
         if dashboard is None:
-            self._preset_manager_local = PresetManager()
+            self._experiment_manager_local = ExperimentManager()
         else:
-            self._preset_manager_local = dashboard.preset_manager
+            self._experiment_manager_local = dashboard.experiment_manager
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
 
     @property
-    def preset_manager(self) -> PresetManager:
-        return self._preset_manager_local
+    def experiment_manager(self) -> ExperimentManager:
+        return self._experiment_manager_local
 
     def show(self):
         """ Open the Configurator User Interface
 
-        If the Dashboard is not None and has a current preset set, the configurator preset name
+        If the Dashboard is not None and has a current experiment set, the configurator experiment name
         entry will be set as readonly and the settings are taken from the modules
         """
         if self.dashboard is not None:
@@ -86,29 +82,29 @@ class Configurator(ManagerBase):
             )
             self.update_settings(settings)
         else:
-            self.update_settings(self._preset_manager_local.entry)
+            self.update_settings(self._experiment_manager_local.entry)
 
         super().show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_configurator_path(self.preset_filename)
+        return get_set_configurator_path(self.experiment_filename)
 
-    def set_preset_filename(self, name: str):
+    def set_experiment_filename(self, name: str):
         """ convenience method to be used as slot in Qt connection"""
-        self.preset_filename = name
+        self.experiment_filename = name
 
     @property
-    def preset_filename(self) -> str:
+    def experiment_filename(self) -> str:
         try:
-            return self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.currentText()
+            return self.experiment_manager.entries_sync.value['current']
         except KeyError:  # not yet instantiated but need to be there
             return 'default'
 
-    @preset_filename.setter
-    def preset_filename(self, preset_filename: str):
-        if preset_filename in self.preset_manager.entries:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
+    @experiment_filename.setter
+    def experiment_filename(self, experiment_filename: str):
+        if experiment_filename in self.experiment_manager.entries:
+            self.experiment_manager.entries_sync.update_key('current', experiment_filename)
             self.entries_sync.update_key('items', self.entries)
             self.update_entry('default')
 
@@ -134,9 +130,9 @@ class Configurator(ManagerBase):
             entry_path = self.entry_filepath
         config_subentries = config_subentries_from_path(entry_path)
 
-        if self.preset_manager.applied_entry_name != self.preset_filename:
-            logger.warning(f'The current configuration is referring to the prest: {self.preset_filename} '
-                           f'while the current applied preset is: {self.preset_manager.applied_entry_name}')
+        if self.experiment_manager.applied_entry_name != self.experiment_filename:
+            logger.warning(f'The current configuration is referring to the prest: {self.experiment_filename} '
+                           f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
             return False
 
         if len(config_subentries) > 0:
@@ -203,7 +199,7 @@ class Configurator(ManagerBase):
             self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
         self.subentry_handler.show_dialog()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.tree.setDragEnabled(True)
         self.tree.setAcceptDrops(False)
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
@@ -238,7 +234,7 @@ class Configurator(ManagerBase):
         widget_buttons = QtWidgets.QWidget()
         widget_buttons.setLayout(QtWidgets.QVBoxLayout())
         widget_buttons.layout().addStretch()
-        move_toolbar = self.add_toolbar('move')
+        move_toolbar = self.add_toolbar('move', 'Move')
         move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
         widget_buttons.layout().addWidget(move_toolbar)
         widget_buttons.layout().addStretch()
@@ -256,13 +252,13 @@ class Configurator(ManagerBase):
 
     def setup_actions(self):
         self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
+                        checkable=True,
                         tip='If Checked: display all settings (in green, settings that can be configured)'
                             ' otherwise only configurables ones')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
-                                      add_preset=True, add_configurator=False, add_break=False)
-        self.preset_manager.enable_actions(True)
+                                      add_experiment=True, add_configurator=False, add_break=False)
+        self.experiment_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
                         tip='Add the current Parameter item',
@@ -276,11 +272,8 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
-        self.get_toolbar('main').addSeparator()
-        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
-                        tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+        self.toolbar.addSeparator()
+
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
@@ -291,15 +284,15 @@ class Configurator(ManagerBase):
         self.connect_action('show_all_settings', self.display_settings)
 
         if self.dashboard is None:
-            self.preset_manager.enable_actions(True)
-            self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
+            self.experiment_manager.enable_actions(True)
+            self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
 
         else:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
-            self.preset_manager.applied_entry.connect(self.set_preset_filename)  #action slot from preset menu need this to update the list onf configurator entries
+            self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
+            self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf configurator entries
 
-        self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
-                                       ).widget.currentTextChanged.connect(self.set_preset_filename)
+        self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL
+                                           ).widget.currentTextChanged.connect(self.set_experiment_filename)
 
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
@@ -310,18 +303,18 @@ class Configurator(ManagerBase):
             if settings == '':
                 return
         if isinstance(settings, str):
-            self._preset_manager_local.entry = settings
-            preset_settings: Parameter = self._preset_manager_local.settings
+            self._experiment_manager_local.entry = settings
+            experiment_settings: Parameter = self._experiment_manager_local.settings
             settings = SettingsManager().create_settings_all(
-                preset_settings.child(ModuleType.Actuator.value).children(),
-                preset_settings.child(ModuleType.Detector.value).children(),
+                experiment_settings.child(ModuleType.Actuator.value).children(),
+                experiment_settings.child(ModuleType.Detector.value).children(),
             )
 
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
         elif isinstance(settings, Path):
             self.populate_from_file(settings)
-            self.preset_filename = settings.stem
+            self.experiment_filename = settings.stem
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
@@ -441,6 +434,6 @@ if __name__ == "__main__":
     prog.update_settings('default')
     prog.mainwindow.show()
     prog.enable_actions(True)
-    prog.preset_manager.enable_actions(True)
+    prog.experiment_manager.enable_actions(True)
 
     sys.exit(app.exec())

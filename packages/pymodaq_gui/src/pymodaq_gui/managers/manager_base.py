@@ -125,6 +125,7 @@ class ManagerBase(CustomExt):
 
         self.splash_subentries: Optional[SubEntriesSplash] = None
         self.subentries_model: Optional[ManagerSubEntriesModel] = None
+        self._updating_entry = False
 
         #first create the object
         self.entries_sync = WidgetSync(
@@ -172,14 +173,10 @@ class ManagerBase(CustomExt):
         raise NotImplementedError
 
     def setup_ui(self):
-        self.setup_docks()
+        self.setup_docks_and_widgets()
+        self.setup_menus_and_toolbars()
         self.setup_actions_base()
         self.setup_actions()
-
-        try:
-            self.setup_menu(self._menubar)
-        except TypeError:
-            self.setup_menu()  # for backcompatibility
 
         self.connect_things_base()
         self.connect_things()
@@ -227,7 +224,7 @@ class ManagerBase(CustomExt):
 
         Example:
         --------
-        [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
+        [path for path in get_set_experiment_path().iterdir() if path.suffix == self.entry_extension]
         """
         entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
         if not entry_path.exists():
@@ -236,7 +233,7 @@ class ManagerBase(CustomExt):
             self.create_entry('default', bypass_dialog=True)
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """Sets up the widgets for the manager.
 
         Eventually, this can be reimplemented in subclasses to add more/different widgets/docks...
@@ -252,6 +249,9 @@ class ManagerBase(CustomExt):
     def get_action_from_file(self, file: Path) -> str:
         """ Get an action name given a file and the manager name"""
         return f"{file.stem}_{self.manager_name}"
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar(self.manager_name.lower(), self.manager_name, self.mainwindow, add_break=False)
 
     def setup_actions_base(self):
 
@@ -500,18 +500,26 @@ class ManagerBase(CustomExt):
 
     def update_entry(self, entry: Union[str, Path] = None, **kwargs):
         """ Load and display the given entry """
-        if entry is None:
-            if self.entry is None:
-                return
-            entry = self.entry_filepath
-        elif isinstance(entry, str):
-            entry = self.entry_path_from_name(entry)
+        if self._updating_entry:
+            return
+        self._updating_entry = True
+        try:
+            if entry is None:
+                if self.entry is None:
+                    return
+                entry = self.entry_filepath
+            elif isinstance(entry, str):
+                entry = self.entry_path_from_name(entry)
 
-        self.entry = entry.stem  # make sure the combo is updated (if triggered not from the combo, in particular the action slots)
+            self.entry = entry.stem  # syncs the combo; if called from an action slot this fires
+                                     # value_changed → lambda → update_entry (re-entrant, blocked above)
+                                     # but value_changed sync-to-widget still runs → external combos updated
 
-        self._update_entry(entry)
-        self.update_execute_action_tooltip(entry.stem)
-        self.updated_entry.emit(entry.stem)
+            self._update_entry(entry)
+            self.update_execute_action_tooltip(entry.stem)
+            self.updated_entry.emit(entry.stem)
+        finally:
+            self._updating_entry = False
 
     def _update_entry(self, entry_path: Path):
         """ Particular implementation to update entries for this inherited Manager """

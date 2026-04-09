@@ -134,14 +134,14 @@ class PIDModelGeneric:
 
 
 def main(xmlfile):
-    from pymodaq.utils.gui_utils.loader_utils import load_dashboard_with_preset
+    from pymodaq.dashboard import load_dashboard_with_experiment
     from pathlib import Path
     from qtpy import QtWidgets
     from pymodaq_gui.qt_utils import mkQApp
 
     import sys
     app = mkQApp('BeamSteering')
-    dashboard, extension, win = load_dashboard_with_preset(xmlfile, 'DAQ_PID')
+    dashboard, extension, win = load_dashboard_with_experiment(xmlfile, 'DAQ_PID')
     sys.exit(app.exec())
 
 

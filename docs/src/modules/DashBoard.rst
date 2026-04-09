@@ -5,14 +5,14 @@ DashBoard
 
 This module is the heart of PyMoDAQ, it will:
 
-* Help you declare the list of actuators and detectors to be used for a given experiment (:ref:`preset_manager`)
+* Help you declare the list of actuators and detectors to be used for a given experiment (:ref:`experiment_manager`)
 * Setup automatic data acquisition of detectors as a function of one or more actuators using its DAQ_Scan extension
 * Log data into advanced binary file or distant database using its DAQ_Logger extension
 
 
 The flow of this module is as follow:
 
-* At startup you have to define/load/modify a preset (see :ref:`preset_manager`) representing an ensemble of actuators and detectors
+* At startup you have to define/load/modify an experiment (see :ref:`experiment_manager`) representing an ensemble of actuators and detectors
 * Define/load/modify a Configuration (see :ref:`configurator`) representing a state of the control modules settings and some other special configuration subentries
 * Define/load/modify eventual overshoots (see :ref:`overshoot_manager`)
 * Define/load/modify eventual ROI (Region of interests) selections (see :ref:`roi_manager`)
@@ -29,8 +29,8 @@ The flow of this module is as follow:
     A list of accepted command-line arguments are available, you can list them using ``dashboard -h``. For now the
     accepted arguments are the following:
 
-    * ``-p`` or ``--preset`` followed by an existing preset name will start the dashboard with the
-      selected preset loaded. For example ``dashboard -p preset_default`` should start the dashboard with the default preset.
+    * ``-exp`` or ``--experiment`` followed by an existing experiment name will start the dashboard with the
+      selected experiment loaded. For example ``dashboard -exp default`` should start the dashboard with the default experiment.
 
 Introduction
 ------------
@@ -69,7 +69,7 @@ The **file** menu will allow you to quickly display, in a default text editor, t
 in the *pymodaq_local* folder, see :ref:`section_configuration`. The user can also access and edit the general
 configuration file *config.toml* selecting the *Show configuration file* entry that will open a popup window (see
 Fig. :numref:`edit_config`) allowing the user to modify all its fields. Finally, the user can *Quit* the application
-or *Restart* it if changes have to be applied (for instance when modifying a *Preset*)
+or *Restart* it if changes have to be applied (for instance when modifying an *Experiment*)
 
 
   .. _edit_config:
@@ -83,17 +83,17 @@ The **Settings** menu is allowing the user to save/load layouts of docked window
 
 .. note::
 
-    Docked Windows Layout: when a *Preset* has been loaded and if the arrangement of the *Control Modules* (their docked panels) is
-    modified, then a *layout* configuration file whose name derive from the loaded preset filename will be created.
-    At each later loading of this preset, the *Control Modules* arrangement will then be restored.
+    Docked Windows Layout: when an *Experiment* has been loaded and if the arrangement of the *Control Modules* (their docked panels) is
+    modified, then a *layout* configuration file whose name derive from the loaded experiment filename will be created.
+    At each later loading of this experiment, the *Control Modules* arrangement will then be restored.
 
-The **Preset Modes** menu enables to create or modify (using the :ref:`preset_manager`) *presets* that are XML
+The **Tools/Experiment** menu enables to create or modify (using the :ref:`experiment_manager`) *experiments* that are XML
 files defining a set of actuators and detectors used for a given experiment. Each experiment has therefore a corresponding
-preset file. At startup, the program checks for existing preset files and create a menu entry for each of them.
+experiment file. At startup, the program checks for existing experiment files and create a menu entry for each of them.
 
 The **Configurator Modes** menu, new from version 5.2.x, enables to create or modify (using the :ref:`configurator`)
 *configurations* that are binary files defining a set of status for the settings of all actuators and detectors
-declared in the DashBoard (from the loaded preset). One can therefore easily switch between different configurations, hence
+declared in the DashBoard (from the loaded experiment). One can therefore easily switch between different configurations, hence
 different settings for the control modules. Special *actions* are also available such as the initialization of control
 modules (could be interesting if some settings have to be set before initialization) or defining a value for an actuator.
 
@@ -127,7 +127,7 @@ referred to as *Master* and the other ones will be referred to as *Slave*. They 
 address represented in the settings tree by the *Controller ID* entry. These settings will be activated
 within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
 in :numref:`daq_move_gui_settings`). This feature can be enabled for both DAQ_Move and DAQ_Viewer modules but will be
-most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`. This has to be done using the Preset Manager
+most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`. This has to be done using the Experiment Manager
 
 
 

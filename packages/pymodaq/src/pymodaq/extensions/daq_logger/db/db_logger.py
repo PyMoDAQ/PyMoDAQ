@@ -295,6 +295,6 @@ class DataBaseLogger(AbstractLogger):
 
 
 if __name__ == '__main__':
-    db = DbLogger('preset_default')
+    db = DbLogger('default')
     db.connect_db()
     pass

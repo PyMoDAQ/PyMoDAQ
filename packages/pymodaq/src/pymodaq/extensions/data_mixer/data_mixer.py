@@ -64,15 +64,13 @@ class DataMixer(CustomExt):
             self.settings.child('models', 'model_params').addChildren(params)
 
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """Mandatory method to be subclassed to setup the docks layout
 
         """
-        self.create_dashboard_toolbar()
-
         self.docks['settings'] = gutils.Dock('Settings')
         self.dockarea.addDock(self.docks['settings'])
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self.docks['settings'].addWidget(splitter)
         splitter.addWidget(self.modules_manager.settings_tree)
         self.modules_manager.tree.header().setVisible(False)
@@ -200,26 +198,8 @@ class DataMixer(CustomExt):
             self.models, 'name', model_name)['class'](self)
         self.model_class.ini_model_base()
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """Non mandatory method to be subclassed in order to create a menubar
-
-        create menu for actions contained into the self._actions, for instance:
-
-        Examples
-        --------
-        >>>file_menu = self.mainwindow.menuBar().addMenu('File')
-        >>>self.affect_to('load', file_menu)
-        >>>self.affect_to('save', file_menu)
-
-        >>>file_menu.addSeparator()
-        >>>self.affect_to('quit', file_menu)
-
-        See Also
-        --------
-        pymodaq.utils.managers.action_manager.ActionManager
-        """
-        # todo create and populate menu using actions defined above in self.setup_actions
-        pass
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         """ Actions to perform when one of the param's value in self.settings is changed from the
@@ -259,8 +239,6 @@ def main():
 
     win_ext, data_mixer = create_extension(dashboard, DataMixer)
     win_ext.show()
-
-    data_mixer.preset_manager.execute_entry(config("pymodaq", "presets", "default_preset_for_datamixer"))
 
     sys.exit(app.exec())
 

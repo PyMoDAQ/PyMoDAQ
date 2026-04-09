@@ -123,7 +123,7 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
-        self.ui: DAQScanUI = DAQScanUI(dockarea)
+
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
 
@@ -168,8 +168,10 @@ class DAQScan(CustomExt):
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
 
-        self.setup_ui()
+        self.ui: DAQScanUI = DAQScanUI(dockarea, toolbar=self.toolbar)
         self.ui.command_sig.connect(self.process_ui_cmds)
+        self.ui.finalize_ui(self)
+        self.connect_things()
 
         self.create_dataset_settings()
 
@@ -179,8 +181,9 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        if self.dashboard.preset_manager.entry_applied:
+        if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
+
         logger.info('DAQScan Initialized')
 
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
@@ -199,29 +202,6 @@ class DAQScan(CustomExt):
         self.settings.child('plot_options', 'plot_1d').setValue(
             dict(all_items=data1D_names, selected=data1D_names))
 
-
-    def setup_docks(self):
-        self.mainwindow.removeToolBar(self.toolbar)  # hides it
-
-        self.create_dashboard_toolbar()
-
-        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
-                                        ['General Settings', 'Save Settings'])
-
-        self.ui.set_scanner_settings(self.scanner.parent_widget)
-        self.ui.set_modules_settings(self.modules_manager.settings_tree)
-
-        self.plotting_settings_tree = ParameterTree()
-        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
-        self.ui.set_plotting_settings(self.plotting_settings_tree)
-
-    def setup_actions(self):
-
-        self.ui.enable_start_stop(False)
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        pass
-
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
@@ -229,8 +209,8 @@ class DAQScan(CustomExt):
         self.ui.set_action_enabled('ini_positions',
                                        self.scanner.actuators == self.modules_manager.actuators)
 
-    def do_things_after_preset_set(self, preset_name: str):
-        """ This method is called whenever a preset entry has been set.
+    def do_things_after_experiment_set(self, experiment_name: str):
+        """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
@@ -238,8 +218,7 @@ class DAQScan(CustomExt):
         Can be reimplemented to add some more evolved actions
         """
 
-        super().do_things_after_preset_set(preset_name)
-        self.ui.enable_start_stop(True)
+        super().do_things_after_experiment_set(experiment_name)
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
@@ -1430,8 +1409,8 @@ def main():
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
 
-    preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
-    dashboard.preset_manager.execute_entry(preset_file_name)
+    # preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
+    # dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())
 
