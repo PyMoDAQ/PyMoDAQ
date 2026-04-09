@@ -183,6 +183,7 @@ class DAQScan(CustomExt):
 
         if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
+
         logger.info('DAQScan Initialized')
 
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
@@ -218,7 +219,6 @@ class DAQScan(CustomExt):
         """
 
         super().do_things_after_experiment_set(experiment_name)
-        self.ui.enable_start_stop(True)
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
