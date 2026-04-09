@@ -152,7 +152,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         ----------
         """
 
-        CustomApp.__init__(self, parent)
+        CustomApp.__init__(self, parent, create_app_toolbar=False)
         LECOComponentMixin.__init__(self, DashboardActorListener)
 
         logger.info("Initializing Dashboard")
@@ -228,6 +228,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
+
+        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
 
         self.get_toolbar('configurator').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
@@ -460,16 +462,18 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         Create the menubar object looking like :
         """
+        self.add_menu(MenuNames.FILE, 'File', menubar)
+
         self.add_menu(MenuNames.VIEW, 'View', menubar)
 
         self.add_menu('docked', 'Docked', MenuNames.VIEW)
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
-        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS)
-        self.add_menu('configurator', 'Configurator', MenuNames.TOOLS)
+        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name='experiment')
+        self.add_menu('configurator', 'Configurator', MenuNames.TOOLS, icon_name='discover_tune')
         self.get_menu('configurator').setEnabled(False)
 
-        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS)
+        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name='security')
         self.get_menu('overshooter').setEnabled(False)
 
         # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
