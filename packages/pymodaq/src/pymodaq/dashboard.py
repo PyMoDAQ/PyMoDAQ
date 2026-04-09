@@ -271,11 +271,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.overshooter.enable_actions(True)
 
         self.configurator.set_preset_filename(preset_name)
+
         requested_configuration = self._requested_configuration_name
         if requested_configuration and requested_configuration in self.configurator.entries:
             self.configurator.update_entry(requested_configuration)
 
-        self.configurator.execute_entry(self.configurator.entry_filepath)
+        self.configurator.entry_applied = self.configurator.execute_entry(self.configurator.entry_filepath)
         self._requested_configuration_name = ''
 
         for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
@@ -1445,7 +1446,7 @@ def load_dashboard_with_preset(preset_name: str,
     extension = None
 
     if preset_name in dashboard.preset_manager.entries:
-        dashboard._requested_configuration_name = configuration_name or ''
+        dashboard._requested_configuration_name = configuration_name or 'default'
         dashboard.preset_manager.entry = preset_name
         dashboard.preset_manager.execute_entry(preset_path)
         if extension_name in ExtensionEnum.names():

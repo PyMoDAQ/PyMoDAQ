@@ -101,20 +101,21 @@ class Configurator(ManagerBase):
     @property
     def preset_filename(self) -> str:
         try:
-            return self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.currentText()
+            return self.preset_manager.entries_sync.value['current']
         except KeyError:  # not yet instantiated but need to be there
             return 'default'
 
     @preset_filename.setter
     def preset_filename(self, preset_filename: Union[str, Path] = 'default'):
-        # Accept both str and Path inputs and normalize to preset stem.
         preset_name = Path(preset_filename).stem if isinstance(preset_filename, Path) else str(preset_filename)
         if preset_name in self.preset_manager.entries:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_name)
-            self.entries_sync.update_key('items', self.entries)
-            # Keep current configurator selection when still valid for this preset.
-            target_entry = self.entry if self.entry in self.entries else 'default'
-            self.update_entry(target_entry)
+            self.preset_manager.entries_sync.update_key('current', preset_name)
+            current_entry = self.entries_sync.value.get('current', 'default')
+            if current_entry in self.entries:
+                target_entry = current_entry
+            else:
+                target_entry = 'default'
+            self.entries_sync.set_value({**self.entries_sync.value, 'items': self.entries, 'current': target_entry})
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -302,8 +303,7 @@ class Configurator(ManagerBase):
             self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
             self.preset_manager.applied_entry.connect(self.set_preset_filename)  #action slot from preset menu need this to update the list onf configurator entries
 
-        self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
-                                       ).widget.currentTextChanged.connect(self.set_preset_filename)
+        self.preset_manager.entries_sync.value_changed.connect(lambda value: self.set_preset_filename(value['current']))
 
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
