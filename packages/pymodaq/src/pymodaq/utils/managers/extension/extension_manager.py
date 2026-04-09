@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Union
 
 from qtpy import QtWidgets
 
-from pymodaq.extensions import get_extensions, ExtensionEnum
+from pymodaq.extensions import get_extensions, ExtensionEnum, DataMixer
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -21,12 +21,14 @@ class ExtensionManager(ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
 
-    def __init__(self, dashboard: 'DashBoard' = None):
+    def __init__(self, dashboard: 'DashBoard' = None, shared_UI: 'SharedUI' = None):
         self.extensions_names = ExtensionEnum.values()
         self.extensions: dict[ExtensionEnum, CustomExt] = {}
         self.extension_windows = []
         self._standalone_dashboard_proxy = None
         self._standalone_configurator = None
+
+        self.shared_ui = shared_UI
 
         super().__init__(dashboard=dashboard)
 
@@ -115,28 +117,23 @@ class ExtensionManager(ManagerBase):
 
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None
-                       ) -> 'CustomExt':
-        extensions = get_extensions()
-        if ext_enum not in extensions:
-            raise KeyError(f'Unknown extension enum: {ext_enum}')
+                       ) :
+        from pymodaq_gui.qt_utils import mkQApp
+        from pymodaq.dashboard import create_load_dashboard
+        from pymodaq.utils.gui_utils.loader_utils import create_extension
 
-        dashboard_context = self._get_dashboard_context()
+        mkQApp(str(self.entry))
+        win, dashboard = create_load_dashboard()
+        win.mainwidow.setVisible(False)
 
-        shared_ui, ext_module = create_extension(
-            dashboard_context, extensions[ext_enum].klass,
-            window=win,
-        )
-        self.extensions[ext_enum] = ext_module
-        ext_module.shared_ui = shared_ui
-        if dashboard_context is not None and hasattr(dashboard_context, 'add_status'):
-            ext_module.status_signal.connect(dashboard_context.add_status)
-        else:
-            ext_module.status_signal.connect(self.update_status)
-        shared_ui.show()
-        if ext_module.has_action('show_dashboard'):
-            ext_module.set_action_checked('show_dashboard', True)
+        win_ext, extension = create_extension(self.dashboard, DataMixer)
+        win_ext.show()
 
-        return ext_module
+        win_ext, extension = create_extension()
+
+        # To complete :
+        # /!\ not functional
+
 
     def quit_fun(self):
         try:
