@@ -1,5 +1,5 @@
 """
-Tests for preset execution when modules are already initialized.
+Tests for experiment execution when modules are already initialized.
 
 Regression tests for the bug where a single try/except around the cleanup
 loop caused remaining modules to be skipped if one module's quit_fun() raised.
@@ -10,7 +10,7 @@ from qtpy import QtWidgets
 
 import qt_themes
 from pymodaq.dashboard import create_load_dashboard
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 
 config = GlobalConfig()
@@ -149,36 +149,36 @@ class TestRemoveDetectorsLoopResilient:
 
 
 # ---------------------------------------------------------------------------
-# Integration test: execute preset twice (the original reported bug)
+# Integration test: execute experiment twice (the original reported bug)
 # ---------------------------------------------------------------------------
 
-class TestPresetExecutedTwice:
+class TestExperimentExecutedTwice:
     """
-    When a preset is executed while modules are already loaded, the old modules
+    When an experiment is executed while modules are already loaded, the old modules
     must be fully cleaned up and new modules created.
     """
 
     def test_second_execute_cleans_old_modules(self, dashboard):
         """
-        Execute the default preset once, then execute it a second time.
+        Execute the default experiment once, then execute it a second time.
         The second execution must succeed and the module count must match
-        the preset (not double).
+        the experiment (not double).
         """
         # First execution
-        dashboard.preset_manager.execute_entry()
-        assert dashboard.preset_manager.entry_applied is True
+        dashboard.experiment_manager.execute_entry()
+        assert dashboard.experiment_manager.entry_applied is True
 
         n_actuators_after_first = len(dashboard.actuators_modules)
         n_detectors_after_first = len(dashboard.detector_modules)
 
         # Patch dialog so it auto-confirms (returns True) without showing UI
         with patch(
-            "pymodaq.utils.managers.preset.preset_manager.dialog",
+            "pymodaq.utils.managers.experiment.experiment_manager.dialog",
             return_value=True,
         ):
-            dashboard.preset_manager.execute_entry()
+            dashboard.experiment_manager.execute_entry()
 
-        assert dashboard.preset_manager.entry_applied is True
+        assert dashboard.experiment_manager.entry_applied is True
 
         # Module count after second load must equal first load, not double
         assert len(dashboard.actuators_modules) == n_actuators_after_first
@@ -188,15 +188,15 @@ class TestPresetExecutedTwice:
         self, dashboard
     ):
         """
-        If one module's quit_fun() raises during cleanup, the second preset
+        If one module's quit_fun() raises during cleanup, the second experiment
         execution must still complete. We inject a single stray mock module
         (no real hardware thread) with a failing quit_fun, then execute the
-        preset a second time and verify the mock was attempted and the new
+        experiment a second time and verify the mock was attempted and the new
         real modules loaded correctly.
         """
         # First execution to populate real modules
-        dashboard.preset_manager.execute_entry()
-        assert dashboard.preset_manager.entry_applied is True
+        dashboard.experiment_manager.execute_entry()
+        assert dashboard.experiment_manager.entry_applied is True
 
         expected_n_actuators = len(dashboard.actuators_modules)
         expected_n_detectors = len(dashboard.detector_modules)
@@ -209,12 +209,12 @@ class TestPresetExecutedTwice:
         dashboard.modules_manager._actuators.append(stray)
 
         with patch(
-            "pymodaq.utils.managers.preset.preset_manager.dialog",
+            "pymodaq.utils.managers.experiment.experiment_manager.dialog",
             return_value=True,
         ):
-            dashboard.preset_manager.execute_entry()
+            dashboard.experiment_manager.execute_entry()
 
-        assert dashboard.preset_manager.entry_applied is True
+        assert dashboard.experiment_manager.entry_applied is True
         # stray module's quit_fun was attempted
         stray.quit_fun.assert_called_once()
         # Real module count restored correctly (stray excluded)
