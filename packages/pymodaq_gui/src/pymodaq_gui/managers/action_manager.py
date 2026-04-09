@@ -454,8 +454,10 @@ class ActionManager:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
         return widget
 
-    def add_menu(self, short_name: str, title: str, menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
-                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True) -> QtWidgets.QMenu:
+    def add_menu(self, short_name: str, title: str,
+                 parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
+                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True,
+                 menu: QtWidgets.QMenu = None) -> QtWidgets.QMenu:
         """Create and add a menu to a parent menu
 
         Parameters
@@ -464,31 +466,37 @@ class ActionManager:
             the name as referenced in the dict self._menus
         title: str
             Displayed title of the menu
-        menu: QMenuBar, QMenu, str, optional
-            a parent menu where this menu should be added. If None, uses the default menu
+        parent_menu: QMenuBar, QMenu, str, optional
+            the parent menu or menubar where this menu should be added. If None, uses the default menu
         icon_name: str / Path / QtGui.QIcon / enum name, optional
             str/Path: the png file name/path to produce the icon
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
         auto_menu: bool
             if True add this menu to the defined parent menu
+        menu: QMenu, optional
+            an existing QMenu instance to register instead of creating a new one.
+            Useful for passing custom subclasses. When provided,
+            *title* is ignored (the instance already has a title).
 
         Returns
         -------
         QtWidgets.QMenu
-            The created menu
+            The created (or provided) menu
 
         See Also
         --------
         add_action, get_menu
         """
-        if auto_menu:
-            if menu is None:
-                menu = self._menu
-        if isinstance(menu, str):
-            menu = self.get_menu(menu)
+        if auto_menu and parent_menu is None:
+                parent_menu = self._menu
+        if isinstance(parent_menu, str):
+            parent_menu = self.get_menu(parent_menu)
 
-        new_menu = QtWidgets.QMenu(title, parent=menu)
+        if menu is None:
+            new_menu = QtWidgets.QMenu(title, parent=parent_menu)
+        else:
+            new_menu = menu
 
         # Set icon if provided
         if icon_name and icon_name != '':
@@ -498,8 +506,8 @@ class ActionManager:
                 new_menu.setIcon(create_icon(icon_name))
 
         # Add to parent menu if specified
-        if menu is not None:
-            menu.addMenu(new_menu)
+        if parent_menu is not None:
+            parent_menu.addMenu(new_menu)
 
         # Store reference
         self._menus[short_name] = new_menu
