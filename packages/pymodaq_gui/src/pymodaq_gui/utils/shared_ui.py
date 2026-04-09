@@ -185,7 +185,7 @@ class SharedUI(CustomApp):
         self.get_menu(MenuNames.VIEW).addSeparator()
 
         self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), MenuNames.VIEW,
-                      menu=StickyMenu(MenuNames.TOOLBARS.capitalize()))
+                      menu=StickyMenu())
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
         self.get_menu(MenuNames.TOOLS).addSeparator()
