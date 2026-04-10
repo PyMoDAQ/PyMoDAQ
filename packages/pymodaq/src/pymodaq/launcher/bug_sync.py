@@ -13,9 +13,9 @@ def main() :
     win = QtWidgets.QMainWindow()
     win.setWindowTitle('Bug sync')
     win.setCentralWidget(configurator.add_toolbar('test'))
-    configurator.preset_manager.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
+    configurator.experiment_manager.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
     configurator.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
-    configurator.preset_manager.enable_actions(True)
+    configurator.experiment_manager.enable_actions(True)
     configurator.enable_actions(True)
 
     win.show()
