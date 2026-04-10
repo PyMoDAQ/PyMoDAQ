@@ -104,7 +104,7 @@ class Configurator(ManagerBase):
     @property
     def experiment_filename(self) -> str:
         try:
-            return self.experiment_manager.entries_sync.value[self.entry]
+            return self.experiment_manager.entries_sync.value['current']
         except KeyError:  # not yet instantiated but need to be there
             return 'default'
 
