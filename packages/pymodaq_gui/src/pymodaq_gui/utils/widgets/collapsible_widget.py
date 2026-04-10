@@ -146,16 +146,16 @@ class CollapsibleWidget(QWidget):
 
         # Start the animation
         self.animation.start()
-        
+
         self.toggled_signal.emit(self.is_expanded)
 
     def _update_toggle_symbol(self, expanded):
         """Update the toggle button symbol based on expanded state"""
         if not isinstance(self.toggle_widget, QPushButton) or not self.original_text:
             return
-        text = self.original_text if not expanded else symbol_map[self.original_text]        
+        text = self.original_text if not expanded else symbol_map[self.original_text]
         self.toggle_widget.setText(text)
-        
+
     def set_expanded(self, expanded):
         """Programmatically set the expanded state without animation"""
         if expanded and not self.is_expanded:

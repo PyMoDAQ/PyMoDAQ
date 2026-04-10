@@ -67,10 +67,10 @@ class LECODashboardCommands(StrEnum):
     SEND_CONFIGURATIONS = 'send_configurations'
     APPLY_CONFIGURATION = 'apply_configuration'
     APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
-    GET_PRESETS = 'get_presets'
-    SEND_PRESETS = 'send_presets'
-    APPLY_PRESET = 'apply_preset'
-    APPLIED_PRESET_DONE = 'applied_preset_done'
+    GET_EXPERIMENTS = 'get_experiments'
+    SEND_EXPERIMENTS = 'send_experiments'
+    APPLY_EXPERIMENT = 'apply_experiment'
+    APPLIED_EXPERIMENT_DONE = 'applied_experiment_done'
 
 class ListenerSignals(QObject):
     cmd_signal = Signal(ThreadCommand)
@@ -133,8 +133,8 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
         self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
         self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
-        self.register_rpc_method(self.get_presets, name=DashboardMethods.GET_PRESETS)
-        self.register_rpc_method(self.apply_preset, name=DashboardMethods.APPLY_PRESET)
+        self.register_rpc_method(self.get_experiments, name=DashboardMethods.GET_EXPERIMENTS)
+        self.register_rpc_method(self.apply_experiment, name=DashboardMethods.APPLY_EXPERIMENT)
     @staticmethod
     def extract_pymodaq_object(
         value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
@@ -170,11 +170,11 @@ class ActorHandler(PymodaqPipeHandler):
     def apply_configuration(self, configuration : str):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
 
-    def get_presets(self):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_PRESETS))
+    def get_experiments(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_EXPERIMENTS))
 
-    def apply_preset(self, preset : str):
-        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_PRESET, attribute=preset))
+    def apply_experiment(self, experiment : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_EXPERIMENT, attribute=experiment))
 
     # detector commands
     def send_data_grab(self,) -> None:
@@ -386,14 +386,14 @@ class ActorListener(PymodaqListener):
                     method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
                     configurations=command.attribute
                 )
-            elif command.command == LECODashboardCommands.SEND_PRESETS:
+            elif command.command == LECODashboardCommands.SEND_EXPERIMENTS:
                 self.send_rpc_message_to_remote(
-                    method=DashboardDirectorMethods.SEND_PRESETS,
-                    presets=command.attribute
+                    method=DashboardDirectorMethods.SEND_EXPERIMENTS,
+                    experiments=command.attribute
                 )
-            elif command.command == LECODashboardCommands.APPLIED_PRESET_DONE:
+            elif command.command == LECODashboardCommands.APPLIED_EXPERIMENT_DONE:
                 self.send_rpc_message_to_remote(
-                    method=DashboardDirectorMethods.APPLIED_PRESET_DONE,
+                    method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
                     done=command.attribute
                 )
             elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:

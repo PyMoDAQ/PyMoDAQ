@@ -13,7 +13,7 @@ try:
     try:
         logger = set_logger('pymodaq_data', add_handler=True, base_logger=True)
     except Exception:
-        print("Couldn't create the local folder to store logs , presets...")
+        print("Couldn't create the local folder to store logs , experiments...")
 
     import pymodaq_data.config
     logger.info('************************')

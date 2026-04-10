@@ -13,7 +13,7 @@ This module is an extension of the DashBoard but is the heart of PyMoDAQ, it wil
 
 The flow of this module is as follow:
 
-* at startup you have to define/load a preset (see :ref:`preset_manager`) in the Dashboard
+* at startup you have to define/load an experiment (see :ref:`experiment_manager`) in the Dashboard
 * Select DAQ_Scan in the actions menu
 * A dataset will be declared the first time you set a scan. A dataset is equivalent to a single saved file
   containing multiple scans.  One can see a dataset as a series of scans related to single *subject/sample to be characterized*.

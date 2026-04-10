@@ -13,7 +13,7 @@ from pymodaq.utils.config import get_set_overshoot_path
 overshoot_path = get_set_overshoot_path()
 
 
-class PresetScalableGroupMove(GroupParameter):
+class ExperimentScalableGroupMove(GroupParameter):
     """
         |
 
@@ -58,10 +58,10 @@ class PresetScalableGroupMove(GroupParameter):
         self.addChild(child)
 
 
-registerParameterType('groupmoveover', PresetScalableGroupMove, override=True)
+registerParameterType('groupmoveover', ExperimentScalableGroupMove, override=True)
 
 
-class PresetScalableGroupDet(GroupParameter):
+class ExperimentScalableGroupDet(GroupParameter):
     """
         =============== ==============
         **Attributes**    **Type**
@@ -109,7 +109,7 @@ class PresetScalableGroupDet(GroupParameter):
             print(str(e))
 
 
-registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
+registerParameterType('groupdetover', ExperimentScalableGroupDet, override=True)
 
 
 class OvershootManager:
@@ -164,8 +164,8 @@ class OvershootManager:
             file = 'overshoot_default'
         param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors', 'type': 'groupdetover', 'detlist': self.det_modules,
-                       'movelist': self.actuators_modules}]  # [PresetScalableGroupDet(name="Detectors")]
-        self.overshoot_params = Parameter.create(title='Preset', name='Preset', type='group',
+                       'movelist': self.actuators_modules}]
+        self.overshoot_params = Parameter.create(title='Overshoot', name='Overshoot', type='group',
                                                  children=param + params_det)
 
         self.show_overshoot()

@@ -118,12 +118,12 @@ def get_module_index_from_param(param: ParameterWithPath) -> Union[int, None]:
         try:
             index = param.path[::-1].index(ModuleType.Actuator)
         except ValueError:
-            index = param.path[::-1].index('Moves')  #backcompat with old style preset
+            index = param.path[::-1].index('Moves')  #backcompat with old style experiment
     elif 'Detectors' in param.path or ModuleType.Detector in param.path:
         try:
             index = param.path[::-1].index(ModuleType.Detector)
         except ValueError:
-            index = param.path[::-1].index('Detectors')  #backcompat with old style preset
+            index = param.path[::-1].index('Detectors')  #backcompat with old style experiment
     else:
         return None
     return len(param.path) - index

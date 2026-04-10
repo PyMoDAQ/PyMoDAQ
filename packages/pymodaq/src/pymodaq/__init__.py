@@ -24,7 +24,7 @@ try:
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
 
-        from pymodaq.utils.daq_utils import copy_preset, get_instrument_plugins
+        from pymodaq.utils.daq_utils import copy_experiment, get_instrument_plugins
 
         from pymodaq.utils.scanner.utils import register_scanners
         from pymodaq.control_modules.ui_utils import register_uis
@@ -46,7 +46,7 @@ try:
             pass
 
         config = Config()  # to ckeck for config file existence, otherwise create one
-        copy_preset()
+        copy_experiment()
 
 
         from pymodaq.utils.scanner.utils import register_scanners

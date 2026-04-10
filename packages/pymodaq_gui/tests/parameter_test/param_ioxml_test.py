@@ -23,7 +23,7 @@ axes_names = {'Axis 1': 0, 'Axis 2': 1, 'Axis 3': 2}
 params = [{'title': 'Axes', 'name': 'axes', 'type': 'list', 'limits': axes_names}]
 
 settings = Parameter.create(name='settings', type='group', children=params)
-# preset = PresentManager()
+# experiment = PresentManager()
 
 string = ioxml.parameter_to_xml_string(settings.child('axes'))
 
@@ -113,11 +113,11 @@ class TestXMLbackForth():
 
     def test_load_save_overwrite_xml_file(self, tmp_path):
         """
-        Testing to load default preset saving it under a name,
+        Testing to load default experiment saving it under a name,
         raising an exception when trying to overwrite then forcing overwrite
         :return:
         """
-        defaultparameter = Parameter.create(title='Preset', name='Preset', type='group',
+        defaultparameter = Parameter.create(title='Experiment', name='Experiment', type='group',
                                             children=ioxml.XML_file_to_parameter(
                                                 Path(__file__).resolve().parent.parent.joinpath(
                                                     'data/preset_default.xml')))

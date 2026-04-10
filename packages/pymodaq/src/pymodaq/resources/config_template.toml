@@ -1,12 +1,5 @@
 control_module_ini_polling = 60 # in seconds
 
-
-[presets]
-default_preset_for_scan = "default"
-default_preset_for_logger = "default"
-default_preset_for_pid = "default"
-default_preset_for_datamixer = "default"
-
 [actuator]
 ui = ['Simple', 'Original', 'Binary'] #other eventual options will be added programmaticaly at startup
 epsilon_default = 1

@@ -21,7 +21,7 @@ from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 # Handler
 from watchdog.observers import Observer
 
-from pymodaq.dashboard import load_dashboard_with_preset
+from pymodaq.dashboard import load_dashboard_with_experiment
 from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.configurator.configurator import Configurator
@@ -44,9 +44,9 @@ class EnumToolTip(StrEnum):
     DAQ_VIEWER = 'Launch an empty Viewer'
     DAQ_MOVE = 'Launch an empty DAQ_Move'
     H5BROWSER = 'Launch H5Browser'
-    BACK_HISTORY = 'Navigate to the back item of presets history'
-    NEXT_HISTORY = 'Navigate to the next item of presets history'
-    RESTORE = 'Restore this preset with the selected configurator'
+    BACK_HISTORY = 'Navigate to the back item of experiments history'
+    NEXT_HISTORY = 'Navigate to the next item of experiments history'
+    RESTORE = 'Restore this experiment with the selected configurator'
 
 class HistoryFileHandler(FileSystemEventHandler) :
     def __init__(self, callback, watched_path):
@@ -76,8 +76,8 @@ class Launcher(CustomApp):
         self.mainwindow.removeToolBar(self._toolbar)
 
         self.configurator = Configurator()
-        self.preset_manager = self.configurator.preset_manager
-        self._launcher_preset_external_combo = None
+        self.experiment_manager = self.configurator.experiment_manager
+        self._launcher_experiment_external_combo = None
 
         self.extension_manager = ExtensionManager()
 
@@ -171,8 +171,8 @@ class Launcher(CustomApp):
         self.loader_vbox.addWidget(self.add_toolbar('controls'))
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
-        self.preset_manager.entry = 'New '
-        self.show_preset_titles_only(self.preset_manager.entry_filepath)
+        self.experiment_manager.entry = 'New '
+        self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
 
         self.set_launcher_vbox()
 
@@ -210,9 +210,9 @@ class Launcher(CustomApp):
 
         # Header of loader section
         self.connect_action('back_config', lambda: self.do_navigate(self.history_index + 1))
-        self.connect_action('load_default_dashboard', self.load_dashboard_with_preset_configurator)
+        self.connect_action('load_default_dashboard', self.load_dashboard_with_experiment_configurator)
         self.connect_action('next_config', lambda: self.do_navigate(self.history_index-1))
-        self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
+        self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
         self.date_combo_box.currentIndexChanged.connect(self._on_date_combo_box_changed)
@@ -227,38 +227,38 @@ class Launcher(CustomApp):
         """Non mandatory method to be subclassed in order to do things after the UI setup
         """
         self.history, self.history_keys = self.load_history_in_dict()
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'))
+        self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('launcher'))
-        # self._sync_launcher_preset_to_configurator()
-        self.preset_manager.enable_actions(True)
-        self.preset_manager.set_action_enabled('list_entries', True)
+        # self._sync_launcher_experiment_to_configurator()
+        self.experiment_manager.enable_actions(True)
+        self.experiment_manager.set_action_enabled('list_entries', True)
         self.configurator.enable_actions(True)
         self.extension_manager.enable_actions(True)
 
         self.ui_refresh()
 
-    # def _sync_launcher_preset_to_configurator(self):
-    #     """Reconnect the launcher preset external combo to configurator preset updates."""
-    #     preset_action = self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL)
-    #     preset_combo = preset_action.widget
+    # def _sync_launcher_experiment_to_configurator(self):
+    #     """Reconnect the launcher experiment external combo to configurator experiment updates."""
+    #     experiment_action = self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL)
+    #     experiment_combo = experiment_action.widget
     #
     #     # If a previous combo was connected, disconnect it to avoid duplicate slot calls.
-    #     if self._launcher_preset_external_combo is not None:
+    #     if self._launcher_experiment_external_combo is not None:
     #         try:
-    #             self._launcher_preset_external_combo.currentTextChanged.disconnect(
-    #                 self.configurator.set_preset_filename
+    #             self._launcher_experiment_external_combo.currentTextChanged.disconnect(
+    #                 self.configurator.set_experiment_filename
     #             )
     #         except (TypeError, RuntimeError):
     #             pass
     #
     #     try:
-    #         preset_combo.currentTextChanged.disconnect(self.configurator.set_preset_filename)
+    #         experiment_combo.currentTextChanged.disconnect(self.configurator.set_experiment_filename)
     #     except (TypeError, RuntimeError):
     #         pass
     #
-    #     preset_combo.currentTextChanged.connect(self.configurator.set_preset_filename)
-    #     self._launcher_preset_external_combo = preset_combo
+    #     experiment_combo.currentTextChanged.connect(self.configurator.set_experiment_filename)
+    #     self._launcher_experiment_external_combo = experiment_combo
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -327,7 +327,7 @@ class Launcher(CustomApp):
         self.header_toolbar.layout().setSpacing(20)
 
     def set_controls(self):
-        self.get_toolbar('controls').addWidget(self.add_toolbar('preset', 'Preset', add_break=False))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
         self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
 
     @staticmethod
@@ -341,8 +341,8 @@ class Launcher(CustomApp):
             return str(module_title)
         return str(module_param.name())
 
-    def _build_summary_group(self, preset_settings, module_type: ModuleType, group_title: str) -> dict:
-        group_param = preset_settings.child(module_type.value)
+    def _build_summary_group(self, experiment_settings, module_type: ModuleType, group_title: str) -> dict:
+        group_param = experiment_settings.child(module_type.value)
         children = []
 
         if group_param is not None:
@@ -369,22 +369,22 @@ class Launcher(CustomApp):
             'children': children,
         }
 
-    def show_preset_titles_only(self, preset_source=None):
-        """Load a preset source and display only module titles in settings_tree."""
+    def show_experiment_titles_only(self, experiment_source=None):
+        """Load a experiment source and display only module titles in settings_tree."""
         try:
-            if preset_source is None:
-                preset_settings = self.create_parameter(self.preset_manager.settings)
+            if experiment_source is None:
+                experiment_settings = self.create_parameter(self.experiment_manager.settings)
             else:
-                preset_settings = self.create_parameter(preset_source)
+                experiment_settings = self.create_parameter(experiment_source)
         except Exception as error:
-            logger.warning(f'Unable to load preset source {preset_source}: {error}')
-            preset_settings = self.create_parameter(self.preset_manager.settings)
+            logger.warning(f'Unable to load experiment source {experiment_source}: {error}')
+            experiment_settings = self.create_parameter(self.experiment_manager.settings)
 
-        self._full_preset_settings = preset_settings
+        self._full_experiment_settings = experiment_settings
 
         self.settings = [
-            self._build_summary_group(preset_settings, ModuleType.Actuator, 'Actuators'),
-            self._build_summary_group(preset_settings, ModuleType.Detector, 'Detectors'),
+            self._build_summary_group(experiment_settings, ModuleType.Actuator, 'Actuators'),
+            self._build_summary_group(experiment_settings, ModuleType.Detector, 'Detectors'),
         ]
 
         self.tree.header().hide()
@@ -392,23 +392,23 @@ class Launcher(CustomApp):
         self.tree.setItemsExpandable(True)
 
 
-    def load_dashboard_with_preset_configurator(self):
+    def load_dashboard_with_experiment_configurator(self):
         """
-        Debug : load and show dashboard with default preset and default configurator
+        Debug : load and show dashboard with default experiment and default configurator
         Returns
         -------
 
         """
-        # self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_preset(
-        #     preset_name=self.preset_manager.entry,
+        # self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_experiment(
+        #     experiment_name=self.experiment_manager.entry,
         #     configuration_name=self.configurator.entry,
         # )
-        print(self.preset_manager.entry)
+        print(self.experiment_manager.entry)
         print(self.configurator.entry)
 
-        print(self.preset_manager.entries_sync)
+        print(self.experiment_manager.entries_sync)
         print(self.configurator.entries_sync)
-        subprocess.Popen(['dashboard', '-p', self.preset_manager.entry, '-c', self.configurator.entry])
+        subprocess.Popen(['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry])
         # self._dashboard_shared_ui.show()
 
 
@@ -450,12 +450,12 @@ class Launcher(CustomApp):
             self.set_action_enabled('back_config', True)
 
     def ui_refresh(self):
-        # preset and configurator
+        # experiment and configurator
         if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
 
-            self.preset_manager.entry = self.history[actual_key]['preset']
-            self.configurator.preset_filename = self.preset_manager.entry
+            self.experiment_manager.entry = self.history[actual_key]['experiment']
+            self.configurator.experiment_filename = self.experiment_manager.entry
             QtWidgets.QApplication.processEvents()
             self.configurator.entry = self.history[actual_key]['configurator']
 
@@ -468,12 +468,12 @@ class Launcher(CustomApp):
             self.date_combo_box.blockSignals(False)
 
         else:
-            self.preset_manager.entry = "default"
-            self.configurator.preset_filename = "default"
+            self.experiment_manager.entry = "default"
+            self.configurator.experiment_filename = "default"
             self.configurator.update_entry("default")
 
         # tree
-        self.show_preset_titles_only(self.preset_manager.entry_filepath)
+        self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
 
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
@@ -486,18 +486,18 @@ class Launcher(CustomApp):
     def load_history_in_dict(self) -> tuple[
         dict[str, str], list[str]]:
         """
-        Read history file and return a dictionary with presets and configurators sorted by date.
+        Read history file and return a dictionary with experiments and configurators sorted by date.
 
         Returns
         -------
         history : dict
             Dictionary where keys are datetime strings and values are dictionaries
-            with 'preset' and 'configurator' entries
+            with 'experiment' and 'configurator' entries
             Example::
 
                 {
-                    '2026-18-03:17:07:38': {'preset': 'Manip', 'configurator': 'default'},
-                    '2026-18-03:17:06:31': {'preset': 'default', 'configurator': 'default'}
+                    '2026-18-03:17:07:38': {'experiment': 'Manip', 'configurator': 'default'},
+                    '2026-18-03:17:06:31': {'experiment': 'default', 'configurator': 'default'}
                 }
 
         history_keys : list[str]

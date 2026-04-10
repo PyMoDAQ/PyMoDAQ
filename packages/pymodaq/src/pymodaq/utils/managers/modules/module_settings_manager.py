@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class SettingsManager:
-    """ Manage the settings from a list of Control Modules either actual instances or as defined in a preset file"""
+    """ Manage the settings from a list of Control Modules either actual instances or as defined in a experiment file"""
 
 
     def create_settings_all(self,
@@ -33,12 +33,12 @@ class SettingsManager:
         )
         if len(actuators) > 0:
             if isinstance(actuators[0], Parameter):
-                self.add_settings_from_modules_in_preset(settings, actuators, ModuleType.Actuator)
+                self.add_settings_from_modules_in_experiment(settings, actuators, ModuleType.Actuator)
             else:
                 self.add_settings_from_modules_instances(settings, actuators, ModuleType.Actuator)
         if len(detectors) > 0:
             if isinstance(detectors[0], Parameter):
-                self.add_settings_from_modules_in_preset(settings, detectors, ModuleType.Detector)
+                self.add_settings_from_modules_in_experiment(settings, detectors, ModuleType.Detector)
             else:
                 self.add_settings_from_modules_instances(settings, detectors, ModuleType.Detector)
 
@@ -60,21 +60,21 @@ class SettingsManager:
                                              name=f'{module_type}_{ind:03.0f}', title=modules_titles[ind],
                                              module_settings=module_settings)
 
-    def add_settings_from_modules_in_preset(self,
-                                            settings: Parameter,
-                                            preset_settings: list[Parameter],
-                                            module_type: ModuleType = ModuleType.Actuator
-                                            ):
+    def add_settings_from_modules_in_experiment(self,
+                                                settings: Parameter,
+                                                experiment_settings: list[Parameter],
+                                                module_type: ModuleType = ModuleType.Actuator
+                                                ):
         """ Adds to a given Parameter children based from the current value of their settings
 
         Settings are grouped by module type: 'Actuator' or 'Detector'
         """
-        modules_titles = [param['name'] for param in preset_settings]
+        modules_titles = [param['name'] for param in experiment_settings]
 
-        for ind, param_info in enumerate(preset_settings):
+        for ind, param_info in enumerate(experiment_settings):
 
             module_settings = self.get_settings_from_class(
-                self.get_module_class_from_preset(param_info, module_type),
+                self.get_module_class_from_experiment(param_info, module_type),
             module_type)
 
             self._add_settings_from_settings(settings, module_type=module_type,
@@ -116,7 +116,7 @@ class SettingsManager:
         return Parameter.create(name='settings', type='group', children=params)
 
     @staticmethod
-    def get_module_class_from_preset(preset_subentry: Parameter, module_type: ModuleType)\
+    def get_module_class_from_experiment(preset_subentry: Parameter, module_type: ModuleType)\
             -> Type['ParameterControlModule']:
 
         if module_type == ModuleType.Actuator:
