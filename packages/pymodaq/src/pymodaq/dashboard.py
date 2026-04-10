@@ -1435,7 +1435,7 @@ def main():
                                      description="PyMoDAQ dashboard. "
                                                  "Command-line options only affect GUI initial state."
                                      )
-    parser.add_argument("-p", "--experiment", metavar="EXPERIMENT_NAME",
+    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
                         help="experiment name to load at startup")
     parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
                         help="config name to execute (ignored if no experiment provided)")
