@@ -26,9 +26,18 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 config = Config()
 
 class WhiteCheckboxStyle(QProxyStyle):
+    _pixmap_cache: dict = {}
+
+    def _get_checkmark_pixmap(self, size: QSize) -> QPixmap:
+        key = (size.width(), size.height())
+        if key not in self._pixmap_cache:
+            from pymodaq_gui.utils.styling import create_icon
+            icon = create_icon("check_small", icon_color="white")
+            self._pixmap_cache[key] = icon.pixmap(size)
+        return self._pixmap_cache[key]
+
     def drawPrimitive(self, element:QtWidgets.QStyle.PrimitiveElement, option: QtWidgets.QStyleOption,
                       painter: QtGui.QPainter, widget: Union[QtWidgets.QWidget, None] = None):
-        from pymodaq_gui.utils.styling import create_icon
         if element == QStyle.PrimitiveElement.PE_IndicatorCheckBox:
             state = option.state # type: ignore[attr-defined]
 
@@ -44,8 +53,7 @@ class WhiteCheckboxStyle(QProxyStyle):
             # Draw checkmark when checked
             if state & QStyle.StateFlag.State_On:
                 size = QSize(20, 20)
-                icon = create_icon("check_small", icon_color="white")
-                pixmap = icon.pixmap(size)
+                pixmap = self._get_checkmark_pixmap(size)
 
                 icon_rect = self.baseStyle().alignedRect(
                     Qt.LayoutDirection.LeftToRight, Qt.AlignmentFlag.AlignCenter,
