@@ -105,8 +105,7 @@ class Configurator(ManagerBase):
     def experiment_filename(self, experiment_filename: str):
         if experiment_filename in self.experiment_manager.entries:
             self.experiment_manager.entries_sync.update_key('current', experiment_filename)
-            self.entries_sync.update_key('items', self.entries)
-            self.update_entry('default')
+            self.entries_sync.set_value({**self.entries_sync.value, 'items': self.entries, 'current': self.entry})
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
@@ -425,7 +424,7 @@ if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import DashBoard, create_load_dashboard
 
-    app = mkQApp('PresetManager')
+    app = mkQApp('ConfiguratorManager')
 
     shared_ui, dashboard = create_load_dashboard()
     shared_ui.hide()
