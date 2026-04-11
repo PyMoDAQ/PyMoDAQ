@@ -167,7 +167,7 @@ class SharedUI(CustomApp):
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
-        Create the menubar object land toolbars:
+        Create the menubar object and toolbars:
         """
 
         if menubar is None:
