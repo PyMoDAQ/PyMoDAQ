@@ -174,7 +174,8 @@ class SharedUI(CustomApp):
             menubar = self.menubar
 
         runtime_toolbar = self.add_toolbar('runtime_toolbar', 'Runtime', parent=self.mainwindow, add_break=False)
-
+        runtime_toolbar.setMovable(False)
+        
         help_toolbar = self.add_toolbar('help_toolbar', 'Help', parent=self.mainwindow, add_break=False)
         help_toolbar.setVisible(False)
 
