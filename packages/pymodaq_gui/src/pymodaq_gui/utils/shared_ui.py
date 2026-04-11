@@ -258,6 +258,7 @@ class SharedUI(CustomApp):
             short_name="about",
             name="About PyMoDAQ",
             icon_name="info",
+            icon_color=self.get_theme().blue,
             toolbar='help_toolbar',
             menu=MenuNames.HELP)
 
