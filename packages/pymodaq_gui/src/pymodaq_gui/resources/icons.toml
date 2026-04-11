@@ -24,6 +24,7 @@ names = [
     'build_circle',
     'cable',
     'camera',
+    'cancel',
     'check_box',
     'check_box_outline_blank',
     'close',
@@ -34,6 +35,7 @@ names = [
     'do_not_disturb_on',
     'dock_to_bottom',
     'dock_to_left',
+    'docs',
     'draft',
     'experiment',
     'extension',
@@ -64,6 +66,7 @@ names = [
     'not_started',
     'pause_circle',
     'plug_connect',
+    'quick_reference',
     'refresh',
     'remove',
     'repeat',
@@ -73,6 +76,7 @@ names = [
     'replay',
     'router',
     'router_off',
+    'restart_alt',
     'save',
     'save_as',
     'save_clock',
@@ -100,5 +104,3 @@ names = [
     'visibility',
     'visibility_off'
 ]
-
-
