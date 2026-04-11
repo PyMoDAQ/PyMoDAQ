@@ -205,7 +205,7 @@ class SharedUI(CustomApp):
             name="Restart",
             icon_name="restart_alt",
             tip="Restart PyMoDAQ",
-            toolbar='runtime_toolbar',
+            auto_toolbar=False,
             menu=MenuNames.FILE)
 
         self.add_action(
