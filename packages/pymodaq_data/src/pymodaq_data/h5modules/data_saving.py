@@ -296,11 +296,8 @@ class DataSaverLoader(DataManagement):
         self.data_type = enum_checker(DataType, self.data_type)
 
         if isinstance(h5saver, (Path, str)):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -771,12 +768,9 @@ class DataToExportSaver:
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.custom,
                  new_file: bool = False, metadata: dict = None):
 
-        if isinstance(h5saver, (Path , str)):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
@@ -1057,9 +1051,7 @@ class DataLoader:
         self._data_loader: DataSaverLoader = None
 
         if isinstance(h5saver, (Path, str)):
-            h5saver_tmp = H5SaverLowLevel()
-            h5saver_tmp.init_file(file_name=Path(h5saver))
-            h5saver = h5saver_tmp
+            h5saver = H5SaverLowLevel.from_file(h5saver)
 
         self.h5saver = h5saver
 
