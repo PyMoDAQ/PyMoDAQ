@@ -16,7 +16,7 @@ def get_set_experiment_path(user=False):
 def get_set_state_path(subfolder: str = '', user=False):
     """ creates and return the config folder path for managers files
     """
-    target_path = get_set_config_dir('configurations', user=user).joinpath(subfolder)
+    target_path = get_set_config_dir('states', user=user).joinpath(subfolder)
     target_path.mkdir(parents=True, exist_ok=True)
     
     return target_path
