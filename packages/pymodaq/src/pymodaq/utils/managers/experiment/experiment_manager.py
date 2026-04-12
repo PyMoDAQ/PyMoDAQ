@@ -443,7 +443,7 @@ class ExperimentManager(ManagerBase):
 if __name__ == '__main__':
     from pymodaq_gui.qt_utils import mkQApp
 
-    app = mkQApp('PresetManager')
+    app = mkQApp('ExperimentManager')
 
     prog = ExperimentManager()
     external_ui = QtWidgets.QMainWindow()

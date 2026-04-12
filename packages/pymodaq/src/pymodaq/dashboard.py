@@ -1379,7 +1379,7 @@ def load_dashboard_with_experiment(experiment_name: str,
     -------
 
     """
-    from pymodaq.utils.config import get_set_configurator_path, get_set_experiment_path
+    from pymodaq.utils.config import get_set_experiment_path
     shared_ui, dashboard = create_load_dashboard()
 
     experiment_path = get_set_experiment_path().joinpath(f'{experiment_name}.xml')
@@ -1388,10 +1388,7 @@ def load_dashboard_with_experiment(experiment_name: str,
 
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
-        QtWidgets.QApplication().processEvents()
         if configuration_name is not None:
-            configuration_path = get_set_configurator_path().joinpath(experiment_name).joinpath(
-                f'{configuration_name}.config')
             dashboard.configurator.entry = configuration_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
@@ -1422,7 +1419,7 @@ def main():
                                      description="PyMoDAQ dashboard. "
                                                  "Command-line options only affect GUI initial state."
                                      )
-    parser.add_argument("-exp", "--experiment", metavar="EXPERIMENT_NAME",
+    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
                         help="experiment name to load at startup")
     parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
                         help="config name to execute (ignored if no experiment provided)")
