@@ -171,7 +171,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def update_status(self, message: str, wait_time: Optional[int] = None):
         if self.statusbar is not None:
             if wait_time is None:
-                wait_time = config('utils', 'general', 'message_status_persistence')
+                wait_time = config('gui', 'message_status_persistence')
             self.statusbar.showMessage(message, wait_time)
 
     @property

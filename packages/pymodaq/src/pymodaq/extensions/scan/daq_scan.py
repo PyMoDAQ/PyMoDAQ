@@ -825,7 +825,7 @@ class DAQScan(CustomExt):
             the message to log
         wait_time: int or None
             leave the message apparent in the status bar for this duration in ms.
-            If None, uses the value from config('utils', 'general', 'message_status_persistence').
+            If None, uses the value from config('gui', 'message_status_persistence')
         """
         self.ui.update_status(txt, wait_time)
         self.status_signal.emit(txt)
