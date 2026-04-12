@@ -123,8 +123,8 @@ class CustomExt(CustomApp):
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
         if add_dashboard:
-            self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
-                            toolbar='dashboard')
+            # self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
+            #                 toolbar='dashboard')
             self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
                             'Show/Hide the Dashboard window', checkable=True,
                             icon_color=self.get_theme().green,
