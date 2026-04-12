@@ -9,7 +9,7 @@ from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
-    from pymodaq.utils.managers.state.configurator import Configurator
+    from pymodaq.utils.managers.state.state_manager import StateManager
 
 
 class DashBoardToolbarActions(StrEnum):
@@ -84,9 +84,9 @@ class CustomExt(CustomApp):
             self.show_dashboard()
 
     @property
-    def configurator(self) -> 'Configurator':
+    def state_manager(self) -> 'StateManager':
         if self.dashboard is not None:
-            return self.dashboard.configurator
+            return self.dashboard.state_manager
 
     @property
     def splash(self):
@@ -115,7 +115,7 @@ class CustomExt(CustomApp):
     def create_dashboard_toolbar(self,
                                  add_dashboard: bool = True,
                                  add_experiment=True,
-                                 add_configurator=True,
+                                 add_state=True,
                                  add_break=True):
         """ Creates and add a toolbar named dashboard containing means to show/hide the dashboard and optionally
         to display the experiment and state manager in this toolbar """
@@ -137,8 +137,8 @@ class CustomExt(CustomApp):
         if add_experiment:
             self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
-        if add_configurator:
-            self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+        if add_state:
+            self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
 
     def show_dashboard(self, show: bool = None):

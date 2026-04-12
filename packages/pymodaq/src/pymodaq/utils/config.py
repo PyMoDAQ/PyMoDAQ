@@ -13,7 +13,7 @@ def get_set_experiment_path(user=False):
     return get_set_config_dir('experiments', user=user)
 
 
-def get_set_configurator_path(subfolder: str = '', user=False):
+def get_set_state_path(subfolder: str = '', user=False):
     """ creates and return the config folder path for managers files
     """
     target_path = get_set_config_dir('configurations', user=user).joinpath(subfolder)

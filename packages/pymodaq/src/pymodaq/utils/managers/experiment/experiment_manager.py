@@ -11,7 +11,7 @@ from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 
-from pymodaq.utils.config import get_set_experiment_path, get_set_overshoot_path, get_set_configurator_path, get_set_remote_path
+from pymodaq.utils.config import get_set_experiment_path, get_set_overshoot_path, get_set_state_path, get_set_remote_path
 from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -192,9 +192,9 @@ class ExperimentManager(ManagerBase):
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
-        for file in get_set_configurator_path(preset_name).iterdir():
+        for file in get_set_state_path(preset_name).iterdir():
             file.unlink(missing_ok=True)
-        get_set_configurator_path(preset_name).rmdir()
+        get_set_state_path(preset_name).rmdir()
         get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)

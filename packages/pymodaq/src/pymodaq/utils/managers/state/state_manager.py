@@ -19,15 +19,15 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
 from pymodaq.utils.managers.state.subentries import (
-    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, ConfiguratorSubEntry)
+    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, StateSubEntry)
 from pymodaq.utils.managers.state.utils import (
-    ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
-    get_module_from_param, config_subentries_from_path, ParameterDelegate,
+    StateParameterTree, StateModel, StateTableView,
+    get_module_from_param, state_subentries_from_path, ParameterDelegate,
     EntryActions, ModuleType)
 
 
 
-from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.config import get_set_state_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
 
@@ -39,7 +39,7 @@ logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
 
 
-class Configurator(ManagerBase):
+class StateManager(ManagerBase):
     """
     Main class managing the configuration of control modules from a Dashboard in terms
     of their settings and actuator's value.
@@ -50,19 +50,19 @@ class Configurator(ManagerBase):
     """
 
     entry_type = 'state'
-    entry_extension ='.config'
+    entry_extension ='.state'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
 
         self.subentry_handler: SubEntryHandler = None
-        self.config_model = ConfiguratorModel()
+        self.config_model = StateModel()
         if dashboard is None:
             self._experiment_manager_local = ExperimentManager()
         else:
             self._experiment_manager_local = dashboard.experiment_manager
 
-        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+        super().__init__(dashboard=dashboard, tree=StateParameterTree())
 
 
     @property
@@ -70,7 +70,7 @@ class Configurator(ManagerBase):
         return self._experiment_manager_local
 
     def show(self):
-        """ Open the Configurator User Interface
+        """ Open the StateManager User Interface
 
         If the Dashboard is not None and has a current experiment set, the state experiment name
         entry will be set as readonly and the settings are taken from the modules
@@ -88,7 +88,7 @@ class Configurator(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_configurator_path(self.experiment_filename)
+        return get_set_state_path(self.experiment_filename)
 
     def set_experiment_filename(self, name: str):
         """ convenience method to be used as slot in Qt connection"""
@@ -111,7 +111,7 @@ class Configurator(ManagerBase):
         self.config_model.save(entry_path)
 
     @staticmethod
-    def format_subentries(entries: list[ConfiguratorSubEntry]):
+    def format_subentries(entries: list[StateSubEntry]):
         return [(f'{entry.entry_type.capitalize()} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
@@ -127,7 +127,7 @@ class Configurator(ManagerBase):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries = config_subentries_from_path(entry_path)
+        config_subentries = state_subentries_from_path(entry_path)
 
         if self.experiment_manager.applied_entry_name != self.experiment_filename:
             logger.warning(f'The current configuration is referring to the prest: {self.experiment_filename} '
@@ -204,7 +204,7 @@ class Configurator(ManagerBase):
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
         self.tree.doubleClicked.connect(self.add_setting)
 
-        self.table_out = ConfiguratorTableView(True)
+        self.table_out = StateTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_out.horizontalHeader().setStretchLastSection(True)
         self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
@@ -256,7 +256,7 @@ class Configurator(ManagerBase):
                             ' otherwise only configurables ones')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
-                                      add_experiment=True, add_configurator=False, add_break=False)
+                                      add_experiment=True, add_state=False, add_break=False)
         self.experiment_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
@@ -376,8 +376,8 @@ class Configurator(ManagerBase):
             except KeyError:
                 module = ModuleType.NONE.value
                 module_type = ModuleType.NONE
-            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS, module,
-                                         module_type, ParameterWithPath(current_setting))
+            entry = StateSubEntry(SubEntryHandlerTypes.SETTINGS, module,
+                                  module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
@@ -422,12 +422,12 @@ if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import DashBoard, create_load_dashboard
 
-    app = mkQApp('ConfiguratorManager')
+    app = mkQApp('StateManager')
 
     shared_ui, dashboard = create_load_dashboard()
     shared_ui.hide()
 
-    prog = Configurator(dashboard)
+    prog = StateManager(dashboard)
     prog.update_settings('default')
     prog.mainwindow.show()
     prog.enable_actions(True)

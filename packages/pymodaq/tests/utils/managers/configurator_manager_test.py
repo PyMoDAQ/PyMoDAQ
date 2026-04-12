@@ -7,7 +7,7 @@ Created the 07/11/2023
 import pytest
 from pathlib import Path
 from qtpy import QtWidgets
-from pymodaq.utils.managers.state.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, SubEntryHandlerTypes)
 
@@ -21,35 +21,35 @@ def init_qt(qtbot):
 
 
 @pytest.fixture
-def ini_configurator(init_qt):
+def ini_state_manager(init_qt):
 
     qtbot = init_qt
 
     external_ui = QtWidgets.QMainWindow()
 
-    configurator = Configurator()
-    configurator.settings = Path(__file__).parent.joinpath('settings.xml')
+    state_manager = StateManager()
+    state_manager.settings = Path(__file__).parent.joinpath('settings.xml')
 
-    configurator.update_entry()
-    qtbot.addWidget(configurator.mainwindow)
-    configurator.mainwindow.show()
+    state_manager.update_entry()
+    qtbot.addWidget(state_manager.mainwindow)
+    state_manager.mainwindow.show()
     qtbot.addWidget(external_ui)
 
-    yield configurator, qtbot
+    yield state_manager, qtbot
 
-    configurator.mainwindow.close()
+    state_manager.mainwindow.close()
     external_ui.close()
 
 
-class TestConfigurator:
+class TestStateManager:
 
-    def test_ini(self, ini_configurator):
+    def test_ini(self, ini_state_manager):
         """
         """
-        configurator, qtbot = ini_configurator
+        state_manager, qtbot = ini_state_manager
 
-        assert configurator.entry_type == 'state'
-        assert configurator.entry_extension == '.config'
+        assert state_manager.entry_type == 'state'
+        assert state_manager.entry_extension == '.config'
 
 
 class TestSpecialEntryFactory:

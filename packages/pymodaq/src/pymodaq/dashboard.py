@@ -55,7 +55,7 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
-from pymodaq.utils.managers.state.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
@@ -167,7 +167,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
-        self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
+        self.state_manager: StateManager = None # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None # instanciation in do_things_after_ui_setup
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
@@ -218,13 +218,13 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager.update_entry()
         self.experiment_manager.entry = 'default'
         self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
-        self.configurator = Configurator(dashboard=self)
+        self.state_manager = StateManager(dashboard=self)
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'),
                                                           menu=self.get_menu('experiment'))
         self.experiment_manager.update_menu(self.get_menu('experiment'))
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
-                                                    menu=self.get_menu('state'))
-        self.configurator.update_menu(self.get_menu('state'))
+        self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
+                                                     menu=self.get_menu('state'))
+        self.state_manager.update_menu(self.get_menu('state'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
@@ -240,7 +240,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def do_things_after_experiment_set(self, experiment_name: str):
 
-        self.configurator.update_menu(self.get_menu('state'))
+        self.state_manager.update_menu(self.get_menu('state'))
         self.get_menu('state').setEnabled(True)
         self.get_toolbar('state').setEnabled(True)
 
@@ -249,9 +249,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.get_menu('extensions').setEnabled(True)
 
-        self.configurator.enable_actions(True)
+        self.state_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator.execute_entry(self.configurator.entry_filepath)
+        self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
@@ -275,17 +275,17 @@ class DashBoard(CustomApp, LECOComponentMixin):
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
         elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
-            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
         elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
             configuration = status.attribute
             loaded = False
-            if (configuration in self.configurator.entries and
-                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            if (configuration in self.state_manager.entries and
+                self.state_manager.is_action_enabled(ManagerActions.EXECUTE)
             ):
 
-                self.configurator.entry = configuration
-                self.configurator.execute_entry(self.configurator.entry_filepath)
+                self.state_manager.entry = configuration
+                self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
@@ -470,7 +470,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
         self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name='experiment')
-        self.add_menu('state', 'Configurator', MenuNames.TOOLS, icon_name='discover_tune')
+        self.add_menu('state', 'State', MenuNames.TOOLS, icon_name='discover_tune')
         self.get_menu('state').setEnabled(False)
 
         self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name='security')
@@ -498,7 +498,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('state', 'Configurator', parent=self.mainwindow,
+        self.add_toolbar('state', 'State', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -534,7 +534,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions')
 
-        self.add_action("state", "Configurator", auto_toolbar=False)
+        self.add_action("state", "State", auto_toolbar=False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
@@ -721,7 +721,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     pass
 
             self.experiment_manager.quit_fun()
-            self.configurator.quit_fun()
+            self.state_manager.quit_fun()
             self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
@@ -1405,7 +1405,7 @@ def load_dashboard_with_experiment(experiment_name: str,
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
         if configuration_name is not None:
-            dashboard.configurator.entry = configuration_name
+            dashboard.state_manager.entry = configuration_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
