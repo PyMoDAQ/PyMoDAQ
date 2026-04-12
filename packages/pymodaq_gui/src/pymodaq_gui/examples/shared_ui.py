@@ -25,10 +25,10 @@ class MyApp(CustomApp):
         if menubar is None:
             menubar = self.menubar
         self.create_object_toolbar(add_break=True)
-        self.add_menu('file', 'File', menubar)
-        self.add_menu('tools', 'Tools', menubar)
-        self.add_menu('subtools', 'SubTools', 'tools')
-        self.add_toolbar('file', 'file', self.mainwindow, add_break=False)
+        self.add_menu('file', 'File', parent_menu=menubar)
+        self.add_menu('tools', 'Tools', parent_menu=menubar)
+        self.add_menu('subtools', 'SubTools', parent_menu='tools')
+        self.add_toolbar('file', 'file', parent_menu=self.mainwindow, add_break=False)
 
 
     def setup_actions(self):
