@@ -49,7 +49,7 @@ class TestStateManager:
         state_manager, qtbot = ini_state_manager
 
         assert state_manager.entry_type == 'state'
-        assert state_manager.entry_extension == '.config'
+        assert state_manager.entry_extension == '.state'
 
 
 class TestSpecialEntryFactory:
