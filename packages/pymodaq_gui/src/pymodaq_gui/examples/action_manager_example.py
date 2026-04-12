@@ -131,11 +131,11 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
         view_menu = self.add_menu('view', 'View')
 
         # Level 1: Panels menu
-        panels_menu = self.add_menu('panels', 'Panels', menu=view_menu)
+        panels_menu = self.add_menu('panels', 'Panels', parent_menu=view_menu)
 
         # Level 2: Left Panel menu
         left_panel_menu = self.add_menu('left_panel', 'Left Panel',
-                                       menu=panels_menu)
+                                       parent_menu=panels_menu)
         self.add_action('left_files', 'File Explorer', icon_name='Folder',
                        menu=left_panel_menu, toolbar=view_toolbar,
                        checkable=True, checked=True, tip='Toggle file explorer panel')
@@ -146,7 +146,7 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
 
         # Level 2: Right Panel menu
         right_panel_menu = self.add_menu('right_panel', 'Right Panel',
-                                        menu=panels_menu)
+                                        parent_menu=panels_menu)
         self.add_action('right_outline', 'Outline',
                        menu=right_panel_menu, checkable=True)
         self.add_action('right_terminal', 'Terminal',
@@ -154,7 +154,7 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
 
         # Level 2: Bottom Panel menu
         bottom_panel_menu = self.add_menu('bottom_panel', 'Bottom Panel',
-                                         menu=panels_menu)
+                                         parent_menu=panels_menu)
         self.add_action('bottom_console', 'Console',
                        menu=bottom_panel_menu, checkable=True, checked=True)
         self.add_action('bottom_problems', 'Problems',
@@ -167,17 +167,17 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
 
         # Add appearance menu to View
         appearance_menu = self.add_menu('appearance', 'Appearance',
-                                       menu=view_menu)
+                                       parent_menu=view_menu)
 
         # Theme menu (3 levels deep!)
-        theme_menu = self.add_menu('theme', 'Theme', menu=appearance_menu)
+        theme_menu = self.add_menu('theme', 'Theme', parent_menu=appearance_menu)
         self.add_action('theme_light', 'Light', menu=theme_menu, tip='Switch to light theme')
         self.add_action('theme_dark', 'Dark', menu=theme_menu, tip='Switch to dark theme')
         self.add_action('theme_auto', 'Auto', menu=theme_menu, toolbar=view_toolbar,
                        tip='Auto-detect theme based on system')
 
         # Font size menu (3 levels deep!)
-        font_menu = self.add_menu('font', 'Font Size', menu=appearance_menu)
+        font_menu = self.add_menu('font', 'Font Size', parent_menu=appearance_menu)
         self.add_action('font_small', 'Small', menu=font_menu)
         self.add_action('font_medium', 'Medium', menu=font_menu)
         self.add_action('font_large', 'Large', menu=font_menu)
@@ -190,11 +190,11 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
                        menu='tools', toolbar=tools_toolbar, tip='Format current document')
 
         settings_menu = self.add_menu('settings', 'Settings',
-                                     menu=tools_menu, icon_name='Params')
+                                     parent_menu=tools_menu, icon_name='Params')
 
         # General settings
         general_settings = self.add_menu('general_settings',
-                                        'General', menu=settings_menu)
+                                        'General', parent_menu=settings_menu)
         self.add_action('auto_save', 'Auto Save',
                        menu=general_settings, checkable=True, checked=True)
         self.add_action('show_tooltips', 'Show Tooltips',
@@ -202,7 +202,7 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
 
         # Advanced settings
         advanced_settings = self.add_menu('advanced_settings',
-                                         'Advanced', menu=settings_menu)
+                                         'Advanced', parent_menu=settings_menu)
         self.add_action('debug_mode', 'Debug Mode',
                        menu=advanced_settings, checkable=True)
         self.add_action('verbose_logging', 'Verbose Logging',

@@ -341,7 +341,7 @@ class ParameterManager:
                 children=settings,
                 showTop=False,
             )
-        elif isinstance(settings, Path) or isinstance(settings, str):
+        elif isinstance(settings, (Path, str)):
             settings = Path(settings)
             _settings = Parameter.create(
                 title="Settings",

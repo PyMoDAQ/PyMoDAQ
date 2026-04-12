@@ -27,6 +27,7 @@ from pymodaq_utils.utils import get_version
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.menu_utils import StickyMenu
 
 
 logger = set_logger(get_module_name(__file__))
@@ -187,7 +188,8 @@ class SharedUI(CustomApp):
         self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), menu=menubar)
         self.get_menu(MenuNames.VIEW).addSeparator()
 
-        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), menu=MenuNames.VIEW)
+        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), MenuNames.VIEW,
+                      menu=StickyMenu())
 
         # Tools menu
         self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menu=menubar)
