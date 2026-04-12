@@ -469,11 +469,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.add_menu('docked', 'Docked', MenuNames.VIEW)
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
-        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name='experiment')
-        self.add_menu('state', 'State', MenuNames.TOOLS, icon_name='discover_tune')
+        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name=ExperimentManager.icon_name)
+        self.add_menu('state', 'State', MenuNames.TOOLS, icon_name=StateManager.icon_name)
         self.get_menu('state').setEnabled(False)
 
-        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name='security')
+        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
 
         # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)

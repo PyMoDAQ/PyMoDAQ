@@ -43,6 +43,7 @@ class ExperimentManager(ManagerBase):
 
     entry_type = 'experiment'
     entry_extension ='.xml'
+    icon_name = 'experiment'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):

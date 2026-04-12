@@ -58,6 +58,7 @@ class Overshooter(ManagerBase):
 
     entry_type = 'overshooter'
     entry_extension ='.xml'
+    icon_name = 'security'
 
     overshoot_signal = QtCore.Signal(Overshoot)
 
