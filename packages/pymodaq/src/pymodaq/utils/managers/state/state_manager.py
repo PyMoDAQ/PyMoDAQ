@@ -51,6 +51,7 @@ class StateManager(ManagerBase):
 
     entry_type = 'state'
     entry_extension ='.state'
+    icon_name = 'discover_tune'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -221,39 +222,45 @@ class StateManager(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        self.set_toolbar(self.add_toolbar('configurations'))
+
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
-        vlayout_right = QtWidgets.QVBoxLayout()
+        self.vlayout_right = QtWidgets.QVBoxLayout()
         valyout_left = QtWidgets.QVBoxLayout()
 
-        widget_buttons = QtWidgets.QWidget()
-        widget_buttons.setLayout(QtWidgets.QVBoxLayout())
-        widget_buttons.layout().addStretch()
-        move_toolbar = self.add_toolbar('move', 'Move')
-        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        widget_buttons.layout().addWidget(move_toolbar)
-        widget_buttons.layout().addStretch()
+        self.widget_buttons = QtWidgets.QWidget()
+        self.widget_buttons.setLayout(QtWidgets.QVBoxLayout())
+        self.widget_buttons.layout().addStretch()
+
+        self.widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
         hlayout.addLayout(valyout_left)
-        hlayout.addWidget(widget_buttons)
-        hlayout.addLayout(vlayout_right)
+        hlayout.addWidget(self.widget_buttons)
+        hlayout.addLayout(self.vlayout_right)
 
         valyout_left.addWidget(self.settings_tree)
-        vlayout_right.addWidget(self.get_toolbar('configurations'))
-        vlayout_right.addWidget(self.table_out)
+        self.vlayout_right.addWidget(self.table_out)
 
         self.main_widget.setLayout(vlayout)
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        move_toolbar = self.add_toolbar('move', 'Move')
+        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        self.widget_buttons.layout().insertWidget(1, move_toolbar)
+
+        self.add_toolbar('actions', 'Actions', parent=self.mainwindow)
+        self.vlayout_right.insertWidget(0, self.toolbar)
 
     def setup_actions(self):
         self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
                         checkable=True,
                         tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+                            ' otherwise only configurables ones',
+                        toolbar='actions')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
                                       add_experiment=True, add_state=False, add_break=False)
@@ -272,7 +279,6 @@ class StateManager(ManagerBase):
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.toolbar.addSeparator()
-
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
