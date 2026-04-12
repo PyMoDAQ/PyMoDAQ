@@ -836,7 +836,7 @@ class ActionManager:
         obj: QToolbar or QMenu
             The object where to add the action
         """
-        if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
+        if isinstance(obj, (QtWidgets.QToolBar, QtWidgets.QMenu)):
             if isinstance(action_name, QAction):
                 obj.addAction(action_name)
             elif isinstance(action_name, WidgetActionProxy):
