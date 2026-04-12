@@ -86,7 +86,7 @@ def greater2n(x):
         for el in x:
             if isinstance(el, bool):
                 raise TypeError(f'{el} should be an integer or a float')
-            if not (isinstance(el, int) or isinstance(el, float)):
+            if not (isinstance(el, (int, float))):
                 raise TypeError(f'{x} elements should be integer or float')
             res.append(1 << (int(el) - 1).bit_length())
         if isinstance(x, np.ndarray):
@@ -94,7 +94,7 @@ def greater2n(x):
         else:
             return res
     else:
-        if not (isinstance(x, int) or isinstance(x, float)):
+        if not (isinstance(x, (int, float))):
             raise TypeError(f'{x} should be an integer or a float')
         return 1 << (int(x) - 1).bit_length()
 
