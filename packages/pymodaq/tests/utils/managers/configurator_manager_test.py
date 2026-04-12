@@ -7,8 +7,8 @@ Created the 07/11/2023
 import pytest
 from pathlib import Path
 from qtpy import QtWidgets
-from pymodaq.utils.managers.configurator.configurator import Configurator
-from pymodaq.utils.managers.configurator.subentries import (
+from pymodaq.utils.managers.state.configurator import Configurator
+from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, SubEntryHandlerTypes)
 
 
@@ -48,7 +48,7 @@ class TestConfigurator:
         """
         configurator, qtbot = ini_configurator
 
-        assert configurator.entry_type == 'configurator'
+        assert configurator.entry_type == 'state'
         assert configurator.entry_extension == '.config'
 
 

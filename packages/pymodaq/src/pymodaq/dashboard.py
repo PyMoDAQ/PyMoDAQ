@@ -55,7 +55,7 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.configurator import Configurator
 
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
@@ -222,16 +222,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'),
                                                           menu=self.get_menu('experiment'))
         self.experiment_manager.update_menu(self.get_menu('experiment'))
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
-                                                    menu=self.get_menu('configurator'))
-        self.configurator.update_menu(self.get_menu('configurator'))
+        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
+                                                    menu=self.get_menu('state'))
+        self.configurator.update_menu(self.get_menu('state'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 
         self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
 
-        self.get_toolbar('configurator').setEnabled(False)
+        self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
 
@@ -240,9 +240,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def do_things_after_experiment_set(self, experiment_name: str):
 
-        self.configurator.update_menu(self.get_menu('configurator'))
-        self.get_menu('configurator').setEnabled(True)
-        self.get_toolbar('configurator').setEnabled(True)
+        self.configurator.update_menu(self.get_menu('state'))
+        self.get_menu('state').setEnabled(True)
+        self.get_toolbar('state').setEnabled(True)
 
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
@@ -470,8 +470,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
         self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name='experiment')
-        self.add_menu('configurator', 'Configurator', MenuNames.TOOLS, icon_name='discover_tune')
-        self.get_menu('configurator').setEnabled(False)
+        self.add_menu('state', 'Configurator', MenuNames.TOOLS, icon_name='discover_tune')
+        self.get_menu('state').setEnabled(False)
 
         self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name='security')
         self.get_menu('overshooter').setEnabled(False)
@@ -498,7 +498,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('configurator', 'Configurator', parent=self.mainwindow,
+        self.add_toolbar('state', 'Configurator', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -534,7 +534,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions')
 
-        self.add_action("configurator", "Configurator", auto_toolbar=False)
+        self.add_action("state", "Configurator", auto_toolbar=False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)

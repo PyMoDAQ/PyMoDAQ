@@ -25,7 +25,7 @@ ser_factory = SerializableFactory()
 
 
 if TYPE_CHECKING:
-    from pymodaq.utils.managers.configurator.utils import ConfiguratorModel
+    from pymodaq.utils.managers.state.utils import ConfiguratorModel
     from pymodaq.control_modules.daq_move import DAQ_Move
     from  pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard

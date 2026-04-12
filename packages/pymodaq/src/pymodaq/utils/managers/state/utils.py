@@ -5,7 +5,7 @@ from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
-from pymodaq.utils.managers.configurator.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
+from pymodaq.utils.managers.state.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
     ConfiguratorSubEntry
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum

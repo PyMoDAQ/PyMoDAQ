@@ -18,9 +18,9 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
-from pymodaq.utils.managers.configurator.subentries import (
+from pymodaq.utils.managers.state.subentries import (
     SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, ConfiguratorSubEntry)
-from pymodaq.utils.managers.configurator.utils import (
+from pymodaq.utils.managers.state.utils import (
     ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
     get_module_from_param, config_subentries_from_path, ParameterDelegate,
     EntryActions, ModuleType)
@@ -49,7 +49,7 @@ class Configurator(ManagerBase):
 
     """
 
-    entry_type = 'configurator'
+    entry_type = 'state'
     entry_extension ='.config'
 
     def __init__(self,
@@ -72,7 +72,7 @@ class Configurator(ManagerBase):
     def show(self):
         """ Open the Configurator User Interface
 
-        If the Dashboard is not None and has a current experiment set, the configurator experiment name
+        If the Dashboard is not None and has a current experiment set, the state experiment name
         entry will be set as readonly and the settings are taken from the modules
         """
         if self.dashboard is not None:
@@ -154,7 +154,7 @@ class Configurator(ManagerBase):
 
     def populate_from_settings(self, settings: Parameter):
         """
-        Initialize the configurator from a Parameter settings.
+        Initialize the state from a Parameter settings.
 
         Parameters
         ----------
@@ -288,7 +288,7 @@ class Configurator(ManagerBase):
 
         else:
             self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
-            self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf configurator entries
+            self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf state entries
 
         self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
     def _update_entry(self, entry: Path):

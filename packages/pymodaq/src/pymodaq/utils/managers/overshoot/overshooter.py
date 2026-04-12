@@ -13,7 +13,7 @@ from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_gui.parameter import Parameter, ioxml
 
 
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.configurator import Configurator
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \

@@ -9,7 +9,7 @@ from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
-    from pymodaq.utils.managers.configurator.configurator import Configurator
+    from pymodaq.utils.managers.state.configurator import Configurator
 
 
 class DashBoardToolbarActions(StrEnum):
@@ -118,7 +118,7 @@ class CustomExt(CustomApp):
                                  add_configurator=True,
                                  add_break=True):
         """ Creates and add a toolbar named dashboard containing means to show/hide the dashboard and optionally
-        to display the experiment and configurator manager in this toolbar """
+        to display the experiment and state manager in this toolbar """
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
