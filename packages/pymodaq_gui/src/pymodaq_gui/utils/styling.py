@@ -137,12 +137,13 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 flip_v: bool = False):
     """ Create an icon from various sources by order of preference:
 
-    1) icon_name is an icon
-    2) icon_name is a registered MaterialIcon
-    3) icon_name is a real path to a png
-    4) icon_name is a registered png in icon_library
-    5) icon_name is a registered ThemeIcon
-    6) icon_name is a registered StandardPixmap
+    1) icon_name is a MaterialIcon
+    2) icon_name is a regular QIcon
+    3) icon_name is a registered MaterialIcon
+    4) icon_name is a real path to a png
+    5) icon_name is a registered png in icon_library
+    6) icon_name is a registered ThemeIcon
+    7) icon_name is a registered StandardPixmap
 
     Parameters
     ----------
@@ -157,8 +158,12 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
     """
-
-    if isinstance(icon_name, QtGui.QIcon):
+    if isinstance(icon_name, MaterialIcon):
+        icon_name.set_color(create_color(icon_color))
+        if icon_checked_color is not None:
+            icon_name.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
+        return _flip_icon(icon_name, flip_h, flip_v)
+    elif isinstance(icon_name, QtGui.QIcon): #cannot set Color on non MaterialIcons
         return _flip_icon(icon_name, flip_h, flip_v)
     elif resource_path_exists(
             MaterialIcon.resource_path(
