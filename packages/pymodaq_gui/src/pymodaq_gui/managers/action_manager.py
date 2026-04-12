@@ -66,13 +66,14 @@ class QAction(QtQAction):
     def connect_to(self, slot):
         self.triggered.connect(slot)
 
-    def set_icon(self, icon_name: str = None):
+    def set_icon(self, icon_name: str = None,
+                 icon_color: Union[QtGui.QColor, bytes, str]=None):
         if icon_name is None:
             if self.isChecked():
                 icon_name = self.icon_checked
             else:
                 icon_name = self.icon_unchecked
-        self.setIcon(create_icon(icon_name))
+        self.setIcon(create_icon(icon_name, icon_color))
 
     def __repr__(self):
         return f'QAction {self.text()}'
