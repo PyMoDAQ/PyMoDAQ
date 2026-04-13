@@ -97,9 +97,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menubar)
-        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menubar)
-        self.add_menu('actions', 'Actions', menubar)
+        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.add_menu('actions', 'Actions', parent_menu=menubar)
 
     def setup_actions(self):
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')

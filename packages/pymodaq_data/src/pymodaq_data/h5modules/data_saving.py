@@ -295,12 +295,9 @@ class DataSaverLoader(DataManagement):
                  new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
         self.data_type = enum_checker(DataType, self.data_type)
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -771,12 +768,9 @@ class DataToExportSaver:
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.custom,
                  new_file: bool = False, metadata: dict = None):
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
@@ -1056,10 +1050,8 @@ class DataLoader:
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel()
-            h5saver_tmp.init_file(file_name=Path(h5saver))
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver)
 
         self.h5saver = h5saver
 
@@ -1109,8 +1101,7 @@ class DataLoader:
         """
         node = self._h5saver.get_node(where)
         while node is not None:  # means we reached the root level
-            if isinstance(node, GROUP):
-                if self._h5saver.is_node_in_group(node, SPECIAL_GROUP_NAMES['nav_axes']):
+            if isinstance(node, GROUP) and self._h5saver.is_node_in_group(node, SPECIAL_GROUP_NAMES['nav_axes']):
                     return self._h5saver.get_node(node, SPECIAL_GROUP_NAMES['nav_axes'])
             node = node.parent_node
 

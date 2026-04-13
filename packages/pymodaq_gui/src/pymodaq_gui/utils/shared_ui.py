@@ -27,6 +27,7 @@ from pymodaq_utils.utils import get_version
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.menu_utils import StickyMenu
 
 
 logger = set_logger(get_module_name(__file__))
@@ -45,8 +46,7 @@ class MenuNames(StrEnum):
 
 class PymodaqUpdateTableWidget(QTableWidget):
     """
-    A class to represent PyMoDAQ and its subpackages'
-    available updates as a table.
+    A class to represent PyMoDAQ and its subpackages available updates as a table.
     """
 
     def __init__(self):
@@ -175,92 +175,59 @@ class SharedUI(CustomApp):
 
         runtime_toolbar = self.add_toolbar('runtime_toolbar', 'Runtime', parent=self.mainwindow, add_break=False)
         runtime_toolbar.setMovable(False)
-        
+
         help_toolbar = self.add_toolbar('help_toolbar', 'Help', parent=self.mainwindow, add_break=False)
         help_toolbar.setVisible(False)
 
         # File menu
-        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), menu=menubar)
+        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), parent_menu=menubar)
         self.get_menu(MenuNames.FILE).addSeparator()
 
-        # View menu 
-        self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), menu=menubar)
+        # View menu
+        self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), parent_menu=menubar)
         self.get_menu(MenuNames.VIEW).addSeparator()
 
-        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), menu=MenuNames.VIEW)
+        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), parent_menu=MenuNames.VIEW,
+                      menu=StickyMenu())
 
         # Tools menu
-        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), menu=menubar)
+        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), parent_menu=menubar)
         self.get_menu(MenuNames.TOOLS).addSeparator()
 
         # Help menu
-        self.add_menu(MenuNames.HELP, MenuNames.HELP.capitalize(), menubar)
+        self.add_menu(MenuNames.HELP, MenuNames.HELP.capitalize(), parent_menu=menubar)
 
 
     def setup_actions(self):
-        
-        # File menu
-        self.add_action(
-            short_name="restart",
-            name="Restart",
-            icon_name="restart_alt",
-            tip="Restart PyMoDAQ",
-            auto_toolbar=False,
-            menu=MenuNames.FILE)
 
-        self.add_action(
-            short_name="quit",
-            name="Quit",
-            icon_name="cancel",
-            tip="Quit PyMoDAQ",
-            icon_color=self.get_theme().red,
-            toolbar='runtime_toolbar',
-            menu=MenuNames.FILE)
+        # File menu
+        self.add_action(short_name="restart", name="Restart", icon_name="restart_alt",
+                        tip="Restart PyMoDAQ", auto_toolbar=False, menu=MenuNames.FILE)
+
+        self.add_action(short_name="quit", name="Quit", icon_name="cancel",
+                        tip="Quit PyMoDAQ", icon_color=self.get_theme().red, toolbar='runtime_toolbar',
+                        menu=MenuNames.FILE)
 
         # Tools menu
-        self.add_action(
-            short_name="logs",
-            name="Logs",
-            icon_name="description",
-            tip="Open logs file",
-            auto_toolbar=False,
-            menu=MenuNames.TOOLS)
+        self.add_action(short_name="logs", name="Logs", icon_name="description",
+                        tip="Open logs file", auto_toolbar=False, menu=MenuNames.TOOLS)
 
-        self.add_action(
-            short_name="preferences",
-            name="Preferences",
-            icon_name="handyman",
-            tip="PyMoDAQ preferences",
-            toolbar='help_toolbar',
-            menu=MenuNames.TOOLS)
+        self.add_action(short_name="preferences", name="Preferences", icon_name="handyman",
+                        tip="PyMoDAQ preferences", toolbar='help_toolbar', menu=MenuNames.TOOLS)
 
         # Help menu
-        self.add_action(
-            short_name="documentation",
-            name="Documentation",
-            icon_name="language",
-            tip="Online documentation",
-            toolbar='help_toolbar',
-            menu=MenuNames.HELP)
-        
+        self.add_action( short_name="documentation", name="Documentation", icon_name="language",
+                         tip="Online documentation", toolbar='help_toolbar', menu=MenuNames.HELP)
+
         self.get_action("documentation").setShortcut(QtGui.QKeySequence("F1"))
-        
+
         self.get_menu(MenuNames.HELP).addSeparator()
 
-        self.add_action(
-            short_name="check_updates",
-            name="Check updates",
-            icon_name="update",
-            auto_toolbar=False,
-            menu=MenuNames.HELP)
+        self.add_action(short_name="check_updates", name="Check updates", icon_name="update",
+                        auto_toolbar=False, menu=MenuNames.HELP)
 
-        self.add_action(
-            short_name="about",
-            name="About PyMoDAQ",
-            icon_name="info",
-            icon_color=self.get_theme().blue,
-            toolbar='help_toolbar',
-            menu=MenuNames.HELP)
+        self.add_action(short_name="about", name="About PyMoDAQ", icon_name="info",
+                        icon_color=self.get_theme().blue, toolbar='help_toolbar', menu=MenuNames.HELP)
 
         for toolbar in self.toolbars:
             self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
