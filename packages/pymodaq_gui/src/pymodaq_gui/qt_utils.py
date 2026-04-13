@@ -47,7 +47,9 @@ class WhiteCheckboxStyle(QProxyStyle):
             painter.setBrush(QColor(0, 0, 0, 0))
             if state & QStyle.StateFlag.State_MouseOver:
                 painter.setBrush(QColor(255, 255, 255, 40))
-            painter.drawRoundedRect(option.rect, 2, 2) # type: ignore[attr-defined]
+
+            checkbox = option.rect.adjusted(1,1,-1,-1) # type: ignore[attr-defined]
+            painter.drawRoundedRect(checkbox, 2, 2)
             painter.restore()
 
             # Draw checkmark when checked
@@ -57,7 +59,7 @@ class WhiteCheckboxStyle(QProxyStyle):
 
                 icon_rect = self.baseStyle().alignedRect(
                     Qt.LayoutDirection.LeftToRight, Qt.AlignmentFlag.AlignCenter,
-                    size, option.rect # type: ignore[attr-defined]
+                    size, checkbox # type: ignore[attr-defined]
                 )
                 painter.drawPixmap(icon_rect.topLeft(), pixmap)
         else:
