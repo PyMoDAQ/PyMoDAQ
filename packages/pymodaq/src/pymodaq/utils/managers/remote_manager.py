@@ -263,7 +263,7 @@ class RemoteManager(QObject):
         self.detectors = detectors
         if msgbox:
             msgBox = QMessageBox()
-            msgBox.setText("Preset Manager?")
+            msgBox.setText("Experiment Manager?")
             msgBox.setInformativeText("What do you want to do?")
             cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
             new_button = msgBox.addButton(
@@ -358,8 +358,8 @@ class RemoteManager(QObject):
                           'addList': self.actuators, 'modtype': 'Actuator'},
                          {'title': 'Detector Actions:', 'name': 'det_actions', 'type': 'groupmodules',
                           'addList': self.detectors, 'modtype': 'Detector'}
-                         ]  # PresetScalableGroupMove(name="Moves")]
-        self.remote_params = Parameter.create(title='Preset', name='Preset', type='group',
+                         ]
+        self.remote_params = Parameter.create(title='Remote', name='Remote', type='group',
                                               children=param + params_action)
         self.remote_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
         logger.info('Creating a new remote file')
@@ -469,7 +469,7 @@ class RemoteManager(QObject):
         res = dialog.exec()
 
         if res == QDialog.DialogCode.Accepted:
-            # save preset parameters in a xml file
+            # save experiment parameters in a xml file
             ioxml.parameter_to_xml_file(
                 self.remote_params, os.path.join(remote_path, self.remote_params.child('filename').value()))
 

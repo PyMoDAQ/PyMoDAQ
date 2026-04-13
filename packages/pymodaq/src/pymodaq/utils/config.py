@@ -7,16 +7,16 @@ from pymodaq_utils.config import (GlobalConfig, BaseConfig, ConfigError, get_set
                                   USER, CONFIG_BASE_PATH, get_set_local_dir)
 
 
-def get_set_preset_path(user=False):
+def get_set_experiment_path(user=False):
     """ creates and return the config folder path for managers files
     """
-    return get_set_config_dir('preset_configs', user=user)
+    return get_set_config_dir('experiments', user=user)
 
 
-def get_set_configurator_path(subfolder: str = '', user=False):
+def get_set_state_path(subfolder: str = '', user=False):
     """ creates and return the config folder path for managers files
     """
-    target_path = get_set_config_dir('configurator_configs', user=user).joinpath(subfolder)
+    target_path = get_set_config_dir('states', user=user).joinpath(subfolder)
     target_path.mkdir(parents=True, exist_ok=True)
     
     return target_path

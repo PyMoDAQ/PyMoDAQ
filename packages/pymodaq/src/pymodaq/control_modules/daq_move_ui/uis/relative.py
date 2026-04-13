@@ -19,13 +19,13 @@ class DAQ_Move_UI_Relative(DAQ_Move_UI_Base):
 
         super().__init__(parent, title)
 
-    def setup_docks(self):
-        super().setup_docks()
+    def setup_docks_and_widgets(self):
+        super().setup_docks_and_widgets()
 
         self.parent.setLayout(QVBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.parent.layout().addWidget(self.move_toolbar)
+        self.parent.layout().addWidget(self.toolbar)
 
         self.current_value_sb.set_font_size(10)
         self.current_value_sb.setMinimumHeight(20)

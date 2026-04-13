@@ -99,8 +99,8 @@ class Dashboard(Device[LECODashboardWrapper]):
     def apply_configuration(self, configuration: str) -> Future[bool]:
         return self._wrapper.apply_configuration(configuration)
 
-    def get_presets(self) -> Future[list[str]]:
-        return self._wrapper.get_presets()
+    def get_experiments(self) -> Future[list[str]]:
+        return self._wrapper.get_experiments()
 
-    def apply_preset(self, preset: str) -> Future[bool]:
-        return self._wrapper.apply_preset(preset)
+    def apply_experiment(self, experiment: str) -> Future[bool]:
+        return self._wrapper.apply_experiment(experiment)

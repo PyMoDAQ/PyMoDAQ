@@ -83,15 +83,15 @@ class Console(CustomExt):
 
         self.setup_ui()
 
-    def do_things_after_preset_set(self, preset: str):
-        super().do_things_after_preset_set(preset)
+    def do_things_after_experiment_set(self, experiment: str):
+        super().do_things_after_experiment_set(experiment)
 
         self.console.push_variables(
             {'dashboard': self.dashboard,
              'mods': self.modules_manager,
              'np': np})
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.create_dashboard_toolbar()
         self.mainwindow.setCentralWidget(self.console)
 
@@ -113,7 +113,7 @@ def main():
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, Console)
+    win_ext, console = create_extension(dashboard, Console)
     win_ext.show()
 
     sys.exit(app.exec())

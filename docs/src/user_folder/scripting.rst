@@ -5,7 +5,7 @@ Scripting PyMoDAQ
 
 PyMoDAQ can be controlled from a plain Python script.
 The :mod:`pymodaq.scripting` module provides a small, synchronous and asynchronous API
-that lets you move actuators, acquire data, and manage presets or configurations programmatically.
+that lets you move actuators, acquire data, and manage experiments or configurations programmatically.
 
 Communication between the script and the running PyMoDAQ application uses
 `LECO`_.  Before running any script you must therefore have:
@@ -32,7 +32,7 @@ Three classes are available directly from :mod:`pymodaq.scripting`:
    * - Class
      - Purpose
    * - :class:`~pymodaq.scripting.devices.Dashboard`
-     - Connect to a running Dashboard, apply presets/configurations, retrieve
+     - Connect to a running Dashboard, apply experiments/configurations, retrieve
        the list of loaded modules.
    * - :class:`~pymodaq.scripting.devices.Actuator`
      - Move an actuator (absolute, relative, home), read its current position,
@@ -55,7 +55,7 @@ Connecting to a Dashboard
 --------------------------
 
 A good starting point is a :class:`~pymodaq.scripting.devices.Dashboard`.
-It lets you load a preset (which starts the instrument modules), then retrieve
+It lets you load an experiment (which starts the instrument modules), then retrieve
 the corresponding :class:`~pymodaq.scripting.devices.Actuator` and
 :class:`~pymodaq.scripting.devices.Detector` objects with a single call.
 
@@ -65,10 +65,10 @@ the corresponding :class:`~pymodaq.scripting.devices.Actuator` and
 
    dashboard = Dashboard()
 
-   # list available presets and apply one
-   print(dashboard.get_presets().result())
+   # list available experiments and apply one
+   print(dashboard.get_experiments().result())
    # >>> ['default']
-   dashboard.apply_preset('default').result()
+   dashboard.apply_experiment('default').result()
 
    # list available configurations
    print(dashboard.get_configurations().result())

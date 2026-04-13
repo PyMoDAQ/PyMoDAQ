@@ -112,7 +112,7 @@ def test_nested_menus(qtbot):
     parent_menu = action_manager.add_menu('parent', 'Parent Menu')
 
     # Create child menu within parent
-    child_menu = action_manager.add_menu('child', 'Child Menu', menu=parent_menu)
+    child_menu = action_manager.add_menu('child', 'Child Menu', parent_menu=parent_menu)
 
     assert action_manager.has_menu('parent')
     assert action_manager.has_menu('child')
@@ -219,7 +219,7 @@ def test_shared_menu(qtbot):
     view_menu = action_manager.add_menu('view', 'View')
 
     # Create a shared menu (add to file menu first)
-    shared_menu = action_manager.add_menu('recent', 'Recent Files', menu=file_menu)
+    shared_menu = action_manager.add_menu('recent', 'Recent Files', parent_menu=file_menu)
 
     # Add the same menu to view menu
     view_menu.addMenu(shared_menu)
@@ -614,7 +614,7 @@ def test_complex_menu_toolbar_structure(qtbot):
 
     # Create nested menu structure
     file_menu = action_manager.add_menu('file', 'File')
-    recent_menu = action_manager.add_menu('recent', 'Recent', menu=file_menu)
+    recent_menu = action_manager.add_menu('recent', 'Recent', parent_menu=file_menu)
 
     # Add actions to both menu and toolbar
     action_manager.add_action('new', 'New', icon_name='NewFile',

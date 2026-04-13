@@ -158,7 +158,7 @@ Main Settings
 ^^^^^^^^^^^^^
 
 * *Actuator type*: is recalling the instrument plugin class being selected
-* *Actuator name*: is the name as defined in the preset (otherwise it is defaulted to *test*)
+* *Actuator name*: is the name as defined in the experiment (otherwise it is defaulted to *test*)
 * *Controller ID*: is related to multi-axes controller (see :ref:`multiaxes_controller`)
 * *Refresh value*: is the timer duration when grabbing the actuator's current value (see :ref:`daq_move_grabing`).
 
@@ -200,7 +200,7 @@ in :numref:`daq_move_gui_settings`).
 
 These settings are
 really valid only when the module is used within the Dashboard framework that deals with multiple modules
-at the same time as configured in the :ref:`preset_manager` interface.
+at the same time as configured in the :ref:`experiment_manager` interface.
 
 Bounds
 ^^^^^^
@@ -267,7 +267,7 @@ Other Actuator UI
 .. note::
    New in 5.1.0
 
-It is now possible to declare in the Preset menu, the feel and shape of the Actuators Graphical User Interfaces. This
+It is now possible to declare in the Experiment Manager, the feel and shape of the Actuators Graphical User Interfaces. This
 has been done in order to compactify the DashBoard where regular Actuator UI can quickly take a lot of room. If you
 don't need an access to advanced features, you can choose the layout (see below) among:
 

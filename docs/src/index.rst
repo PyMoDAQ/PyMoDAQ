@@ -64,7 +64,7 @@ Detectors and actuators can be wrapped together in a :ref:`Dashboard_module` whi
 setup.
 The Dashboard has functionalities to fully configure
 all its detectors and actuators and
-save their configurations in a :term:`preset` file that will, at startup, load and initialize all modules.
+save their configurations in a :term:`experiment` file that will, at startup, load and initialize all modules.
 
 As soon as the Dashboard has been configured, all the :ref:`Dashboard Extensions <extensions>` can be used to perform
 advanced and

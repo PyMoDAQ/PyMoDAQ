@@ -9,7 +9,7 @@ from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import QModelIndex
 
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
+from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
 
 
@@ -18,16 +18,16 @@ from pymodaq_gui.parameter.utils import ParameterWithPath
 
 from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
 
-from pymodaq.utils.managers.configurator.subentries import (
-    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, ConfiguratorSubEntry)
-from pymodaq.utils.managers.configurator.utils import (
-    ConfiguratorParameterTree, ConfiguratorModel, ConfiguratorTableView,
-    get_module_from_param, config_subentries_from_path, ParameterDelegate,
+from pymodaq.utils.managers.state.subentries import (
+    SubEntryHandlerFactory, SubEntryHandler, SubEntryError, SubEntryHandlerTypes, StateSubEntry)
+from pymodaq.utils.managers.state.utils import (
+    StateParameterTree, StateModel, StateTableView,
+    get_module_from_param, state_subentries_from_path, ParameterDelegate,
     EntryActions, ModuleType)
 
 
 
-from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.config import get_set_state_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
 
@@ -39,44 +39,41 @@ logger = set_logger(get_module_name(__file__))
 handler_factory = SubEntryHandlerFactory()
 
 
-class Configurator(ManagerBase):
+class StateManager(ManagerBase):
     """
     Main class managing the configuration of control modules from a Dashboard in terms
     of their settings and actuator's value.
 
-    This class provides a GUI to create, modify and save configurations for different presets (DashBoard state)
+    This class provides a GUI to create, modify and save configurations for different experiments (DashBoard state)
     controlling various modules (actuators, detectors...).
 
-    Parameters
-    ----------
-    preset_filename : str, optional
-        Name of the preset file to load at startup
     """
 
-    entry_type = 'configurator'
-    entry_extension ='.config'
+    entry_type = 'state'
+    entry_extension ='.state'
+    icon_name = 'discover_tune'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
 
         self.subentry_handler: SubEntryHandler = None
-        self.config_model = ConfiguratorModel()
+        self.config_model = StateModel()
         if dashboard is None:
-            self._preset_manager_local = PresetManager()
+            self._experiment_manager_local = ExperimentManager()
         else:
-            self._preset_manager_local = dashboard.preset_manager
+            self._experiment_manager_local = dashboard.experiment_manager
 
-        super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
+        super().__init__(dashboard=dashboard, tree=StateParameterTree())
 
 
     @property
-    def preset_manager(self) -> PresetManager:
-        return self._preset_manager_local
+    def experiment_manager(self) -> ExperimentManager:
+        return self._experiment_manager_local
 
     def show(self):
-        """ Open the Configurator User Interface
+        """ Open the StateManager User Interface
 
-        If the Dashboard is not None and has a current preset set, the configurator preset name
+        If the Dashboard is not None and has a current experiment set, the state experiment name
         entry will be set as readonly and the settings are taken from the modules
         """
         if self.dashboard is not None:
@@ -86,37 +83,36 @@ class Configurator(ManagerBase):
             )
             self.update_settings(settings)
         else:
-            self.update_settings(self._preset_manager_local.entry)
+            self.update_settings(self._experiment_manager_local.entry)
 
         super().show()
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_configurator_path(self.preset_filename)
+        return get_set_state_path(self.experiment_filename)
 
-    def set_preset_filename(self, name: str):
+    def set_experiment_filename(self, name: str):
         """ convenience method to be used as slot in Qt connection"""
-        self.preset_filename = name
+        self.experiment_filename = name
 
     @property
-    def preset_filename(self) -> str:
+    def experiment_filename(self) -> str:
         try:
-            return self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.currentText()
+            return self.experiment_manager.entries_sync.value['current']
         except KeyError:  # not yet instantiated but need to be there
             return 'default'
 
-    @preset_filename.setter
-    def preset_filename(self, preset_filename: str):
-        if preset_filename in self.preset_manager.entries:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).setCurrentText(preset_filename)
-            self.entries_sync.update_key('items', self.entries)
-            self.update_entry('default')
+    @experiment_filename.setter
+    def experiment_filename(self, experiment_filename: str):
+        if experiment_filename in self.experiment_manager.entries:
+            self.experiment_manager.entries_sync.update_key('current', experiment_filename)
+            self.entries_sync.set_value({**self.entries_sync.value, 'items': self.entries, 'current': self.entry})
 
     def save_entries(self, entry_path: Path = None):
         self.config_model.save(entry_path)
 
     @staticmethod
-    def format_subentries(entries: list[ConfiguratorSubEntry]):
+    def format_subentries(entries: list[StateSubEntry]):
         return [(f'{entry.entry_type.capitalize()} for '
                  f'{entry.module_name} - '
                  f'{entry.setting.parameter.title()} '
@@ -132,11 +128,11 @@ class Configurator(ManagerBase):
         """
         if entry_path is None:
             entry_path = self.entry_filepath
-        config_subentries = config_subentries_from_path(entry_path)
+        config_subentries = state_subentries_from_path(entry_path)
 
-        if self.preset_manager.applied_entry_name != self.preset_filename:
-            logger.warning(f'The current configuration is referring to the prest: {self.preset_filename} '
-                           f'while the current applied preset is: {self.preset_manager.applied_entry_name}')
+        if self.experiment_manager.applied_entry_name != self.experiment_filename:
+            logger.warning(f'The current configuration is referring to the prest: {self.experiment_filename} '
+                           f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
             return False
 
         if len(config_subentries) > 0:
@@ -159,7 +155,7 @@ class Configurator(ManagerBase):
 
     def populate_from_settings(self, settings: Parameter):
         """
-        Initialize the configurator from a Parameter settings.
+        Initialize the state from a Parameter settings.
 
         Parameters
         ----------
@@ -203,13 +199,13 @@ class Configurator(ManagerBase):
             self.config_model, self.settings, self.actuators, self.detectors, self.extensions)
         self.subentry_handler.show_dialog()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.tree.setDragEnabled(True)
         self.tree.setAcceptDrops(False)
         self.tree.setDragDropMode(QtWidgets.QTableView.DragDropMode.DragOnly)
         self.tree.doubleClicked.connect(self.add_setting)
 
-        self.table_out = ConfiguratorTableView(True)
+        self.table_out = StateTableView(True)
         self.table_out.horizontalHeader().ResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_out.horizontalHeader().setStretchLastSection(True)
         self.table_out.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
@@ -226,43 +222,49 @@ class Configurator(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-        self.set_toolbar(self.add_toolbar('configurations'))
+
 
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
         hwidget.setLayout(hlayout)
-        vlayout_right = QtWidgets.QVBoxLayout()
+        self.vlayout_right = QtWidgets.QVBoxLayout()
         valyout_left = QtWidgets.QVBoxLayout()
 
-        widget_buttons = QtWidgets.QWidget()
-        widget_buttons.setLayout(QtWidgets.QVBoxLayout())
-        widget_buttons.layout().addStretch()
-        move_toolbar = self.add_toolbar('move')
-        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        widget_buttons.layout().addWidget(move_toolbar)
-        widget_buttons.layout().addStretch()
+        self.widget_buttons = QtWidgets.QWidget()
+        self.widget_buttons.setLayout(QtWidgets.QVBoxLayout())
+        self.widget_buttons.layout().addStretch()
+
+        self.widget_buttons.layout().addStretch()
 
         vlayout.addWidget(hwidget)
         hlayout.addLayout(valyout_left)
-        hlayout.addWidget(widget_buttons)
-        hlayout.addLayout(vlayout_right)
+        hlayout.addWidget(self.widget_buttons)
+        hlayout.addLayout(self.vlayout_right)
 
         valyout_left.addWidget(self.settings_tree)
-        vlayout_right.addWidget(self.get_toolbar('configurations'))
-        vlayout_right.addWidget(self.table_out)
+        self.vlayout_right.addWidget(self.table_out)
 
         self.main_widget.setLayout(vlayout)
 
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        move_toolbar = self.add_toolbar('move', 'Move')
+        move_toolbar.setOrientation(QtCore.Qt.Orientation.Vertical)
+        self.widget_buttons.layout().insertWidget(1, move_toolbar)
+
+        self.add_toolbar('actions', 'Actions', parent=self.mainwindow)
+        self.vlayout_right.insertWidget(0, self.toolbar)
+
     def setup_actions(self):
         self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
+                        checkable=True,
                         tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+                            ' otherwise only configurables ones',
+                        toolbar='actions')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
-                                      add_preset=True, add_configurator=False, add_break=False)
-        self.preset_manager.enable_actions(True)
+                                      add_experiment=True, add_state=False, add_break=False)
+        self.experiment_manager.enable_actions(True)
 
         self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
                         tip='Add the current Parameter item',
@@ -276,11 +278,7 @@ class Configurator(ManagerBase):
         self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
-        self.get_toolbar('main').addSeparator()
-        self.add_action('show_all_settings', 'Show All Settings', 'EditFind',
-                        checkable=True, toolbar=self.get_toolbar('main'),
-                        tip='If Checked: display all settings (in green, settings that can be configured)'
-                            ' otherwise only configurables ones')
+        self.toolbar.addSeparator()
 
     def connect_things(self):
         self.connect_action(EntryActions.ADD, self.add_setting)
@@ -291,16 +289,14 @@ class Configurator(ManagerBase):
         self.connect_action('show_all_settings', self.display_settings)
 
         if self.dashboard is None:
-            self.preset_manager.enable_actions(True)
-            self.preset_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
+            self.experiment_manager.enable_actions(True)
+            self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
 
         else:
-            self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
-            self.preset_manager.applied_entry.connect(self.set_preset_filename)  #action slot from preset menu need this to update the list onf configurator entries
+            self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
+            self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf state entries
 
-        self.preset_manager.get_action(ManagerActions.LIST_EXTERNAL
-                                       ).widget.currentTextChanged.connect(self.set_preset_filename)
-
+        self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
 
@@ -310,18 +306,18 @@ class Configurator(ManagerBase):
             if settings == '':
                 return
         if isinstance(settings, str):
-            self._preset_manager_local.entry = settings
-            preset_settings: Parameter = self._preset_manager_local.settings
+            self._experiment_manager_local.entry = settings
+            experiment_settings: Parameter = self._experiment_manager_local.settings
             settings = SettingsManager().create_settings_all(
-                preset_settings.child(ModuleType.Actuator.value).children(),
-                preset_settings.child(ModuleType.Detector.value).children(),
+                experiment_settings.child(ModuleType.Actuator.value).children(),
+                experiment_settings.child(ModuleType.Detector.value).children(),
             )
 
         if isinstance(settings, Parameter):
             self.populate_from_settings(settings)
         elif isinstance(settings, Path):
             self.populate_from_file(settings)
-            self.preset_filename = settings.stem
+            self.experiment_filename = settings.stem
         else:
             raise TypeError(f'Cannot load settings from {settings}, should be a Parameter or a Path')
 
@@ -386,8 +382,8 @@ class Configurator(ManagerBase):
             except KeyError:
                 module = ModuleType.NONE.value
                 module_type = ModuleType.NONE
-            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS, module,
-                                         module_type, ParameterWithPath(current_setting))
+            entry = StateSubEntry(SubEntryHandlerTypes.SETTINGS, module,
+                                  module_type, ParameterWithPath(current_setting))
             entries = self.config_model.split_entry(entry)
             for entry in entries:
                 self.config_model.add_data(self.config_model.rowCount(), entry)
@@ -432,15 +428,15 @@ if __name__ == "__main__":
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import DashBoard, create_load_dashboard
 
-    app = mkQApp('PresetManager')
+    app = mkQApp('StateManager')
 
     shared_ui, dashboard = create_load_dashboard()
     shared_ui.hide()
 
-    prog = Configurator(dashboard)
+    prog = StateManager(dashboard)
     prog.update_settings('default')
     prog.mainwindow.show()
     prog.enable_actions(True)
-    prog.preset_manager.enable_actions(True)
+    prog.experiment_manager.enable_actions(True)
 
     sys.exit(app.exec())

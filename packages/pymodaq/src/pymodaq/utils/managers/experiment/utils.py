@@ -109,7 +109,7 @@ def make_detector_controller_param():
 def create_info_param(module_type: ModuleType,
                       module_class_name: str,
                       dim: str = None) -> dict:
-    """ Create a generic info parameter dictionary for a ControlModule in a Preset. """
+    """ Create a generic info parameter dictionary for a ControlModule in an Experiment. """
 
     if module_type == ModuleType.Actuator:
         ui = ActuatorUIFactory.keys()
@@ -132,7 +132,7 @@ def create_info_param(module_type: ModuleType,
     return info_param
 
     
-class PresetScalableGroupMove(GroupParameter):
+class ExperimentScalableGroupMove(GroupParameter):
     """
     """
 
@@ -159,10 +159,10 @@ class PresetScalableGroupMove(GroupParameter):
                  ]}
         self.addChild(child)
 
-registerParameterType('groupmove', PresetScalableGroupMove, override=True)
+registerParameterType('groupmove', ExperimentScalableGroupMove, override=True)
 
 
-class PresetScalableGroupDet(GroupParameter):
+class ExperimentScalableGroupDet(GroupParameter):
     """
         =============== ==============
         **Attributes**    **Type**
@@ -211,4 +211,4 @@ class PresetScalableGroupDet(GroupParameter):
         self.addChild(child)
 
 
-registerParameterType('groupdet', PresetScalableGroupDet, override=True)
+registerParameterType('groupdet', ExperimentScalableGroupDet, override=True)

@@ -91,9 +91,6 @@ logger.info(f"Setting Locale to {config('gui', 'style','language')} / {config('g
 setLocale()
 
 
-
-
-
 logger.info(f"Registering PyMoDAQ qt plotters...")
 
 register_plotter(parent_module_name='pymodaq_gui.plotting.plotter')

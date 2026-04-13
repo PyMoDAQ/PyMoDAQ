@@ -241,7 +241,7 @@ where ``dte`` stands for DataToExport, see :ref:`datatoexport`.
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
 used to send temporary data to update the plotting but without triggering anything else (so that the DAQ_Scan still awaits
-for data completion before moving on). It is also used in the initialisation of the plugin in order to preset the type
+for data completion before moving on). It is also used in the initialisation of the plugin in order to set the type
 and number of data viewers displayed by the viewer module. The second signal is to be used once data are fully ready to
 be send back to the user interface
 and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an example of emission of data:
