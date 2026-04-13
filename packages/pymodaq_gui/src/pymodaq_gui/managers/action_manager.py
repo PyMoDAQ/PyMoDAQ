@@ -99,6 +99,9 @@ class WidgetActionProxy(QtWidgets.QWidget):
         self._widget.setVisible(visible)
         super().setVisible(visible)
 
+    def isVisible(self) -> bool:
+        return self.widget.isVisible()
+
     @property
     def widget(self) -> QtWidgets.QWidget:
         return self._widget
@@ -256,7 +259,7 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
 
         action: QtWidgets.QAction = toolbar.addWidget(widget)
         action.setVisible(visible)
-        action.setToolTip(tip)
+        widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
     else:
         widget.setVisible(visible)

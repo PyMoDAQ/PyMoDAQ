@@ -5,8 +5,8 @@ from qtpy import QtWidgets, QtCore
 
 from qtpy.QtCore import QMimeData, Qt, QModelIndex
 from qtpy.QtWidgets import QDialogButtonBox, QDialog
-from pymodaq.utils.managers.configurator.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
-    ConfiguratorSubEntry
+from pymodaq.utils.managers.state.subentries import SubEntryHandlerFactory, SubEntryHandlerTypes, \
+    StateSubEntry
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import StrEnum
 from pymodaq_utils.array_manipulation import are_elements_contiguous
@@ -22,7 +22,7 @@ from pymodaq_gui import utils as gutils
 
 from serializall import SerializableFactory
 
-from pymodaq.utils.config import get_set_configurator_path
+from pymodaq.utils.config import get_set_state_path
 from pymodaq.utils.managers.modules import ModuleType
 import copy
 
@@ -147,7 +147,7 @@ def get_module_from_param(param: ParameterWithPath) -> Union[tuple[str, ModuleTy
     return module, module_type
 
 
-def config_subentries_from_path(fname: Path) -> list[ConfiguratorSubEntry]:
+def state_subentries_from_path(fname: Path) -> list[StateSubEntry]:
     if not fname.exists():
         return []
     with open(fname, 'rb') as file:
@@ -157,30 +157,30 @@ def config_subentries_from_path(fname: Path) -> list[ConfiguratorSubEntry]:
         all_lines += line
     data = []
     while len(all_lines) > 0:
-        entry, all_lines = ConfiguratorSubEntry.deserialize(all_lines)
+        entry, all_lines = StateSubEntry.deserialize(all_lines)
         data.append(entry)
     return data
 
 
 mock_list = ['elt1', 'elt2', 'elt3']
-mock_entry = ConfiguratorSubEntry('settings',
+mock_entry = StateSubEntry('settings',
                                'Photodiode',
-                                  ModuleType.Detector,
-                                  ParameterWithPath(
+                           ModuleType.Detector,
+                           ParameterWithPath(
                                    parameter=Parameter.create(title='mytitle', name='myname',
                                                               type='list', value=mock_list[0],
                                                               limits=mock_list)))
 
 
 
-class ConfiguratorModel(TableModel):
+class StateModel(TableModel):
 
     update_delegate = QtCore.Signal()
 
-    def __init__(self, data: list[ConfiguratorSubEntry]=None,
+    def __init__(self, data: list[StateSubEntry]=None,
                  header=('Type', 'Module', 'Title', 'Value'),
                  ):
-        self._data: list[ConfiguratorSubEntry] = None
+        self._data: list[StateSubEntry] = None
         if data is None:
             data = []
         super().__init__(data, header, editable=[False, False, False, True])
@@ -192,7 +192,7 @@ class ConfiguratorModel(TableModel):
     def mimeTypes(self):
         types = super().mimeTypes()
         types.append('pymodaq/parameter_with_path')
-        types.append('pymodaq/configurator_entry')
+        types.append('pymodaq/state_entry')
         return types
 
     def mimeData(self, items):
@@ -200,13 +200,13 @@ class ConfiguratorModel(TableModel):
         rows = list(set([item.row() for item in items]))
         if are_elements_contiguous(rows):
             entries = [self._data[raw] for raw in rows]
-            data.setData('pymodaq/configurator_entry', ser_factory.get_apply_serializer(entries))
+            data.setData('pymodaq/state_entry', ser_factory.get_apply_serializer(entries))
         return data
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
         if index.isValid():
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                entry: ConfiguratorSubEntry = self._data[index.row()]
+                entry: StateSubEntry = self._data[index.row()]
                 if index.column() == 0:
                     dat = entry.entry_type.capitalize()
                 elif index.column() == 1:
@@ -224,7 +224,7 @@ class ConfiguratorModel(TableModel):
                 else:
                     return Qt.CheckState.Unchecked
             elif role == Qt.ItemDataRole.ToolTipRole:
-                entry: ConfiguratorSubEntry = self._data[index.row()]
+                entry: StateSubEntry = self._data[index.row()]
                 return repr(entry)
         return QVariant()
 
@@ -232,10 +232,10 @@ class ConfiguratorModel(TableModel):
     def dropMimeData(self, data: QMimeData, action: Qt.DropAction, row: int, column: int, parent: QModelIndex):
         if row == -1:
             row = self.rowCount(parent)
-        if data.hasFormat('pymodaq/configurator_entry'):
-            entries: list[ConfiguratorSubEntry] = (
+        if data.hasFormat('pymodaq/state_entry'):
+            entries: list[StateSubEntry] = (
                 ser_factory.get_apply_deserializer(
-                    data.data('pymodaq/configurator_entry').data()))
+                    data.data('pymodaq/state_entry').data()))
         else:
             entries = [mock_entry]
 
@@ -274,9 +274,9 @@ class ConfiguratorModel(TableModel):
                 return True
         return False
 
-    def split_entry(self, entry: ConfiguratorSubEntry,
-                    entries: list[ConfiguratorSubEntry] = None) -> list[ConfiguratorSubEntry]:
-        """ Split A ConfiguratorEntry into multiple entries if its underlying parameter has children"""
+    def split_entry(self, entry: StateSubEntry,
+                    entries: list[StateSubEntry] = None) -> list[StateSubEntry]:
+        """ Split A StateEntry into multiple entries if its underlying parameter has children"""
         if entries is None:
             entries = []
         if not entry.setting.parameter.hasChildren():
@@ -286,7 +286,7 @@ class ConfiguratorModel(TableModel):
             for child in entry.setting.parameter.children():
                 if child.opts.get(VALID_FOR_CONFIGURATION, True) :  # only add the ones specifying they are configurable
                     pwp = ParameterWithPath(parameter=child, path=entry.setting.path + [child.name()])
-                    config_entry = ConfiguratorSubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
+                    config_entry = StateSubEntry(entry.entry_type, entry.module_name, entry.module_type, pwp)
                     self.split_entry(config_entry, entries)
         return entries
 
@@ -335,7 +335,7 @@ class ConfiguratorModel(TableModel):
         vlayout.addWidget(QtWidgets.QLabel(
             f'Setting from module {entry.module_name} with path:\n {entry.setting.path[module_index+2:]}'))
         setting = Parameter.create(name='settings', type='group', children=[entry.setting.parameter.saveState()])
-        tree = ConfiguratorParameterTree(parent=dialog)
+        tree = StateParameterTree(parent=dialog)
         tree.setParameters(setting, showTop=False)
         buttonBox = QDialogButtonBox(parent=dialog)
         buttonBox.addButton("Done", QDialogButtonBox.ButtonRole.AcceptRole)
@@ -351,7 +351,7 @@ class ConfiguratorModel(TableModel):
         if res:
             entry.setting.parameter.setValue(setting.children()[0].value())
 
-    def add_data(self, row, data: ConfiguratorSubEntry):
+    def add_data(self, row, data: StateSubEntry):
         if data is not None:
             if data in self._data:
                 return
@@ -364,11 +364,11 @@ class ConfiguratorModel(TableModel):
 
     def load(self, fname: Union[str, Path] = None):
         if fname is None:
-            fname = gutils.select_file(start_path=get_set_configurator_path(), save=False, ext='*')
+            fname = gutils.select_file(start_path=get_set_state_path(), save=False, ext='*')
         if fname is not None and fname != '':
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
-            data = config_subentries_from_path(Path(fname))
+            data = state_subentries_from_path(Path(fname))
 
             for row in data:
                 self.insert_data(self.rowCount(self.index(-1, -1)), row)
@@ -376,13 +376,13 @@ class ConfiguratorModel(TableModel):
 
     def save(self, fname: str = None):
         if fname is None:
-            fname = gutils.select_file(start_path=get_set_configurator_path(), save=True, ext='config',
+            fname = gutils.select_file(start_path=get_set_state_path(), save=True, ext='config',
                                        force_save_extension=True)
         with open(fname, 'wb') as file:
-            file.writelines([ConfiguratorSubEntry.serialize(entry) for entry in self._data])
+            file.writelines([StateSubEntry.serialize(entry) for entry in self._data])
 
 
-class ConfiguratorTableView(QtWidgets.QTableView):
+class StateTableView(QtWidgets.QTableView):
     """
     """
 
@@ -416,8 +416,8 @@ class ConfiguratorTableView(QtWidgets.QTableView):
             self.menu.addAction('Remove selected row', self.remove)
             self.menu.addAction('Clear all', self.clear)
             self.menu.addSeparator()
-            self.menu.addAction('Load Configurator file', lambda: self.load_data_signal.emit())
-            self.menu.addAction('Save Configurator file', lambda: self.save_data_signal.emit())
+            self.menu.addAction('Load StateManager file', lambda: self.load_data_signal.emit())
+            self.menu.addAction('Save StateManager file', lambda: self.save_data_signal.emit())
         else:
             self.menu = None
 
@@ -462,14 +462,14 @@ class ConfiguratorTableView(QtWidgets.QTableView):
 
 
 
-class ConfiguratorParameterTree(ParameterTree):
+class StateParameterTree(ParameterTree):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def mimeTypes(self):
         types = super().mimeTypes()
         types.append('pymodaq/parameter_with_path')
-        types.append('pymodaq/configurator_entry')
+        types.append('pymodaq/state_entry')
         return types
 
     def mimeData(self, items):
@@ -481,8 +481,8 @@ class ConfiguratorParameterTree(ParameterTree):
             module = ModuleType.NONE.value
             module_type = ModuleType.NONE
         if module is not None:
-            entry = ConfiguratorSubEntry(SubEntryHandlerTypes.SETTINGS,
-                                         module, module_type, param_with_path)
-            data.setData('pymodaq/configurator_entry',
+            entry = StateSubEntry(SubEntryHandlerTypes.SETTINGS,
+                                  module, module_type, param_with_path)
+            data.setData('pymodaq/state_entry',
                          ser_factory.get_apply_serializer([entry]))
         return data
