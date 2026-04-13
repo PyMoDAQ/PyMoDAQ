@@ -1,16 +1,15 @@
 import pickle
 import tempfile
+from collections import OrderedDict
 from pathlib import Path
 
 
 from qtmonaco import Monaco
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets
 
-from qt_themes import get_theme
-
+from pymodaq_gui.editor.file_widget import FileWidget, FileWidgetAction
 from pymodaq_utils.config import get_set_local_dir
 
-from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq_gui.utils import CustomApp
@@ -22,56 +21,17 @@ from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
 
 
-class FileWidget(QtWidgets.QFrame):
-
-    close_signal = QtCore.Signal(Path)
-
-    def __init__(self, filepath: Path, parent=None):
-        super().__init__(parent)
-
-        self.path = filepath
-        self.close_button: QtWidgets.QPushButton = None
-        self.file_name_button: QtWidgets.QPushButton = None
-
-        self.setup_ui()
-
-    def setup_ui(self):
-        self.setLayout(QtWidgets.QHBoxLayout())
-        self.file_name_button = QtWidgets.QPushButton(self.path.stem)
-        self.file_name_button.setAutoExclusive(True)
-        self.file_name_button.setCheckable(True)
-        self.layout().addWidget(self.file_name_button)
-        self.close_button = QtWidgets.QPushButton()
-        self.close_button.setIcon(
-            create_icon('cancel', get_theme(config('gui', 'style', 'theme')[0]).red))
-        self.close_button.setVisible(False)
-        self.close_button.clicked.connect(lambda: self.close_signal.emit(self.path))
-        self.file_name_button.toggled.connect(self.show_close)
-        self.layout().addWidget(self.close_button)
-
-    def show_close(self, show=True):
-        self.close_button.setVisible(show)
-
-
-class FileWidgetAction(QtWidgets.QWidgetAction):
-
-    def __init__(self, path: Path, parent=None):
-        super().__init__(parent)
-        self.path = path
-
-    def createWidget(self, parent: QtWidgets.QWidget=None):
-        widget = FileWidget(self.path, parent=parent)
-        widget.file_name_button.toggled.connect(self.triggered.emit)
-        return widget
-
-
 class MonacoApp(CustomApp):
     def __init__(self, parent: QtWidgets.QWidget = None,):
         super().__init__(parent, create_app_toolbar=False)
 
         self.monaco_widget: Monaco = None
-        self._current_path = config('data', 'data_saving', 'h5file', 'save_path')
+        self._save_path = config('data', 'data_saving', 'h5file', 'save_path')
+
         self._files: list[Path] = []
+        self._file_widgets: dict[Path, FileWidget] = OrderedDict([])
+
+        self._current_file: Path = None
 
         self.setup_ui()
 
@@ -85,9 +45,20 @@ class MonacoApp(CustomApp):
             pass
 
     def setup_docks_and_widgets(self):
-        self.monaco_widget = Monaco()
-        self.mainwindow.setCentralWidget(self.monaco_widget)
+        self.filenames_group = QtWidgets.QButtonGroup()
 
+        self.main_widget = QtWidgets.QWidget()
+        self.mainwindow.setCentralWidget(self.main_widget)
+        self.filenames_widget = QtWidgets.QWidget()
+        self.filenames_layout = QtWidgets.QHBoxLayout()
+        self.filenames_layout.setContentsMargins(0, 0, 0, 0)
+        self.filenames_widget.setLayout(self.filenames_layout)
+        self.filenames_layout.addStretch(stretch=100)
+        self.main_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.main_widget.layout().addWidget(self.filenames_widget)
+
+        self.monaco_widget = Monaco()
+        self.main_widget.layout().addWidget(self.monaco_widget)
         self.monaco_widget.set_language("python")
         self.monaco_widget.set_theme('vs-dark' if self.get_theme().is_dark_theme() else 'vs')
         self.monaco_widget.set_minimap_enabled(True)
@@ -111,32 +82,74 @@ class MonacoApp(CustomApp):
     def connect_things(self):
         self.connect_action('load', self.load_file)
         self.connect_action('new', self.create_file)
+        self.connect_action('save', self.save_file_as)
 
     def create_file(self):
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
             self.add_file(Path(f.name))
 
     def load_file(self):
-        file_path = select_file(start_path=self._current_path, save=False, ext='py')
+        file_path = select_file(start_path=self._save_path, save=False, ext='py')
         if file_path:
+            self.add_file(file_path)
+
+    def save_file_as(self):
+
+        file_path = select_file(start_path=self._save_path, save=True, ext='py',
+                                force_save_extension=True)
+        if file_path:
+            with open(file_path, 'w', encoding="utf-8", newline='') as f:
+                f.write(self.monaco_widget.get_text())
+            self.remove_file(self._current_file)
             self.add_file(file_path)
 
     def add_file(self, file_path: Path, display=True):
         self._files.append(file_path)
-        self._current_path = file_path.parent
-        self.add_action(file_path.stem, toolbar='files',
-                        action=FileWidgetAction(file_path))
-        self.connect_action(file_path.stem, self._create_lambda_file_slot(file_path))
+        self._save_path = file_path.parent
+
+        # widget = FileWidget(file_path)
+        # self._actions[str(file_path)] = self.get_toolbar('files').addWidget(widget)
+        # self.get_menu('files').addAction(self._actions[str(file_path)])
+
+        action_widget = FileWidgetAction(file_path)
+        self.add_action(str(file_path), str(file_path), toolbar='files', menu='files',
+                        action=action_widget)
+        widget = action_widget.defaultWidget()
+
+        self.filenames_group.addButton(widget.file_name_button)
+        widget.file_name_button.setChecked(True)
+        widget.file_name_button.toggled.connect(self._create_lambda_file_slot(file_path))
+        widget.close_button.clicked.connect(lambda: self.remove_file(file_path))
+        self._file_widgets[file_path] = widget
+
         if display:
             self.display_file_text(file_path)
 
     def _create_lambda_file_slot(self, file_path: Path):
         return lambda: self.display_file_text(file_path)
 
+    def remove_file(self, file_path: Path):
+        self.get_toolbar('files').removeAction(self.get_action(str(file_path)))
+
+        index = list(self._file_widgets.keys()).index(file_path)
+        if index > 0:
+            self._current_file = list(self._file_widgets.keys())[index-1]
+        elif len(self._file_widgets) > 1:
+            self._current_file = list(self._file_widgets.keys())[1]
+        else:
+            self._current_file = None
+            self.monaco_widget.set_text('')
+
+        self._file_widgets.pop(file_path)
+        self._files.remove(file_path)
+        if self._current_file is not None:
+            self._file_widgets[self._current_file].file_name_button.setChecked(True)
 
     def display_file_text(self, file_path: Path):
-        with open(file_path, 'r') as f:
+        self._current_file = file_path
+        with open(file_path, 'r', encoding="utf-8", newline='') as f:
             self.monaco_widget.set_text(''.join(f.readlines()))
+
 
     @property
     def local_files_path(self) -> Path:
@@ -159,28 +172,6 @@ def main():
 
     shared_ui = SharedUI(win)
     shared_ui.affect_application(monaco_app)
-
-
-    monaco_app.monaco_widget.set_text(
-        """
-    import numpy as np
-    from typing import TYPE_CHECKING
-    
-    if TYPE_CHECKING:
-        from bec_lib.devicemanager import DeviceContainer
-        from bec_lib.scans import Scans
-        dev: DeviceContainer
-        scans: Scans
-    
-    #######################################
-    ########## User Script #####################
-    #######################################
-    
-    # This is a comment
-    def hello_world():
-        print("Hello, world!")
-                """
-    )
 
     qapp.exec_()
 
