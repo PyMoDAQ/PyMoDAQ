@@ -255,8 +255,8 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
     if toolbar is not None:
 
         action: QtWidgets.QAction = toolbar.addWidget(widget)
-        action.setVisible(visible)
-        action.setToolTip(tip)
+        widget.setVisible(visible)
+        widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
     else:
         widget.setVisible(visible)

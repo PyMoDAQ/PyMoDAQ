@@ -313,7 +313,7 @@ class ManagerBase(CustomExt):
         self.affect_to(ManagerActions.OPEN, menu)
 
         self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
-                        tip=f'Name of the current {self.entry_type}',)
+                        tip=f'List of possible {self.entry_type}s',)
         self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu

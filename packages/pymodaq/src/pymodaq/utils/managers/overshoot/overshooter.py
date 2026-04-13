@@ -56,7 +56,7 @@ class Overshooter(ManagerBase):
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
-    entry_type = 'overshooter'
+    entry_type = 'overshoot'
     entry_extension ='.xml'
     icon_name = 'security'
 
