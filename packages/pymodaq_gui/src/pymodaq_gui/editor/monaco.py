@@ -6,6 +6,8 @@ from pathlib import Path
 
 from qtmonaco import Monaco
 from qtpy import QtWidgets
+from qtpy.QtGui import QKeySequence
+from qtpy.QtCore import Qt
 
 from pymodaq_gui.editor.file_widget import FileWidget, FileWidgetAction
 from pymodaq_utils.config import get_set_local_dir
@@ -73,11 +75,14 @@ class MonacoApp(CustomApp):
 
     def setup_actions(self):
         self.add_action('new', 'New File', 'draft', 'Create a new file',
-                        toolbar='file', menu='file', auto_menu=True)
+                        toolbar='file', menu='file', auto_menu=True,
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
         self.add_action('save', 'Save File', 'file_save', 'Save file as',
-                        toolbar='file', menu='file', auto_menu=True)
-        self.add_action('load', 'Load File', 'file_open', 'Load file ',
-                        toolbar='file', menu='file', auto_menu=True)
+                        toolbar='file', menu='file', auto_menu=True,
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
+        self.add_action('load', 'Open File', 'file_open', 'Load file ',
+                        toolbar='file', menu='file', auto_menu=True,
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_O))
 
     def connect_things(self):
         self.connect_action('load', self.load_file)
@@ -149,7 +154,6 @@ class MonacoApp(CustomApp):
         self._current_file = file_path
         with open(file_path, 'r', encoding="utf-8", newline='') as f:
             self.monaco_widget.set_text(''.join(f.readlines()))
-
 
     @property
     def local_files_path(self) -> Path:
