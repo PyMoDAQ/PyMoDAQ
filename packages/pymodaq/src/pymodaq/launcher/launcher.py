@@ -238,27 +238,6 @@ class Launcher(CustomApp):
 
         self.ui_refresh()
 
-    # def _sync_launcher_experiment_to_configurator(self):
-    #     """Reconnect the launcher experiment external combo to configurator experiment updates."""
-    #     experiment_action = self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL)
-    #     experiment_combo = experiment_action.widget
-    #
-    #     # If a previous combo was connected, disconnect it to avoid duplicate slot calls.
-    #     if self._launcher_experiment_external_combo is not None:
-    #         try:
-    #             self._launcher_experiment_external_combo.currentTextChanged.disconnect(
-    #                 self.configurator.set_experiment_filename
-    #             )
-    #         except (TypeError, RuntimeError):
-    #             pass
-    #
-    #     try:
-    #         experiment_combo.currentTextChanged.disconnect(self.configurator.set_experiment_filename)
-    #     except (TypeError, RuntimeError):
-    #         pass
-    #
-    #     experiment_combo.currentTextChanged.connect(self.configurator.set_experiment_filename)
-    #     self._launcher_experiment_external_combo = experiment_combo
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
@@ -399,18 +378,7 @@ class Launcher(CustomApp):
         -------
 
         """
-        # self.dashboard, self._dashboard_extension, self._dashboard_shared_ui = load_dashboard_with_experiment(
-        #     experiment_name=self.experiment_manager.entry,
-        #     configuration_name=self.configurator.entry,
-        # )
-        print(self.experiment_manager.entry)
-        print(self.configurator.entry)
-
-        print(self.experiment_manager.entries_sync)
-        print(self.configurator.entries_sync)
         subprocess.Popen(['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry])
-        # self._dashboard_shared_ui.show()
-
 
     def do_navigate(self, index: int):
         """
@@ -541,12 +509,8 @@ def main():
 
     shared_ui = SharedUI(win)
     prog = Launcher(win)
-    # print(prog.dashboard_button.size())
-    shared_ui.affect_application(prog)
 
-    # Calculate width and height as a screen ratio
-    # screen = QApplication.screenAt(QCursor.pos())
-    # size = screen.size()
+    shared_ui.affect_application(prog)
 
     win.resize(850, 450)
 
