@@ -300,9 +300,7 @@ class Configurator(ManagerBase):
             self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL).widget.setEnabled(False)
             self.experiment_manager.applied_entry.connect(self.set_experiment_filename)  #action slot from experiment menu need this to update the list onf configurator entries
 
-        self.experiment_manager.get_action(ManagerActions.LIST_EXTERNAL
-                                           ).widget.currentTextChanged.connect(self.set_experiment_filename)
-
+        self.experiment_manager.entries_sync.value_changed.connect(lambda value: self.set_experiment_filename(value['current']))
     def _update_entry(self, entry: Path):
         self.config_model.load(self.entry_filepath)
 
