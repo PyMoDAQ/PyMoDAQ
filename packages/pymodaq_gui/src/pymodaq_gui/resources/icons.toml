@@ -26,7 +26,6 @@ names = [
     'camera',
     'check_box',
     'check_box_outline_blank',
-    'check_small',
     'close',
     'compare_arrows',
     'deblur',
