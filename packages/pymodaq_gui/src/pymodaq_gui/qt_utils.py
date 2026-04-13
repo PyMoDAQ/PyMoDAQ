@@ -40,7 +40,7 @@ class WhiteCheckboxStyle(QProxyStyle):
     def drawPrimitive(self, element:QtWidgets.QStyle.PrimitiveElement, option: QtWidgets.QStyleOption,
                       painter: QtGui.QPainter, widget: Union[QtWidgets.QWidget, None] = None):
         if element == QStyle.PrimitiveElement.PE_IndicatorCheckBox:
-            size = QSize(20, 20)
+            size = QSize(18, 18)
             state = bool(option.state & QStyle.StateFlag.State_On)  # type: ignore[attr-defined]
             checkbox = self._get_checkbox_pixmap(state, size)
 
