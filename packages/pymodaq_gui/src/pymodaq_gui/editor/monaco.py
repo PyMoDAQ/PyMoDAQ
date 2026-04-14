@@ -163,7 +163,11 @@ class MonacoApp(CustomApp):
             self._file_widgets[self._current_file].file_name_button.setChecked(True)
 
     def display_file_text(self, file_path: Path):
-        
+
+        #autosave previous file
+        if self._current_file is not None:
+            self._save_file(self._current_file)
+
         self._current_file = file_path
         with open(file_path, 'r', encoding="utf-8", newline='') as f:
             self.monaco_widget.set_text(''.join(f.readlines()))
