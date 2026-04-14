@@ -48,12 +48,14 @@ class MonacoApp(CustomApp):
 
     def setup_docks_and_widgets(self):
         self.filenames_group = QtWidgets.QButtonGroup()
+        self.tab_widget = QtWidgets.QTabWidget()
 
-        self.monaco_widget = Monaco()
-        self.mainwindow.setCentralWidget(self.monaco_widget )
-        self.monaco_widget.set_language("python")
-        self.monaco_widget.set_theme('vs-dark' if self.get_theme().is_dark_theme() else 'vs')
-        self.monaco_widget.set_minimap_enabled(True)
+    def create_monaco_widget(self) -> Monaco:
+        monaco_widget = Monaco()
+        monaco_widget.set_language("python")
+        monaco_widget.set_theme('vs-dark' if self.get_theme().is_dark_theme() else 'vs')
+        monaco_widget.set_minimap_enabled(True)
+        return monaco_widget
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         self.add_menu(MenuNames.FILE, 'File', parent_menu=menubar)
@@ -77,7 +79,6 @@ class MonacoApp(CustomApp):
         self.add_action('save_as', 'Save File As', 'save_as', 'Save file as',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_S))
-
 
     def connect_things(self):
         self.connect_action('load', self.load_file)
@@ -113,10 +114,6 @@ class MonacoApp(CustomApp):
     def add_file(self, file_path: Path, display=True):
         self._files.append(file_path)
         self._save_path = file_path.parent
-
-        # widget = FileWidget(file_path)
-        # self._actions[str(file_path)] = self.get_toolbar('files').addWidget(widget)
-        # self.get_menu('files').addAction(self._actions[str(file_path)])
 
         action_widget = FileWidgetAction(file_path)
         self.add_action(str(file_path), str(file_path), toolbar='files', menu='files',
