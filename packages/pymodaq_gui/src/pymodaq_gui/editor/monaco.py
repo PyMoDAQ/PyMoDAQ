@@ -49,18 +49,8 @@ class MonacoApp(CustomApp):
     def setup_docks_and_widgets(self):
         self.filenames_group = QtWidgets.QButtonGroup()
 
-        self.main_widget = QtWidgets.QWidget()
-        self.mainwindow.setCentralWidget(self.main_widget)
-        self.filenames_widget = QtWidgets.QWidget()
-        self.filenames_layout = QtWidgets.QHBoxLayout()
-        self.filenames_layout.setContentsMargins(0, 0, 0, 0)
-        self.filenames_widget.setLayout(self.filenames_layout)
-        self.filenames_layout.addStretch(stretch=100)
-        self.main_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.main_widget.layout().addWidget(self.filenames_widget)
-
         self.monaco_widget = Monaco()
-        self.main_widget.layout().addWidget(self.monaco_widget)
+        self.mainwindow.setCentralWidget(self.monaco_widget )
         self.monaco_widget.set_language("python")
         self.monaco_widget.set_theme('vs-dark' if self.get_theme().is_dark_theme() else 'vs')
         self.monaco_widget.set_minimap_enabled(True)
