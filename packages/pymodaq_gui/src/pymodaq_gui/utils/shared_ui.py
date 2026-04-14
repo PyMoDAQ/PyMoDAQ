@@ -93,14 +93,14 @@ class SharedUI(CustomApp):
     -----------
     app: CustomApp
         The wrapped application
-    widget: QWidget, DockArea
+    widget: QMainWindow, QWidget, DockArea
         parent of the wrapped app eg stand alone DAQ_Move, Viewer, Browser DashBoard...
         if None, uses app.parent
 
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+    def __init__(self, widget: Union[QtWidgets.QMainWindow, QtWidgets.QWidget, DockArea],
                  show=True, title: str = None,):
         
         if isinstance(widget, QtWidgets.QMainWindow):
