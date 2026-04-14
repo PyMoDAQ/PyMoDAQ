@@ -636,7 +636,11 @@ class H5Saver(H5SaverBase, QObject):
                 )
 
     def show_file_content(self):
-        win = QtWidgets.QMainWindow()
+        from pymodaq_gui.utils.widgets.window import make_window
+        from pymodaq_gui.utils.shared_ui import SharedUI
+
+        win, area = make_window(area=False, title='H5Browser')
+
         if not self.isopen():
             if self.h5_file_path is not None and self.h5_file_name is not None:
                 full_path = self.h5_file_path / self.h5_file_name
@@ -651,4 +655,7 @@ class H5Saver(H5SaverBase, QObject):
             self.flush()
             self.analysis_prog = browsing.H5Browser(
                 win, h5file=self.h5file, backend=self.backend)
-        win.show()
+        shared_ui = SharedUI(win)
+        shared_ui.affect_application(self.analysis_prog)
+
+        shared_ui.show()
