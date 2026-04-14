@@ -406,7 +406,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
 
     _update_settings_signal = Signal(edict)
 
-    def __init__(self, listener_class = Type[ActorListener], **kwargs):
+    def __init__(self, listener_class=Type[ActorListener], **kwargs):
         ParameterManager.__init__(self, action_list=kwargs.get("action_list", ("search", "save", "update")))
         LECOComponentMixin.__init__(self, listener_class)
         ControlModule.__init__(self)

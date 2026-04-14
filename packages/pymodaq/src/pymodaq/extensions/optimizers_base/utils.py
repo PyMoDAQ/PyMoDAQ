@@ -58,7 +58,7 @@ def individual_as_dte(individual: dict[str, float], actuators: list['DAQ_Move'],
                              units=actuators[ind].units,
                              labels=[actuators[ind].title],
                              origin=name)
-              for ind in range(len(individual))],)
+              for ind in range(len(individual))])
 
 
 def individual_as_dta(individual: dict[str, float], actuators: list['DAQ_Move'],
@@ -71,7 +71,7 @@ def individual_as_dta(individual: dict[str, float], actuators: list['DAQ_Move'],
                            units=actuators[ind].units,
                            labels=[actuators[ind].title],
                            origin=name)
-              for ind in range(len(individual))],)
+              for ind in range(len(individual))])
 
 
 class OptimizerConfig(CacheConfig):

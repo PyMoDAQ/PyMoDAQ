@@ -57,7 +57,7 @@ class TestSendRPCToRemote:
                 self.remote_name,
                 message_type=MessageTypes.JSON,
                 data=ResultResponse(1, None),
-            )
+            ),
         ]
         actorListener.send_rpc_message_to_remote("whatever")
         sent: Message = actorListener.communicator._s[0]  # type: ignore
@@ -79,7 +79,7 @@ class TestSendRPCToRemote:
                 self.remote_name,
                 message_type=MessageTypes.JSON,
                 data=ErrorResponse(None, error=error),
-            )
+            ),
         ]
         actorListener.send_rpc_message_to_remote("whatever")
         assert self.remote_name not in actorListener.remote_names

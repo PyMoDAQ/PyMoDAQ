@@ -62,7 +62,7 @@ def init_data_to_export():
                                      index=0),
                                 Axis(data=create_axis_array(DATA2D.shape[1]),
                                      label='myaxis1', units='myunits1',
-                                     index=1), ],
+                                     index=1)],
                           errors=[np.random.random_sample(DATA2D.shape) for _ in range(Ndata)])
 
     data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)],
@@ -183,7 +183,7 @@ class TestDataSaverLoader:
                             axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1)],)
+                                       index=1)])
 
         data_saver.add_data(h5saver.raw_group, data)
         assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
@@ -266,7 +266,7 @@ class TestDataSaverLoader:
         axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='mm',
                      index=0),
                 Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='um',
-                     index=1), ]
+                     index=1)]
 
         Ndata = 2
         data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
@@ -326,7 +326,7 @@ class TestBkgSaver:
         axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='ms',
                      index=0),
                 Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='s',
-                     index=1), ]
+                     index=1)]
 
         data_bkg = init_data(DATA2D, axes=axes, name='mykbg')
         bkgSaver.add_data(h5saver.raw_group, data_bkg)
@@ -356,7 +356,7 @@ class TestDataEnlargeableSaver:
 
         data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
                             labels=['mylabel1', 'mylabel2'],
-                            source='raw', distribution='uniform',)
+                            source='raw', distribution='uniform')
         data.create_missing_axes()
 
         data_saver.add_data(h5saver.raw_group, data, axis_values=axis_values)
@@ -388,7 +388,7 @@ class TestDataEnlargeableSaver:
         data_saver = DataEnlargeableSaver(h5saver)
 
         data = DataRaw(name='mynddata', data=[data_array_0D for _ in range(Ndata)],
-                       labels=['mylabel1',],
+                       labels=['mylabel1'],
                        nav_indexes=(0,),
                        axes=[axis_values])
 
@@ -421,7 +421,7 @@ class TestDataEnlargeableSaver:
         data_saver = DataEnlargeableSaver(h5saver)
 
         data = DataRaw(name='mynddata', data=[data_array_1D_1D for _ in range(Ndata)],
-                       labels=['mylabel1',],
+                       labels=['mylabel1'],
                        nav_indexes=(0,),
                        axes=[axis_nav, axis_sig])
 
@@ -466,7 +466,7 @@ class TestDataExtendedSaver:
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1',
                                        units='s',
-                                       index=1),])
+                                       index=1)])
         data_ext_shape = list(EXT_SHAPE)
         data_ext_shape.extend(data.shape)
 
@@ -567,7 +567,7 @@ class TestDataToExportEnlargeableSaver:
 
         dte_saver = DataToExportEnlargeableSaver(h5saver,
                                                  enl_axis_names=['ax' for _ in range(Nenl)],
-                                                 enl_axis_units=['units' for _ in range(Nenl)]
+                                                 enl_axis_units=['units' for _ in range(Nenl)],
                                                  )
         dte_loader = DataLoader(h5saver)
 
@@ -635,7 +635,7 @@ class TestDataToExportExtendedSaver:
             DataWithAxes(name='mydata1D', data=[data_float],
                          source='raw', dim='Data1D', distribution='uniform',
                          axes=[Axis(data=create_axis_array(data_float.shape[0]),
-                                    label='ax0', units='ms', index=0)])
+                                    label='ax0', units='ms', index=0)]),
         ])
 
         EXT_SHAPE = (4, 3)

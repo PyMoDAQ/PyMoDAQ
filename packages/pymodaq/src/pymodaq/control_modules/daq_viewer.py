@@ -494,9 +494,9 @@ class DAQ_Viewer(ParameterControlModule):
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
             else:
-                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS, ))
+                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
                     ThreadCommand(ControlToHardwareViewer.GRAB,
@@ -529,7 +529,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
 
     @Slot()
@@ -647,7 +647,7 @@ class DAQ_Viewer(ParameterControlModule):
             dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
                 dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
 
-            dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
+            dte = DataToExport(name=dte.name, data=# filters depending on the extra argument 'save'
                                [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
                                 ('do_save' in dwa.extra_attributes and dwa.do_save)])
 

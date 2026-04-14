@@ -32,7 +32,7 @@ from pymodaq_gui.utils.menu_utils import StickyMenu
 
 logger = set_logger(get_module_name(__file__))
 
-config =  Config()
+config = Config()
 
 
 class MenuNames(StrEnum):
@@ -101,7 +101,7 @@ class SharedUI(CustomApp):
     """
 
     def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
-                 show=True, title: str = None,):
+                 show=True, title: str = None):
         
         if isinstance(widget, QtWidgets.QMainWindow):
             parent = widget
@@ -111,7 +111,7 @@ class SharedUI(CustomApp):
             parent.setCentralWidget(widget)
             self.central_widget = widget
             
-        super().__init__(parent, title = title,
+        super().__init__(parent, title=title,
                          create_app_toolbar=False)
         
         
@@ -133,7 +133,7 @@ class SharedUI(CustomApp):
         menus_dict = dict(zip([menu.title() for menu in self.menus], self.menus))
         if isinstance(app, CustomApp):
             for menu in app.menus:
-                if menu.title() in menus_dict: # two  menus with identical names (titles)
+                if menu.title() in menus_dict:  # two  menus with identical names (titles)
                     self._merge_menus(menu, menus_dict[menu.title()])
                 elif menu.parent() == app.menubar:
                     self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
@@ -273,7 +273,7 @@ class SharedUI(CustomApp):
             mssg = QMessageBox()
             mssg.setText(
                 "You have to restart the application to take the"
-                " modifications into account!"
+                " modifications into account!",
             )
             mssg.setInformativeText("Do you want to restart?")
             mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
@@ -303,7 +303,7 @@ class SharedUI(CustomApp):
         self.splash_sc.showMessage(
             f"PyMoDAQ version {get_version('pymodaq')}\n"
             f"Modular Acquisition with Python\n"
-            f"Written by Sébastien Weber"
+            f"Written by Sébastien Weber",
         )
 
     def check_update(self, show=True):
@@ -317,7 +317,7 @@ class SharedUI(CustomApp):
             # Combine package and version information and select only the ones with a newer version available
 
             packages_data = np.array(
-                list(zip(packages, current_versions, available_versions))
+                list(zip(packages, current_versions, available_versions)),
             )[new_versions]
 
             if len(packages_data) > 0:
@@ -328,7 +328,7 @@ class SharedUI(CustomApp):
                 vlayout = QtWidgets.QVBoxLayout()
 
                 message_label = QLabel(
-                    "New versions of PyMoDAQ packages available!\nUse your package manager to update."
+                    "New versions of PyMoDAQ packages available!\nUse your package manager to update.",
                 )
                 message_label.setAlignment(Qt.Alignment.AlignCenter)
 
@@ -336,7 +336,7 @@ class SharedUI(CustomApp):
                 table.setRowCount(len(packages_data))
                 table.setColumnCount(3)
                 table.setHorizontalHeaderLabels(
-                    ["Package", "Current version", "New version"]
+                    ["Package", "Current version", "New version"],
                 )
 
                 for p in packages_data:

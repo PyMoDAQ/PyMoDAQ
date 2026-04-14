@@ -82,7 +82,7 @@ class TestH5SaverLowLevel:
             raise ValueError
 
         array = h5saver.add_array(h5saver.raw_group, 'TestArray', saving.DataType['data'],
-                                  data_dimension = DataDim['Data0D'],
+                                  data_dimension=DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True)
         if config_value_str == 'nan':
@@ -93,7 +93,7 @@ class TestH5SaverLowLevel:
     def test_add_array_explicit_fill_value(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
         array = h5saver.add_array(h5saver.raw_group, 'TestFill', saving.DataType['data'],
-                                  data_dimension = DataDim['Data0D'],
+                                  data_dimension=DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True,
                                   fill_value=7.5)
@@ -102,7 +102,7 @@ class TestH5SaverLowLevel:
     def test_add_array_nan_fill_value(self, h5saver_lowlevel):
         h5saver = h5saver_lowlevel
         array = h5saver.add_array(h5saver.raw_group, 'TestNan', saving.DataType['data'],
-                                  data_dimension = DataDim['Data0D'],
+                                  data_dimension=DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True,
                                   fill_value=np.nan)
@@ -113,7 +113,7 @@ class TestH5SaverLowLevel:
         h5saver = h5saver_lowlevel
         h5saver.fill_value = np.nan
         array = h5saver.add_array(h5saver.raw_group, 'TestInstanceFill', saving.DataType['data'],
-                                  data_dimension = DataDim['Data0D'],
+                                  data_dimension=DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True)
         assert np.all(np.isnan(array.read()))
@@ -123,7 +123,7 @@ class TestH5SaverLowLevel:
         h5saver = h5saver_lowlevel
         h5saver.fill_value = np.nan
         array = h5saver.add_array(h5saver.raw_group, 'TestOverride', saving.DataType['data'],
-                                  data_dimension = DataDim['Data0D'],
+                                  data_dimension=DataDim['Data0D'],
                                   data_shape=(4,), array_type=np.float64,
                                   scan_shape=(3,), add_scan_dim=True,
                                   fill_value=0.0)

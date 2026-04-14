@@ -617,7 +617,7 @@ class H5Saver(H5SaverBase, QObject):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             None, "Select HDF5 File",
             start_path,
-            "HDF5 Files (*.h5);;All Files (*)"
+            "HDF5 Files (*.h5);;All Files (*)",
         )
         if file_path:
             try:
@@ -632,7 +632,7 @@ class H5Saver(H5SaverBase, QObject):
                 logger.error(f"Could not open file {file_path}: {e}")
                 QtWidgets.QMessageBox.warning(
                     None, "Error",
-                    f"Could not open file:\n{file_path}\n\nError: {e}"
+                    f"Could not open file:\n{file_path}\n\nError: {e}",
                 )
 
     def show_file_content(self):

@@ -92,7 +92,7 @@ class DAQ_Move_PID(DAQ_Move_base):
         if parameter_stab.value():
             if len(self.controller.queue_points) >= self.settings["check_stab", "queue_length"]:
                 self.last_positions = deque(
-                    self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"]
+                    self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"],
                 )
                 current_stab = np.std(self.last_positions)
                 parameter_stab.child("current_stab").setValue(current_stab)
@@ -109,7 +109,7 @@ class DAQ_Move_PID(DAQ_Move_base):
             pass
         elif param.name() == "queue_length":
             self.last_positions = deque(
-                self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"]
+                self.controller.queue_points, maxlen=self.settings["check_stab", "queue_length"],
             )
             param.setOpts(max=self.controller.queue_points.maxlen)
 

@@ -18,7 +18,7 @@ def set_and_check_qt_backend_or_die(config):
         other_backends = [backend for backend in available_backends if backend != wanted_backend]
         if len(other_backends) > 0:
             backend_found = True
-            backend =  other_backends.pop(0)
+            backend = other_backends.pop(0)
             config['gui', 'qtbackend', 'backend'] = [backend] + other_backends
 
     if backend_found:
@@ -72,7 +72,7 @@ logger = set_logger('pymodaq_gui', base_logger=False)
 
 
 logger.info('Starting PyMoDAQ GUI modules')
-if not isinstance(config('gui', 'qtbackend', 'backend'), list): #True for old usage
+if not isinstance(config('gui', 'qtbackend', 'backend'), list):  #True for old usage
     logger.error(f"{config('gui', 'qtbackend', 'backend')} is not a list, please delete your actual "
                  f"pymodaq_utils configuration file to "
                  f"reflect this new type")

@@ -131,7 +131,7 @@ class UniformImageItem(PymodaqImage):
                 autoLevels = True
         if autoLevels:
             level_samples = kargs.pop('levelSamples', 2**16)
-            mn, mx = self.quickMinMax( targetSize=level_samples )
+            mn, mx = self.quickMinMax( targetSize=level_samples)
             # mn and mx can still be NaN if the data is all-NaN
             if mn == mx or self._xp.isnan(mn) or self._xp.isnan(mx):
                 mn = 0

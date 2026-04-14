@@ -66,7 +66,7 @@ class ParameterBindingExample(QMainWindow):
             "• Use bind_properties() for regular Qt widgets\n"
             "• Change values in any tab → parameter tree updates\n"
             "• Change values in tree → all tabs update\n"
-            "• No manual signal connections needed!"
+            "• No manual signal connections needed!",
         )
         desc.setStyleSheet("font-family: monospace; padding: 10px;")
         layout.addWidget(desc)
@@ -290,23 +290,23 @@ class ParameterBindingExample(QMainWindow):
                     'signal': self.algorithm_combo.currentTextChanged,
                     'getter': lambda: self.algorithm_combo.currentText(),
                     'setter': lambda text: self.algorithm_combo.setCurrentText(text),
-                }
-            }
+                },
+            },
         )
 
         self.sync.bind_properties(
             self.buffer_spin,
-            property_map={'buffer_size': {'property': 'value'}}
+            property_map={'buffer_size': {'property': 'value'}},
         )
 
         self.sync.bind_properties(
             self.threshold_spin,
-            property_map={'threshold': {'property': 'value'}}
+            property_map={'threshold': {'property': 'value'}},
         )
 
         self.sync.bind_properties(
             self.auto_check,
-            property_map={'auto_process': {'property': 'checked'}}
+            property_map={'auto_process': {'property': 'checked'}},
         )
 
         # Bind parameters (use bind_parameter - NOT bind_properties!)
@@ -318,23 +318,23 @@ class ParameterBindingExample(QMainWindow):
                     'setter': lambda limits: processing_group.child('algorithm').setLimits(limits),
                     'mode': SyncMode.FROM_SYNC,
                 },
-                'algorithm': {'param': processing_group.child('algorithm')}
-            }
+                'algorithm': {'param': processing_group.child('algorithm')},
+            },
         )
 
         self.sync.bind_parameter(
             processing_group.child('buffer_size'),
-            property_map={'buffer_size': {'param': processing_group.child('buffer_size')}}
+            property_map={'buffer_size': {'param': processing_group.child('buffer_size')}},
         )
 
         self.sync.bind_parameter(
             processing_group.child('threshold'),
-            property_map={'threshold': {'param': processing_group.child('threshold')}}
+            property_map={'threshold': {'param': processing_group.child('threshold')}},
         )
 
         self.sync.bind_parameter(
             processing_group.child('auto_process'),
-            property_map={'auto_process': {'param': processing_group.child('auto_process')}}
+            property_map={'auto_process': {'param': processing_group.child('auto_process')}},
         )
 
     def bind_acquisition(self):
@@ -353,8 +353,8 @@ class ParameterBindingExample(QMainWindow):
                                             self.mode_combo.addItems(items)),
                     'mode': SyncMode.FROM_SYNC,
                 },
-                'mode': {'property': 'currentText'}
-            }
+                'mode': {'property': 'currentText'},
+            },
         )
 
         self.sync.bind_properties(self.samples_spin, property_map={'samples': {'property': 'value'}})
@@ -370,8 +370,8 @@ class ParameterBindingExample(QMainWindow):
                     'setter': lambda limits: acquisition_group.child('mode').setLimits(limits),
                     'mode': SyncMode.FROM_SYNC,
                 },
-                'mode': {'param': acquisition_group.child('mode')}
-            }
+                'mode': {'param': acquisition_group.child('mode')},
+            },
         )
 
         self.sync.bind_parameter(acquisition_group.child('samples'),
@@ -397,8 +397,8 @@ class ParameterBindingExample(QMainWindow):
                                             self.units_combo.addItems(items)),
                     'mode': SyncMode.FROM_SYNC,
                 },
-                'units': {'property': 'currentText'}
-            }
+                'units': {'property': 'currentText'},
+            },
         )
 
         self.sync.bind_properties(self.target_spin, property_map={'target': {'property': 'value'}})
@@ -414,8 +414,8 @@ class ParameterBindingExample(QMainWindow):
                     'setter': lambda limits: position_group.child('units').setLimits(limits),
                     'mode': SyncMode.FROM_SYNC,
                 },
-                'units': {'param': position_group.child('units')}
-            }
+                'units': {'param': position_group.child('units')},
+            },
         )
 
         self.sync.bind_parameter(position_group.child('target'),

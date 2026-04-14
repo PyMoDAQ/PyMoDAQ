@@ -121,7 +121,7 @@ class PatternCompleter:
             popup.setTextElideMode(
                 Qt.TextElideMode.ElideNone
                 if not word_wrap
-                else Qt.TextElideMode.ElideRight
+                else Qt.TextElideMode.ElideRight,
             )
             popup.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             popup.setResizeMode(QListView.ResizeMode.Adjust)
@@ -328,7 +328,7 @@ class PatternCompleter:
             if not self.objectName():
                 self.setObjectName("pattern_completer_widget")
             self.setStyleSheet(
-                "#pattern_completer_widget { border: 2px solid #4CAF50; border-radius: 3px; }"
+                "#pattern_completer_widget { border: 2px solid #4CAF50; border-radius: 3px; }",
             )
         else:
             self.setStyleSheet("")
@@ -596,7 +596,7 @@ class PatternCompleterDelegate(QStyledItemDelegate):
             # Add all configured completers
             for pattern, config in self.completer_configs.items():
                 editor.add_completer(
-                    pattern, config["completions"], **config.get("kwargs", {})
+                    pattern, config["completions"], **config.get("kwargs", {}),
                 )
 
             return editor

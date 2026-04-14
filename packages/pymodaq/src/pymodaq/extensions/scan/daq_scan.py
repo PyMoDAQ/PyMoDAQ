@@ -230,7 +230,7 @@ class DAQScan(CustomExt):
         self.settings.child('time_flow', 'wait_time').setValue(config('pymodaq', 'scan', 'timeflow', 'wait_time'))
         self.settings.child('time_flow', 'wait_time_between').setValue(config('pymodaq', 'scan', 'timeflow', 'wait_time'))
 
-        self.settings.child('scan_options',  'scan_average').setValue(config('pymodaq', 'scan', 'Naverage'))
+        self.settings.child('scan_options', 'scan_average').setValue(config('pymodaq', 'scan', 'Naverage'))
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -602,7 +602,7 @@ class DAQScan(CustomExt):
                         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
                             None, "Select HDF5 File",
                             str(Path(current_file).parent),
-                            "HDF5 Files (*.h5);;All Files (*)"
+                            "HDF5 Files (*.h5);;All Files (*)",
                         )
                         if file_path:
                             logger.info(f"User selected file: {file_path}")
@@ -930,7 +930,7 @@ class DAQScan(CustomExt):
                                              remove_navigation=self.scanner.distribution == DataDistribution.uniform,
                                              average_axis=average_axis,
                                              average_index=self.ind_average,
-                                             separate_average= not self.settings['scan_options', 'average_on_top'],
+                                             separate_average=not self.settings['scan_options', 'average_on_top'],
                                              target_at=self.scanner.positions[self.ind_scan],
                                              last_step=(self.ind_scan ==
                                                         self.scanner.positions.size - 1 and
@@ -965,8 +965,7 @@ class DAQScan(CustomExt):
 
             _, _, viewer2D_overload = self.check_number_type_viewers()
             if viewer2D_overload:
-                messagebox(text=
-                           'The number of live data chosen and the selected options '
+                messagebox(text='The number of live data chosen and the selected options '
                            'will not be able to render fully on the 2D live viewers. Consider changing '
                            'the options, such as "plot on top" for the averaging or "Group 0D data" '
                            'or the number of selected data')
@@ -1202,7 +1201,7 @@ class DAQScanAcquisition(QObject):
     status_sig = Signal(utils.ThreadCommand)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 modules_manager: ModulesManager = None,):
+                 modules_manager: ModulesManager = None):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,

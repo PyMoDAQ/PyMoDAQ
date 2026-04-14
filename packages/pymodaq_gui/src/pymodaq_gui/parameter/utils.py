@@ -105,7 +105,7 @@ def get_param_path(param: Parameter) -> List[str]:
     return path[::-1]
 
 
-def getOpts(param:Parameter,) -> OrderedDict:
+def getOpts(param:Parameter) -> OrderedDict:
     """Return an OrderedDict with tree structures of all opts for all children of this parameter
 
         Parameters
@@ -121,7 +121,7 @@ def getOpts(param:Parameter,) -> OrderedDict:
         vals[ch.name()] = (ch.opts, getOpts(ch))
     return vals
 
-def getStruct(param:Parameter,) -> OrderedDict:
+def getStruct(param:Parameter) -> OrderedDict:
     """Return an OrderedDict with tree structures of all children of this parameter
 
         Parameters
@@ -178,7 +178,7 @@ def compareParameters(param1:Parameter, param2:Parameter, with_self: bool = True
         is_same = is_same and (param1.opts == param2.opts)
     return is_same
     
-def compareStructureParameter(param1:Parameter, param2: Parameter,)-> bool:
+def compareStructureParameter(param1:Parameter, param2: Parameter)-> bool:
     """Compare the structure of two parameters with their children, return True if structure is identical
 
         Parameters
@@ -487,7 +487,7 @@ if __name__ == '__main__':              # pragma: no cover
                         {'title': 'Lines (/mm):', 'name': 'lines', 'type': 'int', 'readonly': True},
                         {'title': 'Blaze WL (nm):', 'name': 'blaze', 'type': 'str', 'readonly': True},
                     ]},
-            ]
+            ],
          },
     ]
 

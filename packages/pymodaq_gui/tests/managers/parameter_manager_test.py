@@ -1,5 +1,5 @@
 
-1# -*- coding: utf-8 -*-
+1  # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
 
@@ -42,7 +42,7 @@ class RealParameterManager(ParameterManager):
         {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50,
          'default': 50, 'min': 1e-5,
          'max': 1e5, 'subtype': 'log'},
-    ]},
+    ]}
 
 
 

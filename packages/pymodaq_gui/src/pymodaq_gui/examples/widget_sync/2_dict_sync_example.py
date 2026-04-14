@@ -32,7 +32,7 @@ class ComboBoxPropertiesExample(QWidget):
             "Use Case: ComboBox with synchronized items AND selection\n"
             "✓ Single dict: {'items': [...], 'current': '...'}\n"
             "✓ bind_properties() for ONE widget\n"
-            "✓ Each property has its own signal/getter/setter"
+            "✓ Each property has its own signal/getter/setter",
         ))
 
         # Create 3 synchronized comboboxes
@@ -56,7 +56,7 @@ class ComboBoxPropertiesExample(QWidget):
         # Create dict sync
         self.combo_sync = WidgetSync(initial_value={
             'items': ["Red", "Green", "Blue", "Yellow"],
-            'current': "Red"
+            'current': "Red",
         })
 
         # Bind each combobox using bind_properties()
@@ -68,15 +68,15 @@ class ComboBoxPropertiesExample(QWidget):
                         'signal': None,  # FROM_SYNC only
                         'getter': lambda c=combo: [c.itemText(i) for i in range(c.count())],
                         'setter': lambda items, c=combo: (c.clear(), c.addItems(items)),
-                        'mode': SyncMode.FROM_SYNC
+                        'mode': SyncMode.FROM_SYNC,
                     },
                     'current': {
                         'signal': combo.currentTextChanged,
                         'getter': lambda c=combo: c.currentText(),
                         'setter': lambda text, c=combo: c.setCurrentText(text),
-                        'mode': SyncMode.BIDIRECTIONAL
-                    }
-                }
+                        'mode': SyncMode.BIDIRECTIONAL,
+                    },
+                },
             )
 
         # Controls
@@ -86,14 +86,14 @@ class ComboBoxPropertiesExample(QWidget):
         colors_btn = QPushButton("Colors")
         colors_btn.clicked.connect(
             lambda: setattr(self.combo_sync, 'value',
-                          {'items': ["Red", "Green", "Blue"], 'current': "Red"})
+                          {'items': ["Red", "Green", "Blue"], 'current': "Red"}),
         )
         controls.addWidget(colors_btn)
 
         fruits_btn = QPushButton("Fruits")
         fruits_btn.clicked.connect(
             lambda: setattr(self.combo_sync, 'value',
-                          {'items': ["Apple", "Banana", "Orange"], 'current': "Apple"})
+                          {'items': ["Apple", "Banana", "Orange"], 'current': "Apple"}),
         )
         controls.addWidget(fruits_btn)
 
@@ -111,7 +111,7 @@ class ComboBoxPropertiesExample(QWidget):
         v = self.combo_sync.value
         self.status.setText(
             f"Items: {v['items']}\nCurrent: {v['current']}\n"
-            f"Connections: {self.combo_sync.connection_count}"
+            f"Connections: {self.combo_sync.connection_count}",
         )
 
 
@@ -126,7 +126,7 @@ class RGBSlidersExample(QWidget):
             "Use Case: RGB color controlled by 3 different sliders\n"
             "✓ Single dict: {'r': 128, 'g': 64, 'b': 192}\n"
             "✓ bind_dict() maps each slider to a dict key\n"
-            "✓ Each widget controls one dict value"
+            "✓ Each widget controls one dict value",
         ))
 
         # RGB sliders
@@ -156,26 +156,26 @@ class RGBSlidersExample(QWidget):
             return {
                 'r': max(0, min(255, rgb.get('r', 0))),
                 'g': max(0, min(255, rgb.get('g', 0))),
-                'b': max(0, min(255, rgb.get('b', 0)))
+                'b': max(0, min(255, rgb.get('b', 0))),
             }
 
         self.color_sync = WidgetSync(
             initial_value={'r': 128, 'g': 64, 'b': 192},
-            validator=validate_rgb
+            validator=validate_rgb,
         )
 
         # bind_dict() - different widgets to different dict keys
         self.color_sync.bind_dict({
             'r': {'widget': self.r_slider[0], 'property': 'value'},
             'g': {'widget': self.g_slider[0], 'property': 'value'},
-            'b': {'widget': self.b_slider[0], 'property': 'value'}
+            'b': {'widget': self.b_slider[0], 'property': 'value'},
         })
 
         # Bind preview with bind()
         self.color_sync.bind(
             self.preview,
             setter=lambda rgb: self._update_preview(rgb),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         # Initial update
@@ -229,7 +229,7 @@ class ConfigurationFormExample(QWidget):
             "Use Case: Device configuration form\n"
             "✓ Dict: {'exposure': 100, 'gain': 10, 'fps': '60'}\n"
             "✓ bind_dict() for all controls at once\n"
-            "✓ Cleaner than multiple bind_properties() calls"
+            "✓ Cleaner than multiple bind_properties() calls",
         ))
 
         # Controls
@@ -272,7 +272,7 @@ class ConfigurationFormExample(QWidget):
         self.status_display = QLabel()
         self.status_display.setStyleSheet(
             "padding: 15px; color: #4fc3f7; "
-            "font-family: monospace; border-radius: 5px;"
+            "font-family: monospace; border-radius: 5px;",
         )
         layout.addWidget(self.status_display)
 
@@ -280,28 +280,28 @@ class ConfigurationFormExample(QWidget):
         self.camera_sync = WidgetSync(initial_value={
             'exposure': 100,
             'gain': 10,
-            'fps': '60'
+            'fps': '60',
         })
 
         # bind_dict() - bind all controls at once!
         self.camera_sync.bind_dict({
             'exposure': {'widget': self.exposure_spin, 'property': 'value'},
             'gain': {'widget': self.gain_slider, 'property': 'value'},
-            'fps': {'widget': self.fps_combo, 'property': 'currentText'}
+            'fps': {'widget': self.fps_combo, 'property': 'currentText'},
         })
 
         # Bind gain label (FROM_SYNC)
         self.camera_sync.bind(
             self.gain_label,
             setter=lambda s: self.gain_label.setText(str(s['gain'])),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         # Bind status display (FROM_SYNC)
         self.camera_sync.bind(
             self.status_display,
             setter=self._update_status,
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
         self._update_status(self.camera_sync.value)
 
@@ -311,19 +311,19 @@ class ConfigurationFormExample(QWidget):
 
         lowlight_btn = QPushButton("Low Light")
         lowlight_btn.clicked.connect(
-            lambda: setattr(self.camera_sync, 'value', {'exposure': 500, 'gain': 30, 'fps': '30'})
+            lambda: setattr(self.camera_sync, 'value', {'exposure': 500, 'gain': 30, 'fps': '30'}),
         )
         presets.addWidget(lowlight_btn)
 
         highspeed_btn = QPushButton("High Speed")
         highspeed_btn.clicked.connect(
-            lambda: setattr(self.camera_sync, 'value', {'exposure': 10, 'gain': 5, 'fps': '240'})
+            lambda: setattr(self.camera_sync, 'value', {'exposure': 10, 'gain': 5, 'fps': '240'}),
         )
         presets.addWidget(highspeed_btn)
 
         balanced_btn = QPushButton("Balanced")
         balanced_btn.clicked.connect(
-            lambda: setattr(self.camera_sync, 'value', {'exposure': 100, 'gain': 10, 'fps': '60'})
+            lambda: setattr(self.camera_sync, 'value', {'exposure': 100, 'gain': 10, 'fps': '60'}),
         )
         presets.addWidget(balanced_btn)
 
@@ -336,7 +336,7 @@ class ConfigurationFormExample(QWidget):
             f"Camera Status\n"
             f"Exposure:  {state['exposure']:4d} ms\n"
             f"Gain:      {state['gain']:4d} dB\n"
-            f"FPS:       {state['fps']:>4s} ({frame_time:.2f}ms/frame)"
+            f"FPS:       {state['fps']:>4s} ({frame_time:.2f}ms/frame)",
         )
 
 
@@ -353,7 +353,7 @@ class HelperMethodsExample(QWidget):
             "✓ remove_from_list() - Remove items safely\n"
             "✓ pop_from_list() - Remove by index\n"
             "✓ update_key() - Update individual keys\n"
-            "✓ All methods handle deep copying internally!"
+            "✓ All methods handle deep copying internally!",
         ))
 
         # Display area
@@ -363,7 +363,7 @@ class HelperMethodsExample(QWidget):
         self.items_display = QLabel()
         self.items_display.setStyleSheet(
             "padding: 10px; "
-            "font-family: monospace; border-radius: 5px;"
+            "font-family: monospace; border-radius: 5px;",
         )
         display_layout.addWidget(self.items_display)
 
@@ -374,7 +374,7 @@ class HelperMethodsExample(QWidget):
         self.list_sync = WidgetSync(initial_value={
             'items': ['Apple', 'Banana', 'Cherry'],
             'current': 'Apple',
-            'count': 3
+            'count': 3,
         })
 
         # Update display when value changes
@@ -446,9 +446,9 @@ class HelperMethodsExample(QWidget):
                                      for i in range(self.current_combo.count())],
                     'setter': lambda items: (self.current_combo.clear(),
                                            self.current_combo.addItems(items)),
-                    'mode': SyncMode.FROM_SYNC
-                }
-            }
+                    'mode': SyncMode.FROM_SYNC,
+                },
+            },
         )
 
         controls_group.setLayout(controls_layout)
@@ -457,7 +457,7 @@ class HelperMethodsExample(QWidget):
         # Info box
         info = QLabel(
             "💡 All operations use helper methods that handle deep copying internally.\n"
-            "This prevents the shallow copy bug and ensures proper change detection!"
+            "This prevents the shallow copy bug and ensures proper change detection!",
         )
         info.setStyleSheet("color: #0288d1; padding: 10px; font-style: italic;")
         info.setWordWrap(True)
@@ -511,7 +511,7 @@ class HelperMethodsExample(QWidget):
             f"Items: [{items_str}]\n"
             f"Current: '{v.get('current', 'N/A')}'\n"
             f"Count: {v.get('count', 0)}\n\n"
-            f"Internal dict:\n{v}"
+            f"Internal dict:\n{v}",
         )
 
 
@@ -527,7 +527,7 @@ class MixedBindingExample(QWidget):
             "✓ bind_dict() for individual controls\n"
             "✓ bind() for JSON editor (custom getter/setter)\n"
             "✓ bind() for display-only status\n"
-            "✓ All approaches work together!"
+            "✓ All approaches work together!",
         ))
 
         # Individual controls
@@ -574,20 +574,20 @@ class MixedBindingExample(QWidget):
         # Initialize sync
         self.settings_sync = WidgetSync(initial_value={
             'temperature': 25,
-            'speed': 50
+            'speed': 50,
         })
 
         # 1. bind_dict() for controls
         self.settings_sync.bind_dict({
             'temperature': {'widget': self.temp_spin, 'property': 'value'},
-            'speed': {'widget': self.speed_slider, 'property': 'value'}
+            'speed': {'widget': self.speed_slider, 'property': 'value'},
         })
 
         # 2. bind() for speed label (FROM_SYNC)
         self.settings_sync.bind(
             self.speed_label,
             setter=lambda s: self.speed_label.setText(str(s['speed'])),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         # 3. bind() for JSON editor (BIDIRECTIONAL with custom getter/setter)
@@ -602,14 +602,14 @@ class MixedBindingExample(QWidget):
             self.json_editor,
             signal=self.json_editor.textChanged,
             getter=json_getter,
-            setter=lambda d: self.json_editor.setPlainText(json.dumps(d, indent=2))
+            setter=lambda d: self.json_editor.setPlainText(json.dumps(d, indent=2)),
         )
 
         # Code snippet
         code = QLabel(
             "Implementation:\n"
             "settings_sync.bind_dict({'temperature': {...}, 'speed': {...}})\n"
-            "settings_sync.bind(json_editor, getter=parse_json, setter=format_json)"
+            "settings_sync.bind(json_editor, getter=parse_json, setter=format_json)",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px;")
         layout.addWidget(code)

@@ -15,7 +15,7 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
-from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType # noqa: F401
+from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 
@@ -325,7 +325,7 @@ class DataSaverLoader(DataManagement):
                             origin=data.origin,
                             units=data.units,
                             nav_indexes=tuple(data.nav_indexes)
-                            if data.nav_indexes is not None else None,)
+                            if data.nav_indexes is not None else None)
             metadata.update(kwargs)
             for name in data.extra_attributes:
                 metadata[name] = getattr(data, name)
@@ -903,7 +903,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
                  axis_value: Union[float, np.ndarray] = None,
-                 settings_as_xml='', **kwargs
+                 settings_as_xml='', **kwargs,
                  ):
         """
 

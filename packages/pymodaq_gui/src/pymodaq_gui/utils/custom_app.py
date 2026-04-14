@@ -162,7 +162,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def statusbar(self) -> QtWidgets.QStatusBar | None:
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
 
-    def update_status(self, message: str, laps_ms = 500):
+    def update_status(self, message: str, laps_ms=500):
         self.statusbar.showMessage(message, laps_ms)
 
     @property
