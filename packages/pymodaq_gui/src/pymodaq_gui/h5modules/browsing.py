@@ -162,7 +162,7 @@ class H5Browser(QObject, ActionManager):
     status_signal = Signal(str)
 
     def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None,
-                 backend='tables', swmr=False):
+                 backend=config('data', 'data_saving', 'backend')[0], swmr=False):
         QObject.__init__(self)
         # toolbar = QtWidgets.QToolBar()
         ActionManager.__init__(self)  # , toolbar=toolbar)
@@ -465,12 +465,13 @@ class H5Browser(QObject, ActionManager):
                                'readonly': True})
             self.settings_attributes.settings.addChildren(params)
 
-            if settings is not None:
+            if len(settings) > 0:
                 for child in self.settings.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = ioxml.XML_string_to_parameter(settings)
-                self.settings.settings.addChildren(params)
+                for setting in settings:
+                    param = ioxml.xml_string_to_parameter_dict(setting)
+                    self.settings.settings.addChild(param)
 
             if scan_settings is not None:
                 params = ioxml.XML_string_to_parameter(scan_settings)

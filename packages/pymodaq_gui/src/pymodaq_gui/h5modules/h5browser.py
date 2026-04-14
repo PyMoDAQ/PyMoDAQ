@@ -18,6 +18,8 @@ def main(h5file_path: Path = None):
     import sys
     app = mkQApp('H5Browser')
 
+    win, area = make
+
     h5file_path_tmp = None
     parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
     parser.add_argument("-i", "--input", help="specify path to the file to be opened")

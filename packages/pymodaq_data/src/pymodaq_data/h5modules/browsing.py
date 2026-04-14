@@ -83,11 +83,15 @@ class H5BrowserUtil(H5Backend):
         attrs_names = node.attrs.attrs_name
         attr_dict = OrderedDict(node.attrs.to_dict())
 
-        settings = None
+        settings = []
         scan_settings = None
-        if 'settings' in attrs_names:
-            if node.attrs['settings'] != '':
-                settings = node.attrs['settings']
+        for attr_name in attrs_names:
+            if 'settings' in attr_name and 'scan_settings' not in attr_name:
+                settings.append(node.attrs[attr_name])
+
+        # if 'settings' in attrs_names:
+        #     if node.attrs['settings'] != '':
+        #         settings = node.attrs['settings']
 
         if 'scan_settings' in attrs_names:
             if node.attrs['scan_settings'] != '':
