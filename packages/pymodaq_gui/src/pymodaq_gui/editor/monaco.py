@@ -77,17 +77,23 @@ class MonacoApp(CustomApp):
         self.add_action('new', 'New File', 'draft', 'Create a new file',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N))
-        self.add_action('save', 'Save File', 'file_save', 'Save file as',
+        self.add_action('save', 'Save File', 'file_save', 'Save file',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
         self.add_action('load', 'Open File', 'file_open', 'Load file ',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_O))
 
+        self.add_action('save_as', 'Save File As', 'save_as', 'Save file as',
+                        toolbar='file', menu='file', auto_menu=True,
+                        shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_S))
+
+
     def connect_things(self):
         self.connect_action('load', self.load_file)
         self.connect_action('new', self.create_file)
-        self.connect_action('save', self.save_file_as)
+        self.connect_action('save', self.save_file)
+        self.connect_action('save_as', self.save_file_as)
 
     def create_file(self):
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
@@ -98,15 +104,21 @@ class MonacoApp(CustomApp):
         if file_path:
             self.add_file(file_path)
 
+    def save_file(self):
+        self._save_file(self._current_file)
+
     def save_file_as(self):
 
         file_path = select_file(start_path=self._save_path, save=True, ext='py',
                                 force_save_extension=True)
         if file_path:
-            with open(file_path, 'w', encoding="utf-8", newline='') as f:
-                f.write(self.monaco_widget.get_text())
+            self._save_file(file_path)
             self.remove_file(self._current_file)
             self.add_file(file_path)
+
+    def _save_file(self, file_path: Path):
+        with open(file_path, 'w', encoding="utf-8", newline='') as f:
+            f.write(self.monaco_widget.get_text())
 
     def add_file(self, file_path: Path, display=True):
         self._files.append(file_path)
@@ -151,6 +163,7 @@ class MonacoApp(CustomApp):
             self._file_widgets[self._current_file].file_name_button.setChecked(True)
 
     def display_file_text(self, file_path: Path):
+        
         self._current_file = file_path
         with open(file_path, 'r', encoding="utf-8", newline='') as f:
             self.monaco_widget.set_text(''.join(f.readlines()))
