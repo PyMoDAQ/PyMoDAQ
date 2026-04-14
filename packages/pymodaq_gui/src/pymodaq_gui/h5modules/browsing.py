@@ -196,9 +196,9 @@ class H5Browser(CustomApp):
         self.add_menu(MenuNames.FILE, 'File', parent_menu=self.menubar)
 
     def setup_actions(self):
-        self.add_action('export', 'Export as', 'SaveAs', tip='Export node content (and children) as ',
+        self.add_action('export', 'Export as', 'file_export', tip='Export node content (and children) as ',
                         auto_toolbar=False)
-        self.add_action('comment', 'Add Comment', 'properties', tip='Add comments to the node',
+        self.add_action('comment', 'Add Comment', 'add_notes', tip='Add comments to the node',
                         auto_toolbar=False)
         self.add_action('plot_node', 'Plot Node', 'color', tip='Plot the current node',
                         auto_toolbar=False)
@@ -217,8 +217,8 @@ class H5Browser(CustomApp):
                                self.get_action('plot_node_with_bkg'),
                                self.get_action('plot_nodes_with_bkg')])
 
-        self.add_action('load', 'Load File', 'Open', tip='Open a new file', menu=MenuNames.FILE)
-        self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file', menu=MenuNames.FILE)
+        self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuNames.FILE)
+        self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuNames.FILE)
         self.add_action('refresh', 'Refresh', 'refresh',
                         tip='Refresh the file view (useful for SWMR live files)',
                         shortcut=QtCore.Qt.Key_F5, menu=MenuNames.FILE)
