@@ -32,6 +32,10 @@ class MultistateLED(QtWidgets.QWidget):
         ``False``, clicking only toggles between the first and last state.
     size : int
         Diameter of the LED circle in pixels (default 20).
+    gradient : bool
+        When ``True``, paint the LED with a radial gradient for a 3-D look.
+        When ``False`` (default), use a solid fill so the true theme color
+        is immediately legible.
     """
 
     state_changed = Signal(str)  # emits state name
@@ -43,12 +47,14 @@ class MultistateLED(QtWidgets.QWidget):
         readonly: bool = True,
         clickable_cycle: bool = True,
         size: int = 20,
+        gradient: bool = False,
     ):
         super().__init__(parent)
         self._states: list[tuple[str, QtGui.QColor]] = []
         self._diameter = size
         self._readonly = readonly
         self._cycle = clickable_cycle
+        self._gradient = gradient
 
         states = states if states is not None else DEFAULT_STATES
         for name, color in states:
@@ -102,11 +108,14 @@ class MultistateLED(QtWidgets.QWidget):
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
-        gradient = QtGui.QRadialGradient(x + d * 0.35, y + d * 0.35, d * 0.55)
-        gradient.setColorAt(0.0, color.lighter(160))
-        gradient.setColorAt(1.0, color.darker(130))
+        if self._gradient:
+            grad = QtGui.QRadialGradient(x + d * 0.35, y + d * 0.35, d * 0.55)
+            grad.setColorAt(0.0, color.lighter(160))
+            grad.setColorAt(1.0, color.darker(130))
+            painter.setBrush(QtGui.QBrush(grad))
+        else:
+            painter.setBrush(QtGui.QBrush(color))
 
-        painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(QtGui.QPen(color.darker(160), 1))
         painter.drawEllipse(x, y, d, d)
         painter.end()
