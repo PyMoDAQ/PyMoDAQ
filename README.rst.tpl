@@ -22,6 +22,11 @@ Packages
 Each package directory can be navigated to for more detailed information about its goal. A link to the official documentation is also provided at the end of each README.
 
 
+Requirements:
+Pymodaq aims at following _SPEC 0:https://scientific-python.org/specs/spec-0000/
+In practice, that means we will only test python versions still considered _alive:https://devguide.python.org/versions/ and that have been bugfixed for at least a year. Other python versions may still work but we cannot guarantee it. 
+For now, this reflects into support in: Python 3.10+ - 3.13
+We usually recommend to use the python distribution that left or will soon leave bugfix status: python 3.12-3.13
 
 Published under the MIT FREE SOFTWARE LICENSE
 
