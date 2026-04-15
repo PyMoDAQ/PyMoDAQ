@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
+from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 
@@ -24,21 +24,14 @@ class ExtensionManager(ManagerBase):
     def __init__(self, dashboard: 'DashBoard' = None):
         self.extension_catalog = get_extensions()
         self.loaded_extensions: dict[ExtensionEnum, CustomExt] = {}
-
-        # Ensure we have a dashboard for extensions
-        if dashboard is None:
-            from pymodaq.dashboard import create_load_dashboard
-            self._internal_dashboard_ui, dashboard = create_load_dashboard()
-            self._internal_dashboard_ui.mainwindow.setVisible(False)
-        else:
-            self._internal_dashboard_ui = None
+        self._internal_dashboard_ui = None
 
         super().__init__(dashboard=dashboard)
 
         if self.entries:
             self.entries_sync.update_key('current', self.entries[0])
 
-    # === ManagerBase Implementation ===
+    # ManagerBase Implementation
     def get_entry_folder(self, **kwargs) -> Path:
         """Extensions are virtual; not file-backed."""
         return Path.home()
@@ -75,28 +68,44 @@ class ExtensionManager(ManagerBase):
             logger.exception(f"Failed to load extension {entry_name}: {e}")
             return False
 
+    def execute_entry(self, entry_path: str | Path = None, **kwargs):
+        """Execute extension, creating dashboard if needed."""
+        if self.dashboard is None:
+            logger.info("Creating internal dashboard for extension")
+            from pymodaq.dashboard import create_load_dashboard
+            self._internal_dashboard_ui, dashboard = create_load_dashboard()
+            self._internal_dashboard_ui.mainwindow.setVisible(False)
+            self.dashboard = dashboard
+            logger.info("Internal dashboard created")
+
+        super().execute_entry(entry_path, **kwargs)
+
     def load_extension(self, ext_enum: ExtensionEnum,
                       win: QtWidgets.QMainWindow = None) -> CustomExt | None:
         """Load and display an extension."""
-        shared_ui, ext_module = create_extension(
-            self.dashboard,
-            self.extension_catalog[ext_enum].klass,
-            window=win,
-        )
+        try:
+            shared_ui, ext_module = create_extension(
+                self.dashboard,
+                self.extension_catalog[ext_enum].klass,
+                window=win,
+            )
 
-        self.loaded_extensions[ext_enum] = ext_module
-        ext_module.shared_ui = shared_ui
-        ext_module.status_signal.connect(self.update_status)
-        shared_ui.show()
+            self.loaded_extensions[ext_enum] = ext_module
+            ext_module.shared_ui = shared_ui
+            ext_module.status_signal.connect(self.update_status)
+            shared_ui.show()
 
-        # Optional: set action if available
-        if hasattr(ext_module, 'set_action_checked'):
-            try:
-                ext_module.set_action_checked('show_dashboard', True)
-            except (AttributeError, RuntimeError):
-                pass  # Action may not exist
+            if hasattr(ext_module, 'set_action_checked'):
+                try:
+                    ext_module.set_action_checked('show_dashboard', True)
+                except (AttributeError, RuntimeError):
+                    pass
 
-        return ext_module
+            logger.info(f"Extension {ext_enum.value} loaded successfully")
+            return ext_module
+        except Exception as e:
+            logger.error(f"Failed to load extension {ext_enum.value}: {e}")
+            raise
 
     def setup_actions(self):
         """Add extension actions to the manager."""
@@ -153,3 +162,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
