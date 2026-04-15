@@ -33,7 +33,7 @@ Requirements
 Pymodaq aims at following `SPEC0 <https://scientific-python.org/specs/spec-0000/>`_.
 
 In practice, that means we will only test python versions still considered `alive <https://devguide.python.org/versions/>`_ and that have been bugfixed for at least a year. Other python versions may still work but we cannot guarantee it.
-For now, this reflects into support in: Python 3.10+ - 3.13
+For now, this reflects into testing support for Python 3.10 - 3.13
 
 
 We usually recommend to use the python distribution that left or will soon leave bugfix status: python 3.12-3.13
