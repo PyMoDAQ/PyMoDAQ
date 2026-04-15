@@ -1,9 +1,11 @@
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Union, cast
 
 from qtpy import QtWidgets
 
-from pymodaq.extensions import get_extensions, ExtensionEnum, DataMixer
+from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
@@ -13,20 +15,42 @@ from pymodaq_utils.logger import get_module_name
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
+    from pymodaq.utils.shared_ui import SharedUI
 
 logger = set_logger(get_module_name(__file__))
+
+
+def _build_standalone_context(manager: 'ExtensionManager', configurator) -> SimpleNamespace:
+    """Create a minimal dashboard context for standalone extension execution."""
+    experiment_manager = configurator.experiment_manager
+    return SimpleNamespace(
+        mainwindow=manager.mainwindow,
+        experiment_manager=experiment_manager,
+        configurator=configurator,
+        detector_modules=[],
+        actuators_modules=[],
+        modules_manager=ModulesManager([], [], parent_name='StandaloneExtensionManager'),
+        splash_sc=manager.splash_sc,
+        overshoot=False,
+        experiment_file=Path('default.xml'),
+        settings=experiment_manager.settings,
+        roi_saver=SimpleNamespace(roi_experiments=None),
+        add_status=lambda txt: None,
+        update_status=lambda txt, wait_time=0, log_type=None: None,
+    )
+
 
 
 class ExtensionManager(ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
+    exceptions = ('SCANNER')  # extensions that should not be launchable in standalone mode
 
     def __init__(self, dashboard: 'DashBoard' = None, shared_UI: 'SharedUI' = None):
-        self.extensions_names = ExtensionEnum.values()
-        self.extensions: dict[ExtensionEnum, CustomExt] = {}
-        self.extension_windows = []
-        self._standalone_dashboard_proxy = None
+        self.extension_catalog = get_extensions()
+        self.loaded_extensions: dict[ExtensionEnum, CustomExt] = {}
         self._standalone_configurator = None
+        self._standalone_context: SimpleNamespace | None = None
 
         self.shared_ui = shared_UI
 
@@ -52,53 +76,44 @@ class ExtensionManager(ManagerBase):
         return
 
     def _update_entry(self, entry_path: Path):
-        # No settings tree update from file for extensions.
         return
 
-    def save_new_history_entry(self):
-        # Extensions are launched ad hoc; nothing to persist in launcher history.
-        return
 
-    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
-        if entry is None:
-            entry_name = self.entry
-        elif isinstance(entry, Path):
-            entry_name = entry.stem
-        else:
-            entry_name = str(entry)
-
-        if entry_name not in self.entries:
-            return
-
-        self.entry = entry_name
-        self.update_execute_action_tooltip(entry_name)
-        self.updated_entry.emit(entry_name)
-
-    def execute_entry(self, entry_path: Path = None, **kwargs):
+    def execute_entry(self, entry_path: Union[str, Path] = None, **kwargs):
+        """Execute selected entry even on standalone dashboard"""
         if entry_path is None:
             entry_name = self.entry
-        else:
+        elif isinstance(entry_path, Path):
             entry_name = entry_path.stem
+        else:
+            entry_name = str(entry_path)
 
         if entry_name not in self.entries:
-            logger.warning(f'Unknown extension: {entry_name}')
-            self.entry_applied = False
+            logger.warning(f"Unknown extension entry: {entry_name}")
             return
 
-        self.update_entry(entry_name)
+        resolved_entry_path = self.entry_path_from_name(entry_name)
+        self.update_entry(resolved_entry_path)
+        self.entry_applied = self._execute_entry(resolved_entry_path, **kwargs)
 
-        try:
-            ext_enum = ExtensionEnum(entry_name)
-            self.load_extension(ext_enum)
-            self.entry_applied = True
-        except Exception as e:
-            logger.exception(str(e))
-            self.entry_applied = False
+
+
+    def _execute_entry(self, entry_path: Path = None, **kwargs):
+        extension_name = self.entry if entry_path is None else entry_path.stem
+        if extension_name not in ExtensionEnum.values():
+            logger.warning(f"Extension entry not found in enum values: {extension_name}")
+            return False
+
+        ext_enum = ExtensionEnum(extension_name)
+        self.entry = extension_name
+        self.load_extension(ext_enum, win=QtWidgets.QMainWindow())
+        self.show()
+        return True
 
     def setup_actions(self):
         # Keep only relevant manager actions for extension launching.
         for action_name in (ManagerActions.COPY, ManagerActions.NEW, ManagerActions.DELETE,
-                            ManagerActions.SAVE, ManagerActions.RELOAD):
+                            ManagerActions.SAVE, ManagerActions.RELOAD, ManagerActions.OPEN):
             self.get_action(action_name).setVisible(False)
 
         for ext_name in ExtensionEnum.names():
@@ -108,38 +123,63 @@ class ExtensionManager(ManagerBase):
 
     def connect_things(self):
         for ext_name in ExtensionEnum.names():
-            self.connect_action(ExtensionEnum[ext_name],
-                                self.create_extension_slot(ExtensionEnum[ext_name]))
+            print(ext_name in self.exceptions)
+            if ext_name not in self.exceptions:
+                self.connect_action(ExtensionEnum[ext_name],
+                                    self.create_extension_slot(ExtensionEnum[ext_name]))
+
 
 
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
 
+
+
     def load_extension(self, ext_enum: ExtensionEnum,
                        win: QtWidgets.QMainWindow = None
-                       ) :
-        from pymodaq_gui.qt_utils import mkQApp
-        from pymodaq.dashboard import create_load_dashboard
-        from pymodaq.utils.gui_utils.loader_utils import create_extension
+                       ) -> 'CustomExt':
+        dashboard_context = self._get_extension_context()
+        shared_ui, ext_module = create_extension(
+            cast('DashBoard', dashboard_context), self.extension_catalog[ext_enum].klass,
+            window=win,
+        )
+        self.loaded_extensions[ext_enum] = ext_module
+        ext_module.shared_ui = shared_ui
+        ext_module.status_signal.connect(self.update_status)
+        shared_ui.show()
+        ext_module.set_action_checked('show_dashboard', True)
 
-        mkQApp(str(self.entry))
-        win, dashboard = create_load_dashboard()
-        win.mainwidow.setVisible(False)
+        return ext_module
 
-        win_ext, extension = create_extension(self.dashboard, DataMixer)
-        win_ext.show()
+    def _get_extension_context(self) -> Union['DashBoard', SimpleNamespace]:
+        if self.dashboard is not None:
+            return self.dashboard
 
-        win_ext, extension = create_extension()
+        self._ensure_standalone_context()
+        if self._standalone_context is None:
+            raise RuntimeError('Standalone extension context could not be initialized')
+        return self._standalone_context
 
-        # To complete :
-        # /!\ not functional
+    def _ensure_standalone_context(self):
+        if self._standalone_context is not None:
+            return
+
+        from pymodaq.utils.managers.configurator.configurator import Configurator
+
+        self._standalone_configurator = Configurator()
+        self._standalone_configurator.enable_actions(True)
+        self._standalone_configurator.experiment_manager.enable_actions(True)
+        self._standalone_context = _build_standalone_context(self, self._standalone_configurator)
 
 
     def quit_fun(self):
         try:
-            for ext in self.extensions.values():
+            for ext in self.loaded_extensions.values():
                 if hasattr(ext, 'quit_fun'):
                     ext.quit_fun()
+
+            if self._standalone_configurator is not None:
+                self._standalone_configurator.quit_fun()
 
         except Exception as e:
             logger.exception(str(e))
@@ -149,43 +189,28 @@ class ExtensionManager(ManagerBase):
         for ext_name in ExtensionEnum.names():
             self.extensions_menu.addAction(self.get_action(ExtensionEnum[ext_name]))
 
-    def _get_dashboard_context(self):
-        if self.dashboard is not None:
-            return self.dashboard
-
-        if self._standalone_dashboard_proxy is None:
-            from pymodaq.utils.managers.configurator.configurator import Configurator
-
-            self._standalone_configurator = Configurator()
-            self._standalone_configurator.enable_actions(True)
-            preset_manager = self._standalone_configurator.preset_manager
-            preset_manager.enable_actions(True)
-
-            class _StandaloneDashboardProxy:
-                pass
-
-            proxy = _StandaloneDashboardProxy()
-            proxy.mainwindow = self.mainwindow
-            proxy.preset_manager = preset_manager
-            proxy.configurator = self._standalone_configurator
-            proxy.detector_modules = []
-            proxy.actuators_modules = []
-            proxy.modules_manager = ModulesManager([], [], parent_name='StandaloneExtensionManager')
-            proxy.splash_sc = self.splash_sc
-            proxy.overshoot = False
-            proxy.preset_file = Path('default.xml')
-            proxy.settings = preset_manager.settings
-
-            class _DummyRoiSaver:
-                roi_presets = None
-
-            proxy.roi_saver = _DummyRoiSaver()
-            proxy.add_status = lambda txt: self.update_status(txt)
-            proxy.update_status = lambda txt, wait_time=0, log_type=None: self.update_status(txt)
-
-            self._standalone_dashboard_proxy = proxy
-
-        return self._standalone_dashboard_proxy
 
 
 
+def main():
+    from pymodaq_gui.qt_utils import mkQApp
+
+    app = mkQApp('ExtensionManager')
+    prog = ExtensionManager()
+    external_ui = QtWidgets.QMainWindow()
+
+    toolbar, menu = prog.get_external_toolbar_menu()
+    external_ui.addToolBar(toolbar)
+    external_ui.menuBar().addMenu(menu)
+
+    prog.update_entry()
+    prog.enable_actions(True)
+    prog.mainwindow.show()
+    external_ui.show()
+    sys.exit(app.exec())
+
+
+
+
+if __name__ == '__main__':
+    main()

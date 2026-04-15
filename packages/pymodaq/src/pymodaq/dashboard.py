@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
 from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
+from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -231,6 +232,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 
+        self.extension_manager = ExtensionManager(dashboard=self)
+        self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('extension'))
+
         self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
 
         self.get_toolbar('configurator').setEnabled(False)
@@ -254,6 +258,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.configurator.enable_actions(True)
         self.overshooter.enable_actions(True)
         self.configurator.execute_entry(self.configurator.entry_filepath)
+
+        self.extension_manager.enable_actions(True)
 
         if self._scripted_experiment_load:
             self._scripted_experiment_load = False
@@ -504,6 +510,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
+        self.add_toolbar('extension', 'Extension', parent=self.mainwindow, add_break=False)
         self.toolbar.addSeparator()
 
         # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,

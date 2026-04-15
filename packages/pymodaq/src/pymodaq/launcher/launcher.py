@@ -15,13 +15,11 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QComboBox,
-    QToolBar
 )
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 # Handler
 from watchdog.observers import Observer
 
-from pymodaq.dashboard import load_dashboard_with_experiment
 from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.configurator.configurator import Configurator
@@ -129,7 +127,7 @@ class Launcher(CustomApp):
         subclass method from ActionManager
         '''
         self.add_action('launch_dashboard', 'Launch empty dashboard', '',
-                        EnumToolTip.DASHBOARD, auto_toolbar=True
+                        EnumToolTip.DASHBOARD, auto_toolbar=False
                         )
         self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.DAQ_VIEWER, auto_toolbar=False)
         self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.DAQ_MOVE, auto_toolbar=False)
@@ -230,7 +228,6 @@ class Launcher(CustomApp):
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('launcher'))
-        # self._sync_launcher_experiment_to_configurator()
         self.experiment_manager.enable_actions(True)
         self.experiment_manager.set_action_enabled('list_entries', True)
         self.configurator.enable_actions(True)
@@ -270,7 +267,7 @@ class Launcher(CustomApp):
         # add a toolbar for future extension feature
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.get_toolbar('launcher').addWidget(self.extension_label)
+        # self.get_toolbar('launcher').addWidget(self.extension_label)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
