@@ -44,7 +44,6 @@ def _build_standalone_context(manager: 'ExtensionManager', configurator) -> Simp
 class ExtensionManager(ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
-    exceptions = ('SCANNER')  # extensions that should not be launchable in standalone mode
 
     def __init__(self, dashboard: 'DashBoard' = None, shared_UI: 'SharedUI' = None):
         self.extension_catalog = get_extensions()
@@ -123,10 +122,8 @@ class ExtensionManager(ManagerBase):
 
     def connect_things(self):
         for ext_name in ExtensionEnum.names():
-            print(ext_name in self.exceptions)
-            if ext_name not in self.exceptions:
-                self.connect_action(ExtensionEnum[ext_name],
-                                    self.create_extension_slot(ExtensionEnum[ext_name]))
+            self.connect_action(ExtensionEnum[ext_name],
+                                self.create_extension_slot(ExtensionEnum[ext_name]))
 
 
 
