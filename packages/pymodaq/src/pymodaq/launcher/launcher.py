@@ -20,6 +20,7 @@ from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 # Handler
 from watchdog.observers import Observer
 
+from pymodaq.extensions import ExtensionEnum
 from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.configurator.configurator import Configurator
@@ -213,6 +214,17 @@ class Launcher(CustomApp):
         self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
 
+        # Remove open action
+        self.extension_manager.get_action(ManagerActions.OPEN).setVisible(False)
+
+        # Inject new implementation extension launch method in the execute action
+        execute_action = self.extension_manager.get_action(ManagerActions.EXECUTE)
+        execute_action.triggered.disconnect() # disconnect normal action
+        # Connect the launcher method
+        execute_action.triggered.connect(
+            lambda: self.load_extension_subprocess(self.extension_manager.entry)
+        )
+
         self.date_combo_box.currentIndexChanged.connect(self._on_date_combo_box_changed)
 
     def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
@@ -267,7 +279,6 @@ class Launcher(CustomApp):
         # add a toolbar for future extension feature
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
         self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
-        # self.get_toolbar('launcher').addWidget(self.extension_label)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
@@ -493,7 +504,34 @@ class Launcher(CustomApp):
     def _refresh_history_ui(self):
         self.ui_refresh()
 
+    def load_extension_subprocess(self, extension_name: str):
+        """Launch an extension in a separate process"""
+        import multiprocessing as mp
+        import sys
 
+        logger.info(f"Launching extension {extension_name} in separate process")
+
+        try:
+            ext_enum = ExtensionEnum(extension_name)
+            ext_class = self.extension_manager.extension_catalog[ext_enum].klass
+            ext_module = sys.modules[ext_class.__module__]
+
+            # Check if the module has a main() function and launch it
+            if hasattr(ext_module, 'main'):
+                process = mp.Process(target=ext_module.main)
+                process.start()
+                logger.info(f"Extension {extension_name} launched in process PID: {process.pid}")
+                return process
+            else:
+                logger.error(f"Extension {extension_name} has no main() function")
+                return None
+
+        except ValueError:
+            logger.error(f"Extension '{extension_name}' not found in ExtensionEnum")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to launch extension {extension_name}: {e}")
+            return None
 
 
 def main():
