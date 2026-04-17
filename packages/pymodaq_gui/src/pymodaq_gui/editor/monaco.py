@@ -9,7 +9,7 @@ from qtpy import QtWidgets
 from qtpy.QtGui import QKeySequence
 from qtpy.QtCore import Qt
 
-from pymodaq_gui.editor.file_widget import FileWidget, FileWidgetAction
+from pymodaq_gui.messenger import messagebox
 from pymodaq_utils.config import get_set_local_dir
 
 from pymodaq_gui.utils.widgets.window import make_window
@@ -23,17 +23,19 @@ from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
 
 
+class MonacoWithFile(Monaco):
+    def __init__(self, file_path: Path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.file_path = file_path
+
+
 class MonacoApp(CustomApp):
     def __init__(self, parent: QtWidgets.QWidget = None,):
         super().__init__(parent, create_app_toolbar=False)
 
         self.monaco_widget: Monaco = None
         self._save_path = config('data', 'data_saving', 'h5file', 'save_path')
-
-        self._files: list[Path] = []
-        self._file_widgets: dict[Path, FileWidget] = OrderedDict([])
-
-        self._current_file: Path = None
 
         self.setup_ui()
 
@@ -42,16 +44,18 @@ class MonacoApp(CustomApp):
             with open(self.local_files_path, 'rb') as f:
                 _files = pickle.load(f)
                 for ind, file in enumerate(_files):
-                    self.add_file(file, display=True if ind == len(_files)-1 else False)
+                    self.add_file(file, display=True)
         except FileNotFoundError as e:
             pass
 
     def setup_docks_and_widgets(self):
-        self.filenames_group = QtWidgets.QButtonGroup()
         self.tab_widget = QtWidgets.QTabWidget()
+        self.tab_widget.setTabsClosable(True)
 
-    def create_monaco_widget(self) -> Monaco:
-        monaco_widget = Monaco()
+        self.mainwindow.setCentralWidget(self.tab_widget)
+
+    def create_monaco_widget(self, file_path: Path) -> MonacoWithFile:
+        monaco_widget = MonacoWithFile(file_path)
         monaco_widget.set_language("python")
         monaco_widget.set_theme('vs-dark' if self.get_theme().is_dark_theme() else 'vs')
         monaco_widget.set_minimap_enabled(True)
@@ -62,8 +66,6 @@ class MonacoApp(CustomApp):
         self.add_menu('files', 'Recent Files', parent_menu=MenuNames.FILE)
 
         self.add_toolbar('file', 'File', parent=self.mainwindow, add_break=False)
-        self.add_toolbar('files', 'Files', parent=self.mainwindow, add_break=True)
-        self.get_toolbar('files').setMovable(False)
 
     def setup_actions(self):
         self.add_action('new', 'New File', 'draft', 'Create a new file',
@@ -86,6 +88,21 @@ class MonacoApp(CustomApp):
         self.connect_action('save', self.save_file)
         self.connect_action('save_as', self.save_file_as)
 
+        self.tab_widget.tabCloseRequested.connect(self.close_editor)
+
+    @property
+    def current_editor(self) -> MonacoWithFile:
+        return self.tab_widget.currentWidget()
+
+    @property
+    def current_file(self) -> Path:
+        return self.current_editor.file_path
+
+    def close_editor(self, tab_index: int):
+        monaco_editor = self.current_editor
+        messagebox(text=f'Are you sure you want to close the file {monaco_editor.file_path.name}')
+        self.tab_widget.removeTab(tab_index)
+
     def create_file(self):
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
             self.add_file(Path(f.name))
@@ -96,7 +113,7 @@ class MonacoApp(CustomApp):
             self.add_file(file_path)
 
     def save_file(self):
-        self._save_file(self._current_file)
+        self._save_file(self.current_file)
 
     def save_file_as(self):
 
@@ -104,69 +121,42 @@ class MonacoApp(CustomApp):
                                 force_save_extension=True)
         if file_path:
             self._save_file(file_path)
-            self.remove_file(self._current_file)
             self.add_file(file_path)
 
-    def _save_file(self, file_path: Path):
+    def _save_file(self, file_path: Path = None):
+        if file_path is None:
+            file_path = self.current_file
+
         with open(file_path, 'w', encoding="utf-8", newline='') as f:
-            f.write(self.monaco_widget.get_text())
+            f.write(self.current_editor.get_text())
 
     def add_file(self, file_path: Path, display=True):
-        self._files.append(file_path)
         self._save_path = file_path.parent
 
-        action_widget = FileWidgetAction(file_path)
-        self.add_action(str(file_path), str(file_path), toolbar='files', menu='files',
-                        action=action_widget)
-        widget = action_widget.defaultWidget()
-
-        self.filenames_group.addButton(widget.file_name_button)
-        widget.file_name_button.setChecked(True)
-        widget.file_name_button.toggled.connect(self._create_lambda_file_slot(file_path))
-        widget.close_button.clicked.connect(lambda: self.remove_file(file_path))
-        self._file_widgets[file_path] = widget
+        monaco_widget = self.create_monaco_widget(file_path)
+        tab_index = self.tab_widget.addTab(monaco_widget, file_path.name)
+        self.tab_widget.setTabToolTip(tab_index, str(file_path))
+        self.tab_widget.setCurrentIndex(tab_index)
 
         if display:
-            self.display_file_text(file_path)
+            self.display_file_text(file_path, monaco_widget)
 
-    def _create_lambda_file_slot(self, file_path: Path):
-        return lambda: self.display_file_text(file_path)
-
-    def remove_file(self, file_path: Path):
-        self.get_toolbar('files').removeAction(self.get_action(str(file_path)))
-
-        index = list(self._file_widgets.keys()).index(file_path)
-        if index > 0:
-            self._current_file = list(self._file_widgets.keys())[index-1]
-        elif len(self._file_widgets) > 1:
-            self._current_file = list(self._file_widgets.keys())[1]
-        else:
-            self._current_file = None
-            self.monaco_widget.set_text('')
-
-        self._file_widgets.pop(file_path)
-        self._files.remove(file_path)
-        if self._current_file is not None:
-            self._file_widgets[self._current_file].file_name_button.setChecked(True)
-
-    def display_file_text(self, file_path: Path):
-
-        #autosave previous file
-        if self._current_file is not None:
-            self._save_file(self._current_file)
-
-        self._current_file = file_path
+    def display_file_text(self, file_path: Path, monaco_widget: MonacoWithFile=None):
         with open(file_path, 'r', encoding="utf-8", newline='') as f:
-            self.monaco_widget.set_text(''.join(f.readlines()))
+            monaco_widget.set_text(''.join(f.readlines()))
 
     @property
     def local_files_path(self) -> Path:
         return get_set_local_dir(user=True).joinpath('monaco_files')
 
+    @property
+    def files(self) -> list[Path]:
+        return [self.tab_widget.widget(index_tab).file_path for index_tab in range(self.tab_widget.count())]
+
     def quit_fun(self):
         super().quit_fun()
         with open(self.local_files_path, 'wb') as f:
-            pickle.dump(self._files, f)
+            pickle.dump(self.files, f)
 
 
 def main():
