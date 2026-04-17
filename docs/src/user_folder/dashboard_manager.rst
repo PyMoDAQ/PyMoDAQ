@@ -33,11 +33,11 @@ The entries browsing and execution is incorporated in the DashBoard toolbar (see
    can be browsed and directly executed.
 
 
-Depending on the task, an entry will look different (see below a Preset entry and a Configurator entry). A preset
+Depending on the task, an entry will look different (see below an Experiment entry and a State entry). An experiment
 features a list of actuators and detectors while a configuration is a list of actions one can perform on control
 modules settings for a given *preset*.
 
-.. _preset_manager:
+.. _experiment_manager:
 
 Preset manager
 --------------
@@ -46,7 +46,7 @@ The *Preset manager* is an object that helps to generate, modify and save preset
 A preset is a set of actuators and detectors represented in a tree like structure, see :numref:`preset_fig`.
 
 
-   .. _preset_fig:
+   .. _experiment_fig:
 
 .. figure:: /image/dashboard/preset_fig.png
    :alt: preset_fig
@@ -57,16 +57,16 @@ A preset is a set of actuators and detectors represented in a tree like structur
 Only a few options are available for the preset. It is merely there to configure the type and list of
 control modules to be added in the DashBoard. The only options are related to the master/slave status
 (see :ref:`multiple_hardware`) and if it should be initialized at startup. For configuration of
-the initial settings of the control modules, see below the :ref:`configurator`.
+the initial settings of the control modules, see below the :ref:`state_manager`.
 
 .. note::
 
   Since its modification in version 5.2.0 onwards, *Presets* can be modified at any time and
   a new preset can be loaded also at any time without having to restart the DashBoard!!
 
-.. _configurator:
+.. _state_manager:
 
-Configurator
+StateManager
 ------------
 
 .. note::
@@ -74,7 +74,7 @@ Configurator
   New in version 5.2.0
 
 
-   .. _configurator_fig:
+   .. _state_fig:
 
 .. figure:: /image/dashboard/configurator_fig.png
    :alt: configurator_fig
@@ -84,28 +84,28 @@ Configurator
    Ypiezo actuators and two to set their absolute value. This *default* configuration is executed
    at startup just after the preset is done loading control modules.
 
-Once the :ref:`preset_manager` is done loading its configured control modules, the Configurator
+Once the :ref:`preset_manager` is done loading its configured control modules, the StateManager
 can be opened. In fact, for each preset file, a configuration called *default* (empty by default)
 will be created and loaded after the loading of the control modules. But then any predefined configuration
 can be loaded at any time.
 
-A configuration is made by selecting a given settings (left side of figure :numref:`configurator_fig`)
+A configuration is made by selecting a given settings (left side of figure :numref:`state_fig`)
 and dragging/dropping it to the table on the right. You can also use double clicking
 a setting to move it to a configuration or use the right arrow in the middle of the window.
 If you select a group parameter, all its children will be moved in the configuration.
 All but only the ones that are valid as configurable settings.
 
 Three special *configuration* subentries are available from the context menu (right click while
-the mouse is hovering the configuration table), see :numref:`configurator_context_menu`.
+the mouse is hovering the configuration table), see :numref:`state_context_menu`.
 
-   .. _configurator_context_menu:
+   .. _state_context_menu:
 
 .. figure:: /image/dashboard/configurator_context_menu.png
    :alt: configurator_fig
 
-   The Configurator context menu
+   The StateManager context menu
 
-These allow to configure:
+These allow to define:
 
 * the Initialization of a given control module
 * the value of an Actuator (an absolute move will be done)
@@ -124,7 +124,7 @@ Overshoot manager
 .. note::
 
   As of version 5.2.0 the overshoot manager will be rewritten to use the general framework described above and also
-  to use entries from the Configurator to trigger a *safe* configuration...
+  to use entries from the StateManager to trigger a *safe* state of your experiment setup...
 
 
 The *Overshoot* manager is used to configure **safety actions** (for instance the absolute positioning of one or more

@@ -123,6 +123,7 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
+        self.ui: DAQScanUI = None  #important to be here before super is called , see do_things_after_experiment_set
 
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
@@ -222,6 +223,9 @@ class DAQScan(CustomExt):
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
+
+        if self.ui is not None:
+            self.ui.enable_start_stop(True)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -513,20 +517,21 @@ class DAQScan(CustomExt):
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
-            settings_all = [ioxml.parameter_to_xml_string(params),
-                           ioxml.parameter_to_xml_string(self.settings),
-                           ioxml.parameter_to_xml_string(self.h5saver.settings),
-                           ioxml.parameter_to_xml_string(self.scanner.settings)]
 
-            settings_str = b'<All_settings title="All Settings" type="group">'
-            for set in settings_all:
-                if len(settings_str + set) < 60000:
-                    # size limit for any object header (including all the other attributes) is 64kb
-                    settings_str += set
-                else:
-                    break
-            settings_str += b'</All_settings>'
-            attr['settings'] = settings_str
+            for name, param in ((self.__class__.__name__.lower(), self.settings),
+                                ('scan_info', params),
+                                ('saver', self.h5saver.settings),
+                                ('scanner', self.scanner.settings),):
+
+                _settings = Parameter.create(name=f'{name}_settings', type='group',
+                                             children=[param.saveState()])
+                attr[name] = ioxml.parameter_to_xml_string(_settings)
+
+
+            for instrument in self.modules_manager.modules_all:
+                instrument_settings = Parameter.create(name=f'{instrument.title}_settings', type='group',
+                                                      children=[instrument.settings.saveState()])
+                attr[f'{instrument.title}_settings'] = ioxml.parameter_to_xml_string(instrument_settings)
 
     def create_new_file(self, new_file):
         if new_file:

@@ -26,7 +26,7 @@ ser_factory = SerializableFactory()
 
 
 if TYPE_CHECKING:
-    from pymodaq.utils.managers.configurator.utils import ConfiguratorModel
+    from pymodaq.utils.managers.state.utils import StateModel
     from pymodaq.control_modules.daq_move import DAQ_Move
     from  pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard
@@ -48,24 +48,24 @@ class SubEntryHandlerTypes(StrEnum):
 
 @SerializableFactory.register_decorator()
 @dataclass
-class ConfiguratorSubEntry:
+class StateSubEntry:
     entry_type: SubEntryHandlerTypes
     module_name: str
     module_type: ModuleType
     setting: ParameterWithPath
 
-    def __eq__(self, other: 'ConfiguratorSubEntry'):
+    def __eq__(self, other: 'StateSubEntry'):
         return (self.entry_type == other.entry_type and
                 self.module_name == other.module_name and
                 self.module_type == other.module_type and
                 self.setting == other.setting)
 
     def __repr__(self):
-        return f"ConfiguratorSubEntry({self.entry_type} for {self.module_type} module {self.module_name}:"\
+        return f"StateSubEntry({self.entry_type} for {self.module_type} module {self.module_name}:"\
                f" {self.setting.value()}"
 
     @staticmethod
-    def serialize(entry: 'ConfiguratorSubEntry') -> bytes:
+    def serialize(entry: 'StateSubEntry') -> bytes:
         """
 
         """
@@ -78,8 +78,8 @@ class ConfiguratorSubEntry:
 
     @classmethod
     def deserialize(cls,
-                    bytes_str: bytes) -> Union['ConfiguratorSubEntry',
-    Tuple['ConfiguratorSubEntry', bytes]]:
+                    bytes_str: bytes) -> Union['StateSubEntry',
+    Tuple['StateSubEntry', bytes]]:
         """Convert bytes into a ParameterWithPath object
 
         Returns
@@ -92,20 +92,20 @@ class ConfiguratorSubEntry:
         parameter_with_path, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_name, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
         module_type, remaining_bytes = ser_factory.get_apply_deserializer(remaining_bytes, False)
-        return ConfiguratorSubEntry(entry_type,
-                                    module_name,
-                                    ModuleType(module_type),
-                                    parameter_with_path), remaining_bytes
+        return StateSubEntry(entry_type,
+                             module_name,
+                             ModuleType(module_type),
+                             parameter_with_path), remaining_bytes
 
 
 class SubEntryHandler(QtCore.QObject):
-    new_entry = QtCore.Signal(ConfiguratorSubEntry)
+    new_entry = QtCore.Signal(StateSubEntry)
 
     handler_name: SubEntryHandlerTypes = abstract_attribute()  # to reimplement in real dialogs
     use_dialog = True
 
     def __init__(self,
-                 model: 'ConfiguratorModel',
+                 model: 'StateModel',
                  settings: Parameter,
                  actuators: list[str] = None,
                  detectors: list[str] = None,
@@ -117,10 +117,10 @@ class SubEntryHandler(QtCore.QObject):
         self.actuators: list[str] = actuators if actuators is not None else []
         self.detectors: list[str] = detectors if detectors is not None else []
         self.extensions: list[str] = extensions if extensions is not None else []
-        self.model: ConfiguratorModel = model
+        self.model: StateModel = model
 
     @staticmethod
-    def get_module(entry: ConfiguratorSubEntry, dashboard: 'DashBoard'):
+    def get_module(entry: StateSubEntry, dashboard: 'DashBoard'):
         return dashboard.modules_manager.get_mod_from_name(entry.module_name, entry.module_type)
 
     def show_dialog(self):
@@ -160,13 +160,13 @@ class SubEntryHandler(QtCore.QObject):
         """
         pass
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
-        """ Get a ConfiguratorEntry from the dialog
+    def get_subentry_from_dialog(self) -> StateSubEntry:
+        """ Get a StateSubEntry from the dialog
 
         To be reimplemented """
         raise NotImplementedError
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         raise NotImplementedError
@@ -220,7 +220,7 @@ class SettingsEntryHandler(SubEntryHandler):
     handler_name = SubEntryHandlerTypes.SETTINGS
     use_dialog = False
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
@@ -253,8 +253,8 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
     def update_suffix_in_dialog(self, actuator_name: str):
         self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
-        return ConfiguratorSubEntry(
+    def get_subentry_from_dialog(self) -> StateSubEntry:
+        return StateSubEntry(
             self.handler_name,
             self.actuator_cb.currentText(),
             module_type=ModuleType.Actuator,
@@ -267,7 +267,7 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
                     suffix=self.value_sb.opts['suffix']),
             path=()),)
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
@@ -294,11 +294,11 @@ class InitSubEntryHandler(SubEntryHandler):
         self.widget.layout().addWidget(self.control_module_cb)
         self.widget.layout().addWidget(self.init_cb)
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
+    def get_subentry_from_dialog(self) -> StateSubEntry:
 
         module_name = self.control_module_cb.currentText()
         module_type = ModuleType.Actuator if module_name in self.actuators else ModuleType.Detector
-        return ConfiguratorSubEntry(
+        return StateSubEntry(
             self.handler_name,
             module_name,
             module_type=module_type,
@@ -310,7 +310,7 @@ class InitSubEntryHandler(SubEntryHandler):
                                                          QtCore.Qt.CheckState.Checked else False,
                                                    )))
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
@@ -340,9 +340,9 @@ class WaitSubEntryHandler(SubEntryHandler):
         self.widget.layout().addWidget(label)
         self.widget.layout().addWidget(self.wait_time_sb)
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
+    def get_subentry_from_dialog(self) -> StateSubEntry:
 
-        return ConfiguratorSubEntry(
+        return StateSubEntry(
             self.handler_name,
             str(ModuleType.NONE),
             module_type=ModuleType.NONE,
@@ -355,7 +355,7 @@ class WaitSubEntryHandler(SubEntryHandler):
                                            siPrefix=True,
                                            )))
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         start = time.perf_counter()
@@ -378,8 +378,8 @@ class StopSubEntryHandler(SubEntryHandler):
         self.widget.layout().addWidget(self.module_cb)
         self.widget.layout().addWidget(self.stop_bool)
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
-        return ConfiguratorSubEntry(
+    def get_subentry_from_dialog(self) -> StateSubEntry:
+        return StateSubEntry(
             self.handler_name,
             self.module_cb.currentText(),
             module_type=ModuleType.Actuator if self.module_cb.currentText() in self.actuators else ModuleType.Detector,
@@ -391,7 +391,7 @@ class StopSubEntryHandler(SubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
             path=()),)
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         module = self.get_module(entry, dashboard)
@@ -414,8 +414,8 @@ class StopAllSubEntryHandler(SubEntryHandler):
         self.widget.layout().addWidget(label)
         self.widget.layout().addWidget(self.stop_bool)
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
-        return ConfiguratorSubEntry(
+    def get_subentry_from_dialog(self) -> StateSubEntry:
+        return StateSubEntry(
             self.handler_name,
             ModuleType.NONE.value,
             module_type=ModuleType.Control,
@@ -427,7 +427,7 @@ class StopAllSubEntryHandler(SubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
             path=()),)
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
@@ -453,8 +453,8 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
         self.widget.layout().addWidget(self.extension_cb)
         self.widget.layout().addWidget(self.stop_bool)
 
-    def get_subentry_from_dialog(self) -> ConfiguratorSubEntry:
-        return ConfiguratorSubEntry(
+    def get_subentry_from_dialog(self) -> StateSubEntry:
+        return StateSubEntry(
             self.handler_name,
             self.extension_cb.currentText(),
             module_type=ModuleType.Extension,
@@ -466,7 +466,7 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
                     value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
             path=()),)
 
-    def execute_subentry(self, entry: ConfiguratorSubEntry,
+    def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
         """ Execute the given subentry """
         try:
@@ -481,7 +481,7 @@ if __name__ == '__main__':
     from pymodaq_gui.qt_utils import mkQApp
 
     class MockModel:
-        def add_data(self, index, data: ConfiguratorSubEntry):
+        def add_data(self, index, data: StateSubEntry):
             print(data)
 
         def rowCount(self):

@@ -90,6 +90,34 @@ class H5SaverLowLevel(H5Backend):
         fill_str = config('data', 'data_saving', 'data_type', 'fill_value')[0]
         self.fill_value: float = np.nan if fill_str == 'nan' else float(fill_str)
 
+    @classmethod
+    def from_file(cls, path: Union[Path, str], save_type: SaveType = 'scan',
+                  new_file: bool = False, metadata: dict = None) -> 'H5SaverLowLevel':
+        """Create and initialise an H5SaverLowLevel from a file path.
+
+        Convenience factory that combines the constructor and :meth:`init_file`
+        call into a single expression.
+        Parameters
+        ----------
+        path: Path or str
+            Full path to the HDF5 file.
+        save_type: SaveType
+            Type label stored in the file (default ``'scan'``).
+        new_file: bool
+            If ``True`` a new file is created, otherwise the existing file is
+            opened for appending.
+        metadata: dict or None
+            Extra attributes written to the raw-data group on creation.
+
+        Returns
+        -------
+        H5SaverLowLevel
+            A fully initialised instance ready for reading/writing.
+        """
+        h5saver = cls(save_type)
+        h5saver.init_file(file_name=Path(path), new_file=new_file, metadata=metadata)
+        return h5saver
+
     def set_swmr_flush_interval(self, interval: int):
         """Set how often to flush data for SWMR readers.
 

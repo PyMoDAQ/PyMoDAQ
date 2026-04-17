@@ -348,7 +348,7 @@ class View2D(ActionManager, QtCore.QObject):
 
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
-            if isinstance(item, SpreadImageItem) or isinstance(item, UniformImageItem):
+            if isinstance(item, (SpreadImageItem, UniformImageItem)):
                 self.plotitem.removeItem(item)
 
     def set_image_displayer(self, data_distribution: DataDistribution):

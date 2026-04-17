@@ -4,6 +4,8 @@ import sys
 import os
 from qtpy import QtWidgets
 
+from pymodaq_gui.utils.shared_ui import SharedUI
+from pymodaq_gui.utils.widgets.window import make_window
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 from pymodaq_gui.h5modules.browsing import H5Browser
@@ -18,6 +20,8 @@ def main(h5file_path: Path = None):
     import sys
     app = mkQApp('H5Browser')
 
+    win, area = make_window(area=False, title='H5Browser')
+
     h5file_path_tmp = None
     parser = argparse.ArgumentParser(description="Opens HDF5 files and navigate their contents")
     parser.add_argument("-i", "--input", help="specify path to the file to be opened")
@@ -30,10 +34,12 @@ def main(h5file_path: Path = None):
             print(f'Error: {args.input} does not exist. Opening h5browser without input file.')
             h5file_path_tmp = h5file_path
 
-    win = QtWidgets.QMainWindow()
-    prog = H5Browser(win, h5file_path=h5file_path_tmp)
-    win.show()
-    QtWidgets.QApplication.processEvents()
+    h5browser = H5Browser(win, h5file_path=h5file_path_tmp)
+
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(h5browser)
+
+    shared_ui.show()
 
     sys.exit(app.exec())
 

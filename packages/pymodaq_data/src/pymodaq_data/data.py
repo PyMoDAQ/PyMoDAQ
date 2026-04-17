@@ -184,19 +184,18 @@ class DataDistribution(BaseEnum):
 
 def _compute_slices_from_axis(axis: Axis, _slice, *ignored, is_index=True, **ignored_also):
     if not is_index:
-        if isinstance(_slice, numbers.Number) or isinstance(_slice, Q_):
+        if isinstance(_slice, (numbers.Number, Q_)):
             if not is_index:
                 _slice = axis.find_index(_slice)
         elif _slice is Ellipsis:
             return _slice
-        elif isinstance(_slice, slice):
-            if not (_slice.start is None and
-                    _slice.stop is None and _slice.step is None):
-                start = axis.find_index(
-                    _slice.start if _slice.start is not None else axis.get_data()[0])
-                stop = axis.find_index(
-                    _slice.stop if _slice.stop is not None else axis.get_data()[-1])
-                _slice = slice(start, stop)
+        elif isinstance(_slice, slice) and not (_slice.start is None and
+                _slice.stop is None and _slice.step is None):
+            start = axis.find_index(
+                _slice.start if _slice.start is not None else axis.get_data()[0])
+            stop = axis.find_index(
+                _slice.stop if _slice.stop is not None else axis.get_data()[-1])
+            _slice = slice(start, stop)
     return _slice
 
 
@@ -437,8 +436,7 @@ class Axis(SerializableBase):
         ----------
         indexes:
         """
-        if not (isinstance(indexes, np.ndarray) or isinstance(indexes, slice) or
-                isinstance(indexes, int)):
+        if not (isinstance(indexes, (np.ndarray, slice, int))):
             indexes = np.array(indexes)
         return self.get_data()[indexes]
 
@@ -1221,38 +1219,37 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         return self.data[index]
 
     def _check_data_type(self, data: List[Union[np.ndarray, Q_]]) -> List[np.ndarray]:
-        """make sure data is a list of nd-arrays"""
-        is_valid = True
+        """Make sure data is a list of non-empty nd-arrays."""
         if data is None:
-            is_valid = False
+            raise TypeError('Data should be a non-empty list of non-empty numpy arrays')
+
+        # Convert single Q_, ndarray, or Number to a list
         if not isinstance(data, list):
-            # try to transform the data to regular type
             if isinstance(data, Q_):
                 self.force_units(str(data.units))
                 data = [data.magnitude]
             elif isinstance(data, np.ndarray):
-                warnings.warn(DataTypeWarning(f'Your data should be a list of numpy arrays not just a single numpy'
-                                              f' array, wrapping them with a list'))
+                warnings.warn(DataTypeWarning('Your data should be a list of numpy arrays, not just a single numpy array. Wrapping it in a list.'))
                 data = [data]
             elif isinstance(data, numbers.Number):
-                warnings.warn(DataTypeWarning(f'Your data should be a list of numpy arrays not just a single numpy'
-                                              f' array, wrapping them with a list'))
+                warnings.warn(DataTypeWarning('Your data should be a list of numpy arrays, not just a single number. Wrapping it in a list.'))
                 data = [np.array([data])]
             else:
-                is_valid = False
-        if isinstance(data, list):
-            if len(data) == 0:
-                is_valid = False
-            elif not (isinstance(data[0], np.ndarray) or
-                             isinstance(data[0], Q_)):
-                is_valid = False
-            elif len(data[0].shape) == 0:
-                is_valid = False
-        if not is_valid:
-            raise TypeError(f'Data should be an non-empty list of non-empty numpy arrays')
+                raise TypeError('Data should be a non-empty list of non-empty numpy arrays')
+
+        # Validate the list
+        if not data or not all(isinstance(item, (np.ndarray, Q_)) for item in data):
+            raise TypeError('Data should be a non-empty list of non-empty numpy arrays')
+
+        # Check for non-empty arrays
+        if any(len(item.shape) == 0 for item in data):
+            raise TypeError('Data should be a non-empty list of non-empty numpy arrays')
+
+        # Convert Q_ to magnitude
         if isinstance(data[0], Q_):
             self.force_units(str(data[0].units))
             data = [array.magnitude for array in data]
+
         return data
 
     def check_shape_from_data(self, data: List[np.ndarray]):
@@ -2642,7 +2639,7 @@ class DataWithAxes(DataBase, SerializableBase):
         list(slice): a version as index of the input argument
         """
         _slices_as_index = []
-        if isinstance(slices, numbers.Number) or isinstance(slices, Q_) or isinstance(slices, slice):
+        if isinstance(slices, (numbers.Number, Q_, slice)):
             slices = [slices]
         if is_navigation:
             indexes = self._am.nav_indexes
@@ -2704,7 +2701,7 @@ class DataWithAxes(DataBase, SerializableBase):
             Object of the same type as the initial data, derived from DataWithAxes. But with lower
             data size due to the slicing and with eventually less axes.
         """
-        if isinstance(slices, numbers.Number) or isinstance(slices, slice):
+        if isinstance(slices, (numbers.Number, slice)):
             slices = [slices]
 
         total_slices, slices = self._compute_slices(slices, is_navigation, is_index=is_index)

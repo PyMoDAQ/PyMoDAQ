@@ -65,59 +65,59 @@ def make_shape_icon(
     pixmap_size = max(width, height)
     pixmap = QtGui.QPixmap(pixmap_size, pixmap_size)
     pixmap.fill(QtCore.Qt.GlobalColor.transparent)
-    painter = QtGui.QPainter(pixmap)
-    painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+    with QtGui.QPainter(pixmap) as painter:
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
 
-    # Create pen and brush if not provided
-    if pen is None:
-        color = kwargs.get("color", "black")
-        pen_width = kwargs.get("pen_width", 1)
-        pen_style = kwargs.get("pen_style", "solid")
-        style = style_map.get(pen_style.lower(), QtCore.Qt.PenStyle.SolidLine)
-        pen = pg.mkPen(color, width=pen_width)
-        pen.setStyle(style)
-    if brush is None and filled:
-        brush_color = kwargs.get("brush_color", kwargs.get("color", "black"))
-        brush = pg.mkBrush(brush_color)
+        # Create pen and brush if not provided
+        if pen is None:
+            color = kwargs.get("color", "black")
+            pen_width = kwargs.get("pen_width", 1)
+            pen_style = kwargs.get("pen_style", "solid")
+            style = style_map.get(pen_style.lower(), QtCore.Qt.PenStyle.SolidLine)
+            pen = pg.mkPen(color, width=pen_width)
+            pen.setStyle(style)
+        if brush is None and filled:
+            brush_color = kwargs.get("brush_color", kwargs.get("color", "black"))
+            brush = pg.mkBrush(brush_color)
 
-    # Set brush and pen
-    painter.setBrush(brush if filled else QtCore.Qt.BrushStyle.NoBrush)
-    painter.setPen(pen if not filled else QtCore.Qt.PenStyle.NoPen)
+        # Set brush and pen
+        painter.setBrush(brush if filled else QtCore.Qt.BrushStyle.NoBrush)
+        painter.setPen(pen if not filled else QtCore.Qt.PenStyle.NoPen)
 
-    if shape == "circle":
-        painter.drawEllipse(1, 1, size - 2, size - 2)
-    elif shape == "triangle":
-        # Draw an equilateral triangle pointing upwards
-        half_size = size / 2
-        triangle_height = (size * (3 ** 0.5)) / 2
-        offset_y = (size - triangle_height) / 2
-        points = [
-            QtCore.QPointF(half_size, offset_y),
-            QtCore.QPointF(size - 1, size - offset_y - 1),
-            QtCore.QPointF(1, size - offset_y - 1),
-        ]
-        polygon = QtGui.QPolygonF(points)
-        painter.drawPolygon(polygon)
-    elif shape == "square":
-        painter.drawRect(1, 1, size - 2, size - 2)
-    elif shape == "rectangle":
-        painter.drawRect(1, 1, width - 2, height - 2)
-    elif shape == "diamond":
-        # Draw a diamond (rotated square)
-        half_width = width / 2
-        half_height = height / 2
-        points = [
-            QtCore.QPointF(half_width, 1),
-            QtCore.QPointF(width - 1, half_height),
-            QtCore.QPointF(half_width, height - 1),
-            QtCore.QPointF(1, half_height),
-        ]
-        polygon = QtGui.QPolygonF(points)
-        painter.drawPolygon(polygon)
-    else:
-        raise ValueError(f"Unsupported shape: {shape}")
+        if shape == "circle":
+            painter.drawEllipse(1, 1, size - 2, size - 2)
+        elif shape == "triangle":
+            # Draw an equilateral triangle pointing upwards
+            half_size = size / 2
+            triangle_height = (size * (3 ** 0.5)) / 2
+            offset_y = (size - triangle_height) / 2
+            points = [
+                QtCore.QPointF(half_size, offset_y),
+                QtCore.QPointF(size - 1, size - offset_y - 1),
+                QtCore.QPointF(1, size - offset_y - 1),
+            ]
+            polygon = QtGui.QPolygonF(points)
+            painter.drawPolygon(polygon)
+        elif shape == "square":
+            painter.drawRect(1, 1, size - 2, size - 2)
+        elif shape == "rectangle":
+            painter.drawRect(1, 1, width - 2, height - 2)
+        elif shape == "diamond":
+            # Draw a diamond (rotated square)
+            half_width = width / 2
+            half_height = height / 2
+            points = [
+                QtCore.QPointF(half_width, 1),
+                QtCore.QPointF(width - 1, half_height),
+                QtCore.QPointF(half_width, height - 1),
+                QtCore.QPointF(1, half_height),
+            ]
+            polygon = QtGui.QPolygonF(points)
+            painter.drawPolygon(polygon)
+        else:
+            raise ValueError(f"Unsupported shape: {shape}")
 
-    painter.end()
+        painter.end()
     return QtGui.QIcon(pixmap)
 
 def create_font(font_name=None, font_size=None, isbold=False, isitalic=False) -> QtGui.QFont:
@@ -245,12 +245,13 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
                 flip_v: bool = False):
     """ Create an icon from various sources by order of preference:
 
-    1) icon_name is an icon
-    2) icon_name is a registered MaterialIcon
-    3) icon_name is a real path to a png
-    4) icon_name is a registered png in icon_library
-    5) icon_name is a registered ThemeIcon
-    6) icon_name is a registered StandardPixmap
+    1) icon_name is a MaterialIcon
+    2) icon_name is a regular QIcon
+    3) icon_name is a registered MaterialIcon
+    4) icon_name is a real path to a png
+    5) icon_name is a registered png in icon_library
+    6) icon_name is a registered ThemeIcon
+    7) icon_name is a registered StandardPixmap
 
     Parameters
     ----------
@@ -265,8 +266,12 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
     flip_v:
         Mirror the icon vertically (top ↔ bottom).
     """
-
-    if isinstance(icon_name, QtGui.QIcon):
+    if isinstance(icon_name, MaterialIcon):
+        icon_name.set_color(create_color(icon_color))
+        if icon_checked_color is not None:
+            icon_name.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
+        return _flip_icon(icon_name, flip_h, flip_v)
+    elif isinstance(icon_name, QtGui.QIcon): #cannot set Color on non MaterialIcons
         return _flip_icon(icon_name, flip_h, flip_v)
     elif resource_path_exists(
             MaterialIcon.resource_path(

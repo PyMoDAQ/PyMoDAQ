@@ -114,9 +114,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self._splash_sc: Optional[QtWidgets.QSplashScreen] = None
 
-        if not (isinstance(parent, DockArea) or
-                isinstance(parent, QtWidgets.QMainWindow) or
-                isinstance(parent, QtWidgets.QWidget)):
+        if not (isinstance(parent, (DockArea, QtWidgets.QMainWindow, QtWidgets.QWidget))):
             parent = QtWidgets.QWidget()
 
         self.parent = parent

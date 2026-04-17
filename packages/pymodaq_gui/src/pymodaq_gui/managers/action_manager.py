@@ -66,13 +66,14 @@ class QAction(QtQAction):
     def connect_to(self, slot):
         self.triggered.connect(slot)
 
-    def set_icon(self, icon_name: str = None):
+    def set_icon(self, icon_name: str = None,
+                 icon_color: Union[QtGui.QColor, bytes, str]=None):
         if icon_name is None:
             if self.isChecked():
                 icon_name = self.icon_checked
             else:
                 icon_name = self.icon_unchecked
-        self.setIcon(create_icon(icon_name))
+        self.setIcon(create_icon(icon_name, icon_color))
 
     def __repr__(self):
         return f'QAction {self.text()}'
@@ -98,6 +99,9 @@ class WidgetActionProxy(QtWidgets.QWidget):
         self._widget.setVisible(visible)
         super().setVisible(visible)
 
+    def isVisible(self) -> bool:
+        return self.widget.isVisible()
+
     @property
     def widget(self) -> QtWidgets.QWidget:
         return self._widget
@@ -122,6 +126,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               icon_checked_color: Union[QtGui.QColor, str] = None,
               flip_h: bool = False,
               flip_v: bool = False,
+              before: QtQAction = None,
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -164,6 +169,9 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
         mirror the icon horizontally (left ↔ right)
     flip_v: bool
         mirror the icon vertically (top ↔ bottom)
+    before: QAction, optional
+        if set, the action is inserted before this action in the toolbar/menu;
+        if None the action is appended at the end
     """
 
     if icon_name is None or icon_name == '':
@@ -184,9 +192,15 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
             action.set_icon()
     action.setToolTip(tip)
     if toolbar is not None:
-        toolbar.addAction(action)
+        if before is not None:
+            toolbar.insertAction(before, action)
+        else:
+            toolbar.addAction(action)
     if menu is not None:
-        menu.addAction(action)
+        if before is not None:
+            menu.insertAction(before, action)
+        else:
+            menu.addAction(action)
     if shortcut is not None:
         action.setShortcut(shortcut)
     action.setVisible(visible)
@@ -245,7 +259,7 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
 
         action: QtWidgets.QAction = toolbar.addWidget(widget)
         action.setVisible(visible)
-        action.setToolTip(tip)
+        widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
     else:
         widget.setVisible(visible)
@@ -287,6 +301,69 @@ class ActionManager:
             self.reference_menu('default', menu)
             self.set_menu(menu)
 
+    def _resolve_toolbar(self, toolbar: Union[str, QtWidgets.QToolBar, None],
+                         auto: bool = True) -> Union[QtWidgets.QToolBar, None]:
+        """Resolve a toolbar reference to a QToolBar instance.
+
+        Parameters
+        ----------
+        toolbar: str, QToolBar, or None
+            str: looked up by name via get_toolbar
+            QToolBar: returned as-is
+            None + auto=True: returns the default toolbar (creating one if needed)
+            None + auto=False: returns None
+        """
+        if toolbar is not None:
+            if isinstance(toolbar, str):
+                return self.get_toolbar(toolbar)
+            if not isinstance(toolbar, QtWidgets.QToolBar):
+                raise TypeError(f'toolbar must be None, a str, or QToolBar, got {type(toolbar)}')
+            return toolbar
+        return self.toolbar if auto else None
+
+    def _resolve_menu(self, menu: Union[str, QtWidgets.QMenu, None],
+                      auto: bool = True) -> Union[QtWidgets.QMenu, None]:
+        """Resolve a menu reference to a QMenu instance.
+
+        Parameters
+        ----------
+        menu: str, QMenu, QMenuBar, or None
+            str: looked up by name via get_menu
+            QMenu/QMenuBar: returned as-is
+            None + auto=True: returns the default menu (creating one if needed)
+            None + auto=False: returns None
+        """
+        if menu is not None:
+            if isinstance(menu, str):
+                return self.get_menu(menu)
+            if not isinstance(menu, (QtWidgets.QMenu, QtWidgets.QMenuBar)):
+                raise TypeError(f'menu must be None, a str, QMenu, or QMenuBar, got {type(menu)}')
+            return menu
+        return self.menu if auto else None
+
+    def _resolve_action(self, action: Union[str, 'QAction', WidgetActionProxy, None]) -> Union['QAction', None]:
+        """Resolve an action reference to a QAction instance.
+
+        Parameters
+        ----------
+        action: str, QAction, WidgetActionProxy, or None
+            str: looked up by name via get_action
+            WidgetActionProxy: unwrapped to its underlying QAction
+            QAction: returned as-is
+            None: returned as None
+        """
+        if action is None:
+            return None
+        if isinstance(action, str):
+            action = self.get_action(action)
+        if isinstance(action, WidgetActionProxy):
+            return action._action
+        if isinstance(action, QtWidgets.QMenu):
+            return action.menuAction()
+        if not isinstance(action, QtQAction):
+            raise TypeError(f'action must be None, a str, QAction, WidgetActionProxy, or QMenu, got {type(action)}')
+        return action
+
     def setup_actions(self):
         """Method where to create actions to be subclassed. Mandatory
 
@@ -317,6 +394,7 @@ class ActionManager:
                    icon_checked_color: Union[QtGui.QColor, bytes, str]=None,
                    flip_h: bool = False,
                    flip_v: bool = False,
+                   before: Union[str, 'QAction', WidgetActionProxy, None] = None,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -371,27 +449,18 @@ class ActionManager:
             mirror the icon horizontally (left ↔ right)
         flip_v: bool
             mirror the icon vertically (top ↔ bottom)
+        before: str, QAction, WidgetActionProxy, or None, optional
+            if set, the action is inserted before this action in the toolbar/menu;
+            accepts a short_name str, a QAction instance, or a WidgetActionProxy
 
         See Also
         --------
         affect_to, pymodaq.resources.QtDesigner_Ressources.icon_library,
         pymodaq.utils.managers.action_manager.add_action
         """
-        if toolbar is not None or auto_toolbar:
-            if toolbar is None:
-                toolbar = self.toolbar
-            elif isinstance(toolbar, str):
-                toolbar = self.get_toolbar(toolbar)
-            elif not isinstance(toolbar, QtWidgets.QToolBar):
-                raise TypeError(f'toolbar must be either None, a string, or QToolBar, got {type(toolbar)}')
-
-        if menu is not None or auto_menu:
-            if menu is None:
-                menu = self.menu
-            elif isinstance(menu, str):
-                menu = self.get_menu(menu)
-            elif not isinstance(menu, QtWidgets.QMenu):
-                raise TypeError(f'menu must be either None, a string, or QMenu, got {type(menu)}')
+        toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
+        menu = self._resolve_menu(menu, auto=auto_menu)
+        before = self._resolve_action(before)
 
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable,
                                               checked=checked, toolbar=toolbar, menu=menu,
@@ -400,7 +469,8 @@ class ActionManager:
                                               icon_color=icon_color,
                                               icon_checked_color=icon_checked_color,
                                               flip_h=flip_h,
-                                              flip_v=flip_v)
+                                              flip_v=flip_v,
+                                              before=before)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
@@ -437,13 +507,7 @@ class ActionManager:
         -------
         QtWidgets.QWidget
         """
-        if auto_toolbar:
-            if toolbar is None:
-                toolbar = self.toolbar
-            elif isinstance(toolbar, str):
-                toolbar = self.get_toolbar(toolbar)
-            elif not isinstance(toolbar, QtWidgets.QToolBar):
-                raise TypeError(f'toolbar must be either None, a string, or QToolBar, got {type(toolbar)}')
+        toolbar = self._resolve_toolbar(toolbar, auto=auto_toolbar)
 
         widget = addwidget(klass, *args, tip=tip, toolbar=toolbar, visible=visible, signal_str=signal_str,
                            slot=slot, enabled=enabled, **kwargs)
@@ -454,41 +518,55 @@ class ActionManager:
             warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
         return widget
 
-    def add_menu(self, short_name: str, title: str, menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
-                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True) -> QtWidgets.QMenu:
+    def add_menu(self, short_name: str, title: str = '',
+                 parent_menu: QtWidgets.QMenuBar | QtWidgets.QMenu | str = None,
+                 icon_name: Union[str, Path, QtGui.QIcon] = '', auto_menu=True,
+                 menu: QtWidgets.QMenu = None,
+                 before: Union[QtWidgets.QMenu, str, None] = None) -> QtWidgets.QMenu:
         """Create and add a menu to a parent menu
 
         Parameters
         ----------
         short_name: str
             the name as referenced in the dict self._menus
-        title: str
-            Displayed title of the menu
-        menu: QMenuBar, QMenu, str, optional
-            a parent menu where this menu should be added. If None, uses the default menu
+        title: str, optional
+            Displayed title of the menu. When *menu* is also provided and *title*
+            is non-empty, the title overrides the instance's own title.
+        parent_menu: QMenuBar, QMenu, str, optional
+            the parent menu or menubar where this menu should be added. If None, uses the default menu
         icon_name: str / Path / QtGui.QIcon / enum name, optional
             str/Path: the png file name/path to produce the icon
             QtGui.QIcon: the instance of a QIcon element
             ThemeIcon enum: the value of QtGui.QIcon.ThemeIcon (requires Qt>=6.7)
         auto_menu: bool
             if True add this menu to the defined parent menu
+        menu: QMenu, optional
+            an existing QMenu instance to register instead of creating a new one.
+        before: QMenu, str, or None, optional
+            if specified, the new menu will be inserted before this menu (by instance or short_name);
+            if None the menu is appended at the end
 
         Returns
         -------
         QtWidgets.QMenu
-            The created menu
+            The created (or provided) menu
 
         See Also
         --------
         add_action, get_menu
         """
-        if auto_menu:
-            if menu is None:
-                menu = self._menu
-        if isinstance(menu, str):
-            menu = self.get_menu(menu)
+        if auto_menu and parent_menu is None:
+            parent_menu = self._menu
+        elif isinstance(parent_menu, str):
+            parent_menu = self.get_menu(parent_menu)
+        before = self._resolve_menu(before, auto=False)
 
-        new_menu = QtWidgets.QMenu(title, parent=menu)
+        if menu is None:
+            new_menu = QtWidgets.QMenu(title, parent=parent_menu)
+        else:
+            new_menu = menu
+            if title:
+                new_menu.setTitle(title)
 
         # Set icon if provided
         if icon_name and icon_name != '':
@@ -498,8 +576,11 @@ class ActionManager:
                 new_menu.setIcon(create_icon(icon_name))
 
         # Add to parent menu if specified
-        if menu is not None:
-            menu.addMenu(new_menu)
+        if parent_menu is not None:
+            if before is None:
+                parent_menu.addMenu(new_menu)
+            else:
+                parent_menu.insertMenu(before.menuAction(), new_menu)
 
         # Store reference
         self._menus[short_name] = new_menu
@@ -525,7 +606,7 @@ class ActionManager:
     def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
                     toolbar: QtWidgets.QToolBar = None,
                     area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
-                    before: QtWidgets.QToolBar = None) -> QtWidgets.QToolBar:
+                    before: Union[str, QtWidgets.QToolBar, None] = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 
         Parameters
@@ -543,8 +624,8 @@ class ActionManager:
         add_break: bool, optional
             If True, a toolbar break is added in the given area before adding the toolbar, valid only for a
             QMainWindow parent
-        before: QToolbar, optional
-            if specified, the new toolbar will be inserted before this toolbar
+        before: str or QToolBar or None, optional
+            if specified, the new toolbar will be inserted before this toolbar (by instance or short_name)
         Returns
         -------
         QtWidgets.QToolBar
@@ -554,6 +635,8 @@ class ActionManager:
         --------
         add_action, get_toolbar
         """
+        before = self._resolve_toolbar(before, auto=False)
+
         if isinstance(parent, QtWidgets.QMainWindow) and add_break:
             parent.addToolBarBreak(area)
         if toolbar is None:
@@ -756,7 +839,7 @@ class ActionManager:
         obj: QToolbar or QMenu
             The object where to add the action
         """
-        if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
+        if isinstance(obj, (QtWidgets.QToolBar, QtWidgets.QMenu)):
             if isinstance(action_name, QAction):
                 obj.addAction(action_name)
             elif isinstance(action_name, WidgetActionProxy):

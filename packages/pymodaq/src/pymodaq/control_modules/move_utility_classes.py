@@ -540,7 +540,7 @@ class DAQ_Move_base(PluginBase):
 
     @current_value.setter
     def current_value(self, value: Union[float, np.ndarray, DataActuator]):
-        if isinstance(value, numbers.Number) or isinstance(value, np.ndarray):
+        if isinstance(value, (numbers.Number, np.ndarray)):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
         else:

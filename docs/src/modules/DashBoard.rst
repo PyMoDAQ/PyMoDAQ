@@ -13,7 +13,8 @@ This module is the heart of PyMoDAQ, it will:
 The flow of this module is as follow:
 
 * At startup you have to define/load/modify an experiment (see :ref:`experiment_manager`) representing an ensemble of actuators and detectors
-* Define/load/modify a Configuration (see :ref:`configurator`) representing a state of the control modules settings and some other special configuration subentries
+* Define/load/modify a State (see :ref:`state_manager`) representing a state of the control modules settings and some other special state subentries
+  like actuator values
 * Define/load/modify eventual overshoots (see :ref:`overshoot_manager`)
 * Define/load/modify eventual ROI (Region of interests) selections (see :ref:`roi_manager`)
 * Use the actuators and detectors manually to drive your experiment
@@ -91,7 +92,7 @@ The **Tools/Experiment** menu enables to create or modify (using the :ref:`exper
 files defining a set of actuators and detectors used for a given experiment. Each experiment has therefore a corresponding
 experiment file. At startup, the program checks for existing experiment files and create a menu entry for each of them.
 
-The **Configurator Modes** menu, new from version 5.2.x, enables to create or modify (using the :ref:`configurator`)
+The **State** menu, new from version 5.2.x, enables to create or modify (using the :ref:`state_manager`)
 *configurations* that are binary files defining a set of status for the settings of all actuators and detectors
 declared in the DashBoard (from the loaded experiment). One can therefore easily switch between different configurations, hence
 different settings for the control modules. Special *actions* are also available such as the initialization of control

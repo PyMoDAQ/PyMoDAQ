@@ -13,7 +13,7 @@ from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_gui.parameter import Parameter, ioxml
 
 
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 
 from pymodaq.utils.managers.overshoot.utils import ModulesManager, \
@@ -56,14 +56,15 @@ class Overshooter(ManagerBase):
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
-    entry_type = 'overshooter'
+    entry_type = 'overshoot'
     entry_extension ='.xml'
+    icon_name = 'security'
 
     overshoot_signal = QtCore.Signal(Overshoot)
 
     def __init__(self, dashboard: 'DashBoard'):
 
-        self._configurator = dashboard.configurator
+        self._state_manager = dashboard.state_manager
 
         super().__init__(dashboard=dashboard,
                          module_manager_class=ModulesManager)
@@ -80,8 +81,8 @@ class Overshooter(ManagerBase):
         self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
         if self.experiment_manager.entry_applied:
             self.do_things_after_experiment_set(self.experiment_manager.entry)
-        self.configurator.new_entry.connect(self.update_configurations)
-        self.configurator.deleted_entry.connect(self.update_configurations)
+        self.state_manager.new_entry.connect(self.update_configurations)
+        self.state_manager.deleted_entry.connect(self.update_configurations)
 
 
     def child_added(self, param: Parameter, data: tuple[Parameter, int]):
@@ -91,25 +92,25 @@ class Overshooter(ManagerBase):
 
     @property
     def experiment_manager(self) -> ExperimentManager:
-        return self.configurator.experiment_manager
+        return self.state_manager.experiment_manager
 
     @property
     def experiment_filename(self) -> str:
-        return self.configurator.experiment_filename
+        return self.state_manager.experiment_filename
 
     @experiment_filename.setter
     def experiment_filename(self, experiment_filename: str):
-        self.configurator.experiment_filename = experiment_filename
+        self.state_manager.experiment_filename = experiment_filename
         self.entries_sync.update_key('items', self.entries)
         self.update_entry()
 
     @property
-    def configurator(self) -> Configurator:
-        return self._configurator
+    def state_manager(self) -> StateManager:
+        return self._state_manager
 
     def apply_config_from_overshoot(self, overshoot: Overshoot):
-        self.configurator._execute_entry(
-            self.configurator.entry_path_from_name(self.settings['configuration']))
+        self.state_manager._execute_entry(
+            self.state_manager.entry_path_from_name(self.settings['configuration']))
         self._overshoot_under_process = False
 
     def show_hide_module_manager_settings(self):
@@ -249,13 +250,13 @@ class Overshooter(ManagerBase):
         self.add_action('update_data', 'Update Data', 'refresh')
 
         self.create_dashboard_toolbar(add_dashboard=__name__ == '__main__',
-                                      add_experiment=True, add_configurator=True, add_break=False)
+                                      add_experiment=True, add_state=True, add_break=False)
 
     def connect_things(self):
         self.connect_action('update_data', self.update_available_data)
 
     def update_configurations(self):
-        configurations = self.configurator.entries
+        configurations = self.state_manager.entries
         self.settings.child('configuration').setLimits(configurations)
 
     def update_available_data(self):
