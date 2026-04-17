@@ -95,6 +95,11 @@ class MonacoApp(CustomApp):
 
         self.tab_widget.tabCloseRequested.connect(self.close_editor)
 
+        self.file_watcher.fileChanged.connect(self.do_things_on_file_changed)
+
+    def do_things_on_file_changed(self, file_path_as_str: str):
+        file_path = Path(file_path_as_str)
+
     @property
     def current_editor(self) -> MonacoWithFile:
         """ Get the editor in the currently opened tab"""
