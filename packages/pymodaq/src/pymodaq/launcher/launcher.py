@@ -544,7 +544,6 @@ def main():
 
     shared_ui = SharedUI(win)
     prog = Launcher(win)
-
     shared_ui.affect_application(prog)
 
     win.resize(850, 450)
