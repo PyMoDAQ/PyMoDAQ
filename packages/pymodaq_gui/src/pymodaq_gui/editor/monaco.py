@@ -230,10 +230,12 @@ class MonacoApp(CustomApp):
         self.tab_widget.setTabToolTip(tab_index, str(file_path))
         self.tab_widget.setCurrentIndex(tab_index)
 
+        monaco_widget.file_status.connect(self.unsaved_tabname)
+
         if display:
             self.display_file_text(file_path, monaco_widget)
 
-        monaco_widget.file_status.connect(self.unsaved_tabname)
+        monaco_widget.set_saved()
 
     def unsaved_tabname(self, file_status: FileStatus):
         for ind in range(self.tab_widget.count()):
