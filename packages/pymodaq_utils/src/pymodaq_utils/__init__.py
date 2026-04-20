@@ -16,7 +16,7 @@ try:
         logger_var.info(f"Done")
         logger_var.info('************************')
     except Exception:
-        print("Couldn't create the local folder to store logs , presets...")
+        print("Couldn't create the local folder to store logs , experiments...")
 
     from pymodaq_utils.config import GlobalConfig as Config
 

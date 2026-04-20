@@ -10,7 +10,7 @@ from pymodaq_utils.logger import set_logger, get_module_name  # for backcompat
 from pymodaq_utils.config import GlobalConfig
 from pymodaq.utils.data import DataFromPlugins   # for backcompat
 
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_experiment_path
 
 if version_mod.parse(platform.python_version()) >= version_mod.parse('3.9'):
     # from version 3.9 the cache decorator is available
@@ -23,8 +23,8 @@ logger = set_logger(get_module_name(__file__))
 
 
 
-def copy_preset():                          # pragma: no cover
-    path = get_set_preset_path().joinpath('default.xml')
+def copy_experiment():                          # pragma: no cover
+    path = get_set_experiment_path().joinpath('default.xml')
     if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
         with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
             path.write_text(file.read())

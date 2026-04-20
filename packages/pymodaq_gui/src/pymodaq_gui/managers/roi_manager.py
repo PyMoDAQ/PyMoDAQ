@@ -19,7 +19,7 @@ from pymodaq_gui.managers.action_manager import QAction
 from pymodaq_data.plotting.utils import PlotColors
 from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.config import GlobalConfig as Config
-from pymodaq_gui.config_saver_loader import get_set_roi_path
+from pymodaq_gui.config import get_set_roi_path
 from pymodaq_gui.utils import select_file
 from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, RectROI, DataDim
 

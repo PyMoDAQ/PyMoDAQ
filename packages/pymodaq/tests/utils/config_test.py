@@ -1,20 +1,17 @@
 from pathlib import Path
 
+import pymodaq_gui.config
 from pymodaq.utils import config as config_mod_pymodaq
 from pymodaq_utils import config as config_mod
 
 
-def test_import():
-    from pymodaq.utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir, USER,
-                                      CONFIG_BASE_PATH, get_set_local_dir)
-
 
 class TestGetSet:
-    def test_get_set_preset_path(self):
+    def test_get_set_experiment_path(self):
         local_path = config_mod.get_set_local_dir()
-        preset_path = config_mod_pymodaq.get_set_preset_path()
-        assert Path(preset_path) == Path(local_path).joinpath('preset_configs')
-        assert Path(preset_path).is_dir()
+        experiment_path = config_mod_pymodaq.get_set_experiment_path()
+        assert Path(experiment_path) == Path(local_path).joinpath('experiments')
+        assert Path(experiment_path).is_dir()
 
     def test_get_set_pid_path(self):
         local_path = config_mod.get_set_local_dir()
@@ -27,12 +24,6 @@ class TestGetSet:
         log_path = config_mod.get_set_log_path()
         assert Path(log_path) == Path(local_path).joinpath('log')
         assert Path(log_path).is_dir()
-
-    def test_get_set_layout_path(self):
-        local_path = config_mod.get_set_local_dir()
-        layout_path = config_mod_pymodaq.get_set_layout_path()
-        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
-        assert Path(layout_path).is_dir()
 
     def test_get_set_remote_path(self):
         local_path = config_mod.get_set_local_dir()
@@ -49,10 +40,6 @@ class TestGetSet:
 
 def test_required_config_entries():
     config = config_mod_pymodaq.Config()
-    assert 'presets' in config
-    assert 'default_preset_for_scan' in config('presets')
-    assert 'default_preset_for_logger' in config('presets')
-    assert 'default_preset_for_pid' in config('presets')
 
     assert 'actuator' in config
     assert 'ui' in config('actuator')

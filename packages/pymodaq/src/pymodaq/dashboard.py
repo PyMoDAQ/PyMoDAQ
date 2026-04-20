@@ -6,9 +6,8 @@ import datetime
 import subprocess
 import logging
 from pathlib import Path
-from importlib import import_module
 
-from typing import Tuple, Union, List, Any, TYPE_CHECKING, Sequence, Iterable, Type
+from typing import Union, List, Any, TYPE_CHECKING, Sequence
 import argparse
 
 from qtpy import QtGui, QtWidgets, QtCore
@@ -16,44 +15,37 @@ from qtpy.QtCore import Qt, QThread, Signal, QSize
 from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
-    QLabel,
     QDialogButtonBox,
     QMessageBox,
 )
-import numpy as np
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq.utils.leco.pymodaq_listener import LECOCommands, LECODashboardCommands, ActorListener, \
-    DashboardActorListener, LECOComponentMixin
+from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
 from pymodaq_gui.managers.manager_base import ManagerActions
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
-from pymodaq_utils.utils import get_version, find_dict_in_list_from_key_val, ThreadCommand
+from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
-from pymodaq_gui.messenger import messagebox, dialog
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.shared_ui import MenuNames
 
-from pymodaq.utils.managers.modules.modules_manager import ModulesManager, ModuleType
-from pymodaq.utils.managers.preset.preset_manager import PresetManager
-from pymodaq_gui.managers.manager_base import Menu
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
+from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq.utils.managers.overshoot.overshooter import Overshooter
-from pymodaq.utils.managers.remote_manager import RemoteManager
 from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
-from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
-from pymodaq.utils.config import (get_set_preset_path, get_set_overshoot_path,
-                                  get_set_roi_path, get_set_remote_path, get_set_layout_path)
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -63,9 +55,7 @@ from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import  ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
-
-from pymodaq.utils.config import Config as ControlModulesConfig
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
@@ -80,21 +70,12 @@ extensions = get_extensions()
 
 
 class ManagerEnums(BaseEnum):
-    preset = 0
+    experiment = 0
     remote = 1
     overshoot = 2
     roi = 3
     configuration = 4
     
-    
-class PresetActions(StrEnum):
-    Open = "open_preset"
-    New = "new_preset"
-    Modify = "modify_preset"
-    Label = "preset_label"
-    List = "preset_list"
-    Load = "load_preset"
-
 
 class PymodaqUpdateTableWidget(QTableWidget):
     """
@@ -153,7 +134,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         {"title": "Log level", "name": "log_level", "type": "list",
          "value": config("utils", "general", "debug_level")[0],
          "limits": config("utils", "general", "debug_level"),},
-        {"title": "Loaded presets", "name": "loaded_files", "type": "group",
+        {"title": "Loaded experiments", "name": "loaded_files", "type": "group",
          "children": [
              {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
              {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
@@ -171,7 +152,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         ----------
         """
 
-        CustomApp.__init__(self, parent)
+        CustomApp.__init__(self, parent, create_app_toolbar=False)
         LECOComponentMixin.__init__(self, DashboardActorListener)
 
         logger.info("Initializing Dashboard")
@@ -185,8 +166,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.database_module = None
         self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
-        self.preset_manager: PresetManager = None  # instanciation in do_things_after_ui_setup
-        self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
+        self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
+        self.state_manager: StateManager = None # instanciation in do_things_after_ui_setup
         self.overshooter: Overshooter = None # instanciation in do_things_after_ui_setup
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
@@ -210,7 +191,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.compact_actuator_manager: ActuatorCompactDock = None
         self.compact_detector_manager: DetectorCompactDock = None
 
-        self._scripted_preset_load = False
+        self._scripted_experiment_load = False
 
         self.setup_ui()
 
@@ -233,45 +214,48 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.modules_manager.detectors_all = modules
 
     def do_things_after_ui_setup(self):
-        self.preset_manager = PresetManager(dashboard=self)
-        self.preset_manager.update_entry()
-        self.preset_manager.entry = 'default'
-        self.preset_manager.applied_entry.connect(self.do_things_after_preset_set)
-        self.configurator = Configurator(dashboard=self)
-        self.preset_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('preset'),
-                                                      menu=self.get_menu('preset'))
-        self.preset_manager.update_menu(self.get_menu('preset'))
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
-                                                    menu=self.get_menu('configurator'))
-        self.configurator.update_menu(self.get_menu('configurator'))
+        self.experiment_manager = ExperimentManager(dashboard=self)
+        self.experiment_manager.update_entry()
+        self.experiment_manager.entry = 'default'
+        self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
+        self.state_manager = StateManager(dashboard=self)
+        self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'),
+                                                          menu=self.get_menu('experiment'))
+        self.experiment_manager.update_menu(self.get_menu('experiment'))
+        self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
+                                                     menu=self.get_menu('state'))
+        self.state_manager.update_menu(self.get_menu('state'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 
-        self.get_toolbar('configurator').setEnabled(False)
+        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
+
+        self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
-        self.preset_manager.enable_actions(True)
+        self.experiment_manager.enable_actions(True)
 
         self.connect_leco(connect=True)
 
 
-    def do_things_after_preset_set(self, preset_name: str):
+    def do_things_after_experiment_set(self, experiment_name: str):
 
-        self.configurator.update_menu(self.get_menu('configurator'))
-        self.get_menu('configurator').setEnabled(True)
-        self.get_toolbar('configurator').setEnabled(True)
+        self.state_manager.update_menu(self.get_menu('state'))
+        self.get_menu('state').setEnabled(True)
+        self.get_toolbar('state').setEnabled(True)
+
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
-        self.configurator.enable_actions(True)
+
+        self.get_menu('extensions').setEnabled(True)
+
+        self.state_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator._execute_entry(self.configurator.entry_filepath)
+        self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
-        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
-            menu.setEnabled(True)
-
-        if self._scripted_preset_load:
-            self._scripted_preset_load = False
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, True))
+        if self._scripted_experiment_load:
+            self._scripted_experiment_load = False
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, True))
 
     def get_leco_name(self) -> str:
         return "dashboard"
@@ -291,30 +275,30 @@ class DashBoard(CustomApp, LECOComponentMixin):
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
         elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
-            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
         elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
             configuration = status.attribute
             loaded = False
-            if (configuration in self.configurator.entries and
-                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            if (configuration in self.state_manager.entries and
+                self.state_manager.is_action_enabled(ManagerActions.EXECUTE)
             ):
 
-                self.configurator.entry = configuration
-                self.configurator.execute_entry_base(self.configurator.entry_filename)
+                self.state_manager.entry = configuration
+                self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
-        elif status.command == LECODashboardCommands.GET_PRESETS:
-            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_PRESETS, self.preset_manager.entries))
-        elif status.command == LECODashboardCommands.APPLY_PRESET:
-            preset = status.attribute
-            if preset not in self.preset_manager.entries:
-                self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_PRESET_DONE, False))
+        elif status.command == LECODashboardCommands.GET_EXPERIMENTS:
+            self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_EXPERIMENTS, self.experiment_manager.entries))
+        elif status.command == LECODashboardCommands.APPLY_EXPERIMENT:
+            experiment = status.attribute
+            if experiment not in self.experiment_manager.entries:
+                self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_EXPERIMENT_DONE, False))
             else:
-                self._scripted_preset_load = True
-                self.preset_manager.entry = preset
-                self.preset_manager.execute_entry_base(self.preset_manager.entry_filename)
+                self._scripted_experiment_load = True
+                self.experiment_manager.entry = experiment
+                self.experiment_manager.execute_entry(self.experiment_manager.entry_filepath)
 
     def add_status(self, txt):
         """
@@ -474,52 +458,83 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
         return ext_module
 
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
+        Create the menubar object looking like :
+        """
+        self.add_menu(MenuNames.FILE, 'File', menubar)
+
+        self.add_menu(MenuNames.VIEW, 'View', menubar)
+
+        self.add_menu('docked', 'Docked', MenuNames.VIEW)
+
+        self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
+        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name=ExperimentManager.icon_name)
+        self.add_menu('state', 'State', MenuNames.TOOLS, icon_name=StateManager.icon_name)
+        self.get_menu('state').setEnabled(False)
+
+        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name=Overshooter.icon_name)
+        self.get_menu('overshooter').setEnabled(False)
+
+        # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
+        # self.update_roi_menu()
+
+        # self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
+        # self.update_remote_menu()
+
+        # extensions menu
+        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuNames.TOOLS)
+        self.get_menu('extensions').setEnabled(False)
+
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
-                        "Load the Saved Docks layout corresponding to the current preset",
-                        auto_toolbar=False,)
+                        "Load the Saved Docks layout corresponding to the current experiment",
+                        auto_toolbar=False, menu='docked')
         self.add_action("save_layout", "Save Layout", "",
-                        "Save the Saved Docks layout corresponding to the current preset",
-                        auto_toolbar=False,)
-        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False)
+                        "Save the Saved Docks layout corresponding to the current experiment",
+                        auto_toolbar=False, menu='docked')
+        self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
+                        menu=MenuNames.VIEW)
 
-        self.add_toolbar('preset', 'Preset Toolbar', parent=self.mainwindow,
+        self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('configurator', 'Configurator Toolbar', parent=self.mainwindow,
+        self.add_toolbar('state', 'State', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('overshooter', 'Overshoot Toolbar', parent=self.mainwindow,
+        self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
         self.toolbar.addSeparator()
 
-        self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False)
-        self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False)
+        # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
+        #                 menu='roi')
+        # self.add_action("modify_roi", "Modify ROI file", "", auto_toolbar=False,
+        #                 menu='roi')
 
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.roi),
-                    file.stem,
-                    "",
-                    auto_toolbar=False,
-                )
-        self.add_action('show_remote', "Show/Hide Remote", 'visibility',
-                        icon_checked='visibility_off', auto_toolbar=False)
-        self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False)
-        self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False)
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                self.add_action(
-                    self.get_action_from_file(file, ManagerEnums.remote),
-                    file.stem,
-                    "",
-                    auto_toolbar=False,
-                )
+        # for file in get_set_roi_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.add_action(
+        #             self.get_action_from_file(file, ManagerEnums.roi),
+        #             file.stem,
+        #             "",
+        #             auto_toolbar=False,
+        #         )
+        # self.add_action('show_remote', "Show/Hide Remote", 'visibility',
+        #                 icon_checked='visibility_off', auto_toolbar=False, menu='remote')
+        # self.add_action("new_remote", "Create New Remote", "", auto_toolbar=False, menu='remote')
+        # self.add_action("modify_remote", "Modify Remote file", "", auto_toolbar=False, menu='remote')
+        # for file in get_set_remote_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.add_action(
+        #             self.get_action_from_file(file, ManagerEnums.remote),
+        #             file.stem,
+        #             "",
+        #             auto_toolbar=False,
+        #         )
         self.toolbar.addSeparator()
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
-                            auto_toolbar=False)
+                            auto_toolbar=False, menu='extensions')
 
-        self.add_action("configurator", "Configurator", auto_toolbar=False)
+        self.add_action("state", "State", auto_toolbar=False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
@@ -527,184 +542,139 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.connect_action("save_layout", self.save_layout_state)
         self.connect_action("show_log_widget", self.show_log_widget)
 
-        self.connect_action("save_roi", self.create_roi_file)
-        self.connect_action("modify_roi", self.modify_roi)
-
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
-                )
-        self.connect_action('show_remote', self.show_remote)
-        self.connect_action("new_remote", self.create_remote)
-        self.connect_action("modify_remote", self.modify_remote)
+        # self.connect_action("save_roi", self.create_roi_file)
+        # self.connect_action("modify_roi", self.modify_roi)
+        #
+        # for file in get_set_roi_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.connect_action(
+        #             self.get_action_from_file(file, ManagerEnums.roi),
+        #             self.create_menu_slot_roi(get_set_roi_path().joinpath(file)),
+        #         )
+        # self.connect_action('show_remote', self.show_remote)
+        # self.connect_action("new_remote", self.create_remote)
+        # self.connect_action("modify_remote", self.modify_remote)
         
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                self.connect_action(
-                    self.get_action_from_file(file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
-                )
+        # for file in get_set_remote_path().iterdir():
+        #     if file.suffix == ".xml":
+        #         self.connect_action(
+        #             self.get_action_from_file(file, ManagerEnums.remote),
+        #             self.create_menu_slot_remote(get_set_remote_path().joinpath(file)),
+        #         )
         for ext_name in ExtensionEnum.names():
             self.connect_action(ExtensionEnum[ext_name],
                                 self.create_extension_slot(ExtensionEnum[ext_name]))
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """
-        Create the menubar object looking like :
-        """
-        #menubar.clear()
-
-        settings_menu = self.add_menu('settings', 'Settings', auto_menu=False)
-        settings_menu.addAction(self.get_action("show_log_widget"))
-
-        docked_menu = settings_menu.addMenu("Docked windows")
-        docked_menu.addAction(self.get_action("load_layout"))
-        docked_menu.addAction(self.get_action("save_layout"))
-
-        self.add_menu('preset', 'Preset', auto_menu=False)
-        self.add_menu('configurator', 'Configurator', auto_menu=False)
-        self.get_menu('configurator').setEnabled(False)
-        self.add_menu('overshooter', 'Overshooter', auto_menu=False)
-        self.get_menu('overshooter').setEnabled(False)
-
-        self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
-        self.update_roi_menu()
-
-        self.remote_menu = self.add_menu('remote', "Remote/Shortcuts Control")
-        self.update_remote_menu()
-
-        # extensions menu
-        self.extensions_menu = self.add_menu('extensions', "Extensions")
-        for ext_name in ExtensionEnum.names():
-            self.extensions_menu.addAction(self.get_action(ExtensionEnum[ext_name]))
-
-        status = True
-
-        for menu in (self.roi_menu, self.remote_menu, self.extensions_menu):
-            menu.setEnabled(not status)
-        settings_menu.setEnabled(True)
-        self.get_menu('preset').setEnabled(status)
-
-
-    def update_roi_menu(self):
-        self.roi_menu.clear()
-        self.roi_menu.addAction(self.get_action("save_roi"))
-        self.roi_menu.addAction(self.get_action("modify_roi"))
-        self.roi_menu.addSeparator()
-        load_roi_menu = self.roi_menu.addMenu("Load roi configs")
-
-        for file in get_set_roi_path().iterdir():
-            if file.suffix == ".xml":
-                load_roi_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
-                )
-
-    def update_remote_menu(self):
-        self.remote_menu.clear()
-        self.remote_menu.addAction(self.get_action("show_remote"))
-        self.connect_action('show_remote', self.show_remote)
-        self.remote_menu.addSeparator()
-
-        self.remote_menu.addAction(self.get_action('new_remote'))
-        self.connect_action('new_remote', self.create_remote)
-        self.remote_menu.addAction(self.get_action('modify_remote'))
-        self.connect_action('modify_remote', self.modify_remote)
-        self.remote_menu.addSeparator()
-        load_remote_menu = self.remote_menu.addMenu("Load remote config.")
-
-        for file in get_set_remote_path().iterdir():
-            if file.suffix == ".xml":
-                load_remote_menu.addAction(
-                    self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
-                )
-
-    def create_remote(self):
-        try:
-            if self.preset_file is not None:
-                self.remote_manager.set_new_remote(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.remote),
-                    self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
-                )
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def modify_remote(self):
-        try:
-            path = select_file(
-                start_path=get_set_remote_path(),
-                save=False,
-                ext="xml",
-            )
-            if path != "":
-                self.remote_manager.set_file_remote(path)
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
-
-    def show_remote(self, show=True):
-        self.remote_widget.setVisible(show)
-        self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
+    # def update_roi_menu(self):
+    #     self.roi_menu.addSeparator()
+    #     load_roi_menu = self.roi_menu.addMenu("Load roi configs")
+    #
+    #     for file in get_set_roi_path().iterdir():
+    #         if file.suffix == ".xml":
+    #             load_roi_menu.addAction(
+    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.roi))
+    #             )
+    #
+    # def update_remote_menu(self):
+    #     self.remote_menu.addAction(self.get_action("show_remote"))
+    #     self.connect_action('show_remote', self.show_remote)
+    #     self.remote_menu.addSeparator()
+    #
+    #     self.remote_menu.addAction(self.get_action('new_remote'))
+    #     self.connect_action('new_remote', self.create_remote)
+    #     self.remote_menu.addAction(self.get_action('modify_remote'))
+    #     self.connect_action('modify_remote', self.modify_remote)
+    #     self.remote_menu.addSeparator()
+    #     load_remote_menu = self.remote_menu.addMenu("Load remote config.")
+    #
+    #     for file in get_set_remote_path().iterdir():
+    #         if file.suffix == ".xml":
+    #             load_remote_menu.addAction(
+    #                 self.get_action(self.get_action_from_file(file, ManagerEnums.remote))
+    #             )
+    #
+    # def create_remote(self):
+    #     try:
+    #         if self.preset_file is not None:
+    #             self.remote_manager.set_new_remote(self.preset_file.stem)
+    #             self.add_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+    #                 self.preset_file.stem,
+    #                 "",
+    #             )
+    #             self.setup_menu(self.menubar)
+    #             self.connect_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.remote),
+    #                 self.create_menu_slot_remote(get_set_remote_path().joinpath(self.preset_file.name)),
+    #             )
+    #
+    #     except Exception as e:
+    #         logger.exception(str(e))
+    #
+    # def modify_remote(self):
+    #     try:
+    #         path = select_file(
+    #             start_path=get_set_remote_path(),
+    #             save=False,
+    #             ext="xml",
+    #         )
+    #         if path != "":
+    #             self.remote_manager.set_file_remote(path)
+    #
+    #         else:  # cancel
+    #             pass
+    #     except Exception as e:
+    #         logger.exception(str(e))
+    #
+    # def show_remote(self, show=True):
+    #     self.remote_widget.setVisible(show)
+    #     self.remote_widget.closeEvent = lambda event: self.set_action_checked('show_remote', False)
 
     def show_log_widget(self, show=True):
         self.logger_widget.setVisible(show)
         self.logger_widget.closeEvent = lambda event: self.set_action_checked('show_log_widget', False)
 
-    def create_menu_slot_roi(self, filename):
-        return lambda: self.set_roi_configuration(filename)
-
-    def create_menu_slot_remote(self, filename):
-        return lambda: self.set_remote_configuration(filename)
+    # def create_menu_slot_roi(self, filename):
+    #     return lambda: self.set_roi_configuration(filename)
+    #
+    # def create_menu_slot_remote(self, filename):
+    #     return lambda: self.set_remote_configuration(filename)
 
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
 
-    def create_roi_file(self):
-        try:
-            if self.preset_file is not None:
-                self.roi_saver.set_new_roi(self.preset_file.stem)
-                self.add_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.preset_file.stem,
-                    "",
-                )
-                self.setup_menu(self.menubar)
-                self.connect_action(
-                    self.get_action_from_file(self.preset_file, ManagerEnums.roi),
-                    self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
-                )
+    # def create_roi_file(self):
+    #     try:
+    #         if self.preset_file is not None:
+    #             self.roi_saver.set_new_roi(self.preset_file.stem)
+    #             self.add_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+    #                 self.preset_file.stem,
+    #                 "",
+    #             )
+    #             self.setup_menu(self.menubar)
+    #             self.connect_action(
+    #                 self.get_action_from_file(self.preset_file, ManagerEnums.roi),
+    #                 self.create_menu_slot_roi(get_set_roi_path().joinpath(self.preset_file.name)),
+    #             )
+    #
+    #
+    #     except Exception as e:
+    #         logger.exception(str(e))
 
 
-        except Exception as e:
-            logger.exception(str(e))
-
-    @staticmethod
-    def get_action_from_file(file: Path, manager: ManagerEnums):
-        return f"{file.stem}_{manager.name}"
-
-    def modify_roi(self):
-        try:
-            path = select_file(
-                start_path=get_set_roi_path(), save=False, ext="xml"
-            )
-            if path != "":
-                self.roi_saver.set_file_roi(path)
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            logger.exception(str(e))
+    # def modify_roi(self):
+    #     try:
+    #         path = select_file(
+    #             start_path=get_set_roi_path(), save=False, ext="xml"
+    #         )
+    #         if path != "":
+    #             self.roi_saver.set_file_roi(path)
+    #
+    #         else:  # cancel
+    #             pass
+    #     except Exception as e:
+    #         logger.exception(str(e))
 
     def quit_fun(self):
         """
@@ -750,8 +720,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 except Exception:
                     pass
 
-            self.preset_manager.quit_fun()
-            self.configurator.quit_fun()
+            self.experiment_manager.quit_fun()
+            self.state_manager.quit_fun()
             self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
@@ -815,8 +785,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
             logger.exception(str(e))
 
     def save_layout_state_auto(self):
-        if self.preset_file is not None:
-            path = get_set_layout_path().joinpath(self.preset_file.stem + ".dock")
+        if self.experiment_file is not None:
+            path = get_set_layout_path().joinpath(self.experiment_file.stem + ".dock")
             self.save_layout_state(path)
 
     def add_move(
@@ -886,7 +856,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             except KeyError as e:
                 mssg = (
                     f"Could not set this setting: {str(e)}\n"
-                    f"The Preset is no more compatible with the plugin {plug_type}"
+                    f"The Experiment file is no more compatible with the plugin {plug_type}"
                 )
                 logger.warning(mssg)
                 self.splash_sc.showMessage(mssg)
@@ -982,7 +952,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             except KeyError as e:
                 mssg = (
                     f"Could not set this setting: {str(e)}\n"
-                    f"The Preset is no more compatible with the plugin {plug_subtype}"
+                    f"The Experiment file is no more compatible with the plugin {plug_subtype}"
                 )
                 logger.warning(mssg)
                 self.splash_sc.showMessage(mssg)
@@ -1044,72 +1014,72 @@ class DashBoard(CustomApp, LECOComponentMixin):
         # Update actuators modules and module manager
         self.detector_modules.append(detector)
 
-    def set_roi_configuration(self, filename):
-        if not isinstance(filename, Path):
-            filename = Path(filename)
-        try:
-            if filename.suffix == ".xml":
-                file = filename.stem
-                self.settings.child("loaded_files", "roi_file").setValue(file)
-                self.update_status(
-                    "ROI configuration ({}) has been loaded".format(file),
-                    log_type="log",
-                )
-                self.roi_saver.set_file_roi(filename, show=False)
+    # def set_roi_configuration(self, filename):
+    #     if not isinstance(filename, Path):
+    #         filename = Path(filename)
+    #     try:
+    #         if filename.suffix == ".xml":
+    #             file = filename.stem
+    #             self.settings.child("loaded_files", "roi_file").setValue(file)
+    #             self.update_status(
+    #                 "ROI configuration ({}) has been loaded".format(file),
+    #                 log_type="log",
+    #             )
+    #             self.roi_saver.set_file_roi(filename, show=False)
+    #
+    #     except Exception as e:
+    #         logger.exception(str(e))
 
-        except Exception as e:
-            logger.exception(str(e))
+    # def set_remote_configuration(self, filename):
+    #     if not isinstance(filename, Path):
+    #         filename = Path(filename)
+    #     ext = filename.suffix
+    #     if ext == ".xml":
+    #         self.remote_file = filename
+    #         self.remote_manager.remote_changed.connect(self.activate_remote)
+    #         self.remote_manager.set_file_remote(filename, show=False)
+    #         self.settings.child("loaded_files", "remote_file").setValue(filename)
+    #         self.remote_manager.set_remote_configuration()
+    #         self.remote_widget.layout().addWidget(self.remote_manager.remote_settings_tree)
+    #         self.get_action('show_remote').trigger()
 
-    def set_remote_configuration(self, filename):
-        if not isinstance(filename, Path):
-            filename = Path(filename)
-        ext = filename.suffix
-        if ext == ".xml":
-            self.remote_file = filename
-            self.remote_manager.remote_changed.connect(self.activate_remote)
-            self.remote_manager.set_file_remote(filename, show=False)
-            self.settings.child("loaded_files", "remote_file").setValue(filename)
-            self.remote_manager.set_remote_configuration()
-            self.remote_widget.layout().addWidget(self.remote_manager.remote_settings_tree)
-            self.get_action('show_remote').trigger()
-
-    def activate_remote(self, remote_action, activate_all=False):
-        """
-        remote_action = dict(action_type='shortcut' or 'joystick',
-                            action_name='blabla',
-                            action_dict= either:
-                                dict(shortcut=action.child(('shortcut')).value(), activated=True,
-                                 name=f'action{ind:02d}', action=action.child(('action')).value(),
-                                  module_name=module, module_type=module_type)
-
-                                or:
-                                 dict(joystickID=action.child(('joystickID')).value(),
-                                     actionner_type=action.child(('actionner_type')).value(),
-                                     actionnerID=action.child(('actionnerID')).value(),
-                                     activated=True, name=f'action{ind:02d}',
-                                     module_name=module, module_type=module_type)
-
-        """
-        if remote_action["action_type"] == "shortcut":
-            if remote_action["action_name"] not in self.shortcuts:
-                self.shortcuts[remote_action["action_name"]] = QtWidgets.QShortcut(
-                    QtGui.QKeySequence(remote_action["action_dict"]["shortcut"]),
-                    self.dockarea,
-                )
-            self.activate_shortcut(
-                self.shortcuts[remote_action["action_name"]],
-                remote_action["action_dict"],
-                activate=remote_action["action_dict"]["activated"],
-            )
-
-        elif remote_action["action_type"] == "joystick":
-            if not self.ispygame_init:
-                self.init_pygame()
-
-            if remote_action["action_name"] not in self.joysticks:
-                self.joysticks[remote_action["action_name"]] = remote_action[
-                    "action_dict"
-                ]
+    # def activate_remote(self, remote_action, activate_all=False):
+    #     """
+    #     remote_action = dict(action_type='shortcut' or 'joystick',
+    #                         action_name='blabla',
+    #                         action_dict= either:
+    #                             dict(shortcut=action.child(('shortcut')).value(), activated=True,
+    #                              name=f'action{ind:02d}', action=action.child(('action')).value(),
+    #                               module_name=module, module_type=module_type)
+    #
+    #                             or:
+    #                              dict(joystickID=action.child(('joystickID')).value(),
+    #                                  actionner_type=action.child(('actionner_type')).value(),
+    #                                  actionnerID=action.child(('actionnerID')).value(),
+    #                                  activated=True, name=f'action{ind:02d}',
+    #                                  module_name=module, module_type=module_type)
+    #
+    #     """
+    #     if remote_action["action_type"] == "shortcut":
+    #         if remote_action["action_name"] not in self.shortcuts:
+    #             self.shortcuts[remote_action["action_name"]] = QtWidgets.QShortcut(
+    #                 QtGui.QKeySequence(remote_action["action_dict"]["shortcut"]),
+    #                 self.dockarea,
+    #             )
+    #         self.activate_shortcut(
+    #             self.shortcuts[remote_action["action_name"]],
+    #             remote_action["action_dict"],
+    #             activate=remote_action["action_dict"]["activated"],
+    #         )
+    #
+    #     elif remote_action["action_type"] == "joystick":
+    #         if not self.ispygame_init:
+    #             self.init_pygame()
+    #
+    #         if remote_action["action_name"] not in self.joysticks:
+    #             self.joysticks[remote_action["action_name"]] = remote_action[
+    #                 "action_dict"
+    #             ]
 
     def init_pygame(self):
         try:
@@ -1245,12 +1215,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
         return self.actuators_modules
 
     @property
-    def preset_file(self) -> Path:
-        return self.preset_manager.entry_filepath
+    def experiment_file(self) -> Path:
+        return self.experiment_manager.entry_filepath
 
     @property
-    def preset_name(self) -> str:
-        return self.preset_manager.entry
+    def experiment_name(self) -> str:
+        return self.experiment_manager.entry
 
     def update_init_tree(self):
         for act in self.actuators_modules:
@@ -1302,7 +1272,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         for mod in self.actuators_modules:
             mod.stop_motion()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         # %% create logger dock
         self.logger_widget = QtWidgets.QWidget(windowTitle='Logger')
         self.logger_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -1311,7 +1281,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
 
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter = QtWidgets.QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.logger_list)
         self.logger_widget.layout().addWidget(splitter)
@@ -1391,11 +1361,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
 
 def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
+
+    win, area = make_window(title='PyMoDAQ Dashboard')
     win.resize(1000, 500)
-    win.setWindowTitle("PyMoDAQ Dashboard")
 
     shared_ui = SharedUI(win)
     dashboard = DashBoard(area)
@@ -1403,17 +1371,17 @@ def create_load_dashboard() -> tuple[SharedUI, DashBoard]:
     return shared_ui, dashboard
 
 
-def load_dashboard_with_preset(preset_name: str,
-                               extension_name: str = None,
-                               configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
+def load_dashboard_with_experiment(experiment_name: str,
+                                   extension_name: str = None,
+                                   configuration_name: str = None)  -> tuple[DashBoard, 'CustomExt', SharedUI]:
 
-    """ Load the Dashboard using a given preset then load an extension
+    """ Load the Dashboard using a given experiment then load an extension
 
     Parameters
     ----------
     configuration_name: str
-    preset_name: str
-        The filename (without extension) defining the preset to be loaded in the Dashboard
+    experiment_name: str
+        The filename (without extension) defining the experiment to be loaded in the Dashboard
     extension_name: str
         The name of the extension. Either the builtins ones:
         * 'DAQScan'
@@ -1427,20 +1395,19 @@ def load_dashboard_with_preset(preset_name: str,
     -------
 
     """
-    from pymodaq.utils.config import get_set_configurator_path, get_set_preset_path
+    from pymodaq.utils.config import get_set_experiment_path
     shared_ui, dashboard = create_load_dashboard()
 
-    preset_path = get_set_preset_path().joinpath(f'{preset_name}.xml')
-    preset_name = preset_path.stem
+    experiment_path = get_set_experiment_path().joinpath(f'{experiment_name}.xml')
+    experiment_name = experiment_path.stem
     extension = None
 
-    if preset_name in dashboard.preset_manager.entries:
-        dashboard.preset_manager.entry = preset_name
-        dashboard.preset_manager.execute_entry(preset_path)
+    if experiment_name in dashboard.experiment_manager.entries:
+        dashboard.experiment_manager.entry = experiment_name
         if configuration_name is not None:
-            configuration_path = get_set_configurator_path().joinpath(preset_name).joinpath(f'{configuration_name}.config')
-            dashboard.configurator.entry = configuration_name
-            dashboard.configurator.execute_entry(configuration_path)
+            dashboard.state_manager.entry = configuration_name
+        dashboard.experiment_manager.execute_entry(experiment_path)
+
         if extension_name in ExtensionEnum.names():
             extension = dashboard.load_extension(ExtensionEnum[extension_name])
         else:
@@ -1449,7 +1416,7 @@ def load_dashboard_with_preset(preset_name: str,
     else:
         msgBox = QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
-                       f"{preset_name}\n"
+                       f"{experiment_name}\n"
                        f"Impossible to load the {extension_name} extension")
         msgBox.setStandardButtons(QMessageBox.StandardButton.Ok)
         ret = msgBox.exec()
@@ -1468,21 +1435,21 @@ def main():
                                      description="PyMoDAQ dashboard. "
                                                  "Command-line options only affect GUI initial state."
                                      )
-    parser.add_argument("-p", "--preset", metavar="PRESET_NAME",
-                        help="preset name to load at startup")
+    parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
+                        help="experiment name to load at startup")
     parser.add_argument("-c", "--config", metavar="CONFIG_NAME",
-                        help="config name to execute (ignored if no preset provided)")
+                        help="config name to execute (ignored if no experiment provided)")
     parser.add_argument("-e", "--extension", metavar="EXTENSION_NAME",
-                        help="extension name to execute (ignored if no preset provided), valid "
+                        help="extension name to execute (ignored if no experiment provided), valid "
                              'values are within: "' + '\" \"'.join(extensions_names) +'"')
     args = parser.parse_args()
 
-    # If preset name is supplied, load dashboard with this preset
-    if args.preset:
-        dashboard, extension, win = load_dashboard_with_preset(preset_name=args.preset,
-                                                               extension_name=args.extension,
-                                                               configuration_name=args.config
-                                                               )
+    # If experiment name is supplied, load dashboard with this experiment
+    if args.experiment:
+        dashboard, extension, win = load_dashboard_with_experiment(experiment_name=args.experiment,
+                                                                   extension_name=args.extension,
+                                                                   configuration_name=args.config
+                                                                   )
 
 
     # If no command-line arguments are supplied, start empty

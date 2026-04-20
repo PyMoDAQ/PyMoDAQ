@@ -83,7 +83,7 @@ is also used for the ``DAQ_Logger`` extension.
 .. figure:: /image/DAQ_Scan/list_modules.PNG
    :alt: list_modules
 
-   List of declared modules from a preset
+   List of declared modules from an experiment file
 
 .. :download:`png <list_modules.PNG>`
 

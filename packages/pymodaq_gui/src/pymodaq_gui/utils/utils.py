@@ -289,8 +289,7 @@ def set_enable_recursive(children, enable=False):
     for child in children:
         if not children:
             return
-        elif isinstance(child, QtWidgets.QSpinBox) or isinstance(child, QtWidgets.QComboBox) or \
-                isinstance(child, QtWidgets.QPushButton) or isinstance(child, QtWidgets.QListWidget):
+        elif isinstance(child, (QtWidgets.QSpinBox, QtWidgets.QComboBox, QtWidgets.QPushButton, QtWidgets.QListWidget)):
             child.setEnabled(enable)
         else:
             set_enable_recursive(child.children(), enable)

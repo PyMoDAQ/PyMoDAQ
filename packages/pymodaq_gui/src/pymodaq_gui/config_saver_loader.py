@@ -1,4 +1,3 @@
-from abc import abstractproperty
 from collections.abc import Iterable
 
 
@@ -6,18 +5,12 @@ from typing import List, TYPE_CHECKING, Optional
 from typing import Iterable as IterableType
 
 
-from pymodaq_utils.config import (BaseConfig, recursive_iterable_flattening, ConfigError,
-                                  get_set_config_dir)
+from pymodaq_utils.config import (BaseConfig, recursive_iterable_flattening, ConfigError)
 from pymodaq_gui.parameter import Parameter
+
 
 if TYPE_CHECKING:
     from pymodaq_gui.parameter import Parameter
-
-
-def get_set_roi_path():
-    """ creates and return the config folder path for managers files
-    """
-    return get_set_config_dir('roi_configs')
 
 
 class ConfigSaverLoader:

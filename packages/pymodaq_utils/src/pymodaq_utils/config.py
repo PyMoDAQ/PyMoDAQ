@@ -321,7 +321,7 @@ class BaseConfig(metaclass=ConfigSingleton):
         self.save()
 
     def __repr__(self):
-        return f'{self.config_name} configuration file'
+        return f'{self.config_name} preference file'
 
     def __call__(self, *args):
         with self._lock.read_lock():

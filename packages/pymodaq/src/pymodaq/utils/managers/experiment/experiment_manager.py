@@ -4,7 +4,6 @@ import sys
 
 from qtpy import QtWidgets
 
-from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.messenger import dialog, messagebox
 from pymodaq_gui.utils.dock import Dock
@@ -12,15 +11,15 @@ from pymodaq_gui.utils.dock import Dock
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.parameter import ioxml
 
-from pymodaq.utils.config import get_set_preset_path, get_set_overshoot_path, get_set_layout_path, \
-    get_set_configurator_path, get_set_remote_path
+from pymodaq.utils.config import get_set_experiment_path, get_set_overshoot_path, get_set_state_path, get_set_remote_path
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
 from pymodaq_gui.managers.manager_base import ManagerBase
 from pymodaq.utils.managers.modules.utils import ModuleType
 
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, MasterSlaveError
 from pymodaq.control_modules.utils import ControllerStatus
-from pymodaq.utils.daq_utils import copy_preset
-from pymodaq.utils.managers.preset import utils  # to register groupemove and groupdet Parameters
+from pymodaq.utils.daq_utils import copy_experiment
+from pymodaq.utils.managers.experiment import utils  # to register groupemove and groupdet Parameters
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -29,23 +28,22 @@ if TYPE_CHECKING:
 
 logger = set_logger(get_module_name(__file__))
 
-# check if preset_mode directory exists on the drive
-preset_path = get_set_preset_path()
+# check if experiment directory exists on the drive
+experiment_path = get_set_experiment_path()
 overshoot_path = get_set_overshoot_path()
 layout_path = get_set_layout_path()
 
 
-class PresetManager(ManagerBase):
+class ExperimentManager(ManagerBase):
 
     params_act = [{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'groupmove'}]
-    # PresetScalableGroupMove(name='Moves')]
     params_det = [{'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'groupdet'}]
-    # [PresetScalableGroupDet(name='Detectors')][]
 
     params = params_act + params_det
 
-    entry_type = 'preset'
+    entry_type = 'experiment'
     entry_extension ='.xml'
+    icon_name = 'experiment'
 
     def __init__(self,
                  dashboard: 'DashBoard' = None):
@@ -58,13 +56,13 @@ class PresetManager(ManagerBase):
 
         Example:
         --------
-        [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
+        [path for path in get_set_experiment_path().iterdir() if path.suffix == self.entry_extension]
         """
         entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
         if not entry_path.exists():
             entry_path.mkdir(parents=True)
         if not entry_path.joinpath(f'default{self.entry_extension}').exists():
-            copy_preset()
+            copy_experiment()
             self.update_entry()
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
@@ -88,7 +86,7 @@ class PresetManager(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_preset_path()
+        return get_set_experiment_path()
 
     def _execute_entry(self, entry: Path = None, **kwargs) -> bool:
         """ Execute the selected entry file to the dashboard and adds Control Modules specified in it
@@ -116,7 +114,7 @@ class PresetManager(ManagerBase):
             else:
                 plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
-            self.show_subentries(plugin_list_message, title=f'Loading Preset: {self.entry}')
+            self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
@@ -152,7 +150,7 @@ class PresetManager(ManagerBase):
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
-                    f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
+                    f"{self.entry_type.capitalize()} ({entry.name}) has been loaded",
                     log_type="log",
                 )
                 self.dashboard.actuators_modules = actuators_modules
@@ -195,9 +193,9 @@ class PresetManager(ManagerBase):
 
     @staticmethod
     def remove_preset_related_files(preset_name: str):
-        for file in get_set_configurator_path(preset_name).iterdir():
+        for file in get_set_state_path(preset_name).iterdir():
             file.unlink(missing_ok=True)
-        get_set_configurator_path(preset_name).rmdir()
+        get_set_state_path(preset_name).rmdir()
         get_set_roi_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
@@ -243,7 +241,7 @@ class PresetManager(ManagerBase):
 
     def create_control_modules_from_preset(self, plugins_sorted) -> tuple[list['DAQ_Move'], list['DAQ_Viewer']]:
         """
-        Load a preset file and create corresponding Control Modules in the Dashboard
+        Load a experiment file and create corresponding Control Modules in the Dashboard
 
         """
         actuators_modules: list[DAQ_Move] = []
@@ -285,7 +283,7 @@ class PresetManager(ManagerBase):
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the preset) in order to init "
+                                f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
@@ -326,7 +324,7 @@ class PresetManager(ManagerBase):
                         elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the preset) in order to init "
+                                f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
@@ -462,7 +460,7 @@ class PresetManager(ManagerBase):
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the preset) in order to init "
+                                f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
@@ -509,7 +507,7 @@ class PresetManager(ManagerBase):
                         elif plugin["status"] == "Master" and len(plug_IDs) > 1:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
-                                f"initialized (init checked in the preset) in order to init "
+                                f"initialized (init checked in the experiment) in order to init "
                                 f"its associated slave instrument"
                             )
                     else:
@@ -542,9 +540,9 @@ class PresetManager(ManagerBase):
 if __name__ == '__main__':
     from pymodaq_gui.qt_utils import mkQApp
 
-    app = mkQApp('PresetManager')
+    app = mkQApp('ExperimentManager')
 
-    prog = PresetManager()
+    prog = ExperimentManager()
     external_ui = QtWidgets.QMainWindow()
 
     toolbar, menu = prog.get_external_toolbar_menu()

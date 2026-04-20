@@ -123,7 +123,8 @@ class DAQScan(CustomExt):
         """
         
         logger.info('Initializing DAQScan')
-        self.ui: DAQScanUI = DAQScanUI(dockarea)
+        self.ui: DAQScanUI = None  #important to be here before super is called , see do_things_after_experiment_set
+
         super().__init__(parent=dockarea,
                          dashboard=dashboard)
 
@@ -168,8 +169,10 @@ class DAQScan(CustomExt):
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
 
-        self.setup_ui()
+        self.ui: DAQScanUI = DAQScanUI(dockarea, toolbar=self.toolbar)
         self.ui.command_sig.connect(self.process_ui_cmds)
+        self.ui.finalize_ui(self)
+        self.connect_things()
 
         self.create_dataset_settings()
 
@@ -179,8 +182,9 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        if self.dashboard.preset_manager.entry_applied:
+        if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
+
         logger.info('DAQScan Initialized')
 
     def get_main_toolbar(self) -> QtWidgets.QToolBar:
@@ -199,29 +203,6 @@ class DAQScan(CustomExt):
         self.settings.child('plot_options', 'plot_1d').setValue(
             dict(all_items=data1D_names, selected=data1D_names))
 
-
-    def setup_docks(self):
-        self.mainwindow.removeToolBar(self.toolbar)  # hides it
-
-        self.create_dashboard_toolbar()
-
-        self.ui.populate_toolbox_widget([self.settings_tree, self._h5saver.settings_tree],
-                                        ['General Settings', 'Save Settings'])
-
-        self.ui.set_scanner_settings(self.scanner.parent_widget)
-        self.ui.set_modules_settings(self.modules_manager.settings_tree)
-
-        self.plotting_settings_tree = ParameterTree()
-        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
-        self.ui.set_plotting_settings(self.plotting_settings_tree)
-
-    def setup_actions(self):
-
-        self.ui.enable_start_stop(False)
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        pass
-
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
 
@@ -229,8 +210,8 @@ class DAQScan(CustomExt):
         self.ui.set_action_enabled('ini_positions',
                                        self.scanner.actuators == self.modules_manager.actuators)
 
-    def do_things_after_preset_set(self, preset_name: str):
-        """ This method is called whenever a preset entry has been set.
+    def do_things_after_experiment_set(self, experiment_name: str):
+        """ This method is called whenever a experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
@@ -238,11 +219,13 @@ class DAQScan(CustomExt):
         Can be reimplemented to add some more evolved actions
         """
 
-        super().do_things_after_preset_set(preset_name)
-        self.ui.enable_start_stop(True)
+        super().do_things_after_experiment_set(experiment_name)
 
         # set the module saver type and applies its h5saver to submodules
         self._module_and_data_saver: module_saving.ScanSaver = module_saving.ScanSaver(self)
+
+        if self.ui is not None:
+            self.ui.enable_start_stop(True)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -534,20 +517,21 @@ class DAQScan(CustomExt):
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
-            settings_all = [ioxml.parameter_to_xml_string(params),
-                           ioxml.parameter_to_xml_string(self.settings),
-                           ioxml.parameter_to_xml_string(self.h5saver.settings),
-                           ioxml.parameter_to_xml_string(self.scanner.settings)]
 
-            settings_str = b'<All_settings title="All Settings" type="group">'
-            for set in settings_all:
-                if len(settings_str + set) < 60000:
-                    # size limit for any object header (including all the other attributes) is 64kb
-                    settings_str += set
-                else:
-                    break
-            settings_str += b'</All_settings>'
-            attr['settings'] = settings_str
+            for name, param in ((self.__class__.__name__.lower(), self.settings),
+                                ('scan_info', params),
+                                ('saver', self.h5saver.settings),
+                                ('scanner', self.scanner.settings),):
+
+                _settings = Parameter.create(name=f'{name}_settings', type='group',
+                                             children=[param.saveState()])
+                attr[name] = ioxml.parameter_to_xml_string(_settings)
+
+
+            for instrument in self.modules_manager.modules_all:
+                instrument_settings = Parameter.create(name=f'{instrument.title}_settings', type='group',
+                                                      children=[instrument.settings.saveState()])
+                attr[f'{instrument.title}_settings'] = ioxml.parameter_to_xml_string(instrument_settings)
 
     def create_new_file(self, new_file):
         if new_file:
@@ -1420,6 +1404,7 @@ def main():
     from pymodaq_gui.qt_utils import mkQApp
     from pymodaq.dashboard import create_load_dashboard
     from pymodaq.utils.gui_utils.loader_utils import create_extension
+
     app = mkQApp('DAQScan')
 
     win, dashboard = create_load_dashboard()
@@ -1427,6 +1412,9 @@ def main():
 
     win_ext, scan = create_extension(dashboard, DAQScan)
     win_ext.show()
+
+    # preset_file_name = config("pymodaq", "presets", "default_preset_for_scan")
+    # dashboard.preset_manager.execute_entry(preset_file_name)
 
     sys.exit(app.exec())
 

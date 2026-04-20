@@ -20,10 +20,12 @@ class FileDirWidget(QtWidgets.QWidget):
     """
     value_changed = QtCore.Signal(str)
 
-    def __init__(self, init_path='D:/Data', file_type=False):
+    def __init__(self, init_path='D:/Data', file_type=False,
+                 filter=''):
 
         super().__init__()
         self.filetype = file_type
+        self.filter = filter
         self.path = init_path
         self.initUI()
 
@@ -38,7 +40,9 @@ class FileDirWidget(QtWidgets.QWidget):
             set_path
         """
         if self.filetype is True:
-            folder_name = QtWidgets.QFileDialog.getOpenFileName(None, 'Choose File', os.path.split(self.path)[0])[0]
+            folder_name = QtWidgets.QFileDialog.getOpenFileName(
+                None, 'Choose File', os.path.split(self.path)[0],
+            filter=self.filter)[0]
         elif self.filetype is False:
             folder_name = QtWidgets.QFileDialog.getExistingDirectory(None, 'Choose Folder', self.path)
 
@@ -118,11 +122,14 @@ class FileDirParameterItem(WidgetParameterItem):
             self.filetype = self.param.opts['filetype']
         else:
             self.filetype = True
+        filter = self.param.opts.get('filter', '')
         if 'value' in self.param.opts:
-            self.w = FileDirWidget(init_path=self.param.opts['value'],
-                               file_type=self.filetype)
+            self.w = FileDirWidget(
+                init_path=self.param.opts['value'],
+                file_type=self.filetype,
+                filter=filter)
         else:
-            self.w = FileDirWidget(file_type=self.filetype)
+            self.w = FileDirWidget(file_type=self.filetype, filter=filter)
             self.param.opts['value'] = self.w.path
         # if 'tip' in self.param.opts:
         #     self.w.setToolTip(self.param.opts['tip'])

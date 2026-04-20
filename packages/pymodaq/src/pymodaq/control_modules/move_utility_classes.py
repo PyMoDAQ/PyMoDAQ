@@ -248,7 +248,7 @@ class DAQ_Move_base(QObject):
     ----------
     parent : DAQ_Move_Hardware
     params_state : Parameter
-            pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the preset)
+            pyqtgraph Parameter instance from which the module will get the initial settings (as defined in the experiment)
     Attributes
     ----------
     move_done_signal: Signal
@@ -520,7 +520,7 @@ class DAQ_Move_base(QObject):
         Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
             if it is a multiaxes controller then:
             * if it is Master: init the controller here
-            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+            * if it is Slave: use an already initialized controller (defined in the experiment of the dashboard)
 
         Parameters
         ----------
@@ -555,7 +555,7 @@ class DAQ_Move_base(QObject):
 
     @current_value.setter
     def current_value(self, value: Union[float, np.ndarray, DataActuator]):
-        if isinstance(value, numbers.Number) or isinstance(value, np.ndarray):
+        if isinstance(value, (numbers.Number, np.ndarray)):
             self._current_value = DataActuator(self._title, data=value,
                                                units=self.axis_unit)
         else:

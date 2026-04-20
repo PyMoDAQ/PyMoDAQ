@@ -63,8 +63,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.title = title
         self._unit = ''
         self._ini_state = False
-        self.move_toolbar = self.add_toolbar('move', 'Move')
-        self.set_toolbar(self.move_toolbar)  # Set as default so ui.toolbar returns this toolbar
 
         self.actuators_combo: QComboBox = None
         self.abs_value_sb: QSpinBoxWithShortcut = None
@@ -81,7 +79,6 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.move_rel_minus_pb: PushButtonIcon = None
         self.stop_pb: PushButtonIcon = None
         self.get_value_pb: PushButtonIcon = None
-        self.statusbar: QtWidgets.QStatusBar = None
 
         self.control_widget: QtWidgets.QWidget = None
         self.graph_widget: QtWidgets.QWidget = None
@@ -219,9 +216,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.abs_value_sb_2.setOpts(siPrefix=show)
         self.rel_value_sb.setOpts(siPrefix=show)
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.parent.setLayout(QtWidgets.QHBoxLayout())
-        self.parent.layout().addWidget(self.move_toolbar)
+
         self.control_widget = QtWidgets.QWidget()
 
         self.actuators_combo = QComboBox()
@@ -249,7 +246,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
         self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
         self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
-        self.statusbar = QtWidgets.QStatusBar()
+
         self.statusbar.setMaximumHeight(30)
 
         self.graph_widget = QtWidgets.QWidget()
@@ -259,6 +256,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.graph_widget.layout().addWidget(dockarea)
         self.viewer = ViewerDispatcher(dockarea)
         self.actuator_init = False
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar('move', 'DAQMove')
+        self.parent.layout().insertWidget(0, self.get_toolbar('move'))
 
     def populate_control_ui(self,  widget: QtWidgets.QWidget):
         widget.setLayout(QtWidgets.QVBoxLayout())
