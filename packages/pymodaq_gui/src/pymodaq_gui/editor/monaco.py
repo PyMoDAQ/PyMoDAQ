@@ -4,23 +4,40 @@ from collections import OrderedDict
 from pathlib import Path
 import dataclasses
 
+import subprocess
+import sys
+
 from qtmonaco import Monaco
 from qtpy import QtWidgets
-from qtpy.QtGui import QKeySequence, QColor
+from qtpy.QtGui import QKeySequence, QColor, QTextCursor
 from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QSignalBlocker
 
 from pymodaq_gui.messenger import dialog
-from pymodaq_utils.config import get_set_local_dir
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig
 
-from pymodaq_gui.utils.widgets.window import make_window
+
+
 
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.shared_ui import SharedUI, MenuNames
 from pymodaq_gui.utils.file_io import select_file
 
-from pymodaq_utils.config import GlobalConfig
 
 config = GlobalConfig()
+
+
+class Redirect:
+    def __init__(self, widget: QtWidgets.QTextEdit, autoscroll=True):
+        self.widget = widget
+        self.autoscroll = autoscroll
+
+    def write(self, text: str):
+        self.widget.append(text)
+        if self.autoscroll:
+            self.widget.moveCursor(QTextCursor.MoveOperation.End)
+
+    def flush(self):
+        pass
 
 
 @dataclasses.dataclass
@@ -84,12 +101,37 @@ class MonacoApp(CustomApp):
             pass
 
     def setup_docks_and_widgets(self):
+        self.main_widget = QtWidgets.QSplitter(Qt.Orientation.Vertical)
+
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setElideMode(Qt.TextElideMode.ElideRight)
         self.tab_widget.setMovable(True)
 
-        self.mainwindow.setCentralWidget(self.tab_widget)
+        self.display_widget = QtWidgets.QTextEdit()
+        self.display_widget.setReadOnly(True)
+
+        self.main_widget.addWidget(self.tab_widget)
+        self.main_widget.addWidget(self.display_widget)
+        self.main_widget.setSizes([300, 100])
+
+        self.mainwindow.setCentralWidget(self.main_widget)
+
+    def add_text_to_display(self, text: str):
+        self.display_widget.append(text)
+
+    def run_file(self, file_path: Path = None):
+        if file_path is None:
+            file_path = self.current_file
+        self._save_file(file_path)
+
+        self.display_widget.clear()
+        self.display_widget.append(f'Running {str(file_path)} file')
+
+        self.do_subprocess([sys.executable, str(file_path)])
+
+    def do_subprocess(self, command: list[str]):
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, text=True)
 
     def create_monaco_widget(self, file_path: Path) -> MonacoWithFile:
         monaco_widget = MonacoWithFile(file_path)
@@ -120,11 +162,16 @@ class MonacoApp(CustomApp):
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_S))
 
+        self.add_action('run_file', 'Run current File', 'start', 'Run the currently selected file',
+                        toolbar='file', menu='file', auto_menu=True,)
+
     def connect_things(self):
-        self.connect_action('load', self.load_file)
+        self.connect_action('load', lambda: self.load_file())
         self.connect_action('new', self.create_file)
         self.connect_action('save', self.save_file)
         self.connect_action('save_copy_as', self.save_copy_file_as)
+
+        self.connect_action('run_file', lambda: self.run_file())
 
         self.tab_widget.tabCloseRequested.connect(self.close_editor)
         self.tab_widget.tabBarClicked.connect(self.highlight_tab)
@@ -276,20 +323,30 @@ class MonacoApp(CustomApp):
         with open(self.local_files_path, 'wb') as f:
             pickle.dump(self.files_path, f)
 
+    @staticmethod
+    def is_python_syntax_valid(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                compile(f.read(), file_path, "exec")
+            return True
+        except SyntaxError as e:
+            print(f"Syntax error: {e}")
+            return False
+        except Exception as e:
+            print(f"Error: {e}")
+            return False
+
 
 def main():
     from pymodaq_gui.utils.utils import mkQApp
+    from pymodaq_gui.editor import editor_main_loader
 
     qapp = mkQApp('Monaco')
 
-    win, area = make_window(area=False, title="Monaco")
+    shared_ui, monaco_app = editor_main_loader()
+    shared_ui.show()
 
-    monaco_app = MonacoApp(win)
-
-    shared_ui = SharedUI(win)
-    shared_ui.affect_application(monaco_app)
-
-    qapp.exec_()
+    qapp.exec()
 
 if __name__ == "__main__":
     main()
