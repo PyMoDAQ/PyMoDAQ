@@ -1,5 +1,5 @@
 import pytest
-from qtpy.QtCore import Qt
+
 from qtpy import QtWidgets
 
 from pymodaq.launcher.launcher import Launcher
@@ -8,6 +8,7 @@ import qt_themes
 from pymodaq_utils.config import GlobalConfig
 
 config = GlobalConfig()
+
 
 @pytest.fixture
 def ini_launcher(qtbot):
@@ -54,42 +55,31 @@ class TestLauncher:
         assert launcher.get_action('back_config').isEnabled() == False
 
 
-
 @pytest.fixture
 def ini_configurator(qtbot):
-    """Fixture pour initialiser un Configurator avec son interface isolée"""
+    """Fixture to replicate the synchronization bug between experiment and configuration."""
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
 
     try:
-        # Importer ici pour éviter les dépendances circulaires
         from pymodaq.utils.managers.configurator.configurator import Configurator
 
-        # Créer le configurator
         configurator = Configurator()
 
-        # Créer la fenêtre principale
         main_window = QtWidgets.QMainWindow()
         main_window.setWindowTitle('Bug sync')
-
-        # Ajouter le toolbar du configurator comme widget central
         main_window.setCentralWidget(configurator.add_toolbar('test'))
 
-        # Configurer les menus externes
         configurator.experiment_manager.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
         configurator.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
-
-        # Activer les actions
         configurator.experiment_manager.enable_actions(True)
         configurator.enable_actions(True)
 
-        # Ajouter à qtbot
         qtbot.addWidget(main_window)
         main_window.show()
 
         yield configurator, main_window, qtbot
 
-        # Nettoyage
         main_window.close()
         main_window.deleteLater()
     except Exception as e:
@@ -97,48 +87,36 @@ def ini_configurator(qtbot):
 
 
 class TestWidgetSync:
-    def test_ini(self, ini_configurator):
+    """Test displayed values."""
+
+    def test_ini(self, ini_configurator, copied_data):
         """Test initialization of Configurator interface"""
         configurator, main_window, qtbot = ini_configurator
         main_window.show()
+        qtbot.wait(5000)
+
+
+    def test_widgets_synchro(self, ini_configurator, copied_data):
+        configurator, main_window, qtbot = ini_configurator
+        main_window.show()
+        qtbot.wait(1000)
+
+        assert configurator.experiment_manager.entry == 'default'
+        assert configurator.experiment_manager.get_action_list().currentText() == 'default'
+
+        configurator.experiment_manager.entry = 'exp_test'
+        QtWidgets.QApplication.processEvents()
         qtbot.wait(500)
 
-    def test_experiment_entries(self, ini_configurator):
-        configurator, main_window, qtbot = ini_configurator
-        main_window.show()
-        qtbot.wait(2000)
-        experiments = configurator.experiment_manager.entries
+        assert configurator.experiment_manager.entry == 'exp_test'
+        assert configurator.experiment_manager.get_action_list().currentText() == 'exp_test'
+        assert 'ten_value' in configurator.entries
+        assert 'hundred_value' in configurator.entries
 
-        if len(experiments) > 1:
-            index = 1
-        else :
-            index = 0
-        configurator.experiment_manager.entry = experiments[index]
-        qtbot.wait(2000)
-        assert configurator.entry == 'default'
-        configurator.quit_fun()
+        configurator.entry = 'hundred_value'
+        qtbot.wait(500)
 
-    def test_default_configuration(self, ini_configurator):
-        configurator, main_window, qtbot = ini_configurator
-        main_window.show()
-        config_filepath_1 = configurator.entry_filepath
-        configurator.experiment_manager.entry = configurator.experiment_manager.entries[-1]
-        config_filepath_2 = configurator.entry_filepath
-
-        assert config_filepath_1 != config_filepath_2
-
-    def test_configuration_filepath(self, ini_configurator):
-        configurator, main_window, qtbot = ini_configurator
-        main_window.show()
-        liste1 = configurator.entries_filepath
-        configurator.experiment_manager.entry = configurator.experiment_manager.entries[-1]
-        liste2 = configurator.entries_filepath
-
-        assert liste1 != liste2
-        for elt in liste1:
-            if elt in liste2:
-                assert False
-
-
+        assert configurator.entry == 'hundred_value'
+        assert configurator.get_action_list().currentText() == 'hundred_value'
 
 
