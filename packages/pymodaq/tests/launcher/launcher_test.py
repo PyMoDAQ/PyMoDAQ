@@ -12,7 +12,7 @@ config = GlobalConfig()
 
 @pytest.fixture
 def ini_launcher(qtbot):
-    """Fixture pour initialiser un Launcher avec le widget Qt"""
+    """Fixture to initialize launcher with Qt widget"""
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
     external_ui = QtWidgets.QMainWindow()
