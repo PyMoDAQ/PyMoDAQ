@@ -2,12 +2,12 @@ import pickle
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-
+import dataclasses
 
 from qtmonaco import Monaco
 from qtpy import QtWidgets
-from qtpy.QtGui import QKeySequence
-from qtpy.QtCore import Qt, QFileSystemWatcher
+from qtpy.QtGui import QKeySequence, QColor
+from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QSignalBlocker
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_utils.config import get_set_local_dir
@@ -23,11 +23,41 @@ from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
 
 
+@dataclasses.dataclass
+class FileStatus:
+    path: Path
+    unsaved: bool = False
+
+
 class MonacoWithFile(Monaco):
+
+    file_status = Signal(FileStatus)
+
     def __init__(self, file_path: Path, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.file_path = file_path
+        self._unsaved = False
+
+        self.text_changed.connect(self.set_unsaved)
+
+    def set_unsaved(self):
+        if not self._unsaved:
+            self._unsaved = True
+            self.file_status.emit(FileStatus(self.file_path, True))
+
+    def set_saved(self):
+        if self._unsaved:
+            self._unsaved = False
+            self.file_status.emit(FileStatus(self.file_path, False))
+
+    @property
+    def saved(self):
+        return not self._unsaved
+
+    @property
+    def unsaved(self):
+        return self._unsaved
 
 
 class MonacoApp(CustomApp):
@@ -37,7 +67,7 @@ class MonacoApp(CustomApp):
         self.monaco_widget: Monaco = None
         self._save_path = config('data', 'data_saving', 'h5file', 'save_path')
 
-        self.file_watcher = QFileSystemWatcher()
+        self.file_watcher = QFileSystemWatcher()  # to check if file are modified from elsewhere
 
         self.setup_ui()
 
@@ -47,6 +77,9 @@ class MonacoApp(CustomApp):
                 _files = pickle.load(f)
                 for file in _files:
                     self.add_file(file, display=True)
+
+            self.highlight_tab(self.tab_widget.currentIndex())
+
         except FileNotFoundError as e:
             pass
 
@@ -94,11 +127,24 @@ class MonacoApp(CustomApp):
         self.connect_action('save_copy_as', self.save_copy_file_as)
 
         self.tab_widget.tabCloseRequested.connect(self.close_editor)
+        self.tab_widget.tabBarClicked.connect(self.highlight_tab)
 
         self.file_watcher.fileChanged.connect(self.do_things_on_file_changed)
 
     def do_things_on_file_changed(self, file_path_as_str: str):
         file_path = Path(file_path_as_str)
+        do_reload = dialog('File Changed',
+                        message=f'{file_path.name} has been changed elsewhere, do you want to reload it?')
+        if do_reload:
+            self.current_file = file_path
+            QtWidgets.QApplication.processEvents()
+
+            self.display_file_text(file_path, self.current_editor)
+
+    def highlight_tab(self, tab_index: int):
+        for ind in range(self.tab_widget.count()):
+            self.tab_widget.tabBar().setTabTextColor(ind,
+                                                     self.get_theme().blue if ind==tab_index else self.get_theme().text)
 
     @property
     def current_editor(self) -> MonacoWithFile:
@@ -112,6 +158,12 @@ class MonacoApp(CustomApp):
     @property
     def current_file(self) -> Path:
         return self.current_editor.file_path
+
+    @current_file.setter
+    def current_file(self, file_path: Path):
+        tab_index = self.files_path.index(file_path)
+        self.tab_widget.setCurrentIndex(tab_index)
+        self.highlight_tab(tab_index)
 
     def close_editor(self, tab_index: int):
         """ close the file and the editor of the given tab index"""
@@ -162,8 +214,11 @@ class MonacoApp(CustomApp):
         if file_path is None:
             file_path = self.current_file
 
+        self.file_watcher.removePath(str(file_path))
         with open(file_path, 'w', encoding="utf-8", newline='') as f:
             f.write(self.current_editor.get_text())
+        self.current_editor.set_saved()
+        self.file_watcher.addPath(str(file_path))
 
     def add_file(self, file_path: Path, display=True):
         """ Open and display a file content in a new editor"""
@@ -177,6 +232,13 @@ class MonacoApp(CustomApp):
 
         if display:
             self.display_file_text(file_path, monaco_widget)
+
+        monaco_widget.file_status.connect(self.unsaved_tabname)
+
+    def unsaved_tabname(self, file_status: FileStatus):
+        for ind in range(self.tab_widget.count()):
+            editor: MonacoWithFile = self.tab_widget.widget(ind)
+            self.tab_widget.setTabText(ind, f'{editor.file_path.name}' if editor.saved else f'{editor.file_path.name}*')
 
     def display_file_text(self, text: Path | str, monaco_widget: MonacoWithFile=None):
         """ display in the given editor the text
