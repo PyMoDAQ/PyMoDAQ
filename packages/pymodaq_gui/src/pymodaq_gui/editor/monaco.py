@@ -126,7 +126,18 @@ class MonacoApp(CustomApp):
         self._save_file(file_path)
 
         self.display_widget.clear()
-        self.display_widget.append(f'Running {str(file_path)} file')
+        self.display_widget.append(f'Checking {file_path.name} file syntax...')
+        try:
+            self.check_python_syntax_valid(file_path)
+        except SyntaxError as e:
+            self.display_widget.append(f"Syntax error: {e}")
+            return
+        except Exception as e:
+            self.display_widget.append(f"Error: {e}")
+            return
+        self.display_widget.append(f'Syntax is Ok!')
+
+        self.display_widget.append(f'Running {file_path.name} file')
 
         self.do_subprocess([sys.executable, str(file_path)])
 
@@ -324,17 +335,9 @@ class MonacoApp(CustomApp):
             pickle.dump(self.files_path, f)
 
     @staticmethod
-    def is_python_syntax_valid(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                compile(f.read(), file_path, "exec")
-            return True
-        except SyntaxError as e:
-            print(f"Syntax error: {e}")
-            return False
-        except Exception as e:
-            print(f"Error: {e}")
-            return False
+    def check_python_syntax_valid(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            compile(f.read(), file_path, "exec")
 
 
 def main():
