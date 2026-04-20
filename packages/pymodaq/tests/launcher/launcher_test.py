@@ -18,12 +18,12 @@ def ini_launcher(qtbot):
     external_ui = QtWidgets.QMainWindow()
     launcher = Launcher(external_ui)
 
-    qtbot.addWidget(external_ui)  # Ajouter le QMainWindow à qtbot, pas le Launcher
+    qtbot.addWidget(external_ui)
     launcher.mainwindow.show()
 
     yield launcher, qtbot
 
-    # Nettoyage après le test
+    # Clean up
     launcher.quit_fun()
     launcher.mainwindow.close()
     external_ui.close()
