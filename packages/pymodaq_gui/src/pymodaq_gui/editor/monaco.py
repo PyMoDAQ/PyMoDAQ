@@ -25,14 +25,13 @@ from pymodaq_gui.utils.file_io import select_file
 
 config = GlobalConfig()
 
+subprocess_file = get_set_local_dir(user=True).joinpath('temp_exec')
+
 
 class Redirect:
     def __init__(self, widget: QtWidgets.QTextEdit, autoscroll=True):
         self.widget = widget
         self.autoscroll = autoscroll
-
-    def fileno(self):
-        return 0
 
     def write(self, text: str):
         self.widget.append(text)
@@ -41,7 +40,6 @@ class Redirect:
 
     def flush(self):
         pass
-
 
 @dataclasses.dataclass
 class FileStatus:
@@ -90,7 +88,16 @@ class Runner(QObject):
 
     def do_subprocess(self, file_path: Path):
         self.redirect.write('Starting subprocess')
-        subprocess.Popen([sys.executable, str(file_path)], stdout=self.redirect, stderr=self.redirect, text=True)
+
+        proc = subprocess.Popen([sys.executable, str(file_path)], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+        out, err = proc.communicate()
+        if err:
+            self.redirect.write('Error in subprocess:')
+            self.redirect.write(err)
+        if out:
+            self.redirect.write('Output of subprocess:')
+            self.redirect.write(out)
 
 
 class MonacoApp(CustomApp):
@@ -166,12 +173,12 @@ class MonacoApp(CustomApp):
             self._thread.wait()
 
         self._runner = Runner(display=self.display_widget)
-        # self._thread = QThread()
-        # self._runner.moveToThread(self._thread)
-        # self._thread.finished.connect(self._runner.deleteLater)
+        self._thread = QThread()
+        self._runner.moveToThread(self._thread)
+        self._thread.finished.connect(self._runner.deleteLater)
         self.run_signal.connect(self._runner.do_subprocess)
 
-        # self._thread.start()
+        self._thread.start()
 
         self.run_signal.emit(file_path)
 
