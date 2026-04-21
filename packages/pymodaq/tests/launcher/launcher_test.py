@@ -61,7 +61,7 @@ class TestLauncher:
         arguments, but the responsibility of the correct launch belongs to the dashboard via the 'load_dashboard_with_preset' method.
         """
         launcher, qtbot = ini_launcher
-        launcher.get_action('load_default_dashboard').trigger()
+        launcher.get_action('restore_dashboard').trigger()
         qtbot.wait(500)
 
         assert mock_popen.called

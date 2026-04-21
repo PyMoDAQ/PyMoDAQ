@@ -33,7 +33,6 @@ from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 
-from pymodaq_utils.config import GlobalConfig
 
 logger = set_logger(get_module_name(__file__))
 
@@ -138,13 +137,13 @@ class Launcher(CustomApp):
                         toolbar='header')
         self.header_toolbar.addWidget(self.date_label)
         self.header_toolbar.addWidget(self.date_combo_box)
-        self.add_action('load_default_dashboard', 'Restore',
+        self.add_action('restore_dashboard', 'Restore',
                         'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
         self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
                         toolbar='header')
 
-        # setup_actions is called after setup_docks; style the action button here once it exists.
-        button = self.header_toolbar.widgetForAction(self.get_action('load_default_dashboard'))
+        # setup_actions is called after setup_docks, style the action button here once it exists.
+        button = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
         if isinstance(button, QtWidgets.QToolButton):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
@@ -209,7 +208,7 @@ class Launcher(CustomApp):
 
         # Header of loader section
         self.connect_action('back_config', lambda: self.do_navigate(self.history_index + 1))
-        self.connect_action('load_default_dashboard', self.load_dashboard_with_experiment_configurator)
+        self.connect_action('restore_dashboard', self.load_dashboard_with_experiment_configurator)
         self.connect_action('next_config', lambda: self.do_navigate(self.history_index-1))
         self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
@@ -306,8 +305,8 @@ class Launcher(CustomApp):
         self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
         self.header_toolbar = self.get_toolbar('header')
         # setup_docks runs before setup_actions, so the action may not exist yet.
-        if self.has_action('load_default_dashboard'):
-            button = self.header_toolbar.widgetForAction(self.get_action('load_default_dashboard'))
+        if self.has_action('restore_dashboard'):
+            button = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
             if isinstance(button, QtWidgets.QToolButton):
                 button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
@@ -381,10 +380,7 @@ class Launcher(CustomApp):
 
     def load_dashboard_with_experiment_configurator(self):
         """
-        Debug : load and show dashboard with default experiment and default configurator
-        Returns
-        -------
-
+        Load and show dashboard with selected experiment and configuration.
         """
         subprocess.Popen(['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry])
 
