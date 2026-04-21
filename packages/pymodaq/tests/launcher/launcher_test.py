@@ -10,23 +10,7 @@ from pymodaq_utils.config import GlobalConfig
 config = GlobalConfig()
 
 
-@pytest.fixture
-def ini_launcher(qtbot):
-    """Fixture to initialize launcher with Qt widget"""
-    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
-                        style=config('gui', 'style', 'style')[0])
-    external_ui = QtWidgets.QMainWindow()
-    launcher = Launcher(external_ui)
 
-    qtbot.addWidget(external_ui)
-    launcher.mainwindow.show()
-
-    yield launcher, qtbot
-
-    # Clean up
-    launcher.quit_fun()
-    launcher.mainwindow.close()
-    external_ui.close()
 
 
 class TestLauncher:
@@ -53,6 +37,29 @@ class TestLauncher:
         launcher.do_navigate(len(launcher.history) - 1)
         assert launcher.get_action('next_config').isEnabled() == True
         assert launcher.get_action('back_config').isEnabled() == False
+
+    def test_informations_from_history_file(self, ini_launcher, copied_data):
+        launcher, qtbot = ini_launcher
+
+        # History size
+        assert len(launcher.history) == 2
+
+        # Test ten value
+        assert launcher.date_combo_box.currentText() == '2026/04/20 at 10h16'
+        assert launcher.experiment_manager.entry == 'exp_test'
+        assert launcher.experiment_manager.get_action_list().currentText() == 'exp_test'
+        assert launcher.configurator.entry == 'ten_value'
+        assert launcher.configurator.get_action_list().currentText() == 'ten_value'
+
+        # Navigate in the back config
+        launcher.do_navigate(launcher.history_index + 1)
+
+        # Test hundred value
+        assert launcher.date_combo_box.currentText() == '2026/04/20 at 10h15'
+        assert launcher.experiment_manager.entry == 'exp_test'
+        assert launcher.experiment_manager.get_action_list().currentText() == 'exp_test'
+        assert launcher.configurator.entry == 'hundred_value'
+        assert launcher.configurator.get_action_list().currentText() == 'hundred_value'
 
 
 @pytest.fixture
@@ -118,5 +125,3 @@ class TestWidgetSync:
 
         assert configurator.entry == 'hundred_value'
         assert configurator.get_action_list().currentText() == 'hundred_value'
-
-
