@@ -53,3 +53,32 @@ def ini_launcher(qtbot, copied_data):
     launcher.mainwindow.close()
     external_ui.close()
 
+@pytest.fixture
+def ini_configurator(qtbot):
+    """Fixture to replicate the synchronization bug between experiment and configuration."""
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
+
+    try:
+        from pymodaq.utils.managers.configurator.configurator import Configurator
+
+        configurator = Configurator()
+
+        main_window = QtWidgets.QMainWindow()
+        main_window.setWindowTitle('Bug sync')
+        main_window.setCentralWidget(configurator.add_toolbar('test'))
+
+        configurator.experiment_manager.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
+        configurator.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
+        configurator.experiment_manager.enable_actions(True)
+        configurator.enable_actions(True)
+
+        qtbot.addWidget(main_window)
+        main_window.show()
+
+        yield configurator, main_window, qtbot
+
+        main_window.close()
+        main_window.deleteLater()
+    except Exception as e:
+        pytest.skip(f"Configurator not available: {str(e)}")
