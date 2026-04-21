@@ -26,6 +26,7 @@ def copied_data(tmp_path):
     # Copy test files to pymodaq directories
     shutil.copy(str(ressources_directory / 'exp_test.xml'), str(experiment_path / 'exp_test.xml'))
     shutil.copy(str(ressources_directory / 'history_test.toml'), str(user_configuration_path / 'history_test.toml'))
+    shutil.copy(str(ressources_directory / 'history_test_duplicates.toml'), str(user_configuration_path / 'history_test_duplicates.toml'))
     shutil.copytree(ressources_directory / 'exp_test', configurator_path / 'exp_test', dirs_exist_ok=True)
 
     yield
@@ -36,13 +37,14 @@ def copied_data(tmp_path):
     shutil.rmtree(configurator_path / 'exp_test', ignore_errors=True)
 
 @pytest.fixture
-def ini_launcher(qtbot, copied_data):
+def ini_launcher(qtbot, copied_data, request):
     """Fixture to initialize launcher with Qt widget"""
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
     external_ui = QtWidgets.QMainWindow()
-    launcher = Launcher(external_ui, history_file_name='history_test.toml') # Use the test history file to isolate data tests and data production
 
+    history_file = getattr(request, 'param', 'history_test.toml')
+    launcher = Launcher(external_ui, history_file_name=history_file)
     qtbot.addWidget(external_ui)
     launcher.mainwindow.show()
 

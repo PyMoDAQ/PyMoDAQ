@@ -67,7 +67,7 @@ class Configurator(ManagerBase):
 
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
-
+        self.history_file_name: str = 'history.toml'
         self.max_history_size = config('launcher', 'max_history_size')
         self.keep_duplicates_items_history = config('launcher', 'keep_duplicates')
 
@@ -427,7 +427,7 @@ class Configurator(ManagerBase):
                     self.config_model.moveRow(QModelIndex(), index,
                                               QModelIndex(), index+2)
 
-    def save_new_history_entry(self, name_history_file : str = 'history.toml'):
+    def save_new_history_entry(self):
         """Implements this method from ManagerBase. Save a new history entry with experiment and configurator for one time"""
         import tomli_w
         import tomllib
@@ -437,7 +437,7 @@ class Configurator(ManagerBase):
 
         entry = {date: {'experiment': self.experiment_manager.entry, 'configurator': self.entry}}
 
-        history_path = get_set_configurator_path(user=True) / name_history_file
+        history_path = get_set_configurator_path(user=True) / self.history_file_name
 
         if history_path.is_file():
             with open(history_path, "rb") as f:

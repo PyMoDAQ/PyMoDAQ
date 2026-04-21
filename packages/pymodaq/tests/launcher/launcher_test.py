@@ -1,4 +1,7 @@
+import pytest
 from qtpy import QtWidgets
+
+from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq_utils.config import GlobalConfig
 from mock import patch
 from subprocess import Popen
@@ -26,7 +29,7 @@ class TestLauncher:
         assert launcher.get_action('next_config').isEnabled() == True
         assert launcher.get_action('back_config').isEnabled() == False
 
-    def test_informations_from_history_file(self, ini_launcher, copied_data):
+    def test_informations_from_history_file(self, ini_launcher):
         launcher, qtbot = ini_launcher
 
         # History size
@@ -83,6 +86,24 @@ class TestLauncher:
 
         assert experiment_value == 'exp_test'
         assert configurator_value == 'ten_value'
+
+    @pytest.mark.parametrize('ini_launcher', ['history_test_duplicates.toml'], indirect=True)
+    def test_history_duplicates_false(self, ini_launcher):
+        launcher, qtbot = ini_launcher
+        launcher.configurator.keep_duplicates_items_history = False
+        launcher.configurator.history_file_name = 'history_test_duplicates.toml'
+        launcher.configurator.save_new_history_entry()
+        launcher._on_history_file_modified()
+        assert len(launcher.history) == 2
+
+    @pytest.mark.parametrize('ini_launcher', ['history_test_duplicates.toml'], indirect=True)
+    def test_history_duplicates_true(self, ini_launcher):
+        launcher, qtbot = ini_launcher
+        launcher.configurator.keep_duplicates_items_history = True
+        launcher.configurator.history_file_name = 'history_test_duplicates.toml'
+        launcher.configurator.save_new_history_entry()
+        launcher._on_history_file_modified()
+        assert len(launcher.history) == 6 # save_new_history_entry write a new entry in the history file
 
 
 class TestWidgetSync:
