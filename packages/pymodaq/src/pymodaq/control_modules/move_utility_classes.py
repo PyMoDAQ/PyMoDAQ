@@ -191,21 +191,17 @@ def main(plugin_file, init=True, title='test'):
 
     """
     import sys
-    from qtpy import QtWidgets
-    from pymodaq.control_modules.daq_move import DAQ_Move
     from pathlib import Path
 
     act = Path(plugin_file).stem.split('daq_move_')[1]
 
-    app = mkQApp("PyMoDAQ Viewer")
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
+    app = mkQApp("PyMoDAQ Move")
+    shared_ui, daq_move = create_load_daq_move('simple')
 
-    widget = QtWidgets.QWidget()
-    prog = DAQ_Move(widget, title=title, actuator=act)
-    widget.show()
-    prog.actuator = Path(plugin_file).stem[9:]
-    if init:
-        prog.init_hardware_ui()
+    daq_move.actuator = act
 
+    shared_ui.show()
     sys.exit(app.exec())
 
 

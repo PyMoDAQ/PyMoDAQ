@@ -36,7 +36,7 @@ import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuNames
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
@@ -229,7 +229,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 
-        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
+        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuToolbarNames.FILE))
 
         self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
@@ -462,18 +462,18 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         Create the menubar object looking like :
         """
-        self.add_menu(MenuNames.FILE, 'File', menubar)
+        self.add_menu(MenuToolbarNames.FILE, 'File', menubar)
 
-        self.add_menu(MenuNames.VIEW, 'View', menubar)
+        self.add_menu(MenuToolbarNames.VIEW, 'View', menubar)
 
-        self.add_menu('docked', 'Docked', MenuNames.VIEW)
+        self.add_menu('docked', 'Docked', MenuToolbarNames.VIEW)
 
-        self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
-        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name=ExperimentManager.icon_name)
-        self.add_menu('state', 'State', MenuNames.TOOLS, icon_name=StateManager.icon_name)
+        self.add_menu(MenuToolbarNames.TOOLS, 'Tools', menubar)
+        self.add_menu('experiment', 'Experiment', MenuToolbarNames.TOOLS, icon_name=ExperimentManager.icon_name)
+        self.add_menu('state', 'State', MenuToolbarNames.TOOLS, icon_name=StateManager.icon_name)
         self.get_menu('state').setEnabled(False)
 
-        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name=Overshooter.icon_name)
+        self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
 
         # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
@@ -483,7 +483,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         # self.update_remote_menu()
 
         # extensions menu
-        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuNames.TOOLS)
+        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuToolbarNames.TOOLS)
         self.get_menu('extensions').setEnabled(False)
 
     def setup_actions(self):
@@ -494,7 +494,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         "Save the Saved Docks layout corresponding to the current experiment",
                         auto_toolbar=False, menu='docked')
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
-                        menu=MenuNames.VIEW)
+                        menu=MenuToolbarNames.VIEW)
 
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)

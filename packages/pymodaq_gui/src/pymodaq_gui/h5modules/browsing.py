@@ -19,6 +19,7 @@ from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 from qtpy import QtWidgets
 
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
@@ -35,6 +36,7 @@ from pymodaq_gui.plotting.data_viewers.viewerND import ViewerND
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.utils.custom_app import CustomApp
 
 
 config = Config()
@@ -137,8 +139,8 @@ class View(QObject):
             self.h5file_tree.tree.setItemWidget(item['item'], 1, widget)
 
 
-class H5Browser(QObject, ActionManager):
-    """UI used to explore h5 files, plot and export subdatas
+class H5Browser(CustomApp):
+    """ App used to explore h5 files, plot and export subdatas
 
     Parameters
     ----------
@@ -162,41 +164,64 @@ class H5Browser(QObject, ActionManager):
     status_signal = Signal(str)
 
     def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None,
-                 backend='tables', swmr=False):
-        QObject.__init__(self)
-        # toolbar = QtWidgets.QToolBar()
-        ActionManager.__init__(self)  # , toolbar=toolbar)
-
-        if not isinstance(parent, QtWidgets.QMainWindow):
-            raise Exception('no valid parent container, expected a QMainWindow')
-
-        self.main_window = parent
-        self.parent_widget = QtWidgets.QWidget()
-        self.main_window.setCentralWidget(self.parent_widget)
-        #self.main_window.addToolBar(self.toolbar)
+                 backend=config('data', 'data_saving', 'backend')[0], swmr=False):
+        super().__init__(parent, title='H5Browser')
 
         self._swmr = swmr
         self._file_is_external = False  # True when h5file was passed by caller (shared handle)
         self.current_node_path = None
 
         self.settings_attributes = ParameterManager()
-        self.settings = ParameterManager()
 
-        # construct the UI interface
-        self.view = View(self.parent_widget, settings_tree=self.settings.settings_tree,
-                         settings_attributes_tree=self.settings_attributes.settings_tree)
-        self.view.item_clicked_sig.connect(self.show_h5_attributes)
-        self.view.item_double_clicked_sig.connect(self.show_h5_data)
-        self.hyper_viewer = ViewerND(self.view.viewer_widget)
-
-        self.setup_actions()
-        self.setup_menu()
-        self.connect_things()
+        self.setup_ui()
 
         # construct the h5 interface and load the file (or open a select file message)
         self.h5utils = H5BrowserUtil(backend=backend)
         self.data_loader = None
         self.load_file(h5file, h5file_path)
+
+    def setup_docks_and_widgets(self):
+        self.parent_widget = QtWidgets.QWidget()
+        self.mainwindow.setCentralWidget(self.parent_widget)
+
+        # construct the UI interface
+        self.view = View(self.parent_widget, settings_tree=self.settings_tree,
+                         settings_attributes_tree=self.settings_attributes.settings_tree)
+        self.view.item_clicked_sig.connect(self.show_h5_attributes)
+        self.view.item_double_clicked_sig.connect(self.show_h5_data)
+        self.hyper_viewer = ViewerND(self.view.viewer_widget)
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar):
+
+        self.add_menu(MenuToolbarNames.FILE, 'File', parent_menu=self.menubar)
+
+    def setup_actions(self):
+        self.add_action('export', 'Export as', 'file_export', tip='Export node content (and children) as ',
+                        auto_toolbar=False)
+        self.add_action('comment', 'Add Comment', 'add_notes', tip='Add comments to the node',
+                        auto_toolbar=False)
+        self.add_action('plot_node', 'Plot Node', 'color', tip='Plot the current node',
+                        auto_toolbar=False)
+        self.add_action('plot_nodes', 'Plot Nodes', 'color', tip='Plot all nodes hanging from the same parent',
+                        auto_toolbar=False)
+        self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'color', tip='Plot the current node with background'
+                                                                                 ' substraction if possible',
+                        auto_toolbar=False)
+        self.add_action('plot_nodes_with_bkg', 'Plot Nodes With Bkg', 'color', tip='Plot all nodes hanging from'
+                                                                                   ' the same parent with background'
+                                                                                   ' substraction if possible',
+                        auto_toolbar=False)
+
+        self.view.add_actions([self.get_action('export'), self.get_action('comment'),
+                               self.get_action('plot_node'), self.get_action('plot_nodes'),
+                               self.get_action('plot_node_with_bkg'),
+                               self.get_action('plot_nodes_with_bkg')])
+
+        self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuToolbarNames.FILE)
+        self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuToolbarNames.FILE)
+        self.add_action('refresh', 'Refresh', 'refresh',
+                        tip='Refresh the file view (useful for SWMR live files)',
+                        shortcut=QtCore.Qt.Key_F5, menu=MenuToolbarNames.FILE)
 
     def connect_things(self):
         self.connect_action('export', self.export_data)
@@ -204,10 +229,6 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('load', lambda: self.load_file(None, None))
         self.connect_action('save', self.save_file)
         self.connect_action('refresh', self.refresh_file)
-        self.connect_action('quit', self.quit_fun)
-        self.connect_action('about', self.show_about)
-        self.connect_action('help', self.show_help)
-        self.connect_action('log', self.show_log)
 
         self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
         self.connect_action('plot_nodes', lambda: self.get_node_and_plot(False, True))
@@ -294,51 +315,6 @@ class H5Browser(QObject, ActionManager):
         except Exception as e:
             logger.exception(str(e))
 
-    def setup_menu(self):
-        menubar = self.main_window.menuBar()
-        file_menu = menubar.addMenu('File')
-        self.affect_to('load', file_menu)
-        self.affect_to('save', file_menu)
-        self.affect_to('refresh', file_menu)
-        file_menu.addSeparator()
-        self.affect_to('quit', file_menu)
-
-        help_menu = menubar.addMenu('?')
-        self.affect_to('about', help_menu)
-        self.affect_to('help', help_menu)
-        self.affect_to('log', help_menu)
-
-    def setup_actions(self):
-        self.add_action('export', 'Export as', 'SaveAs', tip='Export node content (and children) as ',
-                        toolbar=self.toolbar)
-        self.add_action('comment', 'Add Comment', 'properties', tip='Add comments to the node',
-                        toolbar=self.toolbar)
-        self.add_action('plot_node', 'Plot Node', 'color', tip='Plot the current node',
-                        toolbar=self.toolbar)
-        self.add_action('plot_nodes', 'Plot Nodes', 'color', tip='Plot all nodes hanging from the same parent',
-                        toolbar=self.toolbar)
-        self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'color', tip='Plot the current node with background'
-                                                                                 ' substraction if possible',
-                        toolbar=self.toolbar)
-        self.add_action('plot_nodes_with_bkg', 'Plot Nodes With Bkg', 'color', tip='Plot all nodes hanging from'
-                                                                                   ' the same parent with background'
-                                                                                   ' substraction if possible',
-                        toolbar=self.toolbar)
-        self.view.add_actions([self.get_action('export'), self.get_action('comment'),
-                               self.get_action('plot_node'), self.get_action('plot_nodes'),
-                               self.get_action('plot_node_with_bkg'),
-                               self.get_action('plot_nodes_with_bkg')])
-
-        self.add_action('load', 'Load File', 'Open', tip='Open a new file')
-        self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
-        self.add_action('refresh', 'Refresh', 'refresh',
-                        tip='Refresh the file view (useful for SWMR live files)',
-                        shortcut=QtCore.Qt.Key_F5)
-        self.add_action('quit', 'Quit the application', 'Exit', tip='Quit the application')
-        self.add_action('about', 'About', tip='About')
-        self.add_action('help', 'Help', 'Help', tip='Show documentation', shortcut=QtCore.Qt.Key_F1)
-        self.add_action('log', 'Show Log', 'information2', tip='Open Log')
-
     def check_version(self):
         """Check version of PyMoDAQ to assert if file is compatible or not with the current version of the Browser"""
         if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
@@ -420,32 +396,9 @@ class H5Browser(QObject, ActionManager):
         try:
             if not self._file_is_external:
                 self.h5utils.close_file()
-            if self.main_window is None:
-                self.parent_widget.close()
-            else:
-                self.main_window.close()
+            super().quit_fun()
         except Exception as e:
             logger.exception(str(e))
-
-    def show_about(self):
-        splash_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'splash.png')
-        splash = QtGui.QPixmap(splash_path)
-        self.splash_sc = QtWidgets.QSplashScreen(splash, QtCore.Qt.WindoWindowStaysOnTopHint)
-        self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage(
-            f"PyMoDAQ version {utils.get_version()}\n"
-            f"Modular Acquisition with Python\nWritten by Sébastien Weber",
-            QtCore.Qt.AlignmentFlag.AlignRight,
-            QtCore.Qt.GlobalColor.white,
-        )
-
-    @staticmethod
-    def show_log():
-        webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
-
-    @staticmethod
-    def show_help():
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
     @staticmethod
     def add_log(txt):
@@ -465,18 +418,19 @@ class H5Browser(QObject, ActionManager):
                                'readonly': True})
             self.settings_attributes.settings.addChildren(params)
 
-            if settings is not None:
-                for child in self.settings.settings.children():
+            if len(settings) > 0:
+                for child in self.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = ioxml.XML_string_to_parameter(settings)
-                self.settings.settings.addChildren(params)
+                for setting in settings:
+                    param = ioxml.xml_string_to_parameter_dict(setting)
+                    self.settings.addChild(param)
 
             if scan_settings is not None:
                 params = ioxml.XML_string_to_parameter(scan_settings)
-                self.settings.settings.addChildren(params)
+                self.settings.addChildren(params)
 
-            if pixmaps == []:
+            if len(pixmaps) == 0:
                 self.view.pixmap_widget.setVisible(False)
             else:
                 self.view.pixmap_widget.setVisible(True)

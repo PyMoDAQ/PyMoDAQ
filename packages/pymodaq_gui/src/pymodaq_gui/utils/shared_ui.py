@@ -35,13 +35,14 @@ logger = set_logger(get_module_name(__file__))
 config =  Config()
 
 
-class MenuNames(StrEnum):
+class MenuToolbarNames(StrEnum):
     FILE = 'file'
     SETTINGS = 'settings'
     VIEW = 'view'
     TOOLS = 'tools'
     TOOLBARS = 'toolbars'
     HELP = 'help'
+    RUNTIME = 'runtime'
 
 
 class PymodaqUpdateTableWidget(QTableWidget):
@@ -93,14 +94,14 @@ class SharedUI(CustomApp):
     -----------
     app: CustomApp
         The wrapped application
-    widget: QWidget, DockArea
+    widget: QMainWindow, QWidget, DockArea
         parent of the wrapped app eg stand alone DAQ_Move, Viewer, Browser DashBoard...
         if None, uses app.parent
 
     The second argument is the module file path from where the app has been launched: allows simple restart
     """
 
-    def __init__(self, widget: Union[QtWidgets.QWidget, DockArea],
+    def __init__(self, widget: Union[QtWidgets.QMainWindow, QtWidgets.QWidget, DockArea],
                  show=True, title: str = None,):
         
         if isinstance(widget, QtWidgets.QMainWindow):
@@ -136,19 +137,13 @@ class SharedUI(CustomApp):
                 if menu.title() in menus_dict: # two  menus with identical names (titles)
                     self._merge_menus(menu, menus_dict[menu.title()])
                 elif menu.parent() == app.menubar:
-                    self.menubar.insertMenu(self.get_menu(MenuNames.HELP).menuAction(),
+                    self.menubar.insertMenu(self.get_menu(MenuToolbarNames.HELP).menuAction(),
                                             menu)
                 else:
                     pass
 
         for toolbar in app.toolbars:
-            self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
-
-        runtime_toolbar = self.get_toolbar('runtime_toolbar')
-        toolbar_visible = runtime_toolbar.isVisible()
-        self.mainwindow.removeToolBar(runtime_toolbar)
-        self.mainwindow.insertToolBar(app.toolbar, runtime_toolbar)
-        runtime_toolbar.setVisible(toolbar_visible)
+            self.get_menu(MenuToolbarNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.insertActions(menu.actions()[0], menu_to_merge.actions())
@@ -179,64 +174,64 @@ class SharedUI(CustomApp):
         if menubar is None:
             menubar = self.menubar
 
-        runtime_toolbar = self.add_toolbar('runtime_toolbar', 'Runtime', parent=self.mainwindow, add_break=False)
+        runtime_toolbar = self.add_toolbar(MenuToolbarNames.RUNTIME, 'Runtime', parent=self.mainwindow, add_break=False)
         runtime_toolbar.setMovable(False)
 
-        help_toolbar = self.add_toolbar('help_toolbar', 'Help', parent=self.mainwindow, add_break=False)
+        help_toolbar = self.add_toolbar(MenuToolbarNames.HELP, 'Help', parent=self.mainwindow, add_break=False)
         help_toolbar.setVisible(False)
 
         # File menu
-        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), parent_menu=menubar)
-        self.get_menu(MenuNames.FILE).addSeparator()
+        self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
+        self.get_menu(MenuToolbarNames.FILE).addSeparator()
 
         # View menu
-        self.add_menu(MenuNames.VIEW, MenuNames.VIEW.capitalize(), parent_menu=menubar)
-        self.get_menu(MenuNames.VIEW).addSeparator()
+        self.add_menu(MenuToolbarNames.VIEW, MenuToolbarNames.VIEW.capitalize(), parent_menu=menubar)
+        self.get_menu(MenuToolbarNames.VIEW).addSeparator()
 
-        self.add_menu(MenuNames.TOOLBARS, MenuNames.TOOLBARS.capitalize(), parent_menu=MenuNames.VIEW,
+        self.add_menu(MenuToolbarNames.TOOLBARS, MenuToolbarNames.TOOLBARS.capitalize(), parent_menu=MenuToolbarNames.VIEW,
                       menu=StickyMenu())
 
         # Tools menu
-        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), parent_menu=menubar)
-        self.get_menu(MenuNames.TOOLS).addSeparator()
+        self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.get_menu(MenuToolbarNames.TOOLS).addSeparator()
 
         # Help menu
-        self.add_menu(MenuNames.HELP, MenuNames.HELP.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.HELP, MenuToolbarNames.HELP.capitalize(), parent_menu=menubar)
 
 
     def setup_actions(self):
 
         # File menu
         self.add_action(short_name="restart", name="Restart", icon_name="restart_alt",
-                        tip="Restart PyMoDAQ", auto_toolbar=False, menu=MenuNames.FILE)
+                        tip="Restart PyMoDAQ", auto_toolbar=False, menu=MenuToolbarNames.FILE)
 
         self.add_action(short_name="quit", name="Quit", icon_name="cancel",
-                        tip="Quit PyMoDAQ", icon_color=self.get_theme().red, toolbar='runtime_toolbar',
-                        menu=MenuNames.FILE)
+                        tip="Quit PyMoDAQ", icon_color=self.get_theme().red, toolbar=MenuToolbarNames.RUNTIME,
+                        menu=MenuToolbarNames.FILE)
 
         # Tools menu
         self.add_action(short_name="logs", name="Logs", icon_name="description",
-                        tip="Open logs file", auto_toolbar=False, menu=MenuNames.TOOLS)
+                        tip="Open logs file", auto_toolbar=False, menu=MenuToolbarNames.TOOLS)
 
         self.add_action(short_name="preferences", name="Preferences", icon_name="handyman",
-                        tip="PyMoDAQ preferences", toolbar='help_toolbar', menu=MenuNames.TOOLS)
+                        tip="PyMoDAQ preferences", toolbar=MenuToolbarNames.HELP, menu=MenuToolbarNames.TOOLS)
 
         # Help menu
-        self.add_action( short_name="documentation", name="Documentation", icon_name="language",
-                         tip="Online documentation", toolbar='help_toolbar', menu=MenuNames.HELP)
+        self.add_action(short_name="documentation", name="Documentation", icon_name="language",
+                        tip="Online documentation", toolbar=MenuToolbarNames.HELP, menu=MenuToolbarNames.HELP)
 
         self.get_action("documentation").setShortcut(QtGui.QKeySequence("F1"))
 
-        self.get_menu(MenuNames.HELP).addSeparator()
+        self.get_menu(MenuToolbarNames.HELP).addSeparator()
 
         self.add_action(short_name="check_updates", name="Check updates", icon_name="update",
-                        auto_toolbar=False, menu=MenuNames.HELP)
+                        auto_toolbar=False, menu=MenuToolbarNames.HELP)
 
         self.add_action(short_name="about", name="About PyMoDAQ", icon_name="info",
-                        icon_color=self.get_theme().blue, toolbar='help_toolbar', menu=MenuNames.HELP)
+                        icon_color=self.get_theme().blue, toolbar=MenuToolbarNames.HELP, menu=MenuToolbarNames.HELP)
 
         for toolbar in self.toolbars:
-            self.get_menu(MenuNames.TOOLBARS).addAction(toolbar.toggleViewAction())
+            self.get_menu(MenuToolbarNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
     def connect_things(self):
         self.connect_action("logs", self.show_log)
