@@ -145,12 +145,6 @@ class SharedUI(CustomApp):
         for toolbar in app.toolbars:
             self.get_menu(MenuToolbarNames.TOOLBARS).addAction(toolbar.toggleViewAction())
 
-        runtime_toolbar = self.get_toolbar(MenuToolbarNames.RUNTIME)
-        toolbar_visible = runtime_toolbar.isVisible()
-        self.mainwindow.removeToolBar(runtime_toolbar)
-        self.mainwindow.insertToolBar(app.toolbar, runtime_toolbar)
-        runtime_toolbar.setVisible(toolbar_visible)
-
     def _merge_menus(self, menu_to_merge: QtWidgets.QMenu, menu: QtWidgets.QMenu):
         menu.insertActions(menu.actions()[0], menu_to_merge.actions())
         menu_to_merge.parent().removeAction(menu_to_merge.menuAction())

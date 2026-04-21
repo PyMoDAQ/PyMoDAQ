@@ -24,6 +24,7 @@ def create_load_daq_move(ui_identifier='Original', title="DAQ_Move") -> tuple[Sh
     win.setCentralWidget(widget)
     shared_ui = SharedUI(win)
     shared_ui.affect_application(daq_move.ui)
+
     shared_ui.add_toolbar('move_toolbar', 'Move', win, toolbar=daq_move.ui.toolbar,
                           add_break=False)
     daq_move.settings_tree.setVisible(False)
