@@ -1,9 +1,9 @@
 from qtpy import QtWidgets
 from pymodaq_utils.config import GlobalConfig
+from mock import patch
+from subprocess import Popen
 
 config = GlobalConfig()
-
-
 
 
 class TestLauncher:
@@ -15,11 +15,6 @@ class TestLauncher:
     def test_label(self, ini_launcher):
         launcher, qtbot = ini_launcher
         assert launcher.dashboard_button.text() == 'Dashboard'
-
-    def test_restore(self, ini_launcher):
-        launcher, qtbot = ini_launcher
-        launcher.get_action('load_default_dashboard').trigger()
-        qtbot.wait(500)
 
     def test_next_arrow(self, ini_launcher):
         launcher, qtbot = ini_launcher
@@ -54,7 +49,40 @@ class TestLauncher:
         assert launcher.configurator.entry == 'hundred_value'
         assert launcher.configurator.get_action_list().currentText() == 'hundred_value'
 
+    @patch('subprocess.Popen')
+    def test_restore(self, mock_popen, ini_launcher):
+        """
+        Mock 'subprocess.Popen' method to test if the launcher passes the correct arguments to the dashboard command.
 
+        Limits of this test:
+        To restore a dashboard, the launcher passes experiment and configurator names to the dashboard command.
+        But the launcher and the dashboard run in separate processes, the dashboard is a subprocess of the launcher.
+        So direct communication between them is impossible. This test verifies that the launcher passes the correct
+        arguments, but the responsibility of the correct launch belongs to the dashboard via the 'load_dashboard_with_preset' method.
+        """
+        launcher, qtbot = ini_launcher
+        launcher.get_action('load_default_dashboard').trigger()
+        qtbot.wait(500)
+
+        assert mock_popen.called
+
+        # Get arguments list
+        args_list = mock_popen.call_args[0][0]
+
+        # Verify command arguments
+        assert args_list[0] == 'dashboard'
+        assert args_list[1] == '-x'
+        assert args_list[3] == '-c'
+
+        # Get experiment and configurator values
+        exp_index = 2
+        config_index = 4
+
+        experiment_value = args_list[exp_index]
+        configurator_value = args_list[config_index]
+
+        assert experiment_value == 'exp_test'
+        assert configurator_value == 'ten_value'
 
 
 class TestWidgetSync:
@@ -65,7 +93,6 @@ class TestWidgetSync:
         configurator, main_window, qtbot = ini_configurator
         main_window.show()
         qtbot.wait(5000)
-
 
     def test_widgets_synchro(self, ini_configurator, copied_data):
         configurator, main_window, qtbot = ini_configurator
