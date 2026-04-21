@@ -10,7 +10,7 @@ import sys
 from qtmonaco import Monaco
 from qtpy import QtWidgets
 from qtpy.QtGui import QKeySequence, QColor, QTextCursor
-from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QSignalBlocker
+from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QSignalBlocker, QThread, QObject
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig
@@ -30,6 +30,9 @@ class Redirect:
     def __init__(self, widget: QtWidgets.QTextEdit, autoscroll=True):
         self.widget = widget
         self.autoscroll = autoscroll
+
+    def fileno(self):
+        return 0
 
     def write(self, text: str):
         self.widget.append(text)
@@ -77,11 +80,29 @@ class MonacoWithFile(Monaco):
         return self._unsaved
 
 
+class Runner(QObject):
+    def __init__(self, display: QtWidgets.QTextEdit):
+
+        super().__init__()
+
+        self.redirect = Redirect(display)
+        self.redirect.write('Initializing subprocess runner')
+
+    def do_subprocess(self, file_path: Path):
+        self.redirect.write('Starting subprocess')
+        subprocess.Popen([sys.executable, str(file_path)], stdout=self.redirect, stderr=self.redirect, text=True)
+
+
 class MonacoApp(CustomApp):
+
+    run_signal = Signal(Path)
+
     def __init__(self, parent: QtWidgets.QWidget = None,):
         super().__init__(parent, create_app_toolbar=False)
 
         self.monaco_widget: Monaco = None
+        self._thread: QThread = None
+
         self._save_path = config('data', 'data_saving', 'h5file', 'save_path')
 
         self.file_watcher = QFileSystemWatcher()  # to check if file are modified from elsewhere
@@ -139,10 +160,20 @@ class MonacoApp(CustomApp):
 
         self.display_widget.append(f'Running {file_path.name} file')
 
-        self.do_subprocess([sys.executable, str(file_path)])
 
-    def do_subprocess(self, command: list[str]):
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1, text=True)
+        if self._thread is not None and self._thread.isRunning():
+            self._thread.quit()
+            self._thread.wait()
+
+        self._runner = Runner(display=self.display_widget)
+        # self._thread = QThread()
+        # self._runner.moveToThread(self._thread)
+        # self._thread.finished.connect(self._runner.deleteLater)
+        self.run_signal.connect(self._runner.do_subprocess)
+
+        # self._thread.start()
+
+        self.run_signal.emit(file_path)
 
     def create_monaco_widget(self, file_path: Path) -> MonacoWithFile:
         monaco_widget = MonacoWithFile(file_path)
