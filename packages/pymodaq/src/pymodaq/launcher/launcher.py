@@ -17,7 +17,6 @@ from qtpy.QtWidgets import (
     QComboBox,
 )
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-# Handler
 from watchdog.observers import Observer
 
 from pymodaq.extensions import ExtensionEnum
@@ -356,7 +355,7 @@ class Launcher(CustomApp):
         }
 
     def show_experiment_titles_only(self, experiment_source=None):
-        """Load a experiment source and display only module titles in settings_tree."""
+        """Load an experiment source and display only module titles in settings_tree."""
         try:
             if experiment_source is None:
                 experiment_settings = self.create_parameter(self.experiment_manager.settings)
@@ -422,6 +421,7 @@ class Launcher(CustomApp):
             self.set_action_enabled('back_config', True)
 
     def ui_refresh(self):
+        """Refresh interface and update experiment and configuration, entries, combo box values, actuators/detectors tree, history key and navigation actions."""
         # experiment and configurator
         if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
@@ -431,7 +431,7 @@ class Launcher(CustomApp):
             QtWidgets.QApplication.processEvents()
             self.configurator.entry = self.history[actual_key]['configurator']
 
-            # date label
+            # date
             date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
             self.date_combo_box.blockSignals(True)
             self.date_combo_box.clear()
