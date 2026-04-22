@@ -53,7 +53,9 @@ def ini_launcher(qtbot, copied_data, request):
     # Clean up
     launcher.quit_fun()
     launcher.mainwindow.close()
+    launcher.deleteLater()
     external_ui.close()
+
 
 @pytest.fixture
 def ini_configurator(qtbot):
