@@ -1323,7 +1323,7 @@ class DAQ_Detector(QObject):
                 self.average_done = False
             self.waiting_for_data = False
 
-            # for live mode:two possibilities: either snap one data and regrab softwarewise
+            # for live mode:two possibilities: either snap one data and regrab software wise
             # (while True) or if self.detector.live_mode_available is True all data is continuously
             # emitted from the plugin
             if self.detector.live_mode_available:
