@@ -153,7 +153,7 @@ Here, you can change the maximum history size and if the launcher keep duplicate
 
 .. warning::
 
-   If ``keep_duplicates`` settings it is set to ``on`` and you set this to ``off``, old duplicates will be deleted !
+   If ``keep_duplicates`` settings is set to ``on`` and you switch it to ``off``, old duplicates will be deleted !
 
 
 
