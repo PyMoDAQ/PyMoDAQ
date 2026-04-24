@@ -97,7 +97,7 @@ class Launcher(CustomApp):
             recursive=False
         )
         self._observer.start()
-        self.history_modified_sig.connect(self._refresh_history_ui)
+        self.history_modified_sig.connect(self.ui_refresh)
 
         self.setup_ui()
 
@@ -456,8 +456,6 @@ class Launcher(CustomApp):
         self.history_index = 0
         self.history_modified_sig.emit()
 
-    def _refresh_history_ui(self):
-        self.ui_refresh()
 
     def load_extension_subprocess(self, extension_name: str):
         """Launch an extension in a separate process"""
