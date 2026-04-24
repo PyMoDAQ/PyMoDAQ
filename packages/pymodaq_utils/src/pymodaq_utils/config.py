@@ -1,4 +1,5 @@
 import atexit
+import os
 import threading
 from abc import abstractproperty
 from collections.abc import Iterable
@@ -10,11 +11,8 @@ from os import environ
 import sys
 import datetime
 from pathlib import Path
-from typing import Union, Dict, TypeVar, Any, List, TYPE_CHECKING, Callable, Type
+from typing import Union, Dict, TypeVar, Any, TYPE_CHECKING, Callable, Type, cast
 from typing import Iterable as IterableType
-
-from pymodaq_utils.environment import guess_virtual_environment
-from pymodaq_utils.link import link_or_copy, unlink_or_delete
 
 from pymodaq_utils import warnings
 from pymodaq_utils.singleton import Singleton
@@ -25,6 +23,256 @@ import logging
 if TYPE_CHECKING:
     from pymodaq_gui.parameter import Parameter
 
+import os
+import platform
+import subprocess
+import ctypes
+import shutil
+import time
+
+from pathlib import Path
+from subprocess import CalledProcessError
+from typing import Union
+
+SYSTEM = platform.system()  # "Windows", "Linux", "Darwin"
+
+def __wait_for_path(path: str, timeout: float = 1.0) -> bool:
+    """Poll until a path exists or the timeout expires."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if os.path.exists(path):
+            return True
+        time.sleep(0.2)
+    return False
+
+def __elevate_windows(*commands: str) -> bool:
+    """
+    Run one or more cmd.exe commands with a single UAC elevation prompt.
+    Commands are chained with '&&'.
+
+    Attributes
+    ----------
+    *commands: Each command is a list of strings.
+
+   Returns
+   -------
+        bool: True if elevation and commands exeution was successfull, False otherwise
+    """
+
+    from pymodaq_utils.logger import set_logger, get_module_name
+    logger = set_logger(get_module_name(__file__))
+
+    cmd_chain = " && ".join(commands)
+    ret = ctypes.windll.shell32.ShellExecuteW(
+        None,       # parent HWND
+        "runas",    # UAC
+        "cmd.exe",
+        f'/c {cmd_chain}',
+        None,
+        0           # SW_HIDE
+    )
+    if ret <= 32:
+        logger.error(f"Windows elevation via UAC failed.")
+        return False
+
+    return True
+
+def __elevate_unix(*commands: list[str]) -> bool:
+    """
+    Run one or more commands with a single elevated session on Linux/macOS,
+    so the user is only prompted for a password once.
+    Commands are chained with '&&' under a single sh -c call.
+
+    On Linux:  tries pkexec (graphical) then sudo (terminal).
+    On macOS:  uses osascript 'do shell script ... with administrator privileges'.
+
+    Attributes
+    ----------
+    *commands: Each command is a list of strings, e.g.
+        ["mkdir", "-p", "/some/path"], ["chmod", "755", "/some/path"]
+
+   Returns
+   -------
+        bool: True if elevation and commands exeution was successfull, False otherwise
+    """
+
+    from pymodaq_utils.logger import set_logger, get_module_name
+    logger = set_logger(get_module_name(__file__))
+
+    def quote(arg: str) -> str:
+        return f'"{arg}"' if " " in arg else arg
+
+    shell_cmd = " && ".join(
+        " ".join(quote(a) for a in cmd)
+        for cmd in commands
+    )
+
+    if SYSTEM == "Linux":
+        wrapped = ["sh", "-c", shell_cmd]
+
+        def try_run(prefix: list[str]) -> bool:
+            return subprocess.run(prefix + wrapped, capture_output=True).returncode == 0
+
+        if not try_run(["pkexec"]):
+            logger.error("Linux elevation via pkexec failed.")
+            return False
+    else:
+        # macOS — escape inner double-quotes for the osascript string
+        escaped = shell_cmd.replace('"', '\\"')
+        script = f'do shell script "{escaped}" with administrator privileges'
+        result = subprocess.run(["osascript", "-e", script], capture_output=True)
+        if result.returncode != 0:
+            logger.error(f"macOS elevation via osascript failed: {result.stderr.decode().strip()}")
+            return False
+    return True
+
+def create_folder_with_elevation(path: str | Path, mode: int = 0o755) -> bool:
+    """
+    Create a folder at `path` with the given permissions.
+    On Unix, uses 'mkdir -m' so that mode and creation are a single atomic
+    operation, avoiding a separate chmod call (and a second password prompt
+    when elevation is required).
+
+    Args:
+     Attributes
+    ----------
+    path:
+        Target directory path.
+    mode:
+        Unix permission bits. Default 0o755.
+   Returns
+   -------
+        bool: True if successful, False otherwise
+    """
+
+    from pymodaq_utils.logger import set_logger, get_module_name
+    logger = set_logger(get_module_name(__file__))
+
+    path = str(path)
+
+    if SYSTEM == "Windows":
+        __elevate_windows(f'mkdir "{path}"')
+    else:
+        octal_str = oct(mode)[2:]   # e.g. 0o755 → "755"
+        __elevate_unix(["mkdir", "-m", octal_str, "-p", path])
+
+    if not __wait_for_path(path):
+        logger.error(f"Folder not found after elevation: {path}")
+        return False
+
+    logger.debug(f"Folder created (elevated): {path}")
+    return True
+
+
+def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
+    """
+    Rename (move) a file or folder from `old` to `new`.
+
+    On Unix, uses 'mv' under elevation when required.
+    On Windows, uses 'move' under elevation.
+
+    This ensures the rename is executed atomically at the OS level
+    and avoids separate privilege escalation steps.
+
+    Args:
+    ----
+    old_path:
+        Existing file or directory path.
+    new_path:
+        Destination path.
+
+    Returns
+    -------
+    bool
+        True if rename succeeded, False otherwise.
+    """
+
+    from pymodaq_utils.logger import set_logger, get_module_name
+    logger = set_logger(get_module_name(__file__))
+
+    old = str(old)
+    new = str(new)
+
+    if SYSTEM == "Windows":
+        # Windows: move command handles both file and directory renames
+        __elevate_windows(f'move "{old}" "{new}"')
+    else:
+        # Unix: mv is the standard rename/move operation
+        __elevate_unix(["mv", old, new])
+
+    if not __wait_for_path(new):
+        logger.error(f"Rename failed: {old} -> {new}")
+        return False
+
+    logger.debug(f"Renamed (elevated): {old} -> {new}")
+    return True
+
+def link_or_copy(src : Union[str, Path], dst : Union[str, Path]) -> None:
+    '''
+    Tries to reate a symlink of src at dst. If not possible, tries to create a
+    Junction (Windows/NTFS specific symlinks). Otherwise,falls back to copying src to dst.
+
+    A symlink may not always be possible as Windows may need administrative or developer
+    rights to create them. Junctions are NTFS-specific so it depends on the storage format.
+
+    Raises NotADirectoryError if the source is not a directory.
+    Raises FileExistsError if the destination already exists.
+    Parameters
+    ----------
+    src: Union[str, Path]
+        The src path to symlink or copy
+    dst: Union[str, Path]
+        The dst path of the symlink or copy
+
+    Returns
+    -------
+    None
+
+    '''
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
+
+    if not src.is_dir():
+        raise NotADirectoryError(f'Source is not an existing directory: {src}')
+    if dst.exists():
+        raise FileExistsError(f'Destination already exists: {dst}')
+    # Symlink
+    try:
+        dst.symlink_to(src, target_is_directory=True)
+    except (OSError,NotImplementedError) as e:
+        # from pymodaq_utils import logger as logger_module
+        #
+        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
+        # logger.info(f'Symlink not possible: {e}')
+        pass
+    else:
+        return
+
+    # Junction
+    try:
+        subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(dst), str(src)],
+             check=True,
+             stdout=subprocess.DEVNULL,
+             stderr=subprocess.DEVNULL,
+        )
+    except (OSError, CalledProcessError) as e:
+        # from pymodaq_utils import logger as logger_module
+        #
+        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
+        # logger.info(f'Junction not possible: {e}')
+        pass
+    else:
+        return
+
+    shutil.copytree(src, dst)
+
+def unlink_or_delete(dst : Union[str, Path]) -> None:
+    dst = Path(dst).absolute()
+    if dst.is_symlink() or dst.is_junction():
+        dst.unlink()
+    else:
+        shutil.rmtree(dst)
 
 USER = environ.get('USERNAME' if sys.platform == 'win32' else 'USER', 'unknown_user')
 
@@ -40,6 +288,72 @@ CONFIG_USER_PATH = Path.home()
 KeyType = TypeVar('KeyType')
 
 
+def _get_version_hash() -> str:
+    import hashlib
+    from importlib import metadata
+    packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
+    versions = []
+    for package in packages:
+        try:
+            versions.append(metadata.version(package))
+        except metadata.PackageNotFoundError:
+            pass
+    hashed = hashlib.sha256(''.join(versions).encode()).digest()[:8].hex()
+    return hashed + '-dev' if any('dev' in version for version in versions) else ''
+
+
+def _generate_env_path(base_path: Path, folder_name: str, *args) -> Path:
+    if args:
+        suffix = "_" + "_".join(str(arg) for arg in args)
+        folder_name = f"{folder_name}{suffix}"
+
+    return base_path / folder_name
+
+def _generate_backup_path(base_path: Path) -> Path:
+    date = datetime.datetime.now().strftime('%Y%m%d')
+    candidate = base_path / '.pymodaq_{}'.format(date)
+    counter = 0
+    while candidate.exists():
+        counter += 1
+        candidate = base_path / ('.pymodaq_{}'.format(date) + f'-{counter}')
+    return candidate
+
+
+def __dict_to_type(a : Any) -> Any:
+    if isinstance(a, dict):
+        return { k : __dict_to_type(v) for k,v in a.items()}
+    if isinstance(a, list):
+        return [__dict_to_type(x) for x in a]
+    return type(a)
+
+
+T = TypeVar('T')
+
+def deep_type_equals(a : T, b : T) -> bool:
+    '''
+    Compares two objects a and b not on their values but on their types.
+    For iterable objects like lists and dictionaries the function recursively
+    compare the types of nested elements.
+
+    Initially made to work with data loaded from toml.
+    Parameters
+    ----------
+    a : T
+        The first element to compare
+    b : T
+        The second element to compare
+
+    Returns
+    -------
+        True if types are all recursively equals, False otherwise.
+    '''
+    if type(a) != type(b):
+        return False
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(deep_type_equals(a[k], b[k]) for k in a)
+    if isinstance(a, list):
+        return all(deep_type_equals(x, y) for x, y in zip(a, b))
+    return True
 
 def replace_item_in_list(items: list[Any],
                          old: Any,
@@ -122,17 +436,19 @@ def get_set_path(a_base_path: Path, dir_name: str) -> Path:
         try:
             path_to_get.mkdir()
         except PermissionError as e:
-            logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
-                            f", try using admin rights. "
-                            f"Changing the not permitted path to a user "
-                            f"one: {Path.home().joinpath(dir_name)}.")
-            path_to_get = Path.home().joinpath(dir_name)
-            if not path_to_get.is_dir():
-                path_to_get.mkdir()
+            from pymodaq_utils.filesystem import create_folder_with_elevation
+            if not create_folder_with_elevation(path_to_get, 0o606):
+                logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
+                                f", try using admin rights. "
+                                f"Changing the not permitted path to a user "
+                                f"one: {Path.home().joinpath(dir_name)}.")
+                path_to_get = Path.home().joinpath(dir_name)
+                if not path_to_get.is_dir():
+                    path_to_get.mkdir()
     return path_to_get
 
 
-@functools.cache
+@lru_cache(maxsize=None)
 def get_set_local_dir(user=False) -> Path:
     """Defines, creates and returns a local folder where configuration files will be saved
 
@@ -306,6 +622,7 @@ class BaseConfig(metaclass=ConfigSingleton):
         The Path of the template from which the config is constructed
 
     """
+
     config_template_path: Path = NotImplemented
     config_name: str = NotImplemented
 
@@ -426,6 +743,7 @@ class BaseConfig(metaclass=ConfigSingleton):
                 config_dict = self.dict_to_add_to_user()
                 if config_dict is not None:
                     create_toml_from_dict(config_dict, toml_user_path)
+
             self._config = load_system_config_and_update_from_user(self.config_name)
             self._modified_config = toml.load(get_config_file(self.config_name, user=True))
 
@@ -477,6 +795,9 @@ class GlobalConfig(metaclass=Singleton):
                 wrapped_class._allow_direct_call = True
                 config.add_config(name, wrapped_class())
                 wrapped_class._allow_direct_call = False
+                if not config._config_is_valid(name):
+                    config._migrate()
+                    config._reload_configs()
             return wrapped_class
 
         return inner_wrapper
@@ -538,17 +859,52 @@ class GlobalConfig(metaclass=Singleton):
         for config in self._configs.values():
             config.save()
 
+    def _get_registered_config_names(self) -> list[str]:
+        """Get the list of registered config names"""
+        return list(self._configs.keys())
+
+    def _config_is_valid(self, name : str) -> bool:
+        template = toml.load(cast(BaseConfig, self._configs[name]).config_template_path)
+        return deep_type_equals(template,  self._configs[name])
+
+
+    def _reload_configs(self):
+        for name in self._configs.keys():
+            cast(BaseConfig, self._configs[name]).load()
+
+    def _migrate(self):
+        logging.critical("Migration of configuration folder.")
+        logging.critical("Your configuration will be reset. Old files are in backup dirs.")
+        # environment_version_specific_dir = _generate_env_path(
+        #     CONFIG_USER_PATH,
+        #     '.pymodaq',
+        #     guess_virtual_environment(),
+        #     _get_version_hash()
+        # )
+
+        user_backup_dir = _generate_backup_path(CONFIG_USER_PATH)
+        system_backup_dir = _generate_backup_path(CONFIG_BASE_PATH)
+
+        logging.critical(f"backup_dirs: ({user_backup_dir}, {system_backup_dir})")
+
+        os.rename(get_set_config_dir(user=True), user_backup_dir)
+        try:
+            os.rename(get_set_config_dir(user=False), system_backup_dir)
+        except PermissionError:
+            from pymodaq_utils.filesystem import rename_with_elevation
+            rename_with_elevation(get_set_config_dir(user=False), system_backup_dir)
+
+
+
 @GlobalConfig.register()
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
-    config_template_path = Path(__file__).parent.joinpath('resources/config_template.toml')
+    config_template_path = Path(__file__).parent.joinpath("resources/config_template.toml")
     config_name = 'utils'
-
 
     def dict_to_add_to_user(self):
         """To subclass"""
         return dict(user=dict(name=USER))
-
     def __call__(self, *args):
         if 'backends' in args:
             try:
@@ -625,114 +981,3 @@ def _delete_config_files(config : BaseConfig):
     get_config_file(config.config_name, user=False).unlink(missing_ok=True)
     get_config_file(config.config_name, user=True).unlink(missing_ok=True)
 
-
-
-def __generate_backup_path(base_path: Path, filename_fmt: str) -> Path:
-    date = datetime.datetime.now().strftime('%Y%m%d')
-    candidate = base_path / filename_fmt.format(date)
-    counter = 0
-    while candidate.exists():
-        counter += 1
-        candidate = base_path / (filename_fmt.format(date) + f'-{counter}')
-    return candidate
-
-def __get_version_hash() -> str:
-    import hashlib
-    from importlib import metadata
-    packages = ["pymodaq_utils", "pymodaq_data", "pymodaq_gui", "pymodaq"]
-    versions = []
-    for package in packages:
-        try:
-            versions.append(metadata.version(package))
-        except metadata.PackageNotFoundError:
-            pass
-    hashed = hashlib.sha256(''.join(versions).encode()).digest()[:8].hex()
-    return hashed + '-dev' if any('dev' in version for version in versions) else ''
-
-def __generate_env_path(base_path: Path, filename_fmt: str) -> Path:
-
-    candidate = base_path / filename_fmt.format(guess_virtual_environment(), __get_version_hash())
-    return candidate
-
-
-def __dict_to_type(a : Any) -> Any:
-    if isinstance(a, dict):
-        return { k : __dict_to_type(v) for k,v in a.items()}
-    if isinstance(a, list):
-        return [__dict_to_type(x) for x in a]
-    return type(a)
-
-
-T = TypeVar('T')
-
-def deep_type_equals(a : T, b : T) -> bool:
-    '''
-    Compares two objects a and b not on their values but on their types.
-    For iterable objects like lists and dictionaries the function recursively
-    compare the types of nested elements.
-
-    Initially made to work with data loaded from toml.
-    Parameters
-    ----------
-    a : T
-        The first element to compare
-    b : T
-        The second element to compare
-
-    Returns
-    -------
-        True if types are all recursively equals, False otherwise.
-    '''
-    if type(a) != type(b):
-        return False
-    if isinstance(a, dict):
-        return a.keys() == b.keys() and all(deep_type_equals(a[k], b[k]) for k in a)
-    if isinstance(a, list):
-        return all(deep_type_equals(x, y) for x, y in zip(a, b))
-    return True
-
-def __validate_config(template_path : Union[Path, str], config_path : Union[Path, str]) -> bool:
-    template_path = Path(template_path)
-    config_path = Path(config_path)
-    return deep_type_equals(toml.load(template_path), toml.load(config_path))
-
-@lru_cache(maxsize=1)
-def __sanitize_config_directory():
-    import logging
-
-    logging.critical("Sanitize configuration folder")
-    next_today_backup_dir =__generate_backup_path(CONFIG_USER_PATH, '.pymodaq_backup_{0}')
-    environment_version_specific_dir = __generate_env_path(CONFIG_USER_PATH, '.pymodaq_{0}_{1}')
-    logging.critical(f"next_today_backup_dir: {next_today_backup_dir}")
-    logging.critical(f"environment_version_specific_dir: {environment_version_specific_dir}")
-
-    local_config_dir = get_set_local_dir(user=True).absolute()
-    if (local_config_dir.exists() and
-      (not local_config_dir.is_symlink()
-        and not local_config_dir.is_junction())):
-            local_config_dir.rename(next_today_backup_dir)
-            link_or_copy(next_today_backup_dir, local_config_dir)
-            logging.critical(f"creating symlink {next_today_backup_dir} -> {local_config_dir}")
-
-    if __validate_config():
-        logging.critical("config is valid")
-        config_path = local_config_dir.resolve()
-        logging.critical(f"config is in path: {config_path}")
-        if config_path.stem.startswith('.pymodaq_backup'):
-            #unlink old config_path
-            logging.critical(f"local_config_dir : {local_config_dir}")
-            unlink_or_delete(local_config_dir)
-            #rename it
-            config_path = config_path.rename(environment_version_specific_dir)
-            #relink
-            link_or_copy(config_path, local_config_dir)
-    else:
-        config_path = local_config_dir.resolve()
-        unlink_or_delete(local_config_dir)
-        config_path.rename(next_today_backup_dir)
-        if not environment_version_specific_dir.exists():
-            environment_version_specific_dir.mkdir(parents=True)
-        link_or_copy(config_path, local_config_dir)
-
-
-__sanitize_config_directory()
