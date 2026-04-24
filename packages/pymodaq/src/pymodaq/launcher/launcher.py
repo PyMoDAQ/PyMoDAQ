@@ -221,12 +221,6 @@ class Launcher(CustomApp):
 
         self.date_combo_box.currentIndexChanged.connect(self._on_date_combo_box_changed)
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        '''
-        subclass method from CustomApp
-        '''
-        self.add_menu('file', 'File')
-
     def do_things_after_ui_setup(self):
         """Non mandatory method to be subclassed in order to do things after the UI setup
         """
