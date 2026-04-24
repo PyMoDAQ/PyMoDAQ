@@ -382,15 +382,8 @@ class Launcher(CustomApp):
         -------
 
         """
-        if self.history_index < 1 :
-            self.set_action_enabled('next_config', False)
-        else :
-            self.set_action_enabled('next_config', True)
-
-        if self.history_index >= len(self.history_keys) -1 :
-            self.set_action_enabled('back_config', False)
-        else :
-            self.set_action_enabled('back_config', True)
+        self.set_action_enabled('next_config', self.history_index >= 1)
+        self.set_action_enabled('back_config', self.history_index < len(self.history_keys) - 1)
 
     def ui_refresh(self):
         """Refresh interface and update experiment and configuration, entries, combo box values, actuators/detectors tree, history key and navigation actions."""
