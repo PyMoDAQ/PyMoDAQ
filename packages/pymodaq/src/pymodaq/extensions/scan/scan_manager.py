@@ -5,7 +5,7 @@ from pyqtgraph.parametertree import Parameter
 from qtpy import QtWidgets
 
 from pymodaq_utils.config import get_set_path, get_set_local_dir
-
+from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_data.data import DataDim
 
 from pymodaq_gui.managers.manager_base import ManagerBase
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 EXTENSION_PATH = get_set_path(get_set_local_dir(user=True), 'DAQ_SCAN')
-
+logger = set_logger(get_module_name(__file__))
 
 class ScanManager(ManagerBase):
 
@@ -105,8 +105,10 @@ class ScanManager(ManagerBase):
         """ Particular implementation to update entries for this inherited Manager """
         settings_to_load = self.settings_to_save_load()
 
-        for ind, setting in enumerate(ioxml.XML_file_to_parameter(entry_path)):
-            settings_to_load[ind].restoreState(setting['children'])
+        setting_from_file = Parameter.create(**ioxml.xml_file_to_parameter_dict(entry_path))
+
+        for ind, setting in enumerate(setting_from_file.children()):
+            settings_to_load[ind].restoreState(setting.saveState())
 
     def do_things_for_new_creation(self):
         """ To be reimplemented if needed """
@@ -120,11 +122,19 @@ class ScanManager(ManagerBase):
 
         Should not be called directly, use :attr:`execute_entry` instead.
         """
-        self.daq_scan.modules_manager.selected_actuators_name = self.modules_manager.selected_actuators_name
-        self.daq_scan.modules_manager.selected_detectors_name = self.modules_manager.selected_detectors_name
+        try:
+            self.daq_scan.modules_manager.selected_actuators_name = self.modules_manager.selected_actuators_name
+            self.daq_scan.modules_manager.selected_detectors_name = self.modules_manager.selected_detectors_name
 
-        self.daq_scan.settings.restoreState(self.settings.saveState())
-        self.daq_scan.scanner.set_scan_from_settings(self.scanner.settings, self.scanner.scanner.settings)
+            self.daq_scan.settings.restoreState(self.settings.saveState())
+
+            self.daq_scan.scanner.set_scan_from_settings(self.scanner.settings, self.scanner.scanner.settings)
+
+            return True
+        except Exception as e:
+            logger.exception(str(e))
+        finally:
+            return False
 
 
 if __name__ == '__main__':
