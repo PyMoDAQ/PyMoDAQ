@@ -68,6 +68,7 @@ names = [
     'not_started',
     'pause_circle',
     'plug_connect',
+    'qr_code_scanner',
     'quick_reference',
     'refresh',
     'remove',
