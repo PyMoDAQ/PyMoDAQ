@@ -393,7 +393,6 @@ class Launcher(CustomApp):
 
             self.experiment_manager.entry = self.history[actual_key]['experiment']
             self.configurator.experiment_filename = self.experiment_manager.entry
-            QtWidgets.QApplication.processEvents()
             self.configurator.entry = self.history[actual_key]['configurator']
 
             # date
@@ -406,8 +405,7 @@ class Launcher(CustomApp):
 
         else:
             self.experiment_manager.entry = "default"
-            self.configurator.experiment_filename = "default"
-            self.configurator.update_entry("default")
+            self.configurator.entry = "default"
 
         # tree
         self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
