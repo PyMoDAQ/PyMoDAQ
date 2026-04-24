@@ -84,8 +84,6 @@ class Launcher(CustomApp):
 
         self.history_file_name = history_file_name
         self.history_file_path = get_set_local_dir(user=True) / self.history_file_name
-        print(self.history_file_path)
-        print(get_set_local_dir(user=True))
 
         # History file handler (watchdog)
         self._handler = HistoryFileHandler(
@@ -125,12 +123,11 @@ class Launcher(CustomApp):
 
         # setup_actions is called after setup_docks, style the action button here once it exists.
         button = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
-        if isinstance(button, QtWidgets.QToolButton):
-            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
     def setup_docks(self):
         '''
-        Configuration des layouts et widgets
+        Layouts and widgets configuration.
         '''
 
         # Layout
@@ -185,9 +182,6 @@ class Launcher(CustomApp):
 
 
         logger.debug('docks are set')
-
-    def _emit_command(self, command: str):
-        cast(Any, self.command_sig).emit(ThreadCommand(command))
 
     def connect_things(self):
         '''
