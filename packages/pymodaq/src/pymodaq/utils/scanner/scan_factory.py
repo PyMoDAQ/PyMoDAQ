@@ -13,7 +13,6 @@ from collections.abc import Iterable
 import numpy as np
 from qtpy import QtWidgets
 
-from packages.pymodaq_gui.tests.parameter_test.param_ioxml_test import axes_names
 from pymodaq.utils.data import DataActuator
 from pymodaq_data import DataToExport
 from pymodaq_utils.abstract import abstract_attribute
