@@ -4,7 +4,6 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, cast
 
-
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import (
@@ -29,8 +28,11 @@ from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
+from pymodaq_utils.config import get_set_config_dir
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
+import tomllib
+from datetime import datetime
 
 
 logger = set_logger(get_module_name(__file__))
@@ -103,7 +105,7 @@ class Launcher(CustomApp):
         self.date_label = QLabel("Date :")
 
         self.history_file_name = history_file_name
-        self.history_file_path = get_set_configurator_path(user=True) / self.history_file_name
+        self.history_file_path = get_set_config_dir(user=True) / self.history_file_name
 
         # History file handler (watchdog)
         self._handler = HistoryFileHandler(
@@ -475,9 +477,6 @@ class Launcher(CustomApp):
         history_keys : list[str]
             List of history dictionary keys sorted by descending date
         """
-        import tomllib
-        from datetime import datetime
-
         if self.history_file_path.is_file():
             with open(self.history_file_path, "rb") as f:
                 history = tomllib.load(f)

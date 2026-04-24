@@ -11,8 +11,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import GlobalConfig as Config
-
+from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -31,6 +30,10 @@ from pymodaq.utils.managers.configurator.utils import (
 from pymodaq.utils.config import get_set_configurator_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
+
+import tomli_w
+import tomllib
+from datetime import datetime
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
@@ -68,8 +71,6 @@ class Configurator(ManagerBase):
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
         self.history_file_name: str = 'history.toml'
-        # self.max_history_size = config('launcher', 'max_history_size')
-        # self.keep_duplicates_items_history = config('launcher', 'keep_duplicates')
 
 
     @property
@@ -429,15 +430,12 @@ class Configurator(ManagerBase):
 
     def save_new_history_entry(self):
         """Implements this method from ManagerBase. Save a new history entry with experiment and configurator for one time"""
-        import tomli_w
-        import tomllib
-        from datetime import datetime
 
         date = datetime.now().strftime("%Y-%d-%m:%H:%M:%S")
 
         entry = {date: {'experiment': self.experiment_manager.entry, 'configurator': self.entry}}
 
-        history_path = get_set_configurator_path(user=True) / self.history_file_name
+        history_path = get_set_config_dir(user=True) / self.history_file_name
 
         if history_path.is_file():
             with open(history_path, "rb") as f:
