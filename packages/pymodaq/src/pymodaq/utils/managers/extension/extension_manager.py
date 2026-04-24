@@ -46,11 +46,11 @@ class ExtensionManager(ManagerBase):
 
     def save_entries(self, entry_path: Path = None) -> None:
         """Extensions don't persist to files."""
-        pass
+        return NotImplemented
 
     def _update_entry(self, entry_path: Path) -> None:
         """Extensions don't need file updates."""
-        pass
+        return NotImplemented
 
     def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
         """Load and display the selected extension."""
