@@ -89,9 +89,9 @@ class Launcher(CustomApp):
 
         # History file handler (watchdog)
         self._handler = HistoryFileHandler(
-                                            callback=self._on_history_file_modified,
-                                            watched_path=self.history_file_path
-                                        )
+            callback=self._on_history_file_modified,
+            watched_path=self.history_file_path
+        )
         self._observer = Observer()
         self._observer.schedule(
             self._handler,
