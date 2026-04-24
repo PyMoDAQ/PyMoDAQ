@@ -63,12 +63,10 @@ class Launcher(CustomApp):
     # list of dicts enabling a settings tree on the user interface
     params = []
 
-    def __init__(self, mainWindow, dashboard=None, history_file_name = 'history.toml'):
-        super().__init__(mainWindow)
+    def __init__(self, mainwindow, dashboard=None, history_file_name ='history.toml'):
+        super().__init__(mainwindow)
 
         self.dashboard = dashboard
-        # init the App specific attributes
-        self.raw_data = []
 
         # Remove the default toolbar created by CustomApp
         self.mainwindow.removeToolBar(self._toolbar)
@@ -79,29 +77,10 @@ class Launcher(CustomApp):
 
         self.extension_manager = ExtensionManager()
 
-        # Layout
-        self.main_hbox = QHBoxLayout()
-        self.launcher_vbox = QVBoxLayout()
-        self.loader_vbox = QVBoxLayout()
-        self.hbox = QHBoxLayout()
-
-        # Launcher
-        self.dashboard_button = QPushButton("Dashboard")
-        self.viewer_button = QPushButton("DAQ Viewer")
-        self.move_button = QPushButton("DAQ Move")
-        self.h5browser_button = QPushButton("H5Browser")
-        self.shortcut_label = QLabel("Shortcuts :")
-        self.extension_label = QLabel("Extensions :")
-
         # Loader
         self.history_keys = []
         self.history = {}
         self.history_index = 0
-
-        # Header
-        self.date_combo_box = QComboBox()
-        self.date_combo_box.setMinimumSize(QtCore.QSize(146, 25)) # set minimum size to ensure consistent UI layout when history file is empty vs non-empty
-        self.date_label = QLabel("Date :")
 
         self.history_file_name = history_file_name
         self.history_file_path = get_set_local_dir(user=True) / self.history_file_name
@@ -153,7 +132,27 @@ class Launcher(CustomApp):
         '''
         Configuration des layouts et widgets
         '''
+
+        # Layout
+        self.main_hbox = QHBoxLayout()
+        self.launcher_vbox = QVBoxLayout()
+        self.loader_vbox = QVBoxLayout()
+        self.hbox = QHBoxLayout()
+
+        # Launcher
+        self.dashboard_button = QPushButton("Dashboard")
+        self.viewer_button = QPushButton("DAQ Viewer")
+        self.move_button = QPushButton("DAQ Move")
+        self.h5browser_button = QPushButton("H5Browser")
+        self.shortcut_label = QLabel("Shortcuts :")
+        self.extension_label = QLabel("Extensions :")
         self.launcher_vbox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+
+        # Header
+        self.date_combo_box = QComboBox()
+        self.date_combo_box.setMinimumSize(QtCore.QSize(146,
+                                                        25))  # set minimum size to ensure consistent UI layout when history file is empty vs non-empty
+        self.date_label = QLabel("Date :")
 
         # Set tooltip buttons
         self.set_tooltip_button()
