@@ -280,11 +280,6 @@ class Launcher(CustomApp):
     def set_header(self):
         self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
         self.header_toolbar = self.get_toolbar('header')
-        # setup_docks runs before setup_actions, so the action may not exist yet.
-        if self.has_action('restore_dashboard'):
-            button = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
-            if isinstance(button, QtWidgets.QToolButton):
-                button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self.header_toolbar.layout().setSpacing(20)
 
