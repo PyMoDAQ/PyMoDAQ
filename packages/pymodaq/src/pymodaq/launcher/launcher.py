@@ -235,17 +235,6 @@ class Launcher(CustomApp):
 
         self.ui_refresh()
 
-
-    # def value_changed(self, param):
-    #     logger.debug(f'calling value_changed with param {param.name()}')
-    #     if param.name() == 'do_something':
-    #         if param.value():
-    #             self.settings.child('main_settings', 'something_done').setValue(True)
-    #         else:
-    #             self.settings.child('main_settings', 'something_done').setValue(False)
-    #
-    #     logger.debug(f'Value change applied')
-
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
         self.launcher_vbox.addWidget(self.shortcut_label)
