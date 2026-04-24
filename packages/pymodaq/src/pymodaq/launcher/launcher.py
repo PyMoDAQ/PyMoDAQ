@@ -477,10 +477,10 @@ class Launcher(CustomApp):
         history_keys : list[str]
             List of history dictionary keys sorted by descending date
         """
-        if self.history_file_path.is_file():
+        try:
             with open(self.history_file_path, "rb") as f:
                 history = tomllib.load(f)
-        else:
+        except (FileNotFoundError, PermissionError, OSError):
             history = {}
 
         history_keys = sorted(

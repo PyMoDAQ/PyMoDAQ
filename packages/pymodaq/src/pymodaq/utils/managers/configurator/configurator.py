@@ -437,10 +437,10 @@ class Configurator(ManagerBase):
 
         history_path = get_set_config_dir(user=True) / self.history_file_name
 
-        if history_path.is_file():
+        try:
             with open(history_path, "rb") as f:
                 existing = tomllib.load(f)
-        else:
+        except (FileNotFoundError, PermissionError, OSError):
             existing = {}
 
         new_dict = {key: value for i, (key, value) in enumerate(existing.items())
