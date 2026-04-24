@@ -35,6 +35,7 @@ def copied_data(tmp_path):
     # Cleanup: remove all copied files after test execution
     (experiment_path / 'exp_test.xml').unlink(missing_ok=True)
     (user_path / 'history_test.toml').unlink(missing_ok=True)
+    (user_path / 'history_test_duplicates.toml').unlink(missing_ok=True)
     shutil.rmtree(configurator_path / 'exp_test', ignore_errors=True)
     config['pymodaq', 'launcher', 'keep_duplicates'] = keep_duplicates # restore initial application settings after tests execution
 
