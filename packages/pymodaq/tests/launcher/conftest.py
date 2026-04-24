@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 from pymodaq.launcher.launcher import Launcher
 import qt_themes
 
-from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.config import GlobalConfig, get_set_local_dir
 
 from pymodaq.utils.config import get_set_configurator_path, get_set_experiment_path
 
@@ -17,27 +17,29 @@ config = GlobalConfig()
 def copied_data(tmp_path):
     """Setup fixture: copy test data files to appropriate system directories"""
     # Set up paths
+    keep_duplicates = config['pymodaq', 'launcher', 'keep_duplicates']
     configurator_path = get_set_configurator_path()
-    user_configuration_path = get_set_configurator_path(user=True)
+    user_path = get_set_local_dir(user=True)
     experiment_path = get_set_experiment_path()
     test_directory = Path(__file__).parent
     ressources_directory = test_directory / 'ressources'
 
     # Copy test files to pymodaq directories
     shutil.copy(str(ressources_directory / 'exp_test.xml'), str(experiment_path / 'exp_test.xml'))
-    shutil.copy(str(ressources_directory / 'history_test.toml'), str(user_configuration_path / 'history_test.toml'))
-    shutil.copy(str(ressources_directory / 'history_test_duplicates.toml'), str(user_configuration_path / 'history_test_duplicates.toml'))
+    shutil.copy(str(ressources_directory / 'history_test.toml'), str(user_path / 'history_test.toml'))
+    shutil.copy(str(ressources_directory / 'history_test_duplicates.toml'), str(user_path / 'history_test_duplicates.toml'))
     shutil.copytree(ressources_directory / 'exp_test', configurator_path / 'exp_test', dirs_exist_ok=True)
 
     yield
 
     # Cleanup: remove all copied files after test execution
     (experiment_path / 'exp_test.xml').unlink(missing_ok=True)
-    (user_configuration_path / 'history_test.toml').unlink(missing_ok=True)
+    (user_path / 'history_test.toml').unlink(missing_ok=True)
     shutil.rmtree(configurator_path / 'exp_test', ignore_errors=True)
+    config['pymodaq', 'launcher', 'keep_duplicates'] = keep_duplicates # restore initial application settings after tests execution
 
 @pytest.fixture
-def ini_launcher(qtbot, copied_data, request):
+def launcher(qtbot, copied_data, request):
     """Fixture to initialize launcher with Qt widget"""
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])
@@ -48,7 +50,7 @@ def ini_launcher(qtbot, copied_data, request):
     qtbot.addWidget(external_ui)
     launcher.mainwindow.show()
 
-    yield launcher, qtbot
+    yield launcher
 
     # Clean up
     launcher.quit_fun()
@@ -80,7 +82,7 @@ def ini_configurator(qtbot):
         qtbot.addWidget(main_window)
         main_window.show()
 
-        yield configurator, main_window, qtbot
+        yield configurator, main_window
 
         main_window.close()
         main_window.deleteLater()

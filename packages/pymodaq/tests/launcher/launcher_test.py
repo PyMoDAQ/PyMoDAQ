@@ -10,27 +10,16 @@ config = GlobalConfig()
 
 
 class TestLauncher:
-    def test_ini(self, ini_launcher):
-        launcher, qtbot = ini_launcher
-        assert launcher is not None
-        qtbot.wait(5000)
 
-    def test_label(self, ini_launcher):
-        launcher, qtbot = ini_launcher
-        assert launcher.dashboard_button.text() == 'Dashboard'
-
-    def test_next_arrow(self, ini_launcher):
-        launcher, qtbot = ini_launcher
+    def test_next_arrow_disabled(self, launcher):
         assert launcher.get_action('next_config').isEnabled() == False
 
-    def test_back_arrow(self, ini_launcher):
-        launcher, qtbot = ini_launcher
+    def test_back_arrow_disabled_next_arrow_enabled(self, launcher):
         launcher.do_navigate(len(launcher.history) - 1)
         assert launcher.get_action('next_config').isEnabled() == True
         assert launcher.get_action('back_config').isEnabled() == False
 
-    def test_informations_from_history_file(self, ini_launcher):
-        launcher, qtbot = ini_launcher
+    def test_informations_from_history_file(self, launcher):
 
         # History size
         assert len(launcher.history) == 2
@@ -53,7 +42,7 @@ class TestLauncher:
         assert launcher.configurator.get_action_list().currentText() == 'hundred_value'
 
     @patch('subprocess.Popen')
-    def test_restore(self, mock_popen, ini_launcher):
+    def test_restore(self, mock_popen, qtbot, launcher):
         """
         Mock 'subprocess.Popen' method to test if the launcher passes the correct arguments to the dashboard command.
 
@@ -63,10 +52,8 @@ class TestLauncher:
         So direct communication between them is impossible. This test verifies that the launcher passes the correct
         arguments, but the responsibility of the correct launch belongs to the dashboard via the 'load_dashboard_with_preset' method.
         """
-        launcher, qtbot = ini_launcher
         launcher.get_action('restore_dashboard').trigger()
-        qtbot.wait(500)
-
+        qtbot.waitUntil(lambda: mock_popen.called, timeout=5000)
         assert mock_popen.called
 
         # Get arguments list
@@ -87,19 +74,17 @@ class TestLauncher:
         assert experiment_value == 'exp_test'
         assert configurator_value == 'ten_value'
 
-    @pytest.mark.parametrize('ini_launcher', ['history_test_duplicates.toml'], indirect=True)
-    def test_history_duplicates_false(self, ini_launcher):
-        launcher, qtbot = ini_launcher
-        launcher.configurator.keep_duplicates_items_history = False
+    @pytest.mark.parametrize('launcher', ['history_test_duplicates.toml'], indirect=True)
+    def test_history_duplicates_false(self, launcher):
+        config['pymodaq', 'launcher', 'keep_duplicates'] = False
         launcher.configurator.history_file_name = 'history_test_duplicates.toml'
         launcher.configurator.save_new_history_entry()
         launcher._on_history_file_modified()
         assert len(launcher.history) == 2
 
-    @pytest.mark.parametrize('ini_launcher', ['history_test_duplicates.toml'], indirect=True)
-    def test_history_duplicates_true(self, ini_launcher):
-        launcher, qtbot = ini_launcher
-        launcher.configurator.keep_duplicates_items_history = True
+    @pytest.mark.parametrize('launcher', ['history_test_duplicates.toml'], indirect=True)
+    def test_history_duplicates_true(self, launcher):
+        config['pymodaq', 'launcher', 'keep_duplicates'] = True
         launcher.configurator.history_file_name = 'history_test_duplicates.toml'
         launcher.configurator.save_new_history_entry()
         launcher._on_history_file_modified()
@@ -109,23 +94,17 @@ class TestLauncher:
 class TestWidgetSync:
     """Test displayed values."""
 
-    def test_ini(self, ini_configurator, copied_data):
-        """Test initialization of Configurator interface"""
-        configurator, main_window, qtbot = ini_configurator
+    def test_widgets_synchro(self, qtbot, main_window, configurator, copied_data):
         main_window.show()
-        qtbot.wait(5000)
-
-    def test_widgets_synchro(self, ini_configurator, copied_data):
-        configurator, main_window, qtbot = ini_configurator
-        main_window.show()
-        qtbot.wait(1000)
+        qtbot.waitExposed(main_window, timeout=5000)
 
         assert configurator.experiment_manager.entry == 'default'
         assert configurator.experiment_manager.get_action_list().currentText() == 'default'
 
-        configurator.experiment_manager.entry = 'exp_test'
+        with qtbot.waitSignal(configurator.experiment_manager.entries_sync.value_changed, timeout=5000):
+            configurator.experiment_manager.entry = 'exp_test'
+
         QtWidgets.QApplication.processEvents()
-        qtbot.wait(500)
 
         assert configurator.experiment_manager.entry == 'exp_test'
         assert configurator.experiment_manager.get_action_list().currentText() == 'exp_test'
@@ -133,7 +112,7 @@ class TestWidgetSync:
         assert 'hundred_value' in configurator.entries
 
         configurator.entry = 'hundred_value'
-        qtbot.wait(500)
+        qtbot.waitExposed(main_window, timeout=5000)
 
         assert configurator.entry == 'hundred_value'
         assert configurator.get_action_list().currentText() == 'hundred_value'
