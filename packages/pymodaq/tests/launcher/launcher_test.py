@@ -62,17 +62,10 @@ class TestLauncher:
         # Verify command arguments
         assert args_list[0] == 'dashboard'
         assert args_list[1] == '-x'
+        assert args_list[2] == 'exp_test'
         assert args_list[3] == '-c'
+        assert args_list[4] == 'ten_value'
 
-        # Get experiment and configurator values
-        exp_index = 2
-        config_index = 4
-
-        experiment_value = args_list[exp_index]
-        configurator_value = args_list[config_index]
-
-        assert experiment_value == 'exp_test'
-        assert configurator_value == 'ten_value'
 
     @pytest.mark.parametrize('launcher', ['history_test_duplicates.toml'], indirect=True)
     def test_history_duplicates_false(self, launcher):
