@@ -190,10 +190,10 @@ class Launcher(CustomApp):
         logger.debug('connecting things')
         logger.debug('connecting done')
 
-        self.connect_action('launch_dashboard', lambda: self.launch_empty_dashboard())
-        self.connect_action('launch_viewer', lambda: self.launch_empty_viewer())
-        self.connect_action('launch_move', lambda: self.launch_empty_move())
-        self.connect_action('launch_h5browser', lambda: self.launch_h5browser())
+        self.connect_action('launch_dashboard', self.launch_empty_dashboard)
+        self.connect_action('launch_viewer',self.launch_empty_viewer)
+        self.connect_action('launch_move',self.launch_empty_move)
+        self.connect_action('launch_h5browser',self.launch_h5browser)
 
         # Connect action to button
         self.dashboard_button.clicked.connect(self.get_action('launch_dashboard').trigger)
