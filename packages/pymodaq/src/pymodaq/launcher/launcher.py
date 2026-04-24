@@ -1,9 +1,10 @@
 import subprocess
 import sys
-from datetime import datetime
+
 from enum import StrEnum
 from typing import Any, cast
 
+import toml
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import Signal, Qt
 from qtpy.QtWidgets import (
@@ -20,7 +21,6 @@ from watchdog.observers import Observer
 
 from pymodaq.extensions import ExtensionEnum
 from pymodaq.extensions.daq_logger import main as logger_main
-from pymodaq.utils.config import get_set_configurator_path
 from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -28,10 +28,9 @@ from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
-from pymodaq_utils.config import get_set_config_dir
+from pymodaq_utils.config import get_set_local_dir
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
-import tomllib
 from datetime import datetime
 
 
@@ -105,7 +104,9 @@ class Launcher(CustomApp):
         self.date_label = QLabel("Date :")
 
         self.history_file_name = history_file_name
-        self.history_file_path = get_set_config_dir(user=True) / self.history_file_name
+        self.history_file_path = get_set_local_dir(user=True) / self.history_file_name
+        print(self.history_file_path)
+        print(get_set_local_dir(user=True))
 
         # History file handler (watchdog)
         self._handler = HistoryFileHandler(
@@ -478,8 +479,7 @@ class Launcher(CustomApp):
             List of history dictionary keys sorted by descending date
         """
         try:
-            with open(self.history_file_path, "rb") as f:
-                history = tomllib.load(f)
+            history = toml.load(self.history_file_path)
         except (FileNotFoundError, PermissionError, OSError):
             history = {}
 

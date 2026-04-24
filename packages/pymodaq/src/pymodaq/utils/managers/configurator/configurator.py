@@ -3,6 +3,7 @@ from typing import Union, TYPE_CHECKING
 from pathlib import Path
 import sys
 
+import toml
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QKeySequence
@@ -11,7 +12,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
+from pymodaq_utils.config import GlobalConfig as Config, get_set_local_dir
 
 from pymodaq_gui.parameter import Parameter, ioxml
 from pymodaq_gui.parameter.utils import ParameterWithPath
@@ -435,11 +436,10 @@ class Configurator(ManagerBase):
 
         entry = {date: {'experiment': self.experiment_manager.entry, 'configurator': self.entry}}
 
-        history_path = get_set_config_dir(user=True) / self.history_file_name
+        history_path = get_set_local_dir(user=True) / self.history_file_name
 
         try:
-            with open(history_path, "rb") as f:
-                existing = tomllib.load(f)
+            existing = toml.load(history_path)
         except (FileNotFoundError, PermissionError, OSError):
             existing = {}
 
@@ -451,10 +451,8 @@ class Configurator(ManagerBase):
                     }
         new_dict.update(entry)
 
-
-
-        with open(history_path, "wb") as f:
-            tomli_w.dump(new_dict, f)
+        with open(history_path, "w") as f:
+            toml.dump(new_dict, f)
 
 
 
