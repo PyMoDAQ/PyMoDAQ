@@ -11,7 +11,7 @@ from qtpy.QtCore import QModelIndex
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
 from pymodaq_utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import Config
+from pymodaq_utils.config import GlobalConfig as Config
 
 
 from pymodaq_gui.parameter import Parameter, ioxml
@@ -68,8 +68,8 @@ class Configurator(ManagerBase):
         super().__init__(dashboard=dashboard, tree=ConfiguratorParameterTree())
 
         self.history_file_name: str = 'history.toml'
-        self.max_history_size = config('launcher', 'max_history_size')
-        self.keep_duplicates_items_history = config('launcher', 'keep_duplicates')
+        # self.max_history_size = config('launcher', 'max_history_size')
+        # self.keep_duplicates_items_history = config('launcher', 'keep_duplicates')
 
 
     @property
@@ -446,8 +446,8 @@ class Configurator(ManagerBase):
             existing = {}
 
         new_dict = {key: value for i, (key, value) in enumerate(existing.items())
-                    if i >= len(existing) - self.max_history_size + 1
-                    and (self.keep_duplicates_items_history
+                    if i >= len(existing) - config('pymodaq', 'launcher', 'max_history_size') + 1
+                    and (config('pymodaq', 'launcher', 'keep_duplicates')
                          or (value['experiment'] != entry[str(date)]['experiment']
                              or value['configurator'] != entry[str(date)]['configurator']))
                     }
