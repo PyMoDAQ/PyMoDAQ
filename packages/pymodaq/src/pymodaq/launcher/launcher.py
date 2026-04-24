@@ -276,8 +276,6 @@ class Launcher(CustomApp):
     def launch_h5browser(self):
         subprocess.Popen(['h5browser'])
 
-    def launch_empty_logger(self):
-        logger_main()
 
     def set_header(self):
         self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
