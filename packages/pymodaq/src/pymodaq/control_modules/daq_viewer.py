@@ -1206,8 +1206,8 @@ class DetectorWorker(HardwareWorkerBase):
                 self.average_done = False
             self.waiting_for_data = False
 
-            # for live mode:two possibilities: either snap one data and regrab softwarewise
-            # (while True) or if self.plugin.live_mode_available is True all data is continuously
+            # for live mode:two possibilities: either snap one data and regrab software wise
+            # (while True) or if self.detector.live_mode_available is True all data is continuously
             # emitted from the plugin
             if self.plugin.live_mode_available:
                 kwargs['wait_time'] = self.wait_time

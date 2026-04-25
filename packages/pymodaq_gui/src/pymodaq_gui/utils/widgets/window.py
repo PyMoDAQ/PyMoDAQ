@@ -7,7 +7,7 @@ def make_window(
     area: DockArea | None | bool = None,
     win: QMainWindow = None,
     title: str = "Module",
-    flags: Qt.WindowType= (
+    flags: Qt.WindowType | None= (
             Qt.WindowType.Window
             | Qt.WindowType.WindowTitleHint
             | Qt.WindowType.WindowMinimizeButtonHint
@@ -42,7 +42,8 @@ def make_window(
         win = QMainWindow()
 
     # Apply the window flags (controls titlebar, buttons, window type)
-    win.setWindowFlags(flags)
+    if flags is not None:
+        win.setWindowFlags(flags)
 
     # Set the DockArea as the main content widget of the window
     if area is not None:
