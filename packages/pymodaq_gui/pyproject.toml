@@ -57,8 +57,7 @@ dev = [
 ]
 
 editor = [
-    "pyqt6",
-    "QScintilla"
+    "qtmonaco",
 ]
 
 [project.scripts]
