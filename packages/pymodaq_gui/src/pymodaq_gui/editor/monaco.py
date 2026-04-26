@@ -1,6 +1,4 @@
 import pickle
-import tempfile
-from collections import OrderedDict
 from pathlib import Path
 import dataclasses
 
@@ -9,17 +7,14 @@ import sys
 
 from qtmonaco import Monaco
 from qtpy import QtWidgets
-from qtpy.QtGui import QKeySequence, QColor, QTextCursor
-from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QSignalBlocker, QThread, QObject
+from qtpy.QtGui import QKeySequence, QTextCursor
+from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QThread, QObject
 
-from pymodaq_gui.messenger import dialog
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig
 
-
-
-
+from pymodaq_gui.messenger import dialog
 from pymodaq_gui.utils import CustomApp
-from pymodaq_gui.utils.shared_ui import SharedUI, MenuNames
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_gui.utils.file_io import select_file
 
 
@@ -190,8 +185,8 @@ class MonacoApp(CustomApp):
         return monaco_widget
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_menu(MenuNames.FILE, 'File', parent_menu=menubar)
-        self.add_menu('files', 'Recent Files', parent_menu=MenuNames.FILE)
+        self.add_menu(MenuToolbarNames.FILE, 'File', parent_menu=menubar)
+        self.add_menu('files', 'Recent Files', parent_menu=MenuToolbarNames.FILE)
 
         self.add_toolbar('file', 'File', parent=self.mainwindow, add_break=False)
 
