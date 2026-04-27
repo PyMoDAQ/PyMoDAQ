@@ -231,6 +231,7 @@ class Scanner(QObject, ParameterManager):
     def positions_at(self, index: int) -> DataToExport:
         """ Extract the actuators positions at a given index in the scan as a DataToExport of DataActuators"""
         dte = DataToExport('scanner')
+        self.scanner.current_scan_index = index
         if len(self.positions[index]) == len(self.actuators):
             for axis_index, pos in enumerate(self.positions[index]):
                 dte.append(self._scanner.data_actuator_at(scan_index=index, axis_index=axis_index))
