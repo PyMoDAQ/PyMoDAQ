@@ -194,7 +194,7 @@ class DAQScan(CustomExt):
         if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
             self.scan_manager.enable_actions()
-            
+
         logger.info('DAQScan Initialized')
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
