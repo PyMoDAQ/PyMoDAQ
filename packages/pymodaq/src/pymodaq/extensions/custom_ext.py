@@ -70,7 +70,7 @@ class CustomExt(CustomApp):
             return self.dashboard.experiment_manager
 
     def do_things_after_experiment_set(self, experiment_name: str):
-        """ This method is called whenever a experiment entry has been set.
+        """ This method is called whenever an experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
