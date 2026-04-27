@@ -31,6 +31,9 @@ except ImportError as e:
     e.msg = f'{msg}\n{e.msg}'
     raise e
 
+LOCAL_PATH = get_set_path(get_set_local_dir(user=True), 'monaco_editor')
+LOCAL_FILES_PATH = LOCAL_PATH.joinpath('monaco_files')
+
 config = GlobalConfig()
 
 subprocess_file = get_set_local_dir(user=True).joinpath('temp_exec')
@@ -125,19 +128,17 @@ class MonacoApp(CustomApp):
         self.setup_ui()
 
     def do_things_after_ui_setup(self):
-        try:
-            with open(self.local_files_path, 'rb') as f:
-                _files = pickle.load(f)
-                if len(_files) != 0:
-                    for file in _files:
-                        self.add_file(file, display=True)
-                else:
-                    self.create_file()
+        _files = self.get_files_cache()
+        if len(_files) != 0:
+            for file in _files:
+                self.add_file(file, display=True)
 
-            self.highlight_tab(self.tab_widget.currentIndex())
+        self.highlight_tab(self.tab_widget.currentIndex())
 
-        except FileNotFoundError as e:
-            pass
+    def get_files_cache(self) -> list[Path]:
+        with open(self.local_files_path, 'rb') as f:
+            _files = pickle.load(f)
+        return _files
 
     def setup_docks_and_widgets(self):
         self.main_widget = QtWidgets.QSplitter(Qt.Orientation.Vertical)
@@ -226,7 +227,7 @@ class MonacoApp(CustomApp):
 
     def connect_things(self):
         self.connect_action('load', lambda: self.load_file())
-        self.connect_action('new', self.create_file)
+        self.connect_action('new', lambda: self.create_file())
         self.connect_action('save', self.save_file)
         self.connect_action('save_as', lambda: self.save_file_as())
         self.connect_action('save_copy_as', lambda: self.save_copy_file_as())
@@ -299,15 +300,17 @@ class MonacoApp(CustomApp):
         tab_index = self.files_path.index(file_path)
         self.close_editor(tab_index)
 
-    def create_file(self):
+    def create_file(self, file_path: Path = None, add_to_watcher=True):
         """ Create a new file and display it in a new tab """
-        try:
-            current_directory = self.current_editor.file_path.parent
-        except AttributeError:
-            current_directory = self.local_path
+        if file_path is None:
+            try:
+                current_directory = self.current_editor.file_path.parent
+            except AttributeError:
+                current_directory = self.local_path
+            file_path = current_directory.joinpath('untitled.py')
 
-        with open(current_directory.joinpath('untitled.py'), 'w') as f:
-            self.add_file(Path(f.name))
+        with open(file_path, 'w') as f:
+            self.add_file(Path(f.name), add_to_watcher=add_to_watcher)
 
     def load_file(self, file_path: Path = None):
         """ Load a new file and display it in a new tab"""
@@ -353,10 +356,11 @@ class MonacoApp(CustomApp):
         self.current_editor.set_saved()
         self.file_watcher.addPath(str(file_path))
 
-    def add_file(self, file_path: Path, display=True):
+    def add_file(self, file_path: Path, display=True, add_to_watcher=True):
         """ Open and display a file content in a new editor"""
         self._save_path = file_path.parent
-        self.file_watcher.addPath(str(file_path))
+        if add_to_watcher:
+            self.file_watcher.addPath(str(file_path))
 
         monaco_widget = self.create_monaco_widget(file_path)
         tab_index = self.tab_widget.addTab(monaco_widget, file_path.name)
@@ -402,7 +406,7 @@ class MonacoApp(CustomApp):
     @property
     def local_files_path(self) -> Path:
         """ Get a file path to store currently opened files"""
-        path =  self.local_path.joinpath('monaco_files')
+        path =  LOCAL_FILES_PATH
         if not path.is_file():
             self._create_files_file([], path)
         return path
@@ -416,7 +420,7 @@ class MonacoApp(CustomApp):
     @property
     def local_path(self) -> Path:
         """ Get a local file path to cache some data related to this application"""
-        return get_set_path(get_set_local_dir(user=True), 'monaco_editor')
+        return LOCAL_PATH
 
     @property
     def files_path(self) -> list[Path]:
