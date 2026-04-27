@@ -66,12 +66,16 @@ def create_extension(dashboard: 'DashBoard',
         dockarea = DockArea()
         window.setCentralWidget(dockarea)
 
+    shared_ui = SharedUI(window)
     extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
 
-    shared_ui = SharedUI(window)
     shared_ui.affect_application(extension)
     shared_ui.mainwindow.addToolBar(extension.get_toolbar('dashboard'))
     if add_toolbarbreak:
         shared_ui.mainwindow.addToolBarBreak()
-    shared_ui.mainwindow.addToolBar(extension.get_main_toolbar())
+    toolbars = extension.get_app_toolbars()
+    if not isinstance(toolbars, list):
+        toolbars = [toolbars]
+    for toolbar in toolbars:
+        shared_ui.mainwindow.addToolBar(toolbar)
     return shared_ui, extension

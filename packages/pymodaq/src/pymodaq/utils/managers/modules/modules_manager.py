@@ -18,6 +18,7 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
+from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -345,7 +346,7 @@ class ModulesManager(QObject, ParameterManager):
         for mod in self.detectors:
             if mod.title not in overridden_detectors:
                 kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
-                mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
+                mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end

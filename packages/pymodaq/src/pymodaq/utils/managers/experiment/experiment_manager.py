@@ -201,7 +201,6 @@ class ExperimentManager(ManagerBase):
         get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
-
     def list_control_modules_from_preset(self):
         # ################################################################
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
