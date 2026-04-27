@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from pyqtgraph.parametertree import Parameter
 from qtpy import QtWidgets
 
+from pymodaq_gui.h5modules.saving import H5Saver
 from pymodaq_utils.config import get_set_path, get_set_local_dir
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_data.data import DataDim
@@ -41,8 +42,14 @@ class ScanManager(ManagerBase):
         if daq_scan is not None:
             self._daq_scan = daq_scan
             self.params = daq_scan.params
+
         else:
             self._daq_scan = None
+            self.params = []
+
+        self._h5saver = H5Saver()
+        self._h5saver.settings.child('do_save').hide()
+        self._h5saver.settings.child('custom_name').hide()
 
         super().__init__(dashboard=dashboard)
 
@@ -65,6 +72,7 @@ class ScanManager(ManagerBase):
         self.main_widget.setLayout(QtWidgets.QHBoxLayout())
         self.main_widget.layout().addWidget(self.modules_manager.settings_tree)
         self.main_widget.layout().addWidget(self.settings_tree)
+        self.main_widget.layout().addWidget(self._h5saver.settings_tree)
 
     def value_changed(self, param: Parameter):
         if param.name() == 'plot_probe':
@@ -98,7 +106,8 @@ class ScanManager(ManagerBase):
         return [self.modules_manager.settings,
                 self.scanner.settings,
                 self.scanner.scanner.settings,
-                self.settings
+                self.settings,
+                self._h5saver.settings,
                 ]
 
     def _update_entry(self, entry_path: Path):
@@ -126,9 +135,11 @@ class ScanManager(ManagerBase):
             self.daq_scan.modules_manager.selected_actuators_name = self.modules_manager.selected_actuators_name
             self.daq_scan.modules_manager.selected_detectors_name = self.modules_manager.selected_detectors_name
 
-            self.daq_scan.settings.restoreState(self.settings.saveState())
+            self.daq_scan.settings = self.settings.saveState()
 
             self.daq_scan.scanner.set_scan_from_settings(self.scanner.settings, self.scanner.scanner.settings)
+
+            self.daq_scan.h5saver.settings = self._h5saver.settings.saveState()
 
             return True
         except Exception as e:
