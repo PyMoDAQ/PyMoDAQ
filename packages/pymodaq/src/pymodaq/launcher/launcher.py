@@ -2,7 +2,6 @@ import subprocess
 import sys
 
 from enum import StrEnum
-from typing import Any, cast
 
 import toml
 from qtpy import QtCore, QtWidgets
@@ -20,7 +19,6 @@ from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 from watchdog.observers import Observer
 
 from pymodaq.extensions import ExtensionEnum
-from pymodaq.extensions.daq_logger import main as logger_main
 from pymodaq.utils.managers.configurator.configurator import Configurator
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -116,7 +114,7 @@ class Launcher(CustomApp):
                         toolbar='header')
         self.header_toolbar.addWidget(self.date_label)
         self.header_toolbar.addWidget(self.date_combo_box)
-        self.add_action('restore_dashboard', 'Restore',
+        self.add_action('restore_dashboard', 'Launch',
                         'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
         self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
                         toolbar='header')
