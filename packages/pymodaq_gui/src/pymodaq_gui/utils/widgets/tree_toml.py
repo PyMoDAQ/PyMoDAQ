@@ -54,6 +54,13 @@ class TreeFromToml(ParameterManager, QObject):
 
         installed_lower = {mod.name.lower() for mod in pkgutil.iter_modules()}
 
+        # Some backend names are not pip package names; map them to their actual package.
+        _backend_pkg_alias = {'qt': 'qtpy'}
+
+        def _backend_available(name: str) -> bool:
+            pkg = _backend_pkg_alias.get(name.lower(), name.lower())
+            return pkg in installed_lower
+
         def annotate(param_group, template_dict):
             for child in param_group.children():
                 key = child.name()
@@ -65,7 +72,7 @@ class TreeFromToml(ParameterManager, QObject):
                         if item not in full:
                             full.append(item)
                     unavailable = [x for x in full if isinstance(x, str)
-                                   and x.lower() not in installed_lower]
+                                   and not _backend_available(x)]
                     update = {'unavailable': unavailable}
                     if full != current:
                         update['limits'] = full
