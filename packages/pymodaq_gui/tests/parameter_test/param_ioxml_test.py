@@ -5,7 +5,7 @@ Created the 29/08/2023
 @author: Sebastien Weber
 """
 import pytest
-
+import numpy as np
 
 from qtpy import QtWidgets
 
@@ -33,7 +33,7 @@ ioxml.XML_string_to_pobject(string)
 class TestListParameter:
 
     list_limits = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
-    dict_limits = {'DAQ0D': 0, 'DAQ1D': 1, 'DAQ2D': 2, 'DAQND': 3}
+    dict_limits = {'a_nan': np.nan, 'an_int': 21, 'a_str': 'astr'}
 
     params = [{'name': 'list_param', 'type': 'list', 'limits': list_limits},
               {'name': 'dict_param', 'type': 'list', 'limits': dict_limits},
@@ -80,15 +80,20 @@ class TestListParameter:
         assert param_back.opts['removable'] == self.settings.child('list_param').opts['removable']
 
     def test_save_xml_dict(self):
-        xml_string = ioxml.parameter_to_xml_string(self.settings.child('dict_param'))
+        for value_key in self.dict_limits:
+            self.settings.child('dict_param').setValue(self.dict_limits[value_key])
+            xml_string = ioxml.parameter_to_xml_string(self.settings.child('dict_param'))
 
-        param_back = ioxml.XML_string_to_pobject(xml_string).child('dict_param')
-        assert param_back.name() == self.settings.child('dict_param').name()
-        assert param_back.title() == self.settings.child('dict_param').title()
-        assert param_back.value() == self.settings.child('dict_param').value()
-        assert param_back.readonly() == self.settings.child('dict_param').readonly()
-        assert param_back.opts['limits'] == self.settings.child('dict_param').opts['limits']
-        assert param_back.opts['removable'] == self.settings.child('dict_param').opts['removable']
+            param_back = ioxml.XML_string_to_pobject(xml_string).child('dict_param')
+            assert param_back.name() == self.settings.child('dict_param').name()
+            assert param_back.title() == self.settings.child('dict_param').title()
+            try:
+                assert param_back.value() == self.settings.child('dict_param').value()
+            except AssertionError:
+                assert param_back.value() is self.settings.child('dict_param').value()
+            assert param_back.readonly() == self.settings.child('dict_param').readonly()
+            assert param_back.opts['limits'] == self.settings.child('dict_param').opts['limits']
+            assert param_back.opts['removable'] == self.settings.child('dict_param').opts['removable']
 
 
 class TestXMLbackForth():
