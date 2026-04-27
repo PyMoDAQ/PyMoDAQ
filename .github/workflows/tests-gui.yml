@@ -71,6 +71,11 @@ jobs:
           cd ..
           python install-packages.py -d -u pymodaq_gui
 
+      - name: Install QtMonaco editor and webengine for qt5
+        continue-on-error: true
+        run: pip install qtmonaco pyqtwebengine
+
+
       - name: Install tables (optional – no wheel for all Python versions)
         continue-on-error: true
         run: pip install tables
