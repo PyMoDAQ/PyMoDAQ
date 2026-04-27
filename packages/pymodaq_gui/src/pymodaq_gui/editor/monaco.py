@@ -10,7 +10,7 @@ from qtpy import QtWidgets
 from qtpy.QtGui import QKeySequence, QTextCursor
 from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QThread, QObject
 
-from pymodaq_utils.config import get_set_local_dir, GlobalConfig
+from pymodaq_utils.config import get_set_local_dir, GlobalConfig, get_set_path
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.messenger import dialog
@@ -127,8 +127,11 @@ class MonacoApp(CustomApp):
         try:
             with open(self.local_files_path, 'rb') as f:
                 _files = pickle.load(f)
-                for file in _files:
-                    self.add_file(file, display=True)
+                if len(_files) != 0:
+                    for file in _files:
+                        self.add_file(file, display=True)
+                else:
+                    self.create_file()
 
             self.highlight_tab(self.tab_widget.currentIndex())
 
@@ -268,13 +271,23 @@ class MonacoApp(CustomApp):
         self.tab_widget.setCurrentIndex(tab_index)
         self.highlight_tab(tab_index)
 
+    def is_file_and_editor_content_same(self, tab_index: int) -> bool:
+        file_content = self._get_file_content(self.get_editor_from_tab_index(tab_index).file_path)
+        editor_content = self.get_editor_from_tab_index(tab_index).get_text()
+        return file_content == editor_content
+
     def close_editor(self, tab_index: int):
         """ close the file and the editor of the given tab index"""
 
-        #todo modify below to handle unsaved files!
-        do_remove = dialog(title="Closing",
-                           message=f'Are you sure you want to close the file'
-                                   f' {self.get_editor_from_tab_index(tab_index).file_path.name}')
+        if not self.is_file_and_editor_content_same(tab_index):
+            do_remove = dialog(title="Closing",
+                               message=f'Your file {self.get_editor_from_tab_index(tab_index).file_path.name }'
+                                       f'has not been saved since last modification, '
+                                       f'are you sure you want to close it?'
+                                       )
+        else:
+            do_remove = True
+
         if do_remove:
             file_path = self.files_path[tab_index]
             self.file_watcher.removePath(str(file_path))
@@ -287,9 +300,12 @@ class MonacoApp(CustomApp):
 
     def create_file(self):
         """ Create a new file and display it in a new tab """
-        current_directory = self.current_editor.file_path.parent
+        try:
+            current_directory = self.current_editor.file_path.parent
+        except AttributeError:
+            current_directory = self.local_path
 
-        with current_directory.joinpath('untitled.py') as f:
+        with open(current_directory.joinpath('untitled.py'), 'w') as f:
             self.add_file(Path(f.name))
 
     def load_file(self, file_path: Path = None):
@@ -359,15 +375,34 @@ class MonacoApp(CustomApp):
             monaco_widget = self.current_editor
 
         if isinstance(text, Path):
-            with open(text, 'r', encoding="utf-8", newline='') as f:
-                text = ''.join(f.readlines())
+            text = self._get_file_content(text)
 
         monaco_widget.set_text(text)
 
+    @staticmethod
+    def _get_file_content(file_path: Path) -> str:
+        with open(file_path, 'r', encoding="utf-8", newline='') as f:
+            text = ''.join(f.readlines())
+        return text
+
     @property
     def local_files_path(self) -> Path:
-        """ Get a local file path to cache some data"""
-        return get_set_local_dir(user=True).joinpath('monaco_files')
+        """ Get a file path to store currently opened files"""
+        path =  self.local_path.joinpath('monaco_files')
+        if not path.is_file():
+            self._create_files_file([], path)
+        return path
+
+    def _create_files_file(self, files: list[Path], file_path: Path = None):
+        if file_path is None:
+            file_path = self.local_files_path
+        with open(file_path, 'wb') as f:
+            pickle.dump(files, f)
+
+    @property
+    def local_path(self) -> Path:
+        """ Get a local file path to cache some data related to this application"""
+        return get_set_path(get_set_local_dir(user=True), 'monaco_editor')
 
     @property
     def files_path(self) -> list[Path]:
@@ -376,8 +411,7 @@ class MonacoApp(CustomApp):
 
     def quit_fun(self):
         super().quit_fun()
-        with open(self.local_files_path, 'wb') as f:
-            pickle.dump(self.files_path, f)
+        self._create_files_file(self.files_path)
 
     @staticmethod
     def check_python_syntax_valid(file_path):
