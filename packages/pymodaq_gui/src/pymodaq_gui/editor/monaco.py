@@ -25,8 +25,10 @@ logger = set_logger(get_module_name(__file__))
 try:
     from qtmonaco import Monaco
 except ImportError as e:
-    msg = f"Could not import the QtMonaco Editor, make sure you installed it with pip install qtmonaco.\n"\
-          f"If using pyqt5 or pyqt6 try also adding this package: pip install pyqtwebengine"
+    msg = f"Could not import the QtMonaco Editor, make sure you installed it with pip install qtmonaco "\
+          f"or with pip install pymodaq_gui[editor].\n"\
+          f"If using pyqt5 try also adding this package: pip install PyQtWebEngine\n"\
+          f"If using pyqt6 try also adding this package: pip install PyQt6-WebEngine"
     logger.warning(msg)
     e.msg = f'{msg}\n{e.msg}'
     raise e
