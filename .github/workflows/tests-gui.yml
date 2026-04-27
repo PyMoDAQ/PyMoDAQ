@@ -94,6 +94,14 @@ jobs:
             libglu1-mesa libfontconfig1 libfreetype6 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcomposite1 libxcursor1 \
             libxdamage1 libxtst6 libxcb1
           export QT_DEBUG_PLUGINS=1
+
+          sudo apt-get update
+          sudo apt-get install -y mesa-utils vulkan-tools
+          export GDK_BACKEND=x11
+          export MESA_GL_VERSION_OVERRIDE=4.5
+          export MESA_VK_DEVICE_SELECT=software
+          vulkaninfo
+          
           
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
           echo "XDG_DATA_DIRS=/usr/share:/usr/share/icons:/usr/local/share" >> $GITHUB_ENV
