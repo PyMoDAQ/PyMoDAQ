@@ -198,12 +198,12 @@ def dict_from_param(param: Parameter):
         opts.update({VALID_FOR_CONFIGURATION: '1' if param.opts[VALID_FOR_CONFIGURATION] else '0'})
 
     if 'limits' in param.opts:
-        if isinstance(param.opts['limits'], list):
-            limits = str(param.opts['limits'])
-        elif isinstance(param.opts['limits'], dict):
+        if isinstance(param.opts['limits'], dict):
             limits = {}
             for key in param.opts['limits']:
                 limits[key] = basic_serialization(param.opts['limits'][key], within_dict=True)
+        else:
+            limits = str(param.opts['limits'])
         opts.update(dict(limits=limits))
 
     if 'addList' in param.opts:
