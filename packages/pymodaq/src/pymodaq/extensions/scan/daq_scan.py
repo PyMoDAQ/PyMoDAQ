@@ -187,13 +187,14 @@ class DAQScan(CustomExt):
         self.live_timer = QtCore.QTimer(self)
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        if self.dashboard.experiment_manager.entry_applied:
-            self.ui.enable_start_stop(True)
-
         self.scan_manager = ScanManager(dashboard, self)
         self.scan_manager.get_external_toolbar_menu(toolbar=self.ui.get_toolbar('scan_manager'),
                                                     menu=self.ui.get_menu('scan_manager'))
 
+        if self.dashboard.experiment_manager.entry_applied:
+            self.ui.enable_start_stop(True)
+            self.scan_manager.enable_actions()
+            
         logger.info('DAQScan Initialized')
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
@@ -235,7 +236,8 @@ class DAQScan(CustomExt):
 
         if self.ui is not None:
             self.ui.enable_start_stop(True)
-        self.scan_manager.enable_actions()
+        if hasattr(self, 'scan_manager'):
+            self.scan_manager.enable_actions()
 
     ################
     #  CONFIG/SETUP UI / EXIT
