@@ -93,14 +93,18 @@ Restore an experiment
 ------------
 
 
-To restore an experiment click on ``restore`` button. The launcher will load a dashboard with selected experiment and state.
+To restore an experiment click on |open_in_new| ``Launch`` button. The launcher will load a dashboard with selected experiment and state.
 You can modify experiment or state before restore an experiment, for exemple if the last time PyMoDAQ used an experiment and a state, the launcher suggests that but you can just modify state.
 If the experiment that you want load is not suggest directly by the launcher or in :ref:`history <launcher_history>`, you can select any experiment and state, to use passive launcher experience.
 
 .. note::
 
-   If you want to load a dashboard with ``default`` experiment and state, the right method is to choose ``default`` experiment and click on restore/launch.
+   If you want to load a dashboard with ``default`` experiment and state, the right method is to choose ``default`` experiment and click on |open_in_new| ``Launch``.
    This method is faster than open an empty dashboard and load manually ``default`` experiment.
+
+.. |open_in_new| image:: /image/launcher/open_in_new.png
+   :height: 1em
+   :align: middle
 
 Navigate through the history
 ------------
