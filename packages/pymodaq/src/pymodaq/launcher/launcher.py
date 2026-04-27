@@ -24,6 +24,7 @@ from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.shared_ui import SharedUI
 from pymodaq_gui.managers.manager_base import ManagerActions
+from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
 from pymodaq_utils.config import get_set_local_dir
@@ -71,32 +72,41 @@ class ExperimentTreeBuilder:
         return str(module_param.name())
 
     def _build_summary_group(self, module_type: ModuleType, group_title: str) -> dict:
-        group_param = self.experiment_settings.child(module_type.value)
-        children = []
-
-        if group_param is not None:
-            for ind_module, module_param in enumerate(group_param.children()):
-                plugin_name = ""
-                info_param = module_param.child('info')
-                if info_param is not None:
-                    type_param = info_param.child('type')
-                    if type_param is not None:
-                        plugin_name = str(type_param.value())
-
-                children.append({
-                    'title': f"{self._module_display_title(module_param)} ({plugin_name})",
-                    'name': f'{module_type.value}_title_{ind_module:02d}',
-                    'type': 'group',
-                })
-
-        if not children:
+        if not self.experiment_settings.children():
             module_name = "Actuators" if module_type == ModuleType.Actuator else "Detectors"
-            children.append({
+            children = [{
                 'title': f"No {module_name.lower()} set for this experiment",
                 'name': f'{module_type.value}_empty',
                 'type': 'str',
                 'readonly': True,
-            })
+            }]
+        else:
+            group_param = self.experiment_settings.child(module_type.value)
+            children = []
+
+            if group_param is not None:
+                for ind_module, module_param in enumerate(group_param.children()):
+                    plugin_name = ""
+                    info_param = module_param.child('info')
+                    if info_param is not None:
+                        type_param = info_param.child('type')
+                        if type_param is not None:
+                            plugin_name = str(type_param.value())
+
+                    children.append({
+                        'title': f"{self._module_display_title(module_param)} ({plugin_name})",
+                        'name': f'{module_type.value}_title_{ind_module:02d}',
+                        'type': 'group',
+                    })
+
+            if not children:
+                module_name = "Actuators" if module_type == ModuleType.Actuator else "Detectors"
+                children.append({
+                    'title': f"No {module_name.lower()} set for this experiment",
+                    'name': f'{module_type.value}_empty',
+                    'type': 'str',
+                    'readonly': True,
+                })
 
         return {
             'title': group_title,
@@ -225,7 +235,6 @@ class Launcher(CustomApp):
         self.loader_vbox.layout().addWidget(self.settings_tree)
 
         self.experiment_manager.entry = 'New '
-        self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
 
         self.set_launcher_vbox()
 
@@ -348,12 +357,16 @@ class Launcher(CustomApp):
         """Load an experiment source and display only module titles in settings_tree."""
         try:
             if experiment_source is None:
-                experiment_settings = self.create_parameter(self.experiment_manager.settings)
+                experiment_settings = Parameter.create(name='empty', type='group', children=[])
             else:
                 experiment_settings = self.create_parameter(experiment_source)
         except Exception as error:
             logger.warning(f'Unable to load experiment source {experiment_source}: {error}')
-            experiment_settings = self.create_parameter(self.experiment_manager.settings)
+            if experiment_source is None:
+                # Keep empty tree if no source provided
+                experiment_settings = Parameter.create(name='empty', type='group', children=[])
+            else:
+                experiment_settings = self.create_parameter(self.experiment_manager.settings)
 
         self._full_experiment_settings = experiment_settings
 
@@ -419,12 +432,14 @@ class Launcher(CustomApp):
             self.date_combo_box.setCurrentText(date.strftime("%Y/%m/%d at %Hh%M"))
             self.date_combo_box.blockSignals(False)
 
+            # tree
+            self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
+
         else:
             self.experiment_manager.entry = "default"
             self.configurator.entry = "default"
+            self.show_experiment_titles_only(None)
 
-        # tree
-        self.show_experiment_titles_only(self.experiment_manager.entry_filepath)
 
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
