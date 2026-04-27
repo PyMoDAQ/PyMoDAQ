@@ -50,3 +50,16 @@ class TestEditor:
         assert not tmp_file.is_file()
         assert tmp_anotherfile in editor.files_path
         assert tmp_anotherfile.is_file()
+
+    def test_save_copy_s(self, editor, tmp_path):
+        tmp_file = tmp_path.joinpath('afile.py')
+        tmp_anotherfile = tmp_path.joinpath('anotherfile.py')
+        editor.create_file(tmp_file, add_to_watcher=False)
+
+        editor.save_copy_file_as(tmp_anotherfile, add_to_watcher=False)
+
+        assert tmp_file.is_file()
+        assert tmp_file in editor.files_path
+
+        assert tmp_anotherfile.is_file()
+        assert tmp_anotherfile in editor.files_path
