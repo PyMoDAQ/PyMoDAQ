@@ -5,18 +5,28 @@ import dataclasses
 import subprocess
 import sys
 
-from qtmonaco import Monaco
+
 from qtpy import QtWidgets
 from qtpy.QtGui import QKeySequence, QTextCursor
 from qtpy.QtCore import Qt, QFileSystemWatcher, Signal, QThread, QObject
 
 from pymodaq_utils.config import get_set_local_dir, GlobalConfig
+from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.messenger import dialog
 from pymodaq_gui.utils import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_gui.utils.file_io import select_file
 
+
+logger = set_logger(get_module_name(__file__))
+
+try:
+    from qtmonaco import Monaco
+except ImportError as e:
+    logger.warning(f"Could not import the QtMonaco Editor, make sure you installed it with pip install qtmonaco.\n"
+                   f"If using pyqt5 or pyqt6 try also adding this package: pip install pyqtwebengine")
+    raise e
 
 config = GlobalConfig()
 
