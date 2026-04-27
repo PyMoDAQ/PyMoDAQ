@@ -323,7 +323,7 @@ class MonacoApp(CustomApp):
         """ Save the current editor content in the corresponding file Path """
         self._save_file(self.current_file)
 
-    def save_file_as(self, file_path: Path = None):
+    def save_file_as(self, file_path: Path = None, add_to_watcher=True):
         """ Rename the current editor file content in a new file Path """
         if file_path is None:
             file_path = select_file(start_path=self._save_path, save=True, ext='py',
@@ -332,18 +332,18 @@ class MonacoApp(CustomApp):
 
         if file_path:
             self._save_file(file_path)
-            self.add_file(file_path)
+            self.add_file(file_path, add_to_watcher=add_to_watcher)
             self.remove_file(current_path)
             current_path.unlink()
 
-    def save_copy_file_as(self, file_path: Path = None):
+    def save_copy_file_as(self, file_path: Path = None, add_to_watcher=True):
         """ Make a copy of the current editor content in a new file Path """
         if file_path is None:
             file_path = select_file(start_path=self._save_path, save=True, ext='py',
                                     force_save_extension=True)
         if file_path:
             self._save_file(file_path)
-            self.add_file(file_path)
+            self.add_file(file_path, add_to_watcher=add_to_watcher)
 
     def _save_file(self, file_path: Path = None):
         """ Save the current editor content in the specified file Path """

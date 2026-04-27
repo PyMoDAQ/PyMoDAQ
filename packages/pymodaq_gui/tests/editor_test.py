@@ -40,3 +40,13 @@ class TestEditor:
         editor.remove_file(file_here)
         assert file_here not in editor.files_path
 
+    def test_save_as(self, editor, tmp_path):
+        tmp_file = tmp_path.joinpath('afile.py')
+        tmp_anotherfile = tmp_path.joinpath('anotherfile.py')
+        editor.create_file(tmp_file, add_to_watcher=False)
+
+        editor.save_file_as(tmp_anotherfile, add_to_watcher=False)
+
+        assert not tmp_file.is_file()
+        assert tmp_anotherfile in editor.files_path
+        assert tmp_anotherfile.is_file()
