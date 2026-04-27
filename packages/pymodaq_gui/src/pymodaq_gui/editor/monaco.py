@@ -236,6 +236,7 @@ class MonacoApp(CustomApp):
 
         self.tab_widget.tabCloseRequested.connect(self.close_editor)
         self.tab_widget.tabBarClicked.connect(self.highlight_tab)
+        self.tab_widget.currentChanged.connect(self.highlight_tab)
 
         self.file_watcher.fileChanged.connect(self.do_things_on_file_changed)
 
