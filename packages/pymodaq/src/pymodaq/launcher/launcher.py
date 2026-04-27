@@ -54,6 +54,65 @@ class HistoryFileHandler(FileSystemEventHandler) :
             self.callback()
 
 
+class ExperimentTreeBuilder:
+    """Build experiment summary tree from full experiment settings."""
+
+    def __init__(self, experiment_settings):
+        self.experiment_settings = experiment_settings
+
+    @staticmethod
+    def _module_display_title(module_param) -> str:
+        name_param = module_param.child('name')
+        if name_param is not None and name_param.value() not in (None, ''):
+            return str(name_param.value())
+        module_title = module_param.title()
+        if module_title:
+            return str(module_title)
+        return str(module_param.name())
+
+    def _build_summary_group(self, module_type: ModuleType, group_title: str) -> dict:
+        group_param = self.experiment_settings.child(module_type.value)
+        children = []
+
+        if group_param is not None:
+            for ind_module, module_param in enumerate(group_param.children()):
+                plugin_name = ""
+                info_param = module_param.child('info')
+                if info_param is not None:
+                    type_param = info_param.child('type')
+                    if type_param is not None:
+                        plugin_name = str(type_param.value())
+
+                children.append({
+                    'title': f"{self._module_display_title(module_param)} ({plugin_name})",
+                    'name': f'{module_type.value}_title_{ind_module:02d}',
+                    'type': 'group',
+                })
+
+        if not children:
+            module_name = "Actuators" if module_type == ModuleType.Actuator else "Detectors"
+            children.append({
+                'title': f"No {module_name.lower()} set for this experiment",
+                'name': f'{module_type.value}_empty',
+                'type': 'str',
+                'readonly': True,
+            })
+
+        return {
+            'title': group_title,
+            'name': f'{module_type.value}_summary',
+            'type': 'group',
+            'expanded': True,
+            'children': children,
+        }
+
+    def get_titles_only(self) -> list:
+        """Return summary tree with only module titles."""
+        return [
+            self._build_summary_group(ModuleType.Actuator, 'Actuators'),
+            self._build_summary_group(ModuleType.Detector, 'Detectors'),
+        ]
+
 
 class Launcher(CustomApp):
     command_sig = Signal(ThreadCommand)
@@ -285,45 +344,6 @@ class Launcher(CustomApp):
         self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
         self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
 
-    @staticmethod
-    def _module_display_title(module_param) -> str:
-        name_param = module_param.child('name')
-        if name_param is not None and name_param.value() not in (None, ''):
-            return str(name_param.value())
-
-        module_title = module_param.title()
-        if module_title:
-            return str(module_title)
-        return str(module_param.name())
-
-    def _build_summary_group(self, experiment_settings, module_type: ModuleType, group_title: str) -> dict:
-        group_param = experiment_settings.child(module_type.value)
-        children = []
-
-        if group_param is not None:
-            for ind_module, module_param in enumerate(group_param.children()):
-                # Get plugin name from 'info' -> 'type'
-                plugin_name = ""
-                info_param = module_param.child('info')
-                if info_param is not None:
-                    type_param = info_param.child('type')
-                    if type_param is not None:
-                        plugin_name = str(type_param.value())
-                
-                children.append({
-                    'title': f"{self._module_display_title(module_param)} ({plugin_name})",
-                    'name': f'{module_type.value}_title_{ind_module:02d}',
-                    'type': 'group',
-                })
-
-        return {
-            'title': group_title,
-            'name': f'{module_type.value}_summary',
-            'type': 'group',
-            'expanded': True,
-            'children': children,
-        }
-
     def show_experiment_titles_only(self, experiment_source=None):
         """Load an experiment source and display only module titles in settings_tree."""
         try:
@@ -337,10 +357,8 @@ class Launcher(CustomApp):
 
         self._full_experiment_settings = experiment_settings
 
-        self.settings = [
-            self._build_summary_group(experiment_settings, ModuleType.Actuator, 'Actuators'),
-            self._build_summary_group(experiment_settings, ModuleType.Detector, 'Detectors'),
-        ]
+        tree_builder = ExperimentTreeBuilder(experiment_settings)
+        self.settings = tree_builder.get_titles_only()
 
         self.tree.header().hide()
         self.tree.expandAll()
