@@ -179,8 +179,8 @@ class Scanner(QObject, ParameterManager):
 
         self.set_scan_type_and_subtypes(settings['scan_type'],
                                         settings['scan_sub_type'])
-        self.settings.restoreState(settings.saveState())
-        self._scanner.settings.restoreState(scanner_settings.saveState())
+        self.settings = settings
+        self._scanner.settings = scanner_settings
 
     @property
     def scan_type(self) -> str:
