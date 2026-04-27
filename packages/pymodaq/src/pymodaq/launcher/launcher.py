@@ -280,9 +280,8 @@ class Launcher(CustomApp):
         # Inject new implementation extension launch method in the execute action
         execute_action = self.extension_manager.get_action(ManagerActions.EXECUTE)
         execute_action.triggered.disconnect() # disconnect normal action
-        # Connect the launcher method
         execute_action.triggered.connect(
-            lambda: self.load_extension_subprocess(self.extension_manager.entry)
+            lambda checked=False: self.load_extension_subprocess(str(self.extension_manager.entry).strip())
         )
 
         self.date_combo_box.currentIndexChanged.connect(self._on_date_combo_box_changed)
@@ -490,32 +489,31 @@ class Launcher(CustomApp):
 
     def load_extension_subprocess(self, extension_name: str):
         """Launch an extension in a separate process"""
-        import multiprocessing as mp
-        import sys
+        # Validate and log the extension name
+        if not extension_name or not isinstance(extension_name, str):
+            error_msg = f"Invalid extension name: {extension_name} (type: {type(extension_name)})"
+            logger.error(error_msg)
+            print(error_msg)
+            return None
 
-        logger.info(f"Launching extension {extension_name} in separate process")
+        logger.info(f"Attempting to launch extension with name: '{extension_name}'")
 
         try:
             ext_enum = ExtensionEnum(extension_name)
             ext_class = self.extension_manager.extension_catalog[ext_enum].klass
-            ext_module = sys.modules[ext_class.__module__]
+            process = subprocess.Popen([sys.executable, '-m', ext_class.__module__])
+            logger.info(f"Extension '{extension_name}' successfully launched with process PID: {process.pid}")
+            return process
 
-            # Check if the module has a main() function and launch it
-            if hasattr(ext_module, 'main'):
-                process = mp.Process(target=ext_module.main)
-                process.start()
-                logger.info(f"Extension {extension_name} launched in process PID: {process.pid}")
-                return process
-            else:
-                logger.error(f"Extension {extension_name} has no main() function")
-                return None
-
-        except ValueError:
-            logger.error(f"Extension '{extension_name}' not found in ExtensionEnum")
+        except ValueError as e:
+            error_msg = f"Extension '{extension_name}' not found in ExtensionEnum: {e}"
+            logger.error(error_msg)
             return None
         except Exception as e:
-            logger.error(f"Failed to launch extension {extension_name}: {e}")
+            error_msg = f"Failed to launch extension '{extension_name}': {type(e).__name__}: {e}"
+            logger.error(error_msg)
             return None
+
 
 
 def main():
