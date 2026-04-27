@@ -1,3 +1,4 @@
+import copy
 import pickle
 from pathlib import Path
 import dataclasses
@@ -212,15 +213,14 @@ class MonacoApp(CustomApp):
         self.add_action('load', 'Open File', 'file_open', 'Load file ',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_O))
-
         self.add_action('save', 'Save File', 'file_save', 'Save file',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_S))
-
-        self.add_action('save_copy_as', 'Save a Copy As', 'save_as', 'Save a copy of the file as',
+        self.add_action('save_as', 'Save File As', 'save_as', 'Save file As',
                         toolbar='file', menu='file', auto_menu=True,
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_S))
-
+        self.add_action('save_copy_as', 'Save a Copy As', 'save_as', 'Save a copy of the file as',
+                        toolbar='file', menu='file', auto_menu=True)
         self.add_action('run_file', 'Run current File', 'start', 'Run the currently selected file',
                         toolbar='file', menu='file', auto_menu=True,)
 
@@ -228,7 +228,8 @@ class MonacoApp(CustomApp):
         self.connect_action('load', lambda: self.load_file())
         self.connect_action('new', self.create_file)
         self.connect_action('save', self.save_file)
-        self.connect_action('save_copy_as', self.save_copy_file_as)
+        self.connect_action('save_as', lambda: self.save_file_as())
+        self.connect_action('save_copy_as', lambda: self.save_copy_file_as())
 
         self.connect_action('run_file', lambda: self.run_file())
 
@@ -319,8 +320,21 @@ class MonacoApp(CustomApp):
         """ Save the current editor content in the corresponding file Path """
         self._save_file(self.current_file)
 
+    def save_file_as(self, file_path: Path = None):
+        """ Rename the current editor file content in a new file Path """
+        if file_path is None:
+            file_path = select_file(start_path=self._save_path, save=True, ext='py',
+                                    force_save_extension=True)
+        current_path = copy.copy(self.current_file)
+
+        if file_path:
+            self._save_file(file_path)
+            self.add_file(file_path)
+            self.remove_file(current_path)
+            current_path.unlink()
+
     def save_copy_file_as(self, file_path: Path = None):
-        """ Make a copy of the curent editor content in a new file Path """
+        """ Make a copy of the current editor content in a new file Path """
         if file_path is None:
             file_path = select_file(start_path=self._save_path, save=True, ext='py',
                                     force_save_extension=True)
