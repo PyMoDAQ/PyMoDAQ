@@ -130,6 +130,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     @property
     def current_scan_index(self) -> int:
+        """ Get/Set the current scan_index during the scan"""
         return self._current_scan_step
 
     @current_scan_index.setter
