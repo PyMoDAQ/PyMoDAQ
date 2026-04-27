@@ -1,19 +1,32 @@
 import pytest
 from pathlib import Path
 import qt_themes
+
+from pymodaq_utils.config import GlobalConfig
+
 from pymodaq_gui.editor import editor_main_loader
 from pymodaq_gui.editor.monaco import MonacoApp, LOCAL_FILES_PATH
 
+config = GlobalConfig()
+
 @pytest.fixture
-def editor(qtbot):
+def init_qt(qtbot):
+    qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
+                        style=config('gui', 'style', 'style')[0])
+    return qtbot
+
+
+@pytest.fixture
+def editor(init_qt):
     if LOCAL_FILES_PATH.is_file():
         LOCAL_FILES_PATH.unlink()
     qt_themes.set_theme('dracula')
     shared_ui, monaco_app = editor_main_loader()
+    init_qt.addWidget(shared_ui.mainwindow)
     shared_ui.show()
-    qtbot.addWidget(shared_ui.mainwindow)
+
     yield monaco_app
-    shared_ui.quit_fun()
+    monaco_app.quit_fun()
 
 
 class TestEditor:
