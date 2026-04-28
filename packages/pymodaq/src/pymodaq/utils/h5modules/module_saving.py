@@ -234,12 +234,12 @@ class DetectorSaver(ModuleSaver):
         """
         self._datatoexport_saver.add_bkg(where, data_bkg)
 
-    def add_external_h5(self, other_h5data: H5SaverLowLevel):
+    def add_external_h5(self, other_h5data: H5SaverBase):
         if other_h5data is not None:
             external_group = self._h5saver.add_group('external_data', 'external_h5', self.module_group)
             try:
                 if not other_h5data.isopen:
-                    h5saver = H5SaverLowLevel()
+                    h5saver = H5SaverBase()
                     h5saver.init_file(addhoc_file_path=other_h5data.filename)
                     h5_file = h5saver.h5_file
                 else:
