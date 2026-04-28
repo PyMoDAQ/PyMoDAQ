@@ -47,7 +47,8 @@ class Scanner(QObject, ParameterManager):
     settings_name = 'scanner'
 
     params = [
-        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
+        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'bool_push',
+         'label': 'Calculate positions'},
         {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list',
          'limits': scanner_factory.scan_types()},
@@ -119,6 +120,10 @@ class Scanner(QObject, ParameterManager):
         return self._scanner.settings
 
     def value_changed(self, param: Parameter):
+        if param.name() == 'calculate_positions':
+            if param.value():
+
+                param.setValue(False)
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
@@ -191,7 +196,6 @@ class Scanner(QObject, ParameterManager):
         return self.settings['scan_sub_type']
 
     def connect_things(self):
-        self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
         self.scanner_updated_signal.connect(self.save_scanner_settings)
 
     def save_scanner_settings(self):
