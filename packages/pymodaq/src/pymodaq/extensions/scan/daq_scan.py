@@ -25,7 +25,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
 
-from pymodaq_data import data as data_mod, DataDistribution, DataDim
+from pymodaq_data import data as data_mod, DataDistribution, DataDim, DataToExport
 from pymodaq_data.h5modules import data_saving
 
 from pymodaq_gui.parameter import ioxml, Parameter
@@ -76,7 +76,6 @@ class DAQScan(CustomExt):
     """
     settings_name = 'daq_scan_settings'
     command_daq_signal = Signal(utils.ThreadCommand)
-    live_data_1D_signal = Signal(list)
 
     icon_name = 'qr_code_scanner'
 
@@ -177,7 +176,7 @@ class DAQScan(CustomExt):
         self.ui.command_sig.connect(self.process_ui_cmds)
         self.ui.finalize_ui(self)
 
-        self.connect_things()
+        self.setup_ui()
 
         self.create_dataset_settings()
 
@@ -193,9 +192,14 @@ class DAQScan(CustomExt):
 
         if self.dashboard.experiment_manager.entry_applied:
             self.ui.enable_start_stop(True)
-            self.scan_manager.enable_actions()
+            self.ini_scan_manager()
 
         logger.info('DAQScan Initialized')
+
+    def ini_scan_manager(self):
+        self.scan_manager.enable_actions()
+        self.scan_manager.modules_manager.actuators_all = self.modules_manager.actuators_all
+        self.scan_manager.modules_manager.detectors_all = self.modules_manager.detectors_all
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
         """ Get the main toolbars widget to be eventually added in the main window toolbararea
@@ -213,8 +217,20 @@ class DAQScan(CustomExt):
         self.settings.child('plot_options', 'plot_1d').setValue(
             dict(all_items=data1D_names, selected=data1D_names))
 
+    ####
+    def setup_docks_and_widgets(self):
+        """ Mandatory even if empty"""
+        pass
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """ Mandatory even if empty"""
+
+    def setup_actions(self):
+        """ Mandatory even if empty"""
+
     def connect_things(self):
         self.scanner.scanner_updated_signal.connect(self.do_things_after_scanner_changed)
+    ####
 
     def do_things_after_scanner_changed(self):
         self.ui.set_action_enabled('ini_positions',
@@ -236,8 +252,9 @@ class DAQScan(CustomExt):
 
         if self.ui is not None:
             self.ui.enable_start_stop(True)
+
         if hasattr(self, 'scan_manager'):
-            self.scan_manager.enable_actions()
+            self.ini_scan_manager()
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -906,7 +923,7 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_data':
             ind_scan = status.attribute.pop('ind_scan')
-            self.module_and_data_saver.add_data(**status.attribute)
+            self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None), **status.attribute)
             self.module_and_data_saver.add_time(status.attribute['indexes'])
             if ind_scan == 0:  #only the h5arrays initialization can take some time and one need to make sure
                 # it is finished
@@ -914,6 +931,13 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
+
+        elif status.command == 'splash':
+            if status.attribute is None:
+                self.splash_sc.setVisible(False)
+            else:
+                self.splash_sc.show()
+                self.splash_sc.showMessage(status.attribute)
 
     ############
     #  PLOTTING
@@ -1376,10 +1400,11 @@ class DAQScanAcquisition(QObject):
                 indexes = [self.ind_average] + list(indexes)
             indexes = tuple(indexes)
             if self.ind_scan == 0:
-                self.status_sig.emit(utils.ThreadCommand("Update_Status",
+                self.status_sig.emit(utils.ThreadCommand("splash",
                                                          "Creating the arrays nodes in the h5file, please be patient"))
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+                QThread.msleep(50)
                 nav_axes = self.scanner.get_nav_axes()
                 if self.Naverage > 1:
                     for nav_axis in nav_axes:
@@ -1387,21 +1412,6 @@ class DAQScanAcquisition(QObject):
                     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
                                                   index=0))
                 self.status_sig.emit(utils.ThreadCommand("add_nav_axes", nav_axes))
-
-
-            # async saving command sent to all concerned detector control modules
-            # because async if the first initialization takes a long time, the next async move will timeout therefore wait for the _data_saved_flag to be run
-            self.status_sig.emit(
-                utils.ThreadCommand("add_data",
-                                    dict(indexes=indexes, distribution=self.scanner.distribution,
-                                         ind_scan=self.ind_scan)))
-            if self.ind_scan == 0:
-                while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
-                    QThread.msleep(50)
-                    QtWidgets.QApplication.processEvents()
-                self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
-
-            self.det_done_flag = True
 
             if self.scanner.scanner.do_process_data:
                 data_temp = self.scanner.scanner.process_data(det_done_datas)
@@ -1411,6 +1421,23 @@ class DAQScanAcquisition(QObject):
                 data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
                 n_nav_axis_selection = 2-len(indexes) + 1 if self.Naverage > 1 else 2-len(indexes)
                 data_temp = data_temp.get_data_with_naxes_lower_than(n_nav_axis_selection)  # maximum Data2D included nav indexes
+
+            # async saving command sent to all concerned detector control modules
+            # because async if the first initialization takes a long time, the next async move will timeout therefore wait for the _data_saved_flag to be run
+            self.status_sig.emit(
+                utils.ThreadCommand("add_data",
+                                    dict(indexes=indexes, distribution=self.scanner.distribution,
+                                         ind_scan=self.ind_scan,
+                                         extra_data=data_temp if self.scanner.scanner.do_process_data else None,)))
+            if self.ind_scan == 0:
+                while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
+                    QThread.msleep(50)
+                    QtWidgets.QApplication.processEvents()
+                self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
+                self.status_sig.emit(utils.ThreadCommand("splash", attribute=None))
+
+            self.det_done_flag = True
+
 
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
