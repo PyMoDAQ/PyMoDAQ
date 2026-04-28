@@ -925,9 +925,7 @@ class DAQScan(CustomExt):
             ind_scan = status.attribute.pop('ind_scan')
             self.module_and_data_saver.add_data(dte=status.attribute.pop('extra_data', None), **status.attribute)
             self.module_and_data_saver.add_time(status.attribute['indexes'])
-            if ind_scan == 0:  #only the h5arrays initialization can take some time and one need to make sure
-                # it is finished
-                self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
+            self.command_daq_signal.emit(utils.ThreadCommand("data_saved"))
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
@@ -1429,16 +1427,16 @@ class DAQScanAcquisition(QObject):
                                     dict(indexes=indexes, distribution=self.scanner.distribution,
                                          ind_scan=self.ind_scan,
                                          extra_data=data_temp if self.scanner.scanner.do_process_data else None,)))
+
+            while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
+                QThread.msleep(50)
+                QtWidgets.QApplication.processEvents()
+
             if self.ind_scan == 0:
-                while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
-                    QThread.msleep(50)
-                    QtWidgets.QApplication.processEvents()
                 self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
                 self.status_sig.emit(utils.ThreadCommand("splash", attribute=None))
 
             self.det_done_flag = True
-
-
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
         except Exception as e:
