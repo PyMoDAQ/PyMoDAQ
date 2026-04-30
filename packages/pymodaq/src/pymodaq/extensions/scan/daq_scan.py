@@ -77,6 +77,8 @@ class DAQScan(CustomExt):
     settings_name = 'daq_scan_settings'
     command_daq_signal = Signal(utils.ThreadCommand)
 
+    scan_done_signal = QtCore.Signal()
+
     icon_name = 'qr_code_scanner'
 
     params = [
@@ -889,6 +891,7 @@ class DAQScan(CustomExt):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
+            self.scan_done_signal.emit()
             try:
                 self.module_and_data_saver.flush()
                 if self._h5saver.settings['close_after_scan']:
