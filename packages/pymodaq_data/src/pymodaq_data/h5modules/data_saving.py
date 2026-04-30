@@ -52,6 +52,11 @@ class DataManagement(metaclass=ABCMeta):
         """
         return f'{capitalize(cls.data_type.value)}{ind:02d}'
 
+    @property
+    def raw_group(self) -> Node:
+        """ Get the base RawGroup where raw data should be saved"""
+        return self._h5saver.raw_group
+
     def __getattr__(self, item):
         """ Allows to call attributes of the underlying H5Saver object"""
 
@@ -1043,7 +1048,7 @@ class DataLoader:
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5SaverLowLevel or Path
     """
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
@@ -1155,3 +1160,45 @@ class DataLoader:
         data_tmp = DataToExport(name=where.name, data=data_list)
         data.append(data_tmp)
         return data
+
+    def load_data_from_name_origin(self, name: str, origin: str = '',
+                                   where: Union[GROUP, Node, str] = None,
+                                   with_bkg=False, load_all=True) -> DataWithAxes:
+        """ Load data from a node if this data as the given name and origin
+
+        Parameters
+        ----------
+        name: str
+            The name of the data (stored in the title attribute)
+        origin: str
+            The origin of the data
+        where: Node or str
+            If specified start to look for matching Dwa at where Node
+        with_bkg: bool
+            If True load with bkg substraction if any
+        load_all: bool
+            if True load all channels of the parent node
+        """
+        if where is None:
+            where = self._h5saver.raw_group
+
+        where = self._h5saver.get_node(where)
+
+        if isinstance(where, GROUP):
+            for node in self.h5saver.walk_nodes(where):
+
+                if (not isinstance(node, GROUP) and
+                        node.attrs['title'] == name and
+                        node.attrs['origin'] == origin):
+                    return self.load_data(node, with_bkg=with_bkg,
+                                          load_all=load_all)
+        else:
+            dwa = self.load_data(where, with_bkg=with_bkg,
+                                 load_all=load_all)
+            if dwa.name == name and dwa.origin == origin:
+                return dwa
+
+        # if not returned so far raise a NameError
+        raise NameError(f'No dwa matching this name: {name} and '
+                        f'origin: {origin} hanging from '
+                        f'{where}')
