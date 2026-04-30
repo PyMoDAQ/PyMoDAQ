@@ -198,12 +198,10 @@ class DetectorSaver(ModuleSaver):
         """
         dte_filtered = DataToExport('Filtered')
         for dwa in dte:
-            flag = True
             if 'do_save' in dwa.extra_attributes:  # this is the main filter
-                flag = flag and dwa.do_save
-            else:
-                flag = flag and self.filter_data_wrt_settings(dwa)
-            if flag:
+                if dwa.do_save:
+                    dte_filtered.append(dwa)
+            elif self.filter_data_wrt_settings(dwa):
                 dte_filtered.append(dwa)
         return dte_filtered
 
