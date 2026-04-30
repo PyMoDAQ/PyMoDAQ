@@ -10,20 +10,21 @@ from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
 import time
 import xml.etree.ElementTree as ET
 
-
 import numpy as np
 
-from pymodaq_data import DataDim, DataWithAxes
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq_utils.utils import capitalize
+
+from pymodaq_data import DataDim, DataWithAxes
 from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw, DataSource
-from pymodaq_gui.h5modules.saving import H5SaverBase
-from pymodaq_data.h5modules.backends import GROUP, Node
 from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver)
+from pymodaq_data.h5modules.backends import GROUP, Node
+
+from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
 
 if TYPE_CHECKING:
