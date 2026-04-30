@@ -17,17 +17,17 @@ from packaging import version as version_mod
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
-from .backends import H5Backend
+from .saving import H5SaverLowLevel
 from .exporter import ExporterFactory
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-class H5BrowserUtil(H5Backend):
+class H5BrowserUtil(H5SaverLowLevel):
     """Utility object to interact and get info and data from a hdf5 file
 
-    Inherits H5Backend and all its functionalities
+    Inherits H5SaverLowLevel and all its functionalities
 
     Parameters
     ----------
