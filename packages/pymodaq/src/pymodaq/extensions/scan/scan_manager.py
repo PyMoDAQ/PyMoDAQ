@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 
 EXTENSION_PATH = get_set_path(get_set_local_dir(user=True), 'DAQ_SCAN')
+SCANNER_FILES_PATH = get_set_path(EXTENSION_PATH, 'scanners')
+
 logger = set_logger(get_module_name(__file__))
 
 class ScanManager(ManagerBase):
@@ -73,7 +75,7 @@ class ScanManager(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return get_set_path(EXTENSION_PATH, 'scanners')
+        return SCANNER_FILES_PATH
 
     def setup_docks_and_widgets(self):
         self.main_widget.setLayout(QtWidgets.QHBoxLayout())
