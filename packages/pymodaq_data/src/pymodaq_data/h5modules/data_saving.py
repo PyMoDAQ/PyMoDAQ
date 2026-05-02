@@ -1064,11 +1064,25 @@ class DataLoader:
     def h5saver(self):
         return self._h5saver
 
+    @h5saver.setter
+    def h5saver(self, h5saver: H5SaverLowLevel):
+        self._h5saver = h5saver
+        self._axis_loader = AxisSaverLoader(h5saver)
+        self._data_loader = DataSaverLoader(h5saver)
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_file()
+    @property
+
+    def raw_group(self) -> Node:
+        """ Get the base RawGroup where raw data should be saved
+
+        Convenience method
+        """
+        return self._h5saver.raw_group
 
     def close_file(self):
         self._h5saver.close_file()
@@ -1076,12 +1090,6 @@ class DataLoader:
     def walk_nodes(self, where: Union[str, Node] = '/'):
         """Return a Node generator iterating over the h5file content"""
         return self.h5saver.walk_nodes(where)
-
-    @h5saver.setter
-    def h5saver(self, h5saver: H5SaverLowLevel):
-        self._h5saver = h5saver
-        self._axis_loader = AxisSaverLoader(h5saver)
-        self._data_loader = DataSaverLoader(h5saver)
 
     def get_node(self, where: Union[Node, str], name: str = None) -> Node:
         """ Convenience method to get node"""
