@@ -1,9 +1,12 @@
+
 from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq_gui.utils import CustomApp, DockArea
 from pymodaq_utils.enums import StrEnum
+
+from pymodaq_gui.utils import CustomApp, DockArea
+
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 if TYPE_CHECKING:
@@ -28,6 +31,7 @@ class CustomExt(CustomApp):
         super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
+
         self.runner_thread : QtCore.QThread = None
         if dashboard is not None:
             self._modules_manager = module_manager_class(

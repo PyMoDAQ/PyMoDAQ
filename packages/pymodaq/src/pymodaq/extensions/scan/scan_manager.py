@@ -20,10 +20,6 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.extensions.scan.daq_scan import DAQScan
 
-
-EXTENSION_PATH = get_set_path(get_set_local_dir(user=True), 'DAQ_SCAN')
-SCANNER_FILES_PATH = get_set_path(EXTENSION_PATH, 'scanners')
-
 logger = set_logger(get_module_name(__file__))
 
 class ScanManager(ManagerBase):
@@ -56,6 +52,17 @@ class ScanManager(ManagerBase):
 
         super().__init__(dashboard=dashboard)
 
+    @classmethod
+    def get_local_folder(cls, user=True) -> Path:
+        """ reimplemented to point towards DAQ_Scan extension """
+        from pymodaq.extensions.scan.daq_scan import DAQScan
+        return DAQScan.get_local_folder(user=user)
+
+    @classmethod
+    def get_scanner_folder(cls) -> Path:
+        """ Point to a local folder to store the scanner entry files """
+        return get_set_path(cls.get_local_folder(user=True), 'scanners')
+
     def do_things_after_ui_setup(self):
         self.main_widget.layout().insertWidget(1, self.scanner.parent_widget)
 
@@ -75,7 +82,7 @@ class ScanManager(ManagerBase):
 
     def get_entry_folder(self, **kwargs_to_entry_folder) -> Path:
         """Get the folder path where the managed entries are stored."""
-        return SCANNER_FILES_PATH
+        return self.get_scanner_folder()
 
     def setup_docks_and_widgets(self):
         self.main_widget.setLayout(QtWidgets.QHBoxLayout())
