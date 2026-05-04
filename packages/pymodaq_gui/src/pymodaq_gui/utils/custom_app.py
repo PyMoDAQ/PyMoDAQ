@@ -196,6 +196,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.do_things_after_ui_setup()
 
+        self.show_warnings()
+
+    def show_warnings(self):
+        pass
+
     def quit_fun(self):
         """Method to be reimplemented in order to define a custom quit function
         """

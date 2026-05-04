@@ -4,6 +4,7 @@ import platform
 import subprocess
 import ctypes
 import shutil
+import sys
 import time
 
 from pathlib import Path
@@ -17,6 +18,8 @@ from typing import Union
 logger = logging.getLogger(Path(__file__).stem)
 
 SYSTEM = platform.system()  # "Windows", "Linux", "Darwin"
+
+__elevation_cancelled = False
 
 def __wait_for_path(path: str, timeout: float = 1.0) -> bool:
     """Poll until a path exists or the timeout expires."""
@@ -100,7 +103,63 @@ def __elevate_unix(*commands: list[str]) -> bool:
             return False
     return True
 
-def create_folder_with_elevation(path: str | Path, mode: int = 0o755) -> bool:
+def warn_about_elevation_prompt(reason: str):
+    """
+    Warns an user about the upcoming elevation message, trying different methods. First qt, then tkinter and in the
+    worst case, in the console.
+    Parameters
+    ----------
+    reason: the reason for rights elevation.
+    """
+    title = "Admin rights needed"
+    msg = f"PyMoDAQ needs admin rights to {reason}.\nPlease enter your password in the next prompt."
+
+    # Try Qt first
+    try:
+        from qtpy.QtWidgets import QApplication, QMessageBox
+        existing_app = QApplication.instance()
+        app = existing_app or QApplication(sys.argv)
+        QMessageBox.information(None, title, msg)
+        if not existing_app:
+            app.quit()
+            del app
+        return
+    except Exception:
+        pass
+
+    # Try tkinter
+    try:
+        import tkinter as tk
+        root = tk.Tk()
+        root.withdraw()
+
+        dialog = tk.Toplevel(root)
+        dialog.title(title)
+        dialog.resizable(False, False)
+
+        tk.Label(dialog, text=msg, wraplength=380, justify="left", padx=20, pady=20).pack(expand=True, fill="both")
+        tk.Button(dialog, text="OK", width=10, command=dialog.destroy).pack(pady=(0, 15))
+
+        dialog.update_idletasks()  # Let tkinter compute the size first
+        dialog.geometry(f"450x{dialog.winfo_reqheight()}")  # Force width, let height be natural
+
+        dialog.grab_set()
+        root.wait_window(dialog)
+        root.destroy()
+        return
+    except Exception:
+        pass
+
+    # Fallback to console
+    import threading
+    print(f"\n{'#' * 60}\n{msg}\n{'#' * 60}\n", file=sys.stderr, flush=True)
+    print("Press Enter to continue... (auto-continues in 5s)", file=sys.stderr, flush=True)
+
+    entered = threading.Event()
+    threading.Thread(target=lambda: (input(), entered.set()), daemon=True).start()
+    entered.wait(timeout=5)
+
+def create_folder_with_elevation(path: str | Path, mode: int = 0o757) -> bool:
     """
     Create a folder at `path` with the given permissions.
     On Unix, uses 'mkdir -m' so that mode and creation are a single atomic
@@ -113,27 +172,30 @@ def create_folder_with_elevation(path: str | Path, mode: int = 0o755) -> bool:
     path:
         Target directory path.
     mode:
-        Unix permission bits. Default 0o755.
+        Unix permission bits. Default 0o757.
    Returns
    -------
         bool: True if successful, False otherwise
     """
+    global __elevation_cancelled
 
-    path = str(path)
+    if not __elevation_cancelled:
+        path = str(path)
 
-    if SYSTEM == "Windows":
-        __elevate_windows(f'mkdir "{path}"')
-    else:
-        octal_str = oct(mode)[2:]   # e.g. 0o755 → "755"
-        __elevate_unix(["mkdir", "-m", octal_str, "-p", path])
+        warn_about_elevation_prompt("create /etc/.pymodaq to store its configuration.")
+        if SYSTEM == "Windows":
+            __elevation_cancelled = not __elevate_windows(f'mkdir "{path}"')
+        else:
+            octal_str = oct(mode)[2:]   # 0o757 → "757"
+            __elevation_cancelled = not __elevate_unix(["mkdir", "-m", octal_str, "-p", path])
 
-    if not __wait_for_path(path):
-        logger.error(f"Folder not found after elevation: {path}")
-        return False
+        if not __wait_for_path(path):
+            logger.error(f"Folder not found after elevation: {path}")
+            return False
 
-    logger.debug(f"Folder created (elevated): {path}")
-    return True
-
+        logger.debug(f"Folder created (elevated): {path}")
+        return True
+    return False
 
 def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
     """
@@ -158,22 +220,28 @@ def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
         True if rename succeeded, False otherwise.
     """
 
-    old = str(old)
-    new = str(new)
+    global __elevation_cancelled
+    if not __elevation_cancelled:
 
-    if SYSTEM == "Windows":
-        # Windows: move command handles both file and directory renames
-        __elevate_windows(f'move "{old}" "{new}"')
-    else:
-        # Unix: mv is the standard rename/move operation
-        __elevate_unix(["mv", old, new])
+        old = str(old)
+        new = str(new)
 
-    if not __wait_for_path(new):
-        logger.error(f"Rename failed: {old} -> {new}")
-        return False
+        warn_about_elevation_prompt("rename existing /etc/.pymodaq.")
 
-    logger.debug(f"Renamed (elevated): {old} -> {new}")
-    return True
+        if SYSTEM == "Windows":
+            # Windows: move command handles both file and directory renames
+            __elevation_cancelled = not __elevate_windows(f'move "{old}" "{new}"')
+        else:
+            # Unix: mv is the standard rename/move operation
+            __elevation_cancelled = not __elevate_unix(["mv", old, new])
+
+        if not __wait_for_path(new):
+            logger.error(f"Rename failed: {old} -> {new}")
+            return False
+
+        logger.debug(f"Renamed (elevated): {old} -> {new}")
+        return True
+    return False
 
 def link_or_copy(src : Union[str, Path], dst : Union[str, Path]) -> None:
     '''

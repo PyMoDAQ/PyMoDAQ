@@ -36,244 +36,6 @@ from typing import Union
 
 SYSTEM = platform.system()  # "Windows", "Linux", "Darwin"
 
-def __wait_for_path(path: str, timeout: float = 1.0) -> bool:
-    """Poll until a path exists or the timeout expires."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if os.path.exists(path):
-            return True
-        time.sleep(0.2)
-    return False
-
-def __elevate_windows(*commands: str) -> bool:
-    """
-    Run one or more cmd.exe commands with a single UAC elevation prompt.
-    Commands are chained with '&&'.
-
-    Attributes
-    ----------
-    *commands: Each command is a list of strings.
-
-   Returns
-   -------
-        bool: True if elevation and commands exeution was successfull, False otherwise
-    """
-
-    from pymodaq_utils.logger import set_logger, get_module_name
-    logger = set_logger(get_module_name(__file__))
-
-    cmd_chain = " && ".join(commands)
-    ret = ctypes.windll.shell32.ShellExecuteW(
-        None,       # parent HWND
-        "runas",    # UAC
-        "cmd.exe",
-        f'/c {cmd_chain}',
-        None,
-        0           # SW_HIDE
-    )
-    if ret <= 32:
-        logger.error(f"Windows elevation via UAC failed.")
-        return False
-
-    return True
-
-def __elevate_unix(*commands: list[str]) -> bool:
-    """
-    Run one or more commands with a single elevated session on Linux/macOS,
-    so the user is only prompted for a password once.
-    Commands are chained with '&&' under a single sh -c call.
-
-    On Linux:  tries pkexec (graphical) then sudo (terminal).
-    On macOS:  uses osascript 'do shell script ... with administrator privileges'.
-
-    Attributes
-    ----------
-    *commands: Each command is a list of strings, e.g.
-        ["mkdir", "-p", "/some/path"], ["chmod", "755", "/some/path"]
-
-   Returns
-   -------
-        bool: True if elevation and commands exeution was successfull, False otherwise
-    """
-
-    from pymodaq_utils.logger import set_logger, get_module_name
-    logger = set_logger(get_module_name(__file__))
-
-    def quote(arg: str) -> str:
-        return f'"{arg}"' if " " in arg else arg
-
-    shell_cmd = " && ".join(
-        " ".join(quote(a) for a in cmd)
-        for cmd in commands
-    )
-
-    if SYSTEM == "Linux":
-        wrapped = ["sh", "-c", shell_cmd]
-
-        def try_run(prefix: list[str]) -> bool:
-            return subprocess.run(prefix + wrapped, capture_output=True).returncode == 0
-
-        if not try_run(["pkexec"]):
-            logger.error("Linux elevation via pkexec failed.")
-            return False
-    else:
-        # macOS — escape inner double-quotes for the osascript string
-        escaped = shell_cmd.replace('"', '\\"')
-        script = f'do shell script "{escaped}" with administrator privileges'
-        result = subprocess.run(["osascript", "-e", script], capture_output=True)
-        if result.returncode != 0:
-            logger.error(f"macOS elevation via osascript failed: {result.stderr.decode().strip()}")
-            return False
-    return True
-
-def create_folder_with_elevation(path: str | Path, mode: int = 0o755) -> bool:
-    """
-    Create a folder at `path` with the given permissions.
-    On Unix, uses 'mkdir -m' so that mode and creation are a single atomic
-    operation, avoiding a separate chmod call (and a second password prompt
-    when elevation is required).
-
-    Args:
-     Attributes
-    ----------
-    path:
-        Target directory path.
-    mode:
-        Unix permission bits. Default 0o755.
-   Returns
-   -------
-        bool: True if successful, False otherwise
-    """
-
-    from pymodaq_utils.logger import set_logger, get_module_name
-    logger = set_logger(get_module_name(__file__))
-
-    path = str(path)
-
-    if SYSTEM == "Windows":
-        __elevate_windows(f'mkdir "{path}"')
-    else:
-        octal_str = oct(mode)[2:]   # e.g. 0o755 → "755"
-        __elevate_unix(["mkdir", "-m", octal_str, "-p", path])
-
-    if not __wait_for_path(path):
-        logger.error(f"Folder not found after elevation: {path}")
-        return False
-
-    logger.debug(f"Folder created (elevated): {path}")
-    return True
-
-
-def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
-    """
-    Rename (move) a file or folder from `old` to `new`.
-
-    On Unix, uses 'mv' under elevation when required.
-    On Windows, uses 'move' under elevation.
-
-    This ensures the rename is executed atomically at the OS level
-    and avoids separate privilege escalation steps.
-
-    Args:
-    ----
-    old_path:
-        Existing file or directory path.
-    new_path:
-        Destination path.
-
-    Returns
-    -------
-    bool
-        True if rename succeeded, False otherwise.
-    """
-
-    from pymodaq_utils.logger import set_logger, get_module_name
-    logger = set_logger(get_module_name(__file__))
-
-    old = str(old)
-    new = str(new)
-
-    if SYSTEM == "Windows":
-        # Windows: move command handles both file and directory renames
-        __elevate_windows(f'move "{old}" "{new}"')
-    else:
-        # Unix: mv is the standard rename/move operation
-        __elevate_unix(["mv", old, new])
-
-    if not __wait_for_path(new):
-        logger.error(f"Rename failed: {old} -> {new}")
-        return False
-
-    logger.debug(f"Renamed (elevated): {old} -> {new}")
-    return True
-
-def link_or_copy(src : Union[str, Path], dst : Union[str, Path]) -> None:
-    '''
-    Tries to reate a symlink of src at dst. If not possible, tries to create a
-    Junction (Windows/NTFS specific symlinks). Otherwise,falls back to copying src to dst.
-
-    A symlink may not always be possible as Windows may need administrative or developer
-    rights to create them. Junctions are NTFS-specific so it depends on the storage format.
-
-    Raises NotADirectoryError if the source is not a directory.
-    Raises FileExistsError if the destination already exists.
-    Parameters
-    ----------
-    src: Union[str, Path]
-        The src path to symlink or copy
-    dst: Union[str, Path]
-        The dst path of the symlink or copy
-
-    Returns
-    -------
-    None
-
-    '''
-    src = Path(src).resolve()
-    dst = Path(dst).resolve()
-
-    if not src.is_dir():
-        raise NotADirectoryError(f'Source is not an existing directory: {src}')
-    if dst.exists():
-        raise FileExistsError(f'Destination already exists: {dst}')
-    # Symlink
-    try:
-        dst.symlink_to(src, target_is_directory=True)
-    except (OSError,NotImplementedError) as e:
-        # from pymodaq_utils import logger as logger_module
-        #
-        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
-        # logger.info(f'Symlink not possible: {e}')
-        pass
-    else:
-        return
-
-    # Junction
-    try:
-        subprocess.run(
-        ["cmd", "/c", "mklink", "/J", str(dst), str(src)],
-             check=True,
-             stdout=subprocess.DEVNULL,
-             stderr=subprocess.DEVNULL,
-        )
-    except (OSError, CalledProcessError) as e:
-        # from pymodaq_utils import logger as logger_module
-        #
-        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
-        # logger.info(f'Junction not possible: {e}')
-        pass
-    else:
-        return
-
-    shutil.copytree(src, dst)
-
-def unlink_or_delete(dst : Union[str, Path]) -> None:
-    dst = Path(dst).absolute()
-    if dst.is_symlink() or dst.is_junction():
-        dst.unlink()
-    else:
-        shutil.rmtree(dst)
-
 USER = environ.get('USERNAME' if sys.platform == 'win32' else 'USER', 'unknown_user')
 
 CONFIG_BASE_PATH = (
@@ -431,20 +193,20 @@ def recursive_iterable_flattening(aniterable: IterableType):
 
 
 def get_set_path(a_base_path: Path, dir_name: str) -> Path:
-    path_to_get = a_base_path.joinpath(dir_name)
+    path_to_get = Path(a_base_path) / dir_name
     if not path_to_get.is_dir():
         try:
-            path_to_get.mkdir()
+            path_to_get.mkdir(parents=True)
         except PermissionError as e:
             from pymodaq_utils.filesystem import create_folder_with_elevation
-            if not create_folder_with_elevation(path_to_get, 0o606):
+            if not create_folder_with_elevation(path_to_get, 0o757):
                 logging.warning(f"Cannot create local config folder at this location: {path_to_get}"
                                 f", try using admin rights. "
                                 f"Changing the not permitted path to a user "
                                 f"one: {Path.home().joinpath(dir_name)}.")
                 path_to_get = Path.home().joinpath(dir_name)
                 if not path_to_get.is_dir():
-                    path_to_get.mkdir()
+                    path_to_get.mkdir(parents=True)
     return path_to_get
 
 
@@ -471,8 +233,30 @@ def get_set_local_dir(user=False) -> Path:
     return local_path
 
 
+def has_read_write_access(path : Path) -> bool:
+    """
+    A function to check if a Path is readable/writable, directly is it is an
+    already existing file, or by checking its parents rights when it is not.
+    Parameters
+    ----------
+    path: the Path to check
+
+    Returns
+    -------
+    True if the given path is readable and writable, False otherwise
+    """
+    try:
+        target = path if path.exists() else path.parent
+        return os.access(target, os.R_OK | os.W_OK)
+    except PermissionError:
+        return False
+
 def get_config_file(config_file_name: str, user=False) -> Path:
-    return get_set_config_dir('config',user=user).joinpath(replace_file_extension(config_file_name, 'toml'))
+
+    path = get_set_config_dir('config',user=user).joinpath(replace_file_extension(config_file_name, 'toml'))
+    if not user and not has_read_write_access(path):
+        return get_config_file(config_file_name, user=True)
+    return path
 
 
 def get_set_config_dir(config_name='config', user=False):
@@ -581,9 +365,9 @@ def load_system_config_and_update_from_user(config_file_name: str):
     dict: contains the toml system-wide file update with the user file
     """
     config_dict = dict([])
-    toml_base_path = get_config_file(config_file_name, user=False)
-    if toml_base_path.is_file():
-        config_dict = toml.load(toml_base_path)
+    toml_system_path = get_config_file(config_file_name, user=False)
+    if toml_system_path.is_file():
+        config_dict = toml.load(toml_system_path)
     toml_user_path = get_config_file(config_file_name, user=True)
     if toml_user_path.is_file():
         config_dict = deep_update(config_dict, toml.load(toml_user_path))
@@ -768,9 +552,10 @@ class CacheConfig(BaseConfig):
 class GlobalConfig(metaclass=Singleton):
     config_name: str = 'global'
     _register_lock: threading.Lock = threading.Lock()
-
+    
     def __init__(self):
         self._configs = {}
+        
 
     @classmethod
     def register(cls) -> Callable:
@@ -865,7 +650,7 @@ class GlobalConfig(metaclass=Singleton):
 
     def _config_is_valid(self, name : str) -> bool:
         template = toml.load(cast(BaseConfig, self._configs[name]).config_template_path)
-        return deep_type_equals(template,  self._configs[name])
+        return deep_type_equals(template,  self._configs[name].to_dict())
 
 
     def _reload_configs(self):
@@ -882,17 +667,18 @@ class GlobalConfig(metaclass=Singleton):
         #     _get_version_hash()
         # )
 
-        user_backup_dir = _generate_backup_path(CONFIG_USER_PATH)
-        system_backup_dir = _generate_backup_path(CONFIG_BASE_PATH)
+        self.user_backup_dir = _generate_backup_path(CONFIG_USER_PATH)
+        self.system_backup_dir = _generate_backup_path(CONFIG_BASE_PATH)
 
-        logging.critical(f"backup_dirs: ({user_backup_dir}, {system_backup_dir})")
+        logging.critical(f"backup_dirs: ({self.user_backup_dir}, {self.system_backup_dir})")
 
-        os.rename(get_set_config_dir(user=True), user_backup_dir)
+        os.rename(get_set_local_dir(user=True), self.user_backup_dir)
         try:
-            os.rename(get_set_config_dir(user=False), system_backup_dir)
+            os.rename(get_set_local_dir(user=False), self.system_backup_dir)
         except PermissionError:
             from pymodaq_utils.filesystem import rename_with_elevation
-            rename_with_elevation(get_set_config_dir(user=False), system_backup_dir)
+            if not rename_with_elevation(get_set_local_dir(user=False), self.system_backup_dir):
+                del self.system_backup_dir
 
 
 
