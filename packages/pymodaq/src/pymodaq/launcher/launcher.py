@@ -396,10 +396,8 @@ class Launcher(CustomApp):
         Load and show dashboard with selected experiment and configuration.
         """
         args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry]
-        print(self.extension_manager_restore.entry)
         if self.extension_manager_restore.entry not in (None, '', 'empty'):
             args_lst += ['-e', self.extension_manager_restore.entry]
-        print(args_lst)
         subprocess.Popen(args_lst)
 
     def do_navigate(self, index: int):
