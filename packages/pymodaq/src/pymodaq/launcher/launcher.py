@@ -305,8 +305,11 @@ class Launcher(CustomApp):
         self.extension_manager_restore.enable_actions(True)
         self.extension_manager_restore.get_action(ManagerActions.OPEN).setVisible(False)
         self.extension_manager_restore.get_action(ManagerActions.EXECUTE).setVisible(False)
-        self.extension_manager_restore.entries.insert(0, 'empty') #insert None in the first list entries items
-        print(self.extension_manager_restore)
+        restore_entries = self.extension_manager_restore.entries
+        if 'empty' not in restore_entries:
+            restore_entries = ['empty'] + restore_entries
+        self.extension_manager_restore.entries_sync.update_key('items', restore_entries)
+        self.extension_manager_restore.entries_sync.update_key('current', 'empty')
 
         self.ui_refresh()
 
@@ -393,8 +396,10 @@ class Launcher(CustomApp):
         Load and show dashboard with selected experiment and configuration.
         """
         args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry]
-        if self.extension_manager_restore.entry != None :
+        print(self.extension_manager_restore.entry)
+        if self.extension_manager_restore.entry not in (None, '', 'empty'):
             args_lst += ['-e', self.extension_manager_restore.entry]
+        print(args_lst)
         subprocess.Popen(args_lst)
 
     def do_navigate(self, index: int):

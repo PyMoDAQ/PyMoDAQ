@@ -1456,7 +1456,7 @@ def main():
     # If experiment name is supplied, load dashboard with this experiment
     if args.experiment:
         dashboard, extension, win = load_dashboard_with_experiment(experiment_name=args.experiment,
-                                                                   extension_name=args.extension,
+                                                                   extension_name=args.extension.upper() if args.extension is not None else args.extension,
                                                                    configuration_name=args.config
                                                                    )
 
