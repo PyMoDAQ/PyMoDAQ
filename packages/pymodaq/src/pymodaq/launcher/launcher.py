@@ -15,6 +15,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QComboBox,
 )
+from scipy._lib.pyprima.common import history
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 from watchdog.observers import Observer
 
@@ -143,6 +144,7 @@ class Launcher(CustomApp):
         self._launcher_experiment_external_combo = None
 
         self.extension_manager = ExtensionManager()
+        self.extension_manager_restore = ExtensionManager()
 
         # Loader
         self.history_keys = []
@@ -293,10 +295,18 @@ class Launcher(CustomApp):
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'))
         self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('launcher'))
+        self.extension_manager_restore.get_external_toolbar_menu(toolbar=self.get_toolbar('extensions'))
+
         self.experiment_manager.enable_actions(True)
         self.experiment_manager.set_action_enabled('list_entries', True)
         self.configurator.enable_actions(True)
         self.extension_manager.enable_actions(True)
+
+        self.extension_manager_restore.enable_actions(True)
+        self.extension_manager_restore.get_action(ManagerActions.OPEN).setVisible(False)
+        self.extension_manager_restore.get_action(ManagerActions.EXECUTE).setVisible(False)
+        self.extension_manager_restore.entries.insert(0, 'empty') #insert None in the first list entries items
+        print(self.extension_manager_restore)
 
         self.ui_refresh()
 
@@ -351,6 +361,7 @@ class Launcher(CustomApp):
     def set_controls(self):
         self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
         self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('extensions', 'Extensions'))
 
     def show_experiment_titles_only(self, experiment_source=None):
         """Load an experiment source and display only module titles in settings_tree."""
@@ -381,7 +392,10 @@ class Launcher(CustomApp):
         """
         Load and show dashboard with selected experiment and configuration.
         """
-        subprocess.Popen(['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry])
+        args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry]
+        if self.extension_manager_restore.entry != None :
+            args_lst += ['-e', self.extension_manager_restore.entry]
+        subprocess.Popen(args_lst)
 
     def do_navigate(self, index: int):
         """
