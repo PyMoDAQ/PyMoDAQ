@@ -32,8 +32,6 @@ from pymodaq.utils.config import get_set_configurator_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
 
-import tomli_w
-import tomllib
 from datetime import datetime
 
 if TYPE_CHECKING:

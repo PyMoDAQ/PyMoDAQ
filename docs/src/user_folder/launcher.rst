@@ -1,21 +1,10 @@
 Launcher
 =========
 
-This module is a home page for PyMoDAQ, it will:
-
-* Launch empty:
-    * Dashboard
-    * DAQ Viewer
-    * DAQ Move
-    * H5Browser
-* Restore a dashboard with experiment and state
-* Load extensions
-* See informations about the latest experiments:
-    * Date and hour
-    * Which experiment and state used
-    * Actuators and Detectors used for selected experiment
-* Navigate in the configurations history by navigation arrows or by date
-* Change experiment and state to restore on the fly
+This module is a home page for PyMoDAQ, with it it is possible to conveniently start different empty PyMoDAQ
+module (the dashboard, a DAQ Viewer, a DAQ Move, the H5Browser or any available extension). Using an history
+system a dashboard with a specific experiment and state can also be started, while providing the option to
+change the experiment and state to restore on the fly.
 
 .. _launcher_cli_arguments_note:
 
@@ -37,9 +26,8 @@ Finally, under the header, there is a material tree, who expose actuators and de
 .. figure:: /image/launcher/launcher_home_page.png
    :alt: launcher
 
-   Launcher user interface containing shortcuts and experiment informations.
+   Launcher user interface containing shortcuts and experiment information.
 
-.. :download:`png <launcher_home_page.png>`
 
 PyMoDAQ's shorcuts
 ------------
@@ -141,23 +129,22 @@ History entries are sorted by descendant order date. When the right configuratio
    :align: middle
 
 Change history configuration
-------------
+----------------------------
 
-By default in the launcher, the history size is fixed at 20 items and does not keep duplicates entries. So, if you choose a configuration (experiment + state) and
-this configurations already exists at an other date (or hour), the first entry is overwrite by the newest. Yo can change this comportment in the settings !
+By default in the launcher, the history size is fixed at 20 items and does not keep duplicates entries.
+Meaning that, if a configuration (experiment + state) is chosen and this configurations was already recorded in the history,
+this previous entry is overwritten by the current one.
 
-   #. First, select ``Tools`` and ``Preferences`` at the top of application (on any interface, not only the launcher).
-
-   #. Next, go to ``Pymodaq`` > ``Launcher`` (:numref:`launcher_settings`)
-Here, you can change the maximum history size and if the launcher keep duplicates.
-
-.. warning::
-
-   If the new maximum history size is smaller than the previous, old entries will be deleted !
+This behaviour can be changed in the ``Preferences`` under ``Pymodaq`` > ``Launcher``. The maximum history size (number of stored entries)
+and if the launcher keep duplicates can be changed.
 
 .. warning::
 
-   If ``keep_duplicates`` settings is set to ``on`` and you switch it to ``off``, old duplicates will be deleted !
+   If the new maximum history size is smaller than the previous, old entries will be deleted!
+
+.. warning::
+
+   If ``keep_duplicates`` settings is set to ``on`` and you switch it to ``off``, old duplicates will be deleted!
 
 
 

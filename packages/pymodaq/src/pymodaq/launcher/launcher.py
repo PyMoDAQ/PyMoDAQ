@@ -15,7 +15,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QComboBox,
 )
-from scipy._lib.pyprima.common import history
+
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 from watchdog.observers import Observer
 
