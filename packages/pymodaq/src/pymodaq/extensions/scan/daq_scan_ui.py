@@ -9,6 +9,7 @@ from typing import List, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
+from pymodaq.extensions.scan.scan_manager import ScanManager
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -59,7 +60,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
         self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self.toolbar)
 
         splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
         splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
@@ -100,6 +100,10 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
         self.add_menu('actions', 'Actions', parent_menu=menubar)
+
+        self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
+                         add_break=False)
+        self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
 
     def setup_actions(self):
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')

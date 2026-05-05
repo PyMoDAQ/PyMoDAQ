@@ -47,7 +47,8 @@ class Scanner(QObject, ParameterManager):
     settings_name = 'scanner'
 
     params = [
-        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
+        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'bool_push',
+         'label': 'Calculate positions'},
         {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list',
          'limits': scanner_factory.scan_types()},
@@ -119,6 +120,10 @@ class Scanner(QObject, ParameterManager):
         return self._scanner.settings
 
     def value_changed(self, param: Parameter):
+        if param.name() == 'calculate_positions':
+            if param.value():
+
+                param.setValue(False)
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
@@ -179,8 +184,8 @@ class Scanner(QObject, ParameterManager):
 
         self.set_scan_type_and_subtypes(settings['scan_type'],
                                         settings['scan_sub_type'])
-        self.settings.restoreState(settings.saveState())
-        self._scanner.settings.restoreState(scanner_settings.saveState())
+        self.settings = settings
+        self._scanner.settings = scanner_settings
 
     @property
     def scan_type(self) -> str:
@@ -191,7 +196,6 @@ class Scanner(QObject, ParameterManager):
         return self.settings['scan_sub_type']
 
     def connect_things(self):
-        self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
         self.scanner_updated_signal.connect(self.save_scanner_settings)
 
     def save_scanner_settings(self):
@@ -231,10 +235,10 @@ class Scanner(QObject, ParameterManager):
     def positions_at(self, index: int) -> DataToExport:
         """ Extract the actuators positions at a given index in the scan as a DataToExport of DataActuators"""
         dte = DataToExport('scanner')
+        self.scanner.current_scan_index = index
         if len(self.positions[index]) == len(self.actuators):
-            for ind, pos in enumerate(self.positions[index]):
-                dte.append(DataActuator(self.actuators[ind].title, data=float(pos),
-                                        units=self.actuators[ind].units))
+            for axis_index, pos in enumerate(self.positions[index]):
+                dte.append(self._scanner.data_actuator_at(scan_index=index, axis_index=axis_index))
         return dte
 
     @property

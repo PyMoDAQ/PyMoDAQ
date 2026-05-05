@@ -89,6 +89,15 @@ def init_data_to_export():
     data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
     return data_to_export
 
+@pytest.fixture()
+def create_h5_with_data_to_export(h5saver_lowlevel, init_data_to_export):
+    dte = init_data_to_export
+    data_saver = DataToExportSaver(h5saver_lowlevel)
+
+    det_group = h5saver_lowlevel.get_set_group(h5saver_lowlevel.raw_group, 'MyDet')
+    data_saver.add_data(det_group, dte)
+    return h5saver_lowlevel
+
 
 class TestAxisSaverLoader:
 
@@ -528,14 +537,8 @@ class TestDataExtendedSaver:
 
 
 class TestDataToExportSaver:
-    def test_save(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
-
-        data_saver = DataToExportSaver(h5saver)
-
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        data_saver.add_data(det_group, data_to_export)
+    def test_save(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
 
 
 class TestDataToExportEnlargeableSaver:
@@ -658,29 +661,18 @@ class TestDataToExportExtendedSaver:
 
 
 class TestDataLoader:
-    def test_load_normal_data(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
-        data_loader = DataLoader(h5saver)
-
-        data_saver = DataToExportSaver(h5saver)
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-
-        data_saver.add_data(det_group, data_to_export)
+    def test_load_normal_data(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
+        data_loader = DataLoader(create_h5_with_data_to_export)
 
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
         assert len(data_loaded) == 1
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(DATA2D))
 
-    def test_load_one_node(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
+    def test_load_one_node(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
         data_loader = DataLoader(h5saver)
-
-        data_saver = DataToExportSaver(h5saver)
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        data_saver.add_data(det_group, data_to_export)
 
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
         assert len(data_loaded) == 1
@@ -772,3 +764,23 @@ class TestDataLoader:
         # axis node from this type of loading should be 'index'
         assert dwa.axes[0].units == UNITS  # should not be that as the retrieved axis units of an
         # axis node from this type of loading should be ''
+
+    def test_load_data_from_name_origin(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
+        dte = init_data_to_export
+
+        with DataToExportSaver(h5saver) as data_saver:
+            det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+            data_saver.add_data(det_group, dte)
+
+            with DataLoader(h5saver) as data_loader:
+                for dwa in dte:
+                    dwa_loaded = data_loader.load_data_from_name_origin(
+                        name=dwa.name, origin=dwa.origin,
+                    )
+                    assert dwa_loaded == dwa
+
+                with pytest.raises(NameError):
+                    dwa_loaded = data_loader.load_data_from_name_origin(
+                        name='aunknown name', origin='and_origin',
+                    )

@@ -109,6 +109,11 @@ class ParameterEx(ParameterManager):
              'tip': 'Such a parameter display text that are keys of a dict while'
                                                         'values could be any object'
              },
+            {'title': 'List with unavailable items:', 'name': 'unavailable_list', 'type': 'list',
+             'limits': ['pyqt6', 'pyqt5', 'pyside6'], 'value': 'pyqt6',
+             'unavailable': ['pyqt5'],
+             'tip': 'Items listed in "unavailable" are shown greyed-out and cannot be selected '
+                    '(used e.g. to display backends that are not installed)'},
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
             {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': r'D:\Data', 'filetype': True,

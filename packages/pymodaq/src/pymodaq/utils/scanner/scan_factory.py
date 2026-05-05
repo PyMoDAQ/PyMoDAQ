@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from typing import Callable, Union, List, Tuple, TYPE_CHECKING
-
+from collections.abc import Iterable
 
 import numpy as np
 from qtpy import QtWidgets
 
+from pymodaq.utils.data import DataActuator
+from pymodaq_data import DataToExport
 from pymodaq_utils.abstract import abstract_attribute
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.factory import ObjectFactory
@@ -79,6 +81,8 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     scan_type: str = abstract_attribute()
     scan_subtype: str = abstract_attribute()
 
+    do_process_data = False
+
     params: List[dict] = abstract_attribute()
     axes_unique: List[np.ndarray] = abstract_attribute()
     axes_indexes: np.ndarray = abstract_attribute()
@@ -89,8 +93,10 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     def __init__(self, actuators: List[DAQ_Move] = None, display_units=True):
         super().__init__()
-        self.positions: np.ndarray = None
+        self.positions: np.ndarray | list[Iterable[DataActuator]] = None
         self.n_steps = 1
+        self._current_scan_step = 0
+
         self.config = ScanConfig()
         self.display_units = display_units
         base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
@@ -108,6 +114,36 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
         if self.check_steps():
             self.set_scan()
+
+    def data_actuator_at(self, scan_index: int, axis_index=0) -> DataActuator:
+        """ Get the DataActuator specified with two indexes (will be used to be sent to the actuators)
+
+        This allows to have a difference between self.positions (simple numbers used to describe the scan, usually the
+        actuator values) and the real DataActuator sent to the Actuator (that could be 0D, 1D, 2D Data, see BeamShaping
+        plugin)
+
+        To be reimplemented if needed
+
+        """
+        return DataActuator(self.actuators[axis_index].title, data=float(self.positions[scan_index, axis_index]),
+                            units=self.actuators[axis_index].units)
+
+    @property
+    def current_scan_index(self) -> int:
+        """ Get/Set the current scan_index during the scan"""
+        return self._current_scan_step
+
+    @current_scan_index.setter
+    def current_scan_index(self, scan_index: int):
+        self._current_scan_step = scan_index
+
+    def process_data(self, dte: DataToExport) -> DataToExport:
+        """ Process Acquired data if the boolean class attribute *do_process_data* is set to True
+
+        To be reimplemented if some particular processing should be done, see BeamShaping plugin scanner called
+        BeamShapingCalibration
+        """
+        return dte
 
     @abstractmethod
     def set_units(self):
@@ -165,6 +201,10 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     def get_info_from_positions(self, positions: np.ndarray):
         """Set mandatory attributes from a ndarray of positions"""
+        axes_unique = []
+        axes_indexes = []
+        n_steps = 0
+
         if positions is not None:
             if len(positions.shape) == 1:
                 positions = np.expand_dims(positions, 1)
@@ -175,12 +215,14 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
             for ind in range(positions.shape[0]):
                 for ind_pos, pos in enumerate(positions[ind]):
                     axes_indexes[ind, ind_pos] = mutils.find_index(axes_unique[ind_pos], pos)[0][0]
+            n_steps = positions.shape[0]
 
-            self.n_axes = len(axes_unique)
-            self.axes_unique = axes_unique
-            self.axes_indexes = axes_indexes
-            self.positions = positions
-            self.n_steps = positions.shape[0]
+
+        self.n_axes = len(axes_unique)
+        self.axes_unique = axes_unique
+        self.axes_indexes = axes_indexes
+        self.positions = positions
+        self.n_steps = n_steps
 
     @abstractmethod
     def evaluate_steps(self):

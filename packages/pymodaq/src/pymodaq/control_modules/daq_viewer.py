@@ -20,6 +20,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
+from pymodaq_data import DataSource
 from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
 
@@ -473,6 +474,205 @@ class DAQ_Viewer(ParameterControlModule):
     # -------------------------------------------------------------------------
     # Data handling
     # -------------------------------------------------------------------------
+    @Slot()
+    def _raise_timeout(self):
+        """  Print the "timeout occurred" error message in the status bar via the update_status method.
+        """
+        self.update_status("Timeout occurred", log_type="log")
+
+    def save_current(self):
+        """Save current data into a h5file"""
+        self._do_save_data = True
+        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
+                                                                                  ext='h5')  # see daq_utils
+        self._save_export_data(self._data_to_save_export)
+
+
+    def _init_continuous_save(self):
+        """ Initialize the continuous saving H5Saver object
+
+        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
+        """
+        if self._h5saver_continuous.settings.child('do_save').value():
+
+            self.settings.child('saver_settings', 'base_name').setValue('Data')
+            self.settings.child('saver_settings', 'N_saved').show()
+            self.settings.child('saver_settings', 'N_saved').setValue(0)
+            self.module_and_data_saver.h5saver = self._h5saver_continuous
+            self._h5saver_continuous.init_file(update_h5=True)
+
+            self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
+            self.module_and_data_saver.h5saver = self._h5saver_continuous
+            self.module_and_data_saver.get_set_node()
+
+            self.grab_done_signal.connect(self.append_data)
+        else:
+            self._do_continuous_save = False
+            self.settings.child('saver_settings', 'N_saved').hide()
+            self.grab_done_signal.disconnect(self.append_data)
+
+            try:
+                self._h5saver_continuous.close()
+            except Exception as e:
+                self.logger.exception(str(e))
+
+    def append_data(self, dte: DataToExport = None,
+                    where: Union[Node, str] = None,
+                    **kwargs):
+        """Appends current DataToExport to a DetectorTimeSaver
+
+        Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
+
+        Parameters
+        ----------
+        dte: DataToExport
+            not really used
+        where: Node or str
+        kwargs: dict
+        See Also
+        --------
+        :class:`DetectorTimeSaver`
+        """
+        if dte is None:
+            dte = self._data_to_save_export
+        init_step = kwargs.pop('init_step', None)
+        if init_step is None:
+            init_step = self.settings['saver_settings', 'N_saved'] == 0
+        self._add_data_to_saver(dte,
+                                init_step=init_step,
+                                where=where,
+                                **kwargs)
+
+        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
+
+    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
+                    distribution=DataDistribution.uniform,
+                    extra_data: DataToExport = None):
+        """Insert DataToExport to a DetectorExtendedSaver at specified indexes
+
+        Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
+
+        Parameters
+        ----------
+        indexes: tuple(int)
+            The indexes within the extended array where to place these data
+        where: Node or str
+        distribution: DataDistribution enum
+        extra_data: DataToExport
+            If not None add its content to the saved data
+
+        See Also
+        --------
+        DAQ_Scan, DetectorExtendedSaver
+        """
+        if extra_data is not None:
+            self._data_to_save_export.append(extra_data.data)
+        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
+                                indexes=indexes, distribution=distribution)
+
+    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
+        """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
+
+        Parameters
+        ----------
+        dte: DataToExport
+            The data to be saved
+        init_step: bool
+            If True, means this is the first step of saving (if multisaving), then save background if any and a png image
+        kwargs: dict
+            Other named parameters to be passed as is to the module_and_data_saver
+
+        See Also
+        --------
+        DetectorSaver, DetectorTimeSaver, DetectorExtendedSaver
+
+        """
+        if dte is not None:
+            detector_node = self.module_and_data_saver.get_set_node(where)
+            dte = self.module_and_data_saver.filter_data(dte)
+            self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
+
+            if init_step:
+                if self._do_bkg and self._bkg is not None:
+                    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+
+    def _save_data(self, path=None, dte: DataToExport = None):
+        """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
+
+        Parameters
+        ----------
+        path: Path
+            where to save the data as returned from browse_file for instance
+        dte: DataToExport
+
+        See Also
+        --------
+        browse_file, _get_data_from_viewers
+        """
+        if path is not None:
+            path = Path(path)
+        h5saver = H5Saver(save_type='detector')
+        h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
+        self.module_and_data_saver = module_saving.DetectorSaver(self)
+        self.module_and_data_saver.h5saver = h5saver
+
+        self._add_data_to_saver(dte, init_step=True)
+
+        if self.ui is not None:
+            (root, filename) = os.path.split(str(path))
+            filename, ext = os.path.splitext(filename)
+            image_path = os.path.join(root, filename + '.png')
+            self.parent.parent().grab().save(image_path)
+
+        h5saver.close_file()
+        self.data_saved.emit()
+
+    @Slot(DataToExport)
+    def _save_export_data(self, data: DataToExport):
+        """Auxiliary method (Slot) to receive all data (raw and processed from rois) and save them
+
+        Parameters
+        ----------
+        data: DataToExport
+
+        See Also
+        --------
+        _save_data
+        """
+
+        if self._do_save_data:
+            self._save_data(self._save_file_pathname, data)
+            self._do_save_data = False
+
+    def _get_data_from_viewer(self, data: DataToExport):
+        """Get all data emitted by the current viewers
+
+        Each viewer *data_to_export_signal* is connected to this slot. The collected data is stored in another
+        DataToExport `self._data_to_save_export` for further processing. All raw data are also stored in this attribute.
+        When all viewers have emitted this signal, the collected data are emitted  with the
+        `grab_done_signal` signal.
+
+        Parameters
+        ---------_
+        data: DataToExport
+            All data collected from the viewers
+
+        """
+        if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
+            self._received_data += 1
+            if len(data) != 0:
+                viewer_title = data.name
+                for dat in data:
+                    dat.name = '/'.join([viewer_title, dat.origin, dat.name])
+                    dat.origin = self.title
+
+                self._data_to_save_export.append(data)
+
+            if self._received_data == len(self.viewers):
+                self._grab_done = True
+                self.grab_done_signal.emit(self._data_to_save_export)
 
     @Slot(DataToExport)
     def show_temp_data(self, data: DataToExport):
@@ -610,34 +810,6 @@ class DAQ_Viewer(ParameterControlModule):
                 else:
                     self.viewers[ind].show_data(dwa)
 
-    def _get_data_from_viewer(self, data: DataToExport):
-        """Get all data emitted by the current viewers
-
-        Each viewer *data_to_export_signal* is connected to this slot. The collected data is stored in another
-        DataToExport `self._data_to_save_export` for further processing. All raw data are also stored in this attribute.
-        When all viewers have emitted this signal, the collected data are emitted  with the
-        `grab_done_signal` signal.
-
-        Parameters
-        ---------_
-        data: DataToExport
-            All data collected from the viewers
-
-        """
-        if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
-            self._received_data += 1
-            if len(data) != 0:
-                viewer_title = data.name
-                for dat in data:
-                    dat.name = '/'.join([viewer_title, dat.origin, dat.name])
-                    dat.origin = self.title
-
-                self._data_to_save_export.append(data)
-
-            if self._received_data == len(self.viewers):
-                self._grab_done = True
-                self.grab_done_signal.emit(self._data_to_save_export)
-
     # -------------------------------------------------------------------------
     # Saving
     # -------------------------------------------------------------------------
@@ -650,172 +822,6 @@ class DAQ_Viewer(ParameterControlModule):
             self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
         else:
             self._h5saver_continuous.close_file()
-
-    def _init_continuous_save(self):
-        """ Initialize the continuous saving H5Saver object
-
-        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
-        """
-        if self._h5saver_continuous.settings.child('do_save').value():
-
-            self.settings.child('saver_settings', 'base_name').setValue('Data')
-            self.settings.child('saver_settings', 'N_saved').show()
-            self.settings.child('saver_settings', 'N_saved').setValue(0)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self._h5saver_continuous.init_file(update_h5=True)
-
-            self.module_and_data_saver = module_saving.DetectorTimeSaver(self)
-            self.module_and_data_saver.h5saver = self._h5saver_continuous
-            self.module_and_data_saver.get_set_node()
-
-            self.grab_done_signal.connect(self.append_data)
-        else:
-            self._do_continuous_save = False
-            self.settings.child('saver_settings', 'N_saved').hide()
-            self.grab_done_signal.disconnect(self.append_data)
-
-            try:
-                self._h5saver_continuous.close()
-            except Exception as e:
-                self.logger.exception(str(e))
-
-    def save_current(self):
-        """Save current data into a h5file"""
-        self._do_save_data = True
-        self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
-        self._save_export_data(self._data_to_save_export)
-
-    def append_data(self, dte: DataToExport = None,
-                    where: Union[Node, str] = None,
-                    **kwargs):
-        """Appends current DataToExport to a DetectorTimeSaver
-
-        Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
-
-        Parameters
-        ----------
-        dte: DataToExport
-            not really used
-        where: Node or str
-        kwargs: dict
-        See Also
-        --------
-        :class:`DetectorTimeSaver`
-        """
-        if dte is None:
-            dte = self._data_to_save_export
-        init_step = kwargs.pop('init_step', None)
-        if init_step is None:
-            init_step = self.settings['saver_settings', 'N_saved'] == 0
-        self._add_data_to_saver(dte,
-                                init_step=init_step,
-                                where=where,
-                                **kwargs)
-
-        self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
-
-    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
-                    distribution=DataDistribution['uniform']):
-        """Insert DataToExport to a DetectorExtendedSaver at specified indexes
-
-        Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
-
-        Parameters
-        ----------
-        indexes: tuple(int)
-            The indexes within the extended array where to place these data
-        where: Node or str
-        distribution: DataDistribution enum
-
-        See Also
-        --------
-        DAQ_Scan, DetectorExtendedSaver
-        """
-        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
-                                indexes=indexes, distribution=distribution)
-
-    def _add_data_to_saver(self, dte: DataToExport, init_step=False, where=None, **kwargs):
-        """Adds DataToExport data to the current node using the declared module_and_data_saver
-
-        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
-
-        Parameters
-        ----------
-        dte: DataToExport
-            The data to be saved
-        init_step: bool
-            If True, means this is the first step of saving (if multisaving), then save background if any and a png image
-        kwargs: dict
-            Other named parameters to be passed as is to the module_and_data_saver
-
-        See Also
-        --------
-        DetectorSaver, DetectorTimeSaver, DetectorExtendedSaver
-
-        """
-        if dte is not None:
-            detector_node = self.module_and_data_saver.get_set_node(where)
-            dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
-                dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
-
-            dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
-                               [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
-                                ('do_save' in dwa.extra_attributes and dwa.do_save)])
-
-            self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
-
-            if init_step:
-                if self._do_bkg and self._bkg is not None:
-                    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
-
-    def _save_data(self, path=None, dte: DataToExport = None):
-        """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
-
-        Parameters
-        ----------
-        path: Path
-            where to save the data as returned from browse_file for instance
-        dte: DataToExport
-
-        See Also
-        --------
-        browse_file, _get_data_from_viewers
-        """
-        if path is not None:
-            path = Path(path)
-        h5saver = H5Saver(save_type='detector')
-        h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self.module_and_data_saver.h5saver = h5saver
-
-        self._add_data_to_saver(dte, init_step=True)
-
-        if self.ui is not None:
-            (root, filename) = os.path.split(str(path))
-            filename, ext = os.path.splitext(filename)
-            image_path = os.path.join(root, filename + '.png')
-            self.parent.parent().grab().save(image_path)
-
-        h5saver.close_file()
-        self.data_saved.emit()
-
-    @Slot(DataToExport)
-    def _save_export_data(self, data: DataToExport):
-        """Auxiliary method (Slot) to receive all data (raw and processed from rois) and save them
-
-        Parameters
-        ----------
-        data: DataToExport
-
-        See Also
-        --------
-        _save_data
-        """
-
-        if self._do_save_data:
-            self._save_data(self._save_file_pathname, data)
-            self._do_save_data = False
 
     # -------------------------------------------------------------------------
     # Settings / Plugin management

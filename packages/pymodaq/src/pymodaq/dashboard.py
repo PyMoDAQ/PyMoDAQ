@@ -530,7 +530,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.toolbar.addSeparator()
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
-                            auto_toolbar=False, menu='extensions')
+                            auto_toolbar=False, menu='extensions',
+                            icon_name=extensions[ExtensionEnum[ext_name]].klass.icon_name)
 
         self.add_action("state", "State", auto_toolbar=False)
 
