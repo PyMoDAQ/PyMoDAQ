@@ -119,54 +119,54 @@ class TestPanelPositionsConstants:
 class TestPanelPositionConfig:
     def test_read_returns_default_when_config_unavailable(self):
         import pymodaq.utils.compact_dock_manager as mod
-        orig = mod._pymodaq_config
-        mod._pymodaq_config = None
+        orig = mod.config
+        mod.config = None
         try:
             assert _read_panel_position() == 'right'
         finally:
-            mod._pymodaq_config = orig
+            mod.config = orig
 
     def test_read_returns_default_on_exception(self):
         import pymodaq.utils.compact_dock_manager as mod
         cfg = MagicMock()
         cfg.side_effect = Exception("no config")
-        orig = mod._pymodaq_config
-        mod._pymodaq_config = cfg
+        orig = mod.config
+        mod.config = cfg
         try:
             assert _read_panel_position() == 'right'
         finally:
-            mod._pymodaq_config = orig
+            mod.config = orig
 
     def test_read_returns_valid_saved_value(self):
         import pymodaq.utils.compact_dock_manager as mod
         cfg = MagicMock()
         cfg.return_value = 'bottom'
-        orig = mod._pymodaq_config
-        mod._pymodaq_config = cfg
+        orig = mod.config
+        mod.config = cfg
         try:
             assert _read_panel_position() == 'bottom'
         finally:
-            mod._pymodaq_config = orig
+            mod.config = orig
 
     def test_read_ignores_invalid_saved_value(self):
         import pymodaq.utils.compact_dock_manager as mod
         cfg = MagicMock()
         cfg.return_value = 'diagonal'
-        orig = mod._pymodaq_config
-        mod._pymodaq_config = cfg
+        orig = mod.config
+        mod.config = cfg
         try:
             assert _read_panel_position() == 'right'
         finally:
-            mod._pymodaq_config = orig
+            mod.config = orig
 
     def test_save_does_not_raise_on_none_config(self):
         import pymodaq.utils.compact_dock_manager as mod
-        orig = mod._pymodaq_config
-        mod._pymodaq_config = None
+        orig = mod.config
+        mod.config = None
         try:
             _save_panel_position('left')   # must not raise
         finally:
-            mod._pymodaq_config = orig
+            mod.config = orig
 
 
 # ── CompactDockManager.__init__ ───────────────────────────────────────────────

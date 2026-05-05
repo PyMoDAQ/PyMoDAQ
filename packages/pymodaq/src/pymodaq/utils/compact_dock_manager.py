@@ -17,11 +17,9 @@ from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.utils.styling import create_icon
 from pymodaq_gui.utils.widgets.collapsible_widget import CollapsibleWidget
 
-try:
-    from pymodaq_utils.config import Config as _PymConfig
-    _pymodaq_config = _PymConfig()
-except Exception:
-    _pymodaq_config = None
+from pymodaq_utils.config import GlobalConfig as Config
+
+config = Config()
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -70,7 +68,7 @@ _POSITION_ICONS: dict = {
 def _read_panel_position() -> str:
     """Read the saved control-panel position from PyMoDAQ config (default: 'right')."""
     try:
-        pos = _pymodaq_config('pymodaq', 'compact_dock', 'control_panel_position')
+        pos = config('pymodaq', 'compact_dock', 'control_panel_position')
         if pos in _PANEL_POSITIONS:
             return pos
     except Exception:
@@ -81,7 +79,7 @@ def _read_panel_position() -> str:
 def _save_panel_position(position: str) -> None:
     """Persist the control-panel position to PyMoDAQ config (best-effort)."""
     try:
-        _pymodaq_config['pymodaq', 'compact_dock', 'control_panel_position'] = position
+        config['pymodaq', 'compact_dock', 'control_panel_position'] = position
     except Exception:
         pass
 
