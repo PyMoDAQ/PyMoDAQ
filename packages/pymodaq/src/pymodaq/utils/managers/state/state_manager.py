@@ -124,19 +124,19 @@ class StateManager(ManagerBase):
         Parameters:
         -----------
         file : Path
-            The path to the configuration file to be applied.
+            The path to the state file to be applied.
         """
         if entry_path is None:
             entry_path = self.entry_filepath
         config_subentries = state_subentries_from_path(entry_path)
 
         if self.experiment_manager.applied_entry_name != self.experiment_filename:
-            logger.warning(f'The current configuration is referring to the prest: {self.experiment_filename} '
+            logger.warning(f'The current state is referring to the experiment: {self.experiment_filename} '
                            f'while the current applied experiment is: {self.experiment_manager.applied_entry_name}')
             return False
 
         if len(config_subentries) > 0:
-            self.show_subentries(config_subentries, f'Loading Configuration: {self.entry}')
+            self.show_subentries(config_subentries, f'Loading State: {self.entry}')
 
         for ind, entry in enumerate(config_subentries):
             subentry_handler = handler_factory.get_subentry_handler(entry.entry_type)(

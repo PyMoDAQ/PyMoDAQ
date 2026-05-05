@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Union, TYPE_CHECKING, Dict, Optional
 
 import qt_themes
@@ -5,12 +6,15 @@ from qt_themes import Theme
 from qtpy.QtCore import QObject, QLocale
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_utils.config import get_set_path, get_set_local_dir
+from pymodaq_utils.warnings import deprecation_msg
+
 from pymodaq_gui.utils.dock import DockArea, Dock
 from pymodaq_gui.managers.action_manager import ActionManager
 from pymodaq_gui.managers.parameter_manager import ParameterManager
 from pymodaq_gui.parameter import ParameterTree
 from pymodaq_gui.utils.splash import get_splash_sc
-from pymodaq_utils.warnings import deprecation_msg
+
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -153,6 +157,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.add_menu(self.__class__.__name__.lower(),
                           self.__class__.__name__,
                           self.menubar if self.mainwindow is not None else None)
+
+    @classmethod
+    def get_local_folder(cls, user=False) -> Path:
+        """ Create a local User or system wide folder to store things about this extension"""
+        return get_set_path(get_set_local_dir(user=user), cls.__name__)
 
     @property
     def menubar(self):

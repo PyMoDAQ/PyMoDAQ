@@ -15,11 +15,13 @@ def set_and_check_qt_backend_or_die(config):
     if not backend_found:
         #trying in the remaining backends and taking the first one
         logger.warning(f"{backend} is not available. Trying to find another backend.")
-        other_backends = [backend for backend in available_backends if backend != wanted_backend]
-        if len(other_backends) > 0:
+        other_available = [b for b in available_backends if b != wanted_backend]
+        if len(other_available) > 0:
             backend_found = True
-            backend = other_backends.pop(0)
-            config['gui', 'qtbackend', 'backend'] = [backend] + other_backends
+            backend = other_available[0]
+            # Reorder full list so the working backend is first; preserve all entries
+            full_list = config('gui', 'qtbackend', 'backend')
+            config['gui', 'qtbackend', 'backend'] = [backend] + [b for b in full_list if b != backend]
 
     if backend_found:
         # environment variable is set

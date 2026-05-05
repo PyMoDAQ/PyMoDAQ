@@ -99,11 +99,6 @@ def main(plugin_file=None, init=True, title='Testing'):
 
     app = mkQApp("PyMoDAQ Viewer")
 
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Viewer')
     if plugin_file is None:
         detector = 'Mock'
         det_type = f'DAQ0D'
@@ -118,7 +113,6 @@ def main(plugin_file=None, init=True, title='Testing'):
 
     if init:
         daq_viewer.init_hardware_ui(init)
-
 
     sys.exit(app.exec())
 

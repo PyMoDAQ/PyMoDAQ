@@ -114,7 +114,7 @@ class ExperimentManager(ManagerBase):
             else:
                 plugins_sorted, plugin_list_message = self.list_control_modules_from_preset()
 
-            self.show_subentries(plugin_list_message, title=f'Loading Preset: {self.entry}')
+            self.show_subentries(plugin_list_message, title=f'Loading Experiment: {self.entry}')
 
             self.dashboard.mainwindow.setVisible(False)
             for area in self.dashboard.dockarea.tempAreas:
@@ -150,7 +150,7 @@ class ExperimentManager(ManagerBase):
 
             if not (not actuators_modules and not detector_modules):
                 self.dashboard.update_status(
-                    f"{self.entry_type.capitalize()} mode ({entry.name}) has been loaded",
+                    f"{self.entry_type.capitalize()} ({entry.name}) has been loaded",
                     log_type="log",
                 )
                 self.dashboard.actuators_modules = actuators_modules
@@ -200,7 +200,6 @@ class ExperimentManager(ManagerBase):
         get_set_layout_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
-
 
     def list_control_modules_from_preset(self):
         # ################################################################

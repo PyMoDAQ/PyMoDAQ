@@ -10,7 +10,7 @@ from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq_gui.managers.action_manager import addwidget
+
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
