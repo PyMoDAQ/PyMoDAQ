@@ -136,7 +136,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
                    {'title': 'Get data', 'name': 'data_probe', 'type': 'action'},
                    {'title': 'Optimize 0Ds:', 'name': 'optimize_0d', 'type': 'itemselect',
                     'checkbox': True},
-               ]},]
+               ]}]
 
     def __init__(self, optimization_controller):
         self.actuators_name = optimization_controller.modules_manager.selected_actuators_name
@@ -234,7 +234,7 @@ def get_optimizer_models(model_name=None):
             except Exception as e:
                 logger.warning(f'Impossible to import the {pkg.value} optimizer model: {str(e)}')
 
-    if find_dict_in_list_from_key_val(models_import, 'name', 'OptimizerModelDefault')  is None:
+    if find_dict_in_list_from_key_val(models_import, 'name', 'OptimizerModelDefault') is None:
         models_import.append({'name': 'OptimizerModelDefault',
                               'module': inspect.getmodule(OptimizerModelDefault),
                               'class': OptimizerModelDefault})

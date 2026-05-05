@@ -18,11 +18,11 @@ class GenericUpperConfidenceBound(GenericAcquisitionFunctionBase):
         {'title': 'Exploration decay:', 'name': 'exploration_decay', 'type': 'float', 'value': 0.9,
          'tip': 'kappa is multiplied by this factor every iteration.'},
         {'title': 'Exploration decay delay:', 'name': 'exploration_decay_delay', 'type': 'int', 'value': 20,
-         'tip': 'Number of iterations that must have passed before applying the decay to kappa.'}
+         'tip': 'Number of iterations that must have passed before applying the decay to kappa.'},
     ]
     
 
-    def __init__(self,  **kwargs):
+    def __init__(self, **kwargs):
         super().__init__()
         self._function = UpperConfidenceBound(
             kappa=kwargs.get('kappa', 2.576),
@@ -52,7 +52,7 @@ class GenericProbabilityOfImprovement(GenericAcquisitionFunctionBase):
         {'title': 'Exploration decay:', 'name': 'exploration_decay', 'type': 'float', 'value': 0.9,
          'tip': 'Xi is multiplied by this factor every iteration.'},
         {'title': 'Exploration decay delay:', 'name': 'exploration_decay_delay', 'type': 'int', 'value': 20,
-         'tip': 'Number of iterations that must have passed before applying the decay to xi.'}
+         'tip': 'Number of iterations that must have passed before applying the decay to xi.'},
     ]
 
     def __init__(self, **kwargs):
@@ -85,7 +85,7 @@ class GenericExpectedImprovement(GenericAcquisitionFunctionBase):
         {'title': 'Exploration decay:', 'name': 'exploration_decay', 'type': 'float', 'value': 0.9,
          'tip': 'Xi is multiplied by this factor every iteration.'},
         {'title': 'Exploration decay delay:', 'name': 'exploration_decay_delay', 'type': 'int', 'value': 20,
-         'tip': 'Number of iterations that must have passed before applying the decay to xi.'}
+         'tip': 'Number of iterations that must have passed before applying the decay to xi.'},
     ]
     def __init__(self, **kwargs):
         super().__init__()

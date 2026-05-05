@@ -14,7 +14,7 @@ from pymodaq_gui.utils.shared_ui import SharedUI, MenuToolbarNames
 
 logger = set_logger(get_module_name(__file__))
 
-config =  Config()
+config = Config()
 
 
 class SharedUI(SharedUI):

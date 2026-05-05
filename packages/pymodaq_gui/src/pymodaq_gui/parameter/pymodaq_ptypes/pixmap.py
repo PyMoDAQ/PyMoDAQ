@@ -158,7 +158,7 @@ def main_parameter():
                                       info=f'This is an info')},
             {'name': 'other', 'type': 'bool_push', 'value': True},
             {'name': 'otherp', 'type': 'led_push', 'value': True},
-        ]},
+        ]}
 
         def value_changed(self, param):
             print(f'Value changed for {param}: {param.value()}')

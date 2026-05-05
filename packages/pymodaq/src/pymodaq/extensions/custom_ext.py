@@ -58,7 +58,7 @@ class CustomExt(CustomApp):
         """
         super().quit_fun()
         if self.dashboard is not None:
-            self.show_dashboard(True) #make sure to show it if it was hidden
+            self.show_dashboard(True)  #make sure to show it if it was hidden
 
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:

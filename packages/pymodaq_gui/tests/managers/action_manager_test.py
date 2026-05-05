@@ -41,19 +41,19 @@ def test_icon(qtbot):
     assert is_icon_null(action_manager, "no_icon")
 
     action_manager.add_action(
-        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile"
+        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
     )
     assert not is_icon_null(action_manager, "icon_from_pymodaq")
 
     if Version(version_qt) > Version("6.7"):
         action_manager.add_action(
-            short_name="icon_from_Qt", name="an_icon_from_Qt", icon_name="WindowClose"
+            short_name="icon_from_Qt", name="an_icon_from_Qt", icon_name="WindowClose",
         )
         assert not is_icon_null(action_manager, "icon_from_Qt")
 
         icon = QtGui.QIcon.fromTheme(QtGui.QIcon.ThemeIcon.WindowClose)
         action_manager.add_action(
-            short_name="icon", name="an_icon_from_Qt", icon_name=icon
+            short_name="icon", name="an_icon_from_Qt", icon_name=icon,
         )
         assert not is_icon_null(action_manager, "icon")
 
@@ -64,7 +64,7 @@ def test_action_properties(qtbot):
 
     action_manager.add_action(short_name="no_icon", name="my_no_icon", icon_name="")
     action_manager.add_action(
-        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile"
+        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
     )
 
     assert action_manager.get_action('no_icon') == action_manager._actions['no_icon']

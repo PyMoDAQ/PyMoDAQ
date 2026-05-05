@@ -32,7 +32,7 @@ class QSpinBoxWithShortcut(SpinBox):
 
         super().__init__(*args, **kwargs)
 
-        self.shortcut = dict() #Store shortcuts in a dictionnary
+        self.shortcut = dict()  #Store shortcuts in a dictionnary
         for key_sequence in key_sequences:
             shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(key_sequence), self)
             shortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)

@@ -926,11 +926,11 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         """ Convenience method to split each ndarray into a DataWithAxes object """
         return DataToExport(name, data=[type(self)(self.labels[ind],
                                                    source=self.source,
-                                                   dim = self.dim,
+                                                   dim=self.dim,
                                                    data=[array],
-                                                   labels = [self.labels[ind]],
-                                                   axes = deepcopy(self.axes),
-                                                   units = self.units,
+                                                   labels=[self.labels[ind]],
+                                                   axes=deepcopy(self.axes),
+                                                   units=self.units,
                                                    ) for ind, array in enumerate(self)])
 
     def add_extra_attribute(self, **kwargs):
@@ -1017,7 +1017,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
 
     def _comparison_common(self, other, operator='__eq__'):
         if isinstance(other, DataBase):
-            if not (# no more checking for name equality but take care ot the pop/remove methods
+            if not (  # no more checking for name equality but take care ot the pop/remove methods
                     len(self) == len(other) and
                     Unit(self.units).is_compatible_with(other.units)):
                 return False
@@ -2272,7 +2272,7 @@ class DataWithAxes(DataBase, SerializableBase):
             dat_sum.append(np.atleast_1d(np.sum(dat, axis=axis)))
         return self.deepcopy_with_new_data(dat_sum, remove_axes_index=axis)
 
-    def interp(self,  new_axis_data: Union[Axis, np.ndarray], **kwargs) -> DataWithAxes:
+    def interp(self, new_axis_data: Union[Axis, np.ndarray], **kwargs) -> DataWithAxes:
         """Performs linear interpolation for 1D data only.
         
         For more complex ones, see :py:meth:`scipy.interpolate`
@@ -2484,11 +2484,11 @@ class DataWithAxes(DataBase, SerializableBase):
 
             dte.append(DataCalculated(f'{self.labels[ind]}',
                                       data=[self[ind][peaks_indices[-1]],
-                                            peaks_indices[-1]
+                                            peaks_indices[-1],
                                             ],
                                       labels=['peak value', 'peak indexes'],
                                       axes=[Axis('peak position', self.axes[0].units,
-                                                 data=self.axes[0].get_data_at(peaks_indices[-1]))])
+                                                 data=self.axes[0].get_data_at(peaks_indices[-1]))]),
                        )
         return dte
 
@@ -2879,7 +2879,7 @@ class DataWithAxes(DataBase, SerializableBase):
         except ImportError:
             raise ImportError(
                 "xarray is required for to_xarray(). "
-                "Install it with: pip install 'pymodaq_data[xarray]'"
+                "Install it with: pip install 'pymodaq_data[xarray]'",
             )
 
         ndim = len(self.shape)
@@ -2978,7 +2978,7 @@ class DataWithAxes(DataBase, SerializableBase):
         except ImportError:
             raise ImportError(
                 "xarray is required for from_xarray(). "
-                "Install it with: pip install 'pymodaq_data[xarray]'"
+                "Install it with: pip install 'pymodaq_data[xarray]'",
             )
 
         if isinstance(ds, xr.DataArray):
@@ -3097,7 +3097,7 @@ class DataRaw(DataWithAxes):
                          axes=axes,
                          nav_indexes=nav_indexes,
                          errors=errors,
-                         **kwargs
+                         **kwargs,
                          )
 
 
@@ -3770,7 +3770,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         except ImportError:
             raise ImportError(
                 "xarray is required for to_xarray(). "
-                "Install it with: pip install 'pymodaq_data[xarray]'"
+                "Install it with: pip install 'pymodaq_data[xarray]'",
             )
 
         children = {dwa.name: xr.DataTree(dataset=dwa.to_xarray()) for dwa in self}
@@ -3801,7 +3801,7 @@ class DataToExport(DataLowLevel, SerializableBase):
         except ImportError:
             raise ImportError(
                 "xarray is required for from_xarray(). "
-                "Install it with: pip install 'pymodaq_data[xarray]'"
+                "Install it with: pip install 'pymodaq_data[xarray]'",
             )
 
         if isinstance(dt, xr.DataTree):
@@ -3838,7 +3838,7 @@ if __name__ == '__main__':
 
     dat = np.zeros((Nnav, Nsig))
     for ind in range(Nnav):
-        dat[ind] = mutils.gauss1D(x,  50 * (ind -Nnav / 2), 25 / np.sqrt(2))
+        dat[ind] = mutils.gauss1D(x, 50 * (ind -Nnav / 2), 25 / np.sqrt(2))
 
     data = DataRaw('mydata', data=[dat], nav_indexes=(0,),
                    axes=[Axis('nav', data=np.linspace(0, Nnav-1, Nnav), index=0),

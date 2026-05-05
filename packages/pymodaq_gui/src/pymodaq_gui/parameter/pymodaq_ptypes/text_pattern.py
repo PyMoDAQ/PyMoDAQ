@@ -80,7 +80,7 @@ class PatternParameterItem(TextParameterItem):
                 else:
                     # New pattern, add it
                     pattern_config = self.param.opts.get(
-                        f"pattern_config_{pattern}", {}
+                        f"pattern_config_{pattern}", {},
                     )
                     self.widget.add_completer(pattern, completions, **pattern_config)
 
@@ -125,7 +125,7 @@ class PatternParameter(SimpleParameter):
         # Create new patterns dict with the added/updated pattern
         new_patterns = dict(self.opts.get("patterns", {}))
         new_patterns[pattern] = list(
-            completions
+            completions,
         )  # Use list() to create a new list object
 
         # Build opts dict for setOpts
@@ -148,14 +148,14 @@ class PatternParameter(SimpleParameter):
         """
         if pattern not in self.opts.get("patterns", {}):
             print(
-                f"Warning: Pattern '{pattern}' not found. Use add_pattern() to add it first."
+                f"Warning: Pattern '{pattern}' not found. Use add_pattern() to add it first.",
             )
             return
 
         # Create new patterns dict with the updated pattern
         new_patterns = dict(self.opts.get("patterns", {}))
         new_patterns[pattern] = list(
-            completions
+            completions,
         )  # Use list() to create a new list object
 
         # Let setOpts handle everything
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         "• Click buttons below to dynamically update patterns<br><br>"
         "<b>Two approaches available:</b><br>"
         "1. <b>Convenience methods</b>: update_completions(), add_pattern(), remove_pattern()<br>"
-        "2. <b>Direct setOpts()</b>: Standard pyqtgraph approach - message_param.setOpts(patterns=...)"
+        "2. <b>Direct setOpts()</b>: Standard pyqtgraph approach - message_param.setOpts(patterns=...)",
     )
     instructions.setWordWrap(True)
     main_layout.addWidget(instructions)

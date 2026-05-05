@@ -15,7 +15,7 @@ class TestGuessVirtualEnvironment:
         # set one of the possible environment variable to the var name value
         # and remove the others
         monkeypatch.setenv(var, os.path.join("/home/./folder/", venv_name))
-        for other in  [o for o in POSSIBLE_VENV_VARIABLES if o != var]:
+        for other in [o for o in POSSIBLE_VENV_VARIABLES if o != var]:
             monkeypatch.delenv(other, raising=False)   
         
         assert guess_virtual_environment() == venv_name

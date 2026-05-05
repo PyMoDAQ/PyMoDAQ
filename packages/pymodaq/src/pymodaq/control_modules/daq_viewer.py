@@ -495,9 +495,9 @@ class DAQ_Viewer(ParameterControlModule):
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
             else:
-                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS, ))
+                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
                     ThreadCommand(ControlToHardwareViewer.GRAB,
@@ -530,7 +530,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
 
     @Slot()

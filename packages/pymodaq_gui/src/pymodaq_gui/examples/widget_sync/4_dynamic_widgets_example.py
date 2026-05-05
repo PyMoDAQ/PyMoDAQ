@@ -32,7 +32,7 @@ class DynamicSlidersExample(QWidget):
             "✓ Start with 2 volume sliders\n"
             "✓ Click '+' to add more sliders - they automatically sync!\n"
             "✓ Click '×' to remove a slider - automatic cleanup\n"
-            "✓ All sliders stay synchronized"
+            "✓ All sliders stay synchronized",
         ))
 
         # Controls
@@ -112,7 +112,7 @@ class DynamicSlidersExample(QWidget):
             signal=slider.valueChanged,
             getter=slider.value,
             setter=slider.setValue,
-            mode=SyncMode.BIDIRECTIONAL
+            mode=SyncMode.BIDIRECTIONAL,
         )
 
         # Track this slider
@@ -145,7 +145,7 @@ class DynamicSlidersExample(QWidget):
     def update_status(self, value):
         self.status.setText(
             f"Current Volume: {value}%\n"
-            f"Synchronized across {len(self.slider_widgets)} channels"
+            f"Synchronized across {len(self.slider_widgets)} channels",
         )
 
 
@@ -161,7 +161,7 @@ class DynamicFormExample(QWidget):
             "✓ Each device has Name, Port, and Enabled controls\n"
             "✓ 'Sync All' checkbox enables/disables global sync\n"
             "✓ Add/remove devices dynamically\n"
-            "✓ When synced, all devices share same settings"
+            "✓ When synced, all devices share same settings",
         ))
 
         # Global controls
@@ -232,7 +232,7 @@ class DynamicFormExample(QWidget):
         # Remove button
         remove_btn = QPushButton(f"Remove Device #{device_id}")
         remove_btn.clicked.connect(
-            lambda: self.remove_device(container, name_edit, port_spin, enabled_check)
+            lambda: self.remove_device(container, name_edit, port_spin, enabled_check),
         )
         form_layout.addWidget(remove_btn)
 
@@ -275,7 +275,7 @@ class DynamicFormExample(QWidget):
             name_edit,
             signal=name_edit.textChanged,
             getter=name_edit.text,
-            setter=name_edit.setText
+            setter=name_edit.setText,
         )
 
         # Bind port
@@ -283,7 +283,7 @@ class DynamicFormExample(QWidget):
             port_spin,
             signal=port_spin.valueChanged,
             getter=port_spin.value,
-            setter=port_spin.setValue
+            setter=port_spin.setValue,
         )
 
         # Bind enabled
@@ -291,7 +291,7 @@ class DynamicFormExample(QWidget):
             enabled_check,
             signal=enabled_check.toggled,
             getter=enabled_check.isChecked,
-            setter=enabled_check.setChecked
+            setter=enabled_check.setChecked,
         )
 
     def unbind_device(self, name_edit, port_spin, enabled_check):
@@ -324,7 +324,7 @@ class CloneWidgetExample(QWidget):
             "✓ Each monitor has Brightness, Contrast, Color Temp\n"
             "✓ Clone button copies current monitor settings\n"
             "✓ All clones automatically sync with original\n"
-            "✓ Perfect for 'Apply to All' scenarios"
+            "✓ Perfect for 'Apply to All' scenarios",
         ))
 
         # Controls
@@ -351,7 +351,7 @@ class CloneWidgetExample(QWidget):
         self.settings_sync = DictSync({
             'brightness': 50,
             'contrast': 50,
-            'color_temp': 6500
+            'color_temp': 6500,
         })
         self.settings_sync.value_changed.connect(self.update_status)
 
@@ -407,7 +407,7 @@ class CloneWidgetExample(QWidget):
         if self.monitor_count > 1:  # Don't show remove for first monitor
             remove_btn = QPushButton("Remove Monitor")
             remove_btn.clicked.connect(
-                lambda: self.remove_monitor(container, brightness_slider, contrast_slider, temp_spin)
+                lambda: self.remove_monitor(container, brightness_slider, contrast_slider, temp_spin),
             )
             v_layout.addWidget(remove_btn)
 
@@ -418,7 +418,7 @@ class CloneWidgetExample(QWidget):
         self.settings_sync.bind_dict({
             'brightness': {'widget': brightness_slider, 'property': 'value'},
             'contrast': {'widget': contrast_slider, 'property': 'value'},
-            'color_temp': {'widget': temp_spin, 'property': 'value'}
+            'color_temp': {'widget': temp_spin, 'property': 'value'},
         })
 
         # Track
@@ -453,7 +453,7 @@ class CloneWidgetExample(QWidget):
             f"Settings applied to {len(self.monitor_widgets)} monitor(s):\n"
             f"Brightness: {settings['brightness']}% | "
             f"Contrast: {settings['contrast']}% | "
-            f"Color Temp: {settings['color_temp']}K"
+            f"Color Temp: {settings['color_temp']}K",
         )
 
 
@@ -469,7 +469,7 @@ class AutoCleanupExample(QWidget):
             "✓ Create temporary widgets\n"
             "✓ Widgets automatically unbind when destroyed\n"
             "✓ No memory leaks - weak references used internally\n"
-            "✓ Safe to delete widgets without manual cleanup"
+            "✓ Safe to delete widgets without manual cleanup",
         ))
 
         # Controls
@@ -519,7 +519,7 @@ class AutoCleanupExample(QWidget):
             self.master_slider,
             signal=self.master_slider.valueChanged,
             getter=self.master_slider.value,
-            setter=self.master_slider.setValue
+            setter=self.master_slider.setValue,
         )
 
         # Track temporary widgets
@@ -557,7 +557,7 @@ class AutoCleanupExample(QWidget):
             slider,
             signal=slider.valueChanged,
             getter=slider.value,
-            setter=slider.setValue
+            setter=slider.setValue,
         )
 
         # Track
@@ -584,7 +584,7 @@ class AutoCleanupExample(QWidget):
         self.status.setText(
             f"Current Value: {value}\n"
             f"Connected Widgets: {total_widgets} ({len(self.temp_widgets)} temporary + 1 master)\n"
-            f"💡 Temporary widgets auto-cleanup when destroyed - no memory leaks!"
+            f"💡 Temporary widgets auto-cleanup when destroyed - no memory leaks!",
         )
 
 

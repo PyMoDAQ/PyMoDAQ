@@ -104,7 +104,7 @@ class TreeFromToml(ParameterManager, QObject):
 
     def value_changed(self, param):
         path = tuple(get_param_path(param)[1:])
-        self._cached_config_changes[path] =  self.param_to_object(param)
+        self._cached_config_changes[path] = self.param_to_object(param)
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():

@@ -69,7 +69,7 @@ def process_with_reduced_dimensions(func: Callable, dwa: 'DataWithAxes',
         remove_axis = [all_axes[axis_index] for axis_index in axis]
     dwa_func = dwa.deepcopy_with_new_data(
         data=[np.atleast_1d(func(dwa.data[ind], axis, *args, **kwargs)) for ind in range(len(dwa))],
-        remove_axes_index=remove_axis
+        remove_axes_index=remove_axis,
     )
     dwa_func.name += f'_{func.__name__}'
     return dwa_func
@@ -168,7 +168,7 @@ def _roll(dwa: 'DataWithAxes', *args, **kwargs):
 
 
 @implements('pad')
-def _pad(dwa: 'DataWithAxes', pad_width, mode = 'constant', **kwargs):
+def _pad(dwa: 'DataWithAxes', pad_width, mode='constant', **kwargs):
     dwa.create_missing_axes()
     for axis in dwa.axes:
         if not axis.is_axis_linear():

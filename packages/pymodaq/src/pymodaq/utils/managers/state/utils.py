@@ -40,19 +40,19 @@ class EntryActions(StrEnum):
 
 class ParameterDelegate(QtWidgets.QStyledItemDelegate):
 
-    def __init__(self,  *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def createEditor(self, parent, option, index: QModelIndex):
         parameter: Parameter = index.model().get_data(index.row()).setting.parameter
-        widget: QtWidgets.QWidget =  parameter.itemClass(parameter, depth=0).makeWidget()
+        widget: QtWidgets.QWidget = parameter.itemClass(parameter, depth=0).makeWidget()
         widget.setParent(parent)
         widget.setAutoFillBackground(True)
 
         # Set size policy to fill the cell
         widget.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Expanding
+            QtWidgets.QSizePolicy.Policy.Expanding,
         )
 
         # Force widget to fill cell height

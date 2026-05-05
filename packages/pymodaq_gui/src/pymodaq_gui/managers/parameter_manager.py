@@ -91,12 +91,12 @@ class ParameterTreeWidget(ActionManager):
         - Esc: Collapses the toolbar and removes focus from the search field
         """
         self.search_activate_shortcut = QtGui.QShortcut(
-            QtGui.QKeySequence("Ctrl+F"), self.widget
+            QtGui.QKeySequence("Ctrl+F"), self.widget,
         )
         self.search_activate_shortcut.activated.connect(self.activate_search)
 
         self.search_escape_shortcut = QtGui.QShortcut(
-            QtGui.QKeySequence("Esc"), self.widget
+            QtGui.QKeySequence("Esc"), self.widget,
         )
         self.search_escape_shortcut.activated.connect(self.collapse_toolbar)
 
@@ -232,7 +232,7 @@ class ParameterManager:
             self,
             settings_name: Optional[str] = None,
             action_list: tuple = ("search", "save", "update", "load"),
-            tree: ParameterTree = None
+            tree: ParameterTree = None,
     ):
         self._current_filter_text = ""
         if settings_name is None:
@@ -243,29 +243,29 @@ class ParameterManager:
         self._settings_tree = ParameterTreeWidget(action_list, tree)
 
         self._settings_tree.get_action(f"save_settings").connect_to(
-            self.save_settings_slot
+            self.save_settings_slot,
         )
         self._settings_tree.get_action(f"update_settings").connect_to(
-            self.update_settings_slot
+            self.update_settings_slot,
         )
         self._settings_tree.get_action(f"load_settings").connect_to(
-            self.load_settings_slot
+            self.load_settings_slot,
         )
         # Add this line to connect the search widget
         if "search" in action_list:
             self._settings_tree.get_action("search_settings").searchTextChanged.connect(
-                self.search_settings_slot
+                self.search_settings_slot,
             )
         self._settings_tree.collapsible_widget.toggled_signal.connect(
-            self.on_toolbar_toggled
+            self.on_toolbar_toggled,
         )
 
         self.settings = Parameter.create(
-            name=settings_name, type="group", children=self.params, showTop=False
+            name=settings_name, type="group", children=self.params, showTop=False,
         )  # create a Parameter
         # object containing the settings defined in the preamble
         self._settings_tree.tree.header().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents
+            QtWidgets.QHeaderView.ResizeToContents,
         )
 
     @property
@@ -298,7 +298,7 @@ class ParameterManager:
         settings = self.create_parameter(settings)
         self._settings = settings
         self.tree.setParameters(
-            self._settings, showTop=False
+            self._settings, showTop=False,
         )  # load the tree with this parameter object
         self._settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
@@ -352,7 +352,7 @@ class ParameterManager:
             )
         elif isinstance(settings, Parameter):
             _settings = Parameter.create(
-                title="Settings", name=settings.name(), type="group", showTop=False
+                title="Settings", name=settings.name(), type="group", showTop=False,
             )
             _settings.restoreState(settings.saveState())
         else:
@@ -515,7 +515,7 @@ class ParameterManager:
         pass
 
     def limits_changed(
-        self, param: Parameter, data: Tuple[numbers.Number, numbers.Number]
+        self, param: Parameter, data: Tuple[numbers.Number, numbers.Number],
     ):
         """Non-mandatory method to be subclassed for actions to perform when parameter limits change.
 
@@ -696,11 +696,11 @@ class ParameterManager:
             if sameStruct:  # Update if true
                 self.settings = _settings
                 logger.info(
-                    f"The settings from {file_path} have been successfully applied"
+                    f"The settings from {file_path} have been successfully applied",
                 )
             else:
                 logger.info(
-                    f"The loaded settings from {file_path} do not match the current settings structure and cannot be applied."
+                    f"The loaded settings from {file_path} do not match the current settings structure and cannot be applied.",
                 )
 
     def _apply_filter(self, text: str):

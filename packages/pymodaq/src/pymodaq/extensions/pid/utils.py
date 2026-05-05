@@ -30,7 +30,7 @@ class DataToActuatorPID(DataToActuators):
 
 class PIDModelGeneric:
     limits = dict(max=dict(state=False, value=1),
-                  min=dict(state=False, value=0),)
+                  min=dict(state=False, value=0))
     konstants = dict(kp=1, ki=0.1, kd=0.001)
     params = []
 

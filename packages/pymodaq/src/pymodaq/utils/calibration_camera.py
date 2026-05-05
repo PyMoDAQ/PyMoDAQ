@@ -42,20 +42,20 @@ class CalibrationCamera(QtWidgets.QWidget):
 
     def setupUI(self):
 
-        params = [{'title': 'Load data:', 'name': 'Load data', 'type': 'action', },
-                  {'title': 'Set Measurement:', 'name': 'Do measurement', 'type': 'action', },
-                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'limits': ['Hlineout', 'Vlineout'], },
+        params = [{'title': 'Load data:', 'name': 'Load data', 'type': 'action'},
+                  {'title': 'Set Measurement:', 'name': 'Do measurement', 'type': 'action'},
+                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'limits': ['Hlineout', 'Vlineout']},
                   {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
                       {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "µm"},
-                      {'title': 'dx (units):', 'name': 'dx_units', 'type': 'float', 'value': 0, },
-                      {'title': 'dx from fit:', 'name': 'dx_fit', 'type': 'float', 'value': 0, },
-                      {'title': 'x Offset:', 'name': 'xoffset', 'type': 'float', 'value': 0., 'readonly': False}, ]},
+                      {'title': 'dx (units):', 'name': 'dx_units', 'type': 'float', 'value': 0},
+                      {'title': 'dx from fit:', 'name': 'dx_fit', 'type': 'float', 'value': 0},
+                      {'title': 'x Offset:', 'name': 'xoffset', 'type': 'float', 'value': 0., 'readonly': False}]},
                   {'title': 'Y axis:', 'name': 'yaxis', 'type': 'group', 'children': [
                       {'title': 'Units:', 'name': 'yunits', 'type': 'str', 'value': "µm"},
-                      {'title': 'dy (units):', 'name': 'dy_units', 'type': 'float', 'value': 0., },
-                      {'title': 'dy from fit:', 'name': 'dy_fit', 'type': 'float', 'value': 0., },
-                      {'title': 'y Offset:', 'name': 'yoffset', 'type': 'float', 'value': 0., 'readonly': False}, ]},
-                  {'title': 'Save calib:', 'name': 'Save data', 'type': 'action', },
+                      {'title': 'dy (units):', 'name': 'dy_units', 'type': 'float', 'value': 0.},
+                      {'title': 'dy from fit:', 'name': 'dy_fit', 'type': 'float', 'value': 0.},
+                      {'title': 'y Offset:', 'name': 'yoffset', 'type': 'float', 'value': 0., 'readonly': False}]},
+                  {'title': 'Save calib:', 'name': 'Save data', 'type': 'action'},
                   {'title': 'Data Saved:', 'name': 'data_saved', 'type': 'led', 'value': False, 'readonly': True},
                   {'title': 'File path:', 'name': 'filepath', 'type': 'text', 'value': '', 'readonly': True},
                   ]
@@ -136,7 +136,7 @@ class CalibrationCamera(QtWidgets.QWidget):
                             'value': self.settings.child('yaxis', 'dy_units').value() / self.settings.child('yaxis',
                                                                                                             'dy_fit').value()},
                        ]},
-                   ]}, ]
+                   ]}]
         param_obj = Parameter.create(name='Axes_Settings', type='group', children=params)
         ioxml.parameter_to_xml_file(param_obj,
                                     os.path.join(calib_path, os.path.split(self.fname)[1]))

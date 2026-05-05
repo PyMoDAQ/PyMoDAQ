@@ -53,7 +53,7 @@ class ExporterFactory:
         """
 
         def inner_wrapper(wrapped_class) -> Callable:
-            if wrapped_class.FORMAT_EXTENSION   is NotImplemented or \
+            if wrapped_class.FORMAT_EXTENSION is NotImplemented or \
                wrapped_class.FORMAT_DESCRIPTION is NotImplemented:
                 raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
                                           f'`FORMAT_EXTENSION` ({wrapped_class.FORMAT_EXTENSION}) or for '

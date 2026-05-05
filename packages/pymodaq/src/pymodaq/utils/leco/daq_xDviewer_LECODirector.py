@@ -138,7 +138,7 @@ class DAQ_xDViewer_LECODirector(LECODirector, DAQ_Viewer_base):
                     Axis( label=axis.get('label', ''),
                           units=axis.get('units', ''),
                           data=np.array(axis.get('data', [])),
-                          index=ind
+                          index=ind,
                     ) for ind, axis in enumerate(data.get('axes', []))
                 ]
                 labels = data.get('labels', [])
