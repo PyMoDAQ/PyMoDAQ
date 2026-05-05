@@ -197,7 +197,7 @@ def create_folder_with_elevation(path: str | Path, mode: int = 0o757) -> bool:
         return True
     return False
 
-def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
+def rename_with_elevation(old: str | Path, new: str | Path, recreate: bool = False) -> bool:
     """
     Rename (move) a file or folder from `old` to `new`.
 
@@ -213,6 +213,9 @@ def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
         Existing file or directory path.
     new_path:
         Destination path.
+    recreate:
+        If True, recreate `old` as an empty directory with the same mode
+        after the move. Default is False.
 
     Returns
     -------
@@ -229,14 +232,29 @@ def rename_with_elevation(old: str | Path, new: str | Path) -> bool:
         warn_about_elevation_prompt("rename existing /etc/.pymodaq.")
 
         if SYSTEM == "Windows":
-            # Windows: move command handles both file and directory renames
-            __elevation_cancelled = not __elevate_windows(f'move "{old}" "{new}"')
+            commands  = [f'move "{old}" "{new}"']
+            if recreate:
+                commands.append(f'mkdir "{old}"')
+            __elevation_cancelled = not __elevate_windows(*commands)
         else:
-            # Unix: mv is the standard rename/move operation
-            __elevation_cancelled = not __elevate_unix(["mv", old, new])
+            # Get mode of the old directory before moving it, so the
+            # recreated folder gets the exact same permission.
+            try:
+                old_mode = oct(Path(old).stat().st_mode & 0o777)[2:]
+            except OSError:
+                old_mode = "757"
+
+            commands = [["mv", str(old), str(new)]]
+            if recreate:
+                commands.append(["mkdir", "-m", old_mode, "-p", str(old)])
+            __elevation_cancelled = not __elevate_unix(*commands)
 
         if not __wait_for_path(new):
             logger.error(f"Rename failed: {old} -> {new}")
+            return False
+
+        if recreate and not __wait_for_path(str(old)):
+            logger.error(f"Recreated folder not found after elevation: {old}")
             return False
 
         logger.debug(f"Renamed (elevated): {old} -> {new}")

@@ -1,8 +1,9 @@
 import copy
 from typing import Iterable as IterableType, Iterable
 
-from pymodaq_utils.utils import config
+from pymodaq_utils.config import GlobalConfig as Config
 
+config = Config()
 
 class PlotColors:
 

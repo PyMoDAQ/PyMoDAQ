@@ -20,6 +20,8 @@ from fasteners import ReaderWriterLock
 
 import toml
 import logging
+
+
 if TYPE_CHECKING:
     from pymodaq_gui.parameter import Parameter
 
@@ -181,6 +183,26 @@ def getitem_recursive(dic, *args, ndepth=0, create_if_missing=False):
                 raise e
     return dic
 
+def recursive_dict_paths(d : dict) -> list[tuple[str, ...]]:
+    """Gives a list of all paths in a dict to a direct value
+    Parameters
+    ----------
+    d: the dict to extract keys from
+
+    Returns
+    -------
+    a list of tuple where each tuple is a key that leads directly to a value
+    """
+    def _internal_recursive_dict_paths(d: dict, parent: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
+        paths = []
+        for key, value in d.items():
+            current = parent + (key,)
+            if isinstance(value, dict):
+                paths.extend(_internal_recursive_dict_paths(value, current))
+            else:
+                paths.append(current)
+        return paths
+    return _internal_recursive_dict_paths(d, ())
 
 def recursive_iterable_flattening(aniterable: IterableType):
     flatten_iter = []
@@ -210,7 +232,7 @@ def get_set_path(a_base_path: Path, dir_name: str) -> Path:
     return path_to_get
 
 
-@lru_cache(maxsize=None)
+
 def get_set_local_dir(user=False) -> Path:
     """Defines, creates and returns a local folder where configuration files will be saved
 
@@ -501,6 +523,51 @@ class BaseConfig(metaclass=ConfigSingleton):
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
 
+    def _backport_values(self,
+        old_system_config_base_path: Union[Path, None] = None,
+        old_user_config_base_path: Union[Path, None] = None):
+        """
+        Migrates the compatible subset of system user config values into the current config using
+        the template for reference.
+
+        Template values are copied as system one and overrided by already existing system values if type-compatible.
+        User values are applied after system values, only if they still exist in the template and are type-compatible.
+
+        Parameters
+        ----------
+        old_system_config_base_path : Path or str, optional
+            Path to old system config folder.
+        old_user_config_base_path : Path or str, optional
+            Path to old user config folder.
+        """
+        template = toml.load(self.config_template_path)
+
+        old_system_config: dict = toml.load(old_system_config_base_path / 'config' / f'{self.config_name}.toml') if old_system_config_base_path  else {}
+        old_user_config: dict = toml.load(old_user_config_base_path / 'config' / f'{self.config_name}.toml') if old_user_config_base_path  else {}
+
+        with self._lock.write_lock():
+            for key in recursive_dict_paths(template):
+                template_value = getitem_recursive(template, *key)
+                try:
+                    system_value = getitem_recursive(old_system_config, *key)
+                    if type(template_value) == type(system_value):
+                        self[key] = system_value
+                except KeyError:
+                    self[key] = template_value
+            get_config_file(self.config_name, user=False).write_text(toml.dumps(self._config))
+            self._unload()
+
+            for key in recursive_dict_paths(old_user_config):
+                try:
+                    template_value = getitem_recursive(template, *key)
+                    user_value = getitem_recursive(old_user_config, *key)
+                    if type(template_value) == type(user_value):
+                        self[key] = user_value
+                except KeyError:
+                    pass
+            get_config_file(self.config_name, user=True).write_text(toml.dumps(self._config))
+            self._unload()
+
     def load(self):
         """Load a configuration file from both system-wide and user file
         check also if missing entries in the configuration file compared to the template"""
@@ -530,6 +597,11 @@ class BaseConfig(metaclass=ConfigSingleton):
 
             self._config = load_system_config_and_update_from_user(self.config_name)
             self._modified_config = toml.load(get_config_file(self.config_name, user=True))
+
+    def _unload(self):
+        with self._lock.write_lock():
+            self._config = {}
+            self._modified_config = {}
 
     def save(self):
         """Save the current Config object into the user toml file and reload it """
@@ -581,7 +653,7 @@ class GlobalConfig(metaclass=Singleton):
                 config.add_config(name, wrapped_class())
                 wrapped_class._allow_direct_call = False
                 if not config._config_is_valid(name):
-                    config._migrate()
+                    config._migrate_folders()
                     config._reload_configs()
             return wrapped_class
 
@@ -601,12 +673,9 @@ class GlobalConfig(metaclass=Singleton):
         return get_set_config_dir(user=False)
 
     def __str__(self):
-        return ('Managing configurations for:\n'
-            + '\n'.join(map(
-                lambda kv: f'\t{kv[0]}: {kv[1]}',
-                self._configs.items()
-            ))
-        )
+        lines = [f'\t{key}: {value}' for key, value in self._configs.items()]
+        return 'Managing configurations for:\n' + '\n'.join(lines)
+
     def __contains__(self, item):
         return item in self._configs
 
@@ -655,9 +724,12 @@ class GlobalConfig(metaclass=Singleton):
 
     def _reload_configs(self):
         for name in self._configs.keys():
-            cast(BaseConfig, self._configs[name]).load()
+            config = cast(BaseConfig, self._configs[name])
+            config._unload()
+            config._backport_values(self.system_backup_dir, self.user_backup_dir)
+            config.load()
 
-    def _migrate(self):
+    def _migrate_folders(self):
         logging.critical("Migration of configuration folder.")
         logging.critical("Your configuration will be reset. Old files are in backup dirs.")
         # environment_version_specific_dir = _generate_env_path(
@@ -673,14 +745,15 @@ class GlobalConfig(metaclass=Singleton):
         logging.critical(f"backup_dirs: ({self.user_backup_dir}, {self.system_backup_dir})")
 
         os.rename(get_set_local_dir(user=True), self.user_backup_dir)
+        get_set_local_dir(user=True)
         try:
             os.rename(get_set_local_dir(user=False), self.system_backup_dir)
         except PermissionError:
             from pymodaq_utils.filesystem import rename_with_elevation
-            if not rename_with_elevation(get_set_local_dir(user=False), self.system_backup_dir):
+            if not rename_with_elevation(get_set_local_dir(user=False), self.system_backup_dir, recreate=True):
                 del self.system_backup_dir
-
-
+        finally:
+            get_set_local_dir(user=False)
 
 @GlobalConfig.register()
 class Config(BaseConfig):
