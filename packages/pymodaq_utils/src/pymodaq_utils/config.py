@@ -523,14 +523,22 @@ class BaseConfig(metaclass=ConfigSingleton):
         """Get the system_wide config path"""
         return get_config_file(self.config_name, user=False)
 
+
+    def migrate_values(self,
+                       old_system_config_base_path: Union[Path, None] = None,
+                       old_user_config_base_path: Union[Path, None] = None):
+        self._unload()
+        self._backport_values(old_system_config_base_path, old_user_config_base_path)
+        self.load()
+
     def _backport_values(self,
-        old_system_config_base_path: Union[Path, None] = None,
-        old_user_config_base_path: Union[Path, None] = None):
+                         old_system_config_base_path: Union[Path, None] = None,
+                         old_user_config_base_path: Union[Path, None] = None):
         """
         Migrates the compatible subset of system user config values into the current config using
         the template for reference.
 
-        Template values are copied as system one and overrided by already existing system values if type-compatible.
+        Template values are copied as system one and overridden by already existing system values if type-compatible.
         User values are applied after system values, only if they still exist in the template and are type-compatible.
 
         Parameters
@@ -542,9 +550,19 @@ class BaseConfig(metaclass=ConfigSingleton):
         """
         template = toml.load(self.config_template_path)
 
-        old_system_config: dict = toml.load(old_system_config_base_path / 'config' / f'{self.config_name}.toml') if old_system_config_base_path  else {}
-        old_user_config: dict = toml.load(old_user_config_base_path / 'config' / f'{self.config_name}.toml') if old_user_config_base_path  else {}
+        old_system_config = (
+            toml.load(old_system_config_base_path / 'config' / f'{self.config_name}.toml')
+            if old_system_config_base_path
+            else {}
+        )
 
+        old_user_config = (
+            toml.load(old_user_config_base_path / 'config' / f'{self.config_name}.toml')
+            if old_user_config_base_path
+            else {}
+        )
+
+        # Direct usage of config object  out of convenience because it accepts a tuple key
         with self._lock.write_lock():
             for key in recursive_dict_paths(template):
                 template_value = getitem_recursive(template, *key)
@@ -623,10 +641,14 @@ class CacheConfig(BaseConfig):
 
 class GlobalConfig(metaclass=Singleton):
     config_name: str = 'global'
+
+    _config_migration_needed: bool = False
     _register_lock: threading.Lock = threading.Lock()
     
     def __init__(self):
         self._configs = {}
+        self.system_backup_dir = None
+        self.user_backup_dir = None
         
 
     @classmethod
@@ -642,19 +664,26 @@ class GlobalConfig(metaclass=Singleton):
                 raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
                                           f'`config_template_path` ({wrapped_class.config_template_path}) or for '
                                           f'`config_name` ({wrapped_class.config_name})')
-            config = cls()
+            global_config = cls()
             name = wrapped_class.config_name
 
             with cls._register_lock:
-                if name in config._configs:
-                    raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {config._configs[name].__class__.__name__}')
+                if name in global_config._configs:
+                    raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {global_config._configs[name].__class__.__name__}')
 
                 wrapped_class._allow_direct_call = True
-                config.add_config(name, wrapped_class())
+                config = wrapped_class()
+                global_config.add_config(name, config)
+                #Need to migrate the next loaded config values!
+                if cls._config_migration_needed:
+                    config.migrate_values(global_config.system_backup_dir, global_config.user_backup_dir)
                 wrapped_class._allow_direct_call = False
-                if not config._config_is_valid(name):
-                    config._migrate_folders()
-                    config._reload_configs()
+
+                # After adding a config we check if it's valid.
+                if not global_config._config_is_valid(name):
+                    cls._config_migration_needed = True
+                    global_config._backup_and_reset_config_folders()
+                    global_config._migrate_configs()
             return wrapped_class
 
         return inner_wrapper
@@ -722,14 +751,11 @@ class GlobalConfig(metaclass=Singleton):
         return deep_type_equals(template,  self._configs[name].to_dict())
 
 
-    def _reload_configs(self):
+    def _migrate_configs(self):
         for name in self._configs.keys():
-            config = cast(BaseConfig, self._configs[name])
-            config._unload()
-            config._backport_values(self.system_backup_dir, self.user_backup_dir)
-            config.load()
+            cast(BaseConfig, self._configs[name]).migrate_values(self.system_backup_dir, self.user_backup_dir)
 
-    def _migrate_folders(self):
+    def _backup_and_reset_config_folders(self):
         logging.critical("Migration of configuration folder.")
         logging.critical("Your configuration will be reset. Old files are in backup dirs.")
         # environment_version_specific_dir = _generate_env_path(
@@ -751,7 +777,7 @@ class GlobalConfig(metaclass=Singleton):
         except PermissionError:
             from pymodaq_utils.filesystem import rename_with_elevation
             if not rename_with_elevation(get_set_local_dir(user=False), self.system_backup_dir, recreate=True):
-                del self.system_backup_dir
+                self.system_backup_dir = None
         finally:
             get_set_local_dir(user=False)
 

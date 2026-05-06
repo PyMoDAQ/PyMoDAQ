@@ -17,9 +17,9 @@ from typing import Union
 
 logger = logging.getLogger(Path(__file__).stem)
 
-SYSTEM = platform.system()  # "Windows", "Linux", "Darwin"
+SYSTEM = platform.system()  # "Windows", "Linux" or "Darwin"
 
-__elevation_cancelled = False
+__elevation_cancelled = False #If it's canceled once, don't ever try to ask again
 
 def __wait_for_path(path: str, timeout: float = 1.0) -> bool:
     """Poll until a path exists or the timeout expires."""
@@ -43,14 +43,14 @@ def __elevate_windows(*commands: str) -> bool:
    -------
         bool: True if elevation and commands exeution was successfull, False otherwise
     """
-    cmd_chain = " && ".join(commands)
+    command_chain = " && ".join(commands)
     ret = ctypes.windll.shell32.ShellExecuteW(
-        None,       # parent HWND
+        None,       # parent window
         "runas",    # UAC
         "cmd.exe",
-        f'/c {cmd_chain}',
+        f'/c {command_chain}',
         None,
-        0           # SW_HIDE
+        0           # to not show the cmd.exe window
     )
     if ret <= 32:
         logger.error(f"Windows elevation via UAC failed.")
@@ -77,25 +77,22 @@ def __elevate_unix(*commands: list[str]) -> bool:
         bool: True if elevation and commands exeution was successfull, False otherwise
     """
     def quote(arg: str) -> str:
+        #if there
         return f'"{arg}"' if " " in arg else arg
 
-    shell_cmd = " && ".join(
+    shell_commands = " && ".join(
         " ".join(quote(a) for a in cmd)
         for cmd in commands
     )
 
     if SYSTEM == "Linux":
-        wrapped = ["sh", "-c", shell_cmd]
-
-        def try_run(prefix: list[str]) -> bool:
-            return subprocess.run(prefix + wrapped, capture_output=True).returncode == 0
-
-        if not try_run(["pkexec"]):
+        result = subprocess.run(["pkexec", "sh", "-c", shell_commands], capture_output=True).returncode
+        if result != 0:
             logger.error("Linux elevation via pkexec failed.")
             return False
     else:
         # macOS — escape inner double-quotes for the osascript string
-        escaped = shell_cmd.replace('"', '\\"')
+        escaped = shell_commands.replace('"', '\\"')
         script = f'do shell script "{escaped}" with administrator privileges'
         result = subprocess.run(["osascript", "-e", script], capture_output=True)
         if result.returncode != 0:
@@ -159,7 +156,7 @@ def warn_about_elevation_prompt(reason: str):
     threading.Thread(target=lambda: (input(), entered.set()), daemon=True).start()
     entered.wait(timeout=5)
 
-def create_folder_with_elevation(path: str | Path, mode: int = 0o757) -> bool:
+def create_folder_with_elevation(path: Union[str, Path], mode: int = 0o757) -> bool:
     """
     Create a folder at `path` with the given permissions.
     On Unix, uses 'mkdir -m' so that mode and creation are a single atomic
@@ -197,7 +194,7 @@ def create_folder_with_elevation(path: str | Path, mode: int = 0o757) -> bool:
         return True
     return False
 
-def rename_with_elevation(old: str | Path, new: str | Path, recreate: bool = False) -> bool:
+def rename_with_elevation(old: Union[str, Path], new: Union[str, Path], recreate: bool = False) -> bool:
     """
     Rename (move) a file or folder from `old` to `new`.
 
@@ -294,10 +291,6 @@ def link_or_copy(src : Union[str, Path], dst : Union[str, Path]) -> None:
     try:
         dst.symlink_to(src, target_is_directory=True)
     except (OSError,NotImplementedError) as e:
-        # from pymodaq_utils import logger as logger_module
-        #
-        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
-        # logger.info(f'Symlink not possible: {e}')
         pass
     else:
         return
@@ -311,10 +304,6 @@ def link_or_copy(src : Union[str, Path], dst : Union[str, Path]) -> None:
              stderr=subprocess.DEVNULL,
         )
     except (OSError, CalledProcessError) as e:
-        # from pymodaq_utils import logger as logger_module
-        #
-        # logger = logger_module.set_logger(logger_module.get_module_name(__file__))
-        # logger.info(f'Junction not possible: {e}')
         pass
     else:
         return

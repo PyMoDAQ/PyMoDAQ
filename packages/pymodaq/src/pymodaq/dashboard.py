@@ -1361,15 +1361,17 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def show_warnings(self):
         paths = ""
-        if hasattr(config, 'system_backup_dir'):
+        if config.system_backup_dir:
             paths += f"<b><tt>{config.system_backup_dir}</tt></b><br>"
-        if hasattr(config, 'user_backup_dir'):
+        if config.user_backup_dir:
             paths += f"<b><tt>{config.user_backup_dir}</tt></b><br>"
 
         if paths:
             message = f"""
                 Configuration template changed.<br><br>
-                Your config was reset and old config files can be found in:<br>
+                Best effort was made to <b>keep</b> your preferences.<br><br>
+                
+                The old config files can be found in:<br>
                 {paths}
             """
             QtWidgets.QMessageBox.warning(None, "Configuration backup", message)
