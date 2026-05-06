@@ -163,20 +163,20 @@ class DAQ_Logger(CustomExt):
 
         self.docks['logger_settings'].addWidget(self.logger.settings_tree)
 
-    def quit_fun(self):
+    def quit(self):
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
 
             See Also
             --------
-            quit_fun
+            quit
         """
         try:
             self.logger.close()
         except Exception as e:
             logger.exception(str(e))
 
-        super().quit_fun()
+        super().quit()
 
     def set_continuous_save(self):
         """

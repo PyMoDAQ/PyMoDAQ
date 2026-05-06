@@ -17,7 +17,14 @@ from pymodaq_gui.utils.splash import get_splash_sc
 
 
 
-class CustomApp(QObject, ActionManager, ParameterManager):
+class QuittableApp:
+    """Mixin class for qobject that should have a quit function
+    """
+
+    def quit(self):
+        raise NotImplementedError
+
+class CustomApp(QObject, ActionManager, ParameterManager, QuittableApp):
     """Base Class to ease the implementation of User Interfaces
 
     Inherits the MixIns ActionManager and ParameterManager classes. You have to subclass some methods and make
@@ -205,7 +212,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.do_things_after_ui_setup()
 
-    def quit_fun(self):
+    def quit(self):
         """Method to be reimplemented in order to define a custom quit function
         """
         if self.mainwindow is not None:

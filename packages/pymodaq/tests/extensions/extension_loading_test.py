@@ -25,7 +25,7 @@ def dashboard(init_qt):
 
     # dashboard.preset_manager.execute_entry()
     yield dashboard
-    dashboard.quit_fun()
+    dashboard.quit()
 
 
 

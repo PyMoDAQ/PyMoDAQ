@@ -612,11 +612,11 @@ class GenericOptimization(CustomExt):
         self.modules_manager.connect_actuators(False)
 
 
-    def quit_fun(self):
+    def quit(self):
         self.clean_h5_temp()
 
         self.close_file()
-        super().quit_fun()
+        super().quit()
 
     def set_model(self):
         model_name = self.settings.child('models', 'model_class').value()

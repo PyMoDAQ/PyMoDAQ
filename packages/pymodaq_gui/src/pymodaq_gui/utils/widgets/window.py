@@ -12,6 +12,7 @@ def make_window(
             | Qt.WindowType.WindowTitleHint
             | Qt.WindowType.WindowMinimizeButtonHint
             | Qt.WindowType.WindowMaximizeButtonHint
+            | Qt.WindowType.WindowCloseButtonHint
     ),
 ) -> tuple[QMainWindow, DockArea]:
     """

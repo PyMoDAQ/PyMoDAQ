@@ -55,7 +55,7 @@ class TestMethods:
     def test_overriden(self):
         assert ControlModule.stop_grab != DAQ_Move.stop_grab
         assert ControlModule.grab != DAQ_Move.grab
-        assert ControlModule.quit_fun != DAQ_Move.quit_fun
+        assert ControlModule.quit != DAQ_Move.quit
         assert ControlModule.init_hardware != DAQ_Move.init_hardware
 
 
@@ -83,7 +83,7 @@ class TestDAQMove:
                                              abs=daq_move.settings['move_settings', 'epsilon'])
         assert data.name == daq_move.title
 
-        daq_move.quit_fun()
+        daq_move.quit()
         QtWidgets.QApplication.processEvents()  #make sure to properly terminate all the threads!
 
     def test_axis_management(self, ini_daq_move_ui):

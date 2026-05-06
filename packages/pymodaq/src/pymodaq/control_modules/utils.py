@@ -12,6 +12,7 @@ from qtpy import QtWidgets
 
 from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
+from pymodaq_gui.utils.custom_app import QuittableApp
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
@@ -324,7 +325,7 @@ class ControlModule(QObject):
     def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
-    def quit_fun(self):
+    def quit(self):
         """Programmatic entry to quit the control module"""
         raise NotImplementedError
 
@@ -401,7 +402,7 @@ class ControlModule(QObject):
                         attr = value
 
 
-class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
+class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule, QuittableApp):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)

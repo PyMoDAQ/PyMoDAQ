@@ -361,7 +361,7 @@ class DAQ_Viewer(ParameterControlModule):
 
         self._viewers = viewers
 
-    def quit_fun(self):
+    def quit(self):
         """ Quit the application, closing the hardware and other modules """
 
         # insert anything that needs to be closed before leaving

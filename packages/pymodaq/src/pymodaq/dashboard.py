@@ -342,7 +342,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     if is_empty:
                         self.compact_detector_manager.close()
                         self.compact_detector_manager = None
-                detector_module.quit_fun()
+                detector_module.quit()
 
                 # Close individual detector dock
                 dock = self.dockarea.docks.get(f"{detector_module.title}", None)
@@ -372,7 +372,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         self.compact_actuator_manager.close()
                         self.compact_actuator_manager = None
 
-                actuator_module.quit_fun()
+                actuator_module.quit()
                 
                 # Close individual actuator dock (for non-compact actuators)
                 dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
@@ -523,85 +523,49 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def create_extension_slot(self, extenum: ExtensionEnum):
         return lambda: self.load_extension(extenum)
 
-    def quit_fun(self):
+    def quit(self):
         """
         Quit the current instance of DashBoard and close on cascade move and detector modules.
 
         See Also
         --------
-        quit_fun
+        quit
         """
         try:
             self.connect_leco(connect=False)
             self.remote_timer.stop()
 
             for ext in self.extensions:
-                if hasattr(self.extensions[ext], "quit_fun"):
-                    self.extensions[ext].quit_fun()
-            for mov in self.actuators_modules:
-                try:
-                    mov.init_signal.disconnect(self.update_init_tree)
-                except TypeError:
-                    pass
-            for det in self.detector_modules:
-                try:
-                    det.init_signal.disconnect(self.update_init_tree)
-                except TypeError:
-                    pass
+                self.extensions[ext].quit()
 
-            for module in self.actuators_modules:
+            for module in self.actuators_modules + self.detector_modules:
                 try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
+                    module.init_signal.disconnect(self.update_init_tree)
+                except TypeError:
+                    pass
+                try:
+                    module.quit()
                 except Exception:
                     pass
 
-            for module in self.detector_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except Exception:
-                    pass
 
-            self.experiment_manager.quit_fun()
-            self.state_manager.quit_fun()
-            self.overshooter.quit_fun()
+            self.experiment_manager.quit()
+            self.state_manager.quit()
+            self.overshooter.quit()
 
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
-
-            if hasattr(self, "mainwindow"):
-                self.mainwindow.close()
 
             if self.pid_window is not None:
                 self.pid_window.close()
 
+            super().quit()
+
         except Exception as e:
             logger.exception(str(e))
+            sys.exit(-1)
 
-    def restart_fun(self, ask=False):
-        ret = False
-        mssg = QMessageBox()
-        if ask:
-            mssg.setText(
-                "You have to restart the application to take the"
-                " modifications into account!",
-            )
-            mssg.setInformativeText("Do you want to restart?")
-            mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-            ret = mssg.exec()
-
-        if ret == QMessageBox.StandardButton.Ok or not ask:
-            self.quit_fun()
-            subprocess.call([sys.executable, __file__])
 
     def load_layout_state(self, file=None):
         """

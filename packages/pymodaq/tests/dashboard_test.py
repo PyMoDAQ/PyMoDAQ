@@ -25,4 +25,4 @@ class TestGeneral:
 
         dashboard.experiment_manager.execute_entry()
 
-        dashboard.quit_fun()
+        dashboard.quit()

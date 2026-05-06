@@ -53,10 +53,10 @@ class CustomExt(CustomApp):
         """
         raise NotImplementedError
 
-    def quit_fun(self):
+    def quit(self):
         """Method to be subclassed in order to define a custom quit function
         """
-        super().quit_fun()
+        super().quit()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 

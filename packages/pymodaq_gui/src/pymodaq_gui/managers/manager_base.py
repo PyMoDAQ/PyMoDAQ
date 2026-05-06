@@ -620,7 +620,7 @@ class SubEntriesSplash(QtWidgets.QLabel):
         self.list_view.clearFocus()
 
         self.title_label.setFont(QtGui.QFont("Arial", 12))
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
+        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowSystemMenuHint)
 
         vlayout = QtWidgets.QVBoxLayout()
         hlayout = QtWidgets.QHBoxLayout()

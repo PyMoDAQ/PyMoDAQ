@@ -67,7 +67,7 @@ def test_shared_ui_custom(qtbot):
     shared_ui = SharedUI(window)
     shared_ui.affect_application(app)
 
-    shared_ui.quit_fun()
+    shared_ui.quit()
 
 
 

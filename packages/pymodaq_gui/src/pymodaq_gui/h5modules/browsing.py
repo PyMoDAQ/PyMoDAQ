@@ -326,7 +326,7 @@ class H5Browser(CustomApp):
                                           f"Please create and use an adapted environment to use this"
                                           f" version (up to 3.x.y):\n"
                                           f"pip install pymodaq==3.x.y")
-                self.quit_fun()
+                self.quit()
 
     def add_comments(self, status: bool, comment=''):
         """Add comments to a node
@@ -390,13 +390,13 @@ class H5Browser(CustomApp):
         else:
             filename = select_file(save=True, ext=['h5', 'hdf5'])
 
-    def quit_fun(self):
+    def quit(self):
         """
         """
         try:
             if not self._file_is_external:
                 self.h5utils.close_file()
-            super().quit_fun()
+            super().quit()
         except Exception as e:
             logger.exception(str(e))
 

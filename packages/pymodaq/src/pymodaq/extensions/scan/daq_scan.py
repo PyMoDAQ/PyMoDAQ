@@ -321,13 +321,13 @@ class DAQScan(CustomExt):
         elif cmd.command == 'viewers_changed':
             ...
 
-    def quit_fun(self):
+    def quit(self):
         """
             Quit the current instance of DAQ_scan
 
             See Also
             --------
-            quit_fun
+            quit
         """
         try:
             if self.temp_path is not None:
@@ -339,7 +339,7 @@ class DAQScan(CustomExt):
 
             self.close_file()
 
-            super().quit_fun()
+            super().quit()
 
         except Exception as e:
             logger.exception(str(e))

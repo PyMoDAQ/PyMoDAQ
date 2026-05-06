@@ -411,7 +411,7 @@ class DAQ_Move(ParameterControlModule):
     def move_rel_m(self):
         self.move_rel(-self._relative_value)
 
-    def quit_fun(self):
+    def quit(self):
         """Programmatic quitting of the current instance of DAQ_Move
 
         Des-init the actuator then close the UI parent widget
