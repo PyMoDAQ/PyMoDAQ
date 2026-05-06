@@ -46,7 +46,7 @@ class Scan1DBase(ScannerBase):
                      data=np.squeeze(self.positions))]
 
     def get_scan_shape(self) -> Tuple[int]:
-        return len(self.positions),
+        return len(self.positions)
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
@@ -64,7 +64,7 @@ class Scan1DLinear(Scan1DBase):
     params = [
         {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': 0.},
         {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': 1.},
-        {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': 0.1}
+        {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': 0.1},
         ]
     n_axes = 1
     distribution = DataDistribution.uniform
@@ -128,7 +128,7 @@ class Scan1DSparse(Scan1DBase):
 
     scan_subtype = 'Sparse'
     params = [
-        {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1', }
+        {'title': 'Parsed string:', 'name': 'parsed_string', 'type': 'text', 'value': '0:0.1:1'},
         ]
     n_axes = 1
     distribution = DataDistribution.uniform  # because in 1D it doesn't matter is spread or

@@ -91,7 +91,7 @@ def comon_parameters(epsilon=config('pymodaq', 'actuator', 'epsilon_default'),
             {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
                 {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
                 {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
-                {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
+                {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}]},
             {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
                 {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
                  'default': False},
@@ -170,7 +170,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=None,
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True,},
+        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'UI type:', 'name': 'ui_type', 'type': 'list',
          'value': config('pymodaq', 'actuator', 'ui') if config('pymodaq', 'actuator', 'ui') in ActuatorUIFactory.keys() else
@@ -179,7 +179,7 @@ params = [
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
          'value': config('pymodaq', 'actuator', 'refresh_timeout_ms')},
     ] + create_remote_connection_params()},
-    {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
+    {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'},
 ]
 
 
@@ -191,21 +191,17 @@ def main(plugin_file, init=True, title='test'):
 
     """
     import sys
-    from qtpy import QtWidgets
-    from pymodaq.control_modules.daq_move import DAQ_Move
     from pathlib import Path
 
     act = Path(plugin_file).stem.split('daq_move_')[1]
 
-    app = mkQApp("PyMoDAQ Viewer")
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_move
+    app = mkQApp("PyMoDAQ Move")
+    shared_ui, daq_move = create_load_daq_move('simple')
 
-    widget = QtWidgets.QWidget()
-    prog = DAQ_Move(widget, title=title, actuator=act)
-    widget.show()
-    prog.actuator = Path(plugin_file).stem[9:]
-    if init:
-        prog.init_hardware_ui()
+    daq_move.actuator = act
 
+    shared_ui.show()
     sys.exit(app.exec())
 
 
@@ -750,7 +746,7 @@ class DAQ_Move_base(QObject):
                 logger.debug(f'Current position: {self._current_value}')
                 self.move_done(self._current_value)
 
-    def _condition_to_reach_target(self, check_absolute_difference=True,) -> bool:
+    def _condition_to_reach_target(self, check_absolute_difference=True) -> bool:
         """Implement the condition for exiting the polling mechanism and specifying that the
         target value has been reached
 
@@ -817,7 +813,7 @@ class DAQ_Move_base(QObject):
 
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped', ))
+                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, 'Move has been stopped'))
                 logger.info('Move has been stopped')
             self.current_value = self.get_actuator_value()
             self.emit_value(self._current_value)
@@ -825,7 +821,7 @@ class DAQ_Move_base(QObject):
 
             if perf_counter() - self.start_time >= self.settings['timeout']:
                 self.poll_timer.stop()
-                self.emit_status(ThreadCommand(ThreadStatus.RAISE_TIMEOUT, ))
+                self.emit_status(ThreadCommand(ThreadStatus.RAISE_TIMEOUT))
                 logger.info('Timeout activated')
         else:
             self.poll_timer.stop()

@@ -212,10 +212,10 @@ class TabularScanner(ScannerBase):
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
-        return scan_index,
+        return scan_index
 
     def get_scan_shape(self) -> Tuple[int]:
-        return len(self.table_model),
+        return len(self.table_model)
 
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()

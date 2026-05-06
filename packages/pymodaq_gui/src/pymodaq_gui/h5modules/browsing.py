@@ -19,7 +19,7 @@ from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 from qtpy import QtWidgets
 
-from pymodaq_gui.utils.shared_ui import MenuNames
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils import utils
@@ -193,7 +193,7 @@ class H5Browser(CustomApp):
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar):
 
-        self.add_menu(MenuNames.FILE, 'File', parent_menu=self.menubar)
+        self.add_menu(MenuToolbarNames.FILE, 'File', parent_menu=self.menubar)
 
     def setup_actions(self):
         self.add_action('export', 'Export as', 'file_export', tip='Export node content (and children) as ',
@@ -217,11 +217,11 @@ class H5Browser(CustomApp):
                                self.get_action('plot_node_with_bkg'),
                                self.get_action('plot_nodes_with_bkg')])
 
-        self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuNames.FILE)
-        self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuNames.FILE)
+        self.add_action('load', 'Load File', 'file_open', tip='Open a new file', menu=MenuToolbarNames.FILE)
+        self.add_action('save', 'Save File as', 'file_save', tip='Save as another file', menu=MenuToolbarNames.FILE)
         self.add_action('refresh', 'Refresh', 'refresh',
                         tip='Refresh the file view (useful for SWMR live files)',
-                        shortcut=QtCore.Qt.Key_F5, menu=MenuNames.FILE)
+                        shortcut=QtCore.Qt.Key_F5, menu=MenuToolbarNames.FILE)
 
     def connect_things(self):
         self.connect_action('export', self.export_data)

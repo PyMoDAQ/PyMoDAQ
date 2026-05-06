@@ -10,11 +10,11 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq.utils.leco.utils import start_coordinator
 
-from pymodaq_gui.utils.shared_ui import SharedUI, MenuNames
+from pymodaq_gui.utils.shared_ui import SharedUI, MenuToolbarNames
 
 logger = set_logger(get_module_name(__file__))
 
-config =  Config()
+config = Config()
 
 
 class SharedUI(SharedUI):
@@ -38,9 +38,9 @@ class SharedUI(SharedUI):
         super().setup_actions()
 
         self.add_action("leco", "Run Leco Coordinator", "router", "Run a Coordinator on this localhost",
-                        auto_toolbar=False, menu=MenuNames.TOOLS)
+                        auto_toolbar=False, menu=MenuToolbarNames.TOOLS)
         self.add_action("plugin_manager", "Plugin Manager", 'extension', tip='Opens the Plugin Manager',
-                        auto_toolbar=False, menu=MenuNames.TOOLS)
+                        auto_toolbar=False, menu=MenuToolbarNames.TOOLS)
 
     def connect_things(self):
         super().connect_things()

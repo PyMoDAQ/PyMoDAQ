@@ -13,7 +13,7 @@ det1d = Detector('Det1D')
 acquisitions = []
 
 base = theta.get_actuator_value().result()
-target = base + Q_('90°') # Or a DataActuator(data=90, units='°')
+target = base + Q_('90°')  # Or a DataActuator(data=90, units='°')
 step = Q_('10°')
 
 count = (target - base)/step

@@ -10,18 +10,21 @@ from typing import Union, List, Tuple, TYPE_CHECKING, Iterable
 import time
 import xml.etree.ElementTree as ET
 
-
 import numpy as np
+
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.enums import BaseEnum
 from pymodaq_utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq_utils.utils import capitalize
-from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw
-from pymodaq_data.h5modules.saving import H5SaverLowLevel
-from pymodaq_data.h5modules.backends import GROUP, Node
+
+from pymodaq_data import DataDim, DataWithAxes
+from pymodaq_data.data import Axis, DataToExport, DataDistribution, DataRaw, DataSource
 from pymodaq_data.h5modules.data_saving import (
     DataToExportSaver, DataToExportEnlargeableSaver,
     DataToExportTimedSaver, DataToExportExtendedSaver)
+from pymodaq_data.h5modules.backends import GROUP, Node
+
+from pymodaq_gui.h5modules.saving import H5SaverBase
 from pymodaq_gui.parameter import ioxml
 
 if TYPE_CHECKING:
@@ -45,7 +48,7 @@ class ModuleSaver(metaclass=ABCMeta):
     """Abstract base class to save info and data from main modules (DAQScan, DAQViewer, DAQMove, ...)"""
     group_type: GroupModuleType = abstract_attribute()
     _module = abstract_attribute()
-    _h5saver: H5SaverLowLevel = abstract_attribute()
+    _h5saver: H5SaverBase = abstract_attribute()
     _module_group: GROUP = abstract_attribute()
     main_module = True
 
@@ -119,7 +122,7 @@ class ModuleSaver(metaclass=ABCMeta):
         return self._h5saver
 
     @h5saver.setter
-    def h5saver(self, _h5saver: H5SaverLowLevel):
+    def h5saver(self, _h5saver: H5SaverBase):
         self._h5saver = _h5saver
         self.update_after_h5changed()
 
@@ -152,7 +155,7 @@ class DetectorSaver(ModuleSaver):
         self._module_group: GROUP = None
         self._h5saver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportSaver(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}) -> Node:
@@ -189,6 +192,31 @@ class DetectorSaver(ModuleSaver):
     def add_data(self, where: Union[Node, str], data: DataToExport, **kwargs):
         self._datatoexport_saver.add_data(where, data, **kwargs)
 
+    def filter_data(self, dte: DataToExport) -> DataToExport:
+        """ Filter Data to be saved depending on first the presence of the extra_attribute: *do_save* and then on
+        the H5Saver settings
+        """
+        dte_filtered = DataToExport('Filtered')
+        for dwa in dte:
+            if 'do_save' in dwa.extra_attributes:  # this is the main filter
+                if dwa.do_save:
+                    dte_filtered.append(dwa)
+            elif self.filter_data_wrt_settings(dwa):
+                dte_filtered.append(dwa)
+        return dte_filtered
+
+    def filter_data_wrt_settings(self, dwa: DataWithAxes) -> bool:
+        """ Check if this DataWithAxes should be saved depending on the H5Saver settings
+
+        Return True if it should be saved
+        """
+        flag = True
+        if not self.h5saver.settings['save_2D']:  # exclude 2D data and above
+            flag = flag and not (dwa.dim == DataDim.Data2D or dwa.dim == DataDim.DataND)
+        if self.h5saver.settings['save_raw_only']:  # exclude Calculated data
+            flag = flag and dwa.source == DataSource.raw
+        return flag
+
     def add_bkg(self, where: Union[Node, str], data_bkg: DataToExport):
         """ Adds a DataToExport as a background node in the h5file
 
@@ -205,12 +233,12 @@ class DetectorSaver(ModuleSaver):
         """
         self._datatoexport_saver.add_bkg(where, data_bkg)
 
-    def add_external_h5(self, other_h5data: H5SaverLowLevel):
+    def add_external_h5(self, other_h5data: H5SaverBase):
         if other_h5data is not None:
             external_group = self._h5saver.add_group('external_data', 'external_h5', self.module_group)
             try:
                 if not other_h5data.isopen:
-                    h5saver = H5SaverLowLevel()
+                    h5saver = H5SaverBase()
                     h5saver.init_file(addhoc_file_path=other_h5data.filename)
                     h5_file = h5saver.h5_file
                 else:
@@ -236,7 +264,7 @@ class DetectorTimeSaver(DetectorSaver):
         super().__init__(module)
         self._datatoexport_saver: DataToExportTimedSaver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportTimedSaver(self.h5saver)
 
 
@@ -251,7 +279,7 @@ class DetectorEnlargeableSaver(DetectorSaver):
 
     def __init__(self, module: DAQ_Viewer,
                  enl_axis_names: Iterable[str] = None,
-                 enl_axis_units: Iterable[str] = None,):
+                 enl_axis_units: Iterable[str] = None):
         super().__init__(module)
         self.enl_axis_names = enl_axis_names
         self.enl_axis_units = enl_axis_units
@@ -276,7 +304,7 @@ class DetectorExtendedSaver(DetectorSaver):
         self._extended_shape = extended_shape
         self._datatoexport_saver: DataToExportExtendedSaver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportExtendedSaver(self.h5saver, self._extended_shape)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Tuple[int],
@@ -303,7 +331,7 @@ class ActuatorSaver(ModuleSaver):
         self._module: DAQ_Move = module
         self._h5saver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportSaver(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata=None):
@@ -327,7 +355,7 @@ class ActuatorTimeSaver(ActuatorSaver):
         super().__init__(module)
         self._datatoexport_saver: DataToExportTimedSaver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportTimedSaver(self.h5saver)
 
     def add_data(self, where: Union[Node, str], data: DataToExport):
@@ -345,13 +373,13 @@ class ActuatorEnlargeableSaver(ActuatorTimeSaver):
 
     def __init__(self, module: DAQ_Move,
                  enl_axis_names: Iterable[str] = None,
-                 enl_axis_units: Iterable[str] = None,):
+                 enl_axis_units: Iterable[str] = None):
         super().__init__(module)
         self.enl_axis_names = enl_axis_names
         self.enl_axis_units = enl_axis_units
         self._datatoexport_saver: DataToExportEnlargeableSaver = None
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         self._datatoexport_saver = DataToExportEnlargeableSaver(
             self.h5saver, self.enl_axis_names, self.enl_axis_units)
 
@@ -458,9 +486,10 @@ class ScanSaver(ModuleSaver):
 
     def add_data(self, dte: DataToExport = None, indexes: Tuple[int] = None,
                  distribution=DataDistribution.uniform, **kwargs):
-        for detector in self._module.modules_manager.detectors:
+        for ind, detector in enumerate(self._module.modules_manager.detectors):
             try:
-                detector.insert_data(indexes, where=self._module_group, distribution=distribution)
+                detector.insert_data(indexes, where=self._module_group, distribution=distribution,
+                                     extra_data=dte if ind == 0 else None,)
             except Exception as e:
                 logger.exception(f'Cannot insert data: {str(e)}')
 
@@ -527,7 +556,7 @@ class TimeModuleSaver(ModuleSaver):
             dte = DataToExport('Timestamps', data=[
                 DataRaw('ElapsedTime',
                         data=[np.array([elapsed_time], dtype=np.float32)],
-                        units='s')
+                        units='s'),
             ])
             self._datatoexport_saver.add_data(
                 self._module_group, dte, indexes=indexes,
@@ -575,12 +604,12 @@ class OptimizerSaver(ScanSaver):
 
     def __init__(self, module,
                  enl_axis_names: Iterable[str] = None,
-                 enl_axis_units: Iterable[str] = None,):
+                 enl_axis_units: Iterable[str] = None):
         super().__init__(module)
         self.enl_axis_names = enl_axis_names
         self.enl_axis_units = enl_axis_units
 
-    def update_after_h5changed(self, ):
+    def update_after_h5changed(self):
         for module in self._module.modules_manager.detectors:
             module.module_and_data_saver = DetectorEnlargeableSaver(
                 module, self.enl_axis_names, self.enl_axis_units)

@@ -9,7 +9,8 @@ from typing import List, TYPE_CHECKING
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
-from pymodaq_gui.utils.shared_ui import MenuNames
+from pymodaq.extensions.scan.scan_manager import ScanManager
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
 
@@ -59,7 +60,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
         self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self.toolbar)
 
         splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
         splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
@@ -97,9 +97,13 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
 
     def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_menu(MenuNames.FILE, MenuNames.FILE.capitalize(), parent_menu=menubar)
-        self.add_menu(MenuNames.TOOLS, MenuNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
         self.add_menu('actions', 'Actions', parent_menu=menubar)
+
+        self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
+                         add_break=False)
+        self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
 
     def setup_actions(self):
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
@@ -119,17 +123,17 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('show_file', 'Show file content', 'folder_data',
                         tip='Browse the content of the current HDF5 file')
 
-        self.add_action('new_file', 'New file', 'new2', menu=MenuNames.FILE, auto_toolbar=False)
-        self.add_action('load', 'Open file to append...', 'Open', menu=MenuNames.FILE, auto_toolbar=False)
-        self.get_menu(MenuNames.FILE).addSeparator()
-        self.add_action('save', 'Save copy as...', 'SaveAs', menu=MenuNames.FILE, auto_toolbar=False)
+        self.add_action('new_file', 'New file', 'new2', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.add_action('load', 'Open file to append...', 'Open', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.get_menu(MenuToolbarNames.FILE).addSeparator()
+        self.add_action('save', 'Save copy as...', 'SaveAs', menu=MenuToolbarNames.FILE, auto_toolbar=False)
         # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
         # A developer can access them programmatically or add them back to a menu as needed.
         self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
         self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
 
-        self.add_action('navigator', 'Show Navigator', '', menu=MenuNames.TOOLS, auto_toolbar=False)
-        self.add_action('batch', 'Show Batch Scanner', '', menu=MenuNames.TOOLS, auto_toolbar=False)
+        self.add_action('navigator', 'Show Navigator', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
+        self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
     def connect_things(self):

@@ -81,7 +81,7 @@ def create_one_roi(prog, qtbot, roitype='RectROI'):
     return index_roi, roi, roi_type
 
 
-def copy_one_roi(prog, qtbot, roi ):
+def copy_one_roi(prog, qtbot, roi):
     prog.view.get_action('roi').trigger()
     qtbot.wait(0)
     with qtbot.waitSignal(prog.view.roi_manager.new_ROI_signal, timeout=10000) as blocker:

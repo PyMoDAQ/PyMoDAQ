@@ -15,7 +15,7 @@ print(dashboard.get_configurations().result())
 # Same remark as dashboard.apply_preset
 dashboard.apply_configuration('default')
 
-print(dashboard.get_devices().result()) # returns the names
+print(dashboard.get_devices().result())  # returns the names
 # >>> {'actuators': ['Theta', 'Temperature', 'Power', 'Xaxis'], 'detectors': ['Det2D', 'Det0D', 'Det1D']}
 
 devices = dashboard.get_scripting_devices()

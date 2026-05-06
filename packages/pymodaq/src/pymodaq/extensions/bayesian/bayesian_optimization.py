@@ -22,7 +22,7 @@ PREDICTION_NAMES = GenericAcquisitionFunctionFactory.usual_names()
 PREDICTION_SHORT_NAMES = GenericAcquisitionFunctionFactory.short_names()
 PREDICTION_PARAMS = ([{'title': 'Kind', 'name': 'kind', 'type': 'list',
                       'value': PREDICTION_NAMES[0],
-                      'limits': {name: short_name for name, short_name in zip(PREDICTION_NAMES, PREDICTION_SHORT_NAMES)}}
+                      'limits': {name: short_name for name, short_name in zip(PREDICTION_NAMES, PREDICTION_SHORT_NAMES)}},
                      ] +
                      [{'title': 'Options', 'name': 'options', 'type': 'group',
                        'children': GenericAcquisitionFunctionFactory.get(PREDICTION_SHORT_NAMES[0]).params}]

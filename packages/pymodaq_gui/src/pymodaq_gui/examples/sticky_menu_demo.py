@@ -48,15 +48,15 @@ class StickyMenuDemo(CustomApp):
         # --- Checkable-only menu ---
         self.add_action('ch_toggle1', 'Toggle A', checkable=True, menu='checkable')
         self.add_action('ch_toggle2', 'Toggle B', checkable=True, menu='checkable')
-        self.add_action('ch_normal',  'Normal action (closes menu)', menu='checkable')
+        self.add_action('ch_normal', 'Normal action (closes menu)', menu='checkable')
 
         # --- All-sticky menu ---
         self.add_action('all_toggle', 'Toggle', checkable=True, menu='all')
         self.add_action('all_normal', 'Normal action (stays open)', menu='all')
 
         # --- Custom predicate menu ---
-        self.add_action('pin_a',   '[pin] Pinned action A', menu='custom')
-        self.add_action('pin_b',   '[pin] Pinned action B', checkable=True, menu='custom')
+        self.add_action('pin_a', '[pin] Pinned action A', menu='custom')
+        self.add_action('pin_b', '[pin] Pinned action B', checkable=True, menu='custom')
         self.add_action('unpin_c', 'Unpinned action C (closes menu)', menu='custom')
 
     def connect_things(self):

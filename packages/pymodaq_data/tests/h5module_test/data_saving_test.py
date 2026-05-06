@@ -62,7 +62,7 @@ def init_data_to_export():
                                      index=0),
                                 Axis(data=create_axis_array(DATA2D.shape[1]),
                                      label='myaxis1', units='myunits1',
-                                     index=1), ],
+                                     index=1)],
                           errors=[np.random.random_sample(DATA2D.shape) for _ in range(Ndata)])
 
     data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)],
@@ -88,6 +88,15 @@ def init_data_to_export():
 
     data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
     return data_to_export
+
+@pytest.fixture()
+def create_h5_with_data_to_export(h5saver_lowlevel, init_data_to_export):
+    dte = init_data_to_export
+    data_saver = DataToExportSaver(h5saver_lowlevel)
+
+    det_group = h5saver_lowlevel.get_set_group(h5saver_lowlevel.raw_group, 'MyDet')
+    data_saver.add_data(det_group, dte)
+    return h5saver_lowlevel
 
 
 class TestAxisSaverLoader:
@@ -183,7 +192,7 @@ class TestDataSaverLoader:
                             axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1)],)
+                                       index=1)])
 
         data_saver.add_data(h5saver.raw_group, data)
         assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
@@ -266,7 +275,7 @@ class TestDataSaverLoader:
         axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='mm',
                      index=0),
                 Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='um',
-                     index=1), ]
+                     index=1)]
 
         Ndata = 2
         data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
@@ -326,7 +335,7 @@ class TestBkgSaver:
         axes = [Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='ms',
                      index=0),
                 Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='s',
-                     index=1), ]
+                     index=1)]
 
         data_bkg = init_data(DATA2D, axes=axes, name='mykbg')
         bkgSaver.add_data(h5saver.raw_group, data_bkg)
@@ -356,7 +365,7 @@ class TestDataEnlargeableSaver:
 
         data = DataWithAxes(name='mydata', data=[data_array for _ in range(Ndata)],
                             labels=['mylabel1', 'mylabel2'],
-                            source='raw', distribution='uniform',)
+                            source='raw', distribution='uniform')
         data.create_missing_axes()
 
         data_saver.add_data(h5saver.raw_group, data, axis_values=axis_values)
@@ -388,7 +397,7 @@ class TestDataEnlargeableSaver:
         data_saver = DataEnlargeableSaver(h5saver)
 
         data = DataRaw(name='mynddata', data=[data_array_0D for _ in range(Ndata)],
-                       labels=['mylabel1',],
+                       labels=['mylabel1'],
                        nav_indexes=(0,),
                        axes=[axis_values])
 
@@ -421,7 +430,7 @@ class TestDataEnlargeableSaver:
         data_saver = DataEnlargeableSaver(h5saver)
 
         data = DataRaw(name='mynddata', data=[data_array_1D_1D for _ in range(Ndata)],
-                       labels=['mylabel1',],
+                       labels=['mylabel1'],
                        nav_indexes=(0,),
                        axes=[axis_nav, axis_sig])
 
@@ -466,7 +475,7 @@ class TestDataExtendedSaver:
                                        index=0),
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1',
                                        units='s',
-                                       index=1),])
+                                       index=1)])
         data_ext_shape = list(EXT_SHAPE)
         data_ext_shape.extend(data.shape)
 
@@ -528,14 +537,8 @@ class TestDataExtendedSaver:
 
 
 class TestDataToExportSaver:
-    def test_save(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
-
-        data_saver = DataToExportSaver(h5saver)
-
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        data_saver.add_data(det_group, data_to_export)
+    def test_save(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
 
 
 class TestDataToExportEnlargeableSaver:
@@ -567,7 +570,7 @@ class TestDataToExportEnlargeableSaver:
 
         dte_saver = DataToExportEnlargeableSaver(h5saver,
                                                  enl_axis_names=['ax' for _ in range(Nenl)],
-                                                 enl_axis_units=['units' for _ in range(Nenl)]
+                                                 enl_axis_units=['units' for _ in range(Nenl)],
                                                  )
         dte_loader = DataLoader(h5saver)
 
@@ -635,7 +638,7 @@ class TestDataToExportExtendedSaver:
             DataWithAxes(name='mydata1D', data=[data_float],
                          source='raw', dim='Data1D', distribution='uniform',
                          axes=[Axis(data=create_axis_array(data_float.shape[0]),
-                                    label='ax0', units='ms', index=0)])
+                                    label='ax0', units='ms', index=0)]),
         ])
 
         EXT_SHAPE = (4, 3)
@@ -658,29 +661,18 @@ class TestDataToExportExtendedSaver:
 
 
 class TestDataLoader:
-    def test_load_normal_data(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
-        data_loader = DataLoader(h5saver)
-
-        data_saver = DataToExportSaver(h5saver)
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-
-        data_saver.add_data(det_group, data_to_export)
+    def test_load_normal_data(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
+        data_loader = DataLoader(create_h5_with_data_to_export)
 
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
         assert len(data_loaded) == 1
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(DATA2D))
 
-    def test_load_one_node(self, h5saver_lowlevel, init_data_to_export):
-        h5saver = h5saver_lowlevel
-        data_to_export = init_data_to_export
+    def test_load_one_node(self, create_h5_with_data_to_export):
+        h5saver = create_h5_with_data_to_export
         data_loader = DataLoader(h5saver)
-
-        data_saver = DataToExportSaver(h5saver)
-        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
-        data_saver.add_data(det_group, data_to_export)
 
         data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
         assert len(data_loaded) == 1
@@ -772,3 +764,23 @@ class TestDataLoader:
         # axis node from this type of loading should be 'index'
         assert dwa.axes[0].units == UNITS  # should not be that as the retrieved axis units of an
         # axis node from this type of loading should be ''
+
+    def test_load_data_from_name_origin(self, h5saver_lowlevel, init_data_to_export):
+        h5saver = h5saver_lowlevel
+        dte = init_data_to_export
+
+        with DataToExportSaver(h5saver) as data_saver:
+            det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+            data_saver.add_data(det_group, dte)
+
+            with DataLoader(h5saver) as data_loader:
+                for dwa in dte:
+                    dwa_loaded = data_loader.load_data_from_name_origin(
+                        name=dwa.name, origin=dwa.origin,
+                    )
+                    assert dwa_loaded == dwa
+
+                with pytest.raises(NameError):
+                    dwa_loaded = data_loader.load_data_from_name_origin(
+                        name='aunknown name', origin='and_origin',
+                    )

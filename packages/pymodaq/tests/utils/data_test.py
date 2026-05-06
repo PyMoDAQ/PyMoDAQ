@@ -51,13 +51,12 @@ class TestDataFromPlugins:
 
     def test_attributes(self):
         dwa = data_mod.DataFromPlugins(name='blabla', data=[DATA1D])
-
-        assert hasattr(dwa, 'do_plot')
-        assert dwa.do_plot is True
-
-        assert hasattr(dwa, 'do_save')
-        assert dwa.do_save is True
-
+        # no more valid for pymodaq >= 5.2
+        # assert hasattr(dwa, 'do_plot')
+        # assert dwa.do_plot is True
+        #
+        # assert hasattr(dwa, 'do_save')
+        # assert dwa.do_save is True
 
 
 class TestDataActuator:

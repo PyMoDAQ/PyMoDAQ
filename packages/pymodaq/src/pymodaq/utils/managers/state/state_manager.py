@@ -190,7 +190,7 @@ class StateManager(ManagerBase):
         """ for quick testing purpose, not meant to be used at the end"""
         children = ioxml.XML_file_to_parameter(file_path)
         settings = Parameter.create(
-            title="Control Modules:", name="control_modules", type="group", children=children
+            title="Control Modules:", name="control_modules", type="group", children=children,
         )
         self.populate_from_settings(settings)
 

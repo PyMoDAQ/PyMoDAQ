@@ -47,7 +47,7 @@ from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCom
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands,)
+from pymodaq.utils.leco.pymodaq_listener import (MoveActorListener, LECOMoveCommands, LECOCommands)
 from pymodaq.control_modules.utils import ControllerStatus
 from pymodaq import Q_, Unit
 
@@ -94,7 +94,7 @@ class DAQ_Move(ParameterControlModule):
     current_value_signal = Signal(DataActuator)
     bounds_signal = Signal(bool)
 
-    params = daq_move_params +  [
+    params = daq_move_params + [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
          'visible': True, 'children': H5Saver.get_params_for_save_type(SaveType.actuator), 'expanded': False}]
 
@@ -228,12 +228,12 @@ class DAQ_Move(ParameterControlModule):
     def master(self, is_master: bool):
         if self.initialized_state:
             self.settings.child("move_settings", "controller", "controller_status").setValue(
-                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE
+                ControllerStatus.MASTER if is_master else ControllerStatus.SLAVE,
             )
 
 
     def append_data(
-        self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None
+        self, dte: Optional[DataToExport] = None, where: Union[Node, str, None] = None,
     ):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
@@ -326,7 +326,7 @@ class DAQ_Move(ParameterControlModule):
         try:
             if isinstance(value, Number):
                 value = DataActuator(
-                    self.title, data=[np.array([value])], units=self.units
+                    self.title, data=[np.array([value])], units=self.units,
                 )
             self._send_to_leco = send_to_leco
             if value.equal_to(self._current_value, self.epsilon):
@@ -338,10 +338,10 @@ class DAQ_Move(ParameterControlModule):
                 self._target_value = value
                 self.update_status("Moving")
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                    ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
                 )
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value])
+                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value]),
                 )
 
         except Exception as e:
@@ -362,7 +362,7 @@ class DAQ_Move(ParameterControlModule):
             self._move_done_bool = False
             self.update_status("Moving")
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
             )
             self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.MOVE_HOME))
 
@@ -370,7 +370,7 @@ class DAQ_Move(ParameterControlModule):
             self.logger.exception(str(e))
 
     def move_rel(
-        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False
+        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False,
     ):
         """Move the connected hardware to the relative value
 
@@ -387,7 +387,7 @@ class DAQ_Move(ParameterControlModule):
         try:
             if isinstance(rel_value, Number):
                 rel_value = DataActuator(
-                    self.title, data=[np.array([rel_value])], units=self.units
+                    self.title, data=[np.array([rel_value])], units=self.units,
                 )
             self._send_to_leco = send_to_leco
             if self.ui is not None:
@@ -396,10 +396,10 @@ class DAQ_Move(ParameterControlModule):
             self._target_value = self._current_value + rel_value
             self.update_status("Moving")
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
             )
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.MOVE_REL, attribute=[rel_value])
+                ThreadCommand(ControlToHardwareMove.MOVE_REL, attribute=[rel_value]),
             )
 
         except Exception as e:
@@ -441,7 +441,7 @@ class DAQ_Move(ParameterControlModule):
         else:
             try:
                 hardware = DAQ_Move_Hardware(
-                    self._actuator_type, self._current_value, self._title
+                    self._actuator_type, self._current_value, self._title,
                 )
                 self._hardware_thread = QThread()
                 hardware.moveToThread(self._hardware_thread)
@@ -459,7 +459,7 @@ class DAQ_Move(ParameterControlModule):
                             self.settings.child("move_settings").saveState(),
                             self.controller,
                         ],
-                    )
+                    ),
                 )
                 self.connect_leco(True)
             except Exception as e:
@@ -516,10 +516,10 @@ class DAQ_Move(ParameterControlModule):
     def param_deleted(self, param):
         """Apply deletion of settings"""
         if param.name() not in putils.iter_children(
-            self.settings.child("main_settings"), []
+            self.settings.child("main_settings"), [],
         ):
             self._update_settings_signal.emit(
-                edict(path=["move_settings"], param=param, change="parent")
+                edict(path=["move_settings"], param=param, change="parent"),
             )
 
     def child_added(self, param, data):
@@ -527,7 +527,7 @@ class DAQ_Move(ParameterControlModule):
         path = self.settings.childPath(param)
         if "main_settings" not in path:
             self._update_settings_signal.emit(
-                edict(path=path, param=data[0].saveState(), change="childAdded")
+                edict(path=path, param=data[0].saveState(), change="childAdded"),
             )
 
     def raise_timeout(self):
@@ -537,7 +537,7 @@ class DAQ_Move(ParameterControlModule):
 
     @Slot(ThreadCommand)
     def thread_status(
-        self, status: ThreadCommand
+        self, status: ThreadCommand,
     ):  # general function to get datas/infos from all threads back to the main
         """Get back info (using the ThreadCommand object) from the hardware
 
@@ -565,7 +565,7 @@ class DAQ_Move(ParameterControlModule):
         if status.command == ThreadStatusMove.INI_STAGE:
             self.update_status(
                 f"Stage initialized: {status.attribute['initialized']} "
-                f"info: {status.attribute['info']}"
+                f"info: {status.attribute['info']}",
             )
             if status.attribute["initialized"]:
                 self.controller = status.attribute["controller"]
@@ -586,7 +586,7 @@ class DAQ_Move(ParameterControlModule):
             if self.ui is not None:
                 self.ui.display_value(data_act)
                 if self.ui.has_action("show_graph") and not self.ui.is_action_checked(
-                    "show_graph"
+                    "show_graph",
                 ):
                     self.ui.show_data(DataToExport(name=self.title, data=[data_act]))
 
@@ -627,7 +627,7 @@ class DAQ_Move(ParameterControlModule):
             self.units = status.attribute
 
     def _check_data_type(
-        self, data_act: Union[list, np.ndarray, Number, DataActuator]
+        self, data_act: Union[list, np.ndarray, Number, DataActuator],
     ) -> DataActuator:
         """Make sure the data is a DataActuator
 
@@ -636,7 +636,7 @@ class DAQ_Move(ParameterControlModule):
         if isinstance(data_act, list):  # backcompatibility
             if isinstance(data_act[0], Number):
                 data_act = DataActuator(
-                    data=[np.atleast_1d(val) for val in data_act], units=self.units
+                    data=[np.atleast_1d(val) for val in data_act], units=self.units,
                 )
             elif isinstance(data_act[0], np.ndarray):
                 data_act = DataActuator(data=data_act, units=self.units)
@@ -670,7 +670,7 @@ class DAQ_Move(ParameterControlModule):
 
         try:
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE)
+                ThreadCommand(ControlToHardwareMove.GET_ACTUATOR_VALUE),
             )
 
         except Exception as e:
@@ -704,7 +704,7 @@ class DAQ_Move(ParameterControlModule):
         """
         if get_value:
             self._refresh_timer.setInterval(
-                self.settings["main_settings", "refresh_timeout"]
+                self.settings["main_settings", "refresh_timeout"],
             )
             self._refresh_timer.start()
         else:
@@ -730,7 +730,7 @@ class DAQ_Move(ParameterControlModule):
             self.update_settings()
         else:
             raise ActuatorError(
-                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}"
+                f"{act_type} is an invalid actuator, should be within {ACTUATOR_NAMES}",
             )
 
     @property
@@ -740,7 +740,7 @@ class DAQ_Move(ParameterControlModule):
 
     def update_plugin_config(self):
         parent_module = utils.find_dict_in_list_from_key_val(
-            ACTUATOR_TYPES, "name", self.actuator
+            ACTUATOR_TYPES, "name", self.actuator,
         )
         mod = import_module(parent_module["module"].__package__.split(".")[0])
 
@@ -757,7 +757,7 @@ class DAQ_Move(ParameterControlModule):
             self.ui.set_unit_as_suffix(unit)
             self.ui.set_unit_prefix(
                 config("pymodaq", "actuator", "siprefix")
-                and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units"))
+                and (unit != "" or config("pymodaq", "actuator", "siprefix_even_without_units")),
             )
 
     @property
@@ -825,7 +825,7 @@ class DAQ_Move(ParameterControlModule):
             for child in self.settings.child("move_settings").children():
                 child.remove()
             parent_module = utils.find_dict_in_list_from_key_val(
-                ACTUATOR_TYPES, "name", self._actuator_type
+                ACTUATOR_TYPES, "name", self._actuator_type,
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self._actuator_type),
@@ -833,7 +833,7 @@ class DAQ_Move(ParameterControlModule):
             )
             params = getattr(class_, "params")
             move_params = Parameter.create(
-                name="move_settings", type="group", children=params
+                name="move_settings", type="group", children=params,
             )
 
             self.settings.child("move_settings").addChildren(move_params.children())
@@ -866,7 +866,7 @@ class DAQ_Move(ParameterControlModule):
             self.move_rel(status.attribute, send_to_leco=True)
         elif status.command == LECOMoveCommands.MOVE_HOME:
             self.move_home(send_to_leco=True)
-        elif status.command ==  LECOMoveCommands.GET_ACTUATOR_VALUE:
+        elif status.command == LECOMoveCommands.GET_ACTUATOR_VALUE:
             self.get_actuator_value(send_to_leco=True)
         elif status.command == LECOMoveCommands.STOP:
             self.stop_motion()
@@ -951,7 +951,7 @@ class DAQ_Move_Hardware(QObject):
         status = edict(initialized=False, info="")
         try:
             parent_module = utils.find_dict_in_list_from_key_val(
-                ACTUATOR_TYPES, "name", self.actuator_type
+                ACTUATOR_TYPES, "name", self.actuator_type,
             )
             class_ = getattr(
                 getattr(parent_module["module"], "daq_move_" + self.actuator_type),
@@ -961,7 +961,7 @@ class DAQ_Move_Hardware(QObject):
             assert self.hardware is not None
             try:
                 infos = self.hardware.ini_stage(
-                    controller
+                    controller,
                 )  # return edict(info="", controller=, stage=)
             except Exception as e:
                 logger.exception("Hardware couldn't be initialized", exc_info=e)
@@ -982,8 +982,8 @@ class DAQ_Move_Hardware(QObject):
             if status.initialized:
                 self.status_sig.emit(
                     ThreadCommand(
-                        ThreadStatusMove.GET_ACTUATOR_VALUE, self.get_actuator_value()
-                    )
+                        ThreadStatusMove.GET_ACTUATOR_VALUE, self.get_actuator_value(),
+                    ),
                 )
 
             return status
@@ -1001,7 +1001,7 @@ class DAQ_Move_Hardware(QObject):
         self.hardware.ispolling = polling
         if self.hardware.data_actuator_type == self.hardware.data_actuator_type.float:
             self.hardware.move_abs(
-                position.units_as(self.hardware.axis_unit).value()
+                position.units_as(self.hardware.axis_unit).value(),
             )  # convert to plugin controller current axis units
         else:
             position.units = (
@@ -1054,7 +1054,7 @@ class DAQ_Move_Hardware(QObject):
         """Send the move_done signal back to the main class"""
         self._current_value = pos
         self.status_sig.emit(
-            ThreadCommand(command=ThreadStatusMove.MOVE_DONE, attribute=pos)
+            ThreadCommand(command=ThreadStatusMove.MOVE_DONE, attribute=pos),
         )
 
     @Slot(ThreadCommand)
@@ -1087,13 +1087,13 @@ class DAQ_Move_Hardware(QObject):
             if command.command == ControlToHardwareMove.INI_STAGE:
                 status: edict = self.ini_stage(*command.attribute)
                 self.status_sig.emit(
-                    ThreadCommand(command=ThreadStatusMove.INI_STAGE, attribute=status)
+                    ThreadCommand(command=ThreadStatusMove.INI_STAGE, attribute=status),
                 )
 
             elif command.command == ControlToHardwareMove.CLOSE:
                 status = self.close()
                 self.status_sig.emit(
-                    ThreadCommand(command=ThreadStatus.CLOSE, attribute=[status])
+                    ThreadCommand(command=ThreadStatus.CLOSE, attribute=[status]),
                 )
 
             elif command.command == ControlToHardwareMove.MOVE_ABS:
@@ -1108,7 +1108,7 @@ class DAQ_Move_Hardware(QObject):
             elif command.command == ControlToHardwareMove.GET_ACTUATOR_VALUE:
                 pos = self.get_actuator_value()
                 self.status_sig.emit(
-                    ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos)
+                    ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos),
                 )
 
             elif command.command == ControlToHardwareMove.STOP_MOTION:
@@ -1136,7 +1136,7 @@ class DAQ_Move_Hardware(QObject):
         DAQ_utils.ThreadCommand, stop_motion
         """
         self.status_sig.emit(
-            ThreadCommand(command="Update_Status", attribute=["Motion stoping", "log"])
+            ThreadCommand(command="Update_Status", attribute=["Motion stoping", "log"]),
         )
         self.motion_stoped = True
         assert self.hardware is not None

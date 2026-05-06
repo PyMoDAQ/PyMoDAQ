@@ -45,11 +45,11 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config'},
         {'title': 'Dynamic:', 'name': 'dynamic', 'type': 'list',
          'limits': config('data','data_saving', 'data_type', 'dynamic'),
          'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
-        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
+        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True},
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
         {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
@@ -79,7 +79,7 @@ params = [
         ]},
 
     ]},
-    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': []}
+    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': []},
 ]
 
 
@@ -99,11 +99,6 @@ def main(plugin_file=None, init=True, title='Testing'):
 
     app = mkQApp("PyMoDAQ Viewer")
 
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('PyMoDAQ Viewer')
     if plugin_file is None:
         detector = 'Mock'
         det_type = f'DAQ0D'
@@ -118,7 +113,6 @@ def main(plugin_file=None, init=True, title='Testing'):
 
     if init:
         daq_viewer.init_hardware_ui(init)
-
 
     sys.exit(app.exec())
 

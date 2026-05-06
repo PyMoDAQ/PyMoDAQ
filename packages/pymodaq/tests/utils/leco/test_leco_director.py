@@ -33,8 +33,8 @@ class Test_check_actor_connection:
     def test_send_request(self, director: FakeDirector):
         director.communicator._r = [
             Message(
-                director_name, actor_name, ResultResponse(1, None), message_type=MessageTypes.JSON
-            )
+                director_name, actor_name, ResultResponse(1, None), message_type=MessageTypes.JSON,
+            ),
         ]
         director.check_actor_connection()
         sent = director.communicator._s.pop()
@@ -56,7 +56,7 @@ class Test_check_actor_connection:
                 "COORDINATOR",
                 ErrorResponse(1, RECEIVER_UNKNOWN),
                 message_type=MessageTypes.JSON,
-            )
+            ),
         ]
         director.check_actor_connection()
         tc = director._status
