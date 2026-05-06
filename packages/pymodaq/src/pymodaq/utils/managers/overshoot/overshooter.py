@@ -180,7 +180,7 @@ class Overshooter(ManagerBase):
                 if self.is_action_checked(ManagerActions.EXECUTE):
                     self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(000)
+                QtCore.QThread.msleep(0)
 
             if self.is_action_checked(ManagerActions.EXECUTE):
                 self.close_subentries_display(1000)

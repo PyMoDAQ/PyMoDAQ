@@ -99,7 +99,7 @@ def create_remote_connection_params() -> list[dict]:
 
 
 
-class ControlModule(QObject):
+class ControlModule(QObject, QuittableApp):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
 
     Attributes
@@ -325,9 +325,6 @@ class ControlModule(QObject):
     def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
-    def quit(self):
-        """Programmatic entry to quit the control module"""
-        raise NotImplementedError
 
     def init_hardware(self, do_init=True):
         """Programmatic entry to initialize/deinitialize the control module
@@ -402,7 +399,7 @@ class ControlModule(QObject):
                         attr = value
 
 
-class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule, QuittableApp):
+class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule):
     """Base class for a control module with parameters."""
 
     _update_settings_signal = Signal(edict)

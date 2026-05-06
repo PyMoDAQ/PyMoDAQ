@@ -721,11 +721,10 @@ class DAQ_PID(CustomExt):
             areas = self.dock_area.tempAreas[:]
             for area in areas:
                 area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
-            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
+            if hasattr(self.model_class, 'setpoints_names'):
+                self.dashboard.remove_modules(self.model_class.setpoints_names[:])
+
             super().quit()
 
         except Exception as e:

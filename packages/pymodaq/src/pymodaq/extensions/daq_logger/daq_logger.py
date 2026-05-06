@@ -172,7 +172,8 @@ class DAQ_Logger(CustomExt):
             quit
         """
         try:
-            self.logger.close()
+            if self.logger:
+                self.logger.close()
         except Exception as e:
             logger.exception(str(e))
 
