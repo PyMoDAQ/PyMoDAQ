@@ -44,14 +44,18 @@ def __elevate_windows(*commands: str) -> bool:
         bool: True if elevation and commands exeution was successfull, False otherwise
     """
     command_chain = " && ".join(commands)
-    ret = ctypes.windll.shell32.ShellExecuteW(
-        None,       # parent window
-        "runas",    # UAC
-        "cmd.exe",
-        f'/c {command_chain}',
-        None,
-        0           # to not show the cmd.exe window
-    )
+    try:
+        ret = ctypes.windll.shell32.ShellExecuteW(
+            None,       # parent window
+            "runas",    # UAC
+            "cmd.exe",
+            f'/c {command_chain}',
+            None,
+            0           # to not show the cmd.exe window
+        )
+    except Exception as e:
+        logger.error(f"Windows elevation via UAC failed. ({e})")
+        return False
     if ret <= 32:
         logger.error(f"Windows elevation via UAC failed.")
         return False
@@ -86,7 +90,11 @@ def __elevate_unix(*commands: list[str]) -> bool:
     )
 
     if SYSTEM == "Linux":
-        result = subprocess.run(["pkexec", "sh", "-c", shell_commands], capture_output=True).returncode
+        try:
+            result = subprocess.run(["pkexec", "sh", "-c", shell_commands], capture_output=True).returncode
+        except Exception as e:
+            logger.error(f"Linux elevation via pkexec failed. ({e})")
+            return False
         if result != 0:
             logger.error("Linux elevation via pkexec failed.")
             return False
@@ -94,7 +102,11 @@ def __elevate_unix(*commands: list[str]) -> bool:
         # macOS — escape inner double-quotes for the osascript string
         escaped = shell_commands.replace('"', '\\"')
         script = f'do shell script "{escaped}" with administrator privileges'
-        result = subprocess.run(["osascript", "-e", script], capture_output=True)
+        try:
+            result = subprocess.run(["osascript", "-e", script], capture_output=True)
+        except Exception as e:
+            logger.error(f"macOS elevation via osascript failed: {e}")
+            return False
         if result.returncode != 0:
             logger.error(f"macOS elevation via osascript failed: {result.stderr.decode().strip()}")
             return False
