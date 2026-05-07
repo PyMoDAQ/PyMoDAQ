@@ -31,6 +31,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: User Interfaces",
 ]
+
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
