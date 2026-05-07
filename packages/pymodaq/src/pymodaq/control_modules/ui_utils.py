@@ -100,12 +100,9 @@ class ControlModuleUI(CustomApp):
         action_name: str
             The name of the init action
         """
-        if initialized:
-            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().green)
-        else:
-            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().red)
         if self.has_action(action_name):
-            self.get_action(action_name).set_icon(icon)
+            self.get_action(action_name).set_icon(self.INIT_ICON, self.get_theme().green if
+            initialized else self.get_theme().red)
 
     def enable_actions(self, status=True, all_except=()):
         """Enable or disable all toolbar actions, optionally excluding some.

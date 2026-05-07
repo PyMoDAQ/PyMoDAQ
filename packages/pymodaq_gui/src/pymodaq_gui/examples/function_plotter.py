@@ -43,7 +43,7 @@ class FunctionPlotter(CustomApp):
                 {'title': 'Npts:', 'name': 'npoints', 'type': 'int', 'value': 200},
                 {'title': 'Xstart:', 'name': 'xstart', 'type': 'float', 'value': -10},
                 {'title': 'Xstop:', 'name': 'xstop', 'type': 'int', 'value': 10},
-            ]}
+            ]},
     ]
 
     def __init__(self, dockarea):
@@ -125,7 +125,7 @@ class FunctionPlotter(CustomApp):
                                       labels=[function_str],
                                       axes=[Axis(
                                           data=x, label='An axis', units='arb. units')],
-                                      )
+                                      ),
                               )
 
     def value_changed(self, param):

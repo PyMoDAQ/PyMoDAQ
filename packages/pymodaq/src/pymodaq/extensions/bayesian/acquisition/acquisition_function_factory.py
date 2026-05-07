@@ -30,7 +30,7 @@ class GenericAcquisitionFunctionBase(metaclass=ABCMeta):
     def tradeoff(self, tradeoff):
         raise NotImplementedError
 
-    def suggest(self, gaussian_process, target_space, n_random = 1000, n_l_bfgs_b = 10, fit_gp = True):
+    def suggest(self, gaussian_process, target_space, n_random=1000, n_l_bfgs_b=10, fit_gp=True):
         return self._function.suggest(gaussian_process, target_space, n_random, n_l_bfgs_b, fit_gp)
     
 

@@ -46,7 +46,7 @@ from .core import (
     DictSync,
     SyncMode,
     DataType,
-    InitFrom
+    InitFrom,
 )
 from .factories import WidgetSyncFactories
 from typing import Any, Callable, Type

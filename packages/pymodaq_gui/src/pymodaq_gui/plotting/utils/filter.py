@@ -192,7 +192,7 @@ class Filter2DFromCrosshair(Filter):
         dte = DataToExport('Crosshair')
         if len(hor_data) > 0 and len(hor_axis) > 0:
             dte.append(DataFromRoi('hor', data=hor_data,
-                                   axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]),)
+                                   axes=[Axis(dwa.axes[1].label, dwa.axes[1].units, data=hor_axis)]))
         if len(ver_data) > 0 and len(ver_axis) > 0:
             dte.append(DataFromRoi('ver', data=ver_data,
                                    axes=[Axis(dwa.axes[0].label, dwa.axes[0].units, data=ver_axis)]))
@@ -257,7 +257,7 @@ class Filter1DFromRois(Filter):
             logger.warning(f'Issue with the ROI: {str(e)}')
         return dte
 
-    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
+    def get_data_from_roi(self, roi: LinearROI, roi_param: Parameter, data: data_mod.DataWithAxes) -> DataToExport:
         if data is not None:
             dte = DataToExport('ROI1D')
             _slice = self.get_slice_from_roi(roi, data)
@@ -354,7 +354,7 @@ class Filter2DFromRois(Filter):
                 x_axis = Axis(_x_axis.label, _x_axis.units, data=xvals, index=0, spread_order=0)
                 _y_axis = dwa.get_axis_from_index_spread(0, 1)
                 y_axis = Axis(_y_axis.label, _y_axis.units, data=yvals, index=0, spread_order=0)
-                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis],)
+                sub_data_hor = DataFromRoi('hor', distribution='spread', data=[data_H], axes=[x_axis])
                 sub_data_ver = DataFromRoi('ver', distribution='spread', data=[data_V], axes=[y_axis])
                 math_data = DataFromRoi('int', data=int_data)
             else:

@@ -9,23 +9,19 @@ Created the 05/09/2022
 from typing import List, Union
 import sys
 
-from qtpy import QtWidgets, QtGui, QtCore
-from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
-
-import qt_themes
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import QVBoxLayout,  QWidget
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
-from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
-from pymodaq_gui.utils import Dock, DockArea
+from pymodaq_gui.utils import DockArea
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
-from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
+from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.utils.styling import create_icon
-from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector

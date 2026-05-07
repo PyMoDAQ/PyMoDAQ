@@ -2,31 +2,16 @@ from abc import abstractmethod
 
 HW_KIND = 'detector'
 HW_SETTINGS_KEY = f'{HW_KIND}_settings'
-from typing import Union, Iterable
-from qtpy import QtWidgets
+from typing import Iterable, Union
+
+from pymodaq_data.data import DataToExport
+from pymodaq_gui.plotting.items.roi import RoiInfo
+from pymodaq_gui.qt_utils import mkQApp
+from pymodaq_utils.config import GlobalConfig, get_set_local_dir
+from pymodaq_utils.warnings import deprecation_msg
 from qtpy.QtCore import Signal
 
-
-from pymodaq.utils.parameter import ioxml
-
-
-import numpy as np
-from pymodaq.utils.math_utils import gauss1D, gauss2D
-from pymodaq_utils.utils import ThreadCommand, getLineInfo
-
-from pymodaq_utils.config import get_set_local_dir, GlobalConfig
-
-from pymodaq_data.data import DataToExport, DataRaw
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
-from pymodaq_gui.plotting.items.roi import RoiInfo
-from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.control_modules.utils import (create_controller_param, create_remote_connection_params,
-                                            PluginBase)
-from pymodaq_gui.qt_utils import mkQApp
-from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+from pymodaq.control_modules.utils import PluginBase, create_controller_param, create_remote_connection_params
 
 config = GlobalConfig()
 
@@ -48,11 +33,11 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config', },
+        {'title': 'Plugin Config:', 'name': 'plugin_config', 'type': 'bool_push', 'label': 'Show Config'},
         {'title': 'Dynamic:', 'name': 'dynamic', 'type': 'list',
          'limits': config('data','data_saving', 'data_type', 'dynamic'),
          'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
-        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
+        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True},
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
         {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
         {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
@@ -93,12 +78,14 @@ def main(plugin_file=None, init=True, title='Testing'):
     -------
     """
     import sys
-    from qtpy import QtWidgets
-    from pymodaq.utils.gui_utils import DockArea
     from pathlib import Path
-    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
+
+    from qtpy import QtWidgets
+
     from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
     from pymodaq.control_modules.instruments import DAQTypesEnum
+    from pymodaq.utils.gui_utils import DockArea
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 
     app = mkQApp("PyMoDAQ Viewer")
 

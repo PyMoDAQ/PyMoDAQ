@@ -24,7 +24,7 @@ class SettingsManager:
 
     def create_settings_all(self,
                             actuators: list[Parameter] | list[DAQ_Move],
-                            detectors: list[Parameter] | list[DAQ_Viewer],):
+                            detectors: list[Parameter] | list[DAQ_Viewer]):
         settings = Parameter.create(
             title="Control Modules Settings",
             name="control_modules_settings",
@@ -32,7 +32,7 @@ class SettingsManager:
             children=[{'title': 'Actuators:', 'name': ModuleType.Actuator.value, 'type': 'group',
                        VALID_FOR_CONFIGURATION: True},
                       {'title': 'Detectors:', 'name': ModuleType.Detector.value, 'type': 'group',
-                       VALID_FOR_CONFIGURATION: True},],
+                       VALID_FOR_CONFIGURATION: True}],
         )
         if len(actuators) > 0:
             if isinstance(actuators[0], Parameter):
@@ -66,7 +66,7 @@ class SettingsManager:
     def add_settings_from_modules_in_experiment(self,
                                                 settings: Parameter,
                                                 experiment_settings: list[Parameter],
-                                                module_type: ModuleType = ModuleType.Actuator
+                                                module_type: ModuleType = ModuleType.Actuator,
                                                 ):
         """ Adds to a given Parameter children based from the current value of their settings
 
@@ -91,7 +91,7 @@ class SettingsManager:
             {'title': title, 'name': name, 'type': 'group',
              'children': [
                  {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': title,
-                  VALID_FOR_CONFIGURATION: False}
+                  VALID_FOR_CONFIGURATION: False},
              ]},
         )
         settings.child(module_type, name).addChildren(module_settings.children())

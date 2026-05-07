@@ -175,11 +175,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     def statusbar(self) -> QtWidgets.QStatusBar | None:
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
 
-    def update_status(self, message: str, wait_time: Optional[int] = None):
-        if self.statusbar is not None:
-            if wait_time is None:
-                wait_time = config('gui', 'message_status_persistence')
-            self.statusbar.showMessage(message, wait_time)
+    def update_status(self, message: str, laps_ms=500):
+        self.statusbar.showMessage(message, laps_ms)
 
     @property
     def splash_sc(self) -> QtWidgets.QSplashScreen:

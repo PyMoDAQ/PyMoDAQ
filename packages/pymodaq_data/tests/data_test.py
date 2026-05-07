@@ -375,7 +375,7 @@ class TestDataBase:
         assert data.labels == labels_auto
 
     def test_data_source(self):
-        data = data_mod.DataBase('myData', source='calculated',  data=[DATA2D])
+        data = data_mod.DataBase('myData', source='calculated', data=[DATA2D])
         assert data.source == data_mod.DataSource['calculated']
 
     @mark.parametrize("data_array, datadim", [(DATA0D, 'Data0D'), (DATA0D, data_mod.DataDim['Data0D']),
@@ -658,7 +658,7 @@ class TestDataWithAxesUniform:
         AXIS_INDEX = 0
         sorted_data = data.sort_data(axis_index=AXIS_INDEX)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index])
+            assert np.allclose(sorted_data.data[ind], data_arrays[ind][sorted_index])
         assert np.allclose(sorted_data.get_axis_from_index(AXIS_INDEX)[0].get_data(), axis_array[sorted_index])
 
     def test_sorted_uniform_2D_not_inplace(self):
@@ -678,12 +678,12 @@ class TestDataWithAxesUniform:
 
         sorted_data_0 = data.sort_data(axis_index=0)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+            assert np.allclose(sorted_data_0.data[ind], data_arrays[ind][sorted_index_0, :])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
         sorted_data_1 = data.sort_data(axis_index=1)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_1.data[ind],  data_arrays[ind][:, sorted_index_1])
+            assert np.allclose(sorted_data_1.data[ind], data_arrays[ind][:, sorted_index_1])
         assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
 
     def test_sorted_uniform_2D_inplace(self):
@@ -704,12 +704,12 @@ class TestDataWithAxesUniform:
         sorted_data_0 = data.sort_data(axis_index=0, inplace=True)
 
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+            assert np.allclose(sorted_data_0.data[ind], data_arrays[ind][sorted_index_0, :])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
         sorted_data_1 = data.sort_data(axis_index=1)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_1.data[ind],  sorted_data_0.data[ind][:, sorted_index_1])
+            assert np.allclose(sorted_data_1.data[ind], sorted_data_0.data[ind][:, sorted_index_1])
         assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
@@ -769,7 +769,7 @@ class TestDataWithAxesUniform:
         assert dwa_padded.size == dwa.size + np.sum(pad_width[0])
         assert dwa_padded.axes[0].size == dwa.axes[0].size + np.sum(pad_width[0])
 
-        pad_width = ((123, 256), (12, 25),)
+        pad_width = ((123, 256), (12, 25))
         with pytest.raises(TypeError):
             dwa_padded = dwa.pad(pad_width)
 
@@ -809,7 +809,7 @@ class TestDataWithAxesUniform:
             assert dwa_padded.shape[ind] == dwa.shape[ind] + np.sum(pad_width)
             assert dwa_padded.get_axis_from_index(ind)[0].size == dwa.get_axis_from_index(ind)[0].size + np.sum(pad_width)
 
-        pad_width = ((123, 256), (12, 25),)
+        pad_width = ((123, 256), (12, 25))
         dwa_padded = dwa.pad(pad_width)
         for ind in range(len(dwa.shape)):
             assert dwa_padded.shape[ind] == dwa.shape[ind] + np.sum(pad_width[ind])
@@ -847,7 +847,7 @@ class TestDataWithAxesUniform:
                                data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
                                                                  PHI),
                                      OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
-                                                                 PHI2)
+                                                                 PHI2),
                                      ],
                                labels=['sinus1', 'sinus2'],
                                axes=[time_axis])
@@ -876,7 +876,7 @@ class TestDataWithAxesUniform:
                                data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
                                                                  PHI),
                                      OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
-                                                                 PHI2)
+                                                                 PHI2),
                                      ],
                                axes=[time_axis])
         dwa_ft = dwa.ft()
@@ -903,7 +903,7 @@ class TestNavIndexes:
         assert data.sig_indexes == (0, 2)
 
         data.nav_indexes = ()
-        assert data.sig_indexes == (0, 1,  2)
+        assert data.sig_indexes == (0, 1, 2)
 
 
 class TestDataWithAxesSpread:
@@ -932,7 +932,7 @@ class TestDataWithAxesSpread:
 
     def test_nav_axis_length(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
-        nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1,])))
+        nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1])))
         with pytest.raises(data_mod.DataLengthError):
             data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
                                   dim=data_mod.DataDim['Data1D'],
@@ -1007,7 +1007,7 @@ class TestDataWithAxesSpread:
             assert data.sort_data(axis_index=3, spread_index=0) == data
             sorted_data = data.sort_data(axis_index=0, spread_index=0)
             for ind in range(len(data)):
-                assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index_0_0, ...])
+                assert np.allclose(sorted_data.data[ind], data_arrays[ind][sorted_index_0_0, ...])
             for nav_index in sorted_data.nav_indexes:
                 for axis in sorted_data.get_axis_from_index(nav_index):
                     assert np.allclose(axis.get_data(),
@@ -1388,7 +1388,7 @@ class TestDataToExport:
 
         dat2.origin = ORIGIN1
 
-        assert data.get_origins()  == [ORIGIN1]
+        assert data.get_origins() == [ORIGIN1]
 
     def test_get_data_from_name_origin(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
@@ -1586,28 +1586,28 @@ class TestNumpyUfunc:
                 [np.random.rand(),
                  init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
-                 True
+                 True,
                  ],
                 [np.random.rand(),
                  init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=''),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
                  data_mod.Q_(np.random.rand(), REAL_UNITS),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
                  data_mod.Q_(np.random.rand(len(DATA1D)), REAL_UNITS),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                       units=REAL_UNITS),
                  init_data(DATA1D * 10, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
-                 False
+                 False,
                  ],
         ))
     def test_add(self, elt1, elt2, unit_error):
@@ -1726,7 +1726,7 @@ class TestFuncNumpy:
 
     def test_booleans(self):
         dwa_bool = data_mod.DataRaw('raw', units='', data=[
-            np.array([[True, False], [True, True]])],)
+            np.array([[True, False], [True, True]])])
 
         dwa_all = np.all(dwa_bool)
         assert not dwa_all[0]
@@ -1762,7 +1762,7 @@ class TestFuncNumpy:
         assert np.allclose(np.absolute(dwa)[0], 1)
 
     def test_db(self):
-        dwa = data_mod.DataRaw('raw', units='s', data=[GAUSSIAN_2D],)
+        dwa = data_mod.DataRaw('raw', units='s', data=[GAUSSIAN_2D])
 
         dwa_db = dwa.to_dB()
         assert dwa_db.units == ''
@@ -1793,7 +1793,7 @@ class TestFuncNumpy:
     def test_roll(self):
         dwa = data_mod.DataRaw('raw', units='', data=[DATA2D])
         SHIFT = (10, 5)
-        dwa_rolled = np.roll(dwa, shift = SHIFT)
+        dwa_rolled = np.roll(dwa, shift=SHIFT)
         assert np.allclose(dwa_rolled[0], np.roll(dwa[0], shift=SHIFT))
 
 
@@ -1814,9 +1814,9 @@ class TestPintUnitReduction:
         (Q_(1., 'm'), Q_(1., 'm'), Q_(1., 'm**2')),
         (Q_(1., '°'), Q_(1., '°'), Q_(1., '°**2')),
         (Q_(1., 'm'), Q_(1., 's'), Q_(1., 'm * s')),
-        (Q_(1., 'km/s'), Q_(1., 'm/min'), Q_(60000., 'm**2 / min**2')), # May change?
+        (Q_(1., 'km/s'), Q_(1., 'm/min'), Q_(60000., 'm**2 / min**2')),  # May change?
         (Q_(1., 'rad'), Q_(1., 'rad'), Q_(1., 'rad**2')),
-        (Q_(1., '°'), Q_(1., 'rad'), Q_(1., 'rad * °')), # Can't simplify
+        (Q_(1., '°'), Q_(1., 'rad'), Q_(1., 'rad * °')),  # Can't simplify
         (Q_(1., 'step'), Q_(1., 'step'), Q_(1., Unit('step**2'))),
         (Q_(1., 'm'), Q_(1.), Q_(1., 'm')),
         (Q_(1., '°'), Q_(1.), Q_(1., '°')),

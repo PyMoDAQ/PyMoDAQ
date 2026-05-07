@@ -62,9 +62,9 @@ class SliderSpinBox(QtWidgets.QWidget):
 
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
-        self.spinbox.valueChanged.emit(value) #Initializing slider from value
+        self.spinbox.valueChanged.emit(value)  #Initializing slider from value
 
-    def get_bounds(self,):
+    def get_bounds(self):
         """ Convert bounds from opts into list of floats
 
         Returns:
@@ -110,7 +110,7 @@ class SliderSpinBox(QtWidgets.QWidget):
             try:
                 value = np.rint((np.log10(val) - np.log10(min_val)) / (np.log10(max_val) - np.log10(min_val)) * 100)
             except ZeroDivisionError:
-                value  = 50
+                value = 50
         value = int(value)
         self.slider.setValue(value)
         self.slider.valueChanged.connect(self.update_spinbox)

@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 
 class Scan2DBase(ScannerBase):    
     params = [{'title': 'Ax1:', 'name': 'axis1', 'type': 'group',
-                'children':[]
+                'children':[],
                 }, 
                 {'title': 'Ax2:', 'name': 'axis2', 'type': 'group',
-                'children':[]
+                'children':[],
                 }, 
                 ]
     axes = ('axis1','axis2')    

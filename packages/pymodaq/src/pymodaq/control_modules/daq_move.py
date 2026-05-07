@@ -43,7 +43,7 @@ from pymodaq.control_modules.thread_commands import (ThreadStatus, ThreadStatusM
                                                      ControlToHardwareMove, UiToMainMove,
                                                      )
 from pymodaq.control_modules.move_utility_classes import (ThreadCommand, MoveCommand, DAQ_Move_base, DataActuatorType,
-                                                           check_units, DataUnitError)
+                                                           check_units)
 
 
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
@@ -93,7 +93,7 @@ class DAQ_Move(ParameterControlModule):
     current_value_signal = Signal(DataActuator)
     bounds_signal = Signal(bool)
 
-    params = daq_move_params +  [
+    params = daq_move_params + [
         {'title': 'Saver Settings:', 'name': 'saver_settings', 'type': 'group',
          'visible': True, 'children': H5Saver.get_params_for_save_type(SaveType.actuator), 'expanded': False}]
 
@@ -354,7 +354,7 @@ class DAQ_Move(ParameterControlModule):
         try:
             if isinstance(value, Number):
                 value = DataActuator(
-                    self.title, data=[np.array([value])], units=self.units
+                    self.title, data=[np.array([value])], units=self.units,
                 )
             self._send_to_leco = send_to_leco
             if value.equal_to(self._current_value, self.epsilon):
@@ -366,10 +366,10 @@ class DAQ_Move(ParameterControlModule):
                 self._target_value = value
                 self.update_status("Moving")
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                    ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
                 )
                 self.command_hardware.emit(
-                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value])
+                    ThreadCommand(ControlToHardwareMove.MOVE_ABS, attribute=[value]),
                 )
 
         except Exception as e:
@@ -390,7 +390,7 @@ class DAQ_Move(ParameterControlModule):
             self._move_done_bool = False
             self.update_status("Moving")
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
             )
             self.command_hardware.emit(ThreadCommand(ControlToHardwareMove.MOVE_HOME))
 
@@ -398,7 +398,7 @@ class DAQ_Move(ParameterControlModule):
             self.logger.exception(str(e))
 
     def move_rel(
-        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False
+        self, rel_value: Union[DataActuator, numbers.Number], send_to_leco=False,
     ):
         """Move the connected hardware to the relative value
 
@@ -415,7 +415,7 @@ class DAQ_Move(ParameterControlModule):
         try:
             if isinstance(rel_value, Number):
                 rel_value = DataActuator(
-                    self.title, data=[np.array([rel_value])], units=self.units
+                    self.title, data=[np.array([rel_value])], units=self.units,
                 )
             self._send_to_leco = send_to_leco
             if self.ui is not None:
@@ -424,10 +424,10 @@ class DAQ_Move(ParameterControlModule):
             self._target_value = self._current_value + rel_value
             self.update_status("Moving")
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION)
+                ThreadCommand(ControlToHardwareMove.RESET_STOP_MOTION),
             )
             self.command_hardware.emit(
-                ThreadCommand(ControlToHardwareMove.MOVE_REL, attribute=[rel_value])
+                ThreadCommand(ControlToHardwareMove.MOVE_REL, attribute=[rel_value]),
             )
 
         except Exception as e:
@@ -671,7 +671,7 @@ class DAQ_Move(ParameterControlModule):
 
     @Slot(ThreadCommand)
     def thread_status(
-        self, status: ThreadCommand
+        self, status: ThreadCommand,
     ):  # general function to get datas/infos from all threads back to the main
         """Get back info (using the ThreadCommand object) from the hardware
 
@@ -699,7 +699,7 @@ class DAQ_Move(ParameterControlModule):
         if status.command == ThreadStatus.INI_HARDWARE or status.command == ThreadStatusMove.INI_STAGE:
             self.update_status(
                 f"Stage initialized: {status.attribute['initialized']} "
-                f"info: {status.attribute['info']}"
+                f"info: {status.attribute['info']}",
             )
             if status.attribute["initialized"]:
                 self.controller = status.attribute["controller"]
@@ -720,7 +720,7 @@ class DAQ_Move(ParameterControlModule):
             if self.ui is not None:
                 self.ui.display_value(data_act)
                 if self.ui.has_action("show_graph") and not self.ui.is_action_checked(
-                    "show_graph"
+                    "show_graph",
                 ):
                     self.ui.show_data(DataToExport(name=self.title, data=[data_act]))
 
@@ -785,7 +785,7 @@ class DAQ_Move(ParameterControlModule):
             self.move_rel(status.attribute, send_to_leco=True)
         elif status.command == LECOMoveCommands.MOVE_HOME:
             self.move_home(send_to_leco=True)
-        elif status.command ==  LECOMoveCommands.GET_ACTUATOR_VALUE:
+        elif status.command == LECOMoveCommands.GET_ACTUATOR_VALUE:
             self.get_actuator_value(send_to_leco=True)
         elif status.command == LECOMoveCommands.STOP:
             self.stop_motion()
@@ -896,8 +896,8 @@ class ActuatorWorker(HardwareWorkerBase):
             if status.initialized:
                 self.status_sig.emit(
                     ThreadCommand(
-                        ThreadStatusMove.GET_ACTUATOR_VALUE, self.get_actuator_value()
-                    )
+                        ThreadStatusMove.GET_ACTUATOR_VALUE, self.get_actuator_value(),
+                    ),
                 )
 
             return status
@@ -961,7 +961,7 @@ class ActuatorWorker(HardwareWorkerBase):
         self._move_completed = True
         self._current_value = pos
         self.status_sig.emit(
-            ThreadCommand(command=ThreadStatusMove.MOVE_DONE, attribute=pos)
+            ThreadCommand(command=ThreadStatusMove.MOVE_DONE, attribute=pos),
         )
 
     @Slot(ThreadCommand)
@@ -994,7 +994,7 @@ class ActuatorWorker(HardwareWorkerBase):
             elif command.command == ControlToHardwareMove.GET_ACTUATOR_VALUE:
                 pos = self.get_actuator_value()
                 self.status_sig.emit(
-                    ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos)
+                    ThreadCommand(ThreadStatusMove.GET_ACTUATOR_VALUE, pos),
                 )
 
             elif command.command == ControlToHardwareMove.STOP_MOTION:

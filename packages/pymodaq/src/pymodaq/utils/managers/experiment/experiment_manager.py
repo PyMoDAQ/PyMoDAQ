@@ -268,35 +268,79 @@ class ExperimentManager(ManagerBase):
                     self.dashboard.add_move(plug_name, None, plug_type, actuator_docks, actuator_widgets,
                                             actuators_modules,
                                             ui_identifier=plugin["settings"].child("info", "ui").value())
-                    module = actuators_modules[-1]
+
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != ControllerStatus.MASTER:
+                            raise MasterSlaveError(f"The instrument {plug_name} should"
+                                                   f" be defined as Master")
+                        if plug_init:
+                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            actuators_modules[-1].init_hardware_ui()
+                            actuators_modules[-1].master = True
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = actuators_modules[-1].controller
+
+                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the experiment) in order to init "
+                                f"its associated slave instrument",
+                            )
+                    else:
+                        if plugin["status"] != ControllerStatus.SLAVE:
+                            raise MasterSlaveError(f"The instrument {plug_name} should"
+                                                   f" be defined as slave")
+                        if plug_init:
+                            actuators_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            actuators_modules[-1].controller = master_controller
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+
+                    self.subentries_model.set_status(ind_module, True)
+
                 else:
                     plug_dim = plugin["settings"].child("info", "dim").value()
                     self.dashboard.add_det(plug_name, None,
                                            detector_docks_viewer, detector_modules,
                                            plug_dim, plug_type)
-                    module = detector_modules[-1]
-                    
-                # Early validation for status
-                if (ind_plugin == 0 and plugin["status"] != ControllerStatus.MASTER) or \
-                (ind_plugin != 0 and plugin["status"] != ControllerStatus.SLAVE):
-                    expected_status = ControllerStatus.MASTER if ind_plugin == 0 else ControllerStatus.SLAVE
-                    raise MasterSlaveError(f"The instrument {plug_name} should be defined as {expected_status}")                    
-                
-                # Common initialization logic
-                if plug_init:
-                    module.apply_controller_parameters(plugin["settings"].child("controller"))
-                    if ind_plugin == 0:
-                        module.master = True
-                        self.dashboard.init_module(module)
-                        master_controller = module.controller
+                    QtWidgets.QApplication.processEvents()
+
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != ControllerStatus.MASTER:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Master",
+                            )
+                        if plug_init:
+                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = detector_modules[-1].controller
+                        elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the experiment) in order to init "
+                                f"its associated slave instrument",
+                            )
                     else:
-                        self.dashboard.init_module(module, controller=master_controller)
-                # Master-specific validation
-                elif plugin["status"] == ControllerStatus.MASTER and len(plug_IDs) > 1:
-                    raise MasterSlaveError(
-                        f"The instrument {plug_name} defined as Master has to be initialized "
-                        f"(init checked in the preset) in order to init its associated slave instrument"
-                    )
+                        if plugin["status"] != ControllerStatus.SLAVE:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Slave",
+                            )
+                        if plug_init:
+                            detector_modules[-1].controller = master_controller
+                            detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
 
                 self.subentries_model.set_status(ind_module, True)
 
@@ -351,20 +395,20 @@ class ExperimentManager(ManagerBase):
             if plug["type"] == "det":
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "detector_settings", "controller_ID"
+                        "params", "detector_settings", "controller_ID",
                     ]
                     plug["status"] = plug["value"][
-                        "params", "detector_settings", "controller_status"
+                        "params", "detector_settings", "controller_status",
                     ]
                 except KeyError as e:
                     raise DetectorError
             else:
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID"
+                        "params", "move_settings", "multiaxes", "controller_ID",
                     ]
                     plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status"
+                        "params", "move_settings", "multiaxes", "multi_status",
                     ]
                 except KeyError as e:
                     raise ActuatorError
@@ -407,12 +451,47 @@ class ExperimentManager(ManagerBase):
                 plug_settings = plugin["value"].child("params")
 
                 if plugin["type"] == "move":
-                    plug_type = plug_settings.child("main_settings", "move_type").value()
+                    plug_type = plug_settings.child(
+                        "main_settings", "move_type",
+                    ).value()
                     self.dashboard.add_move(
                         plug_name, None, plug_type,
                         actuator_docks, actuator_widgets, actuators_modules,
                     )
-                    module = actuators_modules[-1]
+
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != "Master":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Master",
+                            )
+                        if plug_init:
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = actuators_modules[-1].controller
+                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the experiment) in order to init "
+                                f"its associated slave instrument",
+                            )
+                    else:
+                        if plugin["status"] != "Slave":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as slave",
+                            )
+                        if plug_init:
+                            actuators_modules[-1].controller = master_controller
+                            actuators_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(actuators_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+
+                    self.subentries_model.set_status(ind_module, True)
+
                 else:
                     plug_subtype = plug_settings["main_settings", "detector_type"]
                     plug_type = plug_settings['main_settings', 'DAQ_type']
@@ -423,11 +502,38 @@ class ExperimentManager(ManagerBase):
                     QtWidgets.QApplication.processEvents()
                     module = detector_modules[-1]
 
-                master_controller = self._init_module_master_slave(
-                    module, ind_plugin, plug_name, plug_init,
-                    plug_IDs, plugin["status"], master_controller,
-                )
-                self.subentries_model.set_status(ind_module, True)
+                    if ind_plugin == 0:  # should be a master type plugin
+                        if plugin["status"] != "Master":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Master",
+                            )
+                        if plug_init:
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+                            master_controller = detector_modules[-1].controller
+                        elif plugin["status"] == "Master" and len(plug_IDs) > 1:
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} defined as Master has to be "
+                                f"initialized (init checked in the experiment) in order to init "
+                                f"its associated slave instrument",
+                            )
+                    else:
+                        if plugin["status"] != "Slave":
+                            raise MasterSlaveError(
+                                f"The instrument {plug_name} should"
+                                f" be defined as Slave",
+                            )
+                        if plug_init:
+                            detector_modules[-1].controller = master_controller
+                            detector_modules[-1].init_hardware_ui()
+                            QtWidgets.QApplication.processEvents()
+                            self.dashboard.modules_manager.poll_init(detector_modules[-1])
+                            QtWidgets.QApplication.processEvents()
+
+                    self.subentries_model.set_status(ind_module, True)
 
         QtWidgets.QApplication.processEvents()
         self.close_subentries_display()

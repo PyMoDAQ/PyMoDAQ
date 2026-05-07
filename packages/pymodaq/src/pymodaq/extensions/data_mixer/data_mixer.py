@@ -39,7 +39,7 @@ class DataMixer(CustomExt):
          'children': [
              {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
               'limits': [d['name'] for d in models]},
-             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
+             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action'},
              {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
 
          ]}]
@@ -110,7 +110,7 @@ class DataMixer(CustomExt):
 
         """
         combo_model = QtWidgets.QComboBox()
-        combo_model.addItems([model['name'] for  model in self.models])
+        combo_model.addItems([model['name'] for model in self.models])
         self.add_widget('models', combo_model, tip='List of available models')
         self.add_action('ini_model', 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)

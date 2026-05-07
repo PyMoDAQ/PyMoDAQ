@@ -80,7 +80,7 @@ class WidgetSyncFactories:
 
         if prop_index == -1:
             raise ValueError(
-                f"Property '{property_name}' not found on {type(widget).__name__}"
+                f"Property '{property_name}' not found on {type(widget).__name__}",
             )
 
         prop = meta.property(prop_index)
@@ -93,7 +93,7 @@ class WidgetSyncFactories:
             else:
                 raise ValueError(
                     f"Property '{property_name}' has no notify signal. "
-                    f"Please provide signal_name explicitly."
+                    f"Please provide signal_name explicitly.",
                 )
 
         # Get signal object
@@ -101,7 +101,7 @@ class WidgetSyncFactories:
             signal = getattr(widget, signal_name)
         except AttributeError:
             raise ValueError(
-                f"Signal '{signal_name}' not found on {type(widget).__name__}"
+                f"Signal '{signal_name}' not found on {type(widget).__name__}",
             )
 
         # Store property name in local variable to avoid capturing self in lambda
@@ -139,7 +139,7 @@ class WidgetSyncFactories:
 
     @classmethod
     def for_checkbox(cls, checkbox, initial: bool = False,
-                     mode = None, validator = None) -> WidgetSync:
+                     mode=None, validator=None) -> WidgetSync:
         """
         Create a sync for checkbox widgets.
 
@@ -171,7 +171,7 @@ class WidgetSyncFactories:
 
     @classmethod
     def for_spinbox(cls, spinbox, initial: int | float = 0,
-                    mode = None, validator = None) -> WidgetSync:
+                    mode=None, validator=None) -> WidgetSync:
         """
         Create a sync for QSpinBox or QDoubleSpinBox widgets.
 
@@ -204,7 +204,7 @@ class WidgetSyncFactories:
 
     @classmethod
     def for_slider(cls, slider, initial: int = 0,
-                   mode = None, validator = None) -> WidgetSync:
+                   mode=None, validator=None) -> WidgetSync:
         """
         Create a sync for QSlider widgets.
 
@@ -237,7 +237,7 @@ class WidgetSyncFactories:
     @classmethod
     def for_combobox(cls, combobox, initial: int | str = 0,
                      use_text: bool = False,
-                     mode = None, validator = None) -> WidgetSync:
+                     mode=None, validator=None) -> WidgetSync:
         """
         Create a sync for QComboBox widgets.
 
@@ -281,7 +281,7 @@ class WidgetSyncFactories:
 
     @classmethod
     def for_lineedit(cls, lineedit, initial: str = "",
-                     mode = None, validator = None) -> WidgetSync:
+                     mode=None, validator=None) -> WidgetSync:
         """
         Create a sync for QLineEdit widgets.
 

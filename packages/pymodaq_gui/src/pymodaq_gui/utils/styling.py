@@ -271,7 +271,7 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         if icon_checked_color is not None:
             icon_name.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
         return _flip_icon(icon_name, flip_h, flip_v)
-    elif isinstance(icon_name, QtGui.QIcon): #cannot set Color on non MaterialIcons
+    elif isinstance(icon_name, QtGui.QIcon):  #cannot set Color on non MaterialIcons
         return _flip_icon(icon_name, flip_h, flip_v)
     elif resource_path_exists(
             MaterialIcon.resource_path(
@@ -287,13 +287,13 @@ def create_icon(icon_name: Union[QtGui.QIcon, str, Path],
         icon.set_color(create_color(icon_color))
         if icon_checked_color is not None:
             icon.set_color(create_color(icon_checked_color), state=QtGui.QIcon.State.On)
-    elif Path(icon_name).is_file(): # Test if icon is in path
+    elif Path(icon_name).is_file():  # Test if icon is in path
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
     elif resource_path_exists(f"icons:{icon_name}.png"):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(f"icons:{icon_name}.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
-    elif hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name): # Test if icon is in Qt's library
+    elif hasattr(QtGui.QIcon,'ThemeIcon') and hasattr(QtGui.QIcon.ThemeIcon, icon_name):  # Test if icon is in Qt's library
         icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon, icon_name))
     elif hasattr(QtWidgets.QStyle.StandardPixmap, icon_name):
         pixmapi = getattr(QtWidgets.QStyle.StandardPixmap, icon_name)

@@ -12,7 +12,7 @@ import pymodaq_gui  # to init stuff related to pymodaq_gui  # necessary, leave i
 
 from pymodaq_data import Q_, Unit, ureg  # necessary, leave it there
 
-from pymodaq.utils.config import Config # Necessary for registration
+from pymodaq.utils.config import Config  # Necessary for registration
 from pymodaq_utils.config import GlobalConfig as Config
 try:
     # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:

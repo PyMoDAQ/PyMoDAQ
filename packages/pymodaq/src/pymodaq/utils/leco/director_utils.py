@@ -31,7 +31,7 @@ class GenericDirector(Director):
         self.ask_rpc(method=GenericMethods.SET_INFO,
                      **binary_serialization_to_kwargs(pwp, data_key='parameter'))
 
-    def get_settings(self,) -> None:
+    def get_settings(self) -> None:
         self.ask_rpc(GenericMethods.GET_SETTINGS)
 
 
@@ -49,12 +49,12 @@ class DetectorDirector(GenericDirector):
 class ActuatorDirector(GenericDirector):
     def move_abs(self, position: Union[list, float, DataActuator]) -> None:
         self.ask_rpc(
-            MoveMethods.MOVE_ABS, **binary_serialization_to_kwargs(position, data_key="position")
+            MoveMethods.MOVE_ABS, **binary_serialization_to_kwargs(position, data_key="position"),
         )
 
     def move_rel(self, position: Union[list, float, DataActuator]) -> None:
         self.ask_rpc(
-            MoveMethods.MOVE_REL, **binary_serialization_to_kwargs(position, data_key="position")
+            MoveMethods.MOVE_REL, **binary_serialization_to_kwargs(position, data_key="position"),
         )
 
     def move_home(self) -> None:
@@ -68,7 +68,7 @@ class ActuatorDirector(GenericDirector):
         # according to DAQ_Move, this supersedes "check_position"
         self.ask_rpc(MoveMethods.GET_ACTUATOR_VALUE)
 
-    def stop_motion(self,) -> None:
+    def stop_motion(self) -> None:
         # not implemented in DAQ_Move!
         self.ask_rpc(MoveMethods.STOP_MOTION)
 

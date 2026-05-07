@@ -29,7 +29,7 @@ class BasicCheckboxSync(QWidget):
         layout.addWidget(QLabel(
             "Use Case: Module state sync between compact and full views\n"
             "✓ All checkboxes stay in sync\n"
-            "✓ Change any one, all update"
+            "✓ Change any one, all update",
         ))
 
         # Create checkboxes
@@ -72,7 +72,7 @@ class BasicCheckboxSync(QWidget):
     def update_status(self):
         self.status.setText(
             f"Init: {self.init_sync.value} | Grab: {self.grab_sync.value}\n"
-            f"Connections: {self.init_sync.connection_count + self.grab_sync.connection_count}"
+            f"Connections: {self.init_sync.connection_count + self.grab_sync.connection_count}",
         )
 
 
@@ -86,7 +86,7 @@ class DifferentWidgetTypes(QWidget):
         layout.addWidget(QLabel(
             "Use Case: Control same value with different widgets\n"
             "✓ Slider, SpinBox, Progress all sync\n"
-            "✓ match='property' allows different types"
+            "✓ match='property' allows different types",
         ))
 
         # Slider
@@ -124,7 +124,7 @@ class DifferentWidgetTypes(QWidget):
         self.value_sync.bind(
             self.progress,
             setter=lambda v: self.progress.setValue(v),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         layout.addStretch()
@@ -140,7 +140,7 @@ class OppositeCheckboxes(QWidget):
         layout.addWidget(QLabel(
             "Use Case: Enable/Disable or Lock/Unlock with opposite states\n"
             "✓ Use to_sync_transform and from_sync_transform\n"
-            "✓ One checkbox controls opposite of another"
+            "✓ One checkbox controls opposite of another",
         ))
 
         # Enable/Disable pair
@@ -157,7 +157,7 @@ class OppositeCheckboxes(QWidget):
             self.disable_checkbox,
             match='property',
             to_sync_transform=lambda checked: not checked,  # Invert
-            from_sync_transform=lambda checked: not checked
+            from_sync_transform=lambda checked: not checked,
         )
 
         # Code snippet
@@ -165,7 +165,7 @@ class OppositeCheckboxes(QWidget):
             "Implementation:\n"
             "sync.add(opposite_checkbox, match='property',\n"
             "         to_sync_transform=lambda v: not v,\n"
-            "         from_sync_transform=lambda v: not v)"
+            "         from_sync_transform=lambda v: not v)",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px; border-radius: 5px;")
         layout.addWidget(code)
@@ -182,7 +182,7 @@ class EnableDisablePattern(QWidget):
 
         layout.addWidget(QLabel(
             "Use Case: Enable advanced controls conditionally\n"
-            "✓ Use value_changed signal to control widget states"
+            "✓ Use value_changed signal to control widget states",
         ))
 
         # Master enable
@@ -226,7 +226,7 @@ class ValueTransforms(QWidget):
         layout.addWidget(QLabel(
             "Use Case: Temperature conversion\n"
             "✓ Celsius spinbox controls the sync\n"
-            "✓ Fahrenheit spinbox uses transforms for conversion"
+            "✓ Fahrenheit spinbox uses transforms for conversion",
         ))
 
         # Celsius (master)
@@ -255,14 +255,14 @@ class ValueTransforms(QWidget):
             self.fahrenheit_spin,
             match='property',
             to_sync_transform=lambda f: round((f - 32) * 5/9),  # F → C
-            from_sync_transform=lambda c: round(c * 9/5 + 32)   # C → F
+            from_sync_transform=lambda c: round(c * 9/5 + 32),   # C → F
         )
 
         # Code snippet
         code = QLabel(
             "sync.add(fahrenheit_spin, match='property',\n"
             "         to_sync_transform=lambda f: (f-32)*5/9,  # F→C\n"
-            "         from_sync_transform=lambda c: c*9/5+32)  # C→F"
+            "         from_sync_transform=lambda c: c*9/5+32)  # C→F",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px; border-radius: 5px;")
         layout.addWidget(code)
@@ -278,7 +278,7 @@ class ManyWidgets(QWidget):
 
         layout.addWidget(QLabel(
             "Use case: Different representations of the same value\n"
-            "Shows WidgetSync works with ANY Qt widget type"
+            "Shows WidgetSync works with ANY Qt widget type",
         ))
 
         # Create many different widgets for 0-100 value
@@ -333,7 +333,7 @@ class ManyWidgets(QWidget):
             self.multi_slider,
             signal=self.multi_slider.valueChanged,
             getter=lambda: self.multi_slider.value(),
-            setter=lambda v: self.multi_slider.setValue(v)
+            setter=lambda v: self.multi_slider.setValue(v),
         )
 
         # SpinBox
@@ -341,7 +341,7 @@ class ManyWidgets(QWidget):
             self.multi_spin,
             signal=self.multi_spin.valueChanged,
             getter=lambda: self.multi_spin.value(),
-            setter=lambda v: self.multi_spin.setValue(v)
+            setter=lambda v: self.multi_spin.setValue(v),
         )
 
         # Dial
@@ -349,14 +349,14 @@ class ManyWidgets(QWidget):
             self.multi_dial,
             signal=self.multi_dial.valueChanged,
             getter=lambda: self.multi_dial.value(),
-            setter=lambda v: self.multi_dial.setValue(v)
+            setter=lambda v: self.multi_dial.setValue(v),
         )
 
         # Progress (read-only)
         self.multi_sync.bind(
             self.multi_progress,
             setter=lambda v: self.multi_progress.setValue(v),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         # LineEdit with validation
@@ -365,14 +365,14 @@ class ManyWidgets(QWidget):
             signal=self.multi_lineedit.textChanged,
             getter=lambda: self.multi_lineedit.text(),
             setter=lambda v: self.multi_lineedit.setText(str(v)),
-            to_sync_transform=lambda text: max(0, min(100, int(text))) if text.isdigit() else 0
+            to_sync_transform=lambda text: max(0, min(100, int(text))) if text.isdigit() else 0,
         )
 
         # Label (read-only)
         self.multi_sync.bind(
             self.multi_label,
             setter=lambda v: self.multi_label.setText(f"Value: {v}"),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
 class EnableVsBind(QWidget):
@@ -385,7 +385,7 @@ class EnableVsBind(QWidget):
         layout.addWidget(QLabel(
             "Understanding enable() vs bind()\n"
             "✓ enable() - Resumes sync but widget keeps its old value\n"
-            "✓ bind() - Creates connection and updates widget immediately"
+            "✓ bind() - Creates connection and updates widget immediately",
         ))
 
         # Master slider
@@ -455,11 +455,11 @@ class EnableVsBind(QWidget):
             "3. Move Master to 30\n"
             "4. Click 'Enable Slave A' → Slave A stays at 70 (no immediate update)\n"
             "5. Click 'Bind Slave B' → Slave B jumps to 30 (immediate update!)\n"
-            "6. Move Master to 50 → All sliders update (both are now syncing)"
+            "6. Move Master to 50 → All sliders update (both are now syncing)",
         )
         instructions.setStyleSheet(
             "padding: 15px; border-radius: 5px; "
-            "border-left: 4px solid #2196f3;"
+            "border-left: 4px solid #2196f3;",
         )
         layout.addWidget(instructions)
 
@@ -472,11 +472,11 @@ class EnableVsBind(QWidget):
             "  • Use for temporary pause\n\n"
             "unbind() → bind():\n"
             "  • Connection removed, widget auto-updates on re-bind\n"
-            "  • Use for permanent disconnection"
+            "  • Use for permanent disconnection",
         )
         comparison.setStyleSheet(
             "padding: 15px; border-radius: 5px; "
-            "font-family: monospace; font-size: 10pt;"
+            "font-family: monospace; font-size: 10pt;",
         )
         layout.addWidget(comparison)
 

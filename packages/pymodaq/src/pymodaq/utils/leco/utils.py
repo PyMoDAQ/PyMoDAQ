@@ -42,7 +42,7 @@ def binary_serialization(
 
 
 def binary_serialization_to_kwargs(
-    pymodaq_object: Union[SERIALIZABLE, Any], data_key: str = "data"
+    pymodaq_object: Union[SERIALIZABLE, Any], data_key: str = "data",
 ) -> dict[str, Any]:
     """Create a dictionary of data parameters and of additional payload to send.
 

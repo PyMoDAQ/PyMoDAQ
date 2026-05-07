@@ -34,12 +34,10 @@ class CustomConfig1(BaseConfig):
 
 
 TOML_DICT = dict(
-    scan=dict(scan1d=
-              dict(start=0.,
+    scan=dict(scan1d=dict(start=0.,
                    stop=5,
                    step=0.1),
-              scan2d=
-              dict(rmax=5,
+              scan2d=dict(rmax=5,
                    rstep=0.2),
               ),
     general=dict(name='myname',
@@ -248,8 +246,7 @@ def test_nested_update_from_user(tmp_path):
     dest_file = copy_template_config(test_name, source_path=template_path)
 
     user_dict = dict(
-        scan=dict(scan1d=
-                  dict(start=23.,
+        scan=dict(scan1d=dict(start=23.,
                        ),
                   ),
     )

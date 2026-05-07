@@ -215,7 +215,7 @@ class DbLogger:
 class DbLoggerGUI(DbLogger, ParameterManager):
     params = [
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
-            'limits': ['PostgreSQL', ]},
+            'limits': ['PostgreSQL']},
         {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
             'value': config('utils', 'network', 'logging', 'sql', 'ip'),
          'tip':'Either localhost if the database server is on the same computer or the IP address of the server'},

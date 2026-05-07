@@ -474,7 +474,7 @@ class ModulesManager(QObject, ParameterManager):
         layout.addLayout(form)
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok |
-            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel,
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -497,7 +497,7 @@ class ModulesManager(QObject, ParameterManager):
         for dact in self.move_done_positions:
             test_actuator.addChild(
                 {'title': dact.name, 'name': dact.name.replace(' ', '_'),
-                 'type': 'float', 'value': dact.value(), 'readonly': True}
+                 'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
 
