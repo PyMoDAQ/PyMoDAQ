@@ -72,6 +72,7 @@ jobs:
           
 
       - name: Install WebEngine
+        continue-on-error: true
         run: |
           pip install ${{ 
             matrix.qt-backend == 'pyqt5' && 'PyQtWebEngine'   || 
