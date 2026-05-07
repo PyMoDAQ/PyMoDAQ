@@ -66,8 +66,8 @@ class ThresholdLoss(LossFunctionBase):
     dim = LossDim.LOSS_2D
     usual_name = 'Threshold'
     params = [
-        {'title': 'Lower:', 'name': 'lower_threshold', 'type': 'float', 'value': None,},
-        {'title': 'Upper:', 'name': 'upper_threshold', 'type': 'float', 'value': None,},
-        {'title': 'Priority factor:', 'name': 'priority_factor', 'type': 'float', 'value': 0.1,},
+        {'title': 'Lower:', 'name': 'lower_threshold', 'type': 'float', 'value': None},
+        {'title': 'Upper:', 'name': 'upper_threshold', 'type': 'float', 'value': None},
+        {'title': 'Priority factor:', 'name': 'priority_factor', 'type': 'float', 'value': 0.1},
     ]
 

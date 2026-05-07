@@ -183,15 +183,15 @@ class ThreadCommand(SerializableBase):
             serialize_factory.get_apply_deserializer(bytes_str=bytes_str, only_object=False),
         )
         attribute, remaining = cast(
-            Tuple[Any, bytes], serialize_factory.get_apply_deserializer(remaining, False)
+            Tuple[Any, bytes], serialize_factory.get_apply_deserializer(remaining, False),
         )
         args, remaining = cast(
             Tuple[list, bytes],
-            serialize_factory.get_apply_deserializer(remaining, False)
+            serialize_factory.get_apply_deserializer(remaining, False),
         )
         kwargs, remaining = cast(
             Tuple[dict, bytes],
-            serialize_factory.get_apply_deserializer(remaining, False)
+            serialize_factory.get_apply_deserializer(remaining, False),
         )
         return ThreadCommand(command, attribute, args=tuple(args), kwargs=kwargs), remaining
 
@@ -639,7 +639,7 @@ if __name__ == '__main__':
                                          exp="'multiaxes'",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox',],
+                                                  '.tox'],
                                          replace=False,
                                          replace_str="pymodaq.utils")
 

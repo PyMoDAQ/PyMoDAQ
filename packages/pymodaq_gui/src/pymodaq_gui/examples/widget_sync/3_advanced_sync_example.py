@@ -33,7 +33,7 @@ class MultipleSyncsExample(QWidget):
             "Use Case: ListWidget with separate item and selection syncs\n"
             "✓ items_sync: Controls what items are available (FROM_SYNC)\n"
             "✓ index_sync: Controls which item is selected (BIDIRECTIONAL)\n"
-            "✓ Same widget participates in TWO different syncs!"
+            "✓ Same widget participates in TWO different syncs!",
         ))
 
         # List widgets
@@ -67,7 +67,7 @@ class MultipleSyncsExample(QWidget):
             self.items_sync.bind(
                 list_widget,
                 setter=lambda items, lw=list_widget: (lw.clear(), lw.addItems(items)),
-                mode=SyncMode.FROM_SYNC
+                mode=SyncMode.FROM_SYNC,
             )
 
         # Sync 2: Index (BIDIRECTIONAL)
@@ -87,13 +87,13 @@ class MultipleSyncsExample(QWidget):
 
         colors_btn = QPushButton("Colors")
         colors_btn.clicked.connect(
-            lambda: setattr(self.items_sync, 'value', ["Red", "Green", "Blue", "Yellow"])
+            lambda: setattr(self.items_sync, 'value', ["Red", "Green", "Blue", "Yellow"]),
         )
         controls.addWidget(colors_btn)
 
         fruits_btn = QPushButton("Fruits")
         fruits_btn.clicked.connect(
-            lambda: setattr(self.items_sync, 'value', ["Apple", "Banana", "Orange", "Grape"])
+            lambda: setattr(self.items_sync, 'value', ["Apple", "Banana", "Orange", "Grape"]),
         )
         controls.addWidget(fruits_btn)
 
@@ -115,7 +115,7 @@ class MultipleSyncsExample(QWidget):
         self.status.setText(
             f"Items: {items}\n"
             f"Selected: {selected} (index {idx})\n"
-            f"List1 participates in: items_sync + index_sync"
+            f"List1 participates in: items_sync + index_sync",
         )
 
 
@@ -130,7 +130,7 @@ class DynamicPropertiesExample(QWidget):
             "Use Case: Configuration that grows over time\n"
             "✓ Start with basic properties (name, version)\n"
             "✓ Add optional properties dynamically (author, license, description)\n"
-            "✓ Remove properties when no longer needed"
+            "✓ Remove properties when no longer needed",
         ))
 
         # Current state display
@@ -203,17 +203,17 @@ class DynamicPropertiesExample(QWidget):
         # Initialize sync with fixed properties
         self.config_sync = WidgetSync(initial_value={
             'name': 'MyProject',
-            'version': 1
+            'version': 1,
         })
 
         # Bind fixed properties
         self.config_sync.bind_properties(
             self.name_edit,
-            property_map={'name': {'property': 'text'}}
+            property_map={'name': {'property': 'text'}},
         )
         self.config_sync.bind_properties(
             self.version_spin,
-            property_map={'version': {'property': 'value'}}
+            property_map={'version': {'property': 'value'}},
         )
 
         # Bind display
@@ -244,7 +244,7 @@ class DynamicPropertiesExample(QWidget):
         # Bind widget to new property
         self.config_sync.bind_properties(
             self.author_edit,
-            property_map={'author': {'property': 'text'}}
+            property_map={'author': {'property': 'text'}},
         )
 
         # Update buttons
@@ -268,7 +268,7 @@ class DynamicPropertiesExample(QWidget):
         # Bind widget
         self.config_sync.bind_properties(
             self.license_edit,
-            property_map={'license': {'property': 'text'}}
+            property_map={'license': {'property': 'text'}},
         )
 
         # Update buttons
@@ -310,7 +310,7 @@ class ComplexScenarioExample(QWidget):
             "✓ Channel selection (items + index) - dict sync\n"
             "✓ Color (RGB) - dict sync with bind_dict()\n"
             "✓ Display options (3 checkboxes) - dict sync\n"
-            "✓ Preset buttons load complete configurations"
+            "✓ Preset buttons load complete configurations",
         ))
 
         # Channels
@@ -363,7 +363,7 @@ class ComplexScenarioExample(QWidget):
         # 1. Channel sync
         self.channel_sync = WidgetSync(initial_value={
             'channels': ["Ch0", "Ch1", "Ch2", "Ch3"],
-            'index': 0
+            'index': 0,
         })
 
         self.channel_sync.bind_properties(
@@ -375,15 +375,15 @@ class ComplexScenarioExample(QWidget):
                                      for i in range(self.channel_list.count())],
                     'setter': lambda items: (self.channel_list.clear(),
                                             self.channel_list.addItems(items)),
-                    'mode': SyncMode.FROM_SYNC
+                    'mode': SyncMode.FROM_SYNC,
                 },
                 'index': {
                     'signal': self.channel_list.currentRowChanged,
                     'getter': lambda: self.channel_list.currentRow(),
                     'setter': lambda idx: self.channel_list.setCurrentRow(idx),
-                    'mode': SyncMode.BIDIRECTIONAL
-                }
-            }
+                    'mode': SyncMode.BIDIRECTIONAL,
+                },
+            },
         )
 
         # 2. Color sync
@@ -392,7 +392,7 @@ class ComplexScenarioExample(QWidget):
         self.color_sync.bind_dict({
             'r': {'widget': self.r_slider[0], 'property': 'value'},
             'g': {'widget': self.g_slider[0], 'property': 'value'},
-            'b': {'widget': self.b_slider[0], 'property': 'value'}
+            'b': {'widget': self.b_slider[0], 'property': 'value'},
         })
 
         self.color_sync.value_changed.connect(self.update_color_preview)
@@ -402,13 +402,13 @@ class ComplexScenarioExample(QWidget):
         self.display_sync = WidgetSync(initial_value={
             'grid': True,
             'legend': True,
-            'autoscale': False
+            'autoscale': False,
         })
 
         self.display_sync.bind_dict({
             'grid': {'widget': self.grid_check, 'property': 'checked'},
             'legend': {'widget': self.legend_check, 'property': 'checked'},
-            'autoscale': {'widget': self.autoscale_check, 'property': 'checked'}
+            'autoscale': {'widget': self.autoscale_check, 'property': 'checked'},
         })
 
         # Presets
@@ -419,7 +419,7 @@ class ComplexScenarioExample(QWidget):
         default_btn.clicked.connect(lambda: self.load_preset(
             ['Ch0', 'Ch1', 'Ch2', 'Ch3'], 0,
             {'r': 255, 'g': 100, 'b': 0},
-            {'grid': True, 'legend': True, 'autoscale': False}
+            {'grid': True, 'legend': True, 'autoscale': False},
         ))
         presets.addWidget(default_btn)
 
@@ -427,7 +427,7 @@ class ComplexScenarioExample(QWidget):
         thermal_btn.clicked.connect(lambda: self.load_preset(
             ['Temperature', 'Pressure', 'Humidity'], 0,
             {'r': 255, 'g': 0, 'b': 0},
-            {'grid': True, 'legend': False, 'autoscale': True}
+            {'grid': True, 'legend': False, 'autoscale': True},
         ))
         presets.addWidget(thermal_btn)
 
@@ -454,7 +454,7 @@ class ComplexScenarioExample(QWidget):
     def update_color_preview(self, rgb):
         self.color_preview.setStyleSheet(
             f"background-color: rgb({rgb['r']}, {rgb['g']}, {rgb['b']}); "
-            f"border: 1px solid black;"
+            f"border: 1px solid black;",
         )
 
 
@@ -470,7 +470,7 @@ class InitFromExample(QWidget):
             "✓ init_from='sync' (default) - Widget gets sync's value\n"
             "✓ init_from='widget' - Sync gets widget's value\n"
             "✓ init_from=None - No initialization, preserve both values\n"
-            "✓ Works with bind(), bind_dict(), and bind_properties()"
+            "✓ Works with bind(), bind_dict(), and bind_properties()",
         ))
 
         # Example 1: Basic init_from modes
@@ -479,7 +479,7 @@ class InitFromExample(QWidget):
 
         basic_layout.addWidget(QLabel(
             "WATCH: When you click Bind, observe what value each widget shows!\n"
-            "The widget starts at 100, sync starts at 50 - who wins?"
+            "The widget starts at 100, sync starts at 50 - who wins?",
         ))
 
         # Sync value display
@@ -498,7 +498,7 @@ class InitFromExample(QWidget):
             self.sync_value_spin,
             signal=self.sync_value_spin.valueChanged,
             getter=self.sync_value_spin.value,
-            setter=self.sync_value_spin.setValue
+            setter=self.sync_value_spin.setValue,
         )
 
         # init_from='sync' (default)
@@ -563,7 +563,7 @@ class InitFromExample(QWidget):
             "SCENARIO: You have RGB sliders at specific positions.\n"
             "CHOICE 1: Overwrite sliders with sync's colors (init_from='sync')\n"
             "CHOICE 2: Capture slider positions into sync (init_from='widget')\n"
-            "Try both! Reset sliders between attempts to see the difference."
+            "Try both! Reset sliders between attempts to see the difference.",
         ))
 
         # Control buttons at top
@@ -622,7 +622,7 @@ class InitFromExample(QWidget):
             "SCENARIO: A config with 2 properties. Where does each get its initial value?\n"
             "We'll bind with MIXED init_from: 'name' from widget, 'enabled' from sync.\n"
             "BEFORE: Widget shows (name='MyWidget', enabled=True), Sync has (name='DefaultName', enabled=False)\n"
-            "AFTER: BOTH will have (name='MyWidget' from widget, enabled=False from sync)"
+            "AFTER: BOTH will have (name='MyWidget' from widget, enabled=False from sync)",
         ))
 
         # Before state
@@ -698,7 +698,7 @@ class InitFromExample(QWidget):
             signal=self.sync_mode_spin.valueChanged,
             getter=self.sync_mode_spin.value,
             setter=self.sync_mode_spin.setValue,
-            init_from='sync'  # Widget gets sync's value (50)
+            init_from='sync',  # Widget gets sync's value (50)
         )
         self.bind_sync_btn.setEnabled(False)
         self.unbind_sync_btn.setEnabled(True)
@@ -717,7 +717,7 @@ class InitFromExample(QWidget):
             signal=self.widget_mode_spin.valueChanged,
             getter=self.widget_mode_spin.value,
             setter=self.widget_mode_spin.setValue,
-            init_from='widget'  # Sync gets widget's value (100)
+            init_from='widget',  # Sync gets widget's value (100)
         )
         self.bind_widget_btn.setEnabled(False)
         self.unbind_widget_btn.setEnabled(True)
@@ -737,7 +737,7 @@ class InitFromExample(QWidget):
             signal=self.none_mode_spin.valueChanged,
             getter=self.none_mode_spin.value,
             setter=self.none_mode_spin.setValue,
-            init_from=None  # No initialization
+            init_from=None,  # No initialization
         )
         self.bind_none_btn.setEnabled(False)
         self.unbind_none_btn.setEnabled(True)
@@ -776,7 +776,7 @@ class InitFromExample(QWidget):
         b = self.color_b_slider[0].value()
         self.color_preview.setStyleSheet(
             f"background-color: rgb({r}, {g}, {b}); "
-            f"border: 1px solid black;"
+            f"border: 1px solid black;",
         )
 
     def bind_color_from_sync(self):
@@ -789,7 +789,7 @@ class InitFromExample(QWidget):
         self.color_sync.bind_dict({
             'r': {'widget': self.color_r_slider[0], 'property': 'value'},
             'g': {'widget': self.color_g_slider[0], 'property': 'value'},
-            'b': {'widget': self.color_b_slider[0], 'property': 'value'}
+            'b': {'widget': self.color_b_slider[0], 'property': 'value'},
         }, init_from='sync')  # Sliders get sync's values
 
         self.color_sync.value_changed.connect(self.update_color_preview)
@@ -798,7 +798,7 @@ class InitFromExample(QWidget):
         self.color_status.setText(
             "✓ Bound with init_from='sync'\n"
             "RESULT: Sliders jumped to sync's values (R=255, G=100, B=50)\n"
-            "Try 'Unbind All' then 'Reset Sliders' to test the other mode!"
+            "Try 'Unbind All' then 'Reset Sliders' to test the other mode!",
         )
         self.unbind_color_btn.setEnabled(True)
 
@@ -817,7 +817,7 @@ class InitFromExample(QWidget):
         self.color_sync.bind_dict({
             'r': {'widget': self.color_r_slider[0], 'property': 'value'},
             'g': {'widget': self.color_g_slider[0], 'property': 'value'},
-            'b': {'widget': self.color_b_slider[0], 'property': 'value'}
+            'b': {'widget': self.color_b_slider[0], 'property': 'value'},
         }, init_from='widget')  # Sync gets current slider values
 
         self.color_sync.value_changed.connect(self.update_color_preview)
@@ -826,7 +826,7 @@ class InitFromExample(QWidget):
         self.color_status.setText(
             f"✓ Bound with init_from='widget'\n"
             f"RESULT: Sync captured slider values (R={current_r}, G={current_g}, B={current_b})\n"
-            f"Sliders stayed where they were. Now try the other mode!"
+            f"Sliders stayed where they were. Now try the other mode!",
         )
         self.unbind_color_btn.setEnabled(True)
 
@@ -837,7 +837,7 @@ class InitFromExample(QWidget):
 
         self.config_sync = WidgetSync(initial_value={
             'name': 'DefaultName',
-            'enabled': False
+            'enabled': False,
         })
 
         # Use bind_dict with per-property init_from override
@@ -845,13 +845,13 @@ class InitFromExample(QWidget):
             'name': {
                 'widget': self.config_name_edit,
                 'property': 'text',
-                'init_from': 'widget'  # Sync gets widget's "MyWidget"
+                'init_from': 'widget',  # Sync gets widget's "MyWidget"
             },
             'enabled': {
                 'widget': self.config_enabled_check,
                 'property': 'checked',
-                'init_from': 'sync'  # Widget gets sync's False
-            }
+                'init_from': 'sync',  # Widget gets sync's False
+            },
         })
 
         self.config_status.setText(
@@ -859,7 +859,7 @@ class InitFromExample(QWidget):
             f"RESULT in sync: name='{self.config_sync.value['name']}' (from widget), "
             f"enabled={self.config_sync.value['enabled']} (stayed in sync)\n\n"
             f"RESULT in widgets: Name stayed 'MyWidget', Checkbox changed to {self.config_enabled_check.isChecked()}\n\n"
-            f"KEY POINT: Different properties can initialize from different sources!"
+            f"KEY POINT: Different properties can initialize from different sources!",
         )
         self.unbind_config_btn.setEnabled(True)
 
@@ -877,7 +877,7 @@ class InitFromExample(QWidget):
     def update_color_preview(self, rgb):
         self.color_preview.setStyleSheet(
             f"background-color: rgb({rgb['r']}, {rgb['g']}, {rgb['b']}); "
-            f"border: 1px solid black;"
+            f"border: 1px solid black;",
         )
 
 

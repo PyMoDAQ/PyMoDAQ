@@ -38,7 +38,7 @@ Gradients.update(OrderedDict([
     ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
     ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
     ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}),
-    ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'}),]))
+    ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'})]))
 
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 
@@ -1081,7 +1081,7 @@ def main(data_distribution='uniform'):
         data_to_plot = DataRaw(name='mydata', distribution='spread', data=[data_spread[:,2]],
                                        nav_indexes=(0,),
                                        axes=[Axis('xaxis', units='xpxl', data=data_spread[:,0], index=0, spread_order=0),
-                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1),])
+                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1)])
 
     prog = Viewer2D(widget)
     widget.show()
@@ -1116,9 +1116,9 @@ def generate_uniform_data() -> DataRaw:
 
     data_to_plot = DataRaw(name='mydata', distribution='uniform',
                                    data=[data_red, data_green, data_red-data_green],
-                                   labels = ['myreddata', 'mygreendata'],
+                                   labels=['myreddata', 'mygreendata'],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
+                                         Axis('yaxis', units='ypxl', data=y, index=0)])
     return data_to_plot
 
 

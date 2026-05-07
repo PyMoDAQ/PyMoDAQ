@@ -14,8 +14,8 @@ from pymodaq_utils.config import GlobalConfig as Config
 
 try:
     from pymodaq_gui.resources.material_icons import MaterialIcon
-except  ImportError:
-    pass #this could happen when creating /importing new MaterialIcons
+except ImportError:
+    pass  #this could happen when creating /importing new MaterialIcons
 
 config = Config()
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
@@ -610,7 +610,7 @@ class ActionManager:
 
     def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
                     toolbar: QtWidgets.QToolBar = None,
-                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
+                    area=QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
                     before: Union[str, QtWidgets.QToolBar, None] = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 

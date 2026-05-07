@@ -201,7 +201,6 @@ class ExperimentManager(ManagerBase):
         get_set_overshoot_path().joinpath(preset_name).unlink(missing_ok=True)
         get_set_remote_path().joinpath(preset_name).unlink(missing_ok=True)
 
-
     def list_control_modules_from_preset(self):
         # ################################################################
         # ##### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -284,7 +283,7 @@ class ExperimentManager(ManagerBase):
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument"
+                                f"its associated slave instrument",
                             )
                     else:
                         if plugin["status"] != ControllerStatus.SLAVE:
@@ -312,7 +311,7 @@ class ExperimentManager(ManagerBase):
                         if plugin["status"] != ControllerStatus.MASTER:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as Master"
+                                f" be defined as Master",
                             )
                         if plug_init:
                             detector_modules[-1].apply_controller_parameters(plugin["settings"].child("controller"))
@@ -325,13 +324,13 @@ class ExperimentManager(ManagerBase):
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument"
+                                f"its associated slave instrument",
                             )
                     else:
                         if plugin["status"] != ControllerStatus.SLAVE:
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as Slave"
+                                f" be defined as Slave",
                             )
                         if plug_init:
                             detector_modules[-1].controller = master_controller
@@ -368,20 +367,20 @@ class ExperimentManager(ManagerBase):
             if plug["type"] == "det":
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "detector_settings", "controller_ID"
+                        "params", "detector_settings", "controller_ID",
                     ]
                     plug["status"] = plug["value"][
-                        "params", "detector_settings", "controller_status"
+                        "params", "detector_settings", "controller_status",
                     ]
                 except KeyError as e:
                     raise DetectorError
             else:
                 try:
                     plug["ID"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "controller_ID"
+                        "params", "move_settings", "multiaxes", "controller_ID",
                     ]
                     plug["status"] = plug["value"][
-                        "params", "move_settings", "multiaxes", "multi_status"
+                        "params", "move_settings", "multiaxes", "multi_status",
                     ]
                 except KeyError as e:
                     raise ActuatorError
@@ -434,7 +433,7 @@ class ExperimentManager(ManagerBase):
 
                 if plugin["type"] == "move":
                     plug_type = plug_settings.child(
-                        "main_settings", "move_type"
+                        "main_settings", "move_type",
                     ).value()
                     self.dashboard.add_move(
                         plug_name,
@@ -449,7 +448,7 @@ class ExperimentManager(ManagerBase):
                         if plugin["status"] != "Master":
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as Master"
+                                f" be defined as Master",
                             )
                         if plug_init:
                             actuators_modules[-1].init_hardware_ui()
@@ -461,13 +460,13 @@ class ExperimentManager(ManagerBase):
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument"
+                                f"its associated slave instrument",
                             )
                     else:
                         if plugin["status"] != "Slave":
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as slave"
+                                f" be defined as slave",
                             )
                         if plug_init:
                             actuators_modules[-1].controller = master_controller
@@ -496,7 +495,7 @@ class ExperimentManager(ManagerBase):
                         if plugin["status"] != "Master":
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as Master"
+                                f" be defined as Master",
                             )
                         if plug_init:
                             detector_modules[-1].init_hardware_ui()
@@ -508,13 +507,13 @@ class ExperimentManager(ManagerBase):
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} defined as Master has to be "
                                 f"initialized (init checked in the experiment) in order to init "
-                                f"its associated slave instrument"
+                                f"its associated slave instrument",
                             )
                     else:
                         if plugin["status"] != "Slave":
                             raise MasterSlaveError(
                                 f"The instrument {plug_name} should"
-                                f" be defined as Slave"
+                                f" be defined as Slave",
                             )
                         if plug_init:
                             detector_modules[-1].controller = master_controller

@@ -50,7 +50,7 @@ class CurvatureLoss(LossFunctionBase):
     params = [
         {'title': 'Area', 'name': 'area_factor', 'type': 'float', 'value': 1.},
         {'title': 'Euclid', 'name': 'euclid_factor', 'type': 'float', 'value': 0.02},
-        {'title': 'Horizontal', 'name': 'horizontal_factor', 'type': 'float', 'value': 0.02}
+        {'title': 'Horizontal', 'name': 'horizontal_factor', 'type': 'float', 'value': 0.02},
     ]
 
 

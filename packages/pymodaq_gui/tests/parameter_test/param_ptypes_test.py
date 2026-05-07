@@ -31,7 +31,7 @@ class TestItemSelect:
                                  'type': 'itemselect',
                                  'value': dict(all_items=['item1', 'item2', 'item3'], selected=[]),
                                  'show_pb': True, 'show_mb': True,
-                                 'checkbox': doCheckbox, 'dragdrop': True, }
+                                 'checkbox': doCheckbox, 'dragdrop': True}
             tree = init_ParameterTree
             settings = Parameter.create(**params_itemSelect)
             tree.setParameters(settings, showTop=False)
@@ -42,9 +42,9 @@ class TestItemSelect:
                                             selected=['item1', 'item2'])
 
             # Removing selection
-            settings.setValue(dict(all_items=['item1', 'item2', 'item3'], selected=['item2', ]))
+            settings.setValue(dict(all_items=['item1', 'item2', 'item3'], selected=['item2']))
             assert settings.value() == dict(all_items=['item1', 'item2', 'item3'],
-                                            selected=['item2', ])
+                                            selected=['item2'])
 
             # Adding selection (non matching order between all/selected)
             settings.setValue(
@@ -64,7 +64,7 @@ class TestItemSelect:
                                  'type': 'itemselect',
                                  'value': dict(all_items=['item1', 'item2', 'item3'], selected=[]),
                                  'show_pb': True, 'show_mb': True,
-                                 'checkbox': doCheckbox, 'dragdrop': True, }
+                                 'checkbox': doCheckbox, 'dragdrop': True}
             settings = Parameter.create(**params_itemSelect)
 
             tree = init_ParameterTree
@@ -76,15 +76,15 @@ class TestItemSelect:
             listwidget.select_item(listwidget.item(2), True)
             listwidget.select_item(listwidget.item(0), True)
             settings.value()
-            assert settings.value() == dict(all_items=['item1', 'item2', 'item3', ],
+            assert settings.value() == dict(all_items=['item1', 'item2', 'item3'],
                                             selected=['item3', 'item1'])
 
             # Unselecting item
             listwidget.select_item(listwidget.item(2), False)
-            assert settings.value() == dict(all_items=['item1', 'item2', 'item3', ],
+            assert settings.value() == dict(all_items=['item1', 'item2', 'item3'],
                                             selected=['item1'])
 
             # Reselecting item
             listwidget.select_item(listwidget.item(2), True)
-            assert settings.value() == dict(all_items=['item1', 'item2', 'item3', ],
+            assert settings.value() == dict(all_items=['item1', 'item2', 'item3'],
                                             selected=['item1', 'item3'])

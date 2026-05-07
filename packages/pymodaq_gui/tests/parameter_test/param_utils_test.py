@@ -20,13 +20,13 @@ params = [
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
          'readonly': True},
-    ]}
+    ]},
 ]
 params1 = [
     {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
         {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
             'tip': 'displays this text as a tooltip','children':
-                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20}]},
         ]},
 ]
 # No min for afloat ==) False, True, True
@@ -34,7 +34,7 @@ params2 = [
     {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
         {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20.,
             'tip': 'displays this text as a tooltip','children':
-                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20}]},
     ]},
 ]
 # No children in afloat ==) False, False, False
@@ -50,7 +50,7 @@ params4 = [
     {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
         {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 10., 'min': 1.,
             'tip': 'displays this text as a tooltip','children':
-                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20,}]},
+                [{'title': 'Standard int:', 'name': 'aint', 'type': 'int', 'value': 20}]},
     ]},
 ]    
 
@@ -147,7 +147,7 @@ def test_compareParameters():
     assert [putils.compareParameters(param1=P1,param2=P1) == True,
             putils.compareParameters(param1=P1,param2=P2) == False,
             putils.compareParameters(param1=P1,param2=P3) == False,
-            putils.compareParameters(param1=P1,param2=P4) == False,        
+            putils.compareParameters(param1=P1,param2=P4) == False, 
             putils.compareParameters(param1=P1,param2=P1_bool) == False,
             putils.compareParameters(param1=P1,param2=P1_bool, with_self=False) == True,
             putils.compareParameters(param1=P1,param2=P1_noedit) == False,
@@ -196,7 +196,7 @@ def test_set_param_from_param(qtbot):
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
-        ]}
+        ]},
     ]
     settings = Parameter.create(name='settings', type='group', children=params)
     settings_old = Parameter.create(name='settings', type='group', children=params)

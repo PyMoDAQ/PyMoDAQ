@@ -364,7 +364,7 @@ class TestTestActuatorTree:
         for dact in manager.move_done_positions:
             test_act.addChild(
                 {'title': dact.name, 'name': dact.name.replace(' ', '_'),
-                 'type': 'float', 'value': dact.value(), 'readonly': True}
+                 'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
         children = {p.name(): p.value() for p in test_act.children()}
@@ -377,13 +377,13 @@ class TestTestActuatorTree:
         """A second move replaces the previous children."""
         test_act = manager.settings.child('test_actuator')
         test_act.addChild(
-            {'title': 'X_axis', 'name': 'X_axis', 'type': 'float', 'value': 0.0, 'readonly': True}
+            {'title': 'X_axis', 'name': 'X_axis', 'type': 'float', 'value': 0.0, 'readonly': True},
         )
         assert len(test_act.children()) == 1
 
         test_act.clearChildren()
         test_act.addChild(
-            {'title': 'X_axis', 'name': 'X_axis', 'type': 'float', 'value': 5.0, 'readonly': True}
+            {'title': 'X_axis', 'name': 'X_axis', 'type': 'float', 'value': 5.0, 'readonly': True},
         )
         assert len(test_act.children()) == 1
         assert test_act.children()[0].value() == 5.0

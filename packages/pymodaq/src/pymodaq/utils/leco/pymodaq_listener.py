@@ -93,19 +93,19 @@ class PymodaqPipeHandler(PipeHandler):
         self.register_data_types_for_deserialization()
 
     def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
+        self, types: Optional[Sequence[type[SerializableBase]]] = None,
     ) -> None:
         """Register different data types for deserialization in subclasses."""
         if types is None:
             return
         for cls in types:
             SerializableFactory().register_from_type(
-                cls, cls.serialize, cls.deserialize
+                cls, cls.serialize, cls.deserialize,
             )
 
 class ActorHandler(PymodaqPipeHandler):
     def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
+        self, types: Optional[Sequence[type[SerializableBase]]] = None,
     ) -> None:
         all_types: Sequence[type[SerializableBase]] = [DataWithAxes]
         if types:
@@ -115,15 +115,15 @@ class ActorHandler(PymodaqPipeHandler):
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
         self.register_binary_rpc_method(
-            self.set_info, name=GenericMethods.SET_INFO, accept_binary_input=True
+            self.set_info, name=GenericMethods.SET_INFO, accept_binary_input=True,
         )
         self.register_rpc_method(self.send_data_grab, name=ViewerMethods.GRAB)
         self.register_rpc_method(self.send_data_snap, name=ViewerMethods.SNAP)
         self.register_binary_rpc_method(
-            self.move_abs, accept_binary_input=True, name=MoveMethods.MOVE_ABS
+            self.move_abs, accept_binary_input=True, name=MoveMethods.MOVE_ABS,
         )
         self.register_binary_rpc_method(
-            self.move_rel, accept_binary_input=True, name=MoveMethods.MOVE_REL
+            self.move_rel, accept_binary_input=True, name=MoveMethods.MOVE_REL,
         )
         self.register_rpc_method(self.move_home, name=MoveMethods.MOVE_HOME)
         self.register_rpc_method(self.get_actuator_value, name=MoveMethods.GET_ACTUATOR_VALUE)
@@ -137,11 +137,11 @@ class ActorHandler(PymodaqPipeHandler):
         self.register_rpc_method(self.apply_experiment, name=DashboardMethods.APPLY_EXPERIMENT)
     @staticmethod
     def extract_pymodaq_object(
-        value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
+        value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]],
     ):
         if value is None and additional_payload:
             return cast(
-                DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0])
+                DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]),
             )
         else:
             return value
@@ -153,7 +153,7 @@ class ActorHandler(PymodaqPipeHandler):
                  ) -> None:
         assert additional_payload
         param = cast(
-            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]),
         )
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=param))
 
@@ -177,10 +177,10 @@ class ActorHandler(PymodaqPipeHandler):
         self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_EXPERIMENT, attribute=experiment))
 
     # detector commands
-    def send_data_grab(self,) -> None:
+    def send_data_grab(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
 
-    def send_data_snap(self,) -> None:
+    def send_data_snap(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
     # actuator commands
@@ -218,10 +218,10 @@ class ActorHandler(PymodaqPipeHandler):
         # according to DAQ_Move, this supersedes "check_position"
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.GET_ACTUATOR_VALUE))
 
-    def stop_motion(self,) -> None:
+    def stop_motion(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.STOP))
 
-    def stop_grab(self,) -> None:
+    def stop_grab(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.STOP))
 
 
@@ -301,7 +301,7 @@ class ActorListener(PymodaqListener):
     def start_listen(self) -> None:
         super().start_listen()
         self.message_handler.register_rpc_method(
-            self.set_remote_name, name=GenericMethods.SET_REMOTE_NAME
+            self.set_remote_name, name=GenericMethods.SET_REMOTE_NAME,
         )
 
     def set_remote_name(self, name: str) -> None:
@@ -379,27 +379,27 @@ class ActorListener(PymodaqListener):
             elif command.command == LECODashboardCommands.SEND_DEVICES:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_DEVICES,
-                    **binary_serialization_to_kwargs(command.attribute, data_key="data")
+                    **binary_serialization_to_kwargs(command.attribute, data_key="data"),
                 )
             elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
-                    configurations=command.attribute
+                    configurations=command.attribute,
                 )
             elif command.command == LECODashboardCommands.SEND_EXPERIMENTS:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.SEND_EXPERIMENTS,
-                    experiments=command.attribute
+                    experiments=command.attribute,
                 )
             elif command.command == LECODashboardCommands.APPLIED_EXPERIMENT_DONE:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
-                    done=command.attribute
+                    done=command.attribute,
                 )
             elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
                 self.send_rpc_message_to_remote(
                     method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
-                    done=command.attribute
+                    done=command.attribute,
                 )
         else:
             raise IOError("Unknown TCP client command")
@@ -478,7 +478,7 @@ class LECOComponentMixin:
             self._leco_commands_signal.connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
         else:
-            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT, ))
+            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT))
             try:
                 self._leco_commands_signal.disconnect(self._leco_client.queue_command)
             except TypeError:

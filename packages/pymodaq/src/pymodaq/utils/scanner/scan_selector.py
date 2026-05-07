@@ -238,12 +238,12 @@ class ScanSelector(ParameterManager, QObject):
 
     params = [
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
-            {'title': 'Sources:', 'name': 'sources', 'type': 'list', },
+            {'title': 'Sources:', 'name': 'sources', 'type': 'list'},
             {'title': 'Selector type:', 'name': 'selector_type', 'type': 'list',
              'limits': selector_factory.keys},
         ]},
         {'title': 'Coordinates:', 'name': 'coordinates', 'type': 'table_view', 'visible': True,
-         'delegate': gutils.SpinBoxDelegate,},
+         'delegate': gutils.SpinBoxDelegate},
         # ]},
     ]
 
@@ -416,11 +416,11 @@ def main_fake_scan():
     win.setWindowTitle('pymodaq main')
     fake = FakeDaqScan(area)
 
-    prog = DAQ_Viewer(area, title="Testing", daq_type='DAQ2D')#, parent_scan=fake)
+    prog = DAQ_Viewer(area, title="Testing", daq_type='DAQ2D')  #, parent_scan=fake)
     prog.init_hardware_ui(True)
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
-    prog2 = DAQ_Viewer(area, title="Testing2", daq_type='DAQ2D')#, parent_scan=fake)
+    prog2 = DAQ_Viewer(area, title="Testing2", daq_type='DAQ2D')  #, parent_scan=fake)
     prog2.init_hardware_ui(True)
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()

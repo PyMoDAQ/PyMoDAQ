@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 
-from  pymodaq_data.data import Axis
+from pymodaq_data.data import Axis
 from pymodaq_utils import utils
 
 AXIS_POSITIONS = ['top', 'bottom', 'right', 'left']

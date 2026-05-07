@@ -39,7 +39,7 @@ def setup(path: Path):
             "Operating System :: OS Independent",
             "Topic :: Software Development :: Libraries :: Python Modules",
             "Topic :: Software Development :: User Interfaces",
-        ], )
+        ])
 
 
     entrypoints = {}
@@ -67,7 +67,7 @@ def setup(path: Path):
         package_dir={'': 'src'},
         include_package_data=True,
         entry_points=entrypoints,
-        install_requires=['toml', ]+config['plugin-install']['packages-required'],
-        **setupOpts
+        install_requires=['toml']+config['plugin-install']['packages-required'],
+        **setupOpts,
     )
 

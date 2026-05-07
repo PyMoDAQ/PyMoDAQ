@@ -1,5 +1,5 @@
 
-1# -*- coding: utf-8 -*-
+1  # -*- coding: utf-8 -*-
 """
 Created the 07/11/2023
 
@@ -33,7 +33,7 @@ def ini_qt_widget(init_qt):
 
 
 class RealParameterManager(ParameterManager):
-    params = {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
+    params = [{'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
         {'title': 'Standard float', 'name': 'afloat', 'type': 'float', 'value': 20., 'min': 1.,
          'tip': 'displays this text as a tooltip'},
         {'title': 'Linear Slide float', 'name': 'linearslidefloat', 'type': 'slide', 'value': 50,
@@ -42,7 +42,7 @@ class RealParameterManager(ParameterManager):
         {'title': 'Log Slide float', 'name': 'logslidefloat', 'type': 'slide', 'value': 50,
          'default': 50, 'min': 1e-5,
          'max': 1e5, 'subtype': 'log'},
-    ]},
+    ]}]
 
 
 

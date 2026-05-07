@@ -32,9 +32,9 @@ class TestSettings:
                 scanner = scanner_factory.get(scan_type, scan_sub_type, **config_scanner)
                 scanner.evaluate_steps()
                 scanner.set_scan()
-                assert hasattr(scanner,  'axes_unique')
-                assert hasattr(scanner,  'axes_indexes')
-                assert hasattr(scanner,  'positions')
+                assert hasattr(scanner, 'axes_unique')
+                assert hasattr(scanner, 'axes_indexes')
+                assert hasattr(scanner, 'positions')
                 assert hasattr(scanner, 'n_steps')
                 assert hasattr(scanner, 'n_axes')
 

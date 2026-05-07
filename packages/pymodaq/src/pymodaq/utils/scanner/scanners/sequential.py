@@ -133,7 +133,7 @@ class SequentialScanner(ScannerBase):
                     init_data = [[act.title, f'0. {act.units}', f'1. {act.units}', f'0.1 {act.units}'] for act in self._actuators]
                 else:
                     init_data = [[act.title, '0.', '1.', '0.1'] for act in self._actuators]
-        self.table_model = TableModelSequential(init_data, )
+        self.table_model = TableModelSequential(init_data)
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('seq_table').setValue(self.table_model)
         self.n_axes = len(self._actuators)
