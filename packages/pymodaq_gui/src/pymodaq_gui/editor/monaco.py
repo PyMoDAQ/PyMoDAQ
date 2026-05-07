@@ -23,6 +23,13 @@ from pymodaq_gui.utils.file_io import select_file
 logger = set_logger(get_module_name(__file__))
 
 try:
+    import qtpy.QtWebEngineCore
+
+    if not hasattr(qtpy.QtWebEngineCore, 'QWebEnginePage'):
+        from qtpy.QtWebEngineWidgets import QWebEnginePage
+
+        qtpy.QtWebEngineCore.QWebEnginePage = QWebEnginePage
+
     from qtmonaco import Monaco
 except ImportError as e:
     msg = f"Could not import the QtMonaco Editor, make sure you installed it with pip install qtmonaco "\
