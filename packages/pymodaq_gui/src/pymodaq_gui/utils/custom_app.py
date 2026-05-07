@@ -176,6 +176,8 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         return self.mainwindow.statusBar() if self.mainwindow is not None else self._statusbar
 
     def update_status(self, message: str, wait_time: Optional[int] = None):
+        """Show the message in the status bar with a delay of wait_time ms.
+        """
         if self.statusbar is not None:
             if wait_time is None:
                 wait_time = config('gui', 'message_status_persistence')
