@@ -84,7 +84,7 @@ qt_documentation = "PyQt6"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/doc/stable/', None)
+    'numpy': ('https://numpy.org/doc/stable/', None),
 }
 
 nitpick_ignore_regex = [
@@ -159,7 +159,7 @@ autodoc_mock_imports = [
     "qtpy",
     "qtpy.QtCore",
     "qtpy.QtGui",
-    "qtpy.QtWidgets"
+    "qtpy.QtWidgets",
 ]
 
 
@@ -177,7 +177,6 @@ html_theme = 'sphinx_rtd_theme'
 # html_theme_options = {}
 html_css_files = [
     'css/overflow.css',
-    'css/figure.css'
 ]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -228,7 +227,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (master_doc, 'PyMoDAQ', 'PyMoDAQ Documentation',
-     [author], 1)
+     [author], 1),
 ]
 
 

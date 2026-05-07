@@ -60,7 +60,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         widget_command = QtWidgets.QWidget()
         widget_command.setLayout(QtWidgets.QVBoxLayout())
         self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self.toolbar)
 
         splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
         splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)

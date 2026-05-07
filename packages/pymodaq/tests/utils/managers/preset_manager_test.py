@@ -92,7 +92,7 @@ class TestExperimentManager:
 
         experiment_manager.delete_entry(copy_name, bypass_dialog=True)
         assert copy_name not in experiment_manager.entries
-        assert copy_name not in experiment_manager.list_managed_entries() # should be the same as above
+        assert copy_name not in experiment_manager.list_managed_entries()  # should be the same as above
         assert default_entry in experiment_manager.list_managed_entries()
 
         experiment_manager.delete_entry(default_entry, bypass_dialog=True)

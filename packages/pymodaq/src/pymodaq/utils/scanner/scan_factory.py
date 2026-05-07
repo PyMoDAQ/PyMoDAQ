@@ -95,6 +95,8 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         super().__init__()
         self.positions: np.ndarray | list[Iterable[DataActuator]] = None
         self.n_steps = 1
+        self._current_scan_step = 0
+
         self.config = ScanConfig()
         self.display_units = display_units
         base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
@@ -125,6 +127,15 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         """
         return DataActuator(self.actuators[axis_index].title, data=float(self.positions[scan_index, axis_index]),
                             units=self.actuators[axis_index].units)
+
+    @property
+    def current_scan_index(self) -> int:
+        """ Get/Set the current scan_index during the scan"""
+        return self._current_scan_step
+
+    @current_scan_index.setter
+    def current_scan_index(self, scan_index: int):
+        self._current_scan_step = scan_index
 
     def process_data(self, dte: DataToExport) -> DataToExport:
         """ Process Acquired data if the boolean class attribute *do_process_data* is set to True

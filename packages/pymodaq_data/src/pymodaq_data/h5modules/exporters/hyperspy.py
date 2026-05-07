@@ -47,8 +47,8 @@ try:
                 # data.nav_index is a tuple containing the index of the nav axes
 
                 data = data_loader.load_data(node, with_bkg=False)
-                axes = data.axes #all axes
-                nav_axes = data.get_nav_axes_with_data() #only navigation one
+                axes = data.axes  #all axes
+                nav_axes = data.get_nav_axes_with_data()  #only navigation one
 
                 #deprecated
                 # data, axes, nav_axes, is_spread = get_h5_data_from_node(node)

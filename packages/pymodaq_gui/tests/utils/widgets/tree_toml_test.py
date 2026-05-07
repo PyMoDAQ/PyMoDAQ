@@ -42,8 +42,8 @@ class TestTreeFromToml:
             # here it depends on the default value of darkstyle!
             ([], True),
             ([(('style', 'darkstyle'), False)], False),
-            ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], True)
-        ]
+            ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], True),
+        ],
     )
     def test_reject_config(self, qtbot, config, changes, equals_to_config):
 
@@ -83,8 +83,8 @@ class TestTreeFromToml:
             # here it depends on the default value of darkstyle!
             ([], False),
             ([(('style', 'darkstyle'), False)], True),
-            ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], False)
-        ]
+            ([(('style', 'darkstyle'), False), (('style', 'darkstyle'), True)], False),
+        ],
     )
 
     @pytest.mark.order(after="test_reject_config")
@@ -126,8 +126,8 @@ class TestTreeFromToml:
             #Path to start the tree, the change to make, and if it should succeed or not
             # (entry exist in the sub config)
             (('optimizer', 'bounds'), (('style', 'darkstyle'), False), False),
-            (('optimizer', 'bounds'), (('actuator_min',), 0), True)
-        ]
+            (('optimizer', 'bounds'), (('actuator_min',), 0), True),
+        ],
     )
     @pytest.mark.order(after="test_accept_config")
     def test_subtree(self, qtbot, config, start_path, change, exists):

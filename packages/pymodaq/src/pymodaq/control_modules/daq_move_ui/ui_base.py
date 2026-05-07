@@ -111,15 +111,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.ini_state_led.set_as(status)
         self.enable_move_buttons(status)
 
-        if status:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().green,)
-        else:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().red,)
         if self.has_action('ini_actuator'):
-            self.get_action('ini_actuator').set_icon(icon)
-        self.ini_actuator_pb.setIcon(icon)
+            self.get_action('ini_actuator'
+                            ).set_icon('cable',
+                                       qt_themes.get_theme().green if status else qt_themes.get_theme().red)
 
     @property
     def actuator(self):
@@ -242,7 +237,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
                                           tip='Set the value of the actuator to the set absolute value',
                                           icon_color=self.get_theme().green)
         self.rel_value_sb = QSpinBoxWithShortcut(step=0.1, dec=True, siPrefix=config('pymodaq', 'actuator', 'siprefix'),
-                                                 key_sequences=("Ctrl+E","Ctrl+Shift+E"),)
+                                                 key_sequences=("Ctrl+E","Ctrl+Shift+E"))
         self.move_rel_minus_pb = PushButtonIcon('step_into', 'Set Rel. (-)', icon_color=self.get_theme().blue)
         self.stop_pb = PushButtonIcon('stop_circle', 'Stop', icon_color=self.get_theme().red)
         self.get_value_pb = PushButtonIcon('looks_one', 'Update Value', icon_color=self.get_theme().cyan)
@@ -261,7 +256,7 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.add_toolbar('move', 'DAQMove')
         self.parent.layout().insertWidget(0, self.get_toolbar('move'))
 
-    def populate_control_ui(self,  widget: QtWidgets.QWidget):
+    def populate_control_ui(self, widget: QtWidgets.QWidget):
         widget.setLayout(QtWidgets.QVBoxLayout())
         container_widget = QtWidgets.QWidget()
         widget.layout().addWidget(container_widget)
@@ -393,9 +388,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         if 'move_abs_2' in self.actions_names:
             self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
         if 'stop' in self.actions_names:
-            self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
+            self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP)))
         if 'show_config' in self.actions_names:
-            self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG, )))
+            self.connect_action('show_config', lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.SHOW_CONFIG)))
         if 'ini_actuator' in self.actions_names:
             self.connect_action('ini_actuator', self.ini_actuator_pb.click)
 
@@ -410,9 +405,9 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.rel_value_sb.shortcut["Ctrl+E"].activated.connect(lambda: self.emit_move_rel('+'))
         self.rel_value_sb.shortcut["Ctrl+Shift+E"].activated.connect(lambda: self.emit_move_rel('-'))
 
-        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.FIND_HOME, )))
-        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP, )))
-        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE, )))
+        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.FIND_HOME)))
+        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.STOP)))
+        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand(UiToMainMove.GET_VALUE)))
 
         self.ini_actuator_pb.clicked.connect(self.send_init)
 

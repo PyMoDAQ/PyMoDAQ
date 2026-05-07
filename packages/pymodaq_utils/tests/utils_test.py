@@ -86,7 +86,7 @@ def test_ThreadCommand():
         (utils.ThreadCommand('test', [3, 4]), False),
         ("not a ThreadCommand", False),
     ],
-    ids=["same_values", "different_command", "different_attribute", "different_type"]
+    ids=["same_values", "different_command", "different_attribute", "different_type"],
 )
 def test_ThreadCommand_eq(other, expected):
     base = utils.ThreadCommand('test', [1, 2])
@@ -205,7 +205,7 @@ def test_elt_as_first_element_dicts():
 
 def test_check_vals_in_iterable():
     with pytest.raises(Exception):
-        utils.check_vals_in_iterable([1, ], [])
+        utils.check_vals_in_iterable([1], [])
 
     assert not utils.check_vals_in_iterable([1, 2.0, 4], (1, 2, 4))
     assert not utils.check_vals_in_iterable([1, 2.0, 4], (1, 2.0, 4))

@@ -497,7 +497,7 @@ def set_txt_from_elt(el, param_dict):
                 param_value = dict(all_items=[], selected=[])
             else:
                 param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
-        elif 'bool' in param_type or 'led' in param_type: # covers 'bool' 'bool_push',  'led' and 'led_push'types
+        elif 'bool' in param_type or 'led' in param_type:  # covers 'bool' 'bool_push',  'led' and 'led_push'types
             param_value = bool(int(val_text))
         elif param_type == 'date_time':
             param_value = QDateTime.fromMSecsSinceEpoch(int(val_text))

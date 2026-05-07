@@ -244,7 +244,7 @@ class DeSerializer:
     :py:class:`~pymodaq_data.serialize.mysocket.Socket`
     """
 
-    def __init__(self, bytes_string:  Union[bytes, Socket,] = None) -> None:
+    def __init__(self, bytes_string:  Union[bytes, Socket] = None) -> None:
         if isinstance(bytes_string, bytes):
             bytes_string = SocketString(bytes_string)
         self._bytes_string = bytes_string

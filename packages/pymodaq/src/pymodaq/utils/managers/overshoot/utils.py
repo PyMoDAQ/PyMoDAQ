@@ -40,7 +40,7 @@ def create_overshoot_param(typ: str) -> list[dict]:
          'readonly': True},
         {'title': 'Direction:', 'name': 'direction', 'type': 'list',
          'value': TriggerDirection.ABOVE.value, 'limits': TriggerDirection.names()},
-        {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0,},
+        {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0},
     ]
 
 class ScalableGroupOverShoot(GroupParameter):

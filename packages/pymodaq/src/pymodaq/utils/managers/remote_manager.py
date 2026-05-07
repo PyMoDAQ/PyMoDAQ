@@ -235,7 +235,7 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                   {'title': 'Value:', 'name': 'axis_value', 'type': 'float', 'value': 0., 'visible': False},
                   {'title': 'Hat ID', 'name': 'hatID', 'type': 'int', 'value': -1, 'visible': False},
                   {'title': 'Value x:', 'name': 'hat_value1', 'type': 'int', 'value': 0, 'visible': False},
-                  {'title': 'Value y:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False}, ]
+                  {'title': 'Value y:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False}]
 
         self.settings = Parameter.create(name='settings', type='group', children=params)
         self.settings_tree = ParameterTree()
@@ -267,10 +267,10 @@ class RemoteManager(QObject):
             msgBox.setInformativeText("What do you want to do?")
             cancel_button = msgBox.addButton(QMessageBox.StandardButton.Cancel)
             new_button = msgBox.addButton(
-                "New", QMessageBox.ButtonRole.ActionRole
+                "New", QMessageBox.ButtonRole.ActionRole,
             )
             modify_button = msgBox.addButton(
-                "Modify", QMessageBox.ButtonRole.AcceptRole
+                "Modify", QMessageBox.ButtonRole.AcceptRole,
             )
             msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
             ret = msgBox.exec()
@@ -357,7 +357,7 @@ class RemoteManager(QObject):
         params_action = [{'title': 'Actuator Actions:', 'name': 'act_actions', 'type': 'groupmodules',
                           'addList': self.actuators, 'modtype': 'Actuator'},
                          {'title': 'Detector Actions:', 'name': 'det_actions', 'type': 'groupmodules',
-                          'addList': self.detectors, 'modtype': 'Detector'}
+                          'addList': self.detectors, 'modtype': 'Detector'},
                          ]
         self.remote_params = Parameter.create(title='Remote', name='Remote', type='group',
                                               children=param + params_action)

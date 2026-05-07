@@ -177,13 +177,13 @@ class UniformDataDisplayer(BaseDataDisplayer):
         if len(nav_axes_limits) == 2:
             self._navigator2D.crosshair.set_crosshair_position(
                 *self._navigator2D.view.unscale_axis(np.mean(nav_axes_limits[1]),
-                                                     np.mean(nav_axes_limits[0]))
+                                                     np.mean(nav_axes_limits[0])),
             )
         if len(sig_axis_limits) == 1:
             self._viewer1D.roi.setPos((float(np.mean(sig_axis_limits[0]) -
                                              np.abs(np.diff(sig_axis_limits[0]))[0] / 3),
                                        float(np.mean(sig_axis_limits[0]) +
-                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3))
+                                             np.abs(np.diff(sig_axis_limits[0]))[0] / 3)),
                                       )
         if len(sig_axis_limits) == 2:
             scaled_axes = np.array(self._viewer2D.view.unscale_axis(np.array(sig_axis_limits[1]),

@@ -1,9 +1,12 @@
+
 from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq_gui.utils import CustomApp, DockArea
 from pymodaq_utils.enums import StrEnum
+
+from pymodaq_gui.utils import CustomApp, DockArea
+
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 if TYPE_CHECKING:
@@ -28,6 +31,7 @@ class CustomExt(CustomApp):
         super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
+
         self.runner_thread : QtCore.QThread = None
         if dashboard is not None:
             self._modules_manager = module_manager_class(
@@ -54,7 +58,7 @@ class CustomExt(CustomApp):
         """
         super().quit_fun()
         if self.dashboard is not None:
-            self.show_dashboard(True) #make sure to show it if it was hidden
+            self.show_dashboard(True)  #make sure to show it if it was hidden
 
 
     def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
@@ -70,7 +74,7 @@ class CustomExt(CustomApp):
             return self.dashboard.experiment_manager
 
     def do_things_after_experiment_set(self, experiment_name: str):
-        """ This method is called whenever a experiment entry has been set.
+        """ This method is called whenever an experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.

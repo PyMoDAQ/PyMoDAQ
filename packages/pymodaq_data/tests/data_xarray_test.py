@@ -32,7 +32,7 @@ class TestXarrayConversion:
     def test_to_xarray_attrs(self):
         dwa = data_mod.DataRaw(
             'test', units='mm', data=[np.zeros((3, 4))],
-            nav_indexes=(0,), origin='detector'
+            nav_indexes=(0,), origin='detector',
         )
         ds = dwa.to_xarray()
         assert ds.attrs['pymodaq_name'] == 'test'
@@ -57,7 +57,7 @@ class TestXarrayConversion:
         nav_axis = data_mod.Axis('nav', units='m', data=np.array([0., 1., 2.]), index=0)
         sig_axis = data_mod.Axis('sig', units='Hz', data=np.array([10., 20., 30., 40.]), index=1)
         dwa = data_mod.DataRaw(
-            'nd', data=[arr], nav_indexes=(0,), axes=[nav_axis, sig_axis]
+            'nd', data=[arr], nav_indexes=(0,), axes=[nav_axis, sig_axis],
         )
         dwa2 = data_mod.DataWithAxes.from_xarray(dwa.to_xarray())
         assert tuple(dwa2.nav_indexes) == (0,)

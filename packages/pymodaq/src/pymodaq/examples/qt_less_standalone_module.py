@@ -65,7 +65,7 @@ class QtLessModule:
 
     @staticmethod
     def extract_pymodaq_object(
-        value: Optional[float], additional_payload: Optional[List[bytes]]
+        value: Optional[float], additional_payload: Optional[List[bytes]],
     ):
         if value is None and additional_payload:
             res = cast(DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]))
@@ -134,7 +134,7 @@ class QtLessModule:
             position=self._fake_position,
         )
 
-    def stop_motion(self,) -> None:
+    def stop_motion(self) -> None:
         # not implemented in DAQ_Move!
         print("stop_motion")
 

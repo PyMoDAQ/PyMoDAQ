@@ -74,7 +74,7 @@ logger = set_logger('pymodaq_gui', base_logger=False)
 
 
 logger.info('Starting PyMoDAQ GUI modules')
-if not isinstance(config('gui', 'qtbackend', 'backend'), list): #True for old usage
+if not isinstance(config('gui', 'qtbackend', 'backend'), list):  #True for old usage
     logger.error(f"{config('gui', 'qtbackend', 'backend')} is not a list, please delete your actual "
                  f"pymodaq_utils configuration file to "
                  f"reflect this new type")

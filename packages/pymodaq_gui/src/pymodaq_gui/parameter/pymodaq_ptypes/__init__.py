@@ -19,7 +19,7 @@ from pyqtgraph.parametertree.Parameter import registerParameterType, registerPar
 
 
 registerParameterType('float', NumericParameter, override=True)
-registerParameterType('int',   NumericParameter, override=True)
+registerParameterType('int', NumericParameter, override=True)
 registerParameterType('bool_push', BoolPushParameter, override=True)
 registerParameterType('pixmap', PixmapParameter, override=True)
 registerParameterType('pixmap_check', PixmapCheckParameter, override=True)

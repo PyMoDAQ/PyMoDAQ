@@ -70,7 +70,7 @@ class Plotter(PlotterBase):
         plt.subplot(self.n_lines, self.n_columns,
                     (self.n_columns * self.ind_line) + 1)
         for ind_data, data_array in enumerate(dwa):
-            plt.plot(dwa.axes[0].get_data(), data_array, *args,  color=PLOT_COLORS[ind_data],
+            plt.plot(dwa.axes[0].get_data(), data_array, *args, color=PLOT_COLORS[ind_data],
                      **kwargs)
             if dwa.errors is not None:
                 plt.fill_between(dwa.axes[0].get_data(), data_array - dwa.get_error(ind_data),
