@@ -877,7 +877,7 @@ class ActuatorWorker(HardwareWorkerBase):
                     controller
                 )  # return edict(info="", controller=, stage=)
             except Exception as e:
-                logger.exception("Hardware couldn't be initialized", exc_info=e)
+                self.logger.exception("Hardware couldn't be initialized", exc_info=e)
                 infos = str(e), False
 
             if isinstance(infos, edict):  # following old plugin templating

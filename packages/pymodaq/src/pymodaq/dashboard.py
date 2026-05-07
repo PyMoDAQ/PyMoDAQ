@@ -4,7 +4,6 @@
 import sys
 import datetime
 import subprocess
-import logging
 from pathlib import Path
 
 from typing import Union, List, Any, TYPE_CHECKING, Sequence
@@ -1326,23 +1325,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
         res = dialog.exec()
         return res
 
-    def update_status(self, txt, wait_time=0, log_type=None):
-        """
-        Show the txt message in the status bar with a delay of wait_time ms.
-
-        =============== =========== =======================
-        **Parameters**    **Type**    **Description**
-        *txt*             string      The message to show
-        *wait_time*       int         the delay of showing
-        *log_type*        string      the type of the log
-        =============== =========== =======================
-        """
-        try:
-            if log_type is not None:
-                self.status_signal.emit(txt)
-                logging.info(txt)
-        except Exception as e:
-            pass
+    def update_status(self, txt: str, wait_time: int = None, log_type=None):
+        """Show txt in the status bar and emit the status signal."""
+        super().update_status(txt, wait_time)
+        self.status_signal.emit(txt)
+        logger.info(txt)
 
 
 def create_load_dashboard() -> tuple[SharedUI, DashBoard]:

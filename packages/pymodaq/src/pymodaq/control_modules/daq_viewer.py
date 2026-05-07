@@ -1119,7 +1119,7 @@ class DetectorWorker(HardwareWorkerBase):
                 self.controller_address = self.plugin.controller
 
             except Exception as e:
-                logger.exception("Hardware couldn't be initialized", exc_info=e)
+                self.logger.exception("Hardware couldn't be initialized", exc_info=e)
                 infos = str(e), False
                 status.controller = None
 
