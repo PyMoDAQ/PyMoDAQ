@@ -156,7 +156,7 @@ def dev_base(tag: str, branch: str) -> str:
     return bump_minor(tag)
 
 
-def get_tag_containing(commit_hash: str, merged: set) -> str | None:
+def get_tag_containing(commit_hash: str) -> str | None:
     """Find the earliest release that included a given commit.
 
     Because tags in this repo are placed on merge commits (not directly on
@@ -165,14 +165,17 @@ def get_tag_containing(commit_hash: str, merged: set) -> str | None:
     underlying commit). We want the *lowest* (earliest) such tag — the first
     release that actually shipped that commit.
 
-    `merged` is the pre-computed set of tags reachable from HEAD on this branch,
-    passed in to avoid re-running `git tag --merged HEAD` on every loop iteration.
+    We also intersect with '--merged HEAD' to exclude tags that exist in the
+    repo but are not yet reachable from the current branch (e.g. a future tag
+    created on a different branch that happens to share ancestor commits).
 
     Returns None if no valid semver tag contains this commit on this branch.
     """
     try:
         # Tags whose ancestry includes commit_hash (commit is reachable from tag)
         containing = set(run_git("tag", "--contains", commit_hash).splitlines())
+        # Tags that are ancestors of HEAD (already released on this branch)
+        merged = set(run_git("tag", "--merged", "HEAD").splitlines())
 
         #Candidates are valid tags that are both contained and merged.
         candidates = [
@@ -212,17 +215,11 @@ def compute_version(package_path: Path) -> str:
     if not commits:
         return FALLBACK_VERSION
 
-    # Compute once — reused for every iteration below (avoids O(n) git calls).
-    try:
-        merged = set(run_git("tag", "--merged", "HEAD").splitlines())
-    except subprocess.CalledProcessError:
-        merged = set()
-
     # Walk commits newest-to-oldest, stop at the first one covered by a tag.
     # This is the most recent release that included a change to this package.
     base_tag = FALLBACK_VERSION
     for c in commits:
-        tag = get_tag_containing(c.strip(), merged)
+        tag = get_tag_containing(c.strip())
         if tag:
             base_tag = tag
             break
