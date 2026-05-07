@@ -111,15 +111,10 @@ class DAQ_Move_UI_Base(ControlModuleUI):
         self.ini_state_led.set_as(status)
         self.enable_move_buttons(status)
 
-        if status:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().green)
-        else:
-            icon = create_icon('cable',
-                               icon_color=qt_themes.get_theme().red)
         if self.has_action('ini_actuator'):
-            self.get_action('ini_actuator').set_icon(icon)
-        self.ini_actuator_pb.setIcon(icon)
+            self.get_action('ini_actuator'
+                            ).set_icon('cable',
+                                       qt_themes.get_theme().green if status else qt_themes.get_theme().red)
 
     @property
     def actuator(self):

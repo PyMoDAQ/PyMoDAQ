@@ -31,6 +31,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: User Interfaces",
 ]
+
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
@@ -41,7 +42,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+
+editor = [
+    "qtmonaco",
+]
 dev = [
+    "pymodaq_gui[editor]",
     "hatch", 
     "flake8",
     "pytest",
@@ -53,8 +59,10 @@ dev = [
     "pytest-qt",
     "pytest-xvfb",
     "pytest-order",
-    "qt_material_icons>=0.5.0"
+    "qt_material_icons>=0.5.0",
+    "qtmonaco"
 ]
+
 
 [project.scripts]
 h5browser = "pymodaq_gui.h5modules.h5browser:main"
