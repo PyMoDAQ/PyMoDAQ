@@ -27,7 +27,7 @@ ser_factory = SerializableFactory()
 if TYPE_CHECKING:
     from pymodaq.utils.managers.state.utils import StateModel
     from pymodaq.control_modules.daq_move import DAQ_Move
-    from  pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.dashboard import DashBoard
 
 
@@ -235,7 +235,7 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
         self.actuator_cb = QtWidgets.QComboBox()
         self.actuator_cb.addItems(self.actuators)
 
-        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]), siPrefix= False)
+        self.value_sb = SpinBox(suffix=self.get_units_from_module_name(self.actuators[0]), siPrefix=False)
         self.actuator_cb.currentTextChanged.connect(self.update_suffix_in_dialog)
 
         self.widget.layout().addWidget(self.actuator_cb)
@@ -259,12 +259,12 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
             module_type=ModuleType.Actuator,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
-                    title= 'Actuator Value',
+                    title='Actuator Value',
                     name=''.join(self.handler_name.split(' ')),
                     type='float',
                     value=self.value_sb.value(),
                     suffix=self.value_sb.opts['suffix']),
-            path=()),)
+            path=()))
 
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
@@ -302,7 +302,7 @@ class InitSubEntryHandler(SubEntryHandler):
             module_name,
             module_type=module_type,
             setting=ParameterWithPath(
-                parameter=Parameter.create(title= 'Control Module Init Value',
+                parameter=Parameter.create(title='Control Module Init Value',
                                            name=''.join(self.handler_name.split(' ')),
                                            type='bool',
                                            value=True if self.init_cb.checkState() ==
@@ -384,11 +384,11 @@ class StopSubEntryHandler(SubEntryHandler):
             module_type=ModuleType.Actuator if self.module_cb.currentText() in self.actuators else ModuleType.Detector,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
-                    title= 'Stop Module',
+                    title='Stop Module',
                     name=''.join(self.handler_name.split(' ')),
                     type='bool',
-                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
-            path=()),)
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
+            path=()))
 
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
@@ -420,11 +420,11 @@ class StopAllSubEntryHandler(SubEntryHandler):
             module_type=ModuleType.Control,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
-                    title= 'Stop All Control Modules',
+                    title='Stop All Control Modules',
                     name=''.join(self.handler_name.split(' ')),
                     type='bool',
-                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
-            path=()),)
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
+            path=()))
 
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):
@@ -459,11 +459,11 @@ class StopExtensionSubEntryHandler(SubEntryHandler):
             module_type=ModuleType.Extension,
             setting=ParameterWithPath(
                 parameter=Parameter.create(
-                    title= 'Stop Extension',
+                    title='Stop Extension',
                     name=''.join(self.handler_name.split(' ')),
                     type='bool',
-                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked,),
-            path=()),)
+                    value=self.stop_bool.checkState() == QtCore.Qt.CheckState.Checked),
+            path=()))
 
     def execute_subentry(self, entry: StateSubEntry,
                          dashboard: 'DashBoard'):

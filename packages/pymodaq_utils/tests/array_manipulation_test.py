@@ -34,7 +34,7 @@ def test_linspace_this_vect():
     assert np.array_equal(linear_x, result_x)
     assert np.array_equal(linear_y, result_y)
     
-    linear_dim = array.linspace_this_vect(test_x, Npts = 11)
+    linear_dim = array.linspace_this_vect(test_x, Npts=11)
     result_dim = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     assert np.size(linear_dim) == 11
     assert np.array_equal(linear_dim, result_dim)
@@ -124,7 +124,7 @@ def test_find():
     assert array.find(test_x, is_positive, 1) == -1
     
     is_negative = lambda x: x < 0
-    assert  array.find(test_x, is_negative) == 0
+    assert array.find(test_x, is_negative) == 0
 
 
 def test_arglimit():

@@ -45,5 +45,5 @@ class ViewerSelector(ModuleSelector):
         # Call the parameter's addNew method with the selected type
         self.add_widget.setText('/'.join((path_tuple[0], path_tuple[-1])))
         self.add_widget.adjustSize()
-        self.selected_module = SelectedModule(DAQTypesEnum[path_tuple[0]], path_tuple[-1], )
+        self.selected_module = SelectedModule(DAQTypesEnum[path_tuple[0]], path_tuple[-1])
         self.module_changed.emit(self.selected_module)

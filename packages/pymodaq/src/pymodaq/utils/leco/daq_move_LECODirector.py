@@ -60,7 +60,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
             param_dict['visible'] = False
 
     def __init__(
-        self, parent=None, params_state=None, host: Optional[str] = None, port: Optional[int] = None, **kwargs
+        self, parent=None, params_state=None, host: Optional[str] = None, port: Optional[int] = None, **kwargs,
     ) -> None:
         DAQ_Move_base.__init__(self, parent=parent, params_state=params_state)
         if host is not None:
@@ -163,7 +163,7 @@ class DAQ_Move_LECODirector(LECODirector, DAQ_Move_base):
 
     # Methods accessible via remote calls
     def _set_position_value(
-        self, data: Union[dict, list, str, float, None], additional_payload=None
+        self, data: Union[dict, list, str, float, None], additional_payload=None,
     ) -> DataActuator:
 
         # This is the first received message, if position is set then

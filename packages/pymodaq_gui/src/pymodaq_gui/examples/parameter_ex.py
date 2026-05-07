@@ -17,7 +17,7 @@ class ScalableGroup(GroupParameter):
 
     def addNew(self, full_path:tuple):
         # Full_path contains all the sub menus
-        value = full_path[-1] # Only showing last values as a string
+        value = full_path[-1]  # Only showing last values as a string
         self.addChild(dict(name=f"ScalableParam {(len(self.childs)+1)}", type='str', value=value, removable=True, renamable=True))
 
 # Need to register a new type to properly trigger addNew
@@ -54,7 +54,7 @@ class ParameterEx(ParameterManager):
             {'title': 'A bool in a bool', 'name': 'a_bool_in_a_bool', 'type': 'bool', 'value': True},
             {'title': 'A push with children', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action','children':[
                  {'title': 'A string in a group', 'name': 'atte_in_a_group', 'type': 'str', 'value': 'this is a string you can edit'},
-            ]},]},            
+            ]}]}, 
         ]},
 
         {'title': 'Numbers:', 'name': 'numbers', 'type': 'group', 'children': [
@@ -107,8 +107,13 @@ class ParameterEx(ParameterManager):
              'limits': {'xaxis': 0, 'yaxis': [0, 1, 2]},
              'value': 'yaxis',
              'tip': 'Such a parameter display text that are keys of a dict while'
-                                                        'values could be any object'
+                                                        'values could be any object',
              },
+            {'title': 'List with unavailable items:', 'name': 'unavailable_list', 'type': 'list',
+             'limits': ['pyqt6', 'pyqt5', 'pyside6'], 'value': 'pyqt6',
+             'unavailable': ['pyqt5'],
+             'tip': 'Items listed in "unavailable" are shown greyed-out and cannot be selected '
+                    '(used e.g. to display backends that are not installed)'},
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
             {'title': 'Look for a file:', 'name': 'afile', 'type': 'browsepath', 'value': r'D:\Data', 'filetype': True,
@@ -124,18 +129,18 @@ class ParameterEx(ParameterManager):
              'tip': 'Press Ctrl+click  to select items in any order'},
             {'title': 'Selectable items', 'name': 'itemsbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
-             'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True,},
+             'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True},
             {'title': 'Removable items', 'name': 'itemsbisbis', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
-             'tip': 'If show_mb is True, user can remove selected items from the list', 'show_mb': True,},            
+             'tip': 'If show_mb is True, user can remove selected items from the list', 'show_mb': True}, 
             {'title': 'Checkable items', 'name': 'itemscheckable', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
              'tip': 'If checkbox is True, user can select item by checking/unchecking items. Remove items is still used with standard selections',
-             'show_pb': True, 'checkbox': True, 'show_mb': True,},                        
+             'show_pb': True, 'checkbox': True, 'show_mb': True}, 
             {'title': 'Dragable items', 'name': 'itemsdragablecheckable', 'type': 'itemselect',
              'value': dict(all_items=['item1', 'item2', 'item3'], selected=['item2']),
              'tip': 'If dragdrop is True, user can drag or drop items inside the list', 'checkbox': True, 'dragdrop': True}, 
-        ]},  
+        ]}, 
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
@@ -173,8 +178,8 @@ class ParameterEx(ParameterManager):
         elif param.name() == 'anotherfloat':
             limits = (self.settings.child('numbers', 'linearslidefloatlimits').opts['limits'][0],
                       param.value())
-            self.settings.child('numbers', 'linearslidefloatlimits').setLimits(limits) #either like this: preferred
-            self.settings.child('numbers', 'linearslidefloat').setOpts(bounds=limits) # or like this!
+            self.settings.child('numbers', 'linearslidefloatlimits').setLimits(limits)  #either like this: preferred
+            self.settings.child('numbers', 'linearslidefloat').setOpts(bounds=limits)  # or like this!
 
     def options_changed(self, param, data: dict):
         if data.get("visible", None) is None:

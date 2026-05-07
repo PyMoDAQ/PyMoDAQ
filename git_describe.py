@@ -24,14 +24,14 @@ from pathlib import Path
 
 FALLBACK_VERSION = "5.1.0"  #Version returned when no tag can be found in the package's git history.
 
-PRE_RANK_ORDER = { # Pre-release order mapping
+PRE_RANK_ORDER = {  # Pre-release order mapping
     "dev": 0,
     "a": 1,
     "alpha": 1,
     "b": 2,
     "beta": 2,
     "preview": 3,
-    "rc": 4
+    "rc": 4,
 }
 
 
@@ -81,7 +81,7 @@ def parse_semver_tuple(tag: str) -> tuple[int, int, int, int, int] | None:
     version_match = re.match(
         r"^(\d+)\.(\d+)\.(\d+)(?:[.\-]?(a(?:lpha)?|b(?:eta)?|rc|preview|dev)\.?(\d*))?$",
         tag,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     #No match so return None

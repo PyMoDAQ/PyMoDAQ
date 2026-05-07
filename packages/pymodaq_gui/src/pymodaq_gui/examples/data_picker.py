@@ -22,7 +22,7 @@ class DataPicker(CustomApp):
     params = [
         {'title': 'picker status', 'name': 'picker_status', 'type': 'led', 'value': False},
         {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-         'delegate': SpinBoxDelegate, 'menu': True}, ]
+         'delegate': SpinBoxDelegate, 'menu': True}]
 
     def __init__(self, area: DockArea):
         super().__init__(area)
@@ -120,7 +120,7 @@ def main():
     data_red += np.random.random(data_red.shape)
     data_to_plot = DataRaw(name='mydata', distribution='uniform', data=[data_red],
                            axes=[Axis('xaxis', units='m', data=x, index=1),
-                                 Axis('yaxis', units='mm', data=y, index=0), ])
+                                 Axis('yaxis', units='mm', data=y, index=0)])
 
     data_picker.show_data(data_to_plot)
 

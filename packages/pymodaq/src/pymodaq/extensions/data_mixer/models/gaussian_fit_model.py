@@ -38,7 +38,7 @@ class DataMixerGaussianFitModel(DataMixerModel):
 
     def process_dte(self, dte: DataToExport):
         dte_processed = DataToExport('computed')
-        if len(self.settings['data1D']['selected']) !=  0:
+        if len(self.settings['data1D']['selected']) != 0:
 
             dwa = dte.get_data_from_full_name(self.settings['data1D']['selected'][0])
             dwa_fit = dwa.fit(gaussian_fit, self.get_guess(dwa), data_index=0)

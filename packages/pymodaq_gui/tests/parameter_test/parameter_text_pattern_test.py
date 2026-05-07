@@ -10,7 +10,7 @@ from qtpy import QtWidgets
 from pymodaq_gui.parameter import Parameter, ParameterTree
 from pymodaq_gui.parameter.pymodaq_ptypes.text_pattern import (
     PatternParameter,
-    PatternParameterItem
+    PatternParameterItem,
 )
 
 
@@ -35,7 +35,7 @@ class TestPatternParameter:
             type='text_pattern',
             value='Hello world',
             patterns={'@': ['alice', 'bob']},
-            completer_config={'min_width': 200}
+            completer_config={'min_width': 200},
         )
 
         assert param.name() == 'test_pattern'
@@ -49,7 +49,7 @@ class TestPatternParameter:
         param = Parameter.create(
             name='test',
             type='text_pattern',
-            value=''
+            value='',
         )
 
         assert param.opts['patterns'] == {}
@@ -61,7 +61,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice']}
+            patterns={'@': ['alice']},
         )
 
         param.add_pattern('#', ['python', 'java'])
@@ -76,7 +76,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice', 'bob']}
+            patterns={'@': ['alice', 'bob']},
         )
 
         param.update_completions('@', ['alice', 'bob', 'charlie'])
@@ -89,7 +89,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice'], '#': ['python']}
+            patterns={'@': ['alice'], '#': ['python']},
         )
 
         param.remove_pattern('#')
@@ -103,7 +103,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            completer_config={'min_width': 150}
+            completer_config={'min_width': 150},
         )
 
         param.set_completer_config(min_width=300, max_width=600)
@@ -117,7 +117,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice']}
+            patterns={'@': ['alice']},
         )
 
         new_patterns = {'@': ['alice', 'bob'], '#': ['python']}
@@ -131,7 +131,7 @@ class TestPatternParameter:
             name='test',
             type='text_pattern',
             value='',
-            completer_config={'min_width': 150}
+            completer_config={'min_width': 150},
         )
 
         new_config = {'min_width': 300, 'case_sensitive': True}
@@ -150,7 +150,7 @@ class TestPatternParameterItem:
             type='text_pattern',
             value='Hello',
             patterns={'@': ['alice', 'bob'], '#': ['python', 'java']},
-            completer_config={'min_width': 200, 'max_width': 400}
+            completer_config={'min_width': 200, 'max_width': 400},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -167,7 +167,7 @@ class TestPatternParameterItem:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice', 'bob'], '#': ['python']}
+            patterns={'@': ['alice', 'bob'], '#': ['python']},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -185,7 +185,7 @@ class TestPatternParameterItem:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice', 'bob', 'charlie']}
+            patterns={'@': ['alice', 'bob', 'charlie']},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -200,7 +200,7 @@ class TestPatternParameterItem:
         param = Parameter.create(
             name='test',
             type='text_pattern',
-            value='Initial'
+            value='Initial',
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -220,7 +220,7 @@ class TestPatternParameterItem:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice']}
+            patterns={'@': ['alice']},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -247,7 +247,7 @@ class TestPatternParameterItem:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice'], '#': ['python']}
+            patterns={'@': ['alice'], '#': ['python']},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -272,7 +272,7 @@ class TestPatternParameterItem:
             name='test',
             type='text_pattern',
             value='',
-            completer_config={'min_width': 150}
+            completer_config={'min_width': 150},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -329,9 +329,9 @@ class TestPatternParameterIntegration:
                         'type': 'text_pattern',
                         'value': 'Test',
                         'patterns': {'@': ['alice']},
-                    }
-                ]
-            }
+                    },
+                ],
+            },
         ]
 
         root = Parameter.create(name='root', type='group', children=params)
@@ -347,7 +347,7 @@ class TestPatternParameterIntegration:
             name='test',
             type='text_pattern',
             value='',
-            patterns={'@': ['alice', 'bob']}
+            patterns={'@': ['alice', 'bob']},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -358,9 +358,9 @@ class TestPatternParameterIntegration:
 
         assert param.opts['patterns']['@'] == ['alice', 'bob', 'charlie', 'david']
 
-        param.setOpts(patterns={"@": ["alice",]})
+        param.setOpts(patterns={"@": ["alice"]})
 
-        assert param.opts["patterns"]["@"] == ["alice",]
+        assert param.opts["patterns"]["@"] == ["alice"]
         # Add new pattern
         param.add_pattern('#', ['python', 'java'])
         qtbot.wait(50)
@@ -373,7 +373,7 @@ class TestPatternParameterIntegration:
             name='test',
             type='text_pattern',
             value='Just plain text',
-            patterns={}
+            patterns={},
         )
 
         parameter_tree.setParameters(param, showTop=False)
@@ -389,8 +389,8 @@ class TestPatternParameterIntegration:
             patterns={
                 '::': ['function', 'method'],  # Double colon
                 '->': ['pointer', 'arrow'],     # Arrow
-                '$': ['dollar', 'variable']      # Dollar sign
-            }
+                '$': ['dollar', 'variable'],      # Dollar sign
+            },
         )
 
         parameter_tree.setParameters(param, showTop=False)

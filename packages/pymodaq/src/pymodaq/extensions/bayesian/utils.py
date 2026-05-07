@@ -43,7 +43,7 @@ class BayesianAlgorithm(GenericAlgorithm):
         super().__init__(ini_random, bounds, actuators)
         self._algo = BayesianOptimization(f=None,
                                           pbounds=bounds,
-                                          **kwargs
+                                          **kwargs,
                                           )
         self.sorting_index: list = None
 

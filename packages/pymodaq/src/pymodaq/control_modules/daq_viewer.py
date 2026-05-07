@@ -20,6 +20,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
+from pymodaq_data import DataSource
 from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
 
@@ -494,9 +495,9 @@ class DAQ_Viewer(ParameterControlModule):
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+                self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
             else:
-                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS, ))
+                self.thread_status(ThreadCommand(ThreadStatusViewer.UPDATE_CHANNELS))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
                     ThreadCommand(ControlToHardwareViewer.GRAB,
@@ -529,7 +530,7 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
+        self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB))
         self._grabing = False
 
     @Slot()
@@ -604,7 +605,8 @@ class DAQ_Viewer(ParameterControlModule):
         self.settings.child('saver_settings', 'N_saved').setValue(self.settings['saver_settings', 'N_saved'] + 1)
 
     def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
-                    distribution=DataDistribution['uniform']):
+                    distribution=DataDistribution.uniform,
+                    extra_data: DataToExport = None):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
@@ -615,11 +617,15 @@ class DAQ_Viewer(ParameterControlModule):
             The indexes within the extended array where to place these data
         where: Node or str
         distribution: DataDistribution enum
+        extra_data: DataToExport
+            If not None add its content to the saved data
 
         See Also
         --------
         DAQ_Scan, DetectorExtendedSaver
         """
+        if extra_data is not None:
+            self._data_to_save_export.append(extra_data.data)
         self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
                                 indexes=indexes, distribution=distribution)
 
@@ -644,13 +650,7 @@ class DAQ_Viewer(ParameterControlModule):
         """
         if dte is not None:
             detector_node = self.module_and_data_saver.get_set_node(where)
-            dte = dte if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else \
-                dte.get_data_from_source('raw')  # filters depending on the source: raw or calculated
-
-            dte = DataToExport(name=dte.name, data=  # filters depending on the extra argument 'save'
-                               [dwa for dwa in dte if ('do_save' not in dwa.extra_attributes) or
-                                ('do_save' in dwa.extra_attributes and dwa.do_save)])
-
+            dte = self.module_and_data_saver.filter_data(dte)
             self.module_and_data_saver.add_data(detector_node, dte, **kwargs)
 
             if init_step:
@@ -1323,7 +1323,7 @@ class DAQ_Detector(QObject):
                 self.average_done = False
             self.waiting_for_data = False
 
-            # for live mode:two possibilities: either snap one data and regrab softwarewise
+            # for live mode:two possibilities: either snap one data and regrab software wise
             # (while True) or if self.detector.live_mode_available is True all data is continuously
             # emitted from the plugin
             if self.detector.live_mode_available:

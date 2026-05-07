@@ -46,7 +46,7 @@ class WhiteCheckboxStyle(QProxyStyle):
 
             icon_rect = self.baseStyle().alignedRect(
                 Qt.LayoutDirection.LeftToRight, Qt.AlignmentFlag.AlignCenter,
-                size, option.rect # type: ignore[attr-defined]
+                size, option.rect,  # type: ignore[attr-defined]
             )
             painter.drawPixmap(icon_rect.topLeft(), checkbox)
         else:

@@ -17,7 +17,7 @@ Tests cover:
 """
 import pytest
 from qtpy.QtWidgets import (
-    QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox
+    QSlider, QSpinBox, QCheckBox, QLineEdit, QComboBox,
 )
 from qtpy.QtCore import Qt
 
@@ -71,7 +71,7 @@ class TestBasicSync:
             spinbox,
             signal=spinbox.valueChanged,
             getter=lambda: spinbox.value(),
-            setter=lambda v: spinbox.setValue(v)
+            setter=lambda v: spinbox.setValue(v),
         )
 
         # Initial value should sync to widget
@@ -215,7 +215,7 @@ class TestFeedbackLoopPrevention:
         sync.bind_dict({
             'min': {'widget': spinbox, 'property': 'minimum', 'mode': SyncMode.FROM_SYNC},
             'max': {'widget': spinbox, 'property': 'maximum', 'mode': SyncMode.FROM_SYNC},
-            'value': {'widget': spinbox, 'property': 'value'}
+            'value': {'widget': spinbox, 'property': 'value'},
         })
 
         # Reset counters
@@ -270,7 +270,7 @@ class TestPropertyChangeOptimization:
             'y': {'widget': y_spin, 'property': 'value',
                   'setter': lambda v: y_spin.setValue(v)},
             'z': {'widget': z_spin, 'property': 'value',
-                  'setter': lambda v: z_spin.setValue(v)}
+                  'setter': lambda v: z_spin.setValue(v)},
         })
 
         # Reset counters
@@ -319,7 +319,7 @@ class TestDynamicProperties:
 
         sync.bind_dict({
             'x': {'widget': x_spin, 'property': 'value'},
-            'y': {'widget': y_spin, 'property': 'value'}
+            'y': {'widget': y_spin, 'property': 'value'},
         })
 
         # Remove y property
@@ -349,7 +349,7 @@ class TestBindDict:
         sync.bind_dict({
             'name': {'widget': name_edit, 'property': 'text'},
             'age': {'widget': age_spin, 'property': 'value'},
-            'active': {'widget': active_check, 'property': 'checked'}
+            'active': {'widget': active_check, 'property': 'checked'},
         })
 
         # Check initial sync
@@ -559,7 +559,7 @@ class TestSyncModes:
             signal=slider2.valueChanged,
             getter=lambda: slider2.value(),
             setter=lambda v: slider2.setValue(v),
-            mode=SyncMode.TO_SYNC
+            mode=SyncMode.TO_SYNC,
         )
 
         # slider2 → slider1 should work
@@ -583,7 +583,7 @@ class TestSyncModes:
         sync.bind(
             slider2,
             setter=lambda v: slider2.setValue(v),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         # slider1 → slider2 should work
@@ -611,7 +611,7 @@ class TestValueTransforms:
         sync.add(
             slider2,
             to_sync_transform=lambda v: v * 2,
-            from_sync_transform=lambda v: v // 2
+            from_sync_transform=lambda v: v // 2,
         )
 
         # Change slider2
@@ -631,7 +631,7 @@ class TestValueTransforms:
         sync.add(
             slider2,
             to_sync_transform=lambda v: v // 2,
-            from_sync_transform=lambda v: v * 2
+            from_sync_transform=lambda v: v * 2,
         )
 
         # Change slider1
@@ -938,7 +938,7 @@ class TestEnableDisableWithDisconnect:
             slider,
             signal=slider.valueChanged,
             getter=lambda: slider.value(),
-            setter=lambda v: slider.setValue(v)
+            setter=lambda v: slider.setValue(v),
         )
 
         # Disable
@@ -951,7 +951,7 @@ class TestEnableDisableWithDisconnect:
             slider,
             signal=slider.valueChanged,
             getter=lambda: slider.value(),
-            setter=lambda v: slider.setValue(v)
+            setter=lambda v: slider.setValue(v),
         )
 
         # Should be enabled again (new connection)
@@ -1145,7 +1145,7 @@ class TestInitFromParameter:
         spinbox.setValue(99)
 
         sync.bind_dict(property_map={
-            'value': {'widget': spinbox, 'property': 'value'}
+            'value': {'widget': spinbox, 'property': 'value'},
         }, init_from='widget')
 
         # Sync should be initialized with widget's value
@@ -1162,7 +1162,7 @@ class TestInitFromParameter:
 
         # Bind property 'b' first with init_from='sync'
         sync.bind_dict(property_map={
-            'b': {'widget': spinbox_b, 'property': 'value', 'init_from': 'sync'}
+            'b': {'widget': spinbox_b, 'property': 'value', 'init_from': 'sync'},
         })
 
         # Property 'b' widget should have sync's value
@@ -1170,7 +1170,7 @@ class TestInitFromParameter:
 
         # Now bind property 'a' with init_from='widget'
         sync.bind_dict(property_map={
-            'a': {'widget': spinbox_a, 'property': 'value', 'init_from': 'widget'}
+            'a': {'widget': spinbox_a, 'property': 'value', 'init_from': 'widget'},
         })
 
         # Property 'a' in sync should now have widget's value
@@ -1202,7 +1202,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 42}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 42},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1218,8 +1218,8 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'setter': value_param.setValue,
-                }
-            }
+                },
+            },
         )
 
         # Check initial sync
@@ -1239,7 +1239,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Threshold:', 'name': 'threshold', 'type': 'float', 'value': 0.5}
+            {'title': 'Threshold:', 'name': 'threshold', 'type': 'float', 'value': 0.5},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         threshold_param = settings.child('threshold')
@@ -1251,8 +1251,8 @@ class TestBindParameter:
         sync.bind_parameter(
             threshold_param,
             property_map={
-                'threshold': {'param': threshold_param}
-            }
+                'threshold': {'param': threshold_param},
+            },
         )
 
         # Check initial sync
@@ -1275,7 +1275,7 @@ class TestBindParameter:
         # Create parameter
         params = [
             {'title': 'Algorithm:', 'name': 'algorithm', 'type': 'list',
-             'limits': algorithms, 'value': 'FFT'}
+             'limits': algorithms, 'value': 'FFT'},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         algorithm_param = settings.child('algorithm')
@@ -1283,7 +1283,7 @@ class TestBindParameter:
         # Create sync for both limits and value
         sync = WidgetSync(initial_value={
             'algorithms': algorithms,
-            'algorithm': 'FFT'
+            'algorithm': 'FFT',
         })
 
         # Bind parameter for both limits and value
@@ -1299,8 +1299,8 @@ class TestBindParameter:
                     'signal': algorithm_param.sigValueChanged,
                     'getter': algorithm_param.value,
                     'setter': algorithm_param.setValue,
-                }
-            }
+                },
+            },
         )
 
         # Check initial sync
@@ -1339,7 +1339,7 @@ class TestBindParameter:
             'int_val': 42,
             'float_val': 3.14,
             'bool_val': True,
-            'str_val': 'test'
+            'str_val': 'test',
         })
 
         # Bind all parameters using shortcut syntax
@@ -1347,7 +1347,7 @@ class TestBindParameter:
             param = settings.child(param_name)
             sync.bind_parameter(
                 param,
-                property_map={param_name: {'param': param}}
+                property_map={param_name: {'param': param}},
             )
 
         # Check initial sync
@@ -1361,7 +1361,7 @@ class TestBindParameter:
             'int_val': 99,
             'float_val': 2.71,
             'bool_val': False,
-            'str_val': 'updated'
+            'str_val': 'updated',
         }
         assert settings.child('int_val').value() == 99
         assert settings.child('float_val').value() == 2.71
@@ -1380,7 +1380,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1406,8 +1406,8 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'setter': lambda v: value_param.setValue(v),
-                }
-            }
+                },
+            },
         )
 
         # Reset counter after initial sync
@@ -1427,7 +1427,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 50}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 50},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1448,13 +1448,13 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'setter': value_param.setValue,
-                }
-            }
+                },
+            },
         )
 
         sync.bind_properties(
             spinbox,
-            property_map={'value': {'property': 'value'}}
+            property_map={'value': {'property': 'value'}},
         )
 
         # All should be in sync
@@ -1483,7 +1483,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1498,8 +1498,8 @@ class TestBindParameter:
                 'value': {
                     'setter': value_param.setValue,
                     'mode': SyncMode.FROM_SYNC,
-                }
-            }
+                },
+            },
         )
 
         # Sync -> parameter should work
@@ -1516,7 +1516,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1532,8 +1532,8 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'mode': SyncMode.TO_SYNC,
-                }
-            }
+                },
+            },
         )
 
         # Parameter -> sync should work
@@ -1550,7 +1550,7 @@ class TestBindParameter:
 
         # Create parameter with different value than sync
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1566,9 +1566,9 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'setter': value_param.setValue,
-                }
+                },
             },
-            init_from='widget'
+            init_from='widget',
         )
 
         # Sync should be initialized with parameter's value
@@ -1580,7 +1580,7 @@ class TestBindParameter:
 
         # Create parameter with different value than sync
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 99},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1596,9 +1596,9 @@ class TestBindParameter:
                     'signal': value_param.sigValueChanged,
                     'getter': value_param.value,
                     'setter': value_param.setValue,
-                }
+                },
             },
-            init_from='sync'
+            init_from='sync',
         )
 
         # Parameter should be initialized with sync's value
@@ -1610,7 +1610,7 @@ class TestBindParameter:
 
         # Create parameter
         params = [
-            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10}
+            {'title': 'Value:', 'name': 'value', 'type': 'int', 'value': 10},
         ]
         settings = Parameter.create(name='settings', type='group', children=params)
         value_param = settings.child('value')
@@ -1622,8 +1622,8 @@ class TestBindParameter:
         sync.bind_parameter(
             value_param,
             property_map={
-                'value': {'param': value_param}
-            }
+                'value': {'param': value_param},
+            },
         )
 
         # Check it works
@@ -1789,7 +1789,7 @@ class TestHelperMethods:
         """Test that helper methods properly update bound widgets"""
         sync = DictSync(initial_value={
             'items': ['Red', 'Green', 'Blue'],
-            'current': 'Red'
+            'current': 'Red',
         })
 
         # Create combo box bound to items
@@ -1800,9 +1800,9 @@ class TestHelperMethods:
                 'items': {
                     'getter': lambda: [combo.itemText(i) for i in range(combo.count())],
                     'setter': lambda items: (combo.clear(), combo.addItems(items)),
-                    'mode': SyncMode.FROM_SYNC
-                }
-            }
+                    'mode': SyncMode.FROM_SYNC,
+                },
+            },
         )
 
         assert combo.count() == 3
@@ -1865,7 +1865,7 @@ class TestHelperMethods:
         """Test a sequence of list operations"""
         sync = DictSync(initial_value={
             'items': ['Apple', 'Banana', 'Cherry'],
-            'count': 3
+            'count': 3,
         })
 
         # Append
@@ -1956,9 +1956,9 @@ class TestDeepCopyBugFix:
                     'signal': combo.currentTextChanged,
                     'getter': combo.currentText,
                     'setter': combo.setCurrentText,
-                    'mode': SyncMode.BIDIRECTIONAL
-                }
-            }
+                    'mode': SyncMode.BIDIRECTIONAL,
+                },
+            },
         )
 
         # Initial value should be set

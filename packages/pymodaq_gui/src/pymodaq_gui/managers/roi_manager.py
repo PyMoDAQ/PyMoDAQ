@@ -45,7 +45,7 @@ def roi_format(index):
 
 
 class ROIScalableGroup(GroupParameter):
-    def __init__(self, roi_type = DataDim.Data1D, **opts):
+    def __init__(self, roi_type=DataDim.Data1D, **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
         self.roi_type = roi_type
@@ -66,7 +66,7 @@ class ROIScalableGroup(GroupParameter):
 
 
     def makeChild(self, index, descriptor: str):
-        child = {'name': ROIManager.roi_format(index), 'type': 'bool','value':True, 'removable': True, 'renamable': False, 'expanded': False,'context':['Copy',]}
+        child = {'name': ROIManager.roi_format(index), 'type': 'bool','value':True, 'removable': True, 'renamable': False, 'expanded': False,'context':['Copy']}
         if self.roi_type == DataDim.Data2D:
             child['children'] = ROIScalableGroup.make_ROIParam2D(descriptor, index)
         elif self.roi_type == DataDim.Data1D:
@@ -78,43 +78,43 @@ class ROIScalableGroup(GroupParameter):
         if dim == DataDim.Data2D:
             child = [{'title': 'Use channel', 'name': 'use_channel', 'type': 'itemselect', 'checkbox': True,
                       'value': dict(all_items=['red', 'green', 'blue'],
-                           selected=['red',]),
-                              },]
+                           selected=['red']),
+                              }]
         else:
-            child = [{'title': 'Use channel', 'name': 'use_channel', 'type': 'itemselect','checkbox': True},]
+            child = [{'title': 'Use channel', 'name': 'use_channel', 'type': 'itemselect','checkbox': True}]
         return child 
 
     @staticmethod
     def makeDisplayParam(index):
         return [{'name': 'Color', 'type': 'color', 'value': list(np.roll(ROIManager.color_list, index)[0])},
-             {'name': 'zlevel', 'title':'Z-level','type': 'int', 'expanded': False, 'value':10},] 
+             {'name': 'zlevel', 'title':'Z-level','type': 'int', 'expanded': False, 'value':10}] 
         
     @staticmethod
     def makeMathParam(dim=DataDim.Data2D):
         return [{'title': 'Math type:', 'name': 'math_function', 'type': 'list',
-                             'limits': data_processors.functions_filtered(dim)},]
+                             'limits': data_processors.functions_filtered(dim)}]
     @staticmethod    
     def make_ROIParam2D(descriptor: str, index):
             children = []    
             children.extend([{'title': 'Type', 'name': 'roi_type', 'type': 'list', 'value': descriptor,
-                              'limits': ROI2D_TYPES, 'readonly': False,}])
+                              'limits': ROI2D_TYPES, 'readonly': False}])
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
-                             'value': config.get(('utils', 'plotting', 'process_roi'), True),})
+                             'value': config.get(('utils', 'plotting', 'process_roi'), True)})
             children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data2D))
             children.extend(ROIScalableGroup.makeMathParam(DataDim.Data2D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
             children.extend([{'name': 'center', 'type': 'group', 'expanded': False, 'children': [
                     {'name': 'x', 'type': 'float', 'value': 0, 'step': 1,'decimals':6},
-                    {'name': 'y', 'type': 'float', 'value': 0, 'step': 1,'decimals':6}
-                ]}, ])                
+                    {'name': 'y', 'type': 'float', 'value': 0, 'step': 1,'decimals':6},
+                ]}])                
             children.extend([{'name': 'position', 'type': 'group', 'expanded': False, 'children': [
                     {'name': 'x', 'type': 'float', 'value': 0, 'step': 1,'decimals':6},
-                    {'name': 'y', 'type': 'float', 'value': 0, 'step': 1,'decimals':6}
-                ]}, ])          
+                    {'name': 'y', 'type': 'float', 'value': 0, 'step': 1,'decimals':6},
+                ]}])          
             children.extend([
                     {'name': 'size', 'type': 'group', 'expanded': False, 'children': [
                         {'name': 'width', 'type': 'float', 'value': 10, 'step': 1,'decimals':6},
-                        {'name': 'height', 'type': 'float', 'value': 10, 'step': 1,'decimals':6}
+                        {'name': 'height', 'type': 'float', 'value': 10, 'step': 1,'decimals':6},
                     ]},
                     {'name': 'angle', 'type': 'float', 'value': 0, 'step': 1}])    
             return children
@@ -123,14 +123,14 @@ class ROIScalableGroup(GroupParameter):
     def make_ROIParam1D(descriptor: str, index):
             children = []
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
-                             'value': config.get(('utils', 'plotting', 'process_roi'), True),})
+                             'value': config.get(('utils', 'plotting', 'process_roi'), True)})
             children.extend(ROIScalableGroup.makeChannelsParam(DataDim.Data1D))
             children.extend(ROIScalableGroup.makeMathParam(DataDim.Data1D))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
             children.extend([{'name': 'position', 'type': 'group', 'children': [
                 {'name': 'left', 'type': 'float', 'value': 0, 'step': 1},
-                {'name': 'right', 'type': 'float', 'value': 10, 'step': 1}
-                    ]}, ])
+                {'name': 'right', 'type': 'float', 'value': 10, 'step': 1},
+                    ]}])
             
             return children
 
@@ -220,7 +220,7 @@ class ROIManager(QObject):
         self.load_ROI_pb.triggered.connect(lambda: self.load_ROI(None))
         self.clear_ROI_pb.triggered.connect(self.clear_ROI)
 
-    def get_ROI_indexes(self,):
+    def get_ROI_indexes(self):
         return [roi.index for roi in self.ROIs.values()]
 
     def roi_tree_changed(self, param, changes):
@@ -292,7 +292,7 @@ class ROIManager(QObject):
         # Emitting signal
         self.new_ROI_signal.emit(roi.key())
 
-    def expand_roi_tree(self, roi,):
+    def expand_roi_tree(self, roi):
         # Expand roi tree when roi gets double selected
         param = self.settings.child(*('ROIs', roi_format(roi.index)))
         isExpanded = not param.opts['expanded']
@@ -361,15 +361,15 @@ class ROIManager(QObject):
         roi_group = self.settings.child('ROIs')
         #Copy parameter and edit name
         param_roi = self.get_parameter(roi)
-        param = param_roi.saveState() # Transforming parameter in dict
-        param['name'] = roi_format(index) # Changing name   
-        param = Parameter.create(**param) # Transforming dict in parameter
+        param = param_roi.saveState()  # Transforming parameter in dict
+        param['name'] = roi_format(index)  # Changing name   
+        param = Parameter.create(**param)  # Transforming dict in parameter
         self.settings_signalBlocker.reblock()
         roi_group.addChild(param)
         self.settings_signalBlocker.unblock()
         new_roi = self.make_ROI(param)
 
-        param_to_update = putils.iter_children_params(param_roi,[],filter_name=('roi_type',),filter_type=('group',)) # Parameters to update
+        param_to_update = putils.iter_children_params(param_roi,[],filter_name=('roi_type',),filter_type=('group',))  # Parameters to update
         # [self.update_roi(new_roi,p) for p in reversed(param_to_update)]     
         self.add_ROI(new_roi)
         [self.update_roi(new_roi,p) for p in reversed(param_to_update)]     
@@ -420,7 +420,7 @@ class ROIManager(QObject):
             position = roi.pos()
             pos = self.update_roi_pos(position, param)
             if self.ROI_type =='1D':
-                pos = np.sort(pos) #Subclass pg.Point to implement sort?
+                pos = np.sort(pos)  #Subclass pg.Point to implement sort?
                 roi.setPos(pos) 
                 self.settings_signalBlocker.reblock()
                 par.child(*('position', 'left')).setValue(pos[0])
@@ -452,7 +452,7 @@ class ROIManager(QObject):
     
     def get_parameter(self, roi):
         if type(roi) is int:
-            par =  self.settings.child(*('ROIs', roi_format(roi)))
+            par = self.settings.child(*('ROIs', roi_format(roi)))
         else:
             par = self.settings.child(*('ROIs', roi.key()))
         return par
@@ -586,18 +586,18 @@ class ROISaver:
             file = 'roi_default'
 
         self.roi_presets = Parameter.create(name='roi_settings', type='group', children=[
-            {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}, ])
+            {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}])
 
         for ind_det, det in enumerate(self.detector_modules):
             det_param = Parameter.create(name=f'det_{ind_det:03d}', type='group', children=[
-                {'title': 'Det Name:', 'name': 'detname', 'type': 'str', 'value': det.title}, ])
+                {'title': 'Det Name:', 'name': 'detname', 'type': 'str', 'value': det.title}])
 
             for ind_viewer, viewer in enumerate(det.ui.viewers):
                 viewer_param = Parameter.create(
                     name=f'viewer_{ind_viewer:03d}', type='group',
                     children=[
                         {'title': 'Viewer:', 'name': 'viewername', 'type': 'str',
-                         'value': det.ui.viewer_docks[ind_viewer].name()}, ])
+                         'value': det.ui.viewer_docks[ind_viewer].name()}])
 
                 if hasattr(viewer, 'roi_manager'):
                     viewer_param.addChild(

@@ -54,7 +54,7 @@ class AdaptiveAlgorithm(GenericAlgorithm):
                                           np.min(bounds[ind]))
         return point
 
-    def set_prediction_function(self, loss_type=LossDim.LOSS_1D, kind='',  **kwargs):
+    def set_prediction_function(self, loss_type=LossDim.LOSS_1D, kind='', **kwargs):
         self._prediction = LossFunctionFactory.create(loss_type, kind, **kwargs)
 
     def update_prediction_function(self):
@@ -99,16 +99,16 @@ class AdaptiveAlgorithm(GenericAlgorithm):
         """ Return the individual coordinates with best fitness"""
 
         if len(self._algo.data) > 0:
-            individual_array =  np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
+            individual_array = np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
         else:
-            individual_array =  np.atleast_1d(self._algo.bounds[0])
+            individual_array = np.atleast_1d(self._algo.bounds[0])
         return dict(zip(self.actuators, individual_array))
 
     def best_individuals(self, n_best):
         if len(self._algo.data) > n_best:
-            individual_array =  np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
+            individual_array = np.atleast_1d(list(self._algo.data.keys())[list(self._algo.data.values()).index(max(self._algo.data.values()))])
         else:
-            individual_array =  np.atleast_1d(self._algo.bounds[0])
+            individual_array = np.atleast_1d(self._algo.bounds[0])
         return dict(zip(self.actuators, individual_array))
 
 

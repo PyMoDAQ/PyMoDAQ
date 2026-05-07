@@ -37,5 +37,5 @@ class PseudoJsonLexer(RegexLexer):
             (r'"\.{3}"', Text),
             # ignore standalone ... (inside arrays or anywhere)
             (r'\.\.\.', Text),
-        ]
+        ],
     }

@@ -161,7 +161,7 @@ class Test1DPlot:
                 for ind in range(NX):
                     data0D = datamod.DataRaw('data0D',
                                              data=[np.array([float(data_array_1D_spread[ind])])],
-                                             distribution='uniform',)
+                                             distribution='uniform')
                     saver_loader.add_data('/RawData', data0D,
                                           axis_values=[float(axis_spread_array[ind])])
 
@@ -390,7 +390,7 @@ class Test4DPlot:
                                                  spread_order=0),
                                     datamod.Axis(data=z, index=0, label='z_axis', units='zunits',
                                                  spread_order=0),
-                                    axis
+                                    axis,
                                     ])
 
         viewer = dwa.plot('qt')

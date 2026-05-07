@@ -201,7 +201,7 @@ class View0D(ActionManager, QObject):
         if not show_toolbar:
             self.splitter.setSizes([0,1])
 
-        self.get_action('Nhistory').setValue(200) #default history length
+        self.get_action('Nhistory').setValue(200)  #default history length
 
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')

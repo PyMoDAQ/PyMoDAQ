@@ -18,6 +18,7 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
+from pymodaq.control_modules.thread_commands import ControlToHardwareViewer
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -174,11 +175,29 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('actuators').setValue(dict(all_items=self.get_names(actuators),
                                                        selected=self.get_names(selected_actuators)))
 
+    def set_actuators_from_names(self, actuators: list[str], selected_actuators: list[str]):
+        """Populates actuators and the subset to be selected in the UI from their names"""
+        for act in actuators:
+            assert act in self.actuators_name
+        for act in selected_actuators:
+            assert act in self.actuators_name
+        self.settings.child('actuators').setValue(dict(all_items=actuators,
+                                                       selected=selected_actuators))
+
     def set_detectors(self, detectors: list['DAQ_Viewer'], selected_detectors: list['DAQ_Viewer']):
         """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
         self.settings.child('detectors').setValue(dict(all_items=self.get_names(detectors),
                                                        selected=self.get_names(selected_detectors)))
+
+    def set_detectors_from_names(self, detectors: list[str], selected_detectors: list[str]):
+        """Populates detectors and the subset to be selected in the UI from their names"""
+        for det in detectors:
+            assert det in self.detectors_name
+        for det in selected_detectors:
+            assert det in self.detectors_name
+        self.settings.child('detectors').setValue(dict(all_items=detectors,
+                                                       selected=selected_detectors))
 
     @property
     def detectors(self) -> List['DAQ_Viewer']:
@@ -200,7 +219,7 @@ class ModulesManager(QObject, ParameterManager):
         return self.get_mods_from_names(self.selected_actuators_name, mod=ModuleType.Actuator)
 
     @property
-    def actuators_all(self):
+    def actuators_all(self) -> list['DAQ_Move']:
         """Get the list of all actuators"""
         return self._actuators
 
@@ -345,7 +364,7 @@ class ModulesManager(QObject, ParameterManager):
         for mod in self.detectors:
             if mod.title not in overridden_detectors:
                 kwargs.update(dict(Naverage=Naverage if Naverage is not None else mod.Naverage))
-                mod.command_hardware.emit(utils.ThreadCommand("single", kwargs))
+                mod.command_hardware.emit(utils.ThreadCommand(ControlToHardwareViewer.SINGLE, kwargs))
 
         while not self.det_done_flag:
             # wait for grab done signals to end
@@ -454,7 +473,7 @@ class ModulesManager(QObject, ParameterManager):
         layout.addLayout(form)
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok |
-            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel,
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -477,7 +496,7 @@ class ModulesManager(QObject, ParameterManager):
         for dact in self.move_done_positions:
             test_actuator.addChild(
                 {'title': dact.name, 'name': dact.name.replace(' ', '_'),
-                 'type': 'float', 'value': dact.value(), 'readonly': True}
+                 'type': 'float', 'value': dact.value(), 'readonly': True},
             )
 
 

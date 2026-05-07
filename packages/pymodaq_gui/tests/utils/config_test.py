@@ -36,11 +36,11 @@ class TestConfigSaverLoader:
         {'name': 'aparent', 'type': 'group', 'children': [
             {'name': 'aparam', 'type': 'group', 'children': [
                 {'name': 'min', 'type': 'float', 'value': 2.},
-                {'name': 'max', 'type': 'float', 'value': 6.}
+                {'name': 'max', 'type': 'float', 'value': 6.},
             ]},
         {'name': 'anotherparam', 'type': 'group', 'children': [
             {'name': 'min', 'type': 'bool', 'value': True},
-            {'name': 'max', 'type': 'str', 'value': 'klj'}
+            {'name': 'max', 'type': 'str', 'value': 'klj'},
         ]},
     ]}]
 

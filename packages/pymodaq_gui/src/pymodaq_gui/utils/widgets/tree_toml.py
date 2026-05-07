@@ -4,6 +4,7 @@ Created the 19/10/2023
 
 @author: Sebastien Weber
 """
+import contextlib
 import sys
 from typing import Union, Any
 import datetime
@@ -41,10 +42,69 @@ class TreeFromToml(ParameterManager, QObject):
 
         self._cached_config_changes = {}
         self.dialog = None
+        self._post_process_params()
+
+    def _post_process_params(self):
+        """For every list param named 'backend': expand limits from the template (so the full
+        list of known backends is always shown) and grey out items not installed."""
+        import pkgutil
+        import toml
+        from pathlib import Path
+        from pymodaq_utils.config import GlobalConfig, BaseConfig
+
+        installed_lower = {mod.name.lower() for mod in pkgutil.iter_modules()}
+
+        # Some backend names are not pip package names; map them to their actual package.
+        _backend_pkg_alias = {'qt': 'qtpy'}
+
+        def _backend_available(name: str) -> bool:
+            pkg = _backend_pkg_alias.get(name.lower(), name.lower())
+            return pkg in installed_lower
+
+        def annotate(param_group, template_dict):
+            for child in param_group.children():
+                key = child.name()
+                tval = template_dict.get(key) if isinstance(template_dict, dict) else None
+                if child.opts.get('type') == 'list' and key == 'backend':
+                    current = list(child.opts.get('limits', []))
+                    full = list(tval) if isinstance(tval, list) else list(current)
+                    for item in current:  # keep any user-added entries not in template
+                        if item not in full:
+                            full.append(item)
+                    unavailable = [x for x in full if isinstance(x, str)
+                                   and not _backend_available(x)]
+                    update = {'unavailable': unavailable}
+                    if full != current:
+                        update['limits'] = full
+                    child.setOpts(**update)
+                elif child.hasChildren():
+                    annotate(child, tval if isinstance(tval, dict) else {})
+
+        # Resolve (param_root, template) pairs so both start at the same nesting level
+        if isinstance(self._config, GlobalConfig):
+            for cfg_name, cfg in self._config._configs.items():
+                tpath = getattr(cfg, 'config_template_path', None)
+                if not (tpath and Path(tpath).is_file()):
+                    continue
+                template = toml.load(tpath)
+                if self.start_path and self.start_path[0] == cfg_name:
+                    for k in self.start_path[1:]:
+                        template = template.get(k, {})
+                    annotate(self.settings, template)
+                elif not self.start_path:
+                    with contextlib.suppress(Exception):
+                        annotate(self.settings.child(cfg_name), template)
+        elif isinstance(self._config, BaseConfig):
+            tpath = getattr(self._config, 'config_template_path', None)
+            if tpath and Path(tpath).is_file():
+                template = toml.load(tpath)
+                for k in self.start_path:
+                    template = template.get(k, {})
+                annotate(self.settings, template)
 
     def value_changed(self, param):
         path = tuple(get_param_path(param)[1:])
-        self._cached_config_changes[path] =  self.param_to_object(param)
+        self._cached_config_changes[path] = self.param_to_object(param)
 
     def commit_config_changes_cache(self):
         for path, value in self._cached_config_changes.items():

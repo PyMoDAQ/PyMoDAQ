@@ -41,17 +41,17 @@ if TYPE_CHECKING:
 #   toolbar_orient       – Qt orientation of the control toolbar
 #
 _PANEL_POSITIONS: dict = {
-    'right':  dict(direction='left',   content_before_toggle=True,
-                   horizontal=True,   toggle_symbol='◀',
+    'right':  dict(direction='left', content_before_toggle=True,
+                   horizontal=True, toggle_symbol='◀',
                    toolbar_orient=Qt.Orientation.Vertical),
-    'left':   dict(direction='right',  content_before_toggle=False,
-                   horizontal=True,   toggle_symbol='▶',
+    'left':   dict(direction='right', content_before_toggle=False,
+                   horizontal=True, toggle_symbol='▶',
                    toolbar_orient=Qt.Orientation.Vertical),
     'top':    dict(direction='bottom', content_before_toggle=False,
-                   horizontal=False,  toggle_symbol='▼',
+                   horizontal=False, toggle_symbol='▼',
                    toolbar_orient=Qt.Orientation.Horizontal),
-    'bottom': dict(direction='top',   content_before_toggle=True,
-                   horizontal=False,  toggle_symbol='▲',
+    'bottom': dict(direction='top', content_before_toggle=True,
+                   horizontal=False, toggle_symbol='▲',
                    toolbar_orient=Qt.Orientation.Horizontal),
 }
 _POSITION_CYCLE = ('right', 'bottom', 'left', 'top')
@@ -60,8 +60,8 @@ _POSITION_CYCLE = ('right', 'bottom', 'left', 'top')
 # 'dock_to_left' shows the panel on the left; its h-mirror = panel on the right.
 # 'dock_to_bottom' shows the panel at the bottom; its v-mirror = panel at the top.
 _POSITION_ICONS: dict = {
-    'left':  dict(icon_name='dock_to_left',   flip_h=True,  flip_v=False),
-    'right':   dict(icon_name='dock_to_left',   flip_h=False, flip_v=False),
+    'left':  dict(icon_name='dock_to_left', flip_h=True, flip_v=False),
+    'right':   dict(icon_name='dock_to_left', flip_h=False, flip_v=False),
     'bottom': dict(icon_name='dock_to_bottom', flip_h=False, flip_v=False),
     'top':    dict(icon_name='dock_to_bottom', flip_h=False, flip_v=True),
 }
@@ -227,7 +227,7 @@ class CompactDockManager(QtCore.QObject, ActionManager):
         toolbar.setAllowedAreas(self.toolbar_area)
         toolbar.setOrientation(
             Qt.Orientation.Horizontal if self.orientation == Qt.Orientation.Vertical
-            else Qt.Orientation.Vertical
+            else Qt.Orientation.Vertical,
         )
 
     def add_widget(self, widget: QtWidgets.QWidget,
@@ -397,7 +397,7 @@ class CompactDockManager(QtCore.QObject, ActionManager):
             return
         cfg = _POSITION_ICONS.get(self._panel_position, _POSITION_ICONS['right'])
         self._position_btn.setIcon(
-            create_icon(cfg['icon_name'], flip_h=cfg['flip_h'], flip_v=cfg['flip_v'])
+            create_icon(cfg['icon_name'], flip_h=cfg['flip_h'], flip_v=cfg['flip_v']),
         )
         menu = self._position_btn.menu()
         if menu is not None:

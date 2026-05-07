@@ -112,5 +112,5 @@ def _handle_item(menu, key, value, path, leaf_callback):
 def _add_leaf(menu, name, path, leaf_callback):
     action = menu.addAction(name)
     action.triggered.connect(
-        lambda checked=False, n=name, p=path: leaf_callback(n, p)
+        lambda checked=False, n=name, p=path: leaf_callback(n, p),
     )

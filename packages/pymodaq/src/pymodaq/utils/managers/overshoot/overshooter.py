@@ -52,7 +52,7 @@ class Overshooter(ManagerBase):
     execute_action_checkable = True
     params = [
         {'title': 'Configuration:', 'name': 'configuration', 'type': 'list',
-         'limits': [],},
+         'limits': []},
         {'title': 'Overshoots:', 'name': 'overshoots', 'type': 'group_overshoot'},
     ]
 
@@ -192,7 +192,7 @@ class Overshooter(ManagerBase):
     def process_data(self, param, data: Union[DataToExport, DataWithAxes]):
         if isinstance(data, DataWithAxes):  # from DAQ_Move modules
             self.process_dwa(param, data)
-        elif isinstance(data, DataToExport): # from DAQ_Viewer modules
+        elif isinstance(data, DataToExport):  # from DAQ_Viewer modules
             self.process_dwa(param, data.get_data_from_name_origin(param['name'],
                                                                    param['module']))
         else:
