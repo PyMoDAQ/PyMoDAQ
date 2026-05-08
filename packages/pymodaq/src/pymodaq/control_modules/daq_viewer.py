@@ -785,10 +785,12 @@ class DAQ_Viewer(ParameterControlModule):
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
                 _current_data = dte.deepcopy()
 
-                self._ind_continuous_grab += 1
-                if self._ind_continuous_grab > 1:
+                if self._ind_continuous_grab == 0:
+                    self._data_to_save_export = _current_data
+                else:
                     self._data_to_save_export = \
                         _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
+                self._ind_continuous_grab += 1
             else:
                 for dwa in dte:
                     dwa.origin = self._title
