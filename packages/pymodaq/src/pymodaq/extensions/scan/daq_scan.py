@@ -54,7 +54,7 @@ from pymodaq.utils.scanner.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.data import DataActuator
 from pymodaq.extensions.scan.manager.scan_manager import ScanManager
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
-from pymodaq_gui.utils.widgets import QLED
+from pymodaq_gui.utils.widgets import MultistateLED, StatusPalette
 from pymodaq_gui.utils.custom_app import CustomApp, WorkFlowActions
 from pymodaq.extensions.extension_worker import DataBundle, ExtensionWorker
 
@@ -85,7 +85,7 @@ class ScanStatusBarManager:
         self._indice_scan_sb: QSpinBox_ro = None
         self._indice_average_sb: QSpinBox_ro = None
 
-        self._scan_done_LED: QLED = None
+        self._scan_done_LED: MultistateLED = None
 
     @property
     def statusbar(self):
@@ -104,10 +104,16 @@ class ScanStatusBarManager:
         self._indice_average_sb = QSpinBox_ro()
         self._indice_average_sb.setToolTip('Current average value')
 
-        self._scan_done_LED = QLED()
-        self._scan_done_LED.set_as_false()
-        self._scan_done_LED.clickable = False
-        self._scan_done_LED.setToolTip('Scan done state')
+        self._scan_done_LED = MultistateLED(
+            states=[
+                ('idle',     StatusPalette.color('off')),
+                ('running',  StatusPalette.color('running')),
+                ('complete', StatusPalette.color('idle')),
+                ('error',    StatusPalette.color('critical')),
+            ],
+            readonly=True,
+        )
+        self._scan_done_LED.setToolTip('Scan state: idle / running / complete / error')
 
         self.statusbar.insertPermanentWidget(1, self._n_scan_steps_sb) # 1 because there is already the permanent label
         self.statusbar.insertPermanentWidget(2, self._indice_scan_sb)
@@ -132,8 +138,13 @@ class ScanStatusBarManager:
     def set_scan_step_average(self, step_ind: int):
         self._indice_average_sb.setValue(step_ind)
 
+    def set_scan_state(self, state: str):
+        """Set the scan LED to a named state: 'idle', 'running', 'complete', or 'error'."""
+        self._scan_done_LED.set_state(state)
+
     def set_scan_done(self, done=True):
-        self._scan_done_LED.set_as(done)
+        """Compatibility shim: True → 'complete', False → 'running'."""
+        self._scan_done_LED.set_state('complete' if done else 'running')
 
 
 class DAQScan(CustomExt):
