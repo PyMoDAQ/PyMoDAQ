@@ -40,15 +40,19 @@ Color Definitions
 |                  |        |                    | flight: moving,      |
 |                  |        |                    | acquiring, or        |
 |                  |        |                    | processing data.     |
+|                  |        |                    | Hex fallback: blue   |
+|                  |        |                    | ``#0078d4``.         |
 +------------------+--------+--------------------+----------------------+
 | ``warning``      | yellow | ``logging.WARNING``| A non-fatal issue.   |
 |                  |        |                    | Still functional;    |
 |                  |        |                    | user attention       |
-|                  |        |                    | advised.             |
+|                  |        |                    | advised.  Fallback:  |
+|                  |        |                    | amber ``#ccaa00``.   |
 +------------------+--------+--------------------+----------------------+
 | ``error``        | orange | ``logging.ERROR``  | An operation failed. |
 |                  |        |                    | Module may still     |
-|                  |        |                    | recover.             |
+|                  |        |                    | recover. Fallback:   |
+|                  |        |                    | ``#dc6400``.         |
 +------------------+--------+--------------------+----------------------+
 | ``critical``     | red    | ``logging.CRITICAL``| Unrecoverable fault.|
 |                  |        |                    | Timeout, hardware    |
@@ -93,12 +97,12 @@ from qtpy import QtGui
 # (state_name, theme_attribute, hex_fallback)
 # theme_attribute is the name of the QColor property on a qt_themes Theme object.
 _DEFINITIONS: list[tuple[str, str, str]] = [
-    ('off',     'grey',   '#808080'),
-    ('idle',    'green',  '#00b400'),
-    ('running', 'blue', '#c8c800'),
-    ('warning', 'yellow', '#dc8200'),
-    ('error', 'orange', '#dc8200'),
-    ('critical',   'red',    '#c80000'),
+    ('off',      'grey', '#808080'),  # grey — adapts to dark/light theme
+    ('idle',     'green',    '#00b400'),  # green — initialized and ready
+    ('running',  'blue',     '#0078d4'),  # blue  — action in flight
+    ('warning',  'yellow',   '#ccaa00'),  # amber — non-fatal issue
+    ('error',    'orange',   '#dc6400'),  # orange — operation failed, may recover
+    ('critical', 'red',      '#c80000'),  # red   — unrecoverable fault
 ]
 
 
