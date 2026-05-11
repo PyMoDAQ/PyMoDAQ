@@ -341,6 +341,16 @@ class Launcher(CustomApp):
         self.move_button.setToolTip(EnumToolTip.DAQ_MOVE)
         self.h5browser_button.setToolTip(EnumToolTip.H5BROWSER)
 
+    def set_header(self):
+        self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
+        self.header_toolbar = self.get_toolbar('header')
+
+        self.header_toolbar.layout().setSpacing(20)
+
+    def set_controls(self):
+        self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('extensions', 'Extensions'))
 
     def launch_empty_dashboard(self):
         subprocess.Popen(['dashboard'])
@@ -353,18 +363,6 @@ class Launcher(CustomApp):
 
     def launch_h5browser(self):
         subprocess.Popen(['h5browser'])
-
-
-    def set_header(self):
-        self.hbox.addWidget(self.add_toolbar('header', 'Header', add_break=False))
-        self.header_toolbar = self.get_toolbar('header')
-
-        self.header_toolbar.layout().setSpacing(20)
-
-    def set_controls(self):
-        self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
-        self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
-        self.get_toolbar('controls').addWidget(self.add_toolbar('extensions', 'Extensions'))
 
     def show_experiment_titles_only(self, experiment_source=None):
         """Load an experiment source and display only module titles in settings_tree."""
@@ -389,7 +387,6 @@ class Launcher(CustomApp):
         self.tree.header().hide()
         self.tree.expandAll()
         self.tree.setItemsExpandable(True)
-
 
     def load_dashboard_with_experiment_configurator(self):
         """
@@ -460,13 +457,10 @@ class Launcher(CustomApp):
         # Enable and disable navigation buttons
         self.check_disable_navigation_buttons()
 
-
     def _on_date_combo_box_changed(self, index) :
         self.do_navigate(index)
 
-
-    def load_history_in_dict(self) -> tuple[
-        dict[str, str], list[str]]:
+    def load_history_in_dict(self) -> tuple[dict[str, str], list[str]]:
         """
         Read history file and return a dictionary with experiments and configurators sorted by date.
 
@@ -502,7 +496,6 @@ class Launcher(CustomApp):
         self.history, self.history_keys = self.load_history_in_dict()
         self.history_index = 0
         self.history_modified_sig.emit()
-
 
     def load_extension_subprocess(self, extension_name: str):
         """Launch an extension in a separate process"""

@@ -23,62 +23,31 @@ Finally, under the header, there is a material tree, who expose actuators and de
 
   .. _launcher:
 
-.. figure:: /image/launcher/launcher_home_page.png
+.. figure:: /image/launcher/launcher_caption.png
    :alt: launcher
 
    Launcher user interface containing shortcuts and experiment information.
 
 
-PyMoDAQ's shorcuts
+Launcher features
 ------------
 
-This part is very basically and allows you to launch an empty interface with different buttons, linked to PyMoDAQ's shortcuts.
+Launcher has graphical shortcuts to launch empty interface, such as command line. (see 1 part of illustration)
 
   .. _launcher_shortcuts:
 
-.. figure:: /image/launcher/launcher_shortcuts.png
-   :alt: launcher_shortcuts
 
-   Launcher graphical shortcuts.
-
-.. :download: `png <launcher_shortcuts.png>`
-
-There are 4 shortcuts:
-
-* :ref:`Dashboard <Dashboard_module>` to launch an empty dashboard without loaded experiment, it's similar to run `dashboard` command in a PyMoDAQ's folder.
 .. _launcher_default_dashboard_note:
 
 .. note::
 
     If you want to launch a ``default`` dashboard with default experiment and state, you can refer to the `Restore an experiment`_ section.
-* :ref:`DAQ_Viewer_module` to launch an empty Viewer, it's similar to run ``daq_viewer`` command in a PyMoDAQ's folder.
-* :ref:`DAQ_Move_module` to launch an empty DAQ Move, it's similar to run ``daq_move`` command in a PyMoDAQ's folder.
-* :ref:`H5Browser <H5Browser_module>`  to launch an empty H5Browser, it's similar to run ``h5browser`` command in a PyMoDAQ's folder.
 
 For all shortcuts, please refer you to appropriate section for more details on how it works.
 
-Extensions launch
-------------
-
-To load an extension, select one in the combo box widget and click to arrow button.
+To load an extension, select one in the combo box widget and click to arrow button. (see 2 part of illustration)
 Multiple extensions can be launched simultaneously. Extensions run in separate process from each other, as well as from the launcher and dashboard.
 So, if an extension encounter an issue, other modules are not affected.
-
-  .. _launcher_extensions:
-
-.. figure:: /image/launcher/launcher_extensions.png
-   :alt: launcher_extensions
-
-   Launcher graphical extensions.
-
-.. :download: `png <launcher_extensions.png>`
-
-
-
-.. _restore_configuration:
-
-Restore an experiment
-------------
 
 
 To restore an experiment click on |open_in_new| ``Launch`` button. The launcher will load a dashboard with selected experiment and state.
@@ -94,42 +63,13 @@ If the experiment that you want load is not suggest directly by the launcher or 
    :height: 1em
    :align: middle
 
-Navigate through the history
-------------
 
 .. _launcher_history:
 
 By default, the launcher  display the last configuration used to make the dashboard restoration as quick as possible. But, you can navigate in the configurations history,
-who store date, hour, experiment and state used. The are two method to navigate in the history entries :
+who store date, hour, experiment and state used.
 
-* By ``navigation arrows``:
-   To navigate to the previous configuration, click on |left_arrow| icon and to navigate to the next one click on |right_arrow| icon.
-
-* By ``date``:
-   To navigate by date, click on date combo box to display all history entries and select one (:numref:`launcher_date_combo_box`).
-
-History entries are sorted by descendant order date. When the right configuration is set, you can change the state before to restore the dashboard (see :ref:`restore_configuration` section).
-
-.. _launcher_date_combo_box:
-
-.. figure:: /image/launcher/launcher_date_combo_box.png
-   :alt: launcher_date_combo_box
-
-   Navigate through the configurations history by date.
-
-.. :download: `png <launcher_date_combo_box.png>`
-
-
-.. |right_arrow| image:: /image/launcher/keyboard_arrow_right.png
-   :height: 1em
-   :align: middle
-
-.. |left_arrow| image:: /image/launcher/keyboard_arrow_left.png
-   :height: 1em
-   :align: middle
-
-Change history configuration
-----------------------------
+You can navigate by navigation arrows or by date through the history. When the right configuration is set, you can change the state before to restore the dashboard.
 
 By default in the launcher, the history size is fixed at 20 items and does not keep duplicates entries.
 Meaning that, if a configuration (experiment + state) is chosen and this configurations was already recorded in the history,
