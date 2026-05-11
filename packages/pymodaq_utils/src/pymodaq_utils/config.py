@@ -220,7 +220,7 @@ def get_set_path(a_base_path: Path, dir_name: str) -> Path:
     if not path_to_get.is_dir():
         try:
             path_to_get.mkdir(parents=True)
-        except PermissionError as e:
+        except PermissionError:
             from pymodaq_utils.filesystem import create_folder_with_elevation
             if not create_folder_with_elevation(path_to_get, 0o757):
                 logging.warning(f"Cannot create local config folder at this location: {path_to_get}"

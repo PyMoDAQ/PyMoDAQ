@@ -129,7 +129,7 @@ def warn_about_elevation_prompt(reason: str):
     reason: the reason for rights elevation.
     """
     title = "Admin rights needed"
-    msg = f"PyMoDAQ needs admin rights to {reason}.\nPlease enter your password in the next prompt."
+    msg = f"PyMoDAQ needs admin rights to {reason}.\nPlease enter your password or accept the next prompt."
 
     # Try Qt first
     try:
