@@ -119,6 +119,7 @@ def deep_type_equals(a : T, b : T) -> bool:
         return all(deep_type_equals(x, y) for x, y in zip(a, b))
     return True
 
+
 def replace_item_in_list(items: list[Any],
                          old: Any,
                          new: Any):
@@ -312,29 +313,29 @@ def create_toml_from_dict(mydict: dict, dest_path: Path):
     dest_path.write_text(toml.dumps(mydict))
 
 
-def check_config(config_base: dict, config_local: dict):
-        """Compare two configuration dictionaries. Adding missing keys
+def check_config(template: dict, config: dict):
+    """Compare two configuration dictionaries. Adding missing keys
 
-        Parameters
-        ----------
-        config_base: dict
-            The base dictionaries with possible new keys
-        config_local: dict
-            a dict from a local config file potentially missing keys
+    Parameters
+    ----------
+    template: dict
+        The base dictionaries with possible new keys
+    config: dict
+        a dict from a local config file potentially missing keys
 
-        Returns
-        -------
-        bool: True if keys where missing else False
-        """
-        status = False
-        for key in config_base:
-            if key in config_local:
-                if isinstance(config_base[key], dict):
-                    status = status or check_config(config_base[key], config_local[key])
-            else:
-                config_local[key] = config_base[key]
-                status = True
-        return status
+    Returns
+    -------
+    bool: True if keys where missing else False
+    """
+    status = False
+    for key in template:
+        if key in config:
+            if isinstance(template[key], dict):
+                status = status or check_config(template[key], config[key])
+        else:
+            config[key] = template[key]
+            status = True
+    return status
 
 
 def copy_template_config(config_file_name: str = 'config', source_path: Union[Path, str] = None,
@@ -574,26 +575,26 @@ class BaseConfig(metaclass=ConfigSingleton):
 
         # write lock because it MODIFIES config
         with self._lock.write_lock():
-            toml_system_path = get_config_file(self.config_name, user=False)
-            toml_user_path = get_config_file(self.config_name, user=True)
-            if toml_system_path.is_file():
-                config = toml.load(toml_system_path)
+            system_config_path = get_config_file(self.config_name, user=False)
+            user_config_path = get_config_file(self.config_name, user=True)
+            if system_config_path.is_file():
+                config = toml.load(system_config_path)
                 if self.config_template_path is not None:
                     config_template = toml.load(self.config_template_path)
                 else:
                     config_template = {}
                 if check_config(config_template, config):  # check if all fields from template are there
                     # (could have been  modified by some commits)
-                    create_toml_from_dict(config, toml_system_path)
+                    create_toml_from_dict(config, system_config_path)
 
             else:
-                copy_template_config(self.config_name, self.config_template_path, toml_system_path.parent)
+                copy_template_config(self.config_name, self.config_template_path, system_config_path.parent)
 
-            if not toml_user_path.is_file():
+            if not user_config_path.is_file():
                 # create the author from environment variable
                 config_dict = self.dict_to_add_to_user()
                 if config_dict is not None:
-                    create_toml_from_dict(config_dict, toml_user_path)
+                    create_toml_from_dict(config_dict, user_config_path)
 
             self._config = load_system_config_and_update_from_user(self.config_name)
             self._modified_config = toml.load(get_config_file(self.config_name, user=True))
@@ -729,8 +730,15 @@ class GlobalConfig(metaclass=Singleton):
         return list(self._configs.keys())
 
     def _config_is_valid(self, name : str) -> bool:
+        def _filter_config(template: dict, config: dict) -> dict:
+            return {
+                k: _filter_config(template[k], config[k]) if isinstance(template[k], dict) else config[k]
+                for k in template
+            }
+
         template = toml.load(cast(BaseConfig, self._configs[name]).config_template_path)
-        return deep_type_equals(template,  self._configs[name].to_dict())
+        config = _filter_config(template, self._configs[name].to_dict())
+        return deep_type_equals(template,  config)
 
 
     def _migrate_configs(self):
