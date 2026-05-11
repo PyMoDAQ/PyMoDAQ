@@ -524,16 +524,12 @@ class BaseConfig(metaclass=ConfigSingleton):
         return get_config_file(self.config_name, user=False)
 
 
-    def migrate_values(self,
-                       old_system_config_base_path: Union[Path, None] = None,
-                       old_user_config_base_path: Union[Path, None] = None):
+    def migrate_values(self):
         self._unload()
-        self._backport_values(old_system_config_base_path, old_user_config_base_path)
+        self._backport_values()
         self.load()
 
-    def _backport_values(self,
-                         old_system_config_base_path: Union[Path, None] = None,
-                         old_user_config_base_path: Union[Path, None] = None):
+    def _backport_values(self):
         """
         Migrates the compatible subset of system user config values into the current config using
         the template for reference.
@@ -541,26 +537,12 @@ class BaseConfig(metaclass=ConfigSingleton):
         Template values are copied as system one and overridden by already existing system values if type-compatible.
         User values are applied after system values, only if they still exist in the template and are type-compatible.
 
-        Parameters
-        ----------
-        old_system_config_base_path : Path or str, optional
-            Path to old system config folder.
-        old_user_config_base_path : Path or str, optional
-            Path to old user config folder.
         """
         template = toml.load(self.config_template_path)
 
-        old_system_config = (
-            toml.load(old_system_config_base_path / 'config' / f'{self.config_name}.toml')
-            if old_system_config_base_path
-            else {}
-        )
+        old_system_config = toml.load(get_config_file(self.config_name, user=False))
+        old_user_config = toml.load(get_config_file(self.config_name, user=True))
 
-        old_user_config = (
-            toml.load(old_user_config_base_path / 'config' / f'{self.config_name}.toml')
-            if old_user_config_base_path
-            else {}
-        )
 
         # Direct usage of config object  out of convenience because it accepts a tuple key
         with self._lock.write_lock():
@@ -676,7 +658,7 @@ class GlobalConfig(metaclass=Singleton):
                 global_config.add_config(name, config)
                 #Need to migrate the next loaded config values!
                 if cls._config_migration_needed:
-                    config.migrate_values(global_config.system_backup_dir, global_config.user_backup_dir)
+                    config.migrate_values()
                 wrapped_class._allow_direct_call = False
 
                 # After adding a config we check if it's valid.
@@ -753,7 +735,7 @@ class GlobalConfig(metaclass=Singleton):
 
     def _migrate_configs(self):
         for name in self._configs.keys():
-            cast(BaseConfig, self._configs[name]).migrate_values(self.system_backup_dir, self.user_backup_dir)
+            cast(BaseConfig, self._configs[name]).migrate_values()
 
     def _backup_and_reset_config_folders(self):
         logging.critical("Migration of configuration folder.")
@@ -770,13 +752,12 @@ class GlobalConfig(metaclass=Singleton):
 
         logging.critical(f"backup_dirs: ({self.user_backup_dir}, {self.system_backup_dir})")
 
-        os.rename(get_set_local_dir(user=True), self.user_backup_dir)
-        get_set_local_dir(user=True)
+        shutil.copytree(get_set_local_dir(user=True), self.user_backup_dir, dirs_exist_ok=True)
         try:
-            os.rename(get_set_local_dir(user=False), self.system_backup_dir)
+            shutil.copytree(get_set_local_dir(user=False), self.system_backup_dir, dirs_exist_ok=True)
         except PermissionError:
-            from pymodaq_utils.filesystem import rename_with_elevation
-            if not rename_with_elevation(get_set_local_dir(user=False), self.system_backup_dir, recreate=True):
+            from pymodaq_utils.filesystem import copy_with_elevation
+            if not copy_with_elevation(get_set_local_dir(user=False), self.system_backup_dir):
                 self.system_backup_dir = None
         finally:
             get_set_local_dir(user=False)
