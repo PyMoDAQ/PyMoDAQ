@@ -164,6 +164,7 @@ class DAQ_Viewer(ParameterControlModule):
                                           module_saving.DetectorExtendedSaver] = None
         self._h5saver_continuous: Optional[H5Saver] = None
         self._ind_continuous_grab = 0
+        self.reset_averaging = [False, "None"]
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
@@ -603,6 +604,10 @@ class DAQ_Viewer(ParameterControlModule):
     def stop(self):
         """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
+        if self._grabing:
+            self.reset_averaging = [True, "live mode"]
+        else:
+            self.reset_averaging = [True, "snap mode"]
         self.command_hardware.emit(ThreadCommand(ControlToHardwareViewer.STOP_GRAB, ))
         self._grabing = False
 
@@ -868,15 +873,19 @@ class DAQ_Viewer(ParameterControlModule):
             if self.ui is not None:
                 self.ui.data_ready = True
 
-            if self.settings['main_settings', 'live_averaging']:
+            if self.settings['main_settings', 'live_averaging'] and (self.reset_averaging[0]==False or self.reset_averaging[1]=="live mode"):
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
                 _current_data = dte.deepcopy()
-
                 self._ind_continuous_grab += 1
                 if self._ind_continuous_grab > 1:
                     self._data_to_save_export = \
                         _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
+                if self.reset_averaging[0]:
+                    self.reset_averaging = [True, "snap mode"]
             else:
+                if self.reset_averaging[0]:
+                    self._ind_continuous_grab = -1
+                    self.reset_averaging = [False, "None"]
                 for dwa in dte:
                     dwa.origin = self._title
                     if self.settings['main_settings', 'dynamic'] != 'as_is':
