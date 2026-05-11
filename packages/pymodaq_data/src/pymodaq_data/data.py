@@ -1046,6 +1046,7 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
             averaged_data = (other * weight + self) / (weight + 1)
             averaged_data.name = other.name
+            averaged_data.add_extra_attribute(**{'averaged': True, 'n_averaged': weight + 1})
             return averaged_data
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
