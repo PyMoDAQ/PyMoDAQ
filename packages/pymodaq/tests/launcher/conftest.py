@@ -9,7 +9,7 @@ import qt_themes
 
 from pymodaq_utils.config import GlobalConfig, get_set_local_dir
 
-from pymodaq.utils.config import get_set_configurator_path, get_set_experiment_path
+from pymodaq.utils.config import get_set_state_path, get_set_experiment_path
 
 config = GlobalConfig()
 
@@ -18,7 +18,7 @@ def copied_data(tmp_path):
     """Setup fixture: copy test data files to appropriate system directories"""
     # Set up paths
     keep_duplicates = config['pymodaq', 'launcher', 'keep_duplicates']
-    configurator_path = get_set_configurator_path()
+    state_path = get_set_state_path()
     user_path = get_set_local_dir(user=True)
     experiment_path = get_set_experiment_path()
     test_directory = Path(__file__).parent
@@ -28,7 +28,7 @@ def copied_data(tmp_path):
     shutil.copy(str(ressources_directory / 'exp_test.xml'), str(experiment_path / 'exp_test.xml'))
     shutil.copy(str(ressources_directory / 'history_test.toml'), str(user_path / 'history_test.toml'))
     shutil.copy(str(ressources_directory / 'history_test_duplicates.toml'), str(user_path / 'history_test_duplicates.toml'))
-    shutil.copytree(ressources_directory / 'exp_test', configurator_path / 'exp_test', dirs_exist_ok=True)
+    shutil.copytree(ressources_directory / 'exp_test', state_path / 'exp_test', dirs_exist_ok=True)
 
     yield
 
@@ -36,7 +36,7 @@ def copied_data(tmp_path):
     (experiment_path / 'exp_test.xml').unlink(missing_ok=True)
     (user_path / 'history_test.toml').unlink(missing_ok=True)
     (user_path / 'history_test_duplicates.toml').unlink(missing_ok=True)
-    shutil.rmtree(configurator_path / 'exp_test', ignore_errors=True)
+    shutil.rmtree(state_path / 'exp_test', ignore_errors=True)
     config['pymodaq', 'launcher', 'keep_duplicates'] = keep_duplicates # restore initial application settings after tests execution
 
 @pytest.fixture
@@ -67,23 +67,23 @@ def ini_configurator(qtbot):
                         style=config('gui', 'style', 'style')[0])
 
     try:
-        from pymodaq.utils.managers.configurator.configurator import Configurator
+        from pymodaq.utils.managers.state.state_manager import StateManager
 
-        configurator = Configurator()
+        state_manager = StateManager()
 
         main_window = QtWidgets.QMainWindow()
         main_window.setWindowTitle('Bug sync')
-        main_window.setCentralWidget(configurator.add_toolbar('test'))
+        main_window.setCentralWidget(state_manager.add_toolbar('test'))
 
-        configurator.experiment_manager.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
-        configurator.get_external_toolbar_menu(toolbar=configurator.get_toolbar('test'))
-        configurator.experiment_manager.enable_actions(True)
-        configurator.enable_actions(True)
+        state_manager.experiment_manager.get_external_toolbar_menu(toolbar=state_manager.get_toolbar('test'))
+        state_manager.get_external_toolbar_menu(toolbar=state_manager.get_toolbar('test'))
+        state_manager.experiment_manager.enable_actions(True)
+        state_manager.enable_actions(True)
 
         qtbot.addWidget(main_window)
         main_window.show()
 
-        yield configurator, main_window
+        yield state_manager, main_window
 
         main_window.close()
         main_window.deleteLater()
