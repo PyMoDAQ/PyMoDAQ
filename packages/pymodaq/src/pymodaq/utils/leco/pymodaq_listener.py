@@ -275,6 +275,7 @@ class PymodaqListener(Listener):
         except AttributeError:
             pass # In case there's no thread
         try:
+            del self.message_handler
             del self.communicator
         except AttributeError:
             pass
