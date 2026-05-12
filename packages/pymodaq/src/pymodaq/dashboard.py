@@ -712,7 +712,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
-                QtWidgets.QApplication.processEvents()
 
             if hasattr(self, "mainwindow"):
                 self.mainwindow.close()
@@ -720,10 +719,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
             if self.pid_window is not None:
                 self.pid_window.close()
 
-            QtWidgets.QApplication.processEvents()
 
         except Exception as e:
             logger.exception(str(e))
+        finally:
+            QtWidgets.QApplication.processEvents()
 
     def restart_fun(self, ask=False):
         ret = False

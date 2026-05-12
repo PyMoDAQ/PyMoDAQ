@@ -482,7 +482,7 @@ class LECOComponentMixin:
             self._leco_commands_signal.connect(self._leco_client.queue_command)
             self._leco_client.start_listen()
         else:
-            self._leco_commands_signal.emit(ThreadCommand(LECOCommands.QUIT))
+            self._leco_client.stop_listen()
             try:
                 self._leco_commands_signal.disconnect(self._leco_client.queue_command)
             except TypeError:
