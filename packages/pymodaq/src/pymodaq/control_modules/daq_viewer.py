@@ -1281,7 +1281,7 @@ class DAQ_Detector(QObject):
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
             else:
-                self.datas = data.average(self.datas, self.ind_average)
+                self.datas = data.average(self.datas, self.ind_average - 1)
 
             if self.show_averaging:
                 self.emit_temp_data(self.datas)
