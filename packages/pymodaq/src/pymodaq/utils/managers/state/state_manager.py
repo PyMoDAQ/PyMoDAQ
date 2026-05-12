@@ -434,11 +434,11 @@ class StateManager(ManagerBase):
                                               QModelIndex(), index+2)
 
     def save_new_history_entry(self):
-        """Implements this method from ManagerBase. Save a new history entry with experiment and configurator for one time"""
+        """Implements this method from ManagerBase. Save a new history entry with experiment and state for one time"""
 
         date = datetime.now().strftime("%Y-%d-%m:%H:%M:%S")
 
-        entry = {date: {'experiment': self.experiment_manager.entry, 'configurator': self.entry}}
+        entry = {date: {'experiment': self.experiment_manager.entry, 'state': self.entry}}
 
         history_path = get_set_local_dir(user=True) / self.history_file_name
 
@@ -451,7 +451,7 @@ class StateManager(ManagerBase):
                     if i >= len(existing) - config('pymodaq', 'launcher', 'max_history_size') + 1
                     and (config('pymodaq', 'launcher', 'keep_duplicates')
                          or (value['experiment'] != entry[str(date)]['experiment']
-                             or value['configurator'] != entry[str(date)]['configurator']))
+                             or value['state'] != entry[str(date)]['state']))
                     }
         new_dict.update(entry)
 

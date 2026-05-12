@@ -20,7 +20,7 @@ from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 from watchdog.observers import Observer
 
 from pymodaq.extensions import ExtensionEnum
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.shared_ui import SharedUI
@@ -44,7 +44,7 @@ class EnumToolTip(StrEnum):
     H5BROWSER = 'Launch H5Browser'
     BACK_HISTORY = 'Navigate to the back item of experiments history'
     NEXT_HISTORY = 'Navigate to the next item of experiments history'
-    RESTORE = 'Restore this experiment with the selected configurator'
+    RESTORE = 'Restore this experiment with the selected state_manager'
 
 class HistoryFileHandler(FileSystemEventHandler) :
     def __init__(self, callback, watched_path):
@@ -139,8 +139,8 @@ class Launcher(CustomApp):
         # Remove the default toolbar created by CustomApp
         self.mainwindow.removeToolBar(self._toolbar)
 
-        self.configurator = Configurator()
-        self.experiment_manager = self.configurator.experiment_manager
+        self.state_manager = StateManager()
+        self.experiment_manager = self.state_manager.experiment_manager
         self._launcher_experiment_external_combo = None
 
         self.extension_manager = ExtensionManager()
@@ -274,7 +274,7 @@ class Launcher(CustomApp):
         self.connect_action('restore_dashboard', self.load_dashboard_with_experiment_configurator)
         self.connect_action('next_config', lambda: self.do_navigate(self.history_index-1))
         self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
-        self.configurator.get_action(ManagerActions.EXECUTE).setVisible(False)
+        self.state_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
 
         # Remove open action
         self.extension_manager.get_action(ManagerActions.OPEN).setVisible(False)
@@ -293,13 +293,13 @@ class Launcher(CustomApp):
         """
         self.history, self.history_keys = self.load_history_in_dict()
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'))
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'))
+        self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state_manager'))
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('launcher'))
         self.extension_manager_restore.get_external_toolbar_menu(toolbar=self.get_toolbar('extensions'))
 
         self.experiment_manager.enable_actions(True)
         self.experiment_manager.set_action_enabled('list_entries', True)
-        self.configurator.enable_actions(True)
+        self.state_manager.enable_actions(True)
         self.extension_manager.enable_actions(True)
 
         self.extension_manager_restore.enable_actions(True)
@@ -349,7 +349,7 @@ class Launcher(CustomApp):
 
     def set_controls(self):
         self.get_toolbar('controls').addWidget(self.add_toolbar('experiment', 'experiment', add_break=False))
-        self.get_toolbar('controls').addWidget(self.add_toolbar('configurator', 'Configurator'))
+        self.get_toolbar('controls').addWidget(self.add_toolbar('state_manager', 'State'))
         self.get_toolbar('controls').addWidget(self.add_toolbar('extensions', 'Extensions'))
 
     def launch_empty_dashboard(self):
@@ -392,7 +392,7 @@ class Launcher(CustomApp):
         """
         Load and show dashboard with selected experiment and configuration.
         """
-        args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.configurator.entry]
+        args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.state_manager.entry]
         if self.extension_manager_restore.entry not in (None, '', 'empty'):
             args_lst += ['-e', self.extension_manager_restore.entry]
         subprocess.Popen(args_lst)
@@ -429,13 +429,13 @@ class Launcher(CustomApp):
 
     def ui_refresh(self):
         """Refresh interface and update experiment and configuration, entries, combo box values, actuators/detectors tree, history key and navigation actions."""
-        # experiment and configurator
+        # experiment and state
         if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
 
             self.experiment_manager.entry = self.history[actual_key]['experiment']
-            self.configurator.experiment_filename = self.experiment_manager.entry
-            self.configurator.entry = self.history[actual_key]['configurator']
+            self.state_manager.experiment_filename = self.experiment_manager.entry
+            self.state_manager.entry = self.history[actual_key]['state']
 
             # date
             date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
@@ -450,7 +450,7 @@ class Launcher(CustomApp):
 
         else:
             self.experiment_manager.entry = "default"
-            self.configurator.entry = "default"
+            self.state_manager.entry = "default"
             self.show_experiment_titles_only(None)
 
 
@@ -462,18 +462,18 @@ class Launcher(CustomApp):
 
     def load_history_in_dict(self) -> tuple[dict[str, str], list[str]]:
         """
-        Read history file and return a dictionary with experiments and configurators sorted by date.
+        Read history file and return a dictionary with experiments and state entries sorted by date.
 
         Returns
         -------
         history : dict
             Dictionary where keys are datetime strings and values are dictionaries
-            with 'experiment' and 'configurator' entries
+            with 'experiment' and 'state' entries
             Example::
 
                 {
-                    '2026-18-03:17:07:38': {'experiment': 'Manip', 'configurator': 'default'},
-                    '2026-18-03:17:06:31': {'experiment': 'default', 'configurator': 'default'}
+                    '2026-18-03:17:07:38': {'experiment': 'Manip', 'state': 'default'},
+                    '2026-18-03:17:06:31': {'experiment': 'default', 'state': 'default'}
                 }
 
         history_keys : list[str]
