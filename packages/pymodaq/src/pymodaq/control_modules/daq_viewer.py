@@ -20,8 +20,8 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq_data import DataSource
-from pymodaq_data.data import DataToExport, Axis, DataDistribution
+
+from pymodaq_data.data import DataToExport, Axis, DataDistribution, Averaging
 from pymodaq.utils.data import DataFromPlugins
 
 from pymodaq_utils.logger import set_logger, get_module_name
@@ -869,7 +869,10 @@ class DAQ_Viewer(ParameterControlModule):
             if ('do_plot' not in dwa.extra_attributes) or \
                     ('do_plot' in dwa.extra_attributes and dwa.do_plot):
                 self.viewers[ind].title = dwa.name
-                self.viewer_docks[ind].setTitle(self._title + ' ' + dwa.name)
+                name = (f'{dwa.name}_Averaged: {getattr(dwa, Averaging.N_AVERAGED)}'
+                        if hasattr(dwa, Averaging.AVERAGED)
+                           and getattr(dwa, Averaging.AVERAGED) else dwa.name)
+                self.viewer_docks[ind].setTitle(f'{self._title} {name}')
 
                 if temp:
                     self.viewers[ind].show_data_temp(dwa)
