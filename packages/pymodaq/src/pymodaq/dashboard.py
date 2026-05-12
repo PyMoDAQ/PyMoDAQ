@@ -713,8 +713,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
             for area in areas:
                 area.win.close()
                 QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
             if hasattr(self, "mainwindow"):
                 self.mainwindow.close()

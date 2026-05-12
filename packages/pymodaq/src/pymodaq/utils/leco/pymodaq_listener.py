@@ -271,6 +271,10 @@ class PymodaqListener(Listener):
     def stop_listen(self) -> None:
         super().stop_listen()
         try:
+            self.thread.join(timeout=5.0)  # wait for ZMQ poll loop to exit
+        except AttributeError:
+            pass # In case there's no thread
+        try:
             del self.communicator
         except AttributeError:
             pass
