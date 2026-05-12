@@ -35,14 +35,16 @@ PRE_RANK_ORDER = {  # Pre-release order mapping
 }
 
 
-def run_git(*args) -> str:
+def run_git(*args, timeout: int = 30) -> str:
     """Run a git command and return its stdout as a stripped string.
 
         Raises subprocess.CalledProcessError on non-zero exit.
         Silences stderr to avoid noise from commands like `git describe` that
         print warnings when no tag is found.
         """
-    return subprocess.check_output(["git", *args], stderr=subprocess.DEVNULL).decode().strip()
+    return subprocess.check_output(
+        ["git", *args], stderr=subprocess.DEVNULL, timeout=timeout
+    ).decode().strip()
 
 
 def is_release_branch(branch: str) -> bool:
