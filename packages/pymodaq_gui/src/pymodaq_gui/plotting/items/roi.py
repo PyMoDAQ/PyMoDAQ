@@ -58,7 +58,7 @@ class ROIFactory():
         """
 
         def inner_wrapper(wrapped_class: ROIBase) -> ROIBase:
-            if wrapped_class.DIMENSIONALITY   is NotImplemented or \
+            if wrapped_class.DIMENSIONALITY is NotImplemented or \
                     wrapped_class.DESCRIPTOR is NotImplemented:
                 raise NotImplementedError(f'{wrapped_class} does not properly provide a valid value for '
                                           f'`DIMENSIONALITY` ({wrapped_class.DIMENSIONALITY}) or for '
@@ -243,11 +243,11 @@ class ROI(pgROI, ROIMixin, ROIBase):
 
     def center(self) -> pg.Point:
         """ Get the center position of the ROI """
-        return pg.Point(self.pos() + rotate2D(point =(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
+        return pg.Point(self.pos() + rotate2D(point=(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
 
     def set_center(self, center: Union[pg.Point, Tuple[float, float]]):
         """ Set the center position of the ROI """
-        self.setPos(center - rotate2D(point =(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
+        self.setPos(center - rotate2D(point=(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
 
     def to_info(self) -> 'RoiInfo':
         """ Return the info about the ROI """
@@ -298,7 +298,7 @@ class LinearROI(pgLinearROI, ROIMixin, ROIBase):
     DIMENSIONALITY = DataDim.Data1D
     DESCRIPTOR = 'LinearROI'
 
-    def __init__(self, index=0, pos=[0, 10], name = 'roi', compute=True, **kwargs):
+    def __init__(self, index=0, pos=[0, 10], name='roi', compute=True, **kwargs):
         pgLinearROI.__init__(self, values=pos, **kwargs)
         ROIBase.__init__(self)
         ROIMixin.__init__(self, index=index, name=name, compute=compute)
@@ -488,11 +488,11 @@ class ROIPositionMapper(QtWidgets.QWidget):
                 {'name': 'x0', 'type': 'float', 'value': self.roi_pos[0] + self.roi_size[0] / 2,
                  'step': 1},
                 {'name': 'y0', 'type': 'float', 'value': self.roi_pos[1] + self.roi_size[1] / 2,
-                 'step': 1}
+                 'step': 1},
             ]},
             {'name': 'size', 'type': 'group', 'children': [
                 {'name': 'width', 'type': 'float', 'value': self.roi_size[0], 'step': 1},
-                {'name': 'height', 'type': 'float', 'value': self.roi_size[1], 'step': 1}]
+                {'name': 'height', 'type': 'float', 'value': self.roi_size[1], 'step': 1}],
              }]
 
         dialog = QtWidgets.QDialog(self)

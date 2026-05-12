@@ -264,7 +264,7 @@ class H5SaverLowLevel(H5Backend):
     def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
                   data_shape: tuple = None, array_type: np.dtype = None, fill_value=None, data_dimension: DataDim = None,
                   scan_shape: tuple = tuple([]), add_scan_dim=False, enlargeable: bool = False,
-                  title: str = '', metadata=dict([]), ):
+                  title: str = '', metadata=dict([])):
 
         """save data arrays on the hdf5 file together with metadata
         Parameters
@@ -496,7 +496,7 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_incremental_group(group_type, where, title, settings_as_xml, metadata)
         return group
 
-    def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=None,):
+    def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=None):
         """Add a new group of type scan
 
         deprecated, use add_generic_group with a group type as GroupType.scan

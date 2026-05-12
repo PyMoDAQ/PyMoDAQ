@@ -57,7 +57,7 @@ def test_axis_list_legacy(qtbot, ISMULTI, AXIS_NAMES, EPSILON, UNITS):
 
 @pytest.mark.parametrize("AXIS_NAMES, EPSILONS, UNITS, error",
                          [(['a', 'b', 'c'], 0.1, 'mm', False),
-                          (['a', 'b',], [0.1, 0.65], 'mm', False),
+                          (['a', 'b'], [0.1, 0.65], 'mm', False),
                           (['a', 'c'], 0.1, ['mm', '°'], False),
                           (['a', 'c'], [0.1, 0.001], ['mm', '°'], False),
                           (['a', 'b', 'c'], 0.1, ['mm', '°'], True),
@@ -109,7 +109,7 @@ def test_axis_list(qtbot, AXIS_NAMES, EPSILONS, UNITS, error):
                           ({'a': 0, 'b': 2}, {'a': 0.1, 'b': 0.65}, 'mm', None),
                           ({'a': 0, 'b': 2}, 0.1, {'a': 'mm', 'b': '°'}, None),
                           ({'a': 0, 'b': 2}, {'a': 0.1, 'b': 0.65}, {'a': 'mm', 'b': '°'}, None),
-                          ({'a': 0, 'b': 2}, {'a': 0.1,}, {'a': 'mm', 'b': '°'}, ValueError),
+                          ({'a': 0, 'b': 2}, {'a': 0.1}, {'a': 'mm', 'b': '°'}, ValueError),
                           ({'a': 0, 'b': 2}, {'a': 0.1, 'b': 0.65}, {'b': '°'}, ValueError),
                           ])
 def test_axis_dict(qtbot, AXIS_NAMES, EPSILONS, UNITS, error):

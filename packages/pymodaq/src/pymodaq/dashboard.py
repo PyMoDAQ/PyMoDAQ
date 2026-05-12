@@ -37,7 +37,7 @@ import pymodaq_gui.utils.layout as layout_mod
 from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
-from pymodaq_gui.utils.shared_ui import MenuNames
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
@@ -53,10 +53,10 @@ from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
 
 from pymodaq.extensions.utils import get_extensions
-from pymodaq.extensions import  ExtensionEnum
+from pymodaq.extensions import ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
 
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
@@ -76,7 +76,7 @@ class ManagerEnums(BaseEnum):
     overshoot = 2
     roi = 3
     configuration = 4
-
+    
 
 class PymodaqUpdateTableWidget(QTableWidget):
     """
@@ -134,18 +134,18 @@ class DashBoard(CustomApp, LECOComponentMixin):
     params = [
         {"title": "Log level", "name": "log_level", "type": "list",
          "value": config("utils", "general", "debug_level")[0],
-         "limits": config("utils", "general", "debug_level"),},
+         "limits": config("utils", "general", "debug_level")},
         {"title": "Loaded experiments", "name": "loaded_files", "type": "group",
          "children": [
              {"title": "Preset file", "name": "preset_file", "type": "str", "value": "", "readonly": True,},
              {"title": "Overshoot file", "name": "overshoot_file", "type": "str", "value": "", "readonly": True,},
-             {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True,},
-             {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True,},
-             {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True,},
+             {"title": "Layout file", "name": "layout_file", "type": "str", "value": "", "readonly": True},
+             {"title": "ROI file", "name": "roi_file", "type": "str", "value": "", "readonly": True},
+             {"title": "Remote file", "name": "remote_file", "type": "str", "value": "", "readonly": True},
          ],
          },
-        {"title": "Actuators Init.", "name": "actuators", "type": "group","children": [],},
-        {"title": "Detectors Init.", "name": "detectors", "type": "group", "children": [],},
+        {"title": "Actuators Init.", "name": "actuators", "type": "group","children": []},
+        {"title": "Detectors Init.", "name": "detectors", "type": "group", "children": []},
     ]
 
     def __init__(self, parent: Union[DockArea]):
@@ -170,8 +170,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.extensions: dict[str, CustomExt] = dict([])
         self.extension_windows = []
         self.experiment_manager: ExperimentManager = None  # instanciation in do_things_after_ui_setup
-        self.configurator: Configurator = None # instanciation in do_things_after_ui_setup
-        self.overshooter: Overshooter = None # instanciation in do_things_after_ui_setup
+        self.state_manager: StateManager = None  # instanciation in do_things_after_ui_setup
+        self.overshooter: Overshooter = None  # instanciation in do_things_after_ui_setup
 
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
 
@@ -221,23 +221,23 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.experiment_manager.update_entry()
         self.experiment_manager.entry = 'default'
         self.experiment_manager.applied_entry.connect(self.do_things_after_experiment_set)
-        self.configurator = Configurator(dashboard=self)
+        self.state_manager = StateManager(dashboard=self)
         self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('experiment'),
                                                           menu=self.get_menu('experiment'))
         self.experiment_manager.update_menu(self.get_menu('experiment'))
-        self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('configurator'),
-                                                    menu=self.get_menu('configurator'))
-        self.configurator.update_menu(self.get_menu('configurator'))
+        self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('state'),
+                                                     menu=self.get_menu('state'))
+        self.state_manager.update_menu(self.get_menu('state'))
         self.overshooter = Overshooter(dashboard=self)
         self.overshooter.get_external_toolbar_menu(toolbar=self.get_toolbar('overshooter'),
                                                    menu=self.get_menu('overshooter'))
 
+        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuToolbarNames.FILE))
         self.extension_manager = ExtensionManager(dashboard=self)
         self.extension_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('extension'))
 
-        self.affect_to(self.experiment_manager.get_action(ManagerActions.NEW), self.get_menu(MenuNames.FILE))
 
-        self.get_toolbar('configurator').setEnabled(False)
+        self.get_toolbar('state').setEnabled(False)
         self.get_toolbar('overshooter').setEnabled(False)
         self.experiment_manager.enable_actions(True)
 
@@ -246,18 +246,18 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def do_things_after_experiment_set(self, experiment_name: str):
 
-        self.configurator.update_menu(self.get_menu('configurator'))
-        self.get_menu('configurator').setEnabled(True)
-        self.get_toolbar('configurator').setEnabled(True)
+        self.state_manager.update_menu(self.get_menu('state'))
+        self.get_menu('state').setEnabled(True)
+        self.get_toolbar('state').setEnabled(True)
 
         self.get_menu('overshooter').setEnabled(True)
         self.get_toolbar('overshooter').setEnabled(True)
 
         self.get_menu('extensions').setEnabled(True)
 
-        self.configurator.enable_actions(True)
+        self.state_manager.enable_actions(True)
         self.overshooter.enable_actions(True)
-        self.configurator.execute_entry(self.configurator.entry_filepath)
+        self.state_manager.execute_entry(self.state_manager.entry_filepath)
 
         self.extension_manager.enable_actions(True)
 
@@ -279,21 +279,21 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if status.command == LECODashboardCommands.GET_DEVICES:
             devices = {
                 'actuators': [ actuator.get_leco_name() for actuator in self.actuators_modules],
-                'detectors': [ detector.get_leco_name() for detector in self.detector_modules]
+                'detectors': [ detector.get_leco_name() for detector in self.detector_modules],
             }
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_DEVICES, devices))
         elif status.command == LECODashboardCommands.GET_CONFIGURATIONS:
-            entries = self.configurator.entries if self.configurator.is_action_enabled(ManagerActions.LIST) else []
+            entries = self.state_manager.entries if self.state_manager.is_action_enabled(ManagerActions.LIST) else []
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.SEND_CONFIGURATIONS, entries))
         elif status.command == LECODashboardCommands.APPLY_CONFIGURATION:
             configuration = status.attribute
             loaded = False
-            if (configuration in self.configurator.entries and
-                self.configurator.is_action_enabled(ManagerActions.EXECUTE)
+            if (configuration in self.state_manager.entries and
+                self.state_manager.is_action_enabled(ManagerActions.EXECUTE)
             ):
 
-                self.configurator.entry = configuration
-                self.configurator.execute_entry(self.configurator.entry_filepath)
+                self.state_manager.entry = configuration
+                self.state_manager.execute_entry(self.state_manager.entry_filepath)
                 loaded = True
 
             self._leco_commands_signal.emit(ThreadCommand(LECODashboardCommands.APPLIED_CONFIGURATION_DONE, loaded))
@@ -321,7 +321,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         try:
             now = datetime.datetime.now()
             new_item = QtWidgets.QListWidgetItem(
-                now.strftime("%Y/%m/%d %H:%M:%S") + ": " + txt
+                now.strftime("%Y/%m/%d %H:%M:%S") + ": " + txt,
             )
             self.logger_list.addItem(new_item)
 
@@ -391,7 +391,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             logger.exception(str(e))
 
     def get_docks_from_modules(
-        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]]
+        self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]],
     ) -> List[Dock]:
         """
         Get a list of Dock instances from the given modules.
@@ -413,7 +413,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         return docks
 
     def remove_modules(
-        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None
+        self, modules: List[Union["DAQ_Move", "DAQ_Viewer", "str"]] = None,
     ):
         """
         Remove the given list of actuators/detectors from the dashboard.
@@ -435,10 +435,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     detector_modules.append(module)
                 if isinstance(module, str):  # Test if module is a string (name of the module)
                     actuators_modules.extend(
-                        self.modules_manager.get_mods_from_names([module,], "act",))  # For actuators
+                        self.modules_manager.get_mods_from_names([module], "act"))  # For actuators
 
                     detector_modules.extend(
-                        self.modules_manager.get_mods_from_names([module,], "det",)  # For detectors
+                        self.modules_manager.get_mods_from_names([module], "det"),  # For detectors
                     )
             if (hasattr(self, "actuators_modules")) & (
                 self.actuators_modules is not None
@@ -452,7 +452,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             logger.exception(str(e))
 
     def load_extension(self, ext_enum: ExtensionEnum,
-                       win: QtWidgets.QMainWindow = None
+                       win: QtWidgets.QMainWindow = None,
                        ) -> 'CustomExt':
         shared_ui, ext_module = create_extension(
             self, extensions[ext_enum].klass,
@@ -470,18 +470,18 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         Create the menubar object looking like :
         """
-        self.add_menu(MenuNames.FILE, 'File', menubar)
+        self.add_menu(MenuToolbarNames.FILE, 'File', menubar)
 
-        self.add_menu(MenuNames.VIEW, 'View', menubar)
+        self.add_menu(MenuToolbarNames.VIEW, 'View', menubar)
 
-        self.add_menu('docked', 'Docked', MenuNames.VIEW)
+        self.add_menu('docked', 'Docked', MenuToolbarNames.VIEW)
 
-        self.add_menu(MenuNames.TOOLS, 'Tools', menubar)
-        self.add_menu('experiment', 'Experiment', MenuNames.TOOLS, icon_name='experiment')
-        self.add_menu('configurator', 'Configurator', MenuNames.TOOLS, icon_name='discover_tune')
-        self.get_menu('configurator').setEnabled(False)
+        self.add_menu(MenuToolbarNames.TOOLS, 'Tools', menubar)
+        self.add_menu('experiment', 'Experiment', MenuToolbarNames.TOOLS, icon_name=ExperimentManager.icon_name)
+        self.add_menu('state', 'State', MenuToolbarNames.TOOLS, icon_name=StateManager.icon_name)
+        self.get_menu('state').setEnabled(False)
 
-        self.add_menu('overshooter', 'Overshooter', MenuNames.TOOLS, icon_name='security')
+        self.add_menu('overshooter', 'Overshooter', MenuToolbarNames.TOOLS, icon_name=Overshooter.icon_name)
         self.get_menu('overshooter').setEnabled(False)
 
         # self.roi_menu = self.add_menu('roi', 'ROI', auto_menu=False)
@@ -491,7 +491,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         # self.update_remote_menu()
 
         # extensions menu
-        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuNames.TOOLS)
+        self.extensions_menu = self.add_menu('extensions', "Extensions", MenuToolbarNames.TOOLS)
         self.get_menu('extensions').setEnabled(False)
 
     def setup_actions(self):
@@ -502,11 +502,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         "Save the Saved Docks layout corresponding to the current experiment",
                         auto_toolbar=False, menu='docked')
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
-                        menu=MenuNames.VIEW)
+                        menu=MenuToolbarNames.VIEW)
 
         self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
                          add_break=False)
-        self.add_toolbar('configurator', 'Configurator', parent=self.mainwindow,
+        self.add_toolbar('state', 'State', parent=self.mainwindow,
                          add_break=False)
         self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
                          add_break=False)
@@ -541,9 +541,10 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.toolbar.addSeparator()
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
-                            auto_toolbar=False, menu='extensions')
+                            auto_toolbar=False, menu='extensions',
+                            icon_name=extensions[ExtensionEnum[ext_name]].klass.icon_name)
 
-        self.add_action("configurator", "Configurator", auto_toolbar=False)
+        self.add_action("state", "State", auto_toolbar=False)
 
     def connect_things(self):
         self.status_signal[str].connect(self.add_status)
@@ -730,7 +731,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     pass
 
             self.experiment_manager.quit_fun()
-            self.configurator.quit_fun()
+            self.state_manager.quit_fun()
             self.overshooter.quit_fun()
 
             areas = self.dockarea.tempAreas[:]
@@ -755,7 +756,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         if ask:
             mssg.setText(
                 "You have to restart the application to take the"
-                " modifications into account!"
+                " modifications into account!",
             )
             mssg.setInformativeText("Do you want to restart?")
             mssg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
@@ -807,7 +808,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             actuator_widgets: list[QtWidgets.QWidget] = None,
             actuators_modules: list[DAQ_Move] = None,
             ui_identifier: str = None,
-            **kwargs
+            **kwargs,
     ) -> DAQ_Move:        
         if actuator_docks is None:
             actuator_docks = []
@@ -884,8 +885,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def add_move_from_extension(
         self, name: str, instrument_name: str, instrument_controller: Any,
-            ui_identifier = None,
-            **kwargs
+            ui_identifier=None,
+            **kwargs,
     ):
         """Specific method to add a DAQ_Move within the Dashboard. This Particular actuator
         should be defined in the plugin of the extension and is used to mimic an actuator while
@@ -921,7 +922,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.actuators_modules.append(actuator)
 
     def add_det(self, plug_name, plug_settings, detector_docks_viewer,
-                detector_modules, plug_type: str = None,  plug_subtype: str = None) -> DAQ_Viewer:
+                detector_modules, plug_type: str = None, plug_subtype: str = None) -> DAQ_Viewer:
         if plug_type is None:
             plug_type = plug_settings.child("main_settings", "DAQ_type").value()
         if plug_subtype is None:
@@ -988,7 +989,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     mod.override_grab_from_extension = True
 
     def add_det_from_extension(
-        self, name: str, daq_type: str, instrument_name: str, instrument_controller: Any
+        self, name: str, daq_type: str, instrument_name: str, instrument_controller: Any,
     ):
         """Specific method to add a DAQ_Viewer within the Dashboard. This Particular detector
         should be defined in the plugin of the extension and is used to mimic a grab while data
@@ -1011,7 +1012,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             which created it
         """
         detector = self.add_det(
-            name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name
+            name, None, [], [], plug_type=daq_type, plug_subtype=instrument_name,
         )
         detector.controller = instrument_controller
         detector.master = False
@@ -1129,12 +1130,12 @@ class DashBoard(CustomApp, LECOComponentMixin):
             ):
                 if action_dict["module_type"] == "act":
                     joy = utils.find_dict_in_list_from_key_val(
-                        self.joysticks_obj, "id", action_dict["joystickID"]
+                        self.joysticks_obj, "id", action_dict["joystickID"],
                     )
                     val = joy["obj"].get_axis(action_dict["actionnerID"])
                     if abs(val) > 1e-4:
                         module = self.modules_manager.get_mod_from_name(
-                            action_dict["module_name"], mod=action_dict["module_type"]
+                            action_dict["module_name"], mod=action_dict["module_type"],
                         )
                         action = getattr(module, action_dict["action"])
                         if module.move_done_bool:
@@ -1142,8 +1143,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
                                 val
                                 * 1
                                 * module.settings.child(
-                                    "move_settings", "epsilon"
-                                ).value()
+                                    "move_settings", "epsilon",
+                                ).value(),
                             )
 
         # # For other actions use the event loop
@@ -1161,7 +1162,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 for action_dict in self.joysticks.values():
                     if action_dict["activated"]:
                         module = self.modules_manager.get_mod_from_name(
-                            action_dict["module_name"], mod=action_dict["module_type"]
+                            action_dict["module_name"], mod=action_dict["module_type"],
                         )
                         if action_dict["module_type"] == "det":
                             action = getattr(module, action_dict["action"])
@@ -1209,7 +1210,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
 
     def create_activated_shortcut(self, action):
         module = self.modules_manager.get_mod_from_name(
-            action["module_name"], mod=action["module_type"]
+            action["module_name"], mod=action["module_type"],
         )
         if action["module_type"] == "det":
             return lambda: getattr(module, action["action"])()
@@ -1237,11 +1238,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
             if act.title not in [
                 ac.title()
                 for ac in putils.iter_children_params(
-                    self.settings.child("actuators"), []
+                    self.settings.child("actuators"), [],
                 )
             ]:
                 self.settings.child("actuators").addChild(
-                    {"title": act.title, "name": name, "type": "led", "value": False}
+                    {"title": act.title, "name": name, "type": "led", "value": False},
                 )
                 QtWidgets.QApplication.processEvents()
             self.settings.child("actuators", name).setValue(act.initialized_state)
@@ -1251,11 +1252,11 @@ class DashBoard(CustomApp, LECOComponentMixin):
             if det.title not in [
                 de.title()
                 for de in putils.iter_children_params(
-                    self.settings.child("detectors"), []
+                    self.settings.child("detectors"), [],
                 )
             ]:
                 self.settings.child("detectors").addChild(
-                    {"title": det.title, "name": name, "type": "led", "value": False}
+                    {"title": det.title, "name": name, "type": "led", "value": False},
                 )
                 QtWidgets.QApplication.processEvents()
             self.settings.child("detectors", name).setValue(det.initialized_state)
@@ -1414,7 +1415,7 @@ def load_dashboard_with_experiment(experiment_name: str,
     if experiment_name in dashboard.experiment_manager.entries:
         dashboard.experiment_manager.entry = experiment_name
         if configuration_name is not None:
-            dashboard.configurator.entry = configuration_name
+            dashboard.state_manager.entry = configuration_name
         dashboard.experiment_manager.execute_entry(experiment_path)
 
         if extension_name in ExtensionEnum.names():
@@ -1442,7 +1443,7 @@ def main():
     # Command-line argument parsing
     parser = argparse.ArgumentParser(prog="dashboard",
                                      description="PyMoDAQ dashboard. "
-                                                 "Command-line options only affect GUI initial state."
+                                                 "Command-line options only affect GUI initial state.",
                                      )
     parser.add_argument("-x", "--experiment", metavar="EXPERIMENT_NAME",
                         help="experiment name to load at startup")

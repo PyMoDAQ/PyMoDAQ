@@ -24,25 +24,27 @@ from pathlib import Path
 
 FALLBACK_VERSION = "5.1.0"  #Version returned when no tag can be found in the package's git history.
 
-PRE_RANK_ORDER = { # Pre-release order mapping
+PRE_RANK_ORDER = {  # Pre-release order mapping
     "dev": 0,
     "a": 1,
     "alpha": 1,
     "b": 2,
     "beta": 2,
     "preview": 3,
-    "rc": 4
+    "rc": 4,
 }
 
 
-def run_git(*args) -> str:
+def run_git(*args, timeout: int = 30) -> str:
     """Run a git command and return its stdout as a stripped string.
 
         Raises subprocess.CalledProcessError on non-zero exit.
         Silences stderr to avoid noise from commands like `git describe` that
         print warnings when no tag is found.
         """
-    return subprocess.check_output(["git", *args], stderr=subprocess.DEVNULL).decode().strip()
+    return subprocess.check_output(
+        ["git", *args], stderr=subprocess.DEVNULL, timeout=timeout
+    ).decode().strip()
 
 
 def is_release_branch(branch: str) -> bool:
@@ -81,7 +83,7 @@ def parse_semver_tuple(tag: str) -> tuple[int, int, int, int, int] | None:
     version_match = re.match(
         r"^(\d+)\.(\d+)\.(\d+)(?:[.\-]?(a(?:lpha)?|b(?:eta)?|rc|preview|dev)\.?(\d*))?$",
         tag,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     #No match so return None

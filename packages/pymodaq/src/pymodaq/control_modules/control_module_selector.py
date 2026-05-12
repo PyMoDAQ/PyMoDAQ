@@ -3,7 +3,7 @@ from qtpy import QtWidgets, QtCore
 from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.utils.menu_utils import build_menu_from_iterable
 
-REMOTE_ITEMS  = {'LECODirector', 'TCPServer'}
+REMOTE_ITEMS = {'LECODirector', 'TCPServer'}
 MOCK_ITEMS = {}
 
 

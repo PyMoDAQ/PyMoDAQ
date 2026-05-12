@@ -1,7 +1,7 @@
 
 
 from pymodaq_gui.utils.widgets.table import SpinBoxDelegate
-from  pymodaq_gui.parameter.utils import get_widget_from_tree
+from pymodaq_gui.parameter.utils import get_widget_from_tree
 from pymodaq_gui.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils import gui_utils as gutils
 from pymodaq_gui.utils.dock import Dock
@@ -49,7 +49,7 @@ class ViewerPointList(QObject):
         dock_list = Dock('List of points')
         self.area.addDock(dock_list, 'right')
         params = [{'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-                   'delegate': SpinBoxDelegate, 'menu': True}, ]
+                   'delegate': SpinBoxDelegate, 'menu': True}]
         self.settings_tree = ParameterTree()
         self.settings = Parameter.create(name='settings', title='Settings', type='group', children=params)
         self.settings_tree.setParameters(self.settings, showTop=False)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     data_red += np.random.random(data_red.shape)
     data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
+                                         Axis('yaxis', units='ypxl', data=y, index=0)])
 
     viewer.show_data(data_to_plot)
     viewer.setXaxis(Axis(data=x, label='This is x axis', units='au'))

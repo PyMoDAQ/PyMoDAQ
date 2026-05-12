@@ -96,7 +96,7 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].attribute[0]
     assert blocker.args[0].attribute[1] == MOD
 
-    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    daq_viewer.detector_init = True  # in real implementation of the DAQ_Viewer, this command is called
     #after the right return from the plugin instrument
 
     assert daq_viewer.is_action_enabled('save_current')
@@ -122,7 +122,7 @@ def test_do_init(ini_daq_viewer_ui):
     daq_type = DAQTypesEnum[DAQTypesEnum.names()[IND_daq_type]]
     det_name = options[daq_type.name][IND_det_type]
 
-    detector  = SelectedModule(daq_type,det_name)
+    detector = SelectedModule(daq_type,det_name)
 
     daq_viewer, qtbot = ini_daq_viewer_ui
     daq_viewer.detector = detector
@@ -150,7 +150,7 @@ def test_do_grab(ini_daq_viewer_ui):
     daq_viewer, qtbot = ini_daq_viewer_ui
 
     daq_viewer.do_init(True)
-    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    daq_viewer.detector_init = True  # in real implementation of the DAQ_Viewer, this command is called
     #after the right return from the plugin instrument
 
     with pytest.raises(qtbot.TimeoutError):

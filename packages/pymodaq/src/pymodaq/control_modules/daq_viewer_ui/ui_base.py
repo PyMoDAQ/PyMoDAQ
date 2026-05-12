@@ -11,7 +11,7 @@ import sys
 
 from qtpy import QtWidgets, QtGui, QtCore
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
+from qtpy.QtWidgets import QVBoxLayout, QWidget, QComboBox
 
 import qt_themes
 
@@ -167,9 +167,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self.connect_action('show_settings', self._show_settings)
 
         self.connect_action('grab', self._grab)
-        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
+        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP)))
 
-        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
+        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT)))
         self.connect_action('ini_detector', self.send_init)
 
         self.selector.module_changed.connect(self._detector_changed)
@@ -203,10 +203,10 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready = status
         if status:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().green,)
+                               icon_color=self.get_theme().green)
         else:
             icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().red,)
+                               icon_color=self.get_theme().red)
         self.get_action('snap').set_icon(icon)
 
     def _detector_changed(self, sel_mod: SelectedModule):

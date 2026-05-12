@@ -10,7 +10,7 @@ from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq_gui.managers.action_manager import addwidget
+
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
@@ -109,6 +109,7 @@ class ManagerBase(CustomExt):
     entry_extension: str
 
     execute_action_checkable = False
+    icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
 
     def __init__(self,
                  dashboard: 'DashBoard' = None,
@@ -132,7 +133,7 @@ class ManagerBase(CustomExt):
             initial_value={
                 'items': [],
                 'current': None,
-                'enabled': False
+                'enabled': False,
         })
 
         self.setup_ui()
@@ -250,14 +251,11 @@ class ManagerBase(CustomExt):
         """ Get an action name given a file and the manager name"""
         return f"{file.stem}_{self.manager_name}"
 
-    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
-        self.add_toolbar(self.manager_name.lower(), self.manager_name, self.mainwindow, add_break=False)
-
     def setup_actions_base(self):
 
         # ACTIONS in Manager
-        self.add_widget('entry_label', QtWidgets.QLabel(
-            f'{self.entry_type.capitalize()}:'))
+        # self.add_widget('entry_label', QtWidgets.QLabel(
+        #     f'{self.entry_type.capitalize()}:'))
         self.add_widget(ManagerActions.LIST, ComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
@@ -269,7 +267,7 @@ class ManagerBase(CustomExt):
                         f'New {self.entry_type.capitalize()}', 'add_circle',
                         tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N),
-                        icon_color=self.get_theme().green,)
+                        icon_color=self.get_theme().green)
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'do_not_disturb_on',
                         icon_color=self.get_theme().red,
@@ -293,7 +291,7 @@ class ManagerBase(CustomExt):
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+Shift+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_E))
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
-                        "build_circle",
+                        self.icon_name,
                         icon_color=self.get_theme().blue,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
                         checkable=True,
@@ -309,12 +307,13 @@ class ManagerBase(CustomExt):
         if menu is None:
             menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
 
-        self.add_widget(ManagerActions.LABEL_EXTERNAL, QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-                        toolbar=toolbar,)
+        # self.add_widget(ManagerActions.LABEL_EXTERNAL, QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+        #                 toolbar=toolbar,)
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
 
-        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar)
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
+                        tip=f'List of possible {self.entry_type}s')
         self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
         return toolbar, menu
@@ -340,21 +339,21 @@ class ManagerBase(CustomExt):
                     'signal': combo.items_changed,
                     'getter': combo.get_items,
                     'setter': combo.set_items,
-                    'mode': SyncMode.BIDIRECTIONAL
+                    'mode': SyncMode.BIDIRECTIONAL,
                 },
                 'current': {
                     'signal': combo.currentTextChanged,
                     'getter': combo.currentText,
                     'setter': combo.setCurrentText,
-                    'mode': SyncMode.BIDIRECTIONAL
+                    'mode': SyncMode.BIDIRECTIONAL,
                 },
                 'enabled': {
                     'signal': combo.enabled_changed,
                     'getter': combo.isEnabled,
                     'setter': combo.setEnabled,
-                    'mode': SyncMode.BIDIRECTIONAL
-                }
-            }
+                    'mode': SyncMode.BIDIRECTIONAL,
+                },
+            },
         )
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
@@ -432,7 +431,7 @@ class ManagerBase(CustomExt):
             entries.pop(index)
             if len(entries) != 0:
                 current = entries[max(0, index - 1)]
-            else: # should trigger the default entry creation!
+            else:  # should trigger the default entry creation!
                 entries = self.entries  # this recreate default
                 current = entries[0]
             self.entries_sync.set_value({'items': entries,
@@ -583,8 +582,8 @@ class ManagerBase(CustomExt):
             for ind_file, file in enumerate(entries_path):
                 if self.has_action(self.get_action_from_file(file)):
                     load_menu.addAction(self.get_action(
-                        self.get_action_from_file(file)
-                    )
+                        self.get_action_from_file(file),
+                    ),
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass

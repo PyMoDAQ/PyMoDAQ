@@ -10,7 +10,7 @@ dynamic = [
 description = "User Interface components for PyMoDAQ"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
@@ -22,15 +22,16 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",    
     "Topic :: Scientific/Engineering :: Human Machine Interfaces",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: User Interfaces",
 ]
+
 dependencies = [
     "pymodaq_utils>=0.0.8",
     "pymodaq_data>=5.0.13",
@@ -41,7 +42,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+
+editor = [
+    "qtmonaco",
+]
 dev = [
+    "pymodaq_gui[editor]",
     "hatch", 
     "flake8",
     "pytest",
@@ -53,8 +59,10 @@ dev = [
     "pytest-qt",
     "pytest-xvfb",
     "pytest-order",
-    "qt_material_icons>=0.5.0"
+    "qt_material_icons>=0.5.0",
+    "qtmonaco"
 ]
+
 
 [project.scripts]
 h5browser = "pymodaq_gui.h5modules.h5browser:main"

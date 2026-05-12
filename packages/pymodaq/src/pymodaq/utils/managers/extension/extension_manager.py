@@ -124,6 +124,14 @@ class ExtensionManager(ManagerBase):
         """Add extensions menu."""
         self.extensions_menu = self.add_menu('extensions', "Extensions")
         for ext_name in ExtensionEnum.names():
+            ext_enum = ExtensionEnum[ext_name]
+            if not self.has_action(ext_enum):
+                self.add_action(
+                    ext_enum,
+                    ext_enum.value,
+                    auto_toolbar=False,
+                    auto_menu=False,
+                )
             self.extensions_menu.addAction(
                 self.get_action(ExtensionEnum[ext_name])
             )

@@ -9,7 +9,7 @@ from pymodaq_gui.managers.parameter_manager import ParameterManager, ParameterTr
 
 
 class RealParameterManager(ParameterManager):
-    params =  [
+    params = [
         {
             'title': 'Main Settings',
             'name': 'main_settings',
@@ -19,7 +19,7 @@ class RealParameterManager(ParameterManager):
                  'limits': ['Single', 'Continuous'], 'value': 'Single'},
                 {'title': 'Integration Time', 'name': 'integration_time',
                  'type': 'float', 'value': 100.0},
-            ]
+            ],
         },
         {
             'title': 'Advanced Settings',
@@ -33,10 +33,10 @@ class RealParameterManager(ParameterManager):
                     'type': 'group',
                     'children': [
                         {'title': 'Offset', 'name': 'offset', 'type': 'float', 'value': 0.0},
-                    ]
-                }
-            ]
-        }
+                    ],
+                },
+            ],
+        },
     ]
 
     def __init__(self):

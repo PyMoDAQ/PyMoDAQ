@@ -14,8 +14,8 @@ from pymodaq_utils.config import GlobalConfig as Config
 
 try:
     from pymodaq_gui.resources.material_icons import MaterialIcon
-except  ImportError:
-    pass #this could happen when creating /importing new MaterialIcons
+except ImportError:
+    pass  #this could happen when creating /importing new MaterialIcons
 
 config = Config()
 resource_folder = Path(__file__).parent.parent.joinpath('resources')
@@ -99,6 +99,9 @@ class WidgetActionProxy(QtWidgets.QWidget):
         self._widget.setVisible(visible)
         super().setVisible(visible)
 
+    def isVisible(self) -> bool:
+        return self.widget.isVisible()
+
     @property
     def widget(self) -> QtWidgets.QWidget:
         return self._widget
@@ -124,6 +127,7 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
               flip_h: bool = False,
               flip_v: bool = False,
               before: QtQAction = None,
+              action: QtQAction | QtWidgets.QWidgetAction = None
               ):
     """Create a new action and add it eventually to a toolbar and a menu
 
@@ -169,14 +173,15 @@ def addaction(name: str = '', icon_name: Union[str, Path, QtGui.QIcon]= '', tip=
     before: QAction, optional
         if set, the action is inserted before this action in the toolbar/menu;
         if None the action is appended at the end
+    action: QAction, QWidgetAction, optional
     """
-
-    if icon_name is None or icon_name == '':
-        action = QAction(None, name)
-    else:
-        action = QAction(icon_name, name, icon_checked=icon_checked,
-                         icon_color=icon_color, icon_checked_color=icon_checked_color,
-                         flip_h=flip_h, flip_v=flip_v)
+    if action is None:
+        if icon_name is None or icon_name == '':
+            action = QAction(None, name)
+        else:
+            action = QAction(icon_name, name, icon_checked=icon_checked,
+                             icon_color=icon_color, icon_checked_color=icon_checked_color,
+                             flip_h=flip_h, flip_v=flip_v)
 
     if slot is not None:
         action.connect_to(slot)
@@ -256,7 +261,7 @@ def addwidget(klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
 
         action: QtWidgets.QAction = toolbar.addWidget(widget)
         action.setVisible(visible)
-        action.setToolTip(tip)
+        widget.setToolTip(tip)
         widget = WidgetActionProxy(widget, action)
     else:
         widget.setVisible(visible)
@@ -392,6 +397,7 @@ class ActionManager:
                    flip_h: bool = False,
                    flip_v: bool = False,
                    before: Union[str, 'QAction', WidgetActionProxy, None] = None,
+                   action: QtQAction | QtWidgets.QWidgetAction = None,
                    ):
         """Create a new action and add it to toolbar and menu
 
@@ -449,6 +455,7 @@ class ActionManager:
         before: str, QAction, WidgetActionProxy, or None, optional
             if set, the action is inserted before this action in the toolbar/menu;
             accepts a short_name str, a QAction instance, or a WidgetActionProxy
+        action: QAction, QWidgetAction, optional
 
         See Also
         --------
@@ -467,7 +474,8 @@ class ActionManager:
                                               icon_checked_color=icon_checked_color,
                                               flip_h=flip_h,
                                               flip_v=flip_v,
-                                              before=before)
+                                              before=before,
+                                              action=action)
         return self._actions[short_name]
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget, object], *args, tip='',
@@ -602,7 +610,7 @@ class ActionManager:
 
     def add_toolbar(self, short_name: str, title: str = '', parent: QtWidgets.QWidget = None,
                     toolbar: QtWidgets.QToolBar = None,
-                    area = QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
+                    area=QtCore.Qt.ToolBarArea.TopToolBarArea, add_break=True,
                     before: Union[str, QtWidgets.QToolBar, None] = None) -> QtWidgets.QToolBar:
         """Create and add a toolbar
 

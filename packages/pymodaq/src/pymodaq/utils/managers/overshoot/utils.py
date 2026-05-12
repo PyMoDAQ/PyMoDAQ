@@ -9,7 +9,7 @@ from pymodaq_utils.config import GlobalConfig as Config, get_set_config_dir
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
 from pymodaq_gui.parameter.pymodaq_ptypes import registerParameterType, GroupParameter
-from pymodaq.utils.managers.configurator.configurator import Configurator
+from pymodaq.utils.managers.state.state_manager import StateManager
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -40,7 +40,7 @@ def create_overshoot_param(typ: str) -> list[dict]:
          'readonly': True},
         {'title': 'Direction:', 'name': 'direction', 'type': 'list',
          'value': TriggerDirection.ABOVE.value, 'limits': TriggerDirection.names()},
-        {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0,},
+        {'title': 'Value:', 'name': 'value', 'type': 'float', 'value': 0},
     ]
 
 class ScalableGroupOverShoot(GroupParameter):

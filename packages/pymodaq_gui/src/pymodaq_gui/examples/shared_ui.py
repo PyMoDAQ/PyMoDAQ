@@ -12,7 +12,7 @@ class MyApp(CustomApp):
              {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int',
               'value': 0,
               'tip': 'Wait time in ms between move and grab processes'},
-         ]},]
+         ]}]
     def __init__(self, parent):
         super().__init__(parent=parent)
 

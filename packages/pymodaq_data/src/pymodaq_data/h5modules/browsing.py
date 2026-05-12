@@ -17,17 +17,17 @@ from packaging import version as version_mod
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
-from .backends import H5Backend
+from .saving import H5SaverLowLevel
 from .exporter import ExporterFactory
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-class H5BrowserUtil(H5Backend):
+class H5BrowserUtil(H5SaverLowLevel):
     """Utility object to interact and get info and data from a hdf5 file
 
-    Inherits H5Backend and all its functionalities
+    Inherits H5SaverLowLevel and all its functionalities
 
     Parameters
     ----------
@@ -83,11 +83,15 @@ class H5BrowserUtil(H5Backend):
         attrs_names = node.attrs.attrs_name
         attr_dict = OrderedDict(node.attrs.to_dict())
 
-        settings = None
+        settings = []
         scan_settings = None
-        if 'settings' in attrs_names:
-            if node.attrs['settings'] != '':
-                settings = node.attrs['settings']
+        for attr_name in attrs_names:
+            if 'settings' in attr_name and 'scan_settings' not in attr_name:
+                settings.append(node.attrs[attr_name])
+
+        # if 'settings' in attrs_names:
+        #     if node.attrs['settings'] != '':
+        #         settings = node.attrs['settings']
 
         if 'scan_settings' in attrs_names:
             if node.attrs['scan_settings'] != '':

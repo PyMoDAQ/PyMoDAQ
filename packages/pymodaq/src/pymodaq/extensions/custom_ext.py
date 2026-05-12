@@ -1,15 +1,18 @@
+
 from typing import Union, TYPE_CHECKING
 
 from qtpy import QtCore, QtWidgets
 
-from pymodaq_gui.utils import CustomApp, DockArea
 from pymodaq_utils.enums import StrEnum
+
+from pymodaq_gui.utils import CustomApp, DockArea
+
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 
 if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
     from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
-    from pymodaq.utils.managers.configurator.configurator import Configurator
+    from pymodaq.utils.managers.state.state_manager import StateManager
 
 
 class DashBoardToolbarActions(StrEnum):
@@ -21,11 +24,14 @@ class CustomExt(CustomApp):
     status_signal = QtCore.Signal(str)  # signal to be used to emit info
     config_changed = QtCore.Signal()  # will be emitted when the user changed anything in the configuration files (emitted from SharedUI)
 
+    icon_name = ''
+
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget, QtWidgets.QMainWindow],
                  dashboard: 'DashBoard', module_manager_class=ModulesManager, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.dashboard = dashboard
+
         self.runner_thread : QtCore.QThread = None
         if dashboard is not None:
             self._modules_manager = module_manager_class(
@@ -52,15 +58,15 @@ class CustomExt(CustomApp):
         """
         super().quit_fun()
         if self.dashboard is not None:
-            self.show_dashboard(True) #make sure to show it if it was hidden
+            self.show_dashboard(True)  #make sure to show it if it was hidden
 
 
-    def get_main_toolbar(self) -> QtWidgets.QToolBar:
-        """ Get the main toolbar widget to be eventually added in the main window toolbararea
+    def get_app_toolbars(self) -> list[QtWidgets.QToolBar]:
+        """ Get the main toolbars widget to be eventually added in the main window toolbararea
 
         Default is the default toolbar. To be reimplemented if needed
         """
-        return self.toolbar
+        return [self.toolbar]
 
     @property
     def experiment_manager(self) -> Union['ExperimentManager', None]:
@@ -68,7 +74,7 @@ class CustomExt(CustomApp):
             return self.dashboard.experiment_manager
 
     def do_things_after_experiment_set(self, experiment_name: str):
-        """ This method is called whenever a experiment entry has been set.
+        """ This method is called whenever an experiment entry has been set.
 
         Its main purpose is to update the list of control modules in the manager and
         some other actions.
@@ -84,9 +90,9 @@ class CustomExt(CustomApp):
             self.show_dashboard()
 
     @property
-    def configurator(self) -> 'Configurator':
+    def state_manager(self) -> 'StateManager':
         if self.dashboard is not None:
-            return self.dashboard.configurator
+            return self.dashboard.state_manager
 
     @property
     def splash(self):
@@ -115,16 +121,16 @@ class CustomExt(CustomApp):
     def create_dashboard_toolbar(self,
                                  add_dashboard: bool = True,
                                  add_experiment=True,
-                                 add_configurator=True,
+                                 add_state=True,
                                  add_break=True):
         """ Creates and add a toolbar named dashboard containing means to show/hide the dashboard and optionally
-        to display the experiment and configurator manager in this toolbar """
+        to display the experiment and state manager in this toolbar """
 
         self.add_toolbar('dashboard', 'Dashboard Toolbar',
                          parent=self.mainwindow, add_break=add_break)
         if add_dashboard:
-            self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
-                            toolbar='dashboard')
+            # self.add_widget(DashBoardToolbarActions.LABEL, QtWidgets.QLabel('Dashboard:'),
+            #                 toolbar='dashboard')
             self.add_action(DashBoardToolbarActions.SHOW, 'Show Dashboard', 'visibility',
                             'Show/Hide the Dashboard window', checkable=True,
                             icon_color=self.get_theme().green,
@@ -137,8 +143,8 @@ class CustomExt(CustomApp):
         if add_experiment:
             self.experiment_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
-        if add_configurator:
-            self.configurator.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
+        if add_state:
+            self.state_manager.get_external_toolbar_menu(toolbar=self.get_toolbar('dashboard'))
             self.get_toolbar('dashboard').addSeparator()
 
     def show_dashboard(self, show: bool = None):

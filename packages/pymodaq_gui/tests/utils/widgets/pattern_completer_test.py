@@ -11,7 +11,7 @@ from pymodaq_gui.utils.widgets.pattern_completer import (
     PatternLineEdit,
     PatternPlainTextEdit,
     PatternTextEdit,
-    PatternCompleterDelegate
+    PatternCompleterDelegate,
 )
 
 
@@ -116,7 +116,7 @@ class TestPatternLineEdit:
             min_width=300,
             max_width=600,
             case_sensitive=True,
-            visual_indicator=True
+            visual_indicator=True,
         )
         qtbot.addWidget(widget)
 
@@ -131,7 +131,7 @@ class TestPatternLineEdit:
             '@',
             ['alice', 'bob'],
             case_sensitive=True,
-            min_width=250
+            min_width=250,
         )
 
         config = pattern_line_edit.completers['@']['config']

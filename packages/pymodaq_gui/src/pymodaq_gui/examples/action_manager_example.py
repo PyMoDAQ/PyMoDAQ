@@ -43,7 +43,7 @@ class ActionManagerExample(QtWidgets.QMainWindow, ActionManager):
             "<li><b>Shared actions</b> - Actions appear in multiple menus AND toolbars</li>"
             "<li><b>Toolbar management</b> - Create, retrieve, and populate toolbars dynamically</li>"
             "</ul>"
-            "<p>Try clicking any menu item or toolbar button to see action details!</p>"
+            "<p>Try clicking any menu item or toolbar button to see action details!</p>",
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)

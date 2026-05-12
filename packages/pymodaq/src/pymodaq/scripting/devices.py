@@ -90,7 +90,7 @@ class Dashboard(Device[LECODashboardWrapper]):
 
         return {
             'actuators': {name: Actuator(name) for name in devices['actuators']},
-            'detectors': {name: Detector(name) for name in devices['detectors']}
+            'detectors': {name: Detector(name) for name in devices['detectors']},
         }
 
     def get_configurations(self) -> Future[list[str]]:

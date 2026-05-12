@@ -67,9 +67,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          cd ..
-          cd ..
+          cd ../../
           python install-packages.py -d -u pymodaq_gui
+          
+
+      - name: Install WebEngine
+        continue-on-error: true
+        run: |
+          pip install ${{ 
+            matrix.qt-backend == 'pyqt5' && 'PyQtWebEngine'   || 
+            matrix.qt-backend == 'pyqt6' && 'PyQt6-WebEngine' || 
+            '' 
+          }}
 
       - name: Install tables (optional – no wheel for all Python versions)
         continue-on-error: true

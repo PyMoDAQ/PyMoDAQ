@@ -7,12 +7,12 @@ from pymodaq_gui.parameter import Parameter
 
 
 class ItemSelect_pb(QtWidgets.QWidget):
-    def __init__(self,checkbox=False,):
+    def __init__(self,checkbox=False):
 
         super(ItemSelect_pb, self).__init__()
-        self.initUI(checkbox,)
+        self.initUI(checkbox)
 
-    def initUI(self, checkbox=False,):        
+    def initUI(self, checkbox=False):        
         #### Widgets ###        
         # ListWidget
         self.itemselect = ItemSelect(checkbox)
@@ -45,7 +45,7 @@ class ItemSelect_pb(QtWidgets.QWidget):
 class ItemSelect(QtWidgets.QListWidget):
     def __init__(self, hasCheckbox=True):
         QtWidgets.QListWidget.__init__(self)
-        self.hasCheckbox = hasCheckbox # Boolean indicating if listwidget item uses checkbox ot not
+        self.hasCheckbox = hasCheckbox  # Boolean indicating if listwidget item uses checkbox ot not
         self.selItems = []  # Dummy variable to keep track of click order
         self.itemDoubleClicked.connect(self.doubleClickSelection)
         
@@ -70,13 +70,13 @@ class ItemSelect(QtWidgets.QListWidget):
             # Clean up list with non existing entries      
             [self.selItems.remove(item) for item in self.selItems if item not in allitems]        
             for item in self.all_items():
-                if item.checkState() != QtCore.Qt.CheckState(0): # Item is selected
-                    if item.text() not in self.selItems: # if item not in list then add it
+                if item.checkState() != QtCore.Qt.CheckState(0):  # Item is selected
+                    if item.text() not in self.selItems:  # if item not in list then add it
                         self.selItems.append(item.text())
-                else: # Item is not selected
+                else:  # Item is not selected
                     if item.text() in self.selItems:  # if item in list then remove it
                         self.selItems.remove(item.text())
-            selitems = self.selItems.copy() #need to copy to correctly emit signal when changed
+            selitems = self.selItems.copy()  #need to copy to correctly emit signal when changed
             
             # selitems = [item.text() for item in self.all_items() if item.checkState()!=0]
         else:
@@ -130,7 +130,7 @@ class ItemSelect(QtWidgets.QListWidget):
         # Create items if needed
         for value in values['all_items']:  # Loop through all values
             if value not in allitems_text:  # Test if object already exists
-                item = QtWidgets.QListWidgetItem(value) # Create object
+                item = QtWidgets.QListWidgetItem(value)  # Create object
                 if self.hasCheckbox:  # Add checkbox if required
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)      
                     self.select_item(item, doSelect=False)
