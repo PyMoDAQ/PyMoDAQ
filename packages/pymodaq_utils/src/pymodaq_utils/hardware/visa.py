@@ -2,7 +2,7 @@
 
 Wraps :mod:`pyvisa` to enumerate available VISA resources exactly once per
 process. ``pyvisa`` is an optional dependency: if it is not installed, or no
-VISA backend is found, all functions return empty lists silently.
+VISA backend is found, all functions return empty lists and a warning is logged.
 
 Typical usage in a plugin::
 
@@ -15,7 +15,10 @@ After hot-plugging a device, refresh the cache with::
     from pymodaq_utils.hardware.visa import invalidate_cache
     invalidate_cache()
 """
+import pymodaq_utils.logger as logger_module
 from .base import HardwareCache
+
+logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 
 class VisaCache(HardwareCache):
@@ -29,7 +32,12 @@ class VisaCache(HardwareCache):
             info = dict(rm.list_resources_info())
             rm.close()
             return info
-        except Exception:
+        except ImportError:
+            logger.warning('pyvisa is not installed — VISA resource discovery unavailable. '
+                           'Install it with: pip install pyvisa pyvisa-py')
+            return {}
+        except Exception as e:
+            logger.warning(f'VISA resource discovery failed: {e}')
             return {}
 
     @classmethod

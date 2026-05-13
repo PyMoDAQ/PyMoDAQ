@@ -2,7 +2,7 @@
 
 Wraps :mod:`serial.tools.list_ports` to enumerate available serial ports
 exactly once per process. ``pyserial`` is an optional dependency: if it is
-not installed, all functions return empty lists silently.
+not installed, all functions return empty lists and a warning is logged.
 
 Typical usage in a plugin::
 
@@ -15,7 +15,10 @@ After hot-plugging a device, refresh the cache with::
     from pymodaq_utils.hardware.serial_ports import invalidate_cache
     invalidate_cache()
 """
+import pymodaq_utils.logger as logger_module
 from .base import HardwareCache
+
+logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 
 class SerialPortsCache(HardwareCache):
@@ -26,7 +29,12 @@ class SerialPortsCache(HardwareCache):
         try:
             from serial.tools.list_ports import comports
             return list(comports())
-        except Exception:
+        except ImportError:
+            logger.warning('pyserial is not installed — serial port discovery unavailable. '
+                           'Install it with: pip install pyserial')
+            return []
+        except Exception as e:
+            logger.warning(f'Serial port discovery failed: {e}')
             return []
 
     @classmethod
