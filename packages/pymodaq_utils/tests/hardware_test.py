@@ -118,14 +118,17 @@ class TestVisaModule:
     def test_serial_resources_are_subset_of_all(self):
         # list_serial_resources() is a filtered view of list_resources();
         # every ASRL entry must also appear in the full resource list.
+        # Skipped when pyvisa is absent: an empty list would make this pass
+        # vacuously without testing anything.
+        pytest.importorskip('pyvisa')
         all_r = visa.list_resources()
         serial_r = visa.list_serial_resources()
         assert all(r in all_r for r in serial_r)
 
     def test_serial_resources_start_with_asrl(self):
         # VISA serial resources always begin with 'ASRL' by the VISA standard.
-        # This test is a no-op when pyvisa is absent (empty list), but guards
-        # the filter logic against regressions in environments where it is present.
+        # Skipped when pyvisa is absent for the same reason as above.
+        pytest.importorskip('pyvisa')
         for r in visa.list_serial_resources():
             assert r.startswith('ASRL')
 
