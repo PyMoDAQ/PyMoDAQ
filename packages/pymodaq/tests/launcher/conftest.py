@@ -61,7 +61,7 @@ def launcher(qtbot, copied_data, request):
 
 
 @pytest.fixture
-def ini_configurator(qtbot):
+def state_manager(qtbot):
     """Fixture to replicate the synchronization bug between experiment and configuration."""
     qt_themes.set_theme(theme=config('gui', 'style', 'theme')[0],
                         style=config('gui', 'style', 'style')[0])

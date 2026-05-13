@@ -89,7 +89,8 @@ class TestLauncher:
 class TestWidgetSync:
     """Test displayed values."""
 
-    def test_widgets_synchro(self, qtbot, main_window, state_manager, copied_data):
+    def test_widgets_synchro(self, qtbot, state_manager, copied_data):
+        main_window = QtWidgets.QMainWindow()
         main_window.show()
         qtbot.waitExposed(main_window, timeout=5000)
 
