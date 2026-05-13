@@ -106,8 +106,27 @@ class TestVisaModule:
         visa.VisaCache.invalidate_cache()
 
     def test_list_resources_returns_list(self):
-        # Passes even when pyvisa is not installed: the module must never raise.
+        # The module must never raise, even when pyvisa is not installed.
         assert isinstance(visa.list_resources(), list)
+
+    def test_warns_when_pyvisa_absent(self, monkeypatch):
+        # When pyvisa is missing the user should get an explicit warning,
+        # not a silent empty list that looks like "no devices connected".
+        import builtins
+        real_import = builtins.__import__
+
+        def block_pyvisa(name, *args, **kwargs):
+            if name == 'pyvisa':
+                raise ImportError('pyvisa blocked for test')
+            return real_import(name, *args, **kwargs)
+
+        warned = []
+        monkeypatch.setattr(builtins, '__import__', block_pyvisa)
+        monkeypatch.setattr(visa.logger, 'warning', lambda msg: warned.append(msg))
+        visa.VisaCache.invalidate_cache()
+
+        visa.list_resources()
+        assert any('pyvisa' in msg for msg in warned)
 
     def test_list_serial_resources_returns_list(self):
         assert isinstance(visa.list_serial_resources(), list)
@@ -164,8 +183,26 @@ class TestSerialPortsModule:
         serial_ports.SerialPortsCache.invalidate_cache()
 
     def test_list_resources_returns_list(self):
-        # Passes even when pyserial is not installed.
+        # The module must never raise, even when pyserial is not installed.
         assert isinstance(serial_ports.list_resources(), list)
+
+    def test_warns_when_pyserial_absent(self, monkeypatch):
+        # Same contract as the visa equivalent: missing backend → warning, not silent empty list.
+        import builtins
+        real_import = builtins.__import__
+
+        def block_serial(name, *args, **kwargs):
+            if name == 'serial.tools.list_ports':
+                raise ImportError('pyserial blocked for test')
+            return real_import(name, *args, **kwargs)
+
+        warned = []
+        monkeypatch.setattr(builtins, '__import__', block_serial)
+        monkeypatch.setattr(serial_ports.logger, 'warning', lambda msg: warned.append(msg))
+        serial_ports.SerialPortsCache.invalidate_cache()
+
+        serial_ports.list_resources()
+        assert any('pyserial' in msg for msg in warned)
 
     def test_list_port_descriptions_returns_list(self):
         assert isinstance(serial_ports.list_port_descriptions(), list)
@@ -173,6 +210,9 @@ class TestSerialPortsModule:
     def test_resources_and_descriptions_same_length(self):
         # Both lists are derived from the same cached port objects, so they
         # must always be parallel (index N in one matches index N in the other).
+        # Skipped when pyserial is absent: both would be empty and the assertion
+        # passes vacuously without testing anything.
+        pytest.importorskip('serial')
         assert len(serial_ports.list_resources()) == len(serial_ports.list_port_descriptions())
 
     def test_fetch_called_once_across_multiple_functions(self, monkeypatch):
