@@ -47,11 +47,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "hatch", 
+    "hatch",
     "flake8",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
+    "pyvisa",
+    "pyserial",
 ]
 
 [project.scripts]
