@@ -1,10 +1,7 @@
 import pytest
 from qtpy import QtWidgets
 
-from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq_utils.config import GlobalConfig
-from mock import patch
-from subprocess import Popen
 
 config = GlobalConfig()
 
@@ -43,8 +40,7 @@ class TestLauncher:
         assert launcher.state_manager.entry == 'hundred_value'
         assert launcher.state_manager.get_action_list().currentText() == 'hundred_value'
 
-    @patch('subprocess.Popen')
-    def test_restore(self, mock_popen, qtbot, launcher):
+    def test_restore(self, qtbot, launcher, monkeypatch):
         """
         Mock 'subprocess.Popen' method to test if the launcher passes the correct arguments to the dashboard command.
 
@@ -54,12 +50,18 @@ class TestLauncher:
         So direct communication between them is impossible. This test verifies that the launcher passes the correct
         arguments, but the responsibility of the correct launch belongs to the dashboard via the 'load_dashboard_with_preset' method.
         """
-        launcher.get_action('restore_dashboard').trigger()
-        qtbot.waitUntil(lambda: mock_popen.called, timeout=5000)
-        assert mock_popen.called
 
-        # Get arguments list
-        args_list = mock_popen.call_args[0][0]
+        args_list = []
+
+        def mock_popen(args):
+            args_list.extend(args)
+
+        monkeypatch.setattr('subprocess.Popen', mock_popen)
+
+        launcher.get_action('restore_dashboard').trigger()
+        qtbot.waitUntil(lambda: len(args_list) > 0, timeout=5000)
+        assert len(args_list) > 0
+
 
         # Verify command arguments
         assert args_list[0] == 'dashboard'
@@ -97,18 +99,24 @@ class TestWidgetSync:
         assert state_manager.experiment_manager.entry == 'default'
         assert state_manager.experiment_manager.get_action_list().currentText() == 'default'
 
-        with qtbot.waitSignal(state_manager.experiment_manager.entries_sync.value_changed, timeout=5000):
-            state_manager.experiment_manager.entry = 'exp_test'
-
-        QtWidgets.QApplication.processEvents()
+        with qtbot.waitSignal(state_manager.experiment_manager.get_action_list().currentTextChanged, timeout=5000):
+            with qtbot.waitSignal(state_manager.experiment_manager.entries_sync.value_changed, timeout=5000):
+                state_manager.experiment_manager.entries_sync.set_value({
+                    **state_manager.experiment_manager.entries_sync.value,
+                    'current' : 'exp_test'
+                })
 
         assert state_manager.experiment_manager.entry == 'exp_test'
         assert state_manager.experiment_manager.get_action_list().currentText() == 'exp_test'
         assert 'ten_value' in state_manager.entries
         assert 'hundred_value' in state_manager.entries
 
-        state_manager.entry = 'hundred_value'
-        qtbot.waitExposed(main_window, timeout=5000)
+        with qtbot.waitSignal(state_manager.get_action_list().currentTextChanged, timeout=5000):
+            with qtbot.waitSignal(state_manager.entries_sync.value_changed, timeout=5000):
+                state_manager.entries_sync.set_value({
+                    **state_manager.entries_sync.value,
+                    'current' : 'hundred_value'
+                })
 
         assert state_manager.entry == 'hundred_value'
         assert state_manager.get_action_list().currentText() == 'hundred_value'

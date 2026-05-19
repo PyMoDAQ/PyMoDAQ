@@ -83,7 +83,7 @@ def state_manager(qtbot):
         qtbot.addWidget(main_window)
         main_window.show()
 
-        yield state_manager, main_window
+        yield state_manager
 
         main_window.close()
         main_window.deleteLater()

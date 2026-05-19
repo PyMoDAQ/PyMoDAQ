@@ -271,7 +271,7 @@ class Launcher(CustomApp):
 
         # Header of loader section
         self.connect_action('back_config', lambda: self.do_navigate(self.history_index + 1))
-        self.connect_action('restore_dashboard', self.load_dashboard_with_experiment_configurator)
+        self.connect_action('restore_dashboard', self.load_dashboard_with_experiment_and_state)
         self.connect_action('next_config', lambda: self.do_navigate(self.history_index-1))
         self.experiment_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
         self.state_manager.get_action(ManagerActions.EXECUTE).setVisible(False)
@@ -388,7 +388,7 @@ class Launcher(CustomApp):
         self.tree.expandAll()
         self.tree.setItemsExpandable(True)
 
-    def load_dashboard_with_experiment_configurator(self):
+    def load_dashboard_with_experiment_and_state(self):
         """
         Load and show dashboard with selected experiment and configuration.
         """
