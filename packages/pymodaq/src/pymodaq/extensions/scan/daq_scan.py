@@ -850,7 +850,7 @@ class DAQScan(CustomExt):
         viewers_enum, data_names, _ = self.check_number_type_viewers()
         self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
-    def update_status(self, txt: str, wait_time=0):
+    def update_status(self, txt: str, wait_time: int = None):
         """ Show the txt message in the status bar with a delay of wait_time ms.
 
         add an info log in the logger
@@ -859,10 +859,11 @@ class DAQScan(CustomExt):
         ----------
         txt: str
             the message to log
-        wait_time: int
-            leave the message apparent in the status bar for this duration in ms
+        wait_time: int or None
+            leave the message apparent in the status bar for this duration in ms.
+            If None, uses the value from config('gui', 'message_status_persistence')
         """
-        self.ui.display_status(txt, wait_time)
+        self.ui.update_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
 
@@ -1095,7 +1096,7 @@ class DAQScan(CustomExt):
             --------
             set_scan
         """
-        self.ui.display_status('Starting acquisition')
+        self.ui.update_status('Starting acquisition')
         #deactivate double_clicked
         if self.ui.is_action_checked('move_at'):
             self.ui.get_action('move_at').trigger()
