@@ -22,7 +22,7 @@
                     <port type="int" title="Port:" visible="1" removable="0" readonly="1" valid_for_configuration="1">12300</port>
                 </leco>
             </main_settings>
-            <move_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
+            <actuator_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
                 <tau type="int" title="Tau (ms):" visible="1" removable="0" readonly="1" valid_for_configuration="1">500.0</tau>
                 <controller type="group" title="Controller:" visible="1" removable="0" readonly="1" valid_for_configuration="1" show_pb="0">
                     <controller_status type="list" title="Controller Status:" visible="1" removable="0" readonly="1" valid_for_configuration="1" limits="['Master', 'Slave']" show_pb="0">str('Master')</controller_status>
@@ -42,7 +42,7 @@
                     <scaling type="float" title="Scaling factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">1.0</scaling>
                     <offset type="float" title="Offset factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">0.0</offset>
                 </scaling>
-            </move_settings>
+            </actuator_settings>
         </actuator_000>
         <actuator_001 type="group" title="Temperature" visible="1" removable="0" readonly="1" valid_for_configuration="1">
             <name type="str" title="Name:" visible="1" removable="0" readonly="1" valid_for_configuration="0">Temperature</name>
@@ -66,7 +66,7 @@
                     <port type="int" title="Port:" visible="1" removable="0" readonly="1" valid_for_configuration="1">12300</port>
                 </leco>
             </main_settings>
-            <move_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
+            <actuator_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
                 <tau type="int" title="Tau (ms):" visible="1" removable="0" readonly="1" valid_for_configuration="1">500.0</tau>
                 <controller type="group" title="Controller:" visible="1" removable="0" readonly="1" valid_for_configuration="1" show_pb="0">
                     <controller_status type="list" title="Controller Status:" visible="1" removable="0" readonly="1" valid_for_configuration="1" limits="['Master', 'Slave']" show_pb="0">str('Master')</controller_status>
@@ -86,7 +86,7 @@
                     <scaling type="float" title="Scaling factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">1.0</scaling>
                     <offset type="float" title="Offset factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">0.0</offset>
                 </scaling>
-            </move_settings>
+            </actuator_settings>
         </actuator_001>
         <actuator_002 type="group" title="Power" visible="1" removable="0" readonly="1" valid_for_configuration="1">
             <name type="str" title="Name:" visible="1" removable="0" readonly="1" valid_for_configuration="0">Power</name>
@@ -110,7 +110,7 @@
                     <port type="int" title="Port:" visible="1" removable="0" readonly="1" valid_for_configuration="1">12300</port>
                 </leco>
             </main_settings>
-            <move_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
+            <actuator_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
                 <tau type="int" title="Tau (ms):" visible="1" removable="0" readonly="1" valid_for_configuration="1">500.0</tau>
                 <controller type="group" title="Controller:" visible="1" removable="0" readonly="1" valid_for_configuration="1" show_pb="0">
                     <controller_status type="list" title="Controller Status:" visible="1" removable="0" readonly="1" valid_for_configuration="1" limits="['Master', 'Slave']" show_pb="1">str('Master')</controller_status>
@@ -130,7 +130,7 @@
                     <scaling type="float" title="Scaling factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">1.0</scaling>
                     <offset type="float" title="Offset factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">0.0</offset>
                 </scaling>
-            </move_settings>
+            </actuator_settings>
         </actuator_002>
         <actuator_003 type="group" title="Xaxis" visible="1" removable="0" readonly="1" valid_for_configuration="1">
             <name type="str" title="Name:" visible="1" removable="0" readonly="1" valid_for_configuration="0">Xaxis</name>
@@ -154,7 +154,7 @@
                     <port type="int" title="Port:" visible="1" removable="0" readonly="1" valid_for_configuration="1">12300</port>
                 </leco>
             </main_settings>
-            <move_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
+            <actuator_settings type="group" title="Actuator Settings:" visible="1" removable="0" readonly="1" valid_for_configuration="1">
                 <tau type="int" title="Tau (ms):" visible="1" removable="0" readonly="1" valid_for_configuration="1">500.0</tau>
                 <controller type="group" title="Controller:" visible="1" removable="0" readonly="1" valid_for_configuration="1" show_pb="0">
                     <controller_status type="list" title="Controller Status:" visible="1" removable="0" readonly="1" valid_for_configuration="1" limits="['Master', 'Slave']" show_pb="1">str('Master')</controller_status>
@@ -174,7 +174,7 @@
                     <scaling type="float" title="Scaling factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">1.0</scaling>
                     <offset type="float" title="Offset factor:" visible="1" removable="0" readonly="1" valid_for_configuration="1">0.0</offset>
                 </scaling>
-            </move_settings>
+            </actuator_settings>
         </actuator_003>
     </actuator>
     <detector type="group" title="Detectors:" visible="1" removable="0" readonly="1" valid_for_configuration="1">

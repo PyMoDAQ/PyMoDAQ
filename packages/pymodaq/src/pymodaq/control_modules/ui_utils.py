@@ -38,10 +38,7 @@ class ControlModuleUI(CustomApp):
         super().__init__(parent)
         self.config = config
         self._ini_state = False
-
-    def display_status(self, txt, wait_time=config('utils', 'general', 'message_status_persistence')):
-        if self.statusbar is not None:
-            self.statusbar.showMessage(txt, wait_time)
+        self._settings_widget = None
 
     # ---- Common action setup methods ----
 
@@ -75,6 +72,7 @@ class ControlModuleUI(CustomApp):
         tip: str
             Tooltip text
         """
+        self._init_action_name = action_name
         self.add_action(action_name, display_name, self.INIT_ICON, checkable=True,
                         tip=tip, icon_color=self.get_theme().red,
                         icon_checked_color=self.get_theme().green,
@@ -102,12 +100,49 @@ class ControlModuleUI(CustomApp):
         action_name: str
             The name of the init action
         """
-        if initialized:
-            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().green)
-        else:
-            icon = create_icon(self.INIT_ICON, icon_color=self.get_theme().red)
         if self.has_action(action_name):
-            self.get_action(action_name).set_icon(icon)
+            self.get_action(action_name).set_icon(self.INIT_ICON, self.get_theme().green if
+            initialized else self.get_theme().red)
+
+    def enable_actions(self, status=True, all_except=()):
+        """Enable or disable all toolbar actions, optionally excluding some.
+
+        Parameters
+        ----------
+        status: bool
+            True to enable, False to disable.
+        all_except: tuple of str
+            Action names to leave unchanged.
+        """
+        for action in self.actions_names:
+            if action not in all_except:
+                self.set_action_enabled(action, status)
+
+    def _show_settings(self, show: bool = True):
+        """Slot connected to the show_settings action."""
+        self._settings_widget.setVisible(show)
+        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
+
+    def show_settings(self, show=True):
+        """Programmatically show/hide the settings widget. API entry."""
+        if self.is_action_checked('show_settings') != show:
+            self.get_action('show_settings').trigger()
+
+    def _connect_common_actions(self):
+        """Connect actions that are common to all control module UIs.
+
+        Connects `show_settings` → `_show_settings` and the init action → `send_init`.
+        Subclasses should call this at the start of their `connect_things()`.
+        """
+        if 'show_settings' in self.actions_names:
+            self.connect_action('show_settings', self._show_settings)
+        if hasattr(self, '_init_action_name') and self._init_action_name in self.actions_names:
+            self.connect_action(self._init_action_name, self.send_init)
+
+    def close(self):
+        """Close and clean up the settings widget. Subclasses should call super().close()."""
+        if self._settings_widget is not None:
+            self._settings_widget.close()
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button

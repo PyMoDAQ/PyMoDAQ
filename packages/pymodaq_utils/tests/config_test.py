@@ -276,8 +276,6 @@ def test_required_config_entries():
     assert 'debug_level' in config('general')
     assert isinstance(config('general', 'debug_level'), list)
     assert 'check_version' in config('general')
-    assert 'message_status_persistence' in config('general')
-
 
     assert 'user' in config
     assert 'name' in config('user')
