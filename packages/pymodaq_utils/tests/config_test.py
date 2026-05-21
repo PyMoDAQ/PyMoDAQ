@@ -179,6 +179,19 @@ class TestConfig:
         for child in ['user', 'sql']:
             assert child in children
 
+    def test_automatic_registration(self):
+        global_config = GlobalConfig()
+        utils_config = Config()
+
+        assert global_config['utils'] == utils_config
+
+        custom_config0 = CustomConfig0()
+        assert custom_config0 not in global_config.to_dict().values()
+
+
+        custom_config1 = CustomConfig0()
+        assert custom_config1 not in global_config.to_dict().values()
+
     def test_get(self):
         config = CustomConfig1()
 
