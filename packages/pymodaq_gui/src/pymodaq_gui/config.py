@@ -3,7 +3,6 @@ from pathlib import Path
 from pymodaq_utils.config import (GlobalConfig, BaseConfig, get_set_config_dir)
 
 
-@GlobalConfig.register()
 class Config(BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = Path(__file__).parent.joinpath('resources/config_template.toml')

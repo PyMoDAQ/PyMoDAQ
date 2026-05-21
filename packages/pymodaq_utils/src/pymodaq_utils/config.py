@@ -407,8 +407,7 @@ class ConfigSingleton(Singleton):
         if not cls._allow_direct_call:
             warnings.deprecation_msg(
                 "Calling a constructor on Config classes is deprecated.\n"
-                "You should use @GlobalConfig.register() decorator instead.\n"
-                f"Your config entries will then be stored inside GlobalConfig "
+                "There are automatically registered in a GlobalConfig "
                 f"object, prefixed with `config_name` "
                 f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])",
             )
@@ -432,6 +431,19 @@ class BaseConfig(metaclass=ConfigSingleton):
 
     config_template_path: Path = NotImplemented
     config_name: str = NotImplemented
+    _should_register : bool = True
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Check if any parent shouldn't register
+        should_register = cls._should_register and all(getattr(p, '_auto_register', True) for p in cls.__mro__)
+
+        if (should_register and
+            cls.config_name is not NotImplemented and
+            cls.config_template_path is not NotImplemented
+        ):
+            GlobalConfig.register()(cls)
 
 
     def __init__(self):
@@ -621,6 +633,7 @@ class BaseConfig(metaclass=ConfigSingleton):
 
 class CacheConfig(BaseConfig):
     _allow_direct_call: bool = True
+    _should_register: bool = False
 
 class GlobalConfig(metaclass=Singleton):
     config_name: str = 'global'
@@ -770,7 +783,7 @@ class GlobalConfig(metaclass=Singleton):
         finally:
             get_set_local_dir(user=False)
 
-@GlobalConfig.register()
+
 class Config(BaseConfig):
     """Main class to deal with configuration values for PyMoDAQ"""
     config_template_path = Path(__file__).parent.joinpath("resources/config_template.toml")
