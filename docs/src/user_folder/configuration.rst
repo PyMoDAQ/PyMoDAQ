@@ -13,7 +13,7 @@ All configuration files used by PyMoDAQ will be located within two folders each 
 while the other is restricted to the current user and located in the user's *home* folder.
 
 All configuration files that should be shared between users are in the system wide folder,
-for instance all files related to the dashboard, see Fig. :numref:`pymodaq_config_folder`:
+for instance all files related to the dashboard, see :numref:`pymodaq_config_folder`:
 
 * experiment configs: experiment file defining the type and numbers of control modules for a given experiment
 * batch configs: file describing the batch of scans to do
@@ -148,3 +148,44 @@ that is a cache (inheriting `CacheConfig`) is **not** registered.
 It is preferred to access them through this object. To access a specific value, it works the same, is just needs
 to be prefixed with the config name. So for example, to access the entry `foo` in PyMoDAQ's `Config` object through
 the `GlobalConfig` object, one would do: `global_config('pymodaq', 'foo')`.
+
+Configuration folders
++++++++++++++++++++++
+
+As said in the beginning, configuration files are stored in a user folder and system folder. The system-wide
+configuration folder is created at application startup and contains at first the templates of each configuration with
+default values. It is manually editable by the system administrator with custom global values.
+
+.. note::
+
+   To create system-wide configuration folder, a popup asking for admin rights (:numref:`prompt_ask_admin_rights`) may appear, accepting will create the
+   folder and refusing will simply ignore and everything will be in the user folder.
+
+.. _prompt_ask_admin_rights:
+
+.. list-table:: Admin rights prompts
+   :align: center
+
+   * - .. figure:: /image/configuration/prompt_admin_rights.png
+          :alt: prompt_admin_rights
+
+          A warning about admin rights prompt
+
+     - .. figure:: /image/configuration/ask_admin_rights.png
+          :alt: ask_admin_rights
+
+          The admin right prompt on linux
+
+The user folder only contain files with entries modified through `Preferences` menu in PyMoDAQ and is account specific.
+
+When a package update introduces breaking changes in a configuration --i.e. when the type of an entry changes-- current
+configuration is automatically saved in a backup folder and modified values (system and user) are ported back as long as
+they are still compatible. The backup configuration path is shown when a dashboard is loaded as shown on
+:numref:`configuration_backup`.
+
+.. _configuration_backup:
+
+.. figure:: /image/configuration/configuration_backup.png
+   :alt: configuration_backup
+
+   The popup showing the backup path for configurations
