@@ -15,6 +15,7 @@ from pymodaq_utils.config import _delete_config_files
 class CustomConfig0(BaseConfig):
     config_name = 'test_utils_custom0'
     config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+    _should_register : bool = False
 
     def __init__(self):
         super().__init__()
@@ -26,6 +27,7 @@ class CustomConfig1(BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_name = "test_utils_custom1"
     config_template_path = None
+    _should_register : bool = False
 
     def __init__(self):
         super().__init__()
