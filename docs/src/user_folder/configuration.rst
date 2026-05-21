@@ -107,7 +107,7 @@ Below is a non exhaustive list of configuration entries stored in the *config_py
 Plugins configuration for default values
 ++++++++++++++++++++++++++++++++++++++++
 
-In the same way, the file *config_pymodaq.toml* stores (system/user wide) default configuration values, plugins
+In the same way, the file *pymodaq.toml* stores (system/user wide) default configuration values, plugins
 benefits of the same features. The mechanism is as follow. The plugin package should contain (PyMoDAQ >= 4)
 a resources folder containing at least the *VERSION* file and a *config_template.toml* file, see
 :numref:`config_resources`.
@@ -139,3 +139,12 @@ In there, will be defined the particular `Config` object to be used with each sc
 This object will automatically be linked to the system wide/user *.pymodaq* folder where the template will be
 copied and renamed from the plugin name. For instance, the plugin package, `pymodaq_plugins_optimisation` will
 produce a configuration file called *config_optimisation.toml*
+
+
+Also note that most config objects are automatically registered into a global one (`GlobalConfig`). The registered
+configurations are the ones in each PyMoDAQ package, and the one in each plugin inheriting `BaseConfig`. Any "config"
+that is a cache (inheriting `CacheConfig`) is **not** registered.
+
+It is preferred to access them through this object. To access a specific value, it works the same, is just needs
+to be prefixed with the config name. So for example, to access the entry `foo` in PyMoDAQ's `Config` object through
+the `GlobalConfig` object, one would do: `global_config('pymodaq', 'foo')`.
