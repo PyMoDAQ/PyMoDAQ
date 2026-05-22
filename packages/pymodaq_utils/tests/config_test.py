@@ -6,9 +6,10 @@ import datetime
 
 import toml
 
-from pymodaq_utils.config import Config, GlobalConfig, BaseConfig, replace_file_extension, get_set_config_dir, get_set_local_dir, \
+from pymodaq_utils.config import Config, GlobalConfig, BaseConfig, replace_file_extension, get_set_config_dir, \
+    get_set_local_dir, \
     copy_template_config, load_system_config_and_update_from_user, create_toml_from_dict, check_config, get_config_file, \
-    recursive_iterable_flattening
+    recursive_iterable_flattening, deep_type_equals
 from pymodaq_utils.config import _delete_config_files
 
 
@@ -237,6 +238,68 @@ class TestConfigSingleton:
 
         #Let's put it back to its original state
         config1['style', 'darkstyle'] = True
+
+test_config_validation_data = [
+    #int
+    (0, 0, True),
+    (1, -1, True),
+
+    #float and int
+    (1.0, -1., True),
+    (1, -1., False),
+
+    #string
+    ('foo', 'bar', True),
+
+    #booleans
+    (False, True, True),
+
+    #lists
+    ([], [], True),
+    (['foo'], [], True),
+    (['foo'], [1], False),
+    (['foo', 'bar', 'baz'], ['qux'], True),
+
+    # dicts
+    ({}, {}, True),
+    ({'a': 1}, {'a': 2}, True),
+    ({'a': 1}, {'a': 1.0}, False),
+    ({'a': 'foo'}, {'a': 'bar'}, True),
+
+    #different keys
+    ({'a': 1}, {'b': 1}, False),
+    ({'a': 1, 'b': 2}, {'a': 3}, False),
+
+    #same keys, different types
+    ({'a': 1, 'b': 'x'}, {'a': 2, 'b': 'y'}, True),
+    ({'a': 1, 'b': 'x'}, {'a': 2, 'b': 3}, False),
+
+    #nested dicts
+    ({'a': {'b': 1}}, {'a': {'b': 2}}, True),
+    ({'a': {'b': 1}}, {'a': {'b': 1.0}}, False),
+
+    #dict with lists
+    ({'a': [1, 2, 3]}, {'a': [4, 5]}, True),
+    ( {'a': [1, 2, 3]}, {'a': ['x', 'y']}, False),
+
+    #list of dicts
+    ([{'a': 1}, {'b': 2}], [{'a': 3}, {'b': 4}], True),
+    ([{'a': 1}], [{'a': 'x'}], False),
+
+    # nested with lists
+    ({'a': [{'b': 1}, {'c': [1, 2]}]}, {'a': [{'b': 2}, {'c': [3, 4]}]}, True),
+    ({'a': [{'b': 1}, {'c': [1, 2]}]}, {'a': [{'b': 2}, {'c': ['x', 'y']}]}, False),
+
+    # edge cases
+    ({'a': None}, {'a': None}, True),
+    ({'a': None}, {'a': 1}, False),
+    ({'a': {}}, {'a': {}}, True),
+    ({'a': {}}, {'a': {'b': 1}}, False),
+]
+class TestConfigValidation:
+    @pytest.mark.parametrize("a,b, res", test_config_validation_data)
+    def test_deep_type_equals(self, a, b, res):
+        assert deep_type_equals(a, b) == res
 
 
 
