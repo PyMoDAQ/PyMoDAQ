@@ -437,7 +437,7 @@ class BaseConfig(metaclass=ConfigSingleton):
         super().__init_subclass__(**kwargs)
 
         # Check if any parent shouldn't register
-        should_register = cls._should_register and all(getattr(p, '_auto_register', True) for p in cls.__mro__)
+        should_register = cls._should_register and all(getattr(p, '_should_register', True) for p in cls.__mro__)
 
         if (should_register and
             cls.config_name is not NotImplemented and
@@ -662,7 +662,8 @@ class GlobalConfig(metaclass=Singleton):
                                           f'`config_name` ({wrapped_class.config_name})')
             global_config = cls()
             name = wrapped_class.config_name
-
+            if "config_" in name:
+                name = name.split("config_")[1]
             with cls._register_lock:
                 if name in global_config._configs:
                     raise ValueError(f'Failed to register {wrapped_class.__name__}. Config {name} already registered for {global_config._configs[name].__class__.__name__}')
