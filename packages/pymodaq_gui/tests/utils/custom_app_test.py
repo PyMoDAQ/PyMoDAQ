@@ -39,5 +39,5 @@ def app(qtbot):
 def test_status_bar(app):
     my_app = app
 
-    my_app.update_status('a message for 2s', laps_ms=2000)
+    my_app.update_status('a message for 2s', wait_time=2000)
     my_app.n_iter_widget.setValue(24)
