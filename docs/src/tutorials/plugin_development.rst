@@ -859,7 +859,7 @@ Notice that the import of the wrapper is very similar to what we have done in th
 .. tip:: **Shared hardware discovery for VISA and serial plugins**
 
    If your plugin enumerates VISA resources or serial ports to populate its
-   settings UI, use :mod:`pymodaq_utils.hardware` instead of calling
+   settings UI, use :mod:`pymodaq_plugins_utils.hardware` instead of calling
    ``pyvisa.ResourceManager()`` or ``serial.tools.list_ports.comports()``
    directly. The module caches the OS query once per process and returns the
    same result to every plugin that requests it, which removes redundant
@@ -868,11 +868,11 @@ Notice that the import of the wrapper is very similar to what we have done in th
    .. code-block:: python
 
       # VISA-based plugin (Newport, Thorlabs, PI, ...)
-      from pymodaq_utils.hardware.visa import list_serial_resources
+      from pymodaq_plugins_utils.hardware.visa import list_serial_resources
       ports = list_serial_resources()  # ['ASRL/dev/ttyUSB0::INSTR', ...]
 
       # pyserial-based plugin (Arduino, Ocean Optics, ...)
-      from pymodaq_utils.hardware.serial_ports import list_resources
+      from pymodaq_plugins_utils.hardware.serial_ports import list_resources
       ports = list_resources()  # ['/dev/ttyUSB0', 'COM3', ...]
 
    Both ``pyvisa`` and ``pyserial`` remain optional: the functions return
@@ -883,7 +883,7 @@ Notice that the import of the wrapper is very similar to what we have done in th
 
    .. code-block:: python
 
-      from pymodaq_utils.hardware import invalidate_all_caches
+      from pymodaq_plugins_utils.hardware import invalidate_all_caches
       invalidate_all_caches()
 
    See :ref:`hardware_discovery_API` for the full API reference.

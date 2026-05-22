@@ -52,8 +52,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-xdist",
-    "pyvisa",
-    "pyserial",
 ]
 
 [project.scripts]
