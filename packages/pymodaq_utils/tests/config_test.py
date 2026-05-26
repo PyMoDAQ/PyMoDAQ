@@ -36,6 +36,15 @@ class CustomConfig1(BaseConfig):
         atexit.register(lambda : _delete_config_files(self))
 
 
+class InvalidConfig0(BaseConfig):
+    config_name = Path(__file__).parent.joinpath('data/config.toml')
+    config_template_path = Path(__file__).parent.joinpath('data/config_template.toml')
+    _should_register : bool = False
+
+    def __init__(self):
+        super().__init__()
+        atexit.unregister(self.save)
+
 TOML_DICT = dict(
     scan=dict(scan1d=dict(start=0.,
                    stop=5,
@@ -300,6 +309,27 @@ class TestConfigValidation:
     @pytest.mark.parametrize("a,b, res", test_config_validation_data)
     def test_deep_type_equals(self, a, b, res):
         assert deep_type_equals(a, b) == res
+
+    def test_valid_config(self):
+        from pymodaq_utils.config import Config
+        global_config = GlobalConfig()
+        assert global_config._config_is_valid('utils'), \
+            "Utils config file is invalid, if changes where made to the template, restart PyMoDAQ first"
+
+    def test_invalid_config(self, global_config):
+        config = InvalidConfig0() # type difference between template and file
+        global_config = GlobalConfig()
+        global_config._configs['invalid'] = config
+
+        try:
+            assert not global_config._config_is_valid('invalid')
+        finally:
+            global_config._configs.pop('invalid')
+
+    @pytest.mark.skip(reason="Deactivated because it will create backup folders and "
+                             "will waste time waiting for admin rights")
+    def test_invalid_register(self):
+        GlobalConfig.register()(InvalidConfig0)
 
 
 

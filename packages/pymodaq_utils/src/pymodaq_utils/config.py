@@ -587,8 +587,12 @@ class BaseConfig(metaclass=ConfigSingleton):
 
         # write lock because it MODIFIES config
         with self._lock.write_lock():
-            system_config_path = get_config_file(self.config_name, user=False)
-            user_config_path = get_config_file(self.config_name, user=True)
+            if isinstance(self.config_name, Path) and self.config_name.is_file():
+                system_config_path = self.config_name
+                user_config_path = self.config_name
+            else:
+                system_config_path = get_config_file(str(self.config_name), user=False)
+                user_config_path = get_config_file(str(self.config_name), user=True)
             if system_config_path.is_file():
                 config = toml.load(system_config_path)
                 if self.config_template_path is not None:
@@ -600,7 +604,7 @@ class BaseConfig(metaclass=ConfigSingleton):
                     create_toml_from_dict(config, system_config_path)
 
             else:
-                copy_template_config(self.config_name, self.config_template_path, system_config_path.parent)
+                copy_template_config(str(self.config_name), self.config_template_path, system_config_path.parent)
 
             if not user_config_path.is_file():
                 # create the author from environment variable
@@ -608,8 +612,8 @@ class BaseConfig(metaclass=ConfigSingleton):
                 if config_dict is not None:
                     create_toml_from_dict(config_dict, user_config_path)
 
-            self._config = load_system_config_and_update_from_user(self.config_name)
-            self._modified_config = toml.load(get_config_file(self.config_name, user=True))
+            self._config = load_system_config_and_update_from_user(str(self.config_name))
+            self._modified_config = toml.load(get_config_file(str(self.config_name), user=True))
 
     def _unload(self):
         with self._lock.write_lock():
@@ -662,6 +666,9 @@ class GlobalConfig(metaclass=Singleton):
                                           f'`config_name` ({wrapped_class.config_name})')
             global_config = cls()
             name = wrapped_class.config_name
+            if isinstance(name, Path) and name.is_file():
+                name = str(name.stem)
+
             if "config_" in name:
                 name = name.split("config_")[1]
             with cls._register_lock:
@@ -866,6 +873,9 @@ def _delete_config_files(config : BaseConfig):
     -------
 
     """
-    get_config_file(config.config_name, user=False).unlink(missing_ok=True)
-    get_config_file(config.config_name, user=True).unlink(missing_ok=True)
+    if isinstance(config.config_name, Path) and config.config_name.is_file():
+        config.config_name.unlink(missing_ok=True)
+    else:
+        get_config_file(str(config.config_name), user=False).unlink(missing_ok=True)
+        get_config_file(str(config.config_name), user=True).unlink(missing_ok=True)
 
