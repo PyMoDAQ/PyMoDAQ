@@ -467,7 +467,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         """
         pass
 
-    def quit_fun(self):
+    def quit(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
         if self._initialized_state:
             self.init_hardware(False)

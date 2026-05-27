@@ -268,9 +268,6 @@ class DAQ_Viewer(ParameterControlModule):
         self._viewers = viewers
 
 
-    def quit(self):
-        """ Quit the application, closing the hardware and other modules """
-
     @property
     def Naverage(self):
         return self.settings['main_settings', 'Naverage']

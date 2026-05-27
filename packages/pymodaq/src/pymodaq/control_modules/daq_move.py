@@ -440,9 +440,6 @@ class DAQ_Move(ParameterControlModule):
     def move_rel_m(self):
         self.move_rel(-self._relative_value)
 
-    def quit(self):
-        """Programmatic quitting of the current instance of DAQ_Move"""
-
     def get_actuator_value(self, send_to_leco=False):
         """Get the current actuator value via the "get_actuator_value" command send to the hardware
 
