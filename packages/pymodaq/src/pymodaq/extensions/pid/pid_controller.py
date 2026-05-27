@@ -5,10 +5,11 @@ from collections import deque
 import numpy as np
 
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal
+from qtpy.QtCore import QObject, Slot, Signal
 
 from simple_pid import PID
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
@@ -263,7 +264,7 @@ class DAQ_PID(CustomExt):
         if self.is_action_checked("ini_pid"):
             output_limits = self.get_output_limits()
             self.update_queues(refresh=True)
-            self.runner_thread = QThread()
+            self.runner_thread = QStopThread()
             pid_runner = PIDRunner(
                 self.model_class,
                 self.modules_manager,
@@ -895,7 +896,7 @@ class PIDRunner(QObject):
                 )  # Time elapsed since last loop
                 sleep_time = self.sample_time - self.time_elapsed
                 if sleep_time > 0:
-                    QThread.msleep(int(sleep_time * 1000))
+                    QStopThread.msleep(int(sleep_time * 1000))
                 # # EXECUTE THE PID
                 self.outputs = []
                 for ind, pid in enumerate(self.pids):

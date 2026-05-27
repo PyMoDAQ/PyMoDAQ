@@ -15,11 +15,12 @@ import sys
 from typing import List, Union, Optional, Dict, TypeVar, TYPE_CHECKING
 import numpy as np
 
-from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
+from qtpy.QtCore import QObject, Signal, Slot, Qt, QTimer
 from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -443,7 +444,7 @@ class DAQ_Move(ParameterControlModule):
                 hardware = DAQ_Move_Hardware(
                     self._actuator_type, self._current_value, self._title,
                 )
-                self._hardware_thread = QThread()
+                self._hardware_thread = QStopThread()
                 hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)

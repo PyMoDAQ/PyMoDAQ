@@ -18,11 +18,12 @@ import time
 from easydict import EasyDict as edict
 import numpy as np
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
+from qtpy.QtCore import Qt, QObject, Slot, Signal
 
 from pymodaq_data import DataSource
 from pymodaq_data.data import DataToExport, Axis, DataDistribution
 from pymodaq.utils.data import DataFromPlugins
+from pymodaq_gui.utils.thread import QStopThread
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ParameterControlModule
@@ -411,7 +412,7 @@ class DAQ_Viewer(ParameterControlModule):
             try:
 
                 hardware = DAQ_Detector(self._title, self.settings, self.detector)
-                self._hardware_thread = QThread()
+                self._hardware_thread = QStopThread()
                 if self.config('pymodaq', 'viewer', 'viewer_in_thread'):
                     hardware.moveToThread(self._hardware_thread)
 
@@ -1344,7 +1345,7 @@ class DAQ_Detector(QObject):
                             if self.average_done:
                                 break
                     else:
-                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time
+                        QStopThread.msleep(self.wait_time)  # if in grab mode apply a waiting time
                         # after acquisition
                     if not self.grab_state:
                         break   # if not in grab mode  breaks the while loop

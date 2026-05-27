@@ -10,9 +10,10 @@ from typing import Optional, Type, Union, TYPE_CHECKING
 from easydict import EasyDict as edict
 from qtpy import QtWidgets
 
-from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
+from qtpy.QtCore import Signal, QObject, Qt, Slot
 
 from pymodaq_gui.utils.custom_app import QuittableApp
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
@@ -131,8 +132,6 @@ class ControlModule(QObject, QuittableApp):
         self.controller = None
         self._initialized_state = False
         self._send_to_leco = False
-        self._send_to_leco = False
-        self._send_to_leco = False
         self._hardware_thread = None
 
         self._h5saver: Optional[H5Saver] = None
@@ -213,12 +212,7 @@ class ControlModule(QObject, QuittableApp):
         elif status.command == ThreadStatus.CLOSE:
             try:
                 self.update_status(status.attribute[0])
-                self._hardware_thread.quit()
-                terminated = self._hardware_thread.wait(5000)
-                if not terminated:
-                    self._hardware_thread.terminate()
-                    self._hardware_thread.wait()
-                    self.update_status('thread is locked?!', 'log')
+                QStopThread.stop(self._hardware_thread, timeout=5.)
             except Exception as e:
                 logger.exception(f'Wrong call to the "close" command: \n{str(e)}')
 

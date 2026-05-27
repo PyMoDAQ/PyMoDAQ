@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_gui.messenger import messagebox
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils import utils
 
 from pymodaq_utils.enums import BaseEnum, StrEnum
@@ -268,7 +269,8 @@ class OptimizationRunner(QtCore.QObject):
             logger.exception(str(e))
 
 
-class GenericOptimization(CustomExt):
+class \
+        GenericOptimization(CustomExt):
     """ PyMoDAQ extension of the DashBoard to perform the optimization of a target signal
     taken form the detectors as a function of one or more parameters controlled by the actuators.
     """
@@ -856,7 +858,7 @@ class GenericOptimization(CustomExt):
                 self.ini_temp_file()
                 self.ini_live_plot()
 
-                self.runner_thread = QtCore.QThread()
+                self.runner_thread = QStopThread()
                 runner = self.runner(self.model_class, self.modules_manager, self.algorithm,
                                      self.get_stopping_parameters())
                 self.runner_thread.runner = runner
@@ -886,12 +888,8 @@ class GenericOptimization(CustomExt):
                 self.command_runner.disconnect()
             except TypeError:
                 pass
-            if self.runner_thread is not None:
-                self.runner_thread.quit()
-                self.runner_thread.wait(5000)
-                if not self.runner_thread.isFinished():
-                    self.runner_thread.terminate()
-                    self.runner_thread.wait()
+            if self.runner_thread:
+                self.runner_thread.stop()
             self.splash.setVisible(False)
             self.get_action('runner_led').set_as_false()
             self._ini_runner = False

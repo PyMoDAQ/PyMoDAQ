@@ -2,10 +2,10 @@ from typing import List, Union, TYPE_CHECKING, Optional, Sequence
 
 from qtpy.QtCore import QObject, Signal, Slot
 from qtpy import QtWidgets
-from qtpy.QtCore import QThread
 import time
 
 from pymodaq.utils.managers.modules.utils import ModuleType
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.enums import enum_checker
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -373,7 +373,7 @@ class ModulesManager(QObject, ParameterManager):
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
-            QThread.msleep(10)
+            QStopThread.msleep(10)
 
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
@@ -561,7 +561,7 @@ class ModulesManager(QObject, ParameterManager):
                     self.timeout_signal.emit(True)
                     logger.error('Timeout Fired during waiting for actuators to be moved')
                     break
-                QThread.msleep(10)
+                QStopThread.msleep(10)
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
@@ -573,7 +573,7 @@ class ModulesManager(QObject, ParameterManager):
     def poll_init(self, module):
         tstart = time.perf_counter()
         while not module.initialized_state:
-            QThread.msleep(1000)
+            QStopThread.msleep(1000)
             QtWidgets.QApplication.processEvents()
             if time.perf_counter() - tstart > config('pymodaq', 'control_module_ini_polling'):  # timeout of 60sec
                 break

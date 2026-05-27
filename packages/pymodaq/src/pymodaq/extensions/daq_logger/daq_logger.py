@@ -11,13 +11,14 @@ from collections import OrderedDict
 import datetime
 from typing import TYPE_CHECKING, Union
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_gui.utils.dock import Dock, DockArea
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.parameter import ioxml
 
 from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
+from qtpy.QtCore import QObject, Slot, Signal, Qt
 
 from pymodaq_gui.utils.widgets import QLED
 
@@ -292,7 +293,7 @@ class DAQ_Logger(CustomExt):
             self.exit_runner_thread()
             self.runner_thread = None
 
-        self.runner_thread = QThread()
+        self.runner_thread = QStopThread()
 
         log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
 

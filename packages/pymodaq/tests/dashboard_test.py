@@ -26,3 +26,4 @@ class TestGeneral:
         dashboard.experiment_manager.execute_entry()
 
         dashboard.quit()
+        qtbot.wait(500)

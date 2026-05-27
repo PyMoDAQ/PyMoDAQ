@@ -28,7 +28,7 @@ from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import get_module_path
 from pymodaq_gui.utils.custom_app import CustomApp, QuittableApp
 from pymodaq_gui.utils.menu_utils import StickyMenu
-
+from pymodaq_utils.warnings import deprecation_msg
 
 logger = set_logger(get_module_name(__file__))
 
@@ -276,7 +276,11 @@ class SharedUI(CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    def restart(self, ask=False):
+    def restart_fun(self, ask: bool = False):
+        deprecation_msg("restart_fun() is deprecated. Use restart() instead.")
+        self.restart(ask=ask)
+
+    def restart(self, ask: bool = False):
         ret = False
         if ask:
             mssg = QMessageBox()

@@ -7,6 +7,7 @@ from qtpy import QtWidgets, QtCore
 
 
 from pymodaq_data import DataWithAxes, DataToExport
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import get_set_experiment_path
 
@@ -180,7 +181,7 @@ class Overshooter(ManagerBase):
                 if self.is_action_checked(ManagerActions.EXECUTE):
                     self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(0)
+                QStopThread.msleep(0)
 
             if self.is_action_checked(ManagerActions.EXECUTE):
                 self.close_subentries_display(1000)

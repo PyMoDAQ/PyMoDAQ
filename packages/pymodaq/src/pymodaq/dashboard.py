@@ -978,7 +978,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.settings.child("actuators").addChild(
                     {"title": act.title, "name": name, "type": "led", "value": False},
                 )
-                QtWidgets.QApplication.processEvents()
             self.settings.child("actuators", name).setValue(act.initialized_state)
 
         for det in self.detector_modules:
@@ -992,7 +991,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 self.settings.child("detectors").addChild(
                     {"title": det.title, "name": name, "type": "led", "value": False},
                 )
-                QtWidgets.QApplication.processEvents()
             self.settings.child("detectors", name).setValue(det.initialized_state)
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):

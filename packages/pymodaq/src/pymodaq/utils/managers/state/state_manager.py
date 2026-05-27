@@ -10,6 +10,7 @@ from qtpy.QtCore import QModelIndex
 
 from pymodaq.utils.managers.modules.module_settings_manager import SettingsManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 
 
@@ -145,7 +146,7 @@ class StateManager(ManagerBase):
                 subentry_handler.execute_subentry(entry, dashboard=self.dashboard)
                 self.subentries_model.set_status(ind, True)
                 QtWidgets.QApplication.processEvents()
-                QtCore.QThread.msleep(0)
+                QStopThread.msleep(0)
             except SubEntryError as e:
                 logger.exception(str(e))
                 self.subentries_model.set_status(ind, False)

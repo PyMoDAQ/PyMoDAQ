@@ -20,7 +20,12 @@ from pymodaq_gui.utils.splash import get_splash_sc
 class QuittableApp:
     """Mixin class for qobject that should have a quit function
     """
+    title : str
+    toolbars:  list[QtWidgets.QToolBar]
 
+    def quit_fun(self):
+        deprecation_msg("Using quit_fun() is deprecated, use quit()")
+        self.quit()
     def quit(self):
         raise NotImplementedError
 
