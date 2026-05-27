@@ -976,38 +976,17 @@ class DashBoard(CustomApp, LECOComponentMixin):
     def _update_init_tree_for(self, modules, settings_key):
         for mod in modules:
             name = "".join(mod.title.split())  # remove empty spaces
-            if mod.title not in [
-                child.title()
-                for child in putils.iter_children_params(
-                    self.settings.child(settings_key), []
-                )
-            ]:
+            children = putils.iter_children_params(self.settings.child(settings_key), [])
+            titles = [ child.title() for child in children]
+            if mod.title not in titles:
                 self.settings.child(settings_key).addChild(
                     {"title": mod.title, "name": name, "type": "led", "value": False}
                 )
-<<<<<<< HEAD
-            self.settings.child("actuators", name).setValue(act.initialized_state)
-
-        for det in self.detector_modules:
-            name = "".join(det.title.split())  # remove empty spaces
-            if det.title not in [
-                de.title()
-                for de in putils.iter_children_params(
-                    self.settings.child("detectors"), [],
-                )
-            ]:
-                self.settings.child("detectors").addChild(
-                    {"title": det.title, "name": name, "type": "led", "value": False},
-                )
-            self.settings.child("detectors", name).setValue(det.initialized_state)
-=======
-                QtWidgets.QApplication.processEvents()
             self.settings.child(settings_key, name).setValue(mod.initialized_state)
 
     def update_init_tree(self):
         self._update_init_tree_for(self.actuators_modules, "actuators")
         self._update_init_tree_for(self.detector_modules, "detectors")
->>>>>>> dev
 
     def do_stuff_from_out_bounds(self, out_of_bounds: bool):
         if out_of_bounds:
