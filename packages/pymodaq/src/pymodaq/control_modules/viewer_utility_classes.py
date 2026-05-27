@@ -1,29 +1,17 @@
 from abc import abstractmethod
-from typing import Union, Iterable
-from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, Signal
 
+HW_KIND = 'detector'
+HW_SETTINGS_KEY = f'{HW_KIND}_settings'
+from typing import Iterable, Union
 
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
-from easydict import EasyDict as edict
-
-import numpy as np
-from pymodaq.utils.math_utils import gauss1D, gauss2D
-from pymodaq_utils.utils import ThreadCommand, getLineInfo
-
-from pymodaq_utils.config import get_set_local_dir, GlobalConfig
-
-from pymodaq_data.data import DataToExport, DataRaw
-from pymodaq_utils.warnings import deprecation_msg
-from pymodaq_utils.serialize.mysocket import Socket
-from pymodaq_utils.serialize.serializer_legacy import DeSerializer, Serializer
+from pymodaq_data.data import DataToExport
 from pymodaq_gui.plotting.items.roi import RoiInfo
-from pymodaq.control_modules.thread_commands import ThreadStatus, ThreadStatusViewer
-from pymodaq.control_modules.utils import create_controller_param, create_remote_connection_params, ControllerStatus
 from pymodaq_gui.qt_utils import mkQApp
-from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.parameter.ioxml import VALID_FOR_CONFIGURATION
+from pymodaq_utils.config import GlobalConfig, get_set_local_dir
+from pymodaq_utils.warnings import deprecation_msg
+from qtpy.QtCore import Signal
+
+from pymodaq.control_modules.utils import PluginBase, create_controller_param, create_remote_connection_params
 
 config = GlobalConfig()
 
@@ -79,7 +67,7 @@ params = [
         ]},
 
     ]},
-    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': []},
+    {'title': 'Detector Settings', 'name': HW_SETTINGS_KEY, 'type': 'group', 'children': []}
 ]
 
 
@@ -90,12 +78,14 @@ def main(plugin_file=None, init=True, title='Testing'):
     -------
     """
     import sys
-    from qtpy import QtWidgets
-    from pymodaq.utils.gui_utils import DockArea
     from pathlib import Path
-    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
+
+    from qtpy import QtWidgets
+
     from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
     from pymodaq.control_modules.instruments import DAQTypesEnum
+    from pymodaq.utils.gui_utils import DockArea
+    from pymodaq.utils.gui_utils.loader_utils import create_load_daq_viewer
 
     app = mkQApp("PyMoDAQ Viewer")
 
@@ -117,7 +107,7 @@ def main(plugin_file=None, init=True, title='Testing'):
     sys.exit(app.exec())
 
 
-class DAQ_Viewer_base(QObject):
+class DAQ_Viewer_base(PluginBase):
     """
         ===================== ===================================
         **Attributes**          **Type**
@@ -143,55 +133,23 @@ class DAQ_Viewer_base(QObject):
     params = []
 
     def __init__(self, parent=None, params_state=None):
-        QObject.__init__(self)  # to make sure this is the parent class
-
-        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when
-        # the current class instance parameter list is a child of some other class
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        if params_state is not None:
-            if isinstance(params_state, dict):
-                self.settings.restoreState(params_state)
-            elif isinstance(params_state, Parameter):
-                self.settings.restoreState(params_state.saveState())
-
+        super().__init__(parent, params_state)
+        self._title = self._title if parent is not None else "mydetector"
         if '0D' in str(self.__class__):
             self.plugin_type = '0D'
         elif '1D' in str(self.__class__):
             self.plugin_type = '1D'
         else:
             self.plugin_type = '2D'
-
-        self.settings.sigTreeStateChanged.connect(self.send_param_status)
-
-        self.parent = parent
-        self.status = edict(info="", controller=None, initialized=False)
         self.scan_parameters = None
-
         self.x_axis = None
         self.y_axis = None
-
-        self.controller = None
-
-        if parent is not None:
-            self._title = parent.title
-        else:
-            self._title = "mydetector"
-
         self.ini_attributes()
-
         try:
             self.data_grabed_signal.connect(self._emit_dte)
             self.data_grabed_signal_temp.connect(self._emit_dte_temp)
         except Exception as exc:
             print(f"Error with old message signal stuff: {exc}")
-
-    @property
-    def is_master(self):
-        """ Get the controller master/slave status
-
-        new in version 4.3.0
-        """
-        return self.settings['controller', 'controller_status'] == ControllerStatus.MASTER
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
@@ -209,46 +167,13 @@ class DAQ_Viewer_base(QObject):
             dte = DataToExport('temp', dte)
         self.dte_signal_temp.emit(dte)
 
-    def ini_attributes(self):
-        """
-        To be reimplemented in subclass
-        """
-        pass
-
     def ini_detector_init(self, old_controller=None, new_controller=None,
                           slave_controller=None):
-        """Manage the Master/Slave controller issue
-
-        First initialize the status dictionary
-        Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
-            if it is a multiaxes controller then:
-            * if it is Master: init the controller here
-            * if it is Slave: use an already initialized controller (defined in the experiment of the dashboard)
-
-        Parameters
-        ----------
-        old_controller: object (deprecated)
-            The particular object that allow the communication with the hardware, in general a python wrapper around the
-            hardware library. In case of Slave this one comes from a previously initialized plugin
-        slave_controller: object
-            The particular object that allow the communication with the hardware, in general a python wrapper around the
-            hardware library. In case of Slave this one comes from a previously initialized plugin
-        new_controller: object
-            The particular object that allow the communication with the hardware, in general a python wrapper around the
-            hardware library. In case of Master it is the new instance of your plugin controller
-        """
-        if old_controller is None and slave_controller is not None:
-            old_controller = slave_controller
-        self.status.update(edict(info="", controller=None, initialized=False))
-        if self.settings['controller', 'controller_status'] == ControllerStatus.SLAVE:
-            if old_controller is None:
-                raise Exception('no controller has been defined externally while this axe is a slave one')
-            else:
-                controller = old_controller
-        else:  # Master stage
-            controller = new_controller
-        self.controller = controller
-        return controller
+        """Deprecated — use ini_controller_init instead."""
+        import warnings
+        warnings.warn("'ini_detector_init' is deprecated, use 'ini_controller_init' instead.",
+                      DeprecationWarning, stacklevel=2)
+        return self.ini_controller_init(old_controller, new_controller, slave_controller)
 
     @abstractmethod
     def ini_detector(self, controller=None):
@@ -282,12 +207,6 @@ class DAQ_Viewer_base(QObject):
         """
         raise NotImplementedError
 
-    def commit_settings(self, param):
-        """
-        To be reimplemented in subclass
-        """
-        pass
-
     def roi_select(self, roi_info: RoiInfo, ind_viewer: int = 0):
         """ Every time a ROISelect is updated on a 2D Viewer,
         this method receive the corresponding info
@@ -316,103 +235,9 @@ class DAQ_Viewer_base(QObject):
         pass
 
 
-    def emit_status(self, status: ThreadCommand):
-        """
-            Emit the status signal from the given status.
-
-            =============== ============ =====================================
-            **Parameters**    **Type**     **Description**
-            *status*                       the status information to transmit
-            =============== ============ =====================================
-        """
-        if self.parent is not None:
-            self.parent.status_sig.emit(status)
-            QtWidgets.QApplication.processEvents()
-        else:
-            print(status)
-
     def update_scanner(self, scan_parameters):
         # todo check this because ScanParameters has been removed
         self.scan_parameters = scan_parameters
-
-    @Slot(edict)
-    def update_settings(self, settings_parameter_dict):
-        """
-            Update the settings tree from settings_parameter_dict.
-            Finally do a commit to activate changes.
-
-            ========================== ============= =====================================================
-            **Parameters**              **Type**      **Description**
-            *settings_parameter_dict*   dictionnnary  a dictionary listing path and associated parameter
-            ========================== ============= =====================================================
-
-            See Also
-            --------
-            send_param_status, commit_settings
-        """
-        # settings_parameter_dict=edict(path=path,param=param)
-        try:
-            path = settings_parameter_dict['path']
-            param = settings_parameter_dict['param']
-            change = settings_parameter_dict['change']
-            try:
-                self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-            except Exception:
-                pass
-            if change == 'value':
-                self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
-            elif change == 'childAdded':
-                child = Parameter.create(name='tmp')
-                child.restoreState(param.saveState())
-                self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
-                param = child
-
-            elif change == 'parent':
-                children = get_param_from_name(self.settings, param.name())
-
-                if children is not None:
-                    path = get_param_path(children)
-                    self.settings.child(*path[1:-1]).removeChild(children)
-
-            self.settings.sigTreeStateChanged.connect(self.send_param_status)
-
-            self.commit_settings(param)
-        except Exception as e:
-            self.emit_status(ThreadCommand(ThreadStatus.UPDATE_STATUS, str(e)))
-
-
-    def send_param_status(self, param, changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, send the 'update_settings' ThreadCommand with concerned path,data and change as attribute.
-
-            =============== ============================================ ============================
-            **Parameters**    **Type**                                    **Description**
-            *param*           instance of pyqtgraph parameter             The parameter to check
-            *changes*         (parameter,change,information) tuple list   The changes list to course
-            =============== ============================================ ============================
-
-            See Also
-            --------
-            daq_utils.ThreadCommand
-        """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                # first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
-                                               [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
-                                                change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
-
-            elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand(ThreadStatus.UPDATE_SETTINGS,
-                                               [self.parent_parameters_path + path, data,
-                                                change]))  # send parameters values/limits back to the GUI
-            elif change == 'parent':
-                pass
-
-            pass
-
 
 if __name__ == '__main__':
     test = DAQ_Viewer_base()

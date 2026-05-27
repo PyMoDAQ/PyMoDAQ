@@ -1,3 +1,5 @@
+from qtpy import QtWidgets
+
 from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
@@ -26,4 +28,4 @@ class TestGeneral:
         dashboard.experiment_manager.execute_entry()
 
         dashboard.quit()
-        qtbot.wait(500)
+        QtWidgets.QApplication.processEvents()

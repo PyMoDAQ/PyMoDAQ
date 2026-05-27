@@ -1,4 +1,5 @@
 import time
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from functools import partial  # needed for the button to sync setpoint with currpoint
 from typing import Dict, List, TYPE_CHECKING
 from collections import deque
@@ -74,7 +75,7 @@ class DAQ_PID(CustomExt):
         },
         {
             "title": "Move settings:",
-            "name": "move_settings",
+            "name": ACTUATOR_SETTINGS_KEY,
             "expanded": True,
             "type": "group",
             "visible": False,

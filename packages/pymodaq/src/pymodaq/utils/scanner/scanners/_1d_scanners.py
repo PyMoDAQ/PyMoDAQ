@@ -46,7 +46,7 @@ class Scan1DBase(ScannerBase):
                      data=np.squeeze(self.positions))]
 
     def get_scan_shape(self) -> Tuple[int]:
-        return len(self.positions)
+        return (len(self.positions), )
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
