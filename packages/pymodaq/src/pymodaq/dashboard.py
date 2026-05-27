@@ -344,7 +344,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
                     if compact_manager.remove_module(module):
                         compact_manager.close()
                         setattr(self, compact_manager_attr, None)
-                module.quit_fun()
+                module.quit()
                 dock = self.dockarea.docks.get(module.title, None)
                 if dock:
                     if remove_dock_widgets:
@@ -363,31 +363,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if detector_modules is None:
             detector_modules = []
-<<<<<<< HEAD
-        try:
-            for detector_module in detector_modules[:]:
-                if detector_module in self.detector_modules:
-                    self.detector_modules.remove(detector_module)
 
-
-                # Remove from compact dock manager
-                if self.compact_detector_manager:
-                    is_empty = self.compact_detector_manager.remove_module(detector_module)
-                    if is_empty:
-                        self.compact_detector_manager.close()
-                        self.compact_detector_manager = None
-                detector_module.quit()
-
-                # Close individual detector dock
-                dock = self.dockarea.docks.get(f"{detector_module.title}", None)
-                if dock:
-                    dock.close()
-        except Exception as e:
-            logger.exception(str(e))
-=======
         self._remove_module_list(detector_modules, self.detector_modules,
                                  'compact_detector_manager')
->>>>>>> dev
 
     def remove_actuators(self, actuator_modules: List[DAQ_Move] = None):
         """
@@ -399,31 +377,8 @@ class DashBoard(CustomApp, LECOComponentMixin):
         """
         if actuator_modules is None:
             actuator_modules = []
-<<<<<<< HEAD
-        try:
-            for actuator_module in actuator_modules[:]:
-                if actuator_module in self.actuators_modules:
-                    self.actuators_modules.remove(actuator_module)
-                # Remove from compact dock manager
-                if self.compact_actuator_manager:
-                    is_empty = self.compact_actuator_manager.remove_module(actuator_module)
-                    if is_empty:
-                        self.compact_actuator_manager.close()
-                        self.compact_actuator_manager = None
-
-                actuator_module.quit()
-                
-                # Close individual actuator dock (for non-compact actuators)
-                dock:Dock = self.dockarea.docks.get(actuator_module.title, None)
-                if dock:
-                    dock.removeWidgets()
-                    dock.close()
-        except Exception as e:
-            logger.exception(str(e))
-=======
         self._remove_module_list(actuator_modules, self.actuators_modules,
                                  'compact_actuator_manager', remove_dock_widgets=True)
->>>>>>> dev
 
     def get_docks_from_modules(
         self, modules: Sequence[Union["DAQ_Move", "DAQ_Viewer"]],
@@ -578,10 +533,9 @@ class DashBoard(CustomApp, LECOComponentMixin):
             self.connect_leco(connect=False)
             self.remote_timer.stop()
 
-            for ext in self.extensions:
-                self.extensions[ext].quit()
+            for name in self.extensions:
+                self.extensions[name].quit()
 
-<<<<<<< HEAD
             for module in self.actuators_modules + self.detector_modules:
                 try:
                     module.init_signal.disconnect(self.update_init_tree)
@@ -592,11 +546,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                 except Exception:
                     pass
 
-=======
-            # Removing control modules
-            self.remove_actuators(self.actuators_modules)
-            self.remove_detectors(self.detector_modules)
->>>>>>> dev
 
             self.experiment_manager.quit()
             self.state_manager.quit()
@@ -606,29 +555,16 @@ class DashBoard(CustomApp, LECOComponentMixin):
             areas = self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
-<<<<<<< HEAD
-=======
-
-            if hasattr(self, "mainwindow"):
-                self.mainwindow.close()
->>>>>>> dev
 
             if self.pid_window is not None:
                 self.pid_window.close()
 
-<<<<<<< HEAD
             super().quit()
-
-        except Exception as e:
-            logger.exception(str(e))
-            sys.exit(-1)
-=======
 
         except Exception as e:
             logger.exception(str(e))
         finally:
             QtWidgets.QApplication.processEvents()
->>>>>>> dev
 
 
     def load_layout_state(self, file=None):
