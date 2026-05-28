@@ -22,10 +22,9 @@ class TestGeneral:
     def test_import(self, init_qt):
         qtbot = init_qt
         shared_ui, dashboard = create_load_dashboard()
-        qtbot.addWidget(shared_ui.mainwindow)
         shared_ui.show()
 
         dashboard.experiment_manager.execute_entry()
 
-        dashboard.quit()
-        QtWidgets.QApplication.processEvents()
+        shared_ui.quit()
+        qtbot.wait(200)

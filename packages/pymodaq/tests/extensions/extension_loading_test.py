@@ -22,9 +22,9 @@ def dashboard(init_qt):
     shared_ui, dashboard = create_load_dashboard()
     shared_ui.show()
 
-    # dashboard.preset_manager.execute_entry()
     yield dashboard
-    dashboard.quit()
+
+    shared_ui.quit()
     qtbot.wait(200)
 
 
