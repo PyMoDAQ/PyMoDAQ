@@ -27,9 +27,7 @@ def init_qt(qtbot):
 
 @pytest.fixture
 def dashboard(init_qt):
-    qtbot = init_qt
     shared_ui, db = create_load_dashboard()
-    qtbot.addWidget(shared_ui.mainwindow)
     shared_ui.show()
     yield db
     db.quit()
