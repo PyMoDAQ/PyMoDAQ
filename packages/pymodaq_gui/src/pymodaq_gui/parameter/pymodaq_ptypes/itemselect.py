@@ -147,7 +147,6 @@ class ItemSelect(QtWidgets.QListWidget):
             for value in values['selected']:  # Loop through selected to retain selection order
                 item = allitems[[item.text() for item in allitems].index(value)]
                 self.select_item(item, doSelect=True)
-            QtWidgets.QApplication.processEvents()
         finally:
             self.blockSignals(old_signals_blocked)
     def sizeHint(self):
