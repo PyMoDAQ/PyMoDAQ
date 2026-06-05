@@ -113,39 +113,42 @@ class ItemSelect(QtWidgets.QListWidget):
             *values*          dictionnary    the values dictionnary to be setted.
             =============== ============== =======================================
         """
-        # Remove values in selected if they do not exist in all
-        values = deepcopy(values)
-        [values['selected'].remove(value) for value in values['selected'] if value
-         not in values['all_items']]
-        
-        allitems_text = []
-        # Check existing items and remove unused ones
-        for item in self.all_items():     
-            if item.text() not in values['all_items']:  # Remove items from list if text not
-                # in values
-                item = self.takeItem(self.row(item))
-            else:
-                allitems_text.append(item.text())  # Add items to list
-            self.updateGeometry()
-        # Create items if needed
-        for value in values['all_items']:  # Loop through all values
-            if value not in allitems_text:  # Test if object already exists
-                item = QtWidgets.QListWidgetItem(value)  # Create object
-                if self.hasCheckbox:  # Add checkbox if required
-                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)      
-                    self.select_item(item, doSelect=False)
-                    # Make sure item is not selected (checkbox not appearing somehow without)
-                self.addItem(item)  # Add object to widget
-                 
-        allitems = self.all_items()  # All selectable items
-        # Selection process
-        for item in allitems:
-            self.select_item(item, doSelect=False)
-        for value in values['selected']:  # Loop through selected to retain selection order
-            item = allitems[[item.text() for item in allitems].index(value)]
-            self.select_item(item, doSelect=True)
-        QtWidgets.QApplication.processEvents()
+        old_signals_blocked = self.signalsBlocked()
+        self.blockSignals(True)
+        try:
+            values = deepcopy(values)
+            # Remove values in selected if they do not exist in all
+            [values['selected'].remove(value) for value in values['selected'] if value
+             not in values['all_items']]
 
+            allitems_text = []
+            # Check existing items and remove unused ones
+            for item in self.all_items():
+                if item.text() not in values['all_items']:  # Remove items from list if text not
+                    # in values
+                    item = self.takeItem(self.row(item))
+                else:
+                    allitems_text.append(item.text())  # Add items to list
+                self.updateGeometry()
+            # Create items if needed
+            for value in values['all_items']:  # Loop through all values
+                if value not in allitems_text:  # Test if object already exists
+                    item = QtWidgets.QListWidgetItem(value)  # Create object
+                    if self.hasCheckbox:  # Add checkbox if required
+                        item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                        self.select_item(item, doSelect=False)
+                        # Make sure item is not selected (checkbox not appearing somehow without)
+                    self.addItem(item)  # Add object to widget
+
+            allitems = self.all_items()  # All selectable items
+            # Selection process
+            for item in allitems:
+                self.select_item(item, doSelect=False)
+            for value in values['selected']:  # Loop through selected to retain selection order
+                item = allitems[[item.text() for item in allitems].index(value)]
+                self.select_item(item, doSelect=True)
+        finally:
+            self.blockSignals(old_signals_blocked)
     def sizeHint(self):
         return QtCore.QSize(super().sizeHint().width(), 25 * self.count())
 

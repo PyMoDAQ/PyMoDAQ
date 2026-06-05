@@ -2,7 +2,7 @@
 Tests for experiment execution when modules are already initialized.
 
 Regression tests for the bug where a single try/except around the cleanup
-loop caused remaining modules to be skipped if one module's quit_fun() raised.
+loop caused remaining modules to be skipped if one module's quit() raised.
 """
 import pytest
 from unittest.mock import MagicMock, patch, call
@@ -29,10 +29,12 @@ def init_qt(qtbot):
 def dashboard(init_qt):
     qtbot = init_qt
     shared_ui, db = create_load_dashboard()
-    qtbot.addWidget(shared_ui.mainwindow)
     shared_ui.show()
+
     yield db
-    db.quit_fun()
+
+    shared_ui.quit()
+    qtbot.wait(200)
 
 
 # ---------------------------------------------------------------------------
@@ -46,12 +48,12 @@ class TestRemoveActuatorsLoopResilient:
         m = MagicMock()
         m.title = title
         if raises:
-            m.quit_fun.side_effect = RuntimeError("simulated C++ object deleted")
+            m.quit.side_effect = RuntimeError("simulated C++ object deleted")
         return m
 
     def test_all_modules_quit_called_when_first_raises(self, dashboard):
         """
-        Regression test: if module[0].quit_fun() raises, module[1].quit_fun()
+        Regression test: if module[0].quit() raises, module[1].quit()
         must still be called.
         """
         mod0 = self._make_mock_module("Move0", raises=True)
@@ -64,8 +66,8 @@ class TestRemoveActuatorsLoopResilient:
 
         dashboard.remove_actuators([mod0, mod1])
 
-        mod0.quit_fun.assert_called_once()
-        mod1.quit_fun.assert_called_once()
+        mod0.quit.assert_called_once()
+        mod1.quit.assert_called_once()
 
     def test_all_modules_quit_called_when_last_raises(self, dashboard):
         mod0 = self._make_mock_module("Move0", raises=False)
@@ -76,8 +78,8 @@ class TestRemoveActuatorsLoopResilient:
 
         dashboard.remove_actuators([mod0, mod1])
 
-        mod0.quit_fun.assert_called_once()
-        mod1.quit_fun.assert_called_once()
+        mod0.quit.assert_called_once()
+        mod1.quit.assert_called_once()
 
     def test_all_modules_quit_called_when_middle_raises(self, dashboard):
         mods = [self._make_mock_module(f"Move{i}", raises=(i == 1)) for i in range(3)]
@@ -88,7 +90,7 @@ class TestRemoveActuatorsLoopResilient:
         dashboard.remove_actuators(list(mods))
 
         for m in mods:
-            m.quit_fun.assert_called_once()
+            m.quit.assert_called_once()
 
     def test_modules_removed_from_list_even_when_quit_raises(self, dashboard):
         """After remove_actuators, the modules list should be empty."""
@@ -110,7 +112,7 @@ class TestRemoveDetectorsLoopResilient:
         m = MagicMock()
         m.title = title
         if raises:
-            m.quit_fun.side_effect = RuntimeError("simulated C++ object deleted")
+            m.quit.side_effect = RuntimeError("simulated C++ object deleted")
         return m
 
     def test_all_modules_quit_called_when_first_raises(self, dashboard):
@@ -122,8 +124,8 @@ class TestRemoveDetectorsLoopResilient:
 
         dashboard.remove_detectors([mod0, mod1])
 
-        mod0.quit_fun.assert_called_once()
-        mod1.quit_fun.assert_called_once()
+        mod0.quit.assert_called_once()
+        mod1.quit.assert_called_once()
 
     def test_all_modules_quit_called_when_middle_raises(self, dashboard):
         mods = [self._make_mock_module(f"Det{i}", raises=(i == 1)) for i in range(3)]
@@ -134,7 +136,7 @@ class TestRemoveDetectorsLoopResilient:
         dashboard.remove_detectors(list(mods))
 
         for m in mods:
-            m.quit_fun.assert_called_once()
+            m.quit.assert_called_once()
 
     def test_modules_removed_from_list_even_when_quit_raises(self, dashboard):
         mod0 = self._make_mock_module("Det0", raises=True)
@@ -188,9 +190,9 @@ class TestExperimentExecutedTwice:
         self, dashboard
     ):
         """
-        If one module's quit_fun() raises during cleanup, the second experiment
+        If one module's quit() raises during cleanup, the second experiment
         execution must still complete. We inject a single stray mock module
-        (no real hardware thread) with a failing quit_fun, then execute the
+        (no real hardware thread) with a failing quit, then execute the
         experiment a second time and verify the mock was attempted and the new
         real modules loaded correctly.
         """
@@ -202,10 +204,10 @@ class TestExperimentExecutedTwice:
         expected_n_detectors = len(dashboard.detector_modules)
 
         # Inject a stray mock actuator that has no real hardware thread
-        # but whose quit_fun raises — simulating a partially-deleted module
+        # but whose quit raises — simulating a partially-deleted module
         stray = MagicMock()
         stray.title = "__stray_mock__"
-        stray.quit_fun.side_effect = RuntimeError("simulated C++ widget deleted")
+        stray.quit.side_effect = RuntimeError("simulated C++ widget deleted")
         dashboard.modules_manager._actuators.append(stray)
 
         with patch(
@@ -215,8 +217,8 @@ class TestExperimentExecutedTwice:
             dashboard.experiment_manager.execute_entry()
 
         assert dashboard.experiment_manager.entry_applied is True
-        # stray module's quit_fun was attempted
-        stray.quit_fun.assert_called_once()
+        # stray module's quit was attempted
+        stray.quit.assert_called_once()
         # Real module count restored correctly (stray excluded)
         assert len(dashboard.actuators_modules) == expected_n_actuators
         assert len(dashboard.detector_modules) == expected_n_detectors

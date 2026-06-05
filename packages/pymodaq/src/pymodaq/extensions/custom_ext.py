@@ -1,8 +1,9 @@
 
-from typing import Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING, Optional
 
 from qtpy import QtCore, QtWidgets
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.utils import CustomApp, DockArea
@@ -32,7 +33,7 @@ class CustomExt(CustomApp):
 
         self.dashboard = dashboard
 
-        self.runner_thread : QtCore.QThread = None
+        self.runner_thread : Optional[QStopThread] = None
         if dashboard is not None:
             self._modules_manager = module_manager_class(
                 detectors=self.dashboard.detector_modules,
@@ -53,10 +54,10 @@ class CustomExt(CustomApp):
         """
         raise NotImplementedError
 
-    def quit_fun(self):
+    def quit(self):
         """Method to be subclassed in order to define a custom quit function
         """
-        super().quit_fun()
+        super().quit()
         if self.dashboard is not None:
             self.show_dashboard(True)  #make sure to show it if it was hidden
 
@@ -111,12 +112,9 @@ class CustomExt(CustomApp):
         """
         return self._modules_manager
 
-    def exit_runner_thread(self, duration : int = 5000):
-        self.runner_thread.quit()
-        terminated = self.runner_thread.wait(duration)
-        if not terminated:
-            self.runner_thread.terminate()
-            self.runner_thread.wait()
+    def exit_runner_thread(self, timeout : float = 5.):
+        if self.runner_thread:
+            self.runner_thread.stop(timeout=timeout)
 
     def create_dashboard_toolbar(self,
                                  add_dashboard: bool = True,

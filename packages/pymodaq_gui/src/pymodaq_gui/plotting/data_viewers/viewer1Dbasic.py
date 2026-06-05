@@ -1,5 +1,5 @@
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import Slot, QObject, QThread, Signal, QLocale, QDateTime, QSize
+from qtpy.QtCore import Slot, QObject, Signal, QLocale, QDateTime, QSize
 import sys
 import pyqtgraph as pg
 import numpy as np

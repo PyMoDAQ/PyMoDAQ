@@ -54,8 +54,8 @@ class SharedUI(SharedUI):
         widget = QtWidgets.QWidget()
         self.win_plug_manager.setCentralWidget(widget)
         self.plugin_manager = PluginManager(widget)
-        self.plugin_manager.quit_signal.connect(self.quit_fun)
-        self.plugin_manager.restart_signal.connect(self.restart_fun)
+        self.plugin_manager.quit_signal.connect(self.quit)
+        self.plugin_manager.restart_signal.connect(self.restart)
         self.win_plug_manager.show()
 
     def setup_docks(self):

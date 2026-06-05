@@ -20,20 +20,18 @@ def init_qt(qtbot):
 def dashboard(init_qt):
     qtbot = init_qt
     shared_ui, dashboard = create_load_dashboard()
-    qtbot.addWidget(shared_ui.mainwindow)
     shared_ui.show()
 
-    # dashboard.preset_manager.execute_entry()
     yield dashboard
-    dashboard.quit_fun()
+
+    shared_ui.quit()
+    qtbot.wait(200)
 
 
 
 class TestExtensions:
     @mark.parametrize('ext', extensions)
     def test_load(self, dashboard, ext):
-        dashboard = dashboard
-
         dashboard.load_extension(ext)
         QtWidgets.QApplication.processEvents()
 

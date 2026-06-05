@@ -10,9 +10,13 @@ from typing import Optional, Type, Union, TYPE_CHECKING
 from easydict import EasyDict as edict
 from qtpy import QtWidgets
 
-from qtpy import QtWidgets
-from qtpy.QtCore import Signal, QObject, Qt, Slot, QThread
 
+from qtpy import QtWidgets
+from qtpy.QtCore import Signal, QObject, Qt, Slot
+
+
+from pymodaq_gui.utils.custom_app import QuittableApp
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.logger import get_base_logger, set_logger, get_module_name
@@ -78,7 +82,8 @@ def create_remote_connection_params() -> list[dict]:
              'value': config('utils', 'network', 'leco-server', 'port')},
         ]},
     ]
-class ControlModule(QObject):
+
+class ControlModule(QObject, QuittableApp):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
 
     Attributes
@@ -254,9 +259,6 @@ class ControlModule(QObject):
     def insert_data(self, *args, **kwargs):
         raise NotImplementedError
 
-    def quit_fun(self):
-        """Programmatic entry to quit the control module"""
-        raise NotImplementedError
 
     def init_hardware(self, do_init=True):
         """Programmatic entry to initialize/deinitialize the control module
@@ -465,7 +467,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         """
         pass
 
-    def quit_fun(self):
+    def quit(self):
         """Programmatic quitting: deinit hardware, emit quit signal, run cleanup hook, close UI."""
         if self._initialized_state:
             self.init_hardware(False)
@@ -508,14 +510,8 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         self.connect_leco(False)
         try:
             self.command_hardware.emit(ThreadCommand(ControlToHardware.CLOSE))
-            if self._hardware_thread is not None and self._hardware_thread.isRunning():
-                self._hardware_thread.quit()
-                if not self._hardware_thread.wait(5000):
-                    self._hardware_thread.terminate()
-                    self._hardware_thread.wait()
-                    self.logger.warning('Hardware thread did not stop cleanly; terminated.')
-            else:
-                QtWidgets.QApplication.processEvents()
+            if self._hardware_thread:
+                self._hardware_thread.stop(timeout=5.)
             if self.ui is not None and self._ui_init_attr:
                 setattr(self.ui, self._ui_init_attr, False)
         except Exception as e:
@@ -549,7 +545,7 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
             return
         try:
             hardware = self._create_hardware()
-            self._hardware_thread = QThread()
+            self._hardware_thread = QStopThread()
             self._setup_hardware_thread(hardware)
 
             self.command_hardware[ThreadCommand].connect(hardware.queue_command)

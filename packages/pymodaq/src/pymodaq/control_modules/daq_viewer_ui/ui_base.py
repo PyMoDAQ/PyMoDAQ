@@ -14,6 +14,7 @@ from qtpy.QtWidgets import QVBoxLayout,  QWidget
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
+from pymodaq_gui.utils.thread import QStopThread
 
 from pymodaq_gui.utils import DockArea
 from pymodaq_utils.config import GlobalConfig as Config
@@ -319,7 +320,7 @@ def main(init_qt=True):
     def set_data_ready_loop(ready=True):
         prog.data_ready = True
         app.processEvents()
-        QtCore.QThread.msleep(100)
+        QStopThread.msleep(100)
         prog.data_ready = False
         app.processEvents()
 

@@ -6,10 +6,11 @@ from collections import deque
 import numpy as np
 
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal
+from qtpy.QtCore import QObject, Slot, Signal
 
 from simple_pid import PID
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.exceptions import DetectorError, ActuatorError, PIDError
@@ -264,7 +265,7 @@ class DAQ_PID(CustomExt):
         if self.is_action_checked("ini_pid"):
             output_limits = self.get_output_limits()
             self.update_queues(refresh=True)
-            self.runner_thread = QThread()
+            self.runner_thread = QStopThread()
             pid_runner = PIDRunner(
                 self.model_class,
                 self.modules_manager,
@@ -711,7 +712,7 @@ class DAQ_PID(CustomExt):
         self.setpoints_sb[i].setValue(self.curr_points[i])
         self.update_runner_setpoints()
 
-    def quit_fun(self):
+    def quit(self):
         """ """
         try:
             try:
@@ -722,12 +723,11 @@ class DAQ_PID(CustomExt):
             areas = self.dock_area.tempAreas[:]
             for area in areas:
                 area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
 
-            self.dashboard.remove_modules([setp for setp in self.model_class.setpoints_names])
-            super().quit_fun()
+            if hasattr(self.model_class, 'setpoints_names'):
+                self.dashboard.remove_modules(self.model_class.setpoints_names[:])
+
+            super().quit()
 
         except Exception as e:
             print(e)
@@ -897,7 +897,7 @@ class PIDRunner(QObject):
                 )  # Time elapsed since last loop
                 sleep_time = self.sample_time - self.time_elapsed
                 if sleep_time > 0:
-                    QThread.msleep(int(sleep_time * 1000))
+                    QStopThread.msleep(int(sleep_time * 1000))
                 # # EXECUTE THE PID
                 self.outputs = []
                 for ind, pid in enumerate(self.pids):

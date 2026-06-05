@@ -15,11 +15,12 @@ from typing import List, Tuple, TYPE_CHECKING
 import numpy as np
 from qtpy import QtWidgets, QtCore
 from qtpy.QtWidgets import QDialogButtonBox
-from qtpy.QtCore import QObject, QThread, Signal, QDateTime, QDate, QTime
+from qtpy.QtCore import QObject, Signal, QDateTime, QDate, QTime
 
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.extensions.scan.scan_manager import ScanManager
 from pymodaq_data.plotting.utils import PlotColors
+from pymodaq_gui.utils.thread import QStopThread
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.config import GlobalConfig as Config
@@ -146,7 +147,6 @@ class DAQScan(CustomExt):
         self.curvilinear_values = []
         self.plot_colors = PlotColors()
 
-        self.runner_thread: QThread = None
 
         self.modules_manager.settings.child('probe_data').setOpts(expanded=False)
         self.modules_manager.settings.child('test_actuator').setOpts(expanded=False)
@@ -321,13 +321,13 @@ class DAQScan(CustomExt):
         elif cmd.command == 'viewers_changed':
             ...
 
-    def quit_fun(self):
+    def quit(self):
         """
             Quit the current instance of DAQ_scan
 
             See Also
             --------
-            quit_fun
+            quit
         """
         try:
             if self.temp_path is not None:
@@ -339,7 +339,7 @@ class DAQScan(CustomExt):
 
             self.close_file()
 
-            super().quit_fun()
+            super().quit()
 
         except Exception as e:
             logger.exception(str(e))
@@ -1143,7 +1143,7 @@ class DAQScan(CustomExt):
                 self.exit_runner_thread()
                 self.runner_thread = None
 
-            self.runner_thread = QThread()
+            self.runner_thread = QStopThread()
 
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
                                                   )
@@ -1363,18 +1363,18 @@ class DAQScanAcquisition(QObject):
                         if self.stop_scan_flag:
                             break
                         QtCore.QCoreApplication.processEvents()
-                        QThread.msleep(50)
+                        QStopThread.msleep(50)
 
                     #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
 
-                    QThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
+                    QStopThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
 
                     #grab datas and wait for grab completion
                     self.det_done(self.modules_manager.grab_data(positions=positions))
 
                     # daq_scan wait time
-                    QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
+                    QStopThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())
 
             self.modules_manager.timeout_signal.disconnect()
             self.modules_manager.connect_actuators(False)
@@ -1405,7 +1405,7 @@ class DAQScanAcquisition(QObject):
                                                          "Creating the arrays nodes in the h5file, please be patient"))
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
-                QThread.msleep(50)
+                QStopThread.msleep(50)
                 nav_axes = self.scanner.get_nav_axes()
                 if self.Naverage > 1:
                     for nav_axis in nav_axes:
@@ -1432,7 +1432,7 @@ class DAQScanAcquisition(QObject):
                                          extra_data=data_temp if self.scanner.scanner.do_process_data else None,)))
 
             while not self._data_saved_flag:  # this flag is changed by a command from the add_data process in main thread
-                QThread.msleep(50)
+                QStopThread.msleep(50)
                 QtWidgets.QApplication.processEvents()
 
             if self.ind_scan == 0:

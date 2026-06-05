@@ -7,6 +7,7 @@ from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtGui import QKeySequence
 
 from pymodaq_gui.utils.styling import create_icon
+from pymodaq_gui.utils.thread import QStopThread
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.custom_ext import CustomExt
@@ -654,8 +655,8 @@ if __name__ == '__main__':
         for ind in range(len(sublist)):
             entry_sublist_model.set_status(ind, bool(np.random.randint(2)))
             QtWidgets.QApplication.processEvents()
-            QtCore.QThread.msleep(200)
-        QtCore.QThread.msleep(2000)
+            QStopThread.msleep(200)
+        QStopThread.msleep(2000)
         #widget.close()
 
     widget.show_splash()

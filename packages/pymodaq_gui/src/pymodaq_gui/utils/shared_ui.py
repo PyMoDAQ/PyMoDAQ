@@ -26,9 +26,9 @@ from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import get_version
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.utils import get_module_path
-from pymodaq_gui.utils.custom_app import CustomApp
+from pymodaq_gui.utils.custom_app import CustomApp, QuittableApp
 from pymodaq_gui.utils.menu_utils import StickyMenu
-
+from pymodaq_utils.warnings import deprecation_msg
 
 logger = set_logger(get_module_name(__file__))
 
@@ -86,13 +86,26 @@ class PymodaqUpdateTableWidget(QTableWidget):
         return QSize(width, height)
 
 
+class CloseEventFilter(QtCore.QObject):
+    def __init__(self, on_close):
+        super().__init__()
+        self.on_close = on_close
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.Close:
+            self.on_close()
+            event.accept()   # allow close after your logic
+            return False     # let Qt process it normally
+        return False
+
+
 class SharedUI(CustomApp):
     """ This class is a UI wrapper that incorporates all base functionalities one want in a
     main PyMoDAQ app including default menu and toolbar with settings, log, help... shortcuts
 
     Parameters:
     -----------
-    app: CustomApp
+    app: QuittableApp
         The wrapped application
     widget: QMainWindow, QWidget, DockArea
         parent of the wrapped app eg stand alone DAQ_Move, Viewer, Browser DashBoard...
@@ -117,17 +130,22 @@ class SharedUI(CustomApp):
 
 
         self._app_class_file: Union[str, Path] = None
-        self._main_application: Union[CustomApp, Any] = None
+        self._main_application: QuittableApp = None
 
         self.setup_ui()
+
+        self._close_filter = CloseEventFilter(self.quit)
+        self.mainwindow.installEventFilter(self._close_filter)
+
         self.mainwindow.setVisible(show)
 
-    def affect_application(self, app: CustomApp):
+    def affect_application(self, app: QuittableApp):
         """ Affect the given application to this SharedUI and add the App QMenus to the
         QMainWindow menubar reordering/merging them if necessary
         """
         self._app_class_file = get_module_path(app.__module__)
         self._main_application = app
+
         self.title = app.title
 
         #handle menus and merge them if necessary
@@ -236,33 +254,33 @@ class SharedUI(CustomApp):
     def connect_things(self):
         self.connect_action("logs", self.show_log)
         self.connect_action("preferences", lambda: self.show_config(config))
-        self.connect_action("quit", self.quit_fun)
-        self.connect_action("restart", self.restart_fun)
+        self.connect_action("quit", self.quit)
+        self.connect_action("restart", self.restart)
 
         self.connect_action("about", self.show_about)
         self.connect_action("documentation", self.show_help)
         self.connect_action("check_updates", lambda: self.check_update(True))
 
-    def quit_fun(self):
+    def quit(self):
         """
         Quit the current instance of DashBoard and close on cascade move and detector modules.
 
         See Also
         --------
-        quit_fun
+        quit
         """
         try:
-            if hasattr(self._main_application, 'quit_fun'):
-                self._main_application.quit_fun()
-                QtWidgets.QApplication.processEvents()
-
-            if hasattr(self, "mainwindow"):
-                self.mainwindow.close()
+            self._main_application.quit()
+            self.mainwindow.close()
 
         except Exception as e:
             logger.exception(str(e))
 
-    def restart_fun(self, ask=False):
+    def restart_fun(self, ask: bool = False):
+        deprecation_msg("restart_fun() is deprecated. Use restart() instead.")
+        self.restart(ask=ask)
+
+    def restart(self, ask: bool = False):
         ret = False
         if ask:
             mssg = QMessageBox()
@@ -275,7 +293,7 @@ class SharedUI(CustomApp):
             ret = mssg.exec()
 
         if ret == QMessageBox.StandardButton.Ok or not ask:
-            self.quit_fun()
+            self.quit()
             subprocess.call([sys.executable, str(self._app_class_file)])
 
     def show_log(self):

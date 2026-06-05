@@ -1,3 +1,5 @@
+from qtpy import QtWidgets
+
 from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
@@ -20,9 +22,9 @@ class TestGeneral:
     def test_import(self, init_qt):
         qtbot = init_qt
         shared_ui, dashboard = create_load_dashboard()
-        qtbot.addWidget(shared_ui.mainwindow)
         shared_ui.show()
 
         dashboard.experiment_manager.execute_entry()
 
-        dashboard.quit_fun()
+        shared_ui.quit()
+        qtbot.wait(200)

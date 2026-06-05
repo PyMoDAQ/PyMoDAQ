@@ -15,11 +15,12 @@ import sys
 from typing import List, Union, Optional, Dict, TypeVar, TYPE_CHECKING
 import numpy as np
 
-from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
+from qtpy.QtCore import QObject, Signal, Slot, Qt, QTimer
 from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils.utils import find_keys_from_val
 from pymodaq_utils import utils
@@ -441,6 +442,7 @@ class DAQ_Move(ParameterControlModule):
 
     def get_actuator_value(self, send_to_leco=False):
         """Get the current actuator value via the "get_actuator_value" command send to the hardware
+
 
         Returns nothing but the  `move_done_signal` will be send once the action is done
         Parameters

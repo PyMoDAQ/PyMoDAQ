@@ -37,7 +37,7 @@ def ini_daq_viewer_without_ui(init_qt):
     qtbot = init_qt
     prog = daqvm.DAQ_Viewer()
     yield prog, qtbot
-    prog.quit_fun()
+    prog.quit()
     QtWidgets.QApplication.processEvents()
 
 
@@ -50,7 +50,7 @@ def ini_daq_viewer_ui(init_qt):
                         style=config('gui', 'style', 'style')[0])
     prog = daqvm.DAQ_Viewer(widget, 'test')
     yield prog, qtbot, widget
-    prog.quit_fun()
+    prog.quit()
     QtWidgets.QApplication.processEvents()
 
 
@@ -58,7 +58,7 @@ class TestMethods:
     def test_overriden(self):
         assert ControlModule.stop_grab != DAQ_Viewer.stop_grab
         assert ControlModule.grab != DAQ_Viewer.grab
-        assert ControlModule.quit_fun != DAQ_Viewer.quit_fun
+        assert ControlModule.quit != DAQ_Viewer.quit
         assert ControlModule.init_hardware != DAQ_Viewer.init_hardware
 
 

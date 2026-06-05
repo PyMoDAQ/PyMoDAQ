@@ -7,10 +7,11 @@ from typing import List, Dict
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import QObject, Slot, QThread, Signal
+from qtpy.QtCore import QObject, Slot, Signal
 
 from pyqtgraph import ROI, RectROI, PolyLineROI, Point, LinearRegionItem
 
+from pymodaq_gui.utils.thread import QStopThread
 from pymodaq_utils.factory import ObjectFactory
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -418,11 +419,11 @@ def main_fake_scan():
 
     prog = DAQ_Viewer(area, title="Testing", daq_type='DAQ2D')  #, parent_scan=fake)
     prog.init_hardware_ui(True)
-    QThread.msleep(1000)
+    QStopThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
     prog2 = DAQ_Viewer(area, title="Testing2", daq_type='DAQ2D')  #, parent_scan=fake)
     prog2.init_hardware_ui(True)
-    QThread.msleep(1000)
+    QStopThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
 
     fake.detector_modules = [prog, prog2]
