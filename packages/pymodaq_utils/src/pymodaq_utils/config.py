@@ -463,6 +463,8 @@ class GlobalConfig(metaclass=Singleton):
                                           f'`config_name` ({wrapped_class.config_name})')
             config = cls()
             name = wrapped_class.config_name
+            if 'config_' in name:
+                name = name.split('config_')[-1]
 
             with cls._register_lock:
                 if name in config._configs:
