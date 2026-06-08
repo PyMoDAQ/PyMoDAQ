@@ -16,6 +16,12 @@ from pymodaq_gui.utils import Dock
 
 from pymodaq.utils.data import DataActuator
 from pymodaq.utils.config import Config as ControlModulesConfig
+from pymodaq.control_modules.thread_commands import (
+    ThreadStatus,
+    ThreadStatusMove,
+    ControlToHardwareMove,
+    UiToMainMove,
+)
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -467,9 +473,9 @@ class ModulesManager(QObject, ParameterManager):
         self.settings.child('move_done').setValue(self.move_done_flag)
 
         if mode == 'abs':
-            command = 'move_abs'
+            command = ControlToHardwareMove.MOVE_ABS
         elif mode == 'rel':
-            command = 'move_rel'
+            command = ControlToHardwareMove.MOVE_REL
         else:
             logger.error(f'Invalid positioning mode: {mode}')
             return self.move_done_positions
