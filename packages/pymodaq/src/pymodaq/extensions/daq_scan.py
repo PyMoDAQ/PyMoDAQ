@@ -984,11 +984,13 @@ class DAQScan(QObject, ParameterManager):
 
     def set_ini_positions(self):
         """
-            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
+
         """
-        if len(self.modules_manager.actuators) != 0:
-            self.scanner.set_scan()
+        self.scanner.set_scan()
+        if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.connect_actuators()
             self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
+            self.modules_manager.connect_actuators(False)
 
     def stop_scan(self):
         """
