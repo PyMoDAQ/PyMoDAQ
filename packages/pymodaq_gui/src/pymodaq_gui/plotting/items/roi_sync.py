@@ -1,5 +1,8 @@
+from typing import Union
+
 import numpy as np
-from qtpy import QtCore
+
+from qtpy import QtCore, QtGui
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter
@@ -102,20 +105,26 @@ registerParameterType('roi', RoiParameter, override=True)
 
 class ROISync(QtCore.QObject):
 
-    def __init__(self, roi_type: DataDim):
+    def __init__(self, roi_type: DataDim,
+                 color: Union[QtGui.QColor, tuple[int, int, int]] = plot_colors[0],
+                 zlevel=1,
+                 x=0, y=0,
+                 width=10, height=10,
+                 angle=0
+                 ):
         super().__init__()
         self.roi_type = roi_type
         initial_value = {
-            'color': plot_colors[0],
-            'zlevel': 1,
-            'x': 0,
-            'y': 0,
+            'color': color,
+            'zlevel': zlevel,
+            'x': x,
+            'y': y,
         }
         if self.roi_type == DataDim.Data2D:
             initial_value.update({
-                'width': 10,
-                'height': 10,
-                'angle': 0
+                'width': width,
+                'height': height,
+                'angle': angle
             },
             )
 
@@ -133,6 +142,8 @@ class ROISync(QtCore.QObject):
                         value[key] = getattr(value[key], 'center')()[1]
                 else:
                     value[key] = getattr(value[key], key)()
+            elif isinstance(value[key], QtGui.QColor) and self.roi_type == DataDim.Data1D:
+                value[key].setAlphaF(0.3)
         return value
 
     def sync_entries_with(self, roi: ROI, roi_parameter: RoiParameter):
@@ -151,7 +162,7 @@ class ROISync(QtCore.QObject):
             'color': {'param': roi_parameter.child('color')},
             'zlevel': {'param': roi_parameter.child('zlevel')},
             'x': {'param': roi_parameter.child('position', 'x')},
-            'y': {'param': roi_parameter.child('position', 'x')},
+            'y': {'param': roi_parameter.child('position', 'y')},
         }
 
         if self.roi_type == DataDim.Data1D:
@@ -209,7 +220,6 @@ class ROISync(QtCore.QObject):
                     'mode': SyncMode.BIDIRECTIONAL,
                 },
                 })
-
 
         self.entries_sync.bind_properties(
             roi,
@@ -312,5 +322,8 @@ if __name__ == '__main__':
 
     sync_2D.sync_entries_with(roi_2D, roi_2D_param)
     sync_1D.sync_entries_with(roi_1D, roi_1D_param)
+
+    sync_1D.entries_sync.set_value(sync_1D.entries_sync.value, emit=True)
+    sync_2D.entries_sync.set_value(sync_2D.entries_sync.value, emit=True)
 
     sys.exit(app.exec())
