@@ -316,7 +316,7 @@ class TestConfigValidation:
         assert global_config._config_is_valid('utils'), \
             "Utils config file is invalid, if changes where made to the template, restart PyMoDAQ first"
 
-    def test_invalid_config(self, global_config):
+    def test_invalid_config(self):
         config = InvalidConfig0() # type difference between template and file
         global_config = GlobalConfig()
         global_config._configs['invalid'] = config
