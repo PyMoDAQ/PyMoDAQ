@@ -33,7 +33,9 @@ class Combo_pb(QtWidgets.QWidget):
         self.setLayout(self.hor_layout)
         self.currentText = self.combo.currentText
         self.currentTextChanged = self.combo.currentTextChanged
+        self.setCurrentText = self.combo.setCurrentText
         self.setCurrentIndex = self.combo.setCurrentIndex
+        self.currentIndexChanged = self.combo.currentIndexChanged
         self.clear = self.combo.clear
         self.addItem = self.combo.addItem
         self.addItems = self.combo.addItems
