@@ -803,7 +803,6 @@ class DAQScan(QObject, ParameterManager):
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
-
             res = self.update_scan_info()
             if not res:
                 return False
@@ -985,9 +984,13 @@ class DAQScan(QObject, ParameterManager):
 
     def set_ini_positions(self):
         """
-            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
+
         """
-        self.command_daq_signal.emit(utils.ThreadCommand("set_ini_positions"))
+        self.scanner.set_scan()
+        if self.modules_manager.actuators == self.scanner.actuators:
+            self.modules_manager.connect_actuators()
+            self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=True)
+            self.modules_manager.connect_actuators(False)
 
     def stop_scan(self):
         """
@@ -1088,23 +1091,11 @@ class DAQScanAcquisition(QObject):
         elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
 
-        elif command.command == "set_ini_positions":
-            self.set_ini_positions()
-
         elif command.command == "move_stages":
             self.modules_manager.move_actuators(command.attribute, polling=False)
 
         elif command.command == "data_saved":
             self._data_saved_flag = True
-
-    def set_ini_positions(self):
-        """ Set the actuators's positions totheir initial value as defined in the scanner  """
-        try:
-            if self.scanner.scan_sub_type != 'Adaptive':
-                self.modules_manager.move_actuators(self.scanner.positions_at(0), polling=False)
-
-        except Exception as e:
-            logger.exception(str(e))
 
     def start_acquisition(self):
         try:
