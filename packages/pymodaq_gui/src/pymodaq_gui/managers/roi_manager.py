@@ -1,9 +1,9 @@
 
 import os
 import sys
-from typing import List, TYPE_CHECKING, Tuple, Union
+from typing import List
 
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal,QSignalBlocker
 from qtpy.QtGui import QIcon, QPixmap
 from collections import OrderedDict
@@ -11,7 +11,7 @@ from collections import OrderedDict
 import pyqtgraph.Point as Point
 
 from pymodaq_gui.parameter import utils as putils
-from pymodaq_gui.parameter import ParameterTree, Parameter, ioxml, pymodaq_ptypes
+from pymodaq_gui.parameter import ParameterTree, Parameter, ioxml
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 from pymodaq_gui.managers.action_manager import QAction
@@ -21,8 +21,7 @@ from pymodaq_utils.logger import get_module_name, set_logger
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_gui.config import get_set_roi_path
 from pymodaq_gui.utils import select_file
-from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, RectROI, DataDim
-
+from pymodaq_gui.plotting.items.roi import ROIFactory, ROI, LinearROI, DataDim, RectROI  # noqa
 
 import numpy as np
 from pathlib import Path
@@ -255,7 +254,7 @@ class ROIManager(QObject):
                 if data=='Copy':
                     self.copy_ROI(self.ROIs[param.name()])                    
 
-    def make_ROI(self, param: Parameter):
+    def make_ROI(self, param: Parameter) -> ROI:
         newindex = int(param.name()[-2:])
         pos = self.viewer_widget.plotItem.vb.viewRange()
         if self.ROI_type == DataDim.Data1D:
@@ -373,7 +372,6 @@ class ROIManager(QObject):
         # [self.update_roi(new_roi,p) for p in reversed(param_to_update)]     
         self.add_ROI(new_roi)
         [self.update_roi(new_roi,p) for p in reversed(param_to_update)]     
-
 
     def update_use_channel(self, channels: List[str], index=None):
         """Function to update the selected channels. If no index is given, the channels are applied to all ROIs.
