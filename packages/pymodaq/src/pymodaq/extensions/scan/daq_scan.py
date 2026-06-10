@@ -100,6 +100,10 @@ class DAQScan(CustomExt):
             {'title': 'Go to ini. positions:', 'name': 'go_to_ini_positions', 'type': 'bool',
              'value': True,
              'tip': 'Move actuators back to their initial positions when the scan ends or is stopped'},
+            {'title': 'Stop on timeout:', 'name': 'stop_on_timeout', 'type': 'bool',
+             'value': config('pymodaq', 'scan', 'stop_on_timeout'),
+             'tip': 'If a hardware timeout occurs while waiting for an actuator or detector, '
+                    'stop the scan. If unchecked, the scan will move on to the next step'},
         ]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
@@ -266,6 +270,8 @@ class DAQScan(CustomExt):
         self.settings.child('time_flow', 'wait_time_between').setValue(config('pymodaq', 'scan', 'timeflow', 'wait_time'))
 
         self.settings.child('scan_options', 'scan_average').setValue(config('pymodaq', 'scan', 'Naverage'))
+        self.settings.child('scan_options', 'stop_on_timeout').setValue(
+            config('pymodaq', 'scan', 'stop_on_timeout'))
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -923,7 +929,7 @@ class DAQScan(CustomExt):
                 self.loop_scan_batch()
 
         elif status.command == "Timeout":
-            self.ui.set_permanent_status('Timeout occurred')
+            self.ui.set_permanent_status(status.attribute or 'Timeout occurred')
 
         elif status.command == 'add_data':
             ind_scan = status.attribute.pop('ind_scan')
@@ -1447,14 +1453,25 @@ class DAQScanAcquisition(QObject):
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
-    def timeout(self):
+    def timeout(self, missing_modules: List[str] = None):
         """
             Send the status signal *'Time out during acquisition'*.
+
+            Parameters
+            ----------
+            missing_modules: list of str
+                Names of the actuators or detectors that did not answer in time
         """
-        self.timeout_scan_flag = True
-        self.status_sig.emit(utils.ThreadCommand("Update_Status",
-                                                 attribute="Timeout during acquisition"))
-        self.status_sig.emit(utils.ThreadCommand("Timeout"))
+        if missing_modules:
+            msg = f'Timeout during acquisition, no answer received from: {", ".join(missing_modules)}'
+        else:
+            msg = 'Timeout during acquisition'
+
+        if self.scan_settings['scan_options', 'stop_on_timeout']:
+            self.timeout_scan_flag = True
+
+        self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute=msg))
+        self.status_sig.emit(utils.ThreadCommand("Timeout", attribute=msg))
 
 
 def main():
