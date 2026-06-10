@@ -48,7 +48,7 @@ class ModulesManager(QObject, ParameterManager):
     actuators_changed = Signal(list)
     det_done_signal = Signal(DataToExport)  # dte here contains DataWithAxes
     move_done_signal = Signal(DataToExport)  # dte here contains DataActuators
-    timeout_signal = Signal(bool)
+    timeout_signal = Signal(list)  # list of names of the modules that did not answer in time
 
     params = [
         {'title': 'Detectors', 'name': 'detectors', 'type': 'itemselect', 'checkbox': True},
@@ -371,8 +371,12 @@ class ModulesManager(QObject, ParameterManager):
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
             if time.perf_counter() - tzero > self.detector_timeout / 1000:
-                self.timeout_signal.emit(True)
-                logger.error('Timeout Fired during waiting for data to be acquired')
+                received_origins = {dwa.origin for dwa in self.det_done_datas}
+                missing_detectors = [name for name in self.selected_detectors_name
+                                      if name not in received_origins]
+                self.timeout_signal.emit(missing_detectors)
+                logger.error('Timeout Fired during waiting for data to be acquired from: '
+                              f'{", ".join(missing_detectors)}')
                 break
             QThread.msleep(10)
 
@@ -559,8 +563,12 @@ class ModulesManager(QObject, ParameterManager):
 
                 QtWidgets.QApplication.processEvents()  # mandatory for the det_done_flag boolean to be modified in the corresponding method
                 if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
-                    self.timeout_signal.emit(True)
-                    logger.error('Timeout Fired during waiting for actuators to be moved')
+                    received_names = self.move_done_positions.get_names()
+                    missing_actuators = [dact.name for dact in dte_act
+                                          if dact.name not in received_names]
+                    self.timeout_signal.emit(missing_actuators)
+                    logger.error('Timeout Fired during waiting for actuators to be moved: '
+                                  f'{", ".join(missing_actuators)}')
                     break
                 QThread.msleep(10)
 
