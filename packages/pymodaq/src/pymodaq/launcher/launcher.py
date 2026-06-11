@@ -20,7 +20,7 @@ from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.enums import StrEnum
 
-from pymodaq_gui.managers.manager_base import ManagerActions
+
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 
@@ -30,6 +30,8 @@ from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.shared_ui import SharedUI
+
+from pymodaq_gui.managers.manager_base import ManagerActions  # should be imported after to avoid circular imports
 
 logger = set_logger(get_module_name(__file__))
 
