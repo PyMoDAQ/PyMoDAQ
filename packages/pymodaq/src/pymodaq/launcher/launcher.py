@@ -1,9 +1,7 @@
+from datetime import datetime
 import subprocess
 import sys
 
-from enum import StrEnum
-
-import toml
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import Signal, Qt, QFileSystemWatcher
 from qtpy.QtWidgets import (
@@ -15,6 +13,16 @@ from qtpy.QtWidgets import (
     QWidget,
     QComboBox,
 )
+import toml
+
+from pymodaq_utils import set_logger
+from pymodaq_utils.logger import get_module_name
+from pymodaq_utils.utils import ThreadCommand
+from pymodaq_utils.enums import StrEnum
+
+from pymodaq_gui.managers.manager_base import ManagerActions
+from pymodaq_gui.parameter import Parameter
+from pymodaq_gui.utils import CustomApp
 
 from pymodaq.extensions import ExtensionEnum
 from pymodaq.launcher import HISTORY_PATH
@@ -22,14 +30,6 @@ from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
 from pymodaq.utils.shared_ui import SharedUI
-from pymodaq_gui.managers.manager_base import ManagerActions
-from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.utils import CustomApp
-from pymodaq_utils import set_logger
-from pymodaq_utils.logger import get_module_name
-from pymodaq_utils.utils import ThreadCommand
-from datetime import datetime
-
 
 logger = set_logger(get_module_name(__file__))
 
@@ -42,7 +42,6 @@ class EnumToolTip(StrEnum):
     BACK_HISTORY = 'Navigate to the back item of experiments history'
     NEXT_HISTORY = 'Navigate to the next item of experiments history'
     RESTORE = 'Restore this experiment with the selected state_manager'
-
 
 
 class ExperimentTreeBuilder:
@@ -202,8 +201,6 @@ class Launcher(CustomApp):
         widget = QWidget()
         widget.setLayout(self.main_hbox)
         self.mainwindow.setCentralWidget(widget)
-
-
 
         logger.debug('docks are set')
 
