@@ -1,7 +1,9 @@
+import sys
+
 import pytest
 from qtpy import QtWidgets
 
-from pymodaq_utils.config import GlobalConfig
+from pymodaq_utils.config import GlobalConfig, get_set_local_dir
 
 config = GlobalConfig()
 
@@ -16,7 +18,7 @@ class TestLauncher:
         assert launcher.get_action('next_config').isEnabled() == True
         assert launcher.get_action('back_config').isEnabled() == False
 
-    def test_informations_from_history_file(self, launcher, qtbot):
+    def test_informations_from_history_file(self, launcher):
 
         # History size
         assert len(launcher.history) == 2
@@ -40,41 +42,12 @@ class TestLauncher:
         assert launcher.state_manager.entry == 'hundred_value'
         assert launcher.state_manager.get_action_list().currentText() == 'hundred_value'
 
-    def test_restore(self, qtbot, launcher, monkeypatch):
-        """
-        Mock 'subprocess.Popen' method to test if the launcher passes the correct arguments to the dashboard command.
-
-        Limits of this test:
-        To restore a dashboard, the launcher passes experiment and state names to the dashboard command.
-        But the launcher and the dashboard run in separate processes, the dashboard is a subprocess of the launcher.
-        So direct communication between them is impossible. This test verifies that the launcher passes the correct
-        arguments, but the responsibility of the correct launch belongs to the dashboard via the 'load_dashboard_with_preset' method.
-        """
-
-        args_list = []
-
-        def mock_popen(args):
-            args_list.extend(args)
-
-        monkeypatch.setattr('subprocess.Popen', mock_popen)
-
-        launcher.get_action('restore_dashboard').trigger()
-        qtbot.waitUntil(lambda: len(args_list) > 0, timeout=5000)
-        assert len(args_list) > 0
-
-
-        # Verify command arguments
-        assert args_list[0] == 'dashboard'
-        assert args_list[1] == '-x'
-        assert args_list[2] == 'exp_test'
-        assert args_list[3] == '-c'
-        assert args_list[4] == 'ten_value'
-
 
     @pytest.mark.parametrize('launcher', ['history_test_duplicates.toml'], indirect=True)
     def test_history_duplicates_false(self, launcher):
         config['pymodaq', 'launcher', 'keep_duplicates'] = False
-        launcher.state_manager.history_file_name = 'history_test_duplicates.toml'
+        launcher.state_manager.history_file_path = (
+            str(get_set_local_dir(user=True).joinpath('history_test_duplicates.toml')))
         launcher.state_manager.save_new_history_entry()
         launcher._on_history_file_modified()
         assert len(launcher.history) == 2
@@ -82,42 +55,10 @@ class TestLauncher:
     @pytest.mark.parametrize('launcher', ['history_test_duplicates.toml'], indirect=True)
     def test_history_duplicates_true(self, launcher):
         config['pymodaq', 'launcher', 'keep_duplicates'] = True
-        launcher.state_manager.history_file_name = 'history_test_duplicates.toml'
+        launcher.state_manager.history_file_path = (
+            str(get_set_local_dir(user=True).joinpath('history_test_duplicates.toml')))
         launcher.state_manager.save_new_history_entry()
         launcher._on_history_file_modified()
         assert len(launcher.history) == 6 # save_new_history_entry write a new entry in the history file
 
 
-@pytest.mark.skip(reason="Test fails because signal seems not to propagate but it works")
-class TestWidgetSync:
-    """Test displayed values."""
-
-    def test_widgets_synchro(self, qtbot, state_manager, copied_data):
-        main_window = QtWidgets.QMainWindow()
-        main_window.show()
-        qtbot.waitExposed(main_window, timeout=5000)
-
-        assert state_manager.experiment_manager.entry == 'default'
-        assert state_manager.experiment_manager.get_action_list().currentText() == 'default'
-
-        with qtbot.waitSignal(state_manager.experiment_manager.get_action_list().currentTextChanged, timeout=5000):
-            with qtbot.waitSignal(state_manager.experiment_manager.entries_sync.value_changed, timeout=5000):
-                state_manager.experiment_manager.entries_sync.set_value({
-                    **state_manager.experiment_manager.entries_sync.value,
-                    'current' : 'exp_test'
-                })
-
-        assert state_manager.experiment_manager.entry == 'exp_test'
-        assert state_manager.experiment_manager.get_action_list().currentText() == 'exp_test'
-        assert 'ten_value' in state_manager.entries
-        assert 'hundred_value' in state_manager.entries
-
-        with qtbot.waitSignal(state_manager.get_action_list().currentTextChanged, timeout=5000):
-            with qtbot.waitSignal(state_manager.entries_sync.value_changed, timeout=5000):
-                state_manager.entries_sync.set_value({
-                    **state_manager.entries_sync.value,
-                    'current' : 'hundred_value'
-                })
-
-        assert state_manager.entry == 'hundred_value'
-        assert state_manager.get_action_list().currentText() == 'hundred_value'

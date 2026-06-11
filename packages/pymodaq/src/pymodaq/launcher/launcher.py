@@ -19,13 +19,13 @@ from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.enums import StrEnum
-
+from pymodaq_utils.config import get_set_local_dir
 
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 
 from pymodaq.extensions import ExtensionEnum
-from pymodaq.launcher import HISTORY_PATH
+from pymodaq.launcher import HISTORY_FILE_PATH, HISTORY_FILE_NAME
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -121,7 +121,7 @@ class Launcher(CustomApp):
     # list of dicts enabling a settings tree on the user interface
     params = []
 
-    def __init__(self, parent: QtWidgets.QMainWindow):
+    def __init__(self, parent: QtWidgets.QMainWindow, history_file_name: str = None):
         super().__init__(parent, add_toolbar_break=False)
 
         self.state_manager = StateManager()
@@ -135,11 +135,13 @@ class Launcher(CustomApp):
         self.history_keys = []
         self.history = {}
         self.history_index = 0
-        self.history_file_name = 'history_file_name'
+        self.history_file_name = history_file_name if history_file_name is not None else HISTORY_FILE_NAME
+        self.history_file_path = get_set_local_dir(user=True).joinpath(self.history_file_name) if \
+            (history_file_name is not None) else HISTORY_FILE_PATH
 
-        # History file handler (watchdog)
+        # History file handler
         self._history_file_watcher = QFileSystemWatcher()
-        self._history_file_watcher.addPath(str(HISTORY_PATH))
+        self._history_file_watcher.addPath(str(self.history_file_path))
         self._history_file_watcher.fileChanged.connect(self.ui_refresh)
         self._history_file_watcher.fileChanged.connect(self._on_history_file_modified)
 
@@ -153,9 +155,9 @@ class Launcher(CustomApp):
         self.mainwindow.removeToolBar(self._toolbar)
 
     def setup_docks_and_widgets(self):
-        '''
+        """
         Layouts and widgets configuration.
-        '''
+        """
 
         # Layout
         self.main_hbox = QHBoxLayout()
@@ -482,7 +484,7 @@ class Launcher(CustomApp):
             List of history dictionary keys sorted by descending date
         """
         try:
-            history = toml.load(HISTORY_PATH)
+            history = toml.load(self.history_file_path)
         except (FileNotFoundError, PermissionError, OSError):
             history = {}
 
