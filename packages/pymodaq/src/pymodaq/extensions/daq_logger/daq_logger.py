@@ -71,7 +71,7 @@ class DAQ_Logger(CustomExt):
             instance of the pymodaq dashboard
         """
 
-        super().__init__(dockarea, dashboard)
+        super().__init__(dockarea, dashboard, add_toolbar_break=False)
 
         self.wait_time = 1000
         self.logger: Union[H5Logger, DataBaseLogger] = None
