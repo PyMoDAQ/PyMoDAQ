@@ -18,11 +18,8 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
-from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
-from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
-from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
-from pymodaq_gui.managers.manager_base import ManagerActions
+
+
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq_utils import utils
@@ -30,6 +27,7 @@ from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
+from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
@@ -37,6 +35,8 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.managers.roi_manager import ROISaver
 from pymodaq_gui.utils.custom_app import CustomApp
 from pymodaq_gui.utils.shared_ui import MenuToolbarNames
+from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
+from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.managers.experiment.experiment_manager import ExperimentManager
@@ -44,12 +44,13 @@ from pymodaq.utils.managers.overshoot.overshooter import Overshooter
 from pymodaq.utils.compact_dock_manager import ActuatorCompactDock, DetectorCompactDock
 from pymodaq.utils.daq_utils import get_instrument_plugins
 
-from pymodaq_gui.config import get_set_layout_path, get_set_roi_path
-from pymodaq_gui.utils.widgets.window import make_window
-
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move_ui.factory import ActuatorUIFactory
+from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
+from pymodaq.utils.gui_utils.loader_utils import create_extension
+from pymodaq.utils.leco.pymodaq_listener import LECODashboardCommands, DashboardActorListener, LECOComponentMixin
+from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 
 from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import ExtensionEnum
@@ -491,6 +492,15 @@ class DashBoard(CustomApp, LECOComponentMixin):
         self.extensions_menu = self.add_menu('extensions', "Extensions", MenuToolbarNames.TOOLS)
         self.get_menu('extensions').setEnabled(False)
 
+        self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('state', 'State', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
+                         add_break=False)
+        self.add_toolbar('extension', 'Extension', parent=self.mainwindow, add_break=False)
+        self.toolbar.addSeparator()
+
     def setup_actions(self):
         self.add_action("load_layout", "Load Layout", "",
                         "Load the Saved Docks layout corresponding to the current experiment",
@@ -500,15 +510,6 @@ class DashBoard(CustomApp, LECOComponentMixin):
                         auto_toolbar=False, menu='docked')
         self.add_action("show_log_widget", "Show/hide log window", "", checkable=True, auto_toolbar=False,
                         menu=MenuToolbarNames.VIEW)
-
-        self.add_toolbar('experiment', 'Experiment', parent=self.mainwindow,
-                         add_break=False)
-        self.add_toolbar('state', 'State', parent=self.mainwindow,
-                         add_break=False)
-        self.add_toolbar('overshooter', 'Overshoot', parent=self.mainwindow,
-                         add_break=False)
-        self.add_toolbar('extension', 'Extension', parent=self.mainwindow, add_break=False)
-        self.toolbar.addSeparator()
 
         # self.add_action("save_roi", "Save ROIs as a file", "", auto_toolbar=False,
         #                 menu='roi')
@@ -535,7 +536,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         #             "",
         #             auto_toolbar=False,
         #         )
-        self.toolbar.addSeparator()
+
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name], ExtensionEnum[ext_name].value,
                             auto_toolbar=False, menu='extensions',
@@ -1425,10 +1426,11 @@ def main():
 
     # If experiment name is supplied, load dashboard with this experiment
     if args.experiment:
-        dashboard, extension, win = load_dashboard_with_experiment(experiment_name=args.experiment,
-                                                                   extension_name=args.extension.upper() if args.extension is not None else args.extension,
-                                                                   configuration_name=args.config
-                                                                   )
+        dashboard, extension, win = load_dashboard_with_experiment(
+            experiment_name=args.experiment,
+            extension_name=args.extension.upper() if args.extension is not None else args.extension,
+            configuration_name=args.config
+        )
 
 
     # If no command-line arguments are supplied, start empty
