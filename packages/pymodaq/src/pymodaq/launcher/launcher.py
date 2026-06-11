@@ -168,13 +168,12 @@ class Launcher(CustomApp):
         self.move_button = QPushButton("DAQ Move")
         self.h5browser_button = QPushButton("H5Browser")
         self.shortcut_label = QLabel("Shortcuts :")
-        self.extension_label = QLabel("Extensions :")
         self.launcher_vbox.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         # Header
         self.date_combo_box = QComboBox()
-        self.date_combo_box.setMinimumSize(QtCore.QSize(146,
-                                                        25))  # set minimum size to ensure consistent UI layout when history file is empty vs non-empty
+        self.date_combo_box.setMinimumSize(QtCore.QSize(146, 25))
+        # set minimum size to ensure consistent UI layout when history file is empty vs non-empty
         self.date_label = QLabel("Date :")
 
         # Set tooltip buttons
@@ -297,7 +296,7 @@ class Launcher(CustomApp):
     def set_launcher_vbox(self):
         """ Set widgets in QVBox launcher section"""
         self.launcher_vbox.addWidget(self.shortcut_label)
-        for button in [self.dashboard_button, self.viewer_button, self.move_button, self.h5browser_button]:
+        for button in [self.dashboard_button, self.viewer_button, self.move_button, self.h5browser_button,]:
             button.setMinimumWidth(140)
             button.setMinimumHeight(28)
             button.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
@@ -314,7 +313,7 @@ class Launcher(CustomApp):
 
         # add a toolbar for future extension feature
         self.launcher_vbox.addWidget(self.add_toolbar('launcher'))
-        self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Vertical)
+        self.get_toolbar('launcher').setOrientation(QtCore.Qt.Orientation.Horizontal)
 
     def set_tooltip_button(self):
         self.dashboard_button.setToolTip(EnumToolTip.DASHBOARD)
