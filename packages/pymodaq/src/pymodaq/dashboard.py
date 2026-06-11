@@ -27,7 +27,7 @@ from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import BaseEnum, StrEnum
 
-from pymodaq_gui.managers.manager_base import ManagerActions
+
 from pymodaq_gui.parameter import ParameterTree, Parameter
 from pymodaq_gui.utils import DockArea, Dock, select_file
 import pymodaq_gui.utils.layout as layout_mod
@@ -55,8 +55,11 @@ from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.extensions.utils import get_extensions
 from pymodaq.extensions import ExtensionEnum
 from pymodaq.utils.shared_ui import SharedUI
-
 from pymodaq.utils.managers.state.state_manager import StateManager
+
+from pymodaq_gui.managers.manager_base import ManagerActions # should be imported afterwards
+
+
 
 if TYPE_CHECKING:
     from pymodaq.extensions.custom_ext import CustomExt
@@ -823,7 +826,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
             # Create compact manager if needed
             if self.compact_actuator_manager is None:
                 self.compact_actuator_manager = ActuatorCompactDock(
-                    "Simple Actuators",
+                    "Actuators",
                     self.dockarea,
                     orientation=Qt.Orientation.Vertical,
                 )
@@ -931,7 +934,7 @@ class DashBoard(CustomApp, LECOComponentMixin):
         # Create compact manager if needed
         if self.compact_detector_manager is None:
             self.compact_detector_manager = DetectorCompactDock(
-                "DAQ Viewer Toolbars",
+                "Detectors",
                 self.dockarea,
                 orientation=Qt.Orientation.Vertical,
             )

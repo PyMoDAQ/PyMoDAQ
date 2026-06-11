@@ -355,7 +355,7 @@ class Launcher(CustomApp):
                                3000)
 
     def launch_h5browser(self):
-        self.popen_with_splash([sys.executable, '-m',  'pymodaq.extension.h5browser'],
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.extensions.h5browser'],
                                'Loading a H5Browser... Please wait...',
                                3000)
 
@@ -392,8 +392,7 @@ class Launcher(CustomApp):
                     '-c', self.state_manager.entry]
         if self.extension_manager_restore.entry not in (None, '', 'empty'):
             args_lst += ['-e', self.extension_manager_restore.entry]
-        subprocess.Popen(args_lst)
-        self.popen_with_splash([sys.executable, '-m',  'pymodaq.extension.h5browser'],
+        self.popen_with_splash(args_lst,
                                f'Loading a DashBoard with {self.experiment_manager.entry} experiment and '
                                f'{self.state_manager.entry} state...\nPlease wait...',
                                5000)
