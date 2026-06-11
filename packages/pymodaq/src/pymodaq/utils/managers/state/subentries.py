@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 import time
 from typing import Callable, TYPE_CHECKING, Union, Tuple
 
@@ -247,7 +248,7 @@ class ActuatorValueSubEntryHandler(SubEntryHandler):
         actuator_settings = self.settings.child(ModuleType.Actuator).children()[
             mods_settings.index(actuator_name)]
 
-        return actuator_settings.child('move_settings', 'units').value()
+        return actuator_settings.child(ACTUATOR_SETTINGS_KEY, 'units').value()
 
     def update_suffix_in_dialog(self, actuator_name: str):
         self.value_sb.setOpts(suffix=self.get_units_from_module_name(actuator_name))

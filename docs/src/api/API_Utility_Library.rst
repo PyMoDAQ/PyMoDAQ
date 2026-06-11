@@ -10,6 +10,7 @@ Utility Libraries
 
    utility_api/utility_classes
    utility_api/tcp_ip
+   utility_api/hardware_discovery
    utility_api/units_conversion
    utility_api/mathematical
    utility_api/scan
