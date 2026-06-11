@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import toml
 from qtpy import QtCore, QtWidgets
-from qtpy.QtCore import Signal, Qt
+from qtpy.QtCore import Signal, Qt, QFileSystemWatcher
 from qtpy.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,10 +16,8 @@ from qtpy.QtWidgets import (
     QComboBox,
 )
 
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
-from watchdog.observers import Observer
-
 from pymodaq.extensions import ExtensionEnum
+from pymodaq.launcher import HISTORY_PATH
 from pymodaq.utils.managers.state.state_manager import StateManager
 from pymodaq.utils.managers.extension.extension_manager import ExtensionManager
 from pymodaq.utils.managers.modules.utils import ModuleType
@@ -28,7 +26,6 @@ from pymodaq_gui.managers.manager_base import ManagerActions
 from pymodaq_gui.parameter import Parameter
 from pymodaq_gui.utils import CustomApp
 from pymodaq_utils import set_logger
-from pymodaq_utils.config import get_set_local_dir
 from pymodaq_utils.logger import get_module_name
 from pymodaq_utils.utils import ThreadCommand
 from datetime import datetime
@@ -46,14 +43,6 @@ class EnumToolTip(StrEnum):
     NEXT_HISTORY = 'Navigate to the next item of experiments history'
     RESTORE = 'Restore this experiment with the selected state_manager'
 
-class HistoryFileHandler(FileSystemEventHandler) :
-    def __init__(self, callback, watched_path):
-        self.callback = callback
-        self.watched_path = str(watched_path)
-
-    def on_modified(self, event: FileModifiedEvent) -> None:
-        if not event.is_directory and event.src_path == self.watched_path:
-            self.callback()
 
 
 class ExperimentTreeBuilder:
@@ -131,13 +120,8 @@ class Launcher(CustomApp):
     # list of dicts enabling a settings tree on the user interface
     params = []
 
-    def __init__(self, mainwindow, dashboard=None, history_file_name ='history.toml'):
-        super().__init__(mainwindow)
-
-        self.dashboard = dashboard
-
-        # Remove the default toolbar created by CustomApp
-        self.mainwindow.removeToolBar(self._toolbar)
+    def __init__(self, parent: QtWidgets.QMainWindow):
+        super().__init__(parent, add_toolbar_break=False)
 
         self.state_manager = StateManager()
         self.experiment_manager = self.state_manager.experiment_manager
@@ -150,51 +134,24 @@ class Launcher(CustomApp):
         self.history_keys = []
         self.history = {}
         self.history_index = 0
-
-        self.history_file_name = history_file_name
-        self.history_file_path = get_set_local_dir(user=True) / self.history_file_name
+        self.history_file_name = 'history_file_name'
 
         # History file handler (watchdog)
-        self._handler = HistoryFileHandler(
-            callback=self._on_history_file_modified,
-            watched_path=self.history_file_path
-        )
-        self._observer = Observer()
-        self._observer.schedule(
-            self._handler,
-            path=str(self.history_file_path.parent),
-            recursive=False
-        )
-        self._observer.start()
-        self.history_modified_sig.connect(self.ui_refresh)
+        self._history_file_watcher = QFileSystemWatcher()
+        self._history_file_watcher.addPath(str(HISTORY_PATH))
+        self._history_file_watcher.fileChanged.connect(self.ui_refresh)
+        self._history_file_watcher.fileChanged.connect(self._on_history_file_modified)
+
+        self.splash_timer = QtCore.QTimer()
+        self.splash_timer.timeout.connect(lambda: self.splash_sc.setVisible(False))
 
         self.setup_ui()
 
-    def setup_actions(self):
-        '''
-        subclass method from ActionManager
-        '''
-        self.add_action('launch_dashboard', 'Launch empty dashboard', '',
-                        EnumToolTip.DASHBOARD, auto_toolbar=False
-                        )
-        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.DAQ_VIEWER, auto_toolbar=False)
-        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.DAQ_MOVE, auto_toolbar=False)
-        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        # Remove the default toolbar created by CustomApp
+        self.mainwindow.removeToolBar(self._toolbar)
 
-        self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True,
-                        toolbar='header')
-        self.header_toolbar.addWidget(self.date_label)
-        self.header_toolbar.addWidget(self.date_combo_box)
-        self.add_action('restore_dashboard', 'Launch',
-                        'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
-        self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
-                        toolbar='header')
-
-        # setup_actions is called after setup_docks, style the action button here once it exists.
-        button = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
-        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         '''
         Layouts and widgets configuration.
         '''
@@ -250,6 +207,30 @@ class Launcher(CustomApp):
 
 
         logger.debug('docks are set')
+
+    def setup_actions(self):
+        '''
+        subclass method from ActionManager
+        '''
+        self.add_action('launch_dashboard', 'Launch empty dashboard', '',
+                        EnumToolTip.DASHBOARD, auto_toolbar=False
+                        )
+        self.add_action('launch_viewer', 'Launch empy viewer', '', EnumToolTip.DAQ_VIEWER, auto_toolbar=False)
+        self.add_action('launch_move', 'Launch empty DAQ move', '', EnumToolTip.DAQ_MOVE, auto_toolbar=False)
+        self.add_action('launch_h5browser', 'Launch H5Browser', '', EnumToolTip.H5BROWSER, auto_toolbar=False)
+
+        self.add_action('back_config', 'Back', 'keyboard_arrow_left', EnumToolTip.BACK_HISTORY, auto_toolbar=True,
+                        toolbar='header')
+        self.header_toolbar.addWidget(self.date_label)
+        self.header_toolbar.addWidget(self.date_combo_box)
+        self.add_action('restore_dashboard', 'Launch',
+                        'open_in_new', EnumToolTip.RESTORE, auto_toolbar=True, toolbar='header')
+        self.add_action('next_config', 'Next', 'keyboard_arrow_right', EnumToolTip.NEXT_HISTORY, auto_toolbar=True,
+                        toolbar='header')
+
+        # setup_actions is called after setup_docks, style the action button here once it exists.
+        button: QtWidgets.QToolButton = self.header_toolbar.widgetForAction(self.get_action('restore_dashboard'))
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
     def connect_things(self):
         '''
@@ -352,17 +333,33 @@ class Launcher(CustomApp):
         self.get_toolbar('controls').addWidget(self.add_toolbar('state_manager', 'State'))
         self.get_toolbar('controls').addWidget(self.add_toolbar('extensions', 'Extensions'))
 
+    def popen_with_splash(self, args: list[str], msg: str, wait_time_ms: int = 1000):
+        self.splash_sc.setVisible(True)
+        self.splash_sc.showMessage(msg)
+        subprocess.Popen(args)
+
+        self.splash_timer.setInterval(wait_time_ms)
+        self.splash_timer.start()
+
     def launch_empty_dashboard(self):
-        subprocess.Popen(['dashboard'])
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.dashboard'],
+                               'Loading a DashBoard... Please wait...',
+                               5000)
 
     def launch_empty_viewer(self):
-        subprocess.Popen(['daq_viewer'])
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.control_modules.daq_viewer'],
+                               'Loading a DAQ_Viewer... Please wait...',
+                               3000)
 
     def launch_empty_move(self):
-        subprocess.Popen(['daq_move'])
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.control_modules.daq_move'],
+                               'Loading a DAQ_Move... Please wait...',
+                               3000)
 
     def launch_h5browser(self):
-        subprocess.Popen(['h5browser'])
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.extension.h5browser'],
+                               'Loading a H5Browser... Please wait...',
+                               3000)
 
     def show_experiment_titles_only(self, experiment_source=None):
         """Load an experiment source and display only module titles in settings_tree."""
@@ -392,10 +389,16 @@ class Launcher(CustomApp):
         """
         Load and show dashboard with selected experiment and configuration.
         """
-        args_lst = ['dashboard', '-x', self.experiment_manager.entry, '-c', self.state_manager.entry]
+        args_lst = [sys.executable, '-m', 'pymodaq.dashboard',
+                    '-x', self.experiment_manager.entry,
+                    '-c', self.state_manager.entry]
         if self.extension_manager_restore.entry not in (None, '', 'empty'):
             args_lst += ['-e', self.extension_manager_restore.entry]
         subprocess.Popen(args_lst)
+        self.popen_with_splash([sys.executable, '-m',  'pymodaq.extension.h5browser'],
+                               f'Loading a DashBoard with {self.experiment_manager.entry} experiment and '
+                               f'{self.state_manager.entry} state...\nPlease wait...',
+                               5000)
 
     def do_navigate(self, index: int):
         """
@@ -428,7 +431,8 @@ class Launcher(CustomApp):
         self.set_action_enabled('back_config', self.history_index < len(self.history_keys) - 1)
 
     def ui_refresh(self):
-        """Refresh interface and update experiment and configuration, entries, combo box values, actuators/detectors tree, history key and navigation actions."""
+        """Refresh interface and update experiment and configuration, entries,
+        combo box values, actuators/detectors tree, history key and navigation actions."""
         # experiment and state
         if len(self.history_keys) > 0:
             actual_key = self.history_keys[self.history_index]
@@ -441,7 +445,8 @@ class Launcher(CustomApp):
             date = datetime.strptime(actual_key, "%Y-%d-%m:%H:%M:%S")
             self.date_combo_box.blockSignals(True)
             self.date_combo_box.clear()
-            self.date_combo_box.addItems([datetime.strptime(i, "%Y-%d-%m:%H:%M:%S").strftime("%Y/%m/%d at %Hh%M") for i in self.history_keys])
+            self.date_combo_box.addItems(
+                [datetime.strptime(i, "%Y-%d-%m:%H:%M:%S").strftime("%Y/%m/%d at %Hh%M") for i in self.history_keys])
             self.date_combo_box.setCurrentText(date.strftime("%Y/%m/%d at %Hh%M"))
             self.date_combo_box.blockSignals(False)
 
@@ -480,7 +485,7 @@ class Launcher(CustomApp):
             List of history dictionary keys sorted by descending date
         """
         try:
-            history = toml.load(self.history_file_path)
+            history = toml.load(HISTORY_PATH)
         except (FileNotFoundError, PermissionError, OSError):
             history = {}
 
@@ -512,6 +517,11 @@ class Launcher(CustomApp):
             ext_enum = ExtensionEnum(extension_name)
             ext_class = self.extension_manager.extension_catalog[ext_enum].klass
             process = subprocess.Popen([sys.executable, '-m', ext_class.__module__])
+
+            self.popen_with_splash([sys.executable, '-m', ext_class.__module__],
+                                   f'Loading the {extension_name} extension... Please wait...',
+                                   5000)
+
             logger.info(f"Extension '{extension_name}' successfully launched with process PID: {process.pid}")
             return process
 

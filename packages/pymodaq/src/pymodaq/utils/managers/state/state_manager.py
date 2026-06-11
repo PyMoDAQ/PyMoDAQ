@@ -31,6 +31,7 @@ from pymodaq.utils.managers.state.utils import (
 from pymodaq.utils.config import get_set_state_path
 from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq.extensions import ExtensionEnum
+from pymodaq.launcher import HISTORY_FILE_NAME, HISTORY_PATH
 
 from datetime import datetime
 
@@ -70,7 +71,7 @@ class StateManager(ManagerBase):
 
         super().__init__(dashboard=dashboard, tree=StateParameterTree())
 
-        self.history_file_name: str = 'history.toml'
+        self.history_file_name: str = HISTORY_FILE_NAME
 
 
     @property
@@ -440,10 +441,8 @@ class StateManager(ManagerBase):
 
         entry = {date: {'experiment': self.experiment_manager.entry, 'state': self.entry}}
 
-        history_path = get_set_local_dir(user=True) / self.history_file_name
-
         try:
-            existing = toml.load(history_path)
+            existing = toml.load(HISTORY_PATH)
         except (FileNotFoundError, PermissionError, OSError):
             existing = {}
 
@@ -455,7 +454,7 @@ class StateManager(ManagerBase):
                     }
         new_dict.update(entry)
 
-        with open(history_path, "w") as f:
+        with open(HISTORY_PATH, "w") as f:
             toml.dump(new_dict, f)
 
 
