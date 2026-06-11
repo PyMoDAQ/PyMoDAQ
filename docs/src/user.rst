@@ -8,6 +8,7 @@ User's Guide
    :caption: Contents:
 
    user_folder/installation_tips
+   user_folder/launcher
    user_folder/dashboard_control_modules
    user_folder/extensions
    user_folder/configuration

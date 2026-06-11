@@ -65,6 +65,7 @@ daq_move = "pymodaq.control_modules.daq_move:main"
 daq_scan = "pymodaq.extensions.scan.daq_scan:main"
 daq_viewer = "pymodaq.control_modules.daq_viewer:main"
 dashboard = "pymodaq.dashboard:main"
+pymodaq = "pymodaq.launcher.launcher:main"
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
