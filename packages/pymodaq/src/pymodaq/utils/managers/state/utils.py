@@ -220,7 +220,7 @@ class StateModel(TableModel):
                 elif index.column() == 3:
                     suffix = ''
                     if entry.setting.parameter.opts.get('suffix', None) is not None:
-                        suffix = f' {entry.setting.parameter.opts.get('suffix')}'
+                        suffix = f' {entry.setting.parameter.opts.get("suffix")}'
                     dat = f"{entry.setting.parameter.value()}{suffix}"
                 else:
                     dat = ''
