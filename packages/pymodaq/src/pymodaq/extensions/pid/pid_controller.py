@@ -233,7 +233,7 @@ class DAQ_PID(CustomExt):
     ]
 
     def __init__(self, dockarea, dashboard):
-        super().__init__(dockarea, dashboard)
+        super().__init__(dockarea, dashboard, add_toolbar_break=False)
 
         self.settings = Parameter.create(
             title="PID settings",

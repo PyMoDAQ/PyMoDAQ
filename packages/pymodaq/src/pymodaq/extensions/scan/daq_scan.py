@@ -131,7 +131,8 @@ class DAQScan(CustomExt):
         self.ui: DAQScanUI = None  #important to be here before super is called , see do_things_after_experiment_set
 
         super().__init__(parent=dockarea,
-                         dashboard=dashboard)
+                         dashboard=dashboard,
+                         add_toolbar_break=False)
 
         self.wait_time = 1000
 

@@ -286,7 +286,7 @@ class GenericOptimization(CustomExt):
     config_saver = OptimizerConfig  #to be redefined in real implementation if needed
 
     def __init__(self, dockarea, dashboard):
-        super().__init__(dockarea, dashboard)
+        super().__init__(dockarea, dashboard, add_toolbar_break=False)
 
         self._ini_runner = False
 
