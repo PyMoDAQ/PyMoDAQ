@@ -29,13 +29,14 @@ The entries browsing and execution is incorporated in the DashBoard toolbar (see
 .. figure:: /image/dashboard/dashboard_manager_toolbar.png
    :alt: toolbar
 
-   Toolbar from the manager incorporated into the DashBoard. The manager can be opened from there and entries
-   can be browsed and directly executed.
+   Toolbar from the manager incorporated into the DashBoard. The various managers can be opened from there and entries
+   can be browsed and directly executed. In red, the Experiment toolbar, in blue the State toolbar, in yellow the
+   Overshoot toolbar and in purple the Extension toolbar (see below)
 
 
-Depending on the task, an entry will look different (see below an Experiment entry and a State entry). An experiment
-features a list of actuators and detectors while a configuration is a list of actions one can perform on control
-modules settings for a given *preset*.
+Depending on the task it manages, a manager entry will be different (see below an Experiment entry and a State entry).
+An Experiment features a list of actuators and detectors in a Parameter Tree while a State is a list of actions one can
+perform on control modules settings for a given *Experiment*, all this in a table.
 
 .. _experiment_manager:
 
@@ -45,7 +46,8 @@ Experiment manager
 The *Experiment manager* is an object that helps to generate, modify and save a set of Control Modules to be displayed
 in a :ref:`Dashboard_module`.
 
-An Experiment entry is a set of actuators and detectors represented in a tree like structure, see :numref:`preset_fig`.
+An Experiment entry is a set of actuators and detectors represented in a tree like structure, see
+:numref:`experiment_fig`.
 
 .. note::
   As of version 5.2.0, PyMoDAQ changed the vocabulary related to presets and split this concept into Experiment
@@ -104,8 +106,8 @@ the mouse is hovering the State table), see :numref:`state_context_menu`.
 
    .. _state_context_menu:
 
-.. figure:: /image/dashboard/configurator_context_menu.png
-   :alt: configurator_fig
+.. figure:: /image/dashboard/state_context_menu.png
+   :alt: state_fig
 
    The StateManager context menu
 
@@ -114,10 +116,26 @@ These allow to define:
 * the Initialization of a given control module
 * the value of an Actuator (an absolute move will be done)
 * a Waiting time before moving to the next subentry
+* stopping control modules or extensions
 
 There are also many ways to move around and delete the subentries: either using the
 arrows in the middle of the window (look at their tooltip) or shortcuts: Ctrl+Up to move up,
 Del to delete...
+
+
+.. _extension_manager:
+
+Extension Manager
+-----------------
+
+The Extension Manager is using the Manager Framework to allow the display of all installed Dashboard Extensions. You
+cannot really configure Extensions as you do with Experiments or States but the manager framework allow to have built
+in toolbar (see :numref:`dashboard_manager_toolbar` in purple), to be used as a shortcut to quickly load an extension
+from the DashBoard or from other Modules (like the launcher).
+
+If loading an Extension from somewhere else than from a DashBoard, an empty DashBoard will be created first.
+You'll then have to load first an Experiment before you can use your extension.
+
 
 
 .. _overshoot_manager:
@@ -127,23 +145,26 @@ Overshoot manager
 
 .. note::
 
-  As of version 5.2.0 the overshoot manager will be rewritten to use the general framework described above and also
+  As of version 5.2.0 the overshoot manager has also be rewritten to use the general framework described above and also
   to use entries from the StateManager to trigger a *safe* state of your experiment setup...
 
 
-The *Overshoot* manager is used to configure **safety actions** (for instance the absolute positioning of one or more
-actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
-out of range with respect to some predefined bounds, see :numref:`overshoot_manager_fig`. It is configurable in the framework of the Dashboard module,
-when actuators and detectors have been activated. A file containing its configuration will be saved (with a name derived
-from the preset configuration name and will automatically be loaded with its preset if existing on disk)
+The *Overshoot* manager, triggered either from the toolbar or the *Tools* menu (see :numref:`dashboard_manager_toolbar`
+in yellow),
+is used to configure**safety actions** (for instance the absolute positioning of one or more
+actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module or
+actuator's value) gets above or below some predefined threshold, see :numref:`overshoot_manager_fig`. A given Overshoot
+is set for a given Experiment and will trigger a predefined State. For one Experiment, one can define several Overshoot
+each with their given State. However, only one at a time is activated.
+
+
 
   .. _overshoot_manager_fig:
 
-.. figure:: /image/DAQ_Scan/overshoot_fig.png
+.. figure:: /image/dashboard/overshooter_fig.png
    :alt: overshoot_fig
 
-   An example of an overshoot creation named *overshoot_default* (and corresponding xml file)
-   containing one listening detector and 2 actuators to be activated.
+   An example of an Overshoot creation named *default*  trigger the *default* State by monitoring ...
 
 
 .. _roi_manager:
