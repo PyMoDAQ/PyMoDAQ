@@ -31,9 +31,9 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "pymodaq_utils>=1.0.11",
-    "pymodaq_gui>=5.0.32",
-    "pymodaq_data>=5.0.21",
+    "pymodaq_utils>5.1",
+    "pymodaq_gui>5.1",
+    "pymodaq_data>5.1",
     "pymodaq_plugin_manager>=0.0.17",
     "pymodaq_plugins_mock>=5.0.12",
     "simple_pid",
