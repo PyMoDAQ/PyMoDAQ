@@ -233,8 +233,6 @@ class StateManager(ManagerBase):
         self.delegate = ParameterDelegate()
         self.table_out.setItemDelegate(self.delegate)
 
-
-
         vlayout = QtWidgets.QVBoxLayout()
         hwidget = QtWidgets.QWidget()
         hlayout = QtWidgets.QHBoxLayout()
@@ -277,16 +275,16 @@ class StateManager(ManagerBase):
                                       add_experiment=True, add_state=False, add_break=False)
         self.experiment_manager.enable_actions(True)
 
-        self.add_action(EntryActions.ADD, 'Add', 'SP_ArrowRight', toolbar='move',
+        self.add_action(EntryActions.ADD, 'Add', 'arrow_circle_right', toolbar='move',
                         tip='Add the current Parameter item',
                         )
-        self.add_action(EntryActions.REMOVE, 'Remove', 'SP_ArrowLeft', toolbar='move',
+        self.add_action(EntryActions.REMOVE, 'Remove', 'arrow_circle_left', toolbar='move',
                         tip='Delete the current Configuration item ("Del")',
                         shortcut=Qt.Key.Key_Delete)
-        self.add_action(EntryActions.UP, 'Move Up', 'SP_ArrowUp', toolbar='move',
+        self.add_action(EntryActions.UP, 'Move Up', 'arrow_circle_up', toolbar='move',
                         tip='Move UP the current Configuration item ("Ctrl+Up")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
-        self.add_action(EntryActions.DOWN, 'Move Down', 'SP_ArrowDown', toolbar='move',
+        self.add_action(EntryActions.DOWN, 'Move Down', 'arrow_circle_down', toolbar='move',
                         tip='Move Down the current Configuration item ("Ctrl+Down")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.toolbar.addSeparator()
