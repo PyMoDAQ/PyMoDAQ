@@ -40,16 +40,16 @@ From the Windows *Start* menu, execute the *Miniforge Prompt*.
    currently activated. (base) indicates that we are in the default environment of *mamba*.
 
 In order to have a clean installation of PyMoDAQ on our machine, we isolate it in a dedicated Python environment.
-Let’s execute the following command to create an environment called *pymodaq* with a 3.11 version of Python.
+Let’s execute the following command to create an environment called *pymodaq* with a 3.12 version of Python.
 
-``mamba create -n pymodaq_env python=3.11.*``
+``mamba create -n pymodaq_env python=3.12.*``
 
 .. note::
    * We can call the environment as we wish, here *pymodaq_env* (the environment is not to be mixed up with the pymodaq
      software that will be installed below)
-   * As a rule of thumb, choose the second last minor version of Python to be sure that PyMoDAQ is compatible. Here 3.11
-     as python 3.13 is on the market!
-   * here `python=3.11.*` means the last patched version of python 3.11.x will be installed
+   * As a rule of thumb, choose the second last minor version of Python to be sure that PyMoDAQ is compatible. Here 3.12
+     as python 3.14 is on the market!
+   * here `python=3.12.*` means the last patched version of python 3.12.x will be installed
 
 And let’s activate it.
 
@@ -63,7 +63,7 @@ Install PyMoDAQ
 After this preparation, the installation of PyMoDAQ is done with a single command line. It takes a few minutes to
 download and install all the dependencies in our new environment.
 
-``pip install pymodaq pyqt5``
+``pip install pymodaq pyside6``
 
 .. note::
 

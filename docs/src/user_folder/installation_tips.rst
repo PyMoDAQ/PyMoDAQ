@@ -34,12 +34,12 @@ Qt backend
 
 PyMoDAQ source code uses a python package called `qtpy`__ that add an abstraction layer between PyMoDAQ's code
 and the actual Qt python implementation (either PyQt6 or PySide6, but also PyQt5). Qtpy will look on what
-is installed on your environment and load PyQt5 by default (see the :ref:`configfile` to change this default behaviour).
+is installed on your environment and load PySide6 by default (see the :ref:`configfile`
+to change this default behaviour).
 This means you have to install one of these backends on your environment using either:
 
-
-* ``pip install pyqt6`` 
 * ``pip install pyside6``
+* ``pip install pyqt6``
 * ``pip install pyqt5``
 
 
@@ -54,11 +54,13 @@ Loading modules
 During its installation, a few scripts have been installed within your environment directory, this means you can start
 PyMoDAQ's main functionalities directly writing in your console either:
 
+*  ``pymodaq`` => to start the PyMoDAQ Launcher, see :ref:`launcher_section` (as of version 5.2.x, should be preferred)
 *  ``dashboard``
-*  ``daq_scan``
-*  ``daq_logger``
 *  ``daq_viewer``
 *  ``daq_move``
+
+*  ``daq_scan``
+*  ``daq_logger``
 *  ``h5browser``
 *  ``plugin_manager``
 

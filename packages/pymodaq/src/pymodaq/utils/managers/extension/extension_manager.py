@@ -7,7 +7,7 @@ from qtpy import QtWidgets
 from pymodaq.extensions import get_extensions, ExtensionEnum
 from pymodaq.extensions.custom_ext import CustomExt
 from pymodaq.utils.gui_utils.loader_utils import create_extension
-from pymodaq_gui.managers.manager_base import ManagerBase
+from pymodaq_gui.managers.manager_base import ManagerBase, ManagerActions
 from pymodaq_utils import set_logger
 from pymodaq_utils.logger import get_module_name
 
@@ -20,6 +20,7 @@ logger = set_logger(get_module_name(__file__))
 class ExtensionManager(ManagerBase):
     entry_type = 'extension'
     entry_extension = '.xml'
+    icon_name = 'extension'
 
     def __init__(self, dashboard: 'DashBoard' = None):
         self.extension_catalog = get_extensions()
@@ -107,34 +108,31 @@ class ExtensionManager(ManagerBase):
             logger.error(f"Failed to load extension {ext_enum.value}: {e}")
             raise
 
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.extensions_menu = self.add_menu('extensions', "Extensions",
+                                             parent_menu=self.menubar)
+
     def setup_actions(self):
         """Add extension actions to the manager."""
         for ext_name in ExtensionEnum.names():
             self.add_action(ExtensionEnum[ext_name],
-                          ExtensionEnum[ext_name].value,
-                          auto_toolbar=False)
+                            ExtensionEnum[ext_name].value,
+                            auto_toolbar=False,
+                            menu=self.extensions_menu
+                        )
+
+        self.get_action(ManagerActions.COPY).setVisible(False)
+        self.get_action(ManagerActions.NEW).setVisible(False)
+        self.get_action(ManagerActions.DELETE).setVisible(False)
+        self.get_action(ManagerActions.SAVE).setVisible(False)
+        self.get_action(ManagerActions.RELOAD).setVisible(False)
+        self.get_action(ManagerActions.OPEN).setVisible(False)
 
     def connect_things(self):
         """Connect extension actions to load methods."""
         for ext_name in ExtensionEnum.names():
             self.connect_action(ExtensionEnum[ext_name],
                                lambda e=ExtensionEnum[ext_name]: self.load_extension(e))
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        """Add extensions menu."""
-        self.extensions_menu = self.add_menu('extensions', "Extensions")
-        for ext_name in ExtensionEnum.names():
-            ext_enum = ExtensionEnum[ext_name]
-            if not self.has_action(ext_enum):
-                self.add_action(
-                    ext_enum,
-                    ext_enum.value,
-                    auto_toolbar=False,
-                    auto_menu=False,
-                )
-            self.extensions_menu.addAction(
-                self.get_action(ExtensionEnum[ext_name])
-            )
 
     def quit_fun(self):
         """Clean up extensions and internal dashboard."""
