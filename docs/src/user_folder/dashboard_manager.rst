@@ -151,7 +151,7 @@ Overshoot manager
 
 The *Overshoot* manager, triggered either from the toolbar or the *Tools* menu (see :numref:`dashboard_manager_toolbar`
 in yellow),
-is used to configure**safety actions** (for instance the absolute positioning of one or more
+is used to configure **safety actions** (for instance the absolute positioning of one or more
 actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module or
 actuator's value) gets above or below some predefined threshold, see :numref:`overshoot_manager_fig`. A given Overshoot
 is set for a given Experiment and will trigger a predefined State. For one Experiment, one can define several Overshoot
@@ -164,7 +164,8 @@ each with their given State. However, only one at a time is activated.
 .. figure:: /image/dashboard/overshooter_fig.png
    :alt: overshoot_fig
 
-   An example of an Overshoot creation named *default*  trigger the *default* State by monitoring ...
+   An example of an Overshoot creation named *default*  trigger the *default* State by monitoring if the value of
+   the Xpiezo is above 10 or if the Ypiezo is below 50.
 
 
 .. _roi_manager:
