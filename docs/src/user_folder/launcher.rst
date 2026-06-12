@@ -1,3 +1,5 @@
+.. _launcher_section:
+
 Launcher
 =========
 
