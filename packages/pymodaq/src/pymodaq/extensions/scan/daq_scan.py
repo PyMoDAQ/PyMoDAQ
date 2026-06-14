@@ -879,7 +879,11 @@ class DAQScan(CustomExt):
         * "Timeout"
         """
         if status.command == "Update_Status":
-            self.update_status(status.attribute, wait_time=self.wait_time)
+            if isinstance(status.attribute, (tuple, list)):
+                txt, wait_time = status.attribute
+            else:
+                txt, wait_time = status.attribute, self.wait_time
+            self.update_status(txt, wait_time=wait_time)
 
         elif status.command == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
@@ -934,13 +938,6 @@ class DAQScan(CustomExt):
 
         elif status.command == 'add_nav_axes':
             self.module_and_data_saver.add_nav_axes(status.attribute)
-
-        elif status.command == 'splash':
-            if status.attribute is None:
-                self.splash_sc.setVisible(False)
-            else:
-                self.splash_sc.show()
-                self.splash_sc.showMessage(status.attribute)
 
     ############
     #  PLOTTING
@@ -1402,10 +1399,9 @@ class DAQScanAcquisition(QObject):
                 indexes = [self.ind_average] + list(indexes)
             indexes = tuple(indexes)
             if self.ind_scan == 0:
-                self.status_sig.emit(utils.ThreadCommand("splash",
-                                                         "Creating the arrays nodes in the h5file, please be patient"))
-                QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+                self.status_sig.emit(utils.ThreadCommand(
+                    "Update_Status",
+                    attribute=("Creating the arrays nodes in the h5file, please be patient", 0)))
                 QThread.msleep(50)
                 nav_axes = self.scanner.get_nav_axes()
                 if self.Naverage > 1:
@@ -1438,15 +1434,12 @@ class DAQScanAcquisition(QObject):
 
             if self.ind_scan == 0:
                 self.status_sig.emit(utils.ThreadCommand("Update_Status", attribute="Acquisition has started"))
-                self.status_sig.emit(utils.ThreadCommand("splash", attribute=None))
 
             self.det_done_flag = True
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
         except Exception as e:
             logger.exception(str(e))
-        finally:
-            QtWidgets.QApplication.restoreOverrideCursor()
 
     def timeout(self):
         """
