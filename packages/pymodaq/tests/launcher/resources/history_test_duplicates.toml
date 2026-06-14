@@ -1,0 +1,19 @@
+["2026-20-04:10:15:00"]
+experiment = "exp_test"
+state = "hundred_value"
+
+["2026-20-04:10:16:04"]
+experiment = "exp_test"
+state = "ten_value"
+
+["2026-20-04:10:18:00"]
+experiment = "exp_test"
+state = "ten_value"
+
+["2026-20-04:10:19:00"]
+experiment = "exp_test"
+state = "ten_value"
+
+["2026-20-04:10:20:00"]
+experiment = "exp_test"
+state = "ten_value"

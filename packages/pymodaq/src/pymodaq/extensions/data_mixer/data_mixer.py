@@ -47,7 +47,7 @@ class DataMixer(CustomExt):
     dte_computed_signal = QtCore.Signal(DataToExport)
 
     def __init__(self, parent: gutils.DockArea, dashboard):
-        super().__init__(parent, dashboard)
+        super().__init__(parent, dashboard, add_toolbar_break=False)
 
         self.model_class: Optional[DataMixerModel] = None
         self.datamixer_config = DataMixerConfig()

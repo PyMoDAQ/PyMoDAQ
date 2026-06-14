@@ -36,7 +36,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     command_sig = Signal(ThreadCommand)
 
     def __init__(self, parent, toolbar=None):
-        CustomApp.__init__(self, parent, toolbar=toolbar)
+        CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)
         self.setup_docks_and_widgets()
         ViewerDispatcher.__init__(self, self.dockarea, title='Scanner',
                                   next_to_dock=self.dock_command)

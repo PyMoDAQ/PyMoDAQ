@@ -357,7 +357,7 @@ class DAQ_Move(ParameterControlModule):
                     self.title, data=[np.array([value])], units=self.units,
                 )
             self._send_to_leco = send_to_leco
-            if value.equal_to(self._current_value, self.epsilon):
+            if value.equal_to(self._current_value, Q_(self.epsilon, self.units)):
                 self.thread_status(ThreadCommand(ThreadStatusMove.MOVE_DONE, value))
             else:
                 if self.ui is not None:
