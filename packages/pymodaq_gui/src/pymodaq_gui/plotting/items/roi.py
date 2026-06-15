@@ -205,7 +205,7 @@ class ROI(pgROI, ROIMixin, ROIBase):
         if self.menu is None:
             self.menu = QtWidgets.QMenu()
             self.menu.setTitle(translate("ROI", "ROI"))
-            self.menu.addAction('Copy ROI to clipboard', self.copy_clipboard)
+            self.menu.addAction('Copy ROI indexes to clipboard', self.copy_clipboard)
             self.menu.addAction("Copy ROI", self._emitCopyRequest)
             self.menu.addAction("Remove ROI", self._emitRemoveRequest)
         return self.menu
