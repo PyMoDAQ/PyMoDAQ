@@ -130,10 +130,6 @@ class ROIMixin:
         ...
 
     @abstractmethod
-    def color(self):
-        ...
-
-    @abstractmethod
     def getMenu(self):
         ...
 
@@ -156,16 +152,41 @@ class ROIMixin:
         info = self.to_info()
         self._clipboard.setText(str(info.to_slices()))
 
-    @abstractmethod
-    def center(self):
-        ...
+    def color(self):
+        raise NotImplementedError
 
-    @abstractmethod
-    def width(self):
-        ...
-    @abstractmethod
-    def height(self):
-        ...
+    def set_color(self, value):
+        raise NotImplementedError
+
+    def center(self) -> IterableType[float]:
+        raise NotImplementedError
+
+    def set_center(self, value: IterableType[float]):
+        raise NotImplementedError
+
+    def width(self) -> float:
+        raise NotImplementedError
+
+    def set_width(self, value: float):
+        raise NotImplementedError
+
+    def height(self) -> float:
+        raise NotImplementedError
+
+    def set_height(self, value: float):
+        raise NotImplementedError
+
+    def x(self) -> float:
+        raise NotImplementedError
+
+    def set_x(self, value: float):
+        raise NotImplementedError
+
+    def y(self) -> float:
+        raise NotImplementedError
+
+    def set_y(self, value: float):
+        raise NotImplementedError
 
     def key(self) -> str:
         return roi_format(self.index)
@@ -237,9 +258,11 @@ class ROI(pgROI, ROIMixin, ROIBase):
         else:
             ev.ignore()
 
-    @property
     def color(self):
         return self.pen.color()
+
+    def set_color(self, value):
+        self.pen.setColor(value)
 
     def center(self) -> pg.Point:
         """ Get the center position of the ROI """
@@ -247,7 +270,11 @@ class ROI(pgROI, ROIMixin, ROIBase):
 
     def set_center(self, center: Union[pg.Point, Tuple[float, float]]):
         """ Set the center position of the ROI """
-        self.setPos(center - rotate2D(point=(self.width()/2,self.height()/2), angle=np.deg2rad(self.angle())))
+        if isinstance(center, pg.Point):
+            center = (center.x(), center.y())
+        pos = tuple(np.array(center) -
+                    np.array(rotate2D(point=(self.width()/2, self.height()/2), angle=np.deg2rad(self.angle()))))
+        self.setPos(pos)
 
     def to_info(self) -> 'RoiInfo':
         """ Return the info about the ROI """
@@ -256,8 +283,27 @@ class ROI(pgROI, ROIMixin, ROIBase):
     def width(self) -> float:
         return self.size().x()
 
+    def set_width(self, value: float):
+        self.setSize((value, self.height()), center=(0.5, 0.5))
+
     def height(self) -> float:
         return self.size().y()
+
+    def set_height(self, value: float):
+        self.setSize((self.width(), value), center=(0.5, 0.5))
+
+    def x(self) -> float:
+        return self.pos().x()
+
+    def set_x(self, value: float):
+        self.setPos(value, self.y())
+
+    def y(self) -> float:
+        return self.pos().y()
+
+    def set_y(self, value: float):
+        self.setPos(self.x(), value)
+
 
 
 class ROIBrushable(ROI):
@@ -348,19 +394,35 @@ class LinearROI(pgLinearROI, ROIMixin, ROIBase):
     def pos(self) -> Tuple[float, float]:
         return self.getRegion()
 
-    def center(self) -> float:
-        pos = self.pos()
-        return (pos[0] + pos[1]) / 2
-
-    def setPos(self, pos: Tuple[int, int]):
+    def setPos(self, pos: Tuple[float, float]):
         self.setRegion(pos)
 
     def setPen(self, color):
         self.setBrush(color)
 
-    @property
     def color(self):
         return self.brush.color()
+
+    def set_color(self, value):
+        self.brush.setColor(value)
+
+    def center(self) -> float:
+        """ Get the center position of the ROI """
+        pos = self.pos()
+        return (pos[0] + pos[1]) / 2
+
+    def x(self) -> float:
+        return self.pos()[0]
+
+    def set_x(self, value: float):
+        self.setPos((value, self.y()))
+
+    def y(self) -> float:
+        return self.pos()[1]
+
+    def set_y(self, value: float):
+        self.setPos((self.x(), value))
+
 
 @ROIFactory.register()
 class EllipseROI(ROI):
