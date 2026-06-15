@@ -1,5 +1,5 @@
 #this is the configuration file of the pymodaq_gui package
-
+message_status_persistence = 1000  # ms
 
 [qtbackend]
 backend = ["pyqt6",  "pyqt5", "pyside6",]
@@ -28,3 +28,4 @@ country = "UnitedStates"
     fill = [false, true]  # pymodaq uses the first elt in config
     size = [40, 20]  # pymodaq uses the first elt in config
     style = ['rounded']  # pymodaq uses the first elt in config
+

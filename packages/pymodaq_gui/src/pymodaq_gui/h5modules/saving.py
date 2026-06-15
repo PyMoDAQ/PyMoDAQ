@@ -143,9 +143,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Browse file...', 'name': 'browse_file', 'type': 'action'},
         {'title': 'Data format:', 'name': 'data_format', 'type': 'group', 'children': [
-            {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list',
-             'limits': config('data', 'data_saving', 'data_type', 'dynamic'),
-             'value': config('data', 'data_saving', 'data_type', 'dynamic')[0]},
             {'title': 'Fill value:', 'name': 'fill_value', 'type': 'list',
              'limits': {'0': 0., 'nan': np.nan},
              'value': 0. if config('data', 'data_saving', 'data_type', 'fill_value')[0] == '0' else np.nan,
@@ -190,6 +187,11 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
     def show_settings(self, show=True):
         self.settings_tree.setVisible(show)
 
+    @staticmethod
+    def get_params_for_save_type(type : SaveType):
+        return [
+            {**p, 'value': type.name} if p['name'] == 'save_type' else p for p in H5SaverBase.params
+        ]
     def _check_swmr_compatibility(self, fullpathname, update_h5):
         """Check SWMR compatibility of an existing file and prompt user on mismatch.
 
@@ -615,7 +617,7 @@ class H5Saver(H5SaverBase, QObject):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             None, "Select HDF5 File",
             start_path,
-            "HDF5 Files (*.h5);;All Files (*)"
+            "HDF5 Files (*.h5);;All Files (*)",
         )
         if file_path:
             try:
@@ -630,11 +632,15 @@ class H5Saver(H5SaverBase, QObject):
                 logger.error(f"Could not open file {file_path}: {e}")
                 QtWidgets.QMessageBox.warning(
                     None, "Error",
-                    f"Could not open file:\n{file_path}\n\nError: {e}"
+                    f"Could not open file:\n{file_path}\n\nError: {e}",
                 )
 
     def show_file_content(self):
-        win = QtWidgets.QMainWindow()
+        from pymodaq_gui.utils.widgets.window import make_window
+        from pymodaq_gui.utils.shared_ui import SharedUI
+
+        win, area = make_window(area=False, title='H5Browser')
+
         if not self.isopen():
             if self.h5_file_path is not None and self.h5_file_name is not None:
                 full_path = self.h5_file_path / self.h5_file_name
@@ -649,4 +655,7 @@ class H5Saver(H5SaverBase, QObject):
             self.flush()
             self.analysis_prog = browsing.H5Browser(
                 win, h5file=self.h5file, backend=self.backend)
-        win.show()
+        shared_ui = SharedUI(win)
+        shared_ui.affect_application(self.analysis_prog)
+
+        shared_ui.show()

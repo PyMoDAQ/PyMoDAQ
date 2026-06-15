@@ -95,7 +95,7 @@ class CollapsibleWidget(QWidget):
 
         # Create animation for smooth expand/collapse
         self.animation = QPropertyAnimation(
-            self.collapsible_container, self.animated_property
+            self.collapsible_container, self.animated_property,
         )
         self.animation.setDuration(self.animation_duration)
         self.animation.setEasingCurve(QEasingCurve.InOutQuad)
@@ -146,16 +146,16 @@ class CollapsibleWidget(QWidget):
 
         # Start the animation
         self.animation.start()
-        
+
         self.toggled_signal.emit(self.is_expanded)
 
     def _update_toggle_symbol(self, expanded):
         """Update the toggle button symbol based on expanded state"""
         if not isinstance(self.toggle_widget, QPushButton) or not self.original_text:
             return
-        text = self.original_text if not expanded else symbol_map[self.original_text]        
+        text = self.original_text if not expanded else symbol_map[self.original_text]
         self.toggle_widget.setText(text)
-        
+
     def set_expanded(self, expanded):
         """Programmatically set the expanded state without animation"""
         if expanded and not self.is_expanded:
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     content_left_layout.addWidget(QPushButton("Option 2"))
 
     collapsible_left = CollapsibleWidget(
-        toggle_left, content_left, direction="left", content_before_toggle=True
+        toggle_left, content_left, direction="left", content_before_toggle=True,
     )
     left_layout.addWidget(collapsible_left)
     left_layout.addStretch()
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     content_right_layout.addWidget(QLineEdit("Setting 2"))
 
     collapsible_right = CollapsibleWidget(
-        toggle_right, content_right, direction="right", content_before_toggle=False
+        toggle_right, content_right, direction="right", content_before_toggle=False,
     )
     right_layout.addWidget(collapsible_right)
     right_layout.addStretch()
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     content_top_layout.addWidget(QPushButton("Action Button"))
 
     collapsible_top = CollapsibleWidget(
-        toggle_top, content_top, direction="top", content_before_toggle=True
+        toggle_top, content_top, direction="top", content_before_toggle=True,
     )
     main_layout.addWidget(collapsible_top)
 
@@ -303,14 +303,14 @@ if __name__ == "__main__":
 
     content_bottom = QFrame()
     content_bottom.setStyleSheet(
-        "background-color: #fff3cd; border: 2px solid #ffc107;"
+        "background-color: #fff3cd; border: 2px solid #ffc107;",
     )
     content_bottom_layout = QVBoxLayout(content_bottom)
     content_bottom_layout.addWidget(QLabel("Bottom Content Area"))
     content_bottom_layout.addWidget(QLabel("Additional Information"))
 
     collapsible_bottom = CollapsibleWidget(
-        toggle_bottom, content_bottom, direction="bottom", content_before_toggle=False
+        toggle_bottom, content_bottom, direction="bottom", content_before_toggle=False,
     )
     main_layout.addWidget(collapsible_bottom)
 

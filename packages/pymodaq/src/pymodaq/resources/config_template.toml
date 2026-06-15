@@ -1,12 +1,5 @@
 control_module_ini_polling = 60 # in seconds
 
-
-[presets]
-default_preset_for_scan = "preset_default"
-default_preset_for_logger = "preset_default"
-default_preset_for_pid = "beam_steering_mock"
-default_preset_for_datamixer = "preset_default"
-
 [actuator]
 ui = ['Simple', 'Original', 'Binary'] #other eventual options will be added programmaticaly at startup
 epsilon_default = 1
@@ -56,3 +49,7 @@ wait_time_between = 0
     [optimizer.bounds]
     actuator_min = -10
     actuator_max = 10
+
+[launcher]
+max_history_size = 20
+keep_duplicates = false

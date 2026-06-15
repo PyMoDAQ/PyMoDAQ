@@ -34,12 +34,10 @@ class CustomConfig1(BaseConfig):
 
 
 TOML_DICT = dict(
-    scan=dict(scan1d=
-              dict(start=0.,
+    scan=dict(scan1d=dict(start=0.,
                    stop=5,
                    step=0.1),
-              scan2d=
-              dict(rmax=5,
+              scan2d=dict(rmax=5,
                    rstep=0.2),
               ),
     general=dict(name='myname',
@@ -57,6 +55,10 @@ def test_replace_extension():
     assert replace_file_extension(test_name+'.tiff', 'toml') == f'{test_name}.toml'
     assert replace_file_extension(test_name, 'toml') == f'{test_name}.toml'
 
+
+def test_import():
+    from pymodaq_utils.config import (BaseConfig, Config, ConfigError, get_set_config_dir, USER,
+                                      CONFIG_BASE_PATH, get_set_local_dir)
 
 @pytest.mark.parametrize('user', [False, True])
 def test_get_set_config_dir(user):
@@ -244,8 +246,7 @@ def test_nested_update_from_user(tmp_path):
     dest_file = copy_template_config(test_name, source_path=template_path)
 
     user_dict = dict(
-        scan=dict(scan1d=
-                  dict(start=23.,
+        scan=dict(scan1d=dict(start=23.,
                        ),
                   ),
     )
@@ -273,8 +274,6 @@ def test_required_config_entries():
     assert 'debug_level' in config('general')
     assert isinstance(config('general', 'debug_level'), list)
     assert 'check_version' in config('general')
-    assert 'message_status_persistence' in config('general')
-
 
     assert 'user' in config
     assert 'name' in config('user')
@@ -299,6 +298,3 @@ def test_required_config_entries():
     assert 'host' in config('network', 'leco-server')
     assert 'port' in config('network', 'leco-server')
 
-    assert 'tcp-server' in config('network')
-    assert 'ip' in config('network', 'tcp-server')
-    assert 'port' in config('network', 'tcp-server')

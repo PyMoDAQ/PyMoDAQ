@@ -64,8 +64,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          cd ..
-          cd ..
+          cd ../../
           python install-packages.py -d -u pymodaq_data
 
       - name: Install tables (optional – no wheel for all Python versions)

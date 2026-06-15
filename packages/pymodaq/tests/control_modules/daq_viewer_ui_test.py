@@ -9,7 +9,8 @@ from pytest import fixture
 
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
-from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI, options, DAQTypesEnum
+from pymodaq.control_modules.daq_viewer_ui.ui_base import DAQ_Viewer_UI, options
+from pymodaq.control_modules.instruments import DAQTypesEnum
 from pymodaq_gui.utils.dock import DockArea
 from qtpy import QtWidgets
 from pymodaq.control_modules.thread_commands import UiToMainViewer
@@ -96,7 +97,7 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].attribute[0]
     assert blocker.args[0].attribute[1] == MOD
 
-    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    daq_viewer.detector_init = True  # in real implementation of the DAQ_Viewer, this command is called
     #after the right return from the plugin instrument
 
     assert daq_viewer.is_action_enabled('save_current')
@@ -118,11 +119,11 @@ def test_signals(ini_daq_viewer_ui):
 @pytestmark
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
-    IND_det_type = 2
+    IND_det_type = 1
     daq_type = DAQTypesEnum[DAQTypesEnum.names()[IND_daq_type]]
     det_name = options[daq_type.name][IND_det_type]
 
-    detector  = SelectedModule(daq_type,det_name)
+    detector = SelectedModule(daq_type,det_name)
 
     daq_viewer, qtbot = ini_daq_viewer_ui
     daq_viewer.detector = detector
@@ -150,7 +151,7 @@ def test_do_grab(ini_daq_viewer_ui):
     daq_viewer, qtbot = ini_daq_viewer_ui
 
     daq_viewer.do_init(True)
-    daq_viewer.detector_init = True # in real implementation of the DAQ_Viewer, this command is called
+    daq_viewer.detector_init = True  # in real implementation of the DAQ_Viewer, this command is called
     #after the right return from the plugin instrument
 
     with pytest.raises(qtbot.TimeoutError):

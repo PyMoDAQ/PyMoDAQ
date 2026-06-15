@@ -5,7 +5,9 @@ from qtpy import QtWidgets
 
 from typing import Optional
 
+from pymodaq_gui.utils.widgets.window import make_window
 from pymodaq_data.data import DataRaw, Axis
+from pymodaq_gui.utils.shared_ui import SharedUI
 
 from pymodaq_gui.utils.widgets.table import SpinBoxDelegate
 from pymodaq_gui.parameter.utils import get_widget_from_tree
@@ -20,7 +22,7 @@ class DataPicker(CustomApp):
     params = [
         {'title': 'picker status', 'name': 'picker_status', 'type': 'led', 'value': False},
         {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-         'delegate': SpinBoxDelegate, 'menu': True}, ]
+         'delegate': SpinBoxDelegate, 'menu': True}]
 
     def __init__(self, area: DockArea):
         super().__init__(area)
@@ -31,7 +33,7 @@ class DataPicker(CustomApp):
 
         self.setup_ui()
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         self.docks['viewer'] = Dock('Viewer2D')
         self.dockarea.addDock(self.docks['viewer'], 'right')
         widget = QtWidgets.QWidget()
@@ -47,11 +49,11 @@ class DataPicker(CustomApp):
     def setup_actions(self):
         self.add_action('save_points', 'Save Points', 'move_contour',
                         tip='If checked, double clicking will put points in the table',
-                        checkable=True)
+                        checkable=True,
+                        menu='actions')
 
-    def setup_menu(self):
-        action_menu = self._menubar.addMenu('Actions')
-        self.affect_to('save_points', action_menu)
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_menu('actions', 'Actions', self.menubar)
 
     def connect_things(self):
         self.connect_action('save_points',
@@ -100,10 +102,13 @@ def main():
     import numpy as np
 
     app = mkQApp('DataPicker')
-    area = DockArea()
-    win = QtWidgets.QMainWindow()
-    win.setCentralWidget(area)
+
+    win, area = make_window(title='DataPicker')
+
     data_picker = DataPicker(area)
+
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(data_picker)
 
     Nx = 100
     Ny = 200
@@ -115,10 +120,10 @@ def main():
     data_red += np.random.random(data_red.shape)
     data_to_plot = DataRaw(name='mydata', distribution='uniform', data=[data_red],
                            axes=[Axis('xaxis', units='m', data=x, index=1),
-                                 Axis('yaxis', units='mm', data=y, index=0), ])
+                                 Axis('yaxis', units='mm', data=y, index=0)])
 
     data_picker.show_data(data_to_plot)
-    win.show()
+
     sys.exit(app.exec())
 
 

@@ -84,10 +84,10 @@ class DataFromPlugins(DataRaw):
             kwargs['do_save'] = do_save
         #######
 
-        if 'do_plot' not in kwargs:
-            kwargs['do_plot'] = True
-        if 'do_save' not in kwargs:
-            kwargs['do_save'] = True
+        # if 'do_plot' not in kwargs:
+        #     kwargs['do_plot'] = True
+        # if 'do_save' not in kwargs:
+        #     kwargs['do_save'] = True
         super().__init__(*args, **kwargs)
 
 

@@ -281,7 +281,7 @@ class ConfigSingleton(Singleton):
                 "You should use @GlobalConfig.register() decorator instead.\n"
                 f"Your config entries will then be stored inside GlobalConfig "
                 f"object, prefixed with `config_name` "
-                f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])"
+                f"(i.e. config['an_entry'] -> config['{getattr(cls, 'config_name', '`self.config_name`')}', 'an_entry'])",
             )
         return Singleton.__call__(cls, *args, **kwargs)
 
@@ -315,7 +315,7 @@ class BaseConfig(metaclass=ConfigSingleton):
         self.save()
 
     def __repr__(self):
-        return f'{self.config_name} configuration file'
+        return f'{self.config_name} preference file'
 
     def __call__(self, *args):
         with self._lock.read_lock():
@@ -463,6 +463,8 @@ class GlobalConfig(metaclass=Singleton):
                                           f'`config_name` ({wrapped_class.config_name})')
             config = cls()
             name = wrapped_class.config_name
+            if 'config_' in name:
+                name = name.split('config_')[-1]
 
             with cls._register_lock:
                 if name in config._configs:
@@ -492,7 +494,7 @@ class GlobalConfig(metaclass=Singleton):
         return ('Managing configurations for:\n'
             + '\n'.join(map(
                 lambda kv: f'\t{kv[0]}: {kv[1]}',
-                self._configs.items()
+                self._configs.items(),
             ))
         )
     def __contains__(self, item):
@@ -515,7 +517,7 @@ class GlobalConfig(metaclass=Singleton):
 
         if isinstance(key, tuple):
             config = config[key[0]]
-            key =  key[1:]
+            key = key[1:]
         return config[key]
 
     def __setitem__(self, key, value):

@@ -90,6 +90,34 @@ class H5SaverLowLevel(H5Backend):
         fill_str = config('data', 'data_saving', 'data_type', 'fill_value')[0]
         self.fill_value: float = np.nan if fill_str == 'nan' else float(fill_str)
 
+    @classmethod
+    def from_file(cls, path: Union[Path, str], save_type: SaveType = 'scan',
+                  new_file: bool = False, metadata: dict = None) -> 'H5SaverLowLevel':
+        """Create and initialise an H5SaverLowLevel from a file path.
+
+        Convenience factory that combines the constructor and :meth:`init_file`
+        call into a single expression.
+        Parameters
+        ----------
+        path: Path or str
+            Full path to the HDF5 file.
+        save_type: SaveType
+            Type label stored in the file (default ``'scan'``).
+        new_file: bool
+            If ``True`` a new file is created, otherwise the existing file is
+            opened for appending.
+        metadata: dict or None
+            Extra attributes written to the raw-data group on creation.
+
+        Returns
+        -------
+        H5SaverLowLevel
+            A fully initialised instance ready for reading/writing.
+        """
+        h5saver = cls(save_type)
+        h5saver.init_file(file_name=Path(path), new_file=new_file, metadata=metadata)
+        return h5saver
+
     def set_swmr_flush_interval(self, interval: int):
         """Set how often to flush data for SWMR readers.
 
@@ -123,7 +151,9 @@ class H5SaverLowLevel(H5Backend):
 
     def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False,
                   metadata: dict = None, swmr_mode: bool = False):
-        """Initializes a new h5 file.
+        """Initializes a new h5 file,
+
+        Should have an extension with h5 in it.
 
         Parameters
         ----------
@@ -146,7 +176,10 @@ class H5SaverLowLevel(H5Backend):
         datetime_now = datetime.datetime.now()
 
         if file_name is not None and isinstance(file_name, Path):
-            self.h5_file_name = file_name.stem + ".h5"
+            if 'h5' not in file_name.suffix:
+                self.h5_file_name = file_name.stem + ".h5"
+            else:
+                self.h5_file_name = file_name.name
             self.h5_file_path = file_name.parent
             fullpath = self.h5_file_path.joinpath(self.h5_file_name)
             if not fullpath.is_file():
@@ -231,7 +264,7 @@ class H5SaverLowLevel(H5Backend):
     def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
                   data_shape: tuple = None, array_type: np.dtype = None, fill_value=None, data_dimension: DataDim = None,
                   scan_shape: tuple = tuple([]), add_scan_dim=False, enlargeable: bool = False,
-                  title: str = '', metadata=dict([]), ):
+                  title: str = '', metadata=dict([])):
 
         """save data arrays on the hdf5 file together with metadata
         Parameters
@@ -377,7 +410,8 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_group(group_name, GroupType.data, where, title, metadata)
         return group
 
-    def add_incremental_group(self, group_type: Union[str, GroupType, enum.Enum], where, title='', settings_as_xml='', metadata=None):
+    def add_incremental_group(self, group_type: Union[str, GroupType, enum.Enum], where, title='', settings_as_xml='',
+                              metadata=None):
         """
         Add a node in the h5 file tree of the group type with an increment in the given name
         Parameters
@@ -462,7 +496,7 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_incremental_group(group_type, where, title, settings_as_xml, metadata)
         return group
 
-    def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=None,):
+    def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=None):
         """Add a new group of type scan
 
         deprecated, use add_generic_group with a group type as GroupType.scan

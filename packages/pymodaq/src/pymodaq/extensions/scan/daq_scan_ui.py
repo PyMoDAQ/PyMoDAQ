@@ -4,25 +4,27 @@ Created the 06/12/2022
 
 @author: Sebastien Weber
 """
-import sys
 from typing import List, TYPE_CHECKING
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
 
+from pymodaq.extensions.scan.scan_manager import ScanManager
+from pymodaq_gui.utils.shared_ui import MenuToolbarNames
 from pymodaq_utils.utils import ThreadCommand
 from pymodaq_utils.logger import set_logger, get_module_name
 
 from pymodaq_gui.utils import CustomApp
-from pymodaq_gui.utils import DockArea, Dock
+from pymodaq_gui.utils import Dock
 from pymodaq_gui.utils.widgets.spinbox import QSpinBox_ro
 from pymodaq_gui.utils.widgets import QLED
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
-
+from pymodaq_gui.parameter import ParameterTree
 
 if TYPE_CHECKING:
-    from pymodaq_gui.parameter import ParameterTree
+
+    from pymodaq.extensions.scan.daq_scan import DAQScan
 
 logger = set_logger(get_module_name(__file__))
 
@@ -33,46 +35,15 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     """
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, parent):
-        CustomApp.__init__(self, parent)
-        self.setup_docks()
+    def __init__(self, parent, toolbar=None):
+        CustomApp.__init__(self, parent, toolbar=toolbar, add_toolbar_break=False)
+        self.setup_docks_and_widgets()
         ViewerDispatcher.__init__(self, self.dockarea, title='Scanner',
                                   next_to_dock=self.dock_command)
 
-        self.setup_menu(self._menubar)
+        self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()
         self.connect_things()
-
-    def setup_actions(self):
-        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu=self.action_menu)
-        self.set_action_enabled('ini_positions', False)
-        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
-                        menu=self.action_menu, icon_color=self.get_theme().green)
-        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
-        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
-                        menu=self.action_menu, icon_color=self.get_theme().red)
-        self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
-                        checkable=True, menu=self.action_menu,
-                        icon_checked_color=self.get_theme().orange)
-        self.add_action('move_at', 'Move at doubleClicked', 'moving',
-                        "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
-
-        self._toolbar.addSeparator()
-        self.add_action('show_file', 'Show file content', 'folder_data',
-                        tip='Browse the content of the current HDF5 file')
-
-        self.add_action('new_file', 'New file', 'new2', menu=self.file_menu, auto_toolbar=False)
-        self.add_action('load', 'Open file to append...', 'Open', menu=self.file_menu, auto_toolbar=False)
-        self.file_menu.addSeparator()
-        self.add_action('save', 'Save copy as...', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
-        # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
-        # A developer can access them programmatically or add them back to a menu as needed.
-        self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
-        self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
-
-        self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
-        self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
-        self.set_action_visible('start_batch', False)
 
     def enable_start_stop(self, enable=True):
         """If True enable main buttons to launch/stop scan"""
@@ -81,6 +52,89 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.set_action_enabled('pause', enable)
         if enable:
             self.set_action_checked('pause', False)
+
+    def setup_docks_and_widgets(self):
+        self.dock_command = Dock('Scan Command')
+        self.dockarea.addDock(self.dock_command)
+
+        widget_command = QtWidgets.QWidget()
+        widget_command.setLayout(QtWidgets.QVBoxLayout())
+        self.dock_command.addWidget(widget_command)
+
+        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        widget_command.layout().addWidget(splitter_widget)
+        splitter_widget.addWidget(splitter_v_widget)
+        self.module_widget = QtWidgets.QWidget()
+        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.module_widget.setMinimumWidth(220)
+        self.module_widget.setMaximumWidth(400)
+
+        self.plotting_widget = QtWidgets.QWidget()
+        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.plotting_widget.setMinimumWidth(220)
+        self.plotting_widget.setMaximumWidth(400)
+
+        self.plotting_settings_tree = ParameterTree()
+        self.plotting_widget.layout().addWidget(self.plotting_settings_tree)
+
+        settings_widget = QtWidgets.QWidget()
+        settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        settings_widget.setMinimumWidth(220)
+
+        splitter_v_widget.addWidget(self.module_widget)
+        splitter_v_widget.addWidget(self.plotting_widget)
+
+        splitter_v_widget.setSizes([400, 400])
+        splitter_widget.addWidget(settings_widget)
+
+        self.populate_status_bar()
+
+        self.settings_toolbox = QtWidgets.QToolBox()
+        settings_widget.layout().addWidget(self.settings_toolbox)
+        self.scanner_widget = QtWidgets.QWidget()
+        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_menu(MenuToolbarNames.FILE, MenuToolbarNames.FILE.capitalize(), parent_menu=menubar)
+        self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
+        self.add_menu('actions', 'Actions', parent_menu=menubar)
+
+        self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
+                         add_break=False)
+        self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
+
+    def setup_actions(self):
+        self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
+        self.set_action_enabled('ini_positions', False)
+        self.add_action('start', 'Start Scan', 'motion_play', "Start the scan",
+                        menu='actions', icon_color=self.get_theme().green)
+        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu='actions')
+        self.add_action('stop', 'Stop Scan', 'stop_circle', "Stop the scan",
+                        menu='actions', icon_color=self.get_theme().red)
+        self.add_action('pause', 'Pause Scan', 'pause_circle', "Pause/resume the scan",
+                        checkable=True, menu='actions',
+                        icon_checked_color=self.get_theme().orange)
+        self.add_action('move_at', 'Move at doubleClicked', 'moving',
+                        "Move to positions where you double clicked", checkable=True, menu='actions')
+
+        self._toolbar.addSeparator()
+        self.add_action('show_file', 'Show file content', 'folder_data',
+                        tip='Browse the content of the current HDF5 file')
+
+        self.add_action('new_file', 'New file', 'new2', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.add_action('load', 'Open file to append...', 'Open', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        self.get_menu(MenuToolbarNames.FILE).addSeparator()
+        self.add_action('save', 'Save copy as...', 'SaveAs', menu=MenuToolbarNames.FILE, auto_toolbar=False)
+        # Debug-only actions: registered but not in any menu so they stay hidden from regular users.
+        # A developer can access them programmatically or add them back to a menu as needed.
+        self.add_action('open_file', 'Open current file', '', auto_toolbar=False)
+        self.add_action('close_file', 'Close current file', '', auto_toolbar=False)
+
+        self.add_action('navigator', 'Show Navigator', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
+        self.add_action('batch', 'Show Batch Scanner', '', menu=MenuToolbarNames.TOOLS, auto_toolbar=False)
+        self.set_action_visible('start_batch', False)
 
     def connect_things(self):
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
@@ -99,54 +153,25 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator')))
         self.connect_action('batch', lambda: self.command_sig.emit(ThreadCommand('batch')))
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        self.file_menu = menubar.addMenu('File')
-        self._extensions_menu = menubar.addMenu('Extensions')
-        self.action_menu = menubar.addMenu('Actions')
+    def finalize_ui(self, app: 'DAQScan'):
+        app.create_dashboard_toolbar()
 
-    def setup_docks(self):
-        self.dock_command = Dock('Scan Command')
-        self.dockarea.addDock(self.dock_command)
+        self.populate_toolbox_widget([app.settings_tree,
+                                      app._h5saver.settings_tree],
+                                     ['General Settings', 'Save Settings'])
 
-        widget_command = QtWidgets.QWidget()
-        widget_command.setLayout(QtWidgets.QVBoxLayout())
-        self.dock_command.addWidget(widget_command)
-        widget_command.layout().addWidget(self._toolbar)
+        self.set_scanner_settings(app.scanner.parent_widget)
+        self.set_modules_settings(app.modules_manager.settings_tree)
 
-        splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        widget_command.layout().addWidget(splitter_widget)
-        splitter_widget.addWidget(splitter_v_widget)
-        self.module_widget = QtWidgets.QWidget()
-        self.module_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.module_widget.setMinimumWidth(220)
-        self.module_widget.setMaximumWidth(400)
+        self.plotting_settings_tree.setParameters(app.settings.child('plot_options'))
 
-        self.plotting_widget = QtWidgets.QWidget()
-        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.plotting_widget.setMinimumWidth(220)
-        self.plotting_widget.setMaximumWidth(400)
+        for ind_menu, menu in enumerate(self.menus):
+            app.reference_menu(self.menus_names[ind_menu], menu)
 
-        settings_widget = QtWidgets.QWidget()
-        settings_widget.setLayout(QtWidgets.QVBoxLayout())
-        settings_widget.setMinimumWidth(220)
+        for ind_toolbar, toolbar in enumerate(self.toolbars):
+            app.reference_toolbar(self.toolbars_names[ind_toolbar], toolbar)
 
-        splitter_v_widget.addWidget(self.module_widget)
-        splitter_v_widget.addWidget(self.plotting_widget)
-
-        splitter_v_widget.setSizes([400, 400])
-        splitter_widget.addWidget(settings_widget)
-
-
-        self._statusbar = QtWidgets.QStatusBar()
-        self.mainwindow.setStatusBar(self._statusbar)
-        self.populate_status_bar()
-
-        self.settings_toolbox = QtWidgets.QToolBox()
-        settings_widget.layout().addWidget(self.settings_toolbox)
-        self.scanner_widget = QtWidgets.QWidget()
-        self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+        self.enable_start_stop(False)
 
     def add_settings_toolbox_widget(self, widget: QtWidgets.QWidget, name: str):
         """Add a widget, usaually a ParameterTree to the SettingsToolbox"""
@@ -173,9 +198,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     def set_modules_settings(self, settings_widget):
         self.module_widget.layout().addWidget(settings_widget)
 
-    def set_plotting_settings(self, settings_plotting):
-        self.plotting_widget.layout().addWidget(settings_plotting)
-
     def populate_status_bar(self):
         self._status_message_label = QtWidgets.QLabel('Initializing')
         self._n_scan_steps_sb = QSpinBox_ro()
@@ -199,16 +221,16 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._swmr_label.setToolTip('SWMR mode status')
         self._swmr_label.setVisible(False)
 
-        self._statusbar.addPermanentWidget(self._status_message_label)
+        self.statusbar.addPermanentWidget(self._status_message_label)
 
-        self._statusbar.addPermanentWidget(self._n_scan_steps_sb)
-        self._statusbar.addPermanentWidget(self._indice_scan_sb)
-        self._statusbar.addPermanentWidget(self._indice_average_sb)
+        self.statusbar.addPermanentWidget(self._n_scan_steps_sb)
+        self.statusbar.addPermanentWidget(self._indice_scan_sb)
+        self.statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
-        self._statusbar.addPermanentWidget(self._scan_done_LED)
-        self._statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
-        self._statusbar.addPermanentWidget(self._file_open_LED)
-        self._statusbar.addPermanentWidget(self._swmr_label)
+        self.statusbar.addPermanentWidget(self._scan_done_LED)
+        self.statusbar.addPermanentWidget(QtWidgets.QLabel('File:'))
+        self.statusbar.addPermanentWidget(self._file_open_LED)
+        self.statusbar.addPermanentWidget(self._swmr_label)
 
     @property
     def n_scan_steps(self):
@@ -218,9 +240,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
     def n_scan_steps(self, nsteps: int):
         self._n_scan_steps_sb.setValue(nsteps)
 
-    def display_status(self, status: str, wait_time=1000):
-        self._statusbar.showMessage(status, wait_time)
-        
     def set_permanent_status(self, status: str):
         self._status_message_label.setText(status)
 
@@ -274,29 +293,3 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
                                                                               viewers=self.viewers)))
 
-def main():
-
-    app = QtWidgets.QApplication(sys.argv)
-
-    win = QtWidgets.QMainWindow()
-    dockarea = DockArea()
-    win.setCentralWidget(dockarea)
-    win.resize(1000, 500)
-    win.setWindowTitle('DAQScan Extension')
-
-    prog = DAQScanUI(dockarea)
-    win.show()
-
-
-    def print_command_sig(cmd_sig):
-        print(cmd_sig)
-        prog.display_status(str(cmd_sig))
-
-    prog.command_sig.connect(print_command_sig)
-    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
-
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()

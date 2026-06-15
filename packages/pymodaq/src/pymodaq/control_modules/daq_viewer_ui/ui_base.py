@@ -9,24 +9,19 @@ Created the 05/09/2022
 from typing import List, Union
 import sys
 
-from qtpy import QtWidgets, QtGui, QtCore
-from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
-
-import qt_themes
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import QVBoxLayout,  QWidget
 
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.ui_utils import ControlModuleUI
 
-from pymodaq_gui.utils.widgets import PushButtonIcon, LabelWithFont, QLED
-from pymodaq_gui.utils import Dock, DockArea
+from pymodaq_gui.utils import DockArea
 from pymodaq_utils.config import GlobalConfig as Config
 from pymodaq_utils.enums import StrEnum
-from pymodaq.control_modules.instruments import DET_TYPES, DAQTypesEnum
+from pymodaq.control_modules.instruments import DET_TYPES
 from pymodaq_gui.plotting.data_viewers.viewer import ViewerFactory, ViewerDispatcher
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_gui.utils.styling import create_icon
-from pymodaq_utils.enums import enum_checker
 from pymodaq.control_modules.thread_commands import UiToMainViewer
 from pymodaq.control_modules.control_module_selector import add_category_layers
 from pymodaq.control_modules.daq_viewer_ui.viewer_selector import SelectedModule, ViewerSelector
@@ -80,8 +75,6 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     pymodaq.utils.daq_utils.ThreadCommand
     """
 
-    command_sig = Signal(ThreadCommand)
-
     def __init__(self, parent: QtWidgets.QWidget, title="DAQ_Viewer", **kwargs):
         ControlModuleUI.__init__(self, parent)
 
@@ -91,22 +84,23 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.title = title
 
-        self._ini_state = False
         self._data_ready = False
-
         self._detector_widget = None
-        self._settings_widget = None
 
         self.selector = ViewerSelector(add_menu_entries=add_menu_entries)
 
-        self.setup_docks()
-
+        self.setup_docks_and_widgets()
+        self.setup_menus_and_toolbars(self.menubar)
         self.setup_actions()  # see ActionManager MixIn class
         self.update_viewers([self.selector.selected_module.daq_type.to_viewer_type()])
         self.connect_things()
 
         self.enable_actions(False, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
         self._settings_widget.setVisible(False)
+
+    # -------------------------------------------------------------------------
+    # Properties
+    # -------------------------------------------------------------------------
 
     @property
     def detector(self) -> SelectedModule:
@@ -116,12 +110,40 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def detector(self, det: SelectedModule):
         self.selector.selected_module = det
 
-    def close(self):
-        for dock in self.viewer_docks:
-            dock.close()
-        self._settings_widget.close()
+    @property
+    def detector_init(self):
+        """bool: the internal init status."""
+        return self._ini_state
 
-    def setup_docks(self):
+    @detector_init.setter
+    def detector_init(self, status):
+        self._ini_state = status
+        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
+        self.set_action_enabled('selector', not status)
+        self.update_init_icon(status, action_name='ini_detector')
+        if self.has_action('ini_detector'):
+            self.set_action_checked('ini_detector', status)
+
+    @property
+    def data_ready(self):
+        return self._data_ready
+
+    @data_ready.setter
+    def data_ready(self, status):
+        self._data_ready = status
+        if status:
+            icon = create_icon(ActionIconNames.SNAP,
+                               icon_color=self.get_theme().green,)
+        else:
+            icon = create_icon(ActionIconNames.SNAP,
+                               icon_color=self.get_theme().red,)
+        self.get_action('snap').set_icon(icon)
+
+    # -------------------------------------------------------------------------
+    # UI Construction
+    # -------------------------------------------------------------------------
+
+    def setup_docks_and_widgets(self):
         widget = self.parent
 
         layout = QVBoxLayout()
@@ -131,6 +153,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
         layout.addWidget(self.dockarea)
+
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        self.add_toolbar('viewer', 'DAQViewer')
 
     def add_setting_tree(self, tree):
         self._settings_widget.layout().addWidget(tree)
@@ -161,13 +186,11 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                         icon_checked_color=self.get_theme().green)
 
     def connect_things(self):
-        self.connect_action('show_settings', self._show_settings)
+        self._connect_common_actions()
 
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SNAP, )))
-
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.SAVE_CURRENT, )))
-        self.connect_action('ini_detector', self.send_init)
 
         self.selector.module_changed.connect(self._detector_changed)
         self.connect_action('background_subtract',
@@ -176,57 +199,9 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
                             lambda: self.command_sig.emit(ThreadCommand(UiToMainViewer.TAKE_BKG)))
         self.connect_action('show_graphs', lambda checked: self.show_graphs(not checked))
 
-    def show_graphs(self, show: bool = True):
-        self.parent.setVisible(show)
-        self.parent.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
-
-    def _show_settings(self, show: bool = True):
-        self._settings_widget.setVisible(show)
-        self._settings_widget.closeEvent = lambda event: self.set_action_checked('show_settings', False)
-
-    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
-                       viewers_name: List[str] = None, force=False):
-        super().update_viewers(viewers_type)
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
-                                            attribute=dict(viewer_types=self.viewer_types,
-                                                           viewers=self.viewers)))
-
-    @property
-    def data_ready(self):
-        return self._data_ready
-
-    @data_ready.setter
-    def data_ready(self, status):
-        self._data_ready = status
-        if status:
-            icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().green,)
-        else:
-            icon = create_icon(ActionIconNames.SNAP,
-                               icon_color=self.get_theme().red,)
-        self.get_action('snap').set_icon(icon)
-
-    def _detector_changed(self, sel_mod: SelectedModule):
-        try:
-            self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, sel_mod))
-            if self.viewer_types != [sel_mod.daq_type.to_viewer_type()]:
-                self.update_viewers([sel_mod.daq_type.to_viewer_type()])
-        except ValueError as e:
-            pass
-
-    def show_settings(self, show=True):
-        if (self.is_action_checked('show_settings') and not show) or \
-                (not self.is_action_checked('show_settings') and show):
-            self.get_action('show_settings').trigger()
-
-    def _grab(self):
-        """Slot from the *grab* action"""
-        self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
-        self.enable_actions(not self.is_action_checked('grab'),
-                            all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
-
-        if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
-            self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
@@ -263,8 +238,19 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         if self.is_action_checked('grab'):
             self.get_action('grab').trigger()
 
+    def update_viewers(self, viewers_type: List[Union[str, ViewersEnum]],
+                       viewers_name: List[str] = None, force=False):
+        super().update_viewers(viewers_type)
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.VIEWERS_CHANGED,
+                                            attribute=dict(viewer_types=self.viewer_types,
+                                                           viewers=self.viewers)))
+
+    # -------------------------------------------------------------------------
+    # Slots / Event Handlers
+    # -------------------------------------------------------------------------
+
     def send_init(self, checked: bool):
-        self._enable_detchoices(not checked)
+        self.get_action('selector').widget.setEnabled(not checked)
         if not checked and self.is_action_checked('background_subtract'):
             self.get_action('background_subtract').trigger()
         QtWidgets.QApplication.processEvents()
@@ -275,22 +261,35 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     def _enable_detchoices(self, enable=True):
         self.get_action('selector').widget.setEnabled(enable)
 
-    @property
-    def detector_init(self):
-        """bool: the internal init status."""
-        return self._ini_state
+    def _detector_changed(self, sel_mod: SelectedModule):
+        try:
+            self.command_sig.emit(ThreadCommand(UiToMainViewer.DETECTOR_CHANGED, sel_mod))
+            if self.viewer_types != [sel_mod.daq_type.to_viewer_type()]:
+                self.update_viewers([sel_mod.daq_type.to_viewer_type()])
+        except ValueError as e:
+            pass
 
-    @detector_init.setter
-    def detector_init(self, status):
-        self._ini_state = status
-        self.enable_actions(status, all_except=('ini_detector', 'selector', 'show_settings', 'show_graphs'))
-        self.set_action_enabled('selector', not status)
-        self.update_init_icon(status, action_name='ini_detector')
+    def _grab(self):
+        """Slot from the *grab* action"""
+        self.command_sig.emit(ThreadCommand(UiToMainViewer.GRAB, attribute=self.is_action_checked('grab')))
+        self.enable_actions(not self.is_action_checked('grab'),
+                            all_except=('grab', 'selector', 'show_settings', 'show_graphs'))
 
-    def enable_actions(self, status=True, all_except=()):
-        for action in self.actions_names:
-            if action not in all_except:
-                self.set_action_enabled(action, status)
+        if not self.config('pymodaq', 'viewer', 'allow_settings_edition'):
+            self._settings_widget.setEnabled(not self.is_action_checked('grab'))
+
+    # -------------------------------------------------------------------------
+    # Visibility / Lifecycle
+    # -------------------------------------------------------------------------
+
+    def show_graphs(self, show: bool = True):
+        self.parent.setVisible(show)
+        self.parent.closeEvent = lambda event: self.set_action_checked('show_graphs', False)
+
+    def close(self):
+        for dock in self.viewer_docks:
+            dock.close()
+        super().close()
 
 
 def main(init_qt=True):
@@ -326,7 +325,7 @@ def main(init_qt=True):
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
-        prog.display_status(str(cmd_sig))
+        prog.update_status(str(cmd_sig))
         if cmd_sig.command == UiToMainViewer.INIT:
             prog.detector_init = cmd_sig.attribute[0]
         elif cmd_sig.command == UiToMainViewer.SNAP:

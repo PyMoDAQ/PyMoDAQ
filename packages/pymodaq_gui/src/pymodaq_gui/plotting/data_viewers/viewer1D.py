@@ -586,9 +586,9 @@ class Viewer1D(ViewerBase):
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis:
                     if dwa.name == 'HorData':
-                        dwa.name = f'Hlineout_{dwa.origin}'
+                        dwa.name = f'Hlineout'
                     elif dwa.name == 'IntData':
-                        dwa.name = f'Integrated_{dwa.origin}'
+                        dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis.data)
                 self.data_to_export_signal.emit(self.data_to_export)
         except AttributeError:
@@ -688,7 +688,7 @@ def main():
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
     data = DataRaw('mydata', data=[y1, ydata_expodec, -ydata_expodec, -y1,
                                    y1, ydata_expodec, -ydata_expodec, -y1,
-                                   y1, ydata_expodec, -ydata_expodec, -y1,],
+                                   y1, ydata_expodec, -ydata_expodec, -y1],
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()

@@ -89,7 +89,7 @@ class CustomWidgetSyncFactories(WidgetSyncFactories):
         # Bind both spinboxes
         sync.bind_dict({
             'min': {'widget': min_spinbox, 'property': 'value'},
-            'max': {'widget': max_spinbox, 'property': 'value'}
+            'max': {'widget': max_spinbox, 'property': 'value'},
         })
 
         return sync
@@ -128,7 +128,7 @@ class CustomWidgetSyncFactories(WidgetSyncFactories):
         sync.bind(
             label,
             setter=lambda v: label.setText(format_func(v)),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         return sync
@@ -157,7 +157,7 @@ class FactoryMethodsExample(QWidget):
             "✓ Extend WidgetSyncFactories with @classmethod\n"
             "✓ No need to subclass BaseWidgetSync\n"
             "✓ Perfect for common patterns in your application\n"
-            "✓ Combines existing sync functionality with convenience API"
+            "✓ Combines existing sync functionality with convenience API",
         ))
 
         # Example 1: Range spinboxes
@@ -182,12 +182,12 @@ class FactoryMethodsExample(QWidget):
             self.min_spin,
             self.max_spin,
             initial_min=20,
-            initial_max=80
+            initial_max=80,
         )
 
         status = QLabel()
         self.range_sync.value_changed.connect(
-            lambda v: status.setText(f"Range: [{v['min']}, {v['max']}]")
+            lambda v: status.setText(f"Range: [{v['min']}, {v['max']}]"),
         )
         status.setText(f"Range: [{self.range_sync.value['min']}, {self.range_sync.value['max']}]")
         range_layout.addWidget(status)
@@ -205,7 +205,7 @@ class FactoryMethodsExample(QWidget):
 
         self.slider_label = QLabel()
         self.slider_label.setStyleSheet(
-            "font-size: 20pt; font-weight: bold; color: #2196f3;"
+            "font-size: 20pt; font-weight: bold; color: #2196f3;",
         )
         slider_layout.addWidget(self.slider_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -214,7 +214,7 @@ class FactoryMethodsExample(QWidget):
             self.slider,
             self.slider_label,
             initial=50,
-            format_func=lambda v: f"{v}%"
+            format_func=lambda v: f"{v}%",
         )
 
         slider_group.setLayout(slider_layout)
@@ -234,7 +234,7 @@ class FactoryMethodsExample(QWidget):
             "    pass\n"
             "\n"
             "# Usage:\n"
-            "sync = MySync.for_range_spinbox(min_spin, max_spin)"
+            "sync = MySync.for_range_spinbox(min_spin, max_spin)",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px; font-size: 9pt;")
         layout.addWidget(code)
@@ -259,7 +259,7 @@ class ValidatorsExample(QWidget):
             "✓ Add validation/transformation without subclassing\n"
             "✓ Works with ValueSync or DictSync\n"
             "✓ Perfect for business logic constraints\n"
-            "✓ Can auto-correct invalid values"
+            "✓ Can auto-correct invalid values",
         ))
 
         # Example 1: Clamping validator
@@ -268,7 +268,7 @@ class ValidatorsExample(QWidget):
 
         clamp_layout.addWidget(QLabel(
             "Use Case: Power setting must stay in safe range 0-100 W\n"
-            "Try entering 150 or -50 - it will auto-clamp on Enter/focus loss"
+            "Try entering 150 or -50 - it will auto-clamp on Enter/focus loss",
         ))
 
         input_row = QHBoxLayout()
@@ -316,26 +316,26 @@ class ValidatorsExample(QWidget):
             self.clamp_lineedit,
             signal=self.clamp_lineedit.editingFinished,
             getter=lambda: self.clamp_lineedit.text(),
-            setter=lambda v: self.clamp_lineedit.setText(str(v))
+            setter=lambda v: self.clamp_lineedit.setText(str(v)),
         )
 
         # Bind displays (read-only, show clamped value)
         self.clamp_sync.bind(
             self.clamp_spin1,
             setter=lambda v: self.clamp_spin1.setValue(v),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
         self.clamp_sync.bind(
             self.clamp_spin2,
             setter=lambda v: self.clamp_spin2.setValue(v),
-            mode=SyncMode.FROM_SYNC
+            mode=SyncMode.FROM_SYNC,
         )
 
         clamp_status = QLabel()
         self.clamp_sync.value_changed.connect(
             lambda v: clamp_status.setText(
-                f"✓ Validated value: {v} W (safe range enforced)"
-            )
+                f"✓ Validated value: {v} W (safe range enforced)",
+            ),
         )
         clamp_status.setText(f"✓ Validated value: {self.clamp_sync.value} W")
         clamp_status.setStyleSheet("color: green; font-weight: bold;")
@@ -350,7 +350,7 @@ class ValidatorsExample(QWidget):
 
         range_layout.addWidget(QLabel(
             "Use Case: Scan range start/stop must be ordered\n"
-            "Set Start=800 and Stop=200 → they auto-swap to ensure start < stop"
+            "Set Start=800 and Stop=200 → they auto-swap to ensure start < stop",
         ))
 
         spin_row = QHBoxLayout()
@@ -377,12 +377,12 @@ class ValidatorsExample(QWidget):
 
         self.range_sync = WidgetSync(
             initial_value={'start': 200, 'stop': 800},
-            validator=range_validator
+            validator=range_validator,
         )
 
         self.range_sync.bind_dict({
             'start': {'widget': self.range_start, 'property': 'value'},
-            'stop': {'widget': self.range_stop, 'property': 'value'}
+            'stop': {'widget': self.range_stop, 'property': 'value'},
         })
 
         range_status = QLabel()
@@ -422,7 +422,7 @@ class ValidatorsExample(QWidget):
             "sync = WidgetSync(\n"
             "    initial_value={'min': 0, 'max': 100},\n"
             "    validator=range_validator\n"
-            ")"
+            ")",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px; font-size: 9pt;")
         layout.addWidget(code)
@@ -495,14 +495,14 @@ class CoordinateSync(DictSync):
                 'widget': x_widget,
                 'signal': x_widget.valueChanged,
                 'getter': x_widget.value,
-                'setter': x_widget.setValue
+                'setter': x_widget.setValue,
             },
             'y': {
                 'widget': y_widget,
                 'signal': y_widget.valueChanged,
                 'getter': y_widget.value,
-                'setter': y_widget.setValue
-            }
+                'setter': y_widget.setValue,
+            },
         })
 
     def bind_bottom_left(self, x_widget, y_widget):
@@ -514,14 +514,14 @@ class CoordinateSync(DictSync):
                 'widget': x_widget,
                 'signal': x_widget.valueChanged,
                 'getter': x_widget.value,
-                'setter': x_widget.setValue
+                'setter': x_widget.setValue,
             },
             'y': {
                 'widget': y_widget,
                 'signal': y_widget.valueChanged,
                 'getter': lambda: height - y_widget.value(),  # Flip Y
-                'setter': lambda y: y_widget.setValue(height - y)
-            }
+                'setter': lambda y: y_widget.setValue(height - y),
+            },
         })
 
     def bind_center(self, x_widget, y_widget):
@@ -534,14 +534,14 @@ class CoordinateSync(DictSync):
                 'widget': x_widget,
                 'signal': x_widget.valueChanged,
                 'getter': lambda: x_widget.value() + cx,  # Offset to center
-                'setter': lambda x: x_widget.setValue(x - cx)
+                'setter': lambda x: x_widget.setValue(x - cx),
             },
             'y': {
                 'widget': y_widget,
                 'signal': y_widget.valueChanged,
                 'getter': lambda: y_widget.value() + cy,
-                'setter': lambda y: y_widget.setValue(y - cy)
-            }
+                'setter': lambda y: y_widget.setValue(y - cy),
+            },
         })
 
 
@@ -558,7 +558,7 @@ class CustomSyncExample(QWidget):
             "✓ Only when storage format differs from display format\n"
             "✓ Subclass BaseWidgetSync\n"
             "✓ Implement: __init__, value property, set_value(), helpers\n"
-            "✓ Example: Image coordinates with different origin conventions"
+            "✓ Example: Image coordinates with different origin conventions",
         ))
 
         coord_group = QGroupBox("Coordinate Sync (Multiple Origins)")
@@ -566,7 +566,7 @@ class CustomSyncExample(QWidget):
 
         coord_layout.addWidget(QLabel(
             "Use Case: 1024×768 image with different coordinate systems\n"
-            "Stored internally as top-left origin, displayed in three conventions"
+            "Stored internally as top-left origin, displayed in three conventions",
         ))
 
         # Top-left origin (standard computer graphics)
@@ -619,7 +619,7 @@ class CustomSyncExample(QWidget):
             image_width=1024,
             image_height=768,
             initial_x=512,
-            initial_y=384
+            initial_y=384,
         )
 
         # Bind all three coordinate systems
@@ -631,8 +631,8 @@ class CustomSyncExample(QWidget):
         status = QLabel()
         self.coord_sync.value_changed.connect(
             lambda coords: status.setText(
-                f"✓ Stored (top-left): X={coords['x']}, Y={coords['y']}"
-            )
+                f"✓ Stored (top-left): X={coords['x']}, Y={coords['y']}",
+            ),
         )
         status.setText(f"✓ Stored (top-left): X={self.coord_sync.value['x']}, Y={self.coord_sync.value['y']}")
         status.setStyleSheet("font-weight: bold; padding: 5px; color: green;")
@@ -662,7 +662,7 @@ class CustomSyncExample(QWidget):
             "coord = CoordinateSync(1024, 768, 512, 384)\n"
             "coord.bind_top_left(tl_x, tl_y)      # Direct mapping\n"
             "coord.bind_bottom_left(bl_x, bl_y)   # Y-axis flipped\n"
-            "coord.bind_center(c_x, c_y)          # Origin at center"
+            "coord.bind_center(c_x, c_y)          # Origin at center",
         )
         code.setStyleSheet("font-family: monospace; padding: 10px; font-size: 9pt;")
         layout.addWidget(code)
@@ -686,7 +686,7 @@ class ExtendingSyncDemo(QWidget):
 
         description = QLabel(
             "Learn when and how to extend widget_sync for your needs.\n"
-            "Most users only need Options 1 or 2. Option 3 is for advanced cases."
+            "Most users only need Options 1 or 2. Option 3 is for advanced cases.",
         )
         description.setWordWrap(True)
         description.setStyleSheet("padding: 5px 10px; color: #666;")

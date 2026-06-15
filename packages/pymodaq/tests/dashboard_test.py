@@ -1,11 +1,11 @@
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
 from pymodaq.dashboard import create_load_dashboard
 
 import qt_themes
 
-preset_path = get_set_preset_path()
+preset_path = get_set_experiment_path()
 config = GlobalConfig()
 
 
@@ -23,6 +23,6 @@ class TestGeneral:
         qtbot.addWidget(shared_ui.mainwindow)
         shared_ui.show()
 
-        dashboard.preset_manager.execute_entry()
+        dashboard.experiment_manager.execute_entry()
 
         dashboard.quit_fun()

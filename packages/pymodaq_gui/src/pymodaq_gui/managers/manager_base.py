@@ -10,7 +10,7 @@ from pymodaq_gui.utils.styling import create_icon
 
 from pymodaq_utils.logger import set_logger, get_module_name
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq_gui.managers.action_manager import addwidget
+
 from pymodaq_utils.enums import StrEnum
 
 from pymodaq_gui.messenger import dialog
@@ -37,6 +37,7 @@ class ManagerActions(StrEnum):
     RELOAD = 'reload_entry'
     EXECUTE = 'execute_entry'
     LIST = 'list_entries'
+    LABEL_EXTERNAL = 'label_external'
     LIST_EXTERNAL = 'list_entries_external'
 
 
@@ -107,28 +108,32 @@ class ManagerBase(CustomExt):
     entry_type: str
     entry_extension: str
 
+    execute_action_checkable = False
+    icon_name = 'build_circle'  # the default icon to represent the manager in Toolbar and Menus
+
     def __init__(self,
                  dashboard: 'DashBoard' = None,
                  **kwargs):
 
         super().__init__(parent=QtWidgets.QMainWindow(), dashboard=dashboard, **kwargs)
 
-        self.external_widgets = []  # to store a reference of external widgets, see
-        # self.get_external_toolbar_menu
         self._entry_applied = False
+        self._applied_entry_name: str = None
 
         self.main_widget = QtWidgets.QWidget()
         self.mainwindow.setCentralWidget(self.main_widget)
+        self._entry_slots = {}
 
         self.splash_subentries: Optional[SubEntriesSplash] = None
         self.subentries_model: Optional[ManagerSubEntriesModel] = None
+        self._updating_entry = False
 
         #first create the object
         self.entries_sync = WidgetSync(
             initial_value={
                 'items': [],
                 'current': None,
-                'enabled': False
+                'enabled': False,
         })
 
         self.setup_ui()
@@ -168,19 +173,11 @@ class ManagerBase(CustomExt):
         """Get the folder path where the managed entries are stored."""
         raise NotImplementedError
 
-    def update_entry(self, entry_path: Path):
-        """ Particular implementation to update entries for this inherited Manager """
-        raise NotImplementedError
-
     def setup_ui(self):
-        self.setup_docks()
+        self.setup_docks_and_widgets()
+        self.setup_menus_and_toolbars()
         self.setup_actions_base()
         self.setup_actions()
-
-        try:
-            self.setup_menu(self._menubar)
-        except TypeError:
-            self.setup_menu()  # for backcompatibility
 
         self.connect_things_base()
         self.connect_things()
@@ -190,18 +187,21 @@ class ManagerBase(CustomExt):
     @property
     def entry(self) -> str:
         """ Get/Set the name of the current entry """
-        return self.get_action_list().currentText()
+        return self.entries_sync.value['current']
 
     @entry.setter
     def entry(self, entry_name: str):
-        self.get_action_list().setCurrentText(entry_name)
+        self.entries_sync.set_value({**self.entries_sync.value, 'current': entry_name})
 
     @property
-    def entry_filename(self) -> Path:
+    def entry_filepath(self) -> Path:
         """ Get the full path of the current entry file """
+        return self.entry_path_from_name(self.entry)
+
+    def entry_path_from_name(self, entry_name: str) -> Path:
         kwargs_to_entry_folder = {}  # reimplement if needed
         return self.get_entry_folder(**kwargs_to_entry_folder).joinpath(
-            self.entry + self.entry_extension)
+            entry_name + self.entry_extension)
 
     @property
     def entries(self) -> list[str]:
@@ -209,13 +209,15 @@ class ManagerBase(CustomExt):
         return self.list_managed_entries()
 
     @property
-    def entries_filename(self) -> list[Path]:
+    def entries_filepath(self) -> list[Path]:
         """ Get the full path of all entries file """
         return self.list_managed_entries_path()
 
     def list_managed_entries(self, **kwargs_to_entry_folder) -> list[str]:
         """Returns a list of names of managed entries with 'default' as first """
         entries = [path.stem for path in self.list_managed_entries_path(**kwargs_to_entry_folder)]
+        entries.remove('default')
+        entries = ['default'] + entries  # always shows default as first
         return entries
 
     def list_managed_entries_path(self, **kwargs_to_entry_folder) -> list[Path]:
@@ -223,7 +225,7 @@ class ManagerBase(CustomExt):
 
         Example:
         --------
-        [path for path in get_set_preset_path().iterdir() if path.suffix == self.entry_extension]
+        [path for path in get_set_experiment_path().iterdir() if path.suffix == self.entry_extension]
         """
         entry_path = self.get_entry_folder(**kwargs_to_entry_folder)
         if not entry_path.exists():
@@ -232,7 +234,7 @@ class ManagerBase(CustomExt):
             self.create_entry('default', bypass_dialog=True)
         return [path for path in entry_path.iterdir() if path.suffix == self.entry_extension]
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """Sets up the widgets for the manager.
 
         Eventually, this can be reimplemented in subclasses to add more/different widgets/docks...
@@ -252,8 +254,8 @@ class ManagerBase(CustomExt):
     def setup_actions_base(self):
 
         # ACTIONS in Manager
-        self.add_widget('entry_label', QtWidgets.QLabel(
-            f'Configuration from {self.entry_type.capitalize()}:'))
+        # self.add_widget('entry_label', QtWidgets.QLabel(
+        #     f'{self.entry_type.capitalize()}:'))
         self.add_widget(ManagerActions.LIST, ComboBox(),
                         tip=f'Name of the current {self.entry_type}',
                         kwargs={'setReadOnly': True})
@@ -265,7 +267,7 @@ class ManagerBase(CustomExt):
                         f'New {self.entry_type.capitalize()}', 'add_circle',
                         tip=f'Create a new {self.entry_type} file ("Ctrl+N")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_N),
-                        icon_color=self.get_theme().green,)
+                        icon_color=self.get_theme().green)
         self.add_action(ManagerActions.DELETE,
                         f'Delete {self.entry_type.capitalize()}', 'do_not_disturb_on',
                         icon_color=self.get_theme().red,
@@ -284,12 +286,16 @@ class ManagerBase(CustomExt):
         self.add_action(ManagerActions.EXECUTE,
                         f'Execute {self.entry_type.capitalize()}', 'start',
                         icon_color=self.get_theme().magenta,
+                        checkable=self.execute_action_checkable,
+                        icon_checked_color=QtGui.QColor(255, 0, 201),
                         tip=f'Execute the current {self.entry_type} file ("Ctrl+Shift+E")',
                         shortcut=QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_E))
         self.add_action(ManagerActions.OPEN, f"{self.entry_type.capitalize()} Manager",
-                        "build_circle",
+                        self.icon_name,
                         icon_color=self.get_theme().blue,
                         tip=f'Open the {self.entry_type.capitalize()} Manager',
+                        checkable=True,
+                        icon_checked_color=self.get_theme().cyan,
                         auto_toolbar=False, auto_menu=False)
 
     def get_external_toolbar_menu(
@@ -301,16 +307,15 @@ class ManagerBase(CustomExt):
         if menu is None:
             menu = QtWidgets.QMenu(f'{self.entry_type.capitalize()}')
 
-        self.external_widgets.append(
-            addwidget(QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
-                      toolbar=toolbar,))
+        # self.add_widget(ManagerActions.LABEL_EXTERNAL, QtWidgets.QLabel(f'{self.entry_type.capitalize()}:'),
+        #                 toolbar=toolbar,)
         self.affect_to(ManagerActions.OPEN, toolbar)
         self.affect_to(ManagerActions.OPEN, menu)
 
-        self.external_widgets.append(addwidget(ComboBox(), toolbar=toolbar))
-        self.sync_entries_with(self.external_widgets[-1].widget)
+        self.add_widget(ManagerActions.LIST_EXTERNAL, ComboBox(), toolbar=toolbar,
+                        tip=f'List of possible {self.entry_type}s')
+        self.sync_entries_with(self.get_action(ManagerActions.LIST_EXTERNAL).widget)
         self.affect_to(ManagerActions.EXECUTE, toolbar)
-        self.affect_to(ManagerActions.EXECUTE, menu)
         return toolbar, menu
 
     def connect_things_base(self):
@@ -318,12 +323,12 @@ class ManagerBase(CustomExt):
         self.connect_action(ManagerActions.NEW, lambda: self.create_entry())
         self.connect_action(ManagerActions.DELETE, lambda: self.delete_entry())
         self.connect_action(ManagerActions.SAVE, lambda: self.save_check())
-        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry_base())
-        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry_base())
+        self.connect_action(ManagerActions.RELOAD, lambda: self.update_entry())
+        self.connect_action(ManagerActions.EXECUTE, lambda: self.execute_entry())
 
         self.connect_action(ManagerActions.OPEN, lambda: self.show())
 
-        self.entries_sync.value_changed.connect(lambda value: self.update_entry_base(value['current']))
+        self.entries_sync.value_changed.connect(lambda value: self.update_entry(value['current']))
         self.sync_entries_with(self.get_action_list())
 
     def sync_entries_with(self, combo: ComboBox):
@@ -331,24 +336,24 @@ class ManagerBase(CustomExt):
             combo,
             property_map={
                 'items': {
-                    'signal': combo.items_changed,  # FROM_SYNC only
+                    'signal': combo.items_changed,
                     'getter': combo.get_items,
                     'setter': combo.set_items,
-                    'mode': SyncMode.BIDIRECTIONAL
+                    'mode': SyncMode.BIDIRECTIONAL,
                 },
                 'current': {
                     'signal': combo.currentTextChanged,
                     'getter': combo.currentText,
                     'setter': combo.setCurrentText,
-                    'mode': SyncMode.BIDIRECTIONAL
+                    'mode': SyncMode.BIDIRECTIONAL,
                 },
                 'enabled': {
                     'signal': combo.enabled_changed,
                     'getter': combo.isEnabled,
                     'setter': combo.setEnabled,
-                    'mode': SyncMode.BIDIRECTIONAL
-                }
-            }
+                    'mode': SyncMode.BIDIRECTIONAL,
+                },
+            },
         )
 
     def create_entry(self, entry: str = None, bypass_dialog=False):
@@ -360,12 +365,11 @@ class ManagerBase(CustomExt):
                 f'Enter a NEW {self.entry_type.capitalize()} name',
                 f'{self.entry_type.capitalize()} name:', QtWidgets.QLineEdit.Normal)
         self.do_things_for_new_creation()
-        if ok and entry != '':
-            if self.save_check(entry, bypass_dialog=bypass_dialog):
-                self.entries_sync.append_to_list('items', entry)
-                self.entries_sync.update_key('current', entry)
-                self.update_action_list()
-                self.new_entry.emit(entry)
+        if ok and entry != '' and self.save_check(entry, bypass_dialog=bypass_dialog):
+            self.entries_sync.append_to_list('items', entry)
+            self.entries_sync.update_key('current', entry)
+            self.update_action_list()
+            self.new_entry.emit(entry)
 
     def do_things_for_new_creation(self):
         """ To be reimplemented if needed """
@@ -375,9 +379,8 @@ class ManagerBase(CustomExt):
         if entry is not None:
             entry_path = self.get_entry_folder().joinpath(entry+self.entry_extension)
         else:
-            entry_path = self.entry_filename
-        if entry_path.exists():
-            if not bypass_dialog:
+            entry_path = self.entry_filepath
+        if entry_path.exists() and not bypass_dialog:
                 user_agreed = dialog(
                     title='Overwrite confirmation',
                     message='File exist do you want to overwrite it ?',
@@ -421,43 +424,64 @@ class ManagerBase(CustomExt):
         if user_agreed:
             entries = self.entries[:]  # to get before unlinking
 
-            self.entry_filename.unlink(missing_ok=True)
+            self.entry_filepath.unlink(missing_ok=True)
             logger.info(f'{self.entry_type.capitalize()} file {self.entry} deleted')
 
             index = entries.index(entry)
             entries.pop(index)
             if len(entries) != 0:
                 current = entries[max(0, index - 1)]
-            else: # should trigger the default entry creation!
+            else:  # should trigger the default entry creation!
                 entries = self.entries  # this recreate default
                 current = entries[0]
             self.entries_sync.set_value({'items': entries,
                                         'current': current})  # deleting will update current and fire update_entry_base
             self.deleted_entry.emit(entry)  # notify that an entry has been deleted
 
-    def execute_entry_base(self, entry_path: Path = None, **kwargs):
-        if entry_path is None:
-            self.save_check(self.entry, bypass_dialog=True)
-            entry_path = self.entry_filename
-
-        if self.dashboard is None:
-            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
-            return
-
-        self.entry_applied = self.execute_entry(entry_path, **kwargs)
 
     @property
     def entry_applied(self) -> bool:
+        """ Get the status of the execution of the last applied entry
+
+        If True, the :attr:`applied_entry_name` property will reflect the last successfully applied/executed entry
+        """
         return self._entry_applied
 
     @entry_applied.setter
     def entry_applied(self, applied: bool):
         self._entry_applied = applied
         if applied:
-            self.applied_entry.emit(self.entry_filename.stem)
+            self._applied_entry_name = self.entry
+            self.applied_entry.emit(self._applied_entry_name)
 
-    def execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
-        """Applies the entry from the given file in the manager.
+    @property
+    def applied_entry_name(self) -> str | None:
+        """ Get the name of the last entry that has been successfully applied/executed """
+        return self._applied_entry_name
+
+    def execute_entry(self, entry_path: str | Path = None, **kwargs):
+        """ To be called to execute the selected entry """
+        if entry_path is None:
+            self.save_check(self.entry, bypass_dialog=True)
+            entry_path = self.entry_filepath
+
+        if isinstance(entry_path, str):
+            entry_path = self.entry_path_from_name(entry_path)
+
+        self.update_entry(entry_path)
+
+        if self.dashboard is None:
+            logger.info(f"Cannot Load {self.entry_type.capitalize()} file: {entry_path.stem} as no Dashboard is initialized")
+            return
+
+        self.entry_applied = self._execute_entry(entry_path, **kwargs)
+
+    def _execute_entry(self, entry_path: Path = None, **kwargs) -> bool:
+        """Particular implementation of the entry execution for this manager
+
+        Applies the entry from the given file in the manager.
+
+        Should not be called directly, use :attr:`execute_entry` instead.
 
         To be reimplemented
 
@@ -466,24 +490,46 @@ class ManagerBase(CustomExt):
         file : Path
             The path to the configuration file to be applied.
         """
+
+        checked = self.is_action_checked(ManagerActions.EXECUTE)
+        # you may want to use the checked state of this action in your implementation
+        # Checkable EXECUTE action is optional and dependant if the class attribute
+        # execute_action_checkable is set to True
         return False
 
-    def update_entry_base(self, entry: Union[str, Path] = None, **kwargs):
-        """ Update the table given the entry argument"""
-        if entry is None:
-            entry = self.entry_filename
+    def update_entry(self, entry: Union[str, Path] = None, **kwargs):
+        """ Load and display the given entry """
+        if self._updating_entry:
+            return
+        self._updating_entry = True
+        try:
+            if entry is None:
+                if self.entry is None:
+                    return
+                entry = self.entry_filepath
+            elif isinstance(entry, str):
+                entry = self.entry_path_from_name(entry)
 
-        if isinstance(entry, str):
-            self.entry = entry  # make sure the current entry field reflects this method argument
-            entry = self.get_entry_folder(**kwargs).joinpath(f'{entry}{self.entry_extension}')
+            self.entry = entry.stem  # syncs the combo; if called from an action slot this fires
+                                     # value_changed → lambda → update_entry (re-entrant, blocked above)
+                                     # but value_changed sync-to-widget still runs → external combos updated
 
-        self.update_entry(entry)
-        self.update_execute_action_tooltip(entry.stem)
-        self.updated_entry.emit(entry.stem)
+            self._update_entry(entry)
+            self.update_execute_action_tooltip(entry.stem)
+            self.updated_entry.emit(entry.stem)
+        finally:
+            self._updating_entry = False
+
+    def _update_entry(self, entry_path: Path):
+        """ Particular implementation to update entries for this inherited Manager """
+        raise NotImplementedError
 
     def show(self):
-        self.mainwindow.show()
-        self.mainwindow.raise_()
+        if self.is_action_checked(ManagerActions.OPEN):
+            self.mainwindow.show()
+            self.mainwindow.raise_()
+        else:
+            self.mainwindow.hide()
 
     def update_action_list(self):
         with QtCore.QSignalBlocker(self.get_action_list()) as blocker:
@@ -503,39 +549,48 @@ class ManagerBase(CustomExt):
                 pass
 
     def update_actions_connection(self):
-
         for ind_file, file in enumerate(self.list_managed_entries_path()):
             self.connect_action(self.get_action_from_file(file), connect=False)
-
-            self.connect_action(
-                self.get_action_from_file(file),
-                self.create_slot_from_file(
-                    self.get_entry_folder().joinpath(file.stem + self.entry_extension)),
-            )
+            self._entry_slots[file.stem] = self.create_slot_from_file(
+                    self.get_entry_folder().joinpath(file.stem + self.entry_extension))
+            self.connect_action(self.get_action_from_file(file),
+                                self._entry_slots[file.stem])
 
     def update_execute_action_tooltip(self, entry: str):
         self.get_action(ManagerActions.EXECUTE).setToolTip(
             f'Execute the selected {self.entry_type} entry: {entry} ("Ctrl+A")')
 
     def create_slot_from_file(self, filename: Path):
-        return lambda: self.execute_entry_base(filename)
+        return lambda: self.execute_entry(filename)
 
-    def update_menu(self):
+    def update_menu(self, menu: QtWidgets.QMenu = None):
         try:
-            menu = self.get_menu(Menu.EXTERNAL)
+            if menu is None:
+                menu = self.get_menu(Menu.EXTERNAL)
+            self.update_action_list()
             menu.clear()
             menu.addAction(self.get_action(ManagerActions.OPEN))
             menu.addSeparator()
             load_menu = menu.addMenu(f"Load {self.entry_type.capitalize()}s")
 
-            for ind_file, file in enumerate(self.list_managed_entries_path()):
+            entries_path = self.list_managed_entries_path()
+            entries_path.sort(key=lambda x: x.stem)
+            default_index = [entry.stem for entry in entries_path].index('default')
+            default_path = entries_path.pop(default_index)
+            entries_path = [default_path] + entries_path
+
+            for ind_file, file in enumerate(entries_path):
                 if self.has_action(self.get_action_from_file(file)):
                     load_menu.addAction(self.get_action(
-                        self.get_action_from_file(file)
-                    )
+                        self.get_action_from_file(file),
+                    ),
                     )
         except AttributeError:  # means self.menu is not yet defined
             pass
+
+    def save_new_history_entry(self):
+        """Save a new history entry in the history file"""
+        raise NotImplementedError
 
 
 class ListView(QtWidgets.QListView):

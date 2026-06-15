@@ -38,7 +38,7 @@ Gradients.update(OrderedDict([
     ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
     ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
     ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}),
-    ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'}),]))
+    ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'})]))
 
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 
@@ -356,7 +356,7 @@ class View2D(ActionManager, QtCore.QObject):
 
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
-            if isinstance(item, SpreadImageItem) or isinstance(item, UniformImageItem):
+            if isinstance(item, (SpreadImageItem, UniformImageItem)):
                 self.plotitem.removeItem(item)
 
     def set_image_displayer(self, data_distribution: DataDistribution):
@@ -1020,17 +1020,17 @@ class Viewer2D(ViewerBase):
                 roi_dte_bis = roi_dte.deepcopy()
                 for dwa in roi_dte_bis.data:
                     if dwa.name == 'hor':
-                        dwa.name = f'Hlineout_{dwa.origin}'
+                        dwa.name = f'Hlineout'
                     elif dwa.name == 'ver':
-                        dwa.name = f'Vlineout_{dwa.origin}'
+                        dwa.name = f'Vlineout'
                     elif dwa.name == 'int':
-                        dwa.name = f'Integrated_{dwa.origin}'
+                        dwa.name = f'Integrated'
                 self.data_to_export.append(roi_dte_bis)
 
                 self.measure_data_dict = dict([])
 
                 for roi_name in roi_dte_bis.get_origins():
-                    dwa = roi_dte_bis.get_data_from_name_origin(f'Integrated_{roi_name}', roi_name)
+                    dwa = roi_dte_bis.get_data_from_name_origin(f'Integrated', roi_name)
                     for ind, data_array in enumerate(dwa.data):
                             self.measure_data_dict[f'{dwa.labels[ind]}:'] = float(data_array[0])
 
@@ -1093,7 +1093,7 @@ def main(data_distribution='uniform'):
         data_to_plot = DataRaw(name='mydata', distribution='spread', data=[data_spread[:,2]],
                                        nav_indexes=(0,),
                                        axes=[Axis('xaxis', units='xpxl', data=data_spread[:,0], index=0, spread_order=0),
-                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1),])
+                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1)])
 
     prog = Viewer2D(widget)
     widget.show()
@@ -1133,9 +1133,9 @@ def generate_uniform_data() -> DataRaw:
 
     data_to_plot = DataRaw(name='mydata', distribution='uniform',
                                    data=[data_red, data_green, data_red-data_green],
-                                   labels = ['myreddata', 'mygreendata'],
+                                   labels=['myreddata', 'mygreendata'],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
+                                         Axis('yaxis', units='ypxl', data=y, index=0)])
     return data_to_plot
 
 

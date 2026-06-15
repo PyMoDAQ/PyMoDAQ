@@ -23,7 +23,7 @@ from pymodaq_gui.utils.widgets import QLED
 
 
 from pymodaq.extensions.daq_logger.h5logging import H5Logger
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq.utils.data import DataActuator, DataToExport
 from pymodaq.extensions.custom_ext import CustomExt
 
@@ -71,7 +71,7 @@ class DAQ_Logger(CustomExt):
             instance of the pymodaq dashboard
         """
 
-        super().__init__(dockarea, dashboard)
+        super().__init__(dockarea, dashboard, add_toolbar_break=False)
 
         self.wait_time = 1000
         self.logger: Union[H5Logger, DataBaseLogger] = None
@@ -103,10 +103,7 @@ class DAQ_Logger(CustomExt):
 
         logger.debug('actions set')
 
-    def setup_docks(self):
-
-        self.create_dashboard_toolbar()
-
+    def setup_docks_and_widgets(self):
         logger.debug('setting docks')
         self.docks['detectors'] = Dock("Detectors")
         splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -140,11 +137,10 @@ class DAQ_Logger(CustomExt):
         self.connect_action('grab_all', self.start_all)
         self.connect_action('stop_all', self.stop_all)
 
-
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
         """
         """
-        file_menu = menubar.addMenu('File')
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         if param.name() == 'log_type':
@@ -161,7 +157,7 @@ class DAQ_Logger(CustomExt):
         if logger_interface == 'H5 File':
             self.logger = H5Logger(self.modules_manager)
         elif logger_interface == 'SQL DataBase':
-            self.logger = DataBaseLogger(self.dashboard.preset_file.stem)
+            self.logger = DataBaseLogger(self.dashboard.experiment_file.stem)
         else:
             return
 
@@ -198,14 +194,9 @@ class DAQ_Logger(CustomExt):
 
             settings_str = b'<All_settings>'
             settings_str += ioxml.parameter_to_xml_string(self.dashboard.settings)
-            settings_str += ioxml.parameter_to_xml_string(
-                self.dashboard.preset_manager.preset_params)
-            if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.overshoot_manager.overshoot_params)
-            if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-                settings_str += ioxml.parameter_to_xml_string(
-                    self.dashboard.roi_saver.roi_presets)
+            # if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
+            #     settings_str += ioxml.parameter_to_xml_string(
+            #         self.dashboard.roi_saver.roi_presets)
             settings_str += ioxml.parameter_to_xml_string(self.settings)
             settings_str += ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'
@@ -273,6 +264,14 @@ class DAQ_Logger(CustomExt):
             det.stop_grab()
         for act in self.modules_manager.actuators:
             act.stop_grab()
+
+    def stop(self):
+        """ Programmatic method to stop action in the extension
+
+        Irrelevant for the DAQLogger as it doesn't do anything on the control modules
+
+        """
+        pass
 
     def set_log_type(self, log_type):
         self.settings.child('log_type').setValue(log_type)
@@ -508,7 +507,7 @@ def main():
     win, dashboard = create_load_dashboard()
     win.mainwindow.setVisible(False)
 
-    win_ext, scan = create_extension(dashboard, DAQ_Logger)
+    win_ext, logger = create_extension(dashboard, DAQ_Logger)
     win_ext.show()
 
     sys.exit(app.exec())

@@ -6,7 +6,8 @@ import toml
 
 from pymodaq_utils import config as config_mod
 from pymodaq_gui.parameter import Parameter
-from pymodaq_gui.config_saver_loader import ConfigSaverLoader, get_set_roi_path
+from pymodaq_gui.config_saver_loader import ConfigSaverLoader
+from pymodaq_gui.config import get_set_layout_path, get_set_config_dir, get_set_roi_path
 
 
 class CustomConfig(config_mod.BaseConfig):
@@ -23,16 +24,23 @@ class TestGetSet:
         assert Path(roi_path).is_dir()
 
 
+    def test_get_set_layout_path(self):
+        local_path = config_mod.get_set_local_dir()
+        layout_path = get_set_layout_path()
+        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
+        assert Path(layout_path).is_dir()
+
+
 class TestConfigSaverLoader:
     params = [
         {'name': 'aparent', 'type': 'group', 'children': [
             {'name': 'aparam', 'type': 'group', 'children': [
                 {'name': 'min', 'type': 'float', 'value': 2.},
-                {'name': 'max', 'type': 'float', 'value': 6.}
+                {'name': 'max', 'type': 'float', 'value': 6.},
             ]},
         {'name': 'anotherparam', 'type': 'group', 'children': [
             {'name': 'min', 'type': 'bool', 'value': True},
-            {'name': 'max', 'type': 'str', 'value': 'klj'}
+            {'name': 'max', 'type': 'str', 'value': 'klj'},
         ]},
     ]}]
 

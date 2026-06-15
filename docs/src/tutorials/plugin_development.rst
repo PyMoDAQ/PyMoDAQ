@@ -854,6 +854,40 @@ __ https://numpydoc.readthedocs.io/en/latest/format.html
 
 Notice that the import of the wrapper is very similar to what we have done in the gold route. However, we do not call anymore the *InterfaceSetupDlg()* method that was poping up a window. We rather use the *EnumerateUSB()* method to get the list of the addresses of the plugged controllers, which will then be sent in the parameter panel (in the item named *Devices*) of the DAQ_Move UI. We now understand precisely the sequence of events that makes the list of controller addresses available just after we have selected our instrument.
 
+.. _hardware_discovery_plugin:
+
+.. tip:: **Shared hardware discovery for VISA and serial plugins**
+
+   If your plugin enumerates VISA resources or serial ports to populate its
+   settings UI, use :mod:`pymodaq_plugins_utils.hardware` instead of calling
+   ``pyvisa.ResourceManager()`` or ``serial.tools.list_ports.comports()``
+   directly. The module caches the OS query once per process and returns the
+   same result to every plugin that requests it, which removes redundant
+   hardware enumeration at startup.
+
+   .. code-block:: python
+
+      # VISA-based plugin (Newport, Thorlabs, PI, ...)
+      from pymodaq_plugins_utils.hardware.visa import list_serial_resources
+      ports = list_serial_resources()  # ['ASRL/dev/ttyUSB0::INSTR', ...]
+
+      # pyserial-based plugin (Arduino, Ocean Optics, ...)
+      from pymodaq_plugins_utils.hardware.serial_ports import list_resources
+      ports = list_resources()  # ['/dev/ttyUSB0', 'COM3', ...]
+
+   Both ``pyvisa`` and ``pyserial`` remain optional: the functions return
+   empty lists if the backend is not installed, so your plugin will not crash
+   on machines where the dependency is absent.
+
+   To refresh the list after hot-plugging a device:
+
+   .. code-block:: python
+
+      from pymodaq_plugins_utils.hardware import invalidate_all_caches
+      invalidate_all_caches()
+
+   See :ref:`hardware_discovery_API` for the full API reference.
+
 Notice that in the class declaration not all the parameters are visible. Most of them are declared in the *comon_parameters_fun* that declares all the parameters that are common to every plugin. But if at some point you need to add some specific parameter for your instrument, you just have to add an element in this *params* list, and it will directly be displayed and controllable through the DAQ_Move UI! You should fill in a *title*, a *name*, a *type* of data, a *value* ... You will find this kind of tree everywhere in the PyMoDAQ code. Copy-paste the first lign for exemple and see what happens when you execute the code ;)
 
 To modify the value of such a parameter, you will use something like

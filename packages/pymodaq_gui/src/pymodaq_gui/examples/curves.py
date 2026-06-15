@@ -38,7 +38,7 @@ class Curve(GraphicsObject):
 
         self.path: QtGui.QPainterPath = None
         self.pen: QtGui.QPen = None
-        self.data = [(0, 3), (1, 2), (2, 4), (3.5, 0), (3.5, -1),]
+        self.data = [(0, 3), (1, 2), (2, 4), (3.5, 0), (3.5, -1)]
 
         self.setPen(pen)
 
@@ -153,9 +153,9 @@ def generate_uniform_data() -> DataRaw:
 
     data_to_plot = DataRaw(name='mydata', distribution='uniform',
                                    data=[data_red, data_green, data_red-data_green],
-                                   labels = ['myreddata', 'mygreendata'],
+                                   labels=['myreddata', 'mygreendata'],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0), ])
+                                         Axis('yaxis', units='ypxl', data=y, index=0)])
     return data_to_plot
 
 

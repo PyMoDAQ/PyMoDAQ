@@ -37,7 +37,7 @@ def main():
     widget.show()
     prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0),]))
+                                         Axis('yaxis', units='ypxl', data=y, index=0)]))
 
     prog.view.show_roi_target(True)
     prog.view.move_scale_roi_target((50, 40), (20, 20))

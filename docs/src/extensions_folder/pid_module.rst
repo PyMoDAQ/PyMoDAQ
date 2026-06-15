@@ -96,16 +96,21 @@ and your favorite Qt backend, we recommand using either PySide6 or PyQt6.
 
 ``pip install PySide6``
 
-We also need to install (from source) another package that contains all the mock plugins to test the PID module. This step is optional if you wish to use the PID module with real actuators and detectors but it provides an interesting toy model and is a good introduction on its use and on its different components.
+We also need to install (from source) another package that contains all the mock plugins to test the PID module.
+This step is optional if you wish to use the PID module with real actuators and detectors but it provides an interesting
+toy model and is a good introduction on its use and on its different components.
 
 ``pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_mockexamples.git``
 
-This will create a folder in your environment (you can also clone it to the folder of your choice). In this folder, you will find all the tools that you need.
+This will create a folder in your environment (you can also clone it to the folder of your choice). In this folder,
+you will find all the tools that you need.
 
-First, go to the resources folder and copy the beam_steering_mock.xml preset to the preset folder, usually found at this path ``C:\ProgramData\.pymodaq\preset_configs``. This is not necessary but you will be able to see it directly in the available presets when starting a dashboard.
+First, go to the resources folder and copy the beam_steering_mock.xml experiment to the experiment folder,
+usually found at this path ``C:\ProgramData\.pymodaq\experiment``. This is not necessary but you will be able to see it
+directly in the available experiments when starting a dashboard.
 
-Configuration from copied preset
-^^^^^^^^^^^^^^^^^^^^
+Configuration from copied experiment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Launch a dashboard
 
@@ -113,7 +118,7 @@ Launch a dashboard
 
 In the main menu go to
 
-**Preset Modes > Load Preset**
+**Tools > Experiments > Load Experiment**
 
 and choose the beam_steering_mock that you just copied.
 
@@ -124,10 +129,10 @@ You should now have this:
 .. figure:: /image/PID_Module/dashboard_preset_loaded_pymodaq5.png
 
 
-Configurations from custom preset
+Configurations from custom experiment
 ^^^^^^^^^^^^^^^^^^^^
 
-If you choose to not use the proposed preset, you can make your own. In that case, the required steps are the following:
+If you choose to not use the proposed experiment, you can make your own. In that case, the required steps are the following:
 
 Launch a dashboard
 
@@ -135,7 +140,7 @@ Launch a dashboard
 
 In the main menu go to
 
-**Preset Modes > New Preset**
+**Tools > Experiments > New Experiment**
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
@@ -160,7 +165,7 @@ and click **SAVE**.
 
 Back to the dashboard menu
 
-**Preset Modes > Load preset > preset_mock_beam_steering**
+**Tools > Experiments > Load experiment > beam_steering**
 
 You should now have this:
 
@@ -366,7 +371,8 @@ __ https://pymodaq.cnrs.fr/en/latest/usage/modules/Plugins.html#naming-conventio
 
 **Number of setpoints and naming of the control modules**
 
-The number of setpoints, their names, and the naming of the control modules are declared at the begining of the class declaration. It is important that **those names are reported in the preset file associated to the model**. We understand now that those names are actually set in the PID model class.
+The number of setpoints, their names, and the naming of the control modules are declared at the begining of the class declaration.
+It is important that **those names are reported in the experiment file associated to the model**. We understand now that those names are actually set in the PID model class.
 
     .. _fig_pid_model_configuration:
 

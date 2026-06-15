@@ -118,7 +118,7 @@ class LECODirector:
                     ThreadCommand(
                         ThreadStatus.UPDATE_STATUS,
                         f"Connection error to actor: {exc.rpc_error.message}",
-                    )
+                    ),
                 )
 
     def stop(self):
@@ -139,13 +139,13 @@ class LECODirector:
                  additional_payload: Optional[List[bytes]] = None,
                  ) -> None:
         """ Write the value of a param updated from the actor to here in the
-        Parameter with path: ('move_settings', 'settings_client')
+        Parameter with path: ('actuator_settings', 'settings_client')
         """
         GenericDirectorMethods.SET_DIRECTOR_INFO  # defined here
         assert additional_payload
         # cast is used by the type checker to infer the returned type (when many are possible)
         param = cast(
-            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]),
         )
 
         try:

@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING
 from pymodaq_utils.utils import get_entrypoints
 from pymodaq_utils import logger as logger_module
 
+from pymodaq.extensions.custom_ext import CustomExt
+# in older extensions, CustomExt was defined here so this import should stay here also for backcompatibility
+
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 if TYPE_CHECKING:
-    from pymodaq.extensions.custom_ext import CustomExt
     from pymodaq.extensions import ExtensionEnum
 
 
@@ -31,7 +33,7 @@ def get_ext_modules(path: Path):
 class Extension:
     name: str
     class_name: str
-    klass: type['CustomExt']
+    klass: type[CustomExt]
 
 
 def get_extensions() -> dict['ExtensionEnum', Extension]:
@@ -64,8 +66,8 @@ def get_extensions() -> dict['ExtensionEnum', Extension]:
                         mod_in = importlib.import_module(f'{pkg.value}.extensions.{mod}')
                         if hasattr(mod_in, 'EXTENSION_NAME'):
                             try:
-                                extend_enum(ExtensionEnum, mod_in.CLASS_NAME.upper(), mod_in.CLASS_NAME)
-                            except TypeError: #already existing no need to add it, could happen if
+                                extend_enum(ExtensionEnum, mod_in.CLASS_NAME.upper(), mod_in.EXTENSION_NAME)
+                            except TypeError:  #already existing no need to add it, could happen if
                                 #this function is called several times
                                 pass
                             extension_import[ExtensionEnum[mod_in.CLASS_NAME.upper()]] = Extension(

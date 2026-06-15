@@ -1,4 +1,5 @@
 import abc
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from typing import List,  Optional
 import tempfile
 from pathlib import Path
@@ -11,7 +12,7 @@ import numpy as np
 from collections import OrderedDict
 
 
-from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
 from pymodaq_gui.messenger import messagebox
 from pymodaq_utils import utils
 
@@ -20,7 +21,7 @@ from pymodaq_utils.logger import set_logger, get_module_name
 try:
     from pymodaq_gui.config_saver_loader import ConfigSaverLoader
 except ModuleNotFoundError:
-    from pymodaq_gui.config import ConfigSaverLoader #backcompatibility
+    from pymodaq_gui.config import ConfigSaverLoader  #backcompatibility
 
 from pymodaq_utils.config import GlobalConfig as Config
 
@@ -81,7 +82,7 @@ def optimizer_params(prediction_params: list[dict]):
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group',
          'children': [
              {'title': 'Prediction Function:', 'name': 'prediction', 'expanded': False, 'type': 'group',
-              'children': prediction_params
+              'children': prediction_params,
 
               },
              {'title': 'Stopping Criteria:', 'name': 'stopping', 'expanded': False, 'type': 'group',
@@ -92,7 +93,7 @@ def optimizer_params(prediction_params: list[dict]):
                    'limits': StopType.values(), 'value': str(StopType.ITER),
                    'tip': StopType.ITER.tip()},
                   {'title': 'Tolerance', 'name': 'tolerance', 'type': 'slide', 'value': 1e-2,
-                   'min': 1e-8, 'max': 1, 'subtype': 'log', },
+                   'min': 1e-8, 'max': 1, 'subtype': 'log'},
                   {'title': 'Npoints', 'name': 'npoints', 'type': 'int', 'value': 5, 'min': 1},
               ]},
              {'title': 'Ini. Random Points', 'name': 'ini_random', 'type': 'int', 'value': 5},
@@ -103,11 +104,11 @@ def optimizer_params(prediction_params: list[dict]):
          'children': [
              {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
               'limits': [d['name'] for d in MODELS]},
-             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action', },
+             {'title': 'Ini Model', 'name': 'ini_model', 'type': 'action'},
              {'title': 'Ini Algo', 'name': 'ini_runner', 'type': 'action', 'enabled': False},
              {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
          ]},
-        {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group',
+        {'title': 'Actuator settings:', 'name': ACTUATOR_SETTINGS_KEY, 'expanded': True, 'type': 'group',
          'visible': False, 'children': [
             {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
 
@@ -206,7 +207,7 @@ class OptimizationRunner(QtCore.QObject):
                 self.output_to_actuators: DataToActuators = \
                     self.model_class.convert_output(
                         self.outputs,
-                        best_individual=self.optimization_algorithm.best_individual
+                        best_individual=self.optimization_algorithm.best_individual,
                     )
                 for dwa in self.output_to_actuators:
                     dwa.origin = DataNames.Actuators
@@ -221,7 +222,7 @@ class OptimizationRunner(QtCore.QObject):
 
                 #log data
                 self.runner_command.emit(
-                    utils.ThreadCommand(OptimizerThreadStatus.ADD_DATA,))
+                    utils.ThreadCommand(OptimizerThreadStatus.ADD_DATA))
 
                 # Run the algo internal mechanic
                 self.optimization_algorithm.tell(self.input_from_dets)
@@ -240,7 +241,7 @@ class OptimizationRunner(QtCore.QObject):
 
                 
                 self.saver_signal.emit(DataToActuatorsOpti(DataNames.Actuators,
-                                                           data = self.output_to_actuators.deepcopy().data,
+                                                           data=self.output_to_actuators.deepcopy().data,
                                                            mode=self.output_to_actuators.mode,
                                                            ind_iter=self._ind_iter))
 
@@ -285,7 +286,7 @@ class GenericOptimization(CustomExt):
     config_saver = OptimizerConfig  #to be redefined in real implementation if needed
 
     def __init__(self, dockarea, dashboard):
-        super().__init__(dockarea, dashboard)
+        super().__init__(dockarea, dashboard, add_toolbar_break=False)
 
         self._ini_runner = False
 
@@ -384,7 +385,7 @@ class GenericOptimization(CustomExt):
     def config_path(self) -> Path:
         return self.optimizer_config.config_path
 
-    def setup_docks(self):
+    def setup_docks_and_widgets(self):
         """
         to be subclassed to setup the docks layout
         for instance:
@@ -398,7 +399,6 @@ class GenericOptimization(CustomExt):
         ########
         pyqtgraph.dockarea.Dock
         """
-        self.create_dashboard_toolbar()
 
         self.docks['saving'] = gutils.Dock('Saving')
         self.docks['saving'].addWidget(self.h5saver.settings_tree)
@@ -456,21 +456,11 @@ class GenericOptimization(CustomExt):
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
 
-    def setup_menu(self, menubar: QtWidgets.QMenuBar = None):
-        '''
-        to be subclassed
-        create menu for actions contained into the self.actions_manager, for instance:
+    def setup_menus_and_toolbars(self, menubar: QtWidgets.QMenuBar = None):
+        """
 
-        For instance:
-
-        file_menu = self.menubar.addMenu('File')
-        self.actions_manager.affect_to('load', file_menu)
-        self.actions_manager.affect_to('save', file_menu)
-
-        file_menu.addSeparator()
-        self.actions_manager.affect_to('quit', file_menu)
-        '''
-        pass
+        """
+        self.create_dashboard_toolbar()
 
     def value_changed(self, param):
         ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
@@ -546,7 +536,7 @@ class GenericOptimization(CustomExt):
     def setup_actions(self):
         logger.debug('setting actions')
         combo_model = QtWidgets.QComboBox()
-        combo_model.addItems([model['name'] for  model in MODELS])
+        combo_model.addItems([model['name'] for model in MODELS])
         self.add_widget(OptimizerAction.MODELS, combo_model, tip='List of available models')
         self.add_action(OptimizerAction.INI_MODEL, 'Init Model', 'ini')
         self.add_widget('model_led', QLED, toolbar=self.toolbar)
@@ -840,7 +830,7 @@ class GenericOptimization(CustomExt):
         node_is_empty = (
             len(self.module_and_data_saver.get_set_node().children()) == 0 or
             len(self.module_and_data_saver.get_set_node().get_child('Detector000').children()) == 0)
-        node = self.module_and_data_saver.get_set_node(new= not node_is_empty)
+        node = self.module_and_data_saver.get_set_node(new=not node_is_empty)
         self.h5saver.settings.child('current_scan_name').setValue(node.name)
 
     def ini_optimization_runner(self):
@@ -950,15 +940,15 @@ class GenericOptimization(CustomExt):
         dte_live = DataToExport('Live', data=[
             DataCalculated('Fitness',
                            data=[np.atleast_1d(dwa_data.value()), np.atleast_1d(fitness.value())],
-                           labels=['Fitness', 'Fitness_best']
-                           ),])
+                           labels=['Fitness', 'Fitness_best'],
+                           )])
         for ind, act in enumerate(self.modules_manager.actuators):
             dte_live.append([
                 DataCalculated(act.title,
                                data=[np.atleast_1d(actuators_values[ind]),
                                      np.atleast_1d(best_individual[ind])],
                                labels=[act.title, f'{act.title}_best'],
-                               units=act.units
+                               units=act.units,
                            ),
                                 ])
 

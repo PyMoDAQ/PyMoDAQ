@@ -17,7 +17,7 @@ class GenericAlgorithm(abc.ABC):
         self.ini_bounds = bounds
 
         self._next_point: Optional[dict[str, float]] = None
-        self._suggested_coordinates: list[dict[str, float]]  = []
+        self._suggested_coordinates: list[dict[str, float]] = []
         self.ini_random_points = ini_random
 
     @abc.abstractmethod

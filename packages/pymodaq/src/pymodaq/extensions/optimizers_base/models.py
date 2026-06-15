@@ -12,8 +12,8 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.extensions.optimizers_base.utils import logger, individual_as_dta
 from pymodaq.extensions.optimizers_base.algorithm import GenericAlgorithm
 from pymodaq.utils.data import DataToActuators
-from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq_data import DataToExport
+from pymodaq.utils.managers.modules.modules_manager import ModulesManager
+from pymodaq_data import DataToExport, DataDim, DataBase
 from pymodaq_gui.plotting.data_viewers import ViewersEnum
 from pymodaq_utils.utils import get_entrypoints, find_dict_in_list_from_key_val
 
@@ -136,7 +136,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
                    {'title': 'Get data', 'name': 'data_probe', 'type': 'action'},
                    {'title': 'Optimize 0Ds:', 'name': 'optimize_0d', 'type': 'itemselect',
                     'checkbox': True},
-               ]},]
+               ]}]
 
     def __init__(self, optimization_controller):
         self.actuators_name = optimization_controller.modules_manager.selected_actuators_name
@@ -171,7 +171,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
         """
         data_name: str = self.settings['optimizing_signal', 'optimize_0d']['selected'][0]
-        origin, name = data_name.split('/')
+        origin, name = DataBase.get_origin_name_from_full_name(data_name)
         return float(measurements.get_data_from_name_origin(name, origin).data[0][0])
 
     def convert_output(self, outputs: dict[str, Union[float, np.ndarray]],
@@ -193,7 +193,7 @@ class OptimizerModelDefault(OptimizerModelGeneric):
 
     def optimize_from(self):
         self.modules_manager.get_det_data_list()
-        data0D_names = self.modules_manager.get_probed_data_channels('Data0D')
+        data0D_names = self.modules_manager.get_probed_data_full_names(DataDim.Data0D)
         self.settings.child('optimizing_signal', 'optimize_0d').setValue(
             dict(all_items=data0D_names, selected=data0D_names))
 
@@ -234,7 +234,7 @@ def get_optimizer_models(model_name=None):
             except Exception as e:
                 logger.warning(f'Impossible to import the {pkg.value} optimizer model: {str(e)}')
 
-    if find_dict_in_list_from_key_val(models_import, 'name', 'OptimizerModelDefault')  is None:
+    if find_dict_in_list_from_key_val(models_import, 'name', 'OptimizerModelDefault') is None:
         models_import.append({'name': 'OptimizerModelDefault',
                               'module': inspect.getmodule(OptimizerModelDefault),
                               'class': OptimizerModelDefault})

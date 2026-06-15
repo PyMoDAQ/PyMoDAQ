@@ -1,21 +1,48 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Any
 from pathlib import Path
+
+import numpy as np
 
 import importlib
 import json
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from collections import OrderedDict
+
+import numpy as np
 from qtpy import QtGui
 from qtpy.QtCore import QDateTime, QTime
+
+from pymodaq_utils.logger import set_logger, get_module_name
+
 from pymodaq_gui.parameter import Parameter
 
 from pyqtgraph.parametertree.Parameter import PARAM_TYPES, PARAM_NAMES
 
 
 VALID_FOR_CONFIGURATION = 'valid_for_configuration'
+logger = set_logger(get_module_name(__file__))
+
+
+def basic_serialization(param_val: Any, within_dict=False) -> str:
+    if param_val is np.nan:
+        text = f"np.nan"
+    elif isinstance(param_val, str):
+        if not within_dict:
+            text = f"str({param_val!r})"  # Export repr() for handling non-printable characters
+        else:
+            text = param_val
+    elif isinstance(param_val, int):
+        text = f"int({param_val})"
+    elif isinstance(param_val, float):
+        text = f"float({param_val})"
+    else:
+        logger.exception(f"Serializing as xml the Parameter value: {param_val} as a simple string\n"
+                         f"May not be reimportable...")
+        text = str(param_val)
+    return text
 
 
 def walk_parameters_to_xml(parent_elt=None, param=None):
@@ -92,14 +119,7 @@ def add_text_to_elt(elt, param):
     elif param_type == 'color':
         text = str([param_val.red(), param_val.green(), param_val.blue(), param_val.alpha()])
     elif param_type == 'list':
-        if isinstance(param_val, str):
-            text = f"str({param_val!r})"    # Export repr() for hangling non-printable characters
-        elif isinstance(param_val, int):
-            text = f"int({param_val})"
-        elif isinstance(param_val, float):
-            text = f"float({param_val})"
-        else:
-            text = str(param_val)
+        text = basic_serialization(param_val)
     elif param_type == 'int':
         if param_val is True:  # known bug is True should be clearly specified here
             val = 1
@@ -126,7 +146,7 @@ def add_text_to_elt(elt, param):
     elt.text = text
 
 
-def dict_from_param(param):
+def dict_from_param(param: Parameter):
     """Get Parameter properties as a dictionary
 
     Parameters
@@ -177,14 +197,14 @@ def dict_from_param(param):
     if VALID_FOR_CONFIGURATION in param.opts:
         opts.update({VALID_FOR_CONFIGURATION: '1' if param.opts[VALID_FOR_CONFIGURATION] else '0'})
 
-    # if 'limits' in param.opts:
-    #     values = str(param.opts['limits'])
-    #     opts.update(dict(values=values))
-
     if 'limits' in param.opts:
-        limits = str(param.opts['limits'])
+        if isinstance(param.opts['limits'], dict):
+            limits = {}
+            for key in param.opts['limits']:
+                limits[key] = basic_serialization(param.opts['limits'][key], within_dict=True)
+        else:
+            limits = str(param.opts['limits'])
         opts.update(dict(limits=limits))
-        # opts.update(dict(values=limits))
 
     if 'addList' in param.opts:
         addList = str(param.opts['addList'])
@@ -313,20 +333,18 @@ def elt_to_dict(el):
         suffix = str(el.get('suffix'))
         param.update(dict(suffix=suffix))
 
-    # if 'limits' in el.attrib.keys():
-    #     try:
-    #         values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
-    #     # iterator type has been used
-    #         param.update(dict(values=values))
-    #     except:
-    #         pass
-
     if 'limits' in el.attrib.keys():
         try:
             limits = eval(el.get('limits'))
+            if isinstance(limits, dict):
+                for key, val in limits.items():
+                    try:
+                        limits[key] = eval(val)
+                    except NameError:
+                        limits[key] = val
             param.update(dict(limits=limits))
-        except:
-            pass
+        except Exception as e:
+            logger.exception(e)
 
     return param
 
@@ -479,7 +497,7 @@ def set_txt_from_elt(el, param_dict):
                 param_value = dict(all_items=[], selected=[])
             else:
                 param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
-        elif 'bool' in param_type or 'led' in param_type: # covers 'bool' 'bool_push',  'led' and 'led_push'types
+        elif 'bool' in param_type or 'led' in param_type:  # covers 'bool' 'bool_push',  'led' and 'led_push'types
             param_value = bool(int(val_text))
         elif param_type == 'date_time':
             param_value = QDateTime.fromMSecsSinceEpoch(int(val_text))
@@ -494,6 +512,8 @@ def set_txt_from_elt(el, param_dict):
                 param_value = eval(val_text)
             except Exception:
                 param_value = val_text  # for back compatibility
+        elif param_type == 'progress':
+            param_value = int(val_text)
         elif param_type == 'table_view':
             data_dict = json.loads(val_text)
             mod = importlib.import_module(data_dict['module'])

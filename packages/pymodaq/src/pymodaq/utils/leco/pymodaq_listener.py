@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 
 from pymodaq_utils.enums import StrEnum
 
@@ -23,7 +24,7 @@ from pymodaq.utils.leco.rpc_method_definitions import (
     ViewerMethods,
     GenericDirectorMethods,
     MoveDirectorMethods,
-    ViewerDirectorMethods,
+    ViewerDirectorMethods, DashboardMethods, DashboardDirectorMethods,
 )
 
 
@@ -59,6 +60,17 @@ class LECOViewerCommands(StrEnum):
     SNAP = 'snap'
     STOP = 'stop_grab'
 
+class LECODashboardCommands(StrEnum):
+    GET_DEVICES = 'get_devices'
+    SEND_DEVICES = 'send_devices'
+    GET_CONFIGURATIONS = 'get_configurations'
+    SEND_CONFIGURATIONS = 'send_configurations'
+    APPLY_CONFIGURATION = 'apply_configuration'
+    APPLIED_CONFIGURATION_DONE = 'applied_configuration_done'
+    GET_EXPERIMENTS = 'get_experiments'
+    SEND_EXPERIMENTS = 'send_experiments'
+    APPLY_EXPERIMENT = 'apply_experiment'
+    APPLIED_EXPERIMENT_DONE = 'applied_experiment_done'
 
 class ListenerSignals(QObject):
     cmd_signal = Signal(ThreadCommand)
@@ -81,19 +93,19 @@ class PymodaqPipeHandler(PipeHandler):
         self.register_data_types_for_deserialization()
 
     def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
+        self, types: Optional[Sequence[type[SerializableBase]]] = None,
     ) -> None:
         """Register different data types for deserialization in subclasses."""
         if types is None:
             return
         for cls in types:
             SerializableFactory().register_from_type(
-                cls, cls.serialize, cls.deserialize
+                cls, cls.serialize, cls.deserialize,
             )
 
 class ActorHandler(PymodaqPipeHandler):
     def register_data_types_for_deserialization(
-        self, types: Optional[Sequence[type[SerializableBase]]] = None
+        self, types: Optional[Sequence[type[SerializableBase]]] = None,
     ) -> None:
         all_types: Sequence[type[SerializableBase]] = [DataWithAxes]
         if types:
@@ -103,29 +115,33 @@ class ActorHandler(PymodaqPipeHandler):
     def register_rpc_methods(self) -> None:
         super().register_rpc_methods()
         self.register_binary_rpc_method(
-            self.set_info, name=GenericMethods.SET_INFO, accept_binary_input=True
+            self.set_info, name=GenericMethods.SET_INFO, accept_binary_input=True,
         )
         self.register_rpc_method(self.send_data_grab, name=ViewerMethods.GRAB)
         self.register_rpc_method(self.send_data_snap, name=ViewerMethods.SNAP)
         self.register_binary_rpc_method(
-            self.move_abs, accept_binary_input=True, name=MoveMethods.MOVE_ABS
+            self.move_abs, accept_binary_input=True, name=MoveMethods.MOVE_ABS,
         )
         self.register_binary_rpc_method(
-            self.move_rel, accept_binary_input=True, name=MoveMethods.MOVE_REL
+            self.move_rel, accept_binary_input=True, name=MoveMethods.MOVE_REL,
         )
         self.register_rpc_method(self.move_home, name=MoveMethods.MOVE_HOME)
         self.register_rpc_method(self.get_actuator_value, name=MoveMethods.GET_ACTUATOR_VALUE)
         self.register_rpc_method(self.stop_motion, name=MoveMethods.STOP_MOTION)
         self.register_rpc_method(self.stop_grab, name=ViewerMethods.STOP)
         self.register_rpc_method(self.get_settings, name=GenericMethods.GET_SETTINGS)
-
+        self.register_rpc_method(self.get_devices, name=DashboardMethods.GET_DEVICES)
+        self.register_rpc_method(self.get_configurations, name=DashboardMethods.GET_CONFIGURATIONS)
+        self.register_rpc_method(self.apply_configuration, name=DashboardMethods.APPLY_CONFIGURATION)
+        self.register_rpc_method(self.get_experiments, name=DashboardMethods.GET_EXPERIMENTS)
+        self.register_rpc_method(self.apply_experiment, name=DashboardMethods.APPLY_EXPERIMENT)
     @staticmethod
     def extract_pymodaq_object(
-        value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]]
+        value: Optional[Union[float, str]], additional_payload: Optional[List[bytes]],
     ):
         if value is None and additional_payload:
             return cast(
-                DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0])
+                DataWithAxes, SerializableFactory().get_apply_deserializer(additional_payload[0]),
             )
         else:
             return value
@@ -137,19 +153,34 @@ class ActorHandler(PymodaqPipeHandler):
                  ) -> None:
         assert additional_payload
         param = cast(
-            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0])
+            ParameterWithPath, SerializableFactory().get_apply_deserializer(additional_payload[0]),
         )
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.SET_INFO, attribute=param))
 
     def get_settings(self):
         self.signals.cmd_signal.emit(ThreadCommand(LECOCommands.GET_SETTINGS))
 
-    # detector commands
-    def send_data_grab(self,) -> None:
-        self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
+    # dashboard commands
+    def get_devices(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_DEVICES))
+
+    def get_configurations(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_CONFIGURATIONS))
+
+    def apply_configuration(self, configuration : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_CONFIGURATION, attribute=configuration))
+
+    def get_experiments(self):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.GET_EXPERIMENTS))
+
+    def apply_experiment(self, experiment : str):
+        self.signals.cmd_signal.emit(ThreadCommand(LECODashboardCommands.APPLY_EXPERIMENT, attribute=experiment))
 
     # detector commands
-    def send_data_snap(self,) -> None:
+    def send_data_grab(self) -> None:
+        self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.GRAB))
+
+    def send_data_snap(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.SNAP))
 
     # actuator commands
@@ -187,16 +218,17 @@ class ActorHandler(PymodaqPipeHandler):
         # according to DAQ_Move, this supersedes "check_position"
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.GET_ACTUATOR_VALUE))
 
-    def stop_motion(self,) -> None:
+    def stop_motion(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOMoveCommands.STOP))
 
-    def stop_grab(self,) -> None:
+    def stop_grab(self) -> None:
         self.signals.cmd_signal.emit(ThreadCommand(LECOViewerCommands.STOP))
 
 
 # to be able to separate them later on
 MoveActorHandler = ActorHandler
 ViewerActorHandler = ActorHandler
+DashboardActorHandler = ActorHandler
 
 
 class PymodaqListener(Listener):
@@ -239,6 +271,11 @@ class PymodaqListener(Listener):
     def stop_listen(self) -> None:
         super().stop_listen()
         try:
+            self.thread.join(timeout=5.0)  # wait for ZMQ poll loop to exit
+        except AttributeError:
+            pass # In case there's no thread
+        try:
+            del self.message_handler
             del self.communicator
         except AttributeError:
             pass
@@ -269,7 +306,7 @@ class ActorListener(PymodaqListener):
     def start_listen(self) -> None:
         super().start_listen()
         self.message_handler.register_rpc_method(
-            self.set_remote_name, name=GenericMethods.SET_REMOTE_NAME
+            self.set_remote_name, name=GenericMethods.SET_REMOTE_NAME,
         )
 
     def set_remote_name(self, name: str) -> None:
@@ -344,7 +381,31 @@ class ActorListener(PymodaqListener):
                     method=GenericDirectorMethods.SET_DIRECTOR_SETTINGS,
                     settings=command.attribute.decode(),
                 )
-
+            elif command.command == LECODashboardCommands.SEND_DEVICES:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_DEVICES,
+                    **binary_serialization_to_kwargs(command.attribute, data_key="data"),
+                )
+            elif command.command == LECODashboardCommands.SEND_CONFIGURATIONS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_CONFIGURATIONS,
+                    configurations=command.attribute,
+                )
+            elif command.command == LECODashboardCommands.SEND_EXPERIMENTS:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.SEND_EXPERIMENTS,
+                    experiments=command.attribute,
+                )
+            elif command.command == LECODashboardCommands.APPLIED_EXPERIMENT_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_EXPERIMENT_DONE,
+                    done=command.attribute,
+                )
+            elif command.command == LECODashboardCommands.APPLIED_CONFIGURATION_DONE:
+                self.send_rpc_message_to_remote(
+                    method=DashboardDirectorMethods.APPLIED_CONFIGURATION_DONE,
+                    done=command.attribute,
+                )
         else:
             raise IOError("Unknown TCP client command")
 
@@ -362,3 +423,103 @@ class ActorListener(PymodaqListener):
 # to be able to separate them later on
 MoveActorListener = ActorListener
 ViewerActorListener = ActorListener
+DashboardActorListener = ActorListener
+
+
+class LECOComponentMixin:
+    """Mixin class adding LECO network connectivity to a PyMoDAQ component.
+
+    This mixin provides the interface for connecting a PyMoDAQ module (actuator,
+    detector, or dashboard) to the LECO (Laboratory Equipment Communication
+    Orchestration) network. It manages the lifecycle of an :class:`ActorListener`
+    that runs in a background thread and bridges incoming LECO remote-procedure
+    calls to Qt signals and vice versa.
+
+    Subclasses must implement :meth:`get_leco_name`, :meth:`get_leco_host_port`,
+    and :meth:`process_leco_commands`.
+
+    The class-level signal :attr:`_leco_commands_signal` is used to forward
+    outgoing :class:`~pymodaq_utils.utils.ThreadCommand` objects to the listener's
+    queue so that they are transmitted over LECO from the Qt thread.
+    """
+
+    _leco_commands_signal = Signal(ThreadCommand)
+
+    def __init__(self, listener_class: Type[ActorListener], **kwargs):
+        """Initialize the mixin.
+
+        :param listener_class: The :class:`ActorListener` subclass to instantiate
+            when establishing a LECO connection.
+        """
+        self._leco_client: Optional[ActorListener] = None
+        self._listener_class: Type[ActorListener] = listener_class
+
+    def connect_leco(self, connect: bool) -> None:
+        """Connect to or disconnect from the LECO network.
+
+        When *connect* is ``True``, an :class:`ActorListener` is created (or
+        reused if one already exists) and started.  The listener's
+        ``cmd_signal`` is wired to :meth:`process_leco_commands` so that
+        incoming LECO commands are dispatched to this component, and
+        :attr:`_leco_commands_signal` is connected to the listener's
+        :meth:`~ActorListener.queue_command` so that outgoing commands can be
+        sent from the Qt thread.
+
+        When *connect* is ``False``, a :attr:`~LECOCommands.QUIT` command is
+        emitted to stop the listener gracefully, and the signal/slot connection
+        to :meth:`~ActorListener.queue_command` is removed.
+
+        :param connect: ``True`` to establish the connection, ``False`` to
+            tear it down.
+        """
+        if connect:
+            name = self.get_leco_name()
+            host, port = self.get_leco_host_port()
+            try:
+                self._leco_client.name = name
+            except AttributeError:
+                self._leco_client = self._listener_class(name=name, host=host, port=port)
+                self._leco_client.cmd_signal.connect(self.process_leco_commands)
+            self._leco_commands_signal.connect(self._leco_client.queue_command)
+            self._leco_client.start_listen()
+        else:
+            self._leco_client.stop_listen()
+            try:
+                self._leco_commands_signal.disconnect(self._leco_client.queue_command)
+            except TypeError:
+                pass  # already disconnected
+
+    def get_leco_name(self) -> str:
+        """Return the LECO component name used to register on the network.
+
+        :returns: The name string that uniquely identifies this component on the
+            LECO coordinator.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def get_leco_host_port(self) -> tuple[str, int]:
+        """Return the host and port of the LECO coordinator to connect to.
+
+        :returns: A ``(host, port)`` tuple where *host* is the hostname or IP
+            address of the coordinator and *port* is its TCP port number.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError
+
+    def process_leco_commands(self, status: ThreadCommand) -> Optional[ThreadCommand]:
+        """Handle an incoming command forwarded from the LECO listener.
+
+        This slot is connected to the listener's ``cmd_signal`` and is called
+        whenever a remote LECO peer sends a command to this component (e.g.
+        grab, snap, move_abs).  Subclasses should dispatch on
+        ``status.command`` and take the appropriate action.
+
+        :param status: The :class:`~pymodaq_utils.utils.ThreadCommand` received
+            from the listener, carrying the command name and optional attribute
+            payload.
+        :returns: Optionally a :class:`~pymodaq_utils.utils.ThreadCommand` for
+            further processing, or ``None``.
+        :raises NotImplementedError: Must be overridden by subclasses.
+        """
+        raise NotImplementedError

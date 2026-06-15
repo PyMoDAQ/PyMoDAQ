@@ -3,9 +3,52 @@
 Uses ``QMenu(title, parent)`` to create submenus so that Qt takes C++
 ownership and PySide6 does not garbage-collect them prematurely.
 """
-from typing import Callable
+from typing import Callable, Optional
 
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtGui
+
+
+class StickyMenu(QtWidgets.QMenu):
+    """A :class:`QMenu` that stays open after an action is triggered.
+
+    By default the menu remains open only when a **checkable** action is
+    clicked (the typical use-case for toolbar-visibility toggles).  Pass
+    ``sticky_all=True`` to keep the menu open after *any* action click,
+    which is useful for multi-selection menus.  For fine-grained control
+    supply a *sticky_predicate*: a callable that receives the triggered
+    ``QAction`` and returns ``True`` when the menu should stay open.
+
+    Parameters
+    ----------
+    *args :
+        Forwarded to :class:`QMenu` (title, parent, …).
+    sticky_all : bool
+        When ``True`` the menu never closes on a click regardless of whether
+        the action is checkable.  Ignored if *sticky_predicate* is given.
+    sticky_predicate : callable(QAction) -> bool, optional
+        Custom predicate that decides per-action whether the menu stays open.
+        When provided, *sticky_all* is ignored.
+    **kwargs :
+        Forwarded to :class:`QMenu`.
+    """
+
+    def __init__(self, *args, sticky_all: bool = False,
+                 sticky_predicate: Optional[Callable[[QtWidgets.QAction], bool]] = None,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        if sticky_predicate is not None:
+            self._is_sticky = sticky_predicate
+        elif sticky_all:
+            self._is_sticky = lambda action: True
+        else:
+            self._is_sticky = lambda action: action.isCheckable()
+
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
+        action = self.activeAction()
+        if action and self._is_sticky(action):
+            action.trigger()
+        else:
+            super().mouseReleaseEvent(event)
 
 
 def build_menu_from_iterable(
@@ -69,5 +112,5 @@ def _handle_item(menu, key, value, path, leaf_callback):
 def _add_leaf(menu, name, path, leaf_callback):
     action = menu.addAction(name)
     action.triggered.connect(
-        lambda checked=False, n=name, p=path: leaf_callback(n, p)
+        lambda checked=False, n=name, p=path: leaf_callback(n, p),
     )

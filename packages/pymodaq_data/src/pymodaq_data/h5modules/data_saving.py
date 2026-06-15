@@ -15,7 +15,7 @@ from pymodaq_utils.enums import enum_checker
 from pymodaq_data.data import (Axis, DataDim, DataWithAxes, DataToExport, DataDistribution,
                                DataDimError, squeeze)
 from .saving import DataType, H5SaverLowLevel
-from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType # noqa: F401
+from .backends import GROUP, CARRAY, Node, EARRAY, NodeError, GroupType  # noqa: F401
 from pymodaq_utils.utils import capitalize
 from pymodaq_data.h5modules.saving import SaveType
 
@@ -51,6 +51,11 @@ class DataManagement(metaclass=ABCMeta):
         str: the future name of the node
         """
         return f'{capitalize(cls.data_type.value)}{ind:02d}'
+
+    @property
+    def raw_group(self) -> Node:
+        """ Get the base RawGroup where raw data should be saved"""
+        return self._h5saver.raw_group
 
     def __getattr__(self, item):
         """ Allows to call attributes of the underlying H5Saver object"""
@@ -295,12 +300,9 @@ class DataSaverLoader(DataManagement):
                  new_file: bool = False, metadata: dict = None, save_type=SaveType.custom):
         self.data_type = enum_checker(DataType, self.data_type)
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(self._h5saver)
@@ -328,7 +330,7 @@ class DataSaverLoader(DataManagement):
                             origin=data.origin,
                             units=data.units,
                             nav_indexes=tuple(data.nav_indexes)
-                            if data.nav_indexes is not None else None,)
+                            if data.nav_indexes is not None else None)
             metadata.update(kwargs)
             for name in data.extra_attributes:
                 metadata[name] = getattr(data, name)
@@ -771,12 +773,9 @@ class DataToExportSaver:
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path, str], save_type=SaveType.custom,
                  new_file: bool = False, metadata: dict = None):
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel(save_type)
-            h5saver_tmp.init_file(file_name=Path(h5saver),
-                                  new_file=new_file,
-                                  metadata=metadata)
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver, save_type,
+                                                new_file=new_file, metadata=metadata)
 
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(self._h5saver)
@@ -909,7 +908,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
     def add_data(self, where: Union[Node, str], data: DataToExport,
                  axis_values: List[Union[float, np.ndarray]] = None,
                  axis_value: Union[float, np.ndarray] = None,
-                 settings_as_xml='', **kwargs
+                 settings_as_xml='', **kwargs,
                  ):
         """
 
@@ -1049,17 +1048,15 @@ class DataLoader:
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5SaverLowLevel or Path
     """
 
     def __init__(self, h5saver: Union[H5SaverLowLevel, Path]):
         self._axis_loader: AxisSaverLoader = None
         self._data_loader: DataSaverLoader = None
 
-        if isinstance(h5saver, Path) or isinstance(h5saver, str):
-            h5saver_tmp = H5SaverLowLevel()
-            h5saver_tmp.init_file(file_name=Path(h5saver))
-            h5saver = h5saver_tmp
+        if isinstance(h5saver, (Path, str)):
+            h5saver = H5SaverLowLevel.from_file(h5saver)
 
         self.h5saver = h5saver
 
@@ -1067,11 +1064,25 @@ class DataLoader:
     def h5saver(self):
         return self._h5saver
 
+    @h5saver.setter
+    def h5saver(self, h5saver: H5SaverLowLevel):
+        self._h5saver = h5saver
+        self._axis_loader = AxisSaverLoader(h5saver)
+        self._data_loader = DataSaverLoader(h5saver)
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close_file()
+    @property
+
+    def raw_group(self) -> Node:
+        """ Get the base RawGroup where raw data should be saved
+
+        Convenience method
+        """
+        return self._h5saver.raw_group
 
     def close_file(self):
         self._h5saver.close_file()
@@ -1079,12 +1090,6 @@ class DataLoader:
     def walk_nodes(self, where: Union[str, Node] = '/'):
         """Return a Node generator iterating over the h5file content"""
         return self.h5saver.walk_nodes(where)
-
-    @h5saver.setter
-    def h5saver(self, h5saver: H5SaverLowLevel):
-        self._h5saver = h5saver
-        self._axis_loader = AxisSaverLoader(h5saver)
-        self._data_loader = DataSaverLoader(h5saver)
 
     def get_node(self, where: Union[Node, str], name: str = None) -> Node:
         """ Convenience method to get node"""
@@ -1109,8 +1114,7 @@ class DataLoader:
         """
         node = self._h5saver.get_node(where)
         while node is not None:  # means we reached the root level
-            if isinstance(node, GROUP):
-                if self._h5saver.is_node_in_group(node, SPECIAL_GROUP_NAMES['nav_axes']):
+            if isinstance(node, GROUP) and self._h5saver.is_node_in_group(node, SPECIAL_GROUP_NAMES['nav_axes']):
                     return self._h5saver.get_node(node, SPECIAL_GROUP_NAMES['nav_axes'])
             node = node.parent_node
 
@@ -1164,3 +1168,45 @@ class DataLoader:
         data_tmp = DataToExport(name=where.name, data=data_list)
         data.append(data_tmp)
         return data
+
+    def load_data_from_name_origin(self, name: str, origin: str = '',
+                                   where: Union[GROUP, Node, str] = None,
+                                   with_bkg=False, load_all=True) -> DataWithAxes:
+        """ Load data from a node if this data as the given name and origin
+
+        Parameters
+        ----------
+        name: str
+            The name of the data (stored in the title attribute)
+        origin: str
+            The origin of the data
+        where: Node or str
+            If specified start to look for matching Dwa at where Node
+        with_bkg: bool
+            If True load with bkg substraction if any
+        load_all: bool
+            if True load all channels of the parent node
+        """
+        if where is None:
+            where = self._h5saver.raw_group
+
+        where = self._h5saver.get_node(where)
+
+        if isinstance(where, GROUP):
+            for node in self.h5saver.walk_nodes(where):
+
+                if (not isinstance(node, GROUP) and
+                        node.attrs['title'] == name and
+                        node.attrs['origin'] == origin):
+                    return self.load_data(node, with_bkg=with_bkg,
+                                          load_all=load_all)
+        else:
+            dwa = self.load_data(where, with_bkg=with_bkg,
+                                 load_all=load_all)
+            if dwa.name == name and dwa.origin == origin:
+                return dwa
+
+        # if not returned so far raise a NameError
+        raise NameError(f'No dwa matching this name: {name} and '
+                        f'origin: {origin} hanging from '
+                        f'{where}')

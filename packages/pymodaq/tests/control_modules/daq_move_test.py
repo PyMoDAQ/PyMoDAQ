@@ -8,6 +8,7 @@ from pytest import fixture, approx
 import qt_themes
 from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
+from pymodaq.control_modules.move_utility_classes import HW_SETTINGS_KEY as ACTUATOR_SETTINGS_KEY
 from pymodaq.control_modules.utils import ControlModule
 
 from pymodaq_utils.config import GlobalConfig
@@ -69,7 +70,7 @@ class TestDAQMove:
         assert blocker.args[0] is True
 
         POSITION = 34.5
-        TIMEOUT = int(2 * daq_move.settings['move_settings', 'tau'])
+        TIMEOUT = int(2 * daq_move.settings[ACTUATOR_SETTINGS_KEY, 'tau'])
         with qtbot.waitSignal(daq_move.move_done_signal, timeout=TIMEOUT) as blocker:
             with qtbot.waitSignal(daq_move.current_value_signal, timeout=1000) as val_blocker:
                 daq_move.move_abs(POSITION)
@@ -80,11 +81,16 @@ class TestDAQMove:
         assert isinstance(data, DataActuator)
 
         assert data.value() == pytest.approx(POSITION,
-                                             abs=daq_move.settings['move_settings', 'epsilon'])
+                                             abs=daq_move.settings[ACTUATOR_SETTINGS_KEY, 'epsilon'])
         assert data.name == daq_move.title
 
         daq_move.quit_fun()
-        QtWidgets.QApplication.processEvents() #make sure to properly terminate all the threads!
+        leco = getattr(daq_move, '_leco_client', None)
+        if leco is not None:
+            thread = getattr(leco, 'thread', None)
+            if thread is not None:
+                thread.join(timeout=5.0)
+        QtWidgets.QApplication.processEvents()
 
     def test_axis_management(self, ini_daq_move_ui):
         daq_move, qtbot, widget = ini_daq_move_ui

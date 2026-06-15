@@ -42,7 +42,7 @@ class ABCMeta(NativeABCMeta):
                 "Can't instantiate abstract class {} with"
                 " abstract attributes: {}".format(
                     cls.__name__,
-                    ', '.join(abstract_attributes)
-                )
+                    ', '.join(abstract_attributes),
+                ),
             )
         return instance

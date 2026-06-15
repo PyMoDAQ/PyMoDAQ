@@ -4,17 +4,13 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
-import logging
-import math
 
 import numpy as np
 import pint.errors
-from pint.errors import DimensionalityError
 import pytest
 from pytest import approx, mark
 import time
 
-import pymodaq_data
 from pymodaq_utils import math_utils as mutils
 from pymodaq_utils.units import nm2eV, eV2nm
 from pymodaq_data import data as data_mod
@@ -35,7 +31,12 @@ SIZE = 1024
 DATA = OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE)
 
 DATA0D = np.array([2.7])
-DATA1D = np.arange(0, 10)
+DATA1D = np.arange(0, 10, dtype=float)
+
+DATA1D_WITH_NANS = DATA1D.copy()
+DATA1D_WITH_NANS[2] = np.nan
+DATA1D_WITH_NANS[7] = np.nan
+
 DATA2D = np.arange(0, 5*6).reshape((5, 6))
 XAXIS_GAUSSIAN = np.linspace(0, 128, endpoint=False)
 X0 = 100
@@ -374,7 +375,7 @@ class TestDataBase:
         assert data.labels == labels_auto
 
     def test_data_source(self):
-        data = data_mod.DataBase('myData', source='calculated',  data=[DATA2D])
+        data = data_mod.DataBase('myData', source='calculated', data=[DATA2D])
         assert data.source == data_mod.DataSource['calculated']
 
     @mark.parametrize("data_array, datadim", [(DATA0D, 'Data0D'), (DATA0D, data_mod.DataDim['Data0D']),
@@ -525,6 +526,16 @@ class TestDataBase:
             for ind_axis, axis in enumerate(dwa_split.axes):
                 assert axis == dwa.axes[ind]
 
+    @pytest.mark.parametrize('epsilon, equal',
+                             ([1, True], [1.0, True], [0.1, False], [Q_(0.5, 'm'), True], [Q_(0.5, 's'), False]))
+    def test_equal_to(self, epsilon, equal):
+        Ndata = 2
+        labels = [f'label{ind}' for ind in range(Ndata)]
+        dwa_1 = init_data(data=mutils.normalize(DATA1D), Ndata=Ndata, labels=labels, units='m')
+        dwa_2 = init_data(data=mutils.normalize(DATA1D) * 0.8, Ndata=Ndata, labels=labels, units='m')
+
+        assert dwa_1.equal_to(dwa_2, epsilon=epsilon) is equal
+
 
 class TestDataWithAxesUniform:
     def test_init(self):
@@ -647,7 +658,7 @@ class TestDataWithAxesUniform:
         AXIS_INDEX = 0
         sorted_data = data.sort_data(axis_index=AXIS_INDEX)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index])
+            assert np.allclose(sorted_data.data[ind], data_arrays[ind][sorted_index])
         assert np.allclose(sorted_data.get_axis_from_index(AXIS_INDEX)[0].get_data(), axis_array[sorted_index])
 
     def test_sorted_uniform_2D_not_inplace(self):
@@ -667,12 +678,12 @@ class TestDataWithAxesUniform:
 
         sorted_data_0 = data.sort_data(axis_index=0)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+            assert np.allclose(sorted_data_0.data[ind], data_arrays[ind][sorted_index_0, :])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
         sorted_data_1 = data.sort_data(axis_index=1)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_1.data[ind],  data_arrays[ind][:, sorted_index_1])
+            assert np.allclose(sorted_data_1.data[ind], data_arrays[ind][:, sorted_index_1])
         assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
 
     def test_sorted_uniform_2D_inplace(self):
@@ -693,12 +704,12 @@ class TestDataWithAxesUniform:
         sorted_data_0 = data.sort_data(axis_index=0, inplace=True)
 
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_0.data[ind],  data_arrays[ind][sorted_index_0, :])
+            assert np.allclose(sorted_data_0.data[ind], data_arrays[ind][sorted_index_0, :])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
         sorted_data_1 = data.sort_data(axis_index=1)
         for ind in range(len(data)):
-            assert np.allclose(sorted_data_1.data[ind],  sorted_data_0.data[ind][:, sorted_index_1])
+            assert np.allclose(sorted_data_1.data[ind], sorted_data_0.data[ind][:, sorted_index_1])
         assert np.allclose(sorted_data_1.get_axis_from_index(1)[0].get_data(), axis_1.get_data()[sorted_index_1])
         assert np.allclose(sorted_data_0.get_axis_from_index(0)[0].get_data(), axis_0.get_data()[sorted_index_0])
 
@@ -758,7 +769,7 @@ class TestDataWithAxesUniform:
         assert dwa_padded.size == dwa.size + np.sum(pad_width[0])
         assert dwa_padded.axes[0].size == dwa.axes[0].size + np.sum(pad_width[0])
 
-        pad_width = ((123, 256), (12, 25),)
+        pad_width = ((123, 256), (12, 25))
         with pytest.raises(TypeError):
             dwa_padded = dwa.pad(pad_width)
 
@@ -798,7 +809,7 @@ class TestDataWithAxesUniform:
             assert dwa_padded.shape[ind] == dwa.shape[ind] + np.sum(pad_width)
             assert dwa_padded.get_axis_from_index(ind)[0].size == dwa.get_axis_from_index(ind)[0].size + np.sum(pad_width)
 
-        pad_width = ((123, 256), (12, 25),)
+        pad_width = ((123, 256), (12, 25))
         dwa_padded = dwa.pad(pad_width)
         for ind in range(len(dwa.shape)):
             assert dwa_padded.shape[ind] == dwa.shape[ind] + np.sum(pad_width[ind])
@@ -836,7 +847,7 @@ class TestDataWithAxesUniform:
                                data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
                                                                  PHI),
                                      OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
-                                                                 PHI2)
+                                                                 PHI2),
                                      ],
                                labels=['sinus1', 'sinus2'],
                                axes=[time_axis])
@@ -865,7 +876,7 @@ class TestDataWithAxesUniform:
                                data=[OFFSET + AMPLITUDE * np.sin(OMEGA0 * time_axis.get_data() +
                                                                  PHI),
                                      OFFSET2 + AMPLITUDE2 * np.sin(OMEGA02 * time_axis.get_data() +
-                                                                 PHI2)
+                                                                 PHI2),
                                      ],
                                axes=[time_axis])
         dwa_ft = dwa.ft()
@@ -892,7 +903,7 @@ class TestNavIndexes:
         assert data.sig_indexes == (0, 2)
 
         data.nav_indexes = ()
-        assert data.sig_indexes == (0, 1,  2)
+        assert data.sig_indexes == (0, 1, 2)
 
 
 class TestDataWithAxesSpread:
@@ -921,7 +932,7 @@ class TestDataWithAxesSpread:
 
     def test_nav_axis_length(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
-        nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1,])))
+        nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1])))
         with pytest.raises(data_mod.DataLengthError):
             data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'],
                                   dim=data_mod.DataDim['Data1D'],
@@ -996,7 +1007,7 @@ class TestDataWithAxesSpread:
             assert data.sort_data(axis_index=3, spread_index=0) == data
             sorted_data = data.sort_data(axis_index=0, spread_index=0)
             for ind in range(len(data)):
-                assert np.allclose(sorted_data.data[ind],  data_arrays[ind][sorted_index_0_0, ...])
+                assert np.allclose(sorted_data.data[ind], data_arrays[ind][sorted_index_0_0, ...])
             for nav_index in sorted_data.nav_indexes:
                 for axis in sorted_data.get_axis_from_index(nav_index):
                     assert np.allclose(axis.get_data(),
@@ -1377,7 +1388,7 @@ class TestDataToExport:
 
         dat2.origin = ORIGIN1
 
-        assert data.get_origins()  == [ORIGIN1]
+        assert data.get_origins() == [ORIGIN1]
 
     def test_get_data_from_name_origin(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
@@ -1575,28 +1586,28 @@ class TestNumpyUfunc:
                 [np.random.rand(),
                  init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
-                 True
+                 True,
                  ],
                 [np.random.rand(),
                  init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=''),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
                  data_mod.Q_(np.random.rand(), REAL_UNITS),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
                  data_mod.Q_(np.random.rand(len(DATA1D)), REAL_UNITS),
-                 False
+                 False,
                  ],
                 [init_data(DATA1D, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                       units=REAL_UNITS),
                  init_data(DATA1D * 10, Ndata=2, name='raw', source=data_mod.DataSource.raw,
                            units=REAL_UNITS),
-                 False
+                 False,
                  ],
         ))
     def test_add(self, elt1, elt2, unit_error):
@@ -1715,7 +1726,7 @@ class TestFuncNumpy:
 
     def test_booleans(self):
         dwa_bool = data_mod.DataRaw('raw', units='', data=[
-            np.array([[True, False], [True, True]])],)
+            np.array([[True, False], [True, True]])])
 
         dwa_all = np.all(dwa_bool)
         assert not dwa_all[0]
@@ -1751,7 +1762,7 @@ class TestFuncNumpy:
         assert np.allclose(np.absolute(dwa)[0], 1)
 
     def test_db(self):
-        dwa = data_mod.DataRaw('raw', units='s', data=[GAUSSIAN_2D],)
+        dwa = data_mod.DataRaw('raw', units='s', data=[GAUSSIAN_2D])
 
         dwa_db = dwa.to_dB()
         assert dwa_db.units == ''
@@ -1782,7 +1793,7 @@ class TestFuncNumpy:
     def test_roll(self):
         dwa = data_mod.DataRaw('raw', units='', data=[DATA2D])
         SHIFT = (10, 5)
-        dwa_rolled = np.roll(dwa, shift = SHIFT)
+        dwa_rolled = np.roll(dwa, shift=SHIFT)
         assert np.allclose(dwa_rolled[0], np.roll(dwa[0], shift=SHIFT))
 
 
@@ -1803,9 +1814,9 @@ class TestPintUnitReduction:
         (Q_(1., 'm'), Q_(1., 'm'), Q_(1., 'm**2')),
         (Q_(1., '°'), Q_(1., '°'), Q_(1., '°**2')),
         (Q_(1., 'm'), Q_(1., 's'), Q_(1., 'm * s')),
-        (Q_(1., 'km/s'), Q_(1., 'm/min'), Q_(60000., 'm**2 / min**2')), # May change?
+        (Q_(1., 'km/s'), Q_(1., 'm/min'), Q_(60000., 'm**2 / min**2')),  # May change?
         (Q_(1., 'rad'), Q_(1., 'rad'), Q_(1., 'rad**2')),
-        (Q_(1., '°'), Q_(1., 'rad'), Q_(1., 'rad * °')), # Can't simplify
+        (Q_(1., '°'), Q_(1., 'rad'), Q_(1., 'rad * °')),  # Can't simplify
         (Q_(1., 'step'), Q_(1., 'step'), Q_(1., Unit('step**2'))),
         (Q_(1., 'm'), Q_(1.), Q_(1., 'm')),
         (Q_(1., '°'), Q_(1.), Q_(1., '°')),
@@ -1823,109 +1834,28 @@ class TestPintUnitReduction:
         res = dimensionless_aware_reduce_units(q1 / q2)
         assert res.m == expected.m and res.u == expected.u
 
+class TestEq:
 
-xr = pytest.importorskip('xarray')
+    @pytest.mark.parametrize(
+        ('data', 'Ndata', 'name', 'eq'), [
+            (DATA1D, 1, 'data', True),
+            (DATA0D, 1, 'data', False),
+            (DATA1D, 1, 'data1', True),  # not same name is equal
+            (DATA1D, 2, 'data', False),
+            (DATA1D * 0.999, 1, 'data', False),
+            (DATA1D_WITH_NANS, 1, 'data', False),
+
+    ])
+    def test_dwa_eq(self, data, Ndata, name, eq):
+        dat1 = init_data(data=DATA1D, Ndata=1, name='data')
+        dat2 = init_data(data=data, Ndata=Ndata, name=name)
+        assert (dat1 == dat2) is eq
 
 
-class TestXarrayConversion:
-    """Tests for DataWithAxes.to_xarray / from_xarray and DataToExport.to_xarray / from_xarray."""
+    def test_dwa_with_nans_eq(self):
+        dat1 = init_data(data=DATA1D_WITH_NANS, Ndata=1, name='data')
+        dat2 = init_data(data=DATA1D_WITH_NANS, Ndata=1, name='data')
 
-    def test_to_xarray_dims_coords(self):
-        axis = data_mod.Axis('time', units='s', data=np.linspace(0, 9, 10), index=0)
-        dwa = data_mod.DataRaw('mydata', data=[np.arange(10, dtype=float)], axes=[axis])
-        ds = dwa.to_xarray()
-        assert 'time' in ds.dims
-        assert 'time' in ds.coords
-        assert np.allclose(ds.coords['time'].values, axis.get_data())
-        assert ds.coords['time'].attrs['units'] == 's'
+        assert dat1 == dat2
 
-    def test_to_xarray_data_vars(self):
-        arr1 = np.arange(5, dtype=float)
-        arr2 = np.arange(5, 10, dtype=float)
-        dwa = data_mod.DataRaw('mydata', data=[arr1, arr2], labels=['ch0', 'ch1'])
-        ds = dwa.to_xarray()
-        assert 'ch0' in ds.data_vars
-        assert 'ch1' in ds.data_vars
-        assert np.allclose(ds['ch0'].values, arr1)
-        assert np.allclose(ds['ch1'].values, arr2)
 
-    def test_to_xarray_attrs(self):
-        dwa = data_mod.DataRaw(
-            'test', units='mm', data=[np.zeros((3, 4))],
-            nav_indexes=(0,), origin='detector'
-        )
-        ds = dwa.to_xarray()
-        assert ds.attrs['pymodaq_name'] == 'test'
-        assert ds.attrs['pymodaq_units'] == 'mm'
-        assert ds.attrs['pymodaq_source'] == 'raw'
-        assert list(ds.attrs['pymodaq_nav_indexes']) == [0]
-
-    def test_round_trip_1d(self):
-        arr = np.linspace(1, 10, 20)
-        axis = data_mod.Axis('x', units='nm', data=np.linspace(0, 19, 20), index=0)
-        dwa = data_mod.DataRaw('signal', data=[arr], labels=['ch0'], axes=[axis])
-        dwa2 = data_mod.DataWithAxes.from_xarray(dwa.to_xarray())
-        assert dwa2.name == 'signal'
-        assert np.allclose(dwa2[0], arr)
-        axes = dwa2.get_axis_from_index(0)
-        assert axes and axes[0].label == 'x'
-        assert axes[0].units == 'nm'
-        assert np.allclose(axes[0].get_data(), axis.get_data())
-
-    def test_round_trip_2d_nav(self):
-        arr = np.arange(12, dtype=float).reshape(3, 4)
-        nav_axis = data_mod.Axis('nav', units='m', data=np.array([0., 1., 2.]), index=0)
-        sig_axis = data_mod.Axis('sig', units='Hz', data=np.array([10., 20., 30., 40.]), index=1)
-        dwa = data_mod.DataRaw(
-            'nd', data=[arr], nav_indexes=(0,), axes=[nav_axis, sig_axis]
-        )
-        dwa2 = data_mod.DataWithAxes.from_xarray(dwa.to_xarray())
-        assert tuple(dwa2.nav_indexes) == (0,)
-        assert np.allclose(dwa2[0], arr)
-
-    def test_round_trip_errors(self):
-        arr = np.arange(5, dtype=float)
-        err = arr * 0.1
-        dwa = data_mod.DataRaw('errs', data=[arr], labels=['ch0'], errors=[err])
-        ds = dwa.to_xarray()
-        assert 'ch0_error' in ds.data_vars
-        assert 'ch0' in ds.data_vars
-        dwa2 = data_mod.DataWithAxes.from_xarray(ds)
-        assert dwa2.errors is not None
-        assert np.allclose(dwa2.errors[0], err)
-        assert 'ch0_error' not in dwa2.labels
-
-    def test_from_dataarray(self):
-        da = xr.DataArray(
-            np.arange(6, dtype=float),
-            dims=['x'],
-            coords={'x': np.arange(6, dtype=float)},
-            name='myvar',
-        )
-        dwa = data_mod.DataWithAxes.from_xarray(da)
-        assert dwa.name == 'from_xarray'
-        assert np.allclose(dwa[0], da.values)
-
-    def test_dte_to_datatree(self):
-        dwa1 = data_mod.DataRaw('a', data=[np.zeros(5)])
-        dwa2 = data_mod.DataRaw('b', data=[np.ones((3, 4))])
-        dte = data_mod.DataToExport('myexp', data=[dwa1, dwa2])
-        dt = dte.to_xarray()
-        assert isinstance(dt, xr.DataTree)
-        assert len(dt.children) == 2
-        assert 'a' in dt.children
-        assert 'b' in dt.children
-
-    def test_dte_round_trip(self):
-        dwa1 = data_mod.DataRaw('ch1', data=[np.arange(8, dtype=float)])
-        dwa2 = data_mod.DataRaw('ch2', data=[np.arange(6, dtype=float).reshape(2, 3)])
-        dte = data_mod.DataToExport('myexp', data=[dwa1, dwa2])
-        dte2 = data_mod.DataToExport.from_xarray(dte.to_xarray())
-        assert dte2.name == 'myexp'
-        names = [dwa.name for dwa in dte2]
-        assert 'ch1' in names
-        assert 'ch2' in names
-        ch1 = dte2.get_data_from_name('ch1')
-        assert ch1.shape == (8,)
-        ch2 = dte2.get_data_from_name('ch2')
-        assert ch2.shape == (2, 3)

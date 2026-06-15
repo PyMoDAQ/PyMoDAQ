@@ -901,21 +901,42 @@ class H5Backend:
             raise NodeError(f'Node {where} (name={name}) does not exist')
 
         if 'CLASS' not in self.get_attr(node):
-            self.set_attr(node, 'CLASS', 'GROUP')
-            return GROUP(node, self.backend)
+            klass = self._infer_class(node)
+            if self.backend == 'tables':
+                node._v_attrs['CLASS'] = klass
+            else:
+                node.attrs['CLASS'] = klass
         else:
-            attr = self.get_attr(node, 'CLASS')
-            if 'ARRAY' not in attr:
-                return GROUP(node, self.backend)
-            elif attr == 'CARRAY':
-                return CARRAY(node, self.backend)
-            elif attr == 'EARRAY':
-                return EARRAY(node, self.backend)
-            elif attr == 'VLARRAY':
-                if self.get_attr(node, 'subdtype') == 'string':
-                    return StringARRAY(node, self.backend)
-                else:
-                    return VLARRAY(node, self.backend)
+            klass = self.get_attr(node, 'CLASS')
+
+        if 'ARRAY' not in klass:
+            return GROUP(node, self.backend)
+        elif klass == 'CARRAY':
+            return CARRAY(node, self.backend)
+        elif klass == 'EARRAY':
+            return EARRAY(node, self.backend)
+        elif klass == 'VLARRAY':
+            if self.get_attr(node, 'subdtype') == 'string':
+                return StringARRAY(node, self.backend)
+            else:
+                return VLARRAY(node, self.backend)
+
+    def _infer_class(self, node) -> str:
+        """Infer the CLASS attribute of a node that is missing it
+
+        PyTables always writes a CLASS attribute on every node, but a node written
+        through h5py/h5pyd can be missing it (for instance an interrupted write).
+        Falling back to 'GROUP' regardless of the actual object type would mislabel
+        datasets and break further tree traversal, so infer the class from the
+        underlying object instead.
+        """
+        if self.backend == 'tables' or isinstance(node, self.h5_library.Group):
+            return 'GROUP'
+        if node.dtype.kind == 'O':
+            return 'VLARRAY'
+        if node.maxshape and node.maxshape[0] is None:
+            return 'EARRAY'
+        return 'CARRAY'
 
     def get_node_name(self, node):
         """return node name
@@ -990,7 +1011,11 @@ class H5Backend:
                 children[child_name] = _cls(child, self.backend)
         else:
             for child_name, child in where.items():
-                klass = get_attr(child, 'CLASS', self.backend)
+                try:
+                    klass = get_attr(child, 'CLASS', self.backend)
+                except KeyError:
+                    klass = self._infer_class(child)
+                    child.attrs['CLASS'] = klass
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
@@ -1033,6 +1058,7 @@ class H5Backend:
     def create_carray(self, where, name, obj=None, title=''):
         if isinstance(where, Node):
             where = where.node
+        title = str(title)
         if obj is None:
             raise ValueError('Data to be saved as carray cannot be None')
         dtype = obj.dtype
@@ -1061,6 +1087,7 @@ class H5Backend:
         """
         if isinstance(where, Node):
             where = where.node
+        title = str(title)
         dtype = np.dtype(dtype)
         shape = [0]
         if data_shape is not None:
@@ -1111,6 +1138,7 @@ class H5Backend:
         """
         if isinstance(where, Node):
             where = where.node
+        title = str(title)
         if dtype == 'string':
             dtype = np.dtype(np.uint8)
             subdtype = 'string'

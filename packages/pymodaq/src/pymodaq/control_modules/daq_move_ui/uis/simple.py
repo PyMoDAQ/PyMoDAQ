@@ -6,6 +6,7 @@ from qtpy import QtWidgets
 import qt_themes
 from pymodaq.control_modules.daq_move_ui.ui_base import DAQ_Move_UI_Base
 from pymodaq.control_modules.thread_commands import UiToMainMove
+from pymodaq_gui.utils.utils import mkQApp
 from pymodaq_gui.utils.widgets import LabelWithFont
 from pymodaq_utils.utils import ThreadCommand
 
@@ -19,8 +20,8 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
 
         super().__init__(parent, title)
 
-    def setup_docks(self):
-        super().setup_docks()
+    def setup_docks_and_widgets(self):
+        super().setup_docks_and_widgets()
 
         self.parent.setLayout(QtWidgets.QHBoxLayout())
         self.parent.layout().setContentsMargins(0, 0, 0, 0)
@@ -38,7 +39,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
         self.populate_control_ui(self.control_widget)
 
     def setup_actions(self):
-        self.setup_actions_in_toolbar(self.move_toolbar)
+        self.setup_actions_in_toolbar(self.toolbar)
 
     def _setup_move_actions(self, toolbar: QtWidgets.QToolBar):
         self._setup_absolute_spinbox_actions(toolbar)
@@ -51,7 +52,7 @@ class DAQ_Move_UI_Simple(DAQ_Move_UI_Base):
 def main(init_qt=True):
     from pymodaq_gui.utils.dock import DockArea, Dock
     if init_qt:  # used for the test suite
-        app = QtWidgets.QApplication(sys.argv)
+        qapp = mkQApp('DAQMoveUI')
 
     actuators = [f'act{ind}' for ind in range(5)]
 
@@ -90,7 +91,7 @@ def main(init_qt=True):
 
     win.show()
     if init_qt:
-        sys.exit(app.exec())
+        sys.exit(qapp.exec())
     return prog, widget
 
 

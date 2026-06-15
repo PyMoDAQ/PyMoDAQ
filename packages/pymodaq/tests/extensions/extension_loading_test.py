@@ -1,13 +1,13 @@
 from qtpy import QtWidgets
 
-from pymodaq.utils.config import get_set_preset_path
+from pymodaq.utils.config import get_set_experiment_path
 from pymodaq_utils.config import GlobalConfig
 from pytest import fixture, mark
 from pymodaq.dashboard import create_load_dashboard, extensions
 
 import qt_themes
 
-preset_path = get_set_preset_path()
+experiment_path = get_set_experiment_path()
 config = GlobalConfig()
 
 @fixture
@@ -23,7 +23,7 @@ def dashboard(init_qt):
     qtbot.addWidget(shared_ui.mainwindow)
     shared_ui.show()
 
-    dashboard.preset_manager.execute_entry()
+    # dashboard.preset_manager.execute_entry()
     yield dashboard
     dashboard.quit_fun()
 

@@ -10,7 +10,7 @@ This module is an extension of the dashboard, it will:
 
 The flow of this module is as follow:
 
-* at startup you have to define/load a preset (see :ref:`preset_manager`) in the Dashboard
+* at startup you have to define/load an experiment (see :ref:`experiment_manager`) in the Dashboard
 * Select DAQ_Logger in the actions menu
 * Select the destination of the logged data: binary hdf5 file or SQL database
 

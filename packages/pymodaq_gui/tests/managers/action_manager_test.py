@@ -41,19 +41,19 @@ def test_icon(qtbot):
     assert is_icon_null(action_manager, "no_icon")
 
     action_manager.add_action(
-        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile"
+        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
     )
     assert not is_icon_null(action_manager, "icon_from_pymodaq")
 
     if Version(version_qt) > Version("6.7"):
         action_manager.add_action(
-            short_name="icon_from_Qt", name="an_icon_from_Qt", icon_name="WindowClose"
+            short_name="icon_from_Qt", name="an_icon_from_Qt", icon_name="WindowClose",
         )
         assert not is_icon_null(action_manager, "icon_from_Qt")
 
         icon = QtGui.QIcon.fromTheme(QtGui.QIcon.ThemeIcon.WindowClose)
         action_manager.add_action(
-            short_name="icon", name="an_icon_from_Qt", icon_name=icon
+            short_name="icon", name="an_icon_from_Qt", icon_name=icon,
         )
         assert not is_icon_null(action_manager, "icon")
 
@@ -64,7 +64,7 @@ def test_action_properties(qtbot):
 
     action_manager.add_action(short_name="no_icon", name="my_no_icon", icon_name="")
     action_manager.add_action(
-        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile"
+        short_name="icon_from_pymodaq", name="an_icon_from_pymodaq", icon_name="NewFile",
     )
 
     assert action_manager.get_action('no_icon') == action_manager._actions['no_icon']
@@ -112,7 +112,7 @@ def test_nested_menus(qtbot):
     parent_menu = action_manager.add_menu('parent', 'Parent Menu')
 
     # Create child menu within parent
-    child_menu = action_manager.add_menu('child', 'Child Menu', menu=parent_menu)
+    child_menu = action_manager.add_menu('child', 'Child Menu', parent_menu=parent_menu)
 
     assert action_manager.has_menu('parent')
     assert action_manager.has_menu('child')
@@ -219,7 +219,7 @@ def test_shared_menu(qtbot):
     view_menu = action_manager.add_menu('view', 'View')
 
     # Create a shared menu (add to file menu first)
-    shared_menu = action_manager.add_menu('recent', 'Recent Files', menu=file_menu)
+    shared_menu = action_manager.add_menu('recent', 'Recent Files', parent_menu=file_menu)
 
     # Add the same menu to view menu
     view_menu.addMenu(shared_menu)
@@ -614,7 +614,7 @@ def test_complex_menu_toolbar_structure(qtbot):
 
     # Create nested menu structure
     file_menu = action_manager.add_menu('file', 'File')
-    recent_menu = action_manager.add_menu('recent', 'Recent', menu=file_menu)
+    recent_menu = action_manager.add_menu('recent', 'Recent', parent_menu=file_menu)
 
     # Add actions to both menu and toolbar
     action_manager.add_action('new', 'New', icon_name='NewFile',

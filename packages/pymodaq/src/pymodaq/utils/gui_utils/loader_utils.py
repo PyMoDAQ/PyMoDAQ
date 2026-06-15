@@ -1,15 +1,9 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from pathlib import Path
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QMessageBox, QMainWindow
 
-
-from pymodaq.utils.gui_utils import DockArea
-from pymodaq.utils.config import get_set_preset_path
 from pymodaq.extensions.custom_ext import CustomExt
-from pymodaq.utils.gui_utils.widgets.window import make_window
+from pymodaq_gui.utils.widgets.window import make_window
 
 from pymodaq.utils.shared_ui import SharedUI
 
@@ -20,17 +14,19 @@ if TYPE_CHECKING:
     from pymodaq.dashboard import DashBoard
 
 
-def create_load_daq_move(ui_identifier='Original') -> tuple[SharedUI, 'DAQ_Move']:
+def create_load_daq_move(ui_identifier='Original', title="DAQ_Move") -> tuple[SharedUI, 'DAQ_Move']:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
+    win, area = make_window(area=False, title='DAQ_Move')
     widget = QtWidgets.QWidget()
-    daq_move = DAQ_Move(widget, title="test",
+    daq_move = DAQ_Move(widget, title=title,
                         ui_identifier=ui_identifier)
+    win.setCentralWidget(widget)
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(daq_move.ui)
 
-    shared_ui = SharedUI(widget)
-    shared_ui.affect_application(daq_move)
-    shared_ui.add_toolbar('move_toolbar', 'Move', toolbar=daq_move.ui.move_toolbar,
-                          add_break=True)
+    shared_ui.add_toolbar('move_toolbar', 'Move', win, toolbar=daq_move.ui.toolbar,
+                          add_break=False)
     daq_move.settings_tree.setVisible(False)
     widget.layout().addWidget(daq_move.ui.control_widget)
     widget.layout().addWidget(daq_move.settings_tree)
@@ -39,15 +35,17 @@ def create_load_daq_move(ui_identifier='Original') -> tuple[SharedUI, 'DAQ_Move'
     return shared_ui, daq_move
 
 
-def create_load_daq_viewer() -> tuple[SharedUI, 'DAQ_Viewer']:
+def create_load_daq_viewer(title='DAQ_Viewer') -> tuple[SharedUI, 'DAQ_Viewer']:
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-
+    win, area = make_window(area=False, title='DAQ_Viewer')
     widget = QtWidgets.QWidget()
-    daq_viewer = DAQ_Viewer(widget, title="test")
+    win.setCentralWidget(widget)
+    daq_viewer = DAQ_Viewer(widget, title=title)
 
-    shared_ui = SharedUI(widget)
-    shared_ui.affect_application(daq_viewer)
-    shared_ui.add_toolbar('viewer', 'Viewer', toolbar=daq_viewer.ui.toolbar, add_break=True)
+    shared_ui = SharedUI(win)
+    shared_ui.affect_application(daq_viewer.ui)
+    shared_ui.add_toolbar('viewer', 'Viewer', win,
+                          toolbar=daq_viewer.ui.toolbar, add_break=False)
 
     return shared_ui, daq_viewer
 
@@ -68,11 +66,16 @@ def create_extension(dashboard: 'DashBoard',
         dockarea = DockArea()
         window.setCentralWidget(dockarea)
 
-    extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
     shared_ui = SharedUI(window)
+    extension = extension_class(dockarea, dashboard, *ext_args, **ext_kwargs)
+
     shared_ui.affect_application(extension)
     shared_ui.mainwindow.addToolBar(extension.get_toolbar('dashboard'))
     if add_toolbarbreak:
         shared_ui.mainwindow.addToolBarBreak()
-    shared_ui.mainwindow.addToolBar(extension.get_main_toolbar())
+    toolbars = extension.get_app_toolbars()
+    if not isinstance(toolbars, list):
+        toolbars = [toolbars]
+    for toolbar in toolbars:
+        shared_ui.mainwindow.addToolBar(toolbar)
     return shared_ui, extension

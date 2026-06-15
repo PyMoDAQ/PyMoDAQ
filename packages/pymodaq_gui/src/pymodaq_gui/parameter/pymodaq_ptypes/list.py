@@ -33,7 +33,9 @@ class Combo_pb(QtWidgets.QWidget):
         self.setLayout(self.hor_layout)
         self.currentText = self.combo.currentText
         self.currentTextChanged = self.combo.currentTextChanged
+        self.setCurrentText = self.combo.setCurrentText
         self.setCurrentIndex = self.combo.setCurrentIndex
+        self.currentIndexChanged = self.combo.currentIndexChanged
         self.clear = self.combo.clear
         self.addItem = self.combo.addItem
         self.addItems = self.combo.addItems
@@ -109,6 +111,27 @@ class ListParameterItem(ListParameterItem):
                     self.limitsChanged(self.param, self.param.opts['limits'])
                     self.param.setValue(text)
 
+    def _apply_unavailable(self, unavailable: list[str]):
+        """Disable combo items that are in *unavailable* and add a tooltip to them."""
+        if not hasattr(self, 'widget') or self.widget is None:
+            return
+        combo = self.widget.combo
+        model = combo.model()
+        for i in range(combo.count()):
+            item = model.item(i)
+            if combo.itemText(i) in unavailable:
+                item.setEnabled(False)
+                item.setToolTip('Not installed')
+            else:
+                item.setEnabled(True)
+                item.setToolTip('')
+
+    def limitsChanged(self, param, limits):
+        super().limitsChanged(param, limits)
+        unavailable = param.opts.get('unavailable', [])
+        if unavailable:
+            self._apply_unavailable(unavailable)
+
     def optsChanged(self, param, opts):
         """
             Called when any options are changed that are not name, value, default, or limits.
@@ -128,6 +151,8 @@ class ListParameterItem(ListParameterItem):
             self.widget.add_pb.setVisible(opts['show_pb'])
         if 'enabled' in opts:
             self.widget.setEnabled(opts['enabled'])
+        if 'unavailable' in opts:
+            self._apply_unavailable(opts['unavailable'])
 
 
 class ListParameter(ListParameter):

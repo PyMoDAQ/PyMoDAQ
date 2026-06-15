@@ -163,7 +163,7 @@ class BaseWidgetSync(QObject):
         except Exception as e:
             logger.error(
                 f"Validator raised exception: {e}. Keeping current value.",
-                exc_info=True
+                exc_info=True,
             )
             raise ValueError(f"Validation failed: {e}") from e
 
@@ -222,7 +222,7 @@ class BaseWidgetSync(QObject):
         from_sync_transform: ValueTransform | None = None,
         property_key: str | None = None,
         property_name: str | None = None,
-        signal_name: str | None = None
+        signal_name: str | None = None,
     ) -> ConnectionInfo:
         """
         Create a standardized connection_info dictionary.
@@ -355,7 +355,7 @@ class BaseWidgetSync(QObject):
     def _setup_widget_destruction_callback(
         self,
         widget: QWidget,
-        connection_keys: list[tuple[int, str | None]]
+        connection_keys: list[tuple[int, str | None]],
     ) -> None:
         """Setup callback for widget destruction."""
         sync_weak = ref(self)
@@ -498,7 +498,7 @@ class BaseWidgetSync(QObject):
             else:
                 if property_key is not None:
                     raise ValueError(
-                        f"Property '{property_key}': Must provide at least getter or setter"
+                        f"Property '{property_key}': Must provide at least getter or setter",
                     )       
         return mode                
 
@@ -523,7 +523,7 @@ class BaseWidgetSync(QObject):
         mode: SyncMode,
         getter: WidgetGetter | None,
         setter: WidgetSetter | None,
-        property_key: str | None = None
+        property_key: str | None = None,
     ) -> None:
         """
         Validate init_from parameter compatibility with mode and getter/setter.
@@ -552,17 +552,17 @@ class BaseWidgetSync(QObject):
             if mode not in (SyncMode.TO_SYNC, SyncMode.BIDIRECTIONAL):
                 raise ValueError(
                     f"{key_string}init_from='widget' requires mode with TO_SYNC capability "
-                    f"(TO_SYNC or BIDIRECTIONAL), but got {mode.value}"
+                    f"(TO_SYNC or BIDIRECTIONAL), but got {mode.value}",
                 )
             if getter is None:
                 raise ValueError(
-                    f"{key_string}init_from='widget' requires getter to read widget's value"
+                    f"{key_string}init_from='widget' requires getter to read widget's value",
                 )
 
         if init_from == 'sync':
             if mode in (SyncMode.FROM_SYNC, SyncMode.BIDIRECTIONAL) and setter is None:
                 raise ValueError(
-                    f"{key_string}init_from='sync' with {mode.value} mode requires setter"
+                    f"{key_string}init_from='sync' with {mode.value} mode requires setter",
                 )
 
     def _handle_initialization(
@@ -574,7 +574,7 @@ class BaseWidgetSync(QObject):
         setter: WidgetSetter | None,
         property_key: str | None,
         to_sync_transform: ValueTransform | None,
-        from_sync_transform: ValueTransform | None
+        from_sync_transform: ValueTransform | None,
     ) -> None:
         """
         Handle widget initialization based on init_from parameter.
@@ -636,7 +636,7 @@ class BaseWidgetSync(QObject):
             except Exception as e:
                 logger.error(
                     f"Error initializing widget {type(widget).__name__} from sync: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
         elif init_from == 'widget':
@@ -650,7 +650,7 @@ class BaseWidgetSync(QObject):
             except Exception as e:
                 logger.error(
                     f"Error reading initial value from widget {type(widget).__name__}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 return
 
@@ -803,7 +803,7 @@ class BaseWidgetSync(QObject):
                 widget_ref=widget_ref,
                 property_key=property_key_for_callbacks,
                 getter=getter,
-                to_sync_transform=to_sync_transform
+                to_sync_transform=to_sync_transform,
             )
             signal.connect(callback)
             connection_info['callbacks'].append(('widget', callback))
@@ -815,7 +815,7 @@ class BaseWidgetSync(QObject):
                 widget_ref=widget_ref,
                 property_key=property_key_for_callbacks,
                 setter=setter,
-                from_sync_transform=from_sync_transform
+                from_sync_transform=from_sync_transform,
             )
             self.value_changed.connect(callback)
             connection_info['callbacks'].append(('sync', callback))
@@ -829,7 +829,7 @@ class BaseWidgetSync(QObject):
             setter=setter,
             property_key=None,  # Regular bind() doesn't use property_key
             to_sync_transform=to_sync_transform,
-            from_sync_transform=from_sync_transform
+            from_sync_transform=from_sync_transform,
         )
 
         # Setup widget destruction callback and store connection
@@ -867,7 +867,7 @@ class BaseWidgetSync(QObject):
         widget_ref: ReferenceType,
         getter: WidgetGetter,
         to_sync_transform: ValueTransform | None,
-        property_key: str | None
+        property_key: str | None,
     ) -> Callable:
         """Create callback for widget → sync updates."""
         def on_widget_change(*args):
@@ -908,7 +908,7 @@ class BaseWidgetSync(QObject):
             except Exception as e:
                 logger.error(
                     f"Error syncing from widget {type(widget_obj).__name__}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
         return on_widget_change
@@ -919,7 +919,7 @@ class BaseWidgetSync(QObject):
         widget_ref: ReferenceType,
         setter: WidgetSetter,
         from_sync_transform: ValueTransform | None,
-        property_key: str | None
+        property_key: str | None,
     ) -> Callable:
         """Create callback for sync → widget updates."""
         def on_sync_change(value):
@@ -970,7 +970,7 @@ class BaseWidgetSync(QObject):
             except Exception as e:
                 logger.error(
                     f"Error updating widget {type(widget_obj).__name__}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
         return on_sync_change
@@ -1071,7 +1071,7 @@ class ValueSync(BaseWidgetSync):
         # Reject dict values
         if isinstance(initial_value, dict):
             raise TypeError(
-                "ValueSync does not accept dict values. Use DictSync instead."
+                "ValueSync does not accept dict values. Use DictSync instead.",
             )
 
         self._validator = validator
@@ -1227,7 +1227,7 @@ class ValueSync(BaseWidgetSync):
                 f"        getter=lambda: widget.get_value(),\n"
                 f"        setter=lambda v: widget.set_value(v),\n"
                 f"        mode=SyncMode.{mode.name}\n"
-                f"    )"
+                f"    )",
             )
 
         # Check if widget has the required signal
@@ -1235,7 +1235,7 @@ class ValueSync(BaseWidgetSync):
             raise TypeError(
                 f"Cannot use add() to bind {widget_type}: "
                 f"it doesn't have the '{signal_name}' signal.\n\n"
-                f"💡 Solution: Use bind() instead"
+                f"💡 Solution: Use bind() instead",
             )
 
         # Get signal and create getter/setter using weak reference
@@ -1304,7 +1304,7 @@ class ValueSync(BaseWidgetSync):
         if not isinstance(value, self._data_type):
             raise TypeError(
                 f"Value has type {type(value).__name__}, "
-                f"but sync expects {self._data_type.__name__}"
+                f"but sync expects {self._data_type.__name__}",
             )
         return value
 
@@ -1384,7 +1384,7 @@ class DictSync(BaseWidgetSync):
         if initial_value is not None and not isinstance(initial_value, dict):
             raise TypeError(
                 f"DictSync requires a dict value, got {type(initial_value).__name__}. "
-                f"Use ValueSync for single values."
+                f"Use ValueSync for single values.",
             )
 
         self._validator = validator
@@ -1427,7 +1427,7 @@ class DictSync(BaseWidgetSync):
         """
         if not isinstance(new_value, dict):
             raise TypeError(
-                f"Sync is in dict mode and requires dict values, but got {type(new_value).__name__}"
+                f"Sync is in dict mode and requires dict values, but got {type(new_value).__name__}",
             )
 
         # Apply validator if provided
@@ -1517,14 +1517,14 @@ class DictSync(BaseWidgetSync):
         # Create and connect callbacks
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.TO_SYNC):
             callback = self._create_widget_to_sync_callback(
-                connection_key, widget_ref, getter, None, property_key
+                connection_key, widget_ref, getter, None, property_key,
             )
             signal.connect(callback)
             connection_info['callbacks'].append(('widget', callback))
 
         if mode in (SyncMode.BIDIRECTIONAL, SyncMode.FROM_SYNC):
             callback = self._create_sync_to_widget_callback(
-                connection_key, widget_ref, setter, None, property_key
+                connection_key, widget_ref, setter, None, property_key,
             )
             self.value_changed.connect(callback)
             connection_info['callbacks'].append(('sync', callback))
@@ -1538,7 +1538,7 @@ class DictSync(BaseWidgetSync):
             setter=setter,
             property_key=property_key,
             to_sync_transform=None,  # Property bindings don't support transforms
-            from_sync_transform=None
+            from_sync_transform=None,
         )
 
         return connection_info
@@ -1593,7 +1593,7 @@ class DictSync(BaseWidgetSync):
         # Configure and connect each property
         for property_key, config in property_map.items():
             connection_info = self._setup_property_binding(
-                widget, widget_ref, property_key, config, init_from
+                widget, widget_ref, property_key, config, init_from,
             )
             self._set_connection(widget_id, property_key, connection_info)
 
@@ -1670,7 +1670,7 @@ class DictSync(BaseWidgetSync):
         if not isinstance(self.value, dict):
             raise TypeError(
                 f"bind_parameter() requires DictSync (sync value must be dict). "
-                f"Got {type(self.value).__name__}"
+                f"Got {type(self.value).__name__}",
             )
 
         param_id = id(parameter)
@@ -1702,7 +1702,7 @@ class DictSync(BaseWidgetSync):
                 if not getter and not setter:
                     raise ValueError(
                         f"Property '{property_key}': Must provide at least 'getter' or 'setter', "
-                        f"or use shortcut syntax with 'param'"
+                        f"or use shortcut syntax with 'param'",
                     )
 
             # Initialize value based on init_from
@@ -1726,7 +1726,7 @@ class DictSync(BaseWidgetSync):
                 'callbacks': [],
                 'enabled': True,
                 'property_key': property_key,
-                'param_callbacks': all_param_callbacks  # Share across all properties
+                'param_callbacks': all_param_callbacks,  # Share across all properties
             }
 
             # Parameter → Sync (TO_SYNC or BIDIRECTIONAL)
@@ -1842,7 +1842,7 @@ class DictSync(BaseWidgetSync):
             if widget is None:
                 raise ValueError(
                     f"Property '{property_key}': 'widget' key is required in bind_dict(). "
-                    f"Each property must specify which widget it controls."
+                    f"Each property must specify which widget it controls.",
                 )
 
             widget_id = id(widget)
@@ -1850,7 +1850,7 @@ class DictSync(BaseWidgetSync):
 
             # Configure and connect this property
             connection_info = self._setup_property_binding(
-                widget, widget_ref, property_key, config, init_from
+                widget, widget_ref, property_key, config, init_from,
             )
             self._set_connection(widget_id, property_key, connection_info)
 

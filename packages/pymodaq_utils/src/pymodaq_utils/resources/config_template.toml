@@ -20,9 +20,6 @@ name = "User name"  # default name used as author in the hdf5 saving files
         ip = "10.47.3.22"
         port = 5432
 
-    [network.tcp-server]
-    ip = "10.47.0.39"
-    port = 6341
 
     [network.leco-server]
     run_coordinator_at_startup = false
