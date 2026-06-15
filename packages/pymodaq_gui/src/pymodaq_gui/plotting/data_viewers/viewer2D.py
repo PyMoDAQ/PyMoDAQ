@@ -346,14 +346,6 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_image_displayer(DataDistribution['uniform'])
 
-    def set_transform(self, xaxis: Axis, yaxis: Axis):
-        tr = QtGui.QTransform()  # prepare PlotItems transformation:
-        tr.translate(xaxis.offset, yaxis.offset)
-        tr.scale(xaxis.scaling, yaxis.scaling)
-        for image_item_name in self.data_displayer.get_images():
-            self.data_displayer.get_image(image_item_name).setTransform(tr)
-        # self.ROIselect.setTransform(tr)
-
     def clear_plot_item(self):
         for item in self.plotitem.items[:]:
             if isinstance(item, (SpreadImageItem, UniformImageItem)):
@@ -738,10 +730,10 @@ class View2D(ActionManager, QtCore.QObject):
         return (xaxis - x_offset) / x_scaling, (yaxis - y_offset) / y_scaling
 
     def _get_axis_scaling_offset(self):
-        x_offset = self.get_axis('top').axis_offset
-        x_scaling = self.get_axis('top').axis_scaling
-        y_offset = self.get_axis('right').axis_offset
-        y_scaling = self.get_axis('right').axis_scaling
+        x_offset = self.get_axis('bottom').axis_offset
+        x_scaling = self.get_axis('bottom').axis_scaling
+        y_offset = self.get_axis('left').axis_offset
+        y_scaling = self.get_axis('left').axis_scaling
         return x_offset, x_scaling, y_offset, y_scaling
 
 
@@ -866,13 +858,13 @@ class Viewer2D(ViewerBase):
         """
         if data.distribution == DataDistribution['uniform']:
             if data.get_axis_from_index(0)[0] is None:
-                axis_view = self.view.get_axis('right')
+                axis_view = self.view.get_axis('left')
                 axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
                             scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
                 axis.create_linear_data(data.shape[0])
                 data.axes.append(axis)
             if data.get_axis_from_index(1)[0] is None:
-                axis_view = self.view.get_axis('top')
+                axis_view = self.view.get_axis('bottom')
                 axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
                             scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
                 axis.create_linear_data(data.shape[1])
@@ -888,7 +880,6 @@ class Viewer2D(ViewerBase):
                 yaxis = self._datas.get_axis_from_index(0)[0]
                 self.x_axis = xaxis
                 self.y_axis = yaxis
-                self.view.set_transform(xaxis, yaxis)
             else:
                 self.x_axis = self._datas.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.get_axis_from_index(0)[1]
@@ -990,23 +981,27 @@ class Viewer2D(ViewerBase):
 
     @property
     def x_axis(self):
-        return self.view.get_axis('top')
+        return self.view.get_axis('bottom')
 
     @x_axis.setter
     def x_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('top', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('bottom', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
+            self.view.set_axis_scaling('top', scaling=1, offset=0,
+                                       label='index', units='')
 
     @property
     def y_axis(self):
-        return self.view.get_axis('right')
+        return self.view.get_axis('left')
 
     @y_axis.setter
     def y_axis(self, axis: Axis = None):
         if axis is not None:
-            self.view.set_axis_scaling('right', scaling=axis.scaling, offset=axis.offset,
+            self.view.set_axis_scaling('left', scaling=axis.scaling, offset=axis.offset,
                                        label=axis.label, units=axis.units)
+            self.view.set_axis_scaling('right', scaling=1, offset=0,
+                                       label='index', units='')
 
     @Slot(DataToExport)
     def process_crosshair_lineouts(self, dte):
