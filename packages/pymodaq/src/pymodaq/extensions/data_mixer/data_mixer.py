@@ -63,7 +63,6 @@ class DataMixer(CustomExt):
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
 
-
     def setup_docks_and_widgets(self):
         """Mandatory method to be subclassed to setup the docks layout
 
