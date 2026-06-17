@@ -888,7 +888,7 @@ class DAQ_Viewer(ParameterControlModule):
             try:
                 if param.name() == 'do_save':
                     self.setup_continuous_saving(param.value())
-                self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
+                    self._h5saver_continuous.settings.child(*path[1:]).setValue(param.value())
             except KeyError:
                 pass
 
