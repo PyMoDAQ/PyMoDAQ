@@ -449,7 +449,9 @@ class ParameterControlModule(ParameterManager,LECOComponentMixin, ControlModule)
         self._module_value_changed(param)
 
         path = self.settings.childPath(param)
-        if path is not None and 'main_settings' not in path:
+        if (path is not None and
+                'main_settings' not in path and
+                'saver_settings' not in path):
             self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
             if self.settings.child('main_settings', 'leco', 'leco_connected').value():
                 self._leco_commands_signal.emit(
