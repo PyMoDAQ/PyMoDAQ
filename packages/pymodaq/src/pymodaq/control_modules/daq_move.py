@@ -520,7 +520,7 @@ class DAQ_Move(ParameterControlModule):
     def _init_continuous_save(self):
         """ Initialize the continuous saving H5Saver object
 
-        Update the module_and_data_saver attribute as :class:`DetectorTimeSaver` object
+        Update the module_and_data_saver attribute as :class:`ActuatorTimeSaver` object
         """
         if self.settings.child('saver_settings', 'do_save').value():
 
@@ -632,7 +632,7 @@ class DAQ_Move(ParameterControlModule):
             path = self.settings.childPath(param)
             if param.name() == 'do_save':
                 self.setup_continuous_saving(param.value())
-            self.h5saver.settings.child(*path[1:]).setValue(param.value())
+                self.h5saver.settings.child(*path[1:]).setValue(param.value())
 
     # -------------------------------------------------------------------------
     # Thread status handler

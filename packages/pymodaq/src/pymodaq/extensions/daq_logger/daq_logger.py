@@ -323,10 +323,7 @@ class DAQ_Logger(CustomExt):
             det.stop()
         self.command_DAQ_signal.emit(["stop_acquisition"])
 
-        if not self.dashboard.overshoot:
-            status = 'Data Logging has been stopped by user'
-        else:
-            status = 'Data Logging has been stopped due to overshoot'
+        status = 'Data Logging has been stopped'
 
         self.update_status(status)
         self._actions['start'].setEnabled(True)
@@ -382,14 +379,14 @@ class DAQ_Logging(QObject):
     def __init__(self, settings=None, logger=None, modules_manager: ModulesManager = None):
 
         """
-            DAQ_Logging deal with the acquisition part of daq_scan.
+            DAQ_Logging deal with the acquisition part of daq_logger.
 
             See Also
             --------
             custom_tree.parameter_to_xml_string
         """
         
-        super(QObject, self).__init__()
+        super().__init__()
 
         self.stop_logging_flag = False
         self.settings = settings
