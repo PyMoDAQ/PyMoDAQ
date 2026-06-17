@@ -146,7 +146,7 @@ class Launcher(CustomApp):
         self._history_file_watcher.fileChanged.connect(self._on_history_file_modified)
 
         self.splash_timer = QtCore.QTimer()
-        self.splash_timer.timeout.connect(lambda: self.splash_sc.setVisible(False))
+        self.splash_timer.timeout.connect(self.splash_sc.close)
 
         self.setup_ui()
 
