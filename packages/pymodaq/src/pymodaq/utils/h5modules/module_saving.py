@@ -614,6 +614,7 @@ class OptimizerSaver(ScanSaver):
             module.module_and_data_saver = DetectorEnlargeableSaver(
                 module, self.enl_axis_names, self.enl_axis_units)
             module.module_and_data_saver.h5saver = self.h5saver
+        self._time_saver.h5saver = self.h5saver
 
 
     def add_data(self, *args, axis_values: List[Union[float, np.ndarray]] = None,
