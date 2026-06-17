@@ -42,8 +42,6 @@ class H5Logger(AbstractLogger):
         self.h5saver = H5Saver(*args, save_type='logger', **kwargs)
 
         self.module_and_data_saver = module_saving.LoggerSaver(self)
-        for det in self.modules_manager.detectors_all:
-            det.module_and_data_saver = module_saving.DetectorTimeSaver(det)
         self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
     def close(self):
