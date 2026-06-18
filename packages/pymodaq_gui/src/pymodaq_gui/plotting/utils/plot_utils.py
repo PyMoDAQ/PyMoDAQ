@@ -1,3 +1,5 @@
+import time
+
 from collections.abc import Iterable
 
 import copy
@@ -415,6 +417,7 @@ class Data0DWithHistory:
         self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
+        self.timestamps: np.ndarray = np.array([])
         self._data_length = 0
         self._sync_x_axis = sync_x_axis
 
@@ -443,31 +446,37 @@ class Data0DWithHistory:
         return self.length
 
     @dispatch(data_mod.DataWithAxes)
-    def add_datas(self, data: data_mod.DataWithAxes):
+    def add_datas(self, data: data_mod.DataWithAxes, timestamp: int = None):
         self.last_data = data
+        if timestamp is None:
+            timestamp = data.timestamp
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
-        self.add_datas(datas)
+        self.add_datas(datas, timestamp)
 
     @dispatch(list)
-    def add_datas(self, data: list):
+    def add_datas(self, data: list, timestamp: int = None):
         """
         Add datas to the history
         Parameters
         ----------
         data: (list) list of floats or np.array(float)
         """
+        if timestamp is None:
+            timestamp = time.time()
         self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
         datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
-        self.add_datas(datas)
+        self.add_datas(datas, timestamp)
 
     @dispatch(dict)
-    def add_datas(self, datas: dict):
+    def add_datas(self, datas: dict, timestamp: int = None):
         """
         Add datas to the history on the form of a dict of key/data pairs (data is a numpy 0D array)
         Parameters
         ----------
         datas: (dict) dictionaary of floats or np.array(float)
         """
+        if timestamp is None:
+            timestamp = time.time()
         if datas.keys() != self._datas.keys():
             if self._sync_x_axis:
                 self.clear_data()
