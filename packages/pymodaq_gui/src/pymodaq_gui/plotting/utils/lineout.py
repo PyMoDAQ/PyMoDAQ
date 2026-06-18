@@ -81,7 +81,7 @@ class LineoutPlotter(QObject):
         self._roi_manager.roi_value_changed.connect(self.update_roi)
 
     def plot_roi_lineouts(self, roi_dicts):
-        self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
+        self.integrated_data.add_datas_dict({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
 
         # for roi_key, lineout_data in roi_dicts.items():
         #     if roi_key in self._roi_curves:

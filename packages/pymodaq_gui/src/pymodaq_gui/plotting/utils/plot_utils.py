@@ -417,7 +417,7 @@ class Data0DWithHistory:
         self.last_data: data_mod.DataRaw = None
         self._Nsamples = Nsamples
         self._xaxis = None
-        self.timestamps: np.ndarray = np.array([])
+        self._timestamps: np.ndarray = np.array([])
         self._data_length = 0
         self._sync_x_axis = sync_x_axis
 
@@ -445,30 +445,25 @@ class Data0DWithHistory:
     def __len__(self):
         return self.length
 
-    @dispatch(data_mod.DataWithAxes)
-    def add_datas(self, data: data_mod.DataWithAxes, timestamp: int = None):
+    def add_datas(self, data: data_mod.DataWithAxes, timestamp: float = None):
         self.last_data = data
         if timestamp is None:
             timestamp = data.timestamp
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
-        self.add_datas(datas, timestamp)
+        self.add_datas_dict(datas, timestamp)
 
-    @dispatch(list)
-    def add_datas(self, data: list, timestamp: int = None):
+    def add_datas_list(self, data: list, timestamp: float = None):
         """
         Add datas to the history
         Parameters
         ----------
         data: (list) list of floats or np.array(float)
         """
-        if timestamp is None:
-            timestamp = time.time()
         self.last_data = data_mod.DataRaw('Data0D', data=[np.array([dat]) for dat in data])
         datas = {f'data_{ind:02d}': data[ind] for ind in range(len(data))}
-        self.add_datas(datas, timestamp)
+        self.add_datas_dict(datas, timestamp)
 
-    @dispatch(dict)
-    def add_datas(self, datas: dict, timestamp: int = None):
+    def add_datas_dict(self, datas: dict, timestamp: float = None):
         """
         Add datas to the history on the form of a dict of key/data pairs (data is a numpy 0D array)
         Parameters
@@ -503,9 +498,15 @@ class Data0DWithHistory:
                 self._datas[data_key] = data
             else:
                 self._datas[data_key] = np.concatenate((self._datas[data_key], data))
-
             if self._data_length > self._Nsamples:
                 self._datas[data_key] = self._datas[data_key][1:]
+
+        if self._data_length == 1:
+            self._timestamps = np.atleast_1d(timestamp)
+        else:
+            self._timestamps = np.concatenate((self._timestamps, np.atleast_1d(timestamp)))
+        if self._data_length > self._Nsamples:
+            self._timestamps = self._timestamps[1:]
 
     @property
     def datas(self):
@@ -515,10 +516,15 @@ class Data0DWithHistory:
     def xaxis(self):
         return self._xaxis
 
+    @property
+    def timestamps(self):
+        return self._timestamps
+
     def clear_data(self):
         self._datas = dict([])
         self._data_length = 0
         self._xaxis = np.array([])
+        self._timestamps = np.array([])
 
 
 class View_cust(pg.ViewBox):

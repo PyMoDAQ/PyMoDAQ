@@ -40,6 +40,7 @@ class DataDisplayer(QObject):
         self._min_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
         self._max_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
         self._data = Data0DWithHistory()
+        self.use_timestamps = False
 
         self._mins: Dict[str, float] = {}
         self._maxs: Dict[str, float] = {}
@@ -83,6 +84,15 @@ class DataDisplayer(QObject):
         their history and the new channel is NaN-padded from the left."""
         self._data.sync_x_axis = sync
 
+    def set_use_timestamps(self, use_timestamps: bool = False):
+        self.use_timestamps = use_timestamps
+
+        axis = self._plotitem.getAxis('bottom')
+        if use_timestamps:
+            axis.setLabel(text='Timestamps', units='s')
+        else:
+            axis.setLabel(text='Samples', units='S')
+
     def _remove_label(self, label: str):
         if label in self._plot_items:
             plot_item = self._plot_items.pop(label)
@@ -115,7 +125,10 @@ class DataDisplayer(QObject):
 
     @property
     def axis(self):
-        return self._data.xaxis
+        if self.use_timestamps:
+            return self._data.timestamps
+        else:
+            return self._data.xaxis
 
     def clear_data(self):
         self._data.clear_data()
@@ -137,7 +150,7 @@ class DataDisplayer(QObject):
             self._data.add_datas(data)
             for label, plot_item in self._plot_items.items():
                 if label in self._data.datas:
-                    plot_item.setData(self._data.xaxis, self._data.datas[label])
+                    plot_item.setData(self.axis, self._data.datas[label])
 
             for label, values in self._data.datas.items():
                 if label not in self._mins:
@@ -211,6 +224,10 @@ class View0D(ActionManager, QObject):
                                                                        'in a side panel', checkable=True)
         self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
                         'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
+        self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
+                        'Use timestamps as axis', checkable=True,
+                        icon_checked='timer')
+
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
                         'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
@@ -242,6 +259,7 @@ class View0D(ActionManager, QObject):
         self.connect_action('Nhistory', self.data_displayer.update_axis, signal_name='valueChanged')
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
+        self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
@@ -332,6 +350,7 @@ def main():
     y2 = 0.7 * gauss1D(x, 120, 50, 2) + 0.2*np.random.rand(len(x))
     widget.show()
     prog.get_action('show_data_as_list').trigger()
+    prog.get_action('use_timestamps').trigger()
     for ind, data in enumerate(y1):
         prog.show_data(data_mod.DataRaw('mydata', data=[np.array([data]), np.array([y2[ind]])],
                                         labels=['lab1', 'lab2'], units="V"))

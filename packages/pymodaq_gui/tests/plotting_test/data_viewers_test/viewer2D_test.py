@@ -133,7 +133,7 @@ class TestData0DWithHistory:
         data_histo = plot_utils.Data0DWithHistory(Nsamplesinhisto)
         dat = [[1, 2], [1, 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_data_list(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(max(0, ind+1-Nsamplesinhisto), ind+1,
                                                                  min(Nsamplesinhisto, ind+1)
@@ -145,7 +145,7 @@ class TestData0DWithHistory:
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_datas_dict(d)
             assert data_histo._data_length == ind+1
             assert np.any(data_histo.xaxis == approx(np.linspace(0, ind+1, ind+1, endpoint=False)))
             assert 'CH0' in data_histo.datas
@@ -155,7 +155,7 @@ class TestData0DWithHistory:
         data_histo = plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
-            data_histo.add_datas(d)
+            data_histo.add_datas_dict(d)
         data_histo.clear_data()
 
         assert data_histo.datas == dict([])
