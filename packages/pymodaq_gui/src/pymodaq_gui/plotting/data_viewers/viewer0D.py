@@ -35,6 +35,7 @@ class DataDisplayer(QObject):
         super().__init__()
         self._plotitem = plotitem
         self.colors = plot_colors
+        self._do_scatter = False
         self._plotitem.addLegend()
         self._plot_items: Dict[str, pyqtgraph.PlotDataItem] = {}
         self._min_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
@@ -109,12 +110,33 @@ class DataDisplayer(QObject):
 
     def update_colors(self, colors: List[QtGui.QPen]):
         self.colors[0:len(colors)] = colors
+        symbol_size = 5
+        symbol = 'o'
+
         for label, color_idx in self._color_indices.items():
             color = self.colors[color_idx]
-            self._plot_items[label].setPen(color)
+            if self._do_scatter:
+                pen = None
+                symbol_type = symbol
+                brush = color['color']
+            else:
+                pen = color['color']
+                symbol_type = None
+                brush = None
+
+            self._plot_items[label].setPen(pen)
+            self._plot_items[label].setSymbolBrush(brush)
+            self._plot_items[label].setSymbol(symbol_type)
+            self._plot_items[label].setSymbolSize(symbol_size)
+
             dash_pen = pyqtgraph.mkPen(color=color['color'], style=Qt.PenStyle.DashLine)
             self._max_lines[label].setPen(dash_pen)
             self._min_lines[label].setPen(dash_pen)
+        self.update_plots()
+
+    def update_scatter(self, do_scatter=False):
+        self._do_scatter = do_scatter
+        self.update_colors(self.colors)
 
     @property
     def legend(self) -> pyqtgraph.LegendItem:
@@ -152,6 +174,7 @@ class DataDisplayer(QObject):
             self.update_plots()
 
     def update_plots(self):
+
         for label, plot_item in self._plot_items.items():
             if label in self._data.datas:
                 plot_item.setData(self.axis, self._data.datas[label])
@@ -231,7 +254,8 @@ class View0D(ActionManager, QObject):
         self.add_action('use_timestamps', 'Use Timestamps', 'timer_off',
                         'Use timestamps as axis', checkable=True,
                         icon_checked='timer')
-
+        self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
+                        checkable=True)
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
                         'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
@@ -264,6 +288,7 @@ class View0D(ActionManager, QObject):
         self.connect_action('show_min_max', self.data_displayer.show_min_max)
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
         self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
+        self.connect_action('scatter', self.data_displayer.update_scatter)
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
