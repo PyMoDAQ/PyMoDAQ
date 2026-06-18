@@ -92,6 +92,7 @@ class DataDisplayer(QObject):
             axis.setLabel(text='Timestamps', units='s')
         else:
             axis.setLabel(text='Samples', units='S')
+        self.update_plots()
 
     def _remove_label(self, label: str):
         if label in self._plot_items:
@@ -148,20 +149,23 @@ class DataDisplayer(QObject):
                 self.update_display_items(data)
 
             self._data.add_datas(data)
-            for label, plot_item in self._plot_items.items():
-                if label in self._data.datas:
-                    plot_item.setData(self.axis, self._data.datas[label])
+            self.update_plots()
 
-            for label, values in self._data.datas.items():
-                if label not in self._mins:
-                    self._mins[label] = float(np.nanmin(values))
-                    self._maxs[label] = float(np.nanmax(values))
-                else:
-                    self._mins[label] = min(self._mins[label], float(np.nanmin(values)))
-                    self._maxs[label] = max(self._maxs[label], float(np.nanmax(values)))
-                if label in self._min_lines:
-                    self._min_lines[label].setValue(self._mins[label])
-                    self._max_lines[label].setValue(self._maxs[label])
+    def update_plots(self):
+        for label, plot_item in self._plot_items.items():
+            if label in self._data.datas:
+                plot_item.setData(self.axis, self._data.datas[label])
+
+        for label, values in self._data.datas.items():
+            if label not in self._mins:
+                self._mins[label] = float(np.nanmin(values))
+                self._maxs[label] = float(np.nanmax(values))
+            else:
+                self._mins[label] = min(self._mins[label], float(np.nanmin(values)))
+                self._maxs[label] = max(self._maxs[label], float(np.nanmax(values)))
+            if label in self._min_lines:
+                self._min_lines[label].setValue(self._mins[label])
+                self._max_lines[label].setValue(self._maxs[label])
 
     def update_display_items(self, data: data_mod.DataWithAxes = None):
         new_labels = set(data.labels) if data is not None else set()
