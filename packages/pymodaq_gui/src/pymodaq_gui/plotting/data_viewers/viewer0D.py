@@ -36,6 +36,7 @@ class DataDisplayer(QObject):
         self._plotitem = plotitem
         self.colors = plot_colors
         self._do_scatter = False
+        self._do_xy = False
         self._plotitem.addLegend()
         self._plot_items: Dict[str, pyqtgraph.PlotDataItem] = {}
         self._min_lines: Dict[str, pyqtgraph.InfiniteLine] = {}
@@ -138,6 +139,23 @@ class DataDisplayer(QObject):
         self._do_scatter = do_scatter
         self.update_colors(self.colors)
 
+    def update_xyplot(self, do_xy=True):
+        self._do_xy = do_xy
+        self.update_plots()
+        labels = list(self._data.datas.keys())
+        plot_items = [self._plot_items[label] for label in labels]
+        xaxis = self._plotitem.getAxis('bottom')
+        yaxis = self._plotitem.getAxis('left')
+        if do_xy and len(labels) == 2:
+            plot_items[1].setVisible(False)
+            xaxis.setLabel(text=labels[0], units='')
+            yaxis.setLabel(text=labels[1], units='')
+        else:
+            if len(plot_items) > 1:
+                plot_items[1].setVisible(True)
+            yaxis.setLabel(text='', units='')
+            self.set_use_timestamps(self.use_timestamps)
+
     @property
     def legend(self) -> pyqtgraph.LegendItem:
         return self._plotitem.legend
@@ -175,9 +193,15 @@ class DataDisplayer(QObject):
 
     def update_plots(self):
 
-        for label, plot_item in self._plot_items.items():
-            if label in self._data.datas:
-                plot_item.setData(self.axis, self._data.datas[label])
+        if self._do_xy and len(self._data.datas) == 2:
+            labels = list(self._data.datas.keys())
+            plot_items = [self._plot_items[label] for label in labels]
+            data_list = [self._data.datas[label] for label in labels]
+            plot_items[0].setData(data_list[0], data_list[1])
+        else:
+            for label, plot_item in self._plot_items.items():
+                if label in self._data.datas:
+                    plot_item.setData(self.axis, self._data.datas[label])
 
         for label, values in self._data.datas.items():
             if label not in self._mins:
@@ -256,6 +280,10 @@ class View0D(ActionManager, QObject):
                         icon_checked='timer')
         self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots',
                         checkable=True)
+        self.add_action('xyplot', 'XYPlotting', '2d',
+                        'Switch between normal or XY representation (valid for 2 channels)',
+                        checkable=True,
+                        visible=False)
         self.add_action('sync_x_axis', 'Sync X axis', 'sync_disabled',
                         'If checked, adding a new channel resets all histories so curves '
                         'share the same x-axis origin', checkable=True, checked=True, icon_checked='sync_lock',
@@ -289,6 +317,7 @@ class View0D(ActionManager, QObject):
         self.connect_action('sync_x_axis', self.data_displayer.set_sync_x_axis)
         self.connect_action('use_timestamps', self.data_displayer.set_use_timestamps)
         self.connect_action('scatter', self.data_displayer.update_scatter)
+        self.connect_action('xyplot', self.data_displayer.update_xyplot)
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
@@ -303,6 +332,7 @@ class View0D(ActionManager, QObject):
         return self.plot_widget.plotItem
 
     def display_data(self, data: data_mod.DataWithAxes, displayer: str = None, **kwargs):
+        self.set_action_visible('xyplot', len(data) == 2)
         if displayer is None:
             self.data_displayer.update_data(data)
         elif displayer in self.other_data_displayers:
