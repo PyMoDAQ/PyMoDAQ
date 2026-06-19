@@ -61,7 +61,7 @@ class TableModelTabular(gutils.TableModel):
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
 
-            data = np.loadtxt(fname)
+            data = np.loadtxt(fname, dtype=str, delimiter='\t')
             if len(data.shape) == 1:
                 data = data.reshape((data.size, 1))
             self.set_data_all(data)
@@ -69,7 +69,7 @@ class TableModelTabular(gutils.TableModel):
     def save_txt(self):
         fname = gutils.select_file(start_path=None, save=True, ext='dat')
         if fname is not None and fname != '':
-            np.savetxt(fname, self.get_data_all(), delimiter='\t')
+            np.savetxt(fname, self.get_data_all(), delimiter='\t',  fmt='%s')
 
     def __repr__(self):
         return f'{self.__class__.__name__} from module {self.__class__.__module__}'
