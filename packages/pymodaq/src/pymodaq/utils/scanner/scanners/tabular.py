@@ -37,8 +37,12 @@ class TableModelTabular(gutils.TableModel):
                 kwargs.pop('header')
             else:
                 raise Exception('Invalid header')
+        if kwargs.pop('display_units', False):
+            self.units = [str(Q_(dat).units) for dat in data[0]]
+        else:
+            self.units = ['' for _ in axes_name]
         header = [name for name in axes_name]
-        editable = [True for name in axes_name]
+        editable = [True for _ in axes_name]
         super().__init__(data, header, editable=editable, cast=str, **kwargs)
 
     def __len__(self):
@@ -48,7 +52,7 @@ class TableModelTabular(gutils.TableModel):
         if data is not None:
             self.insert_data(row, [f'{d}' for d in data])
         else:
-            self.insert_data(row, ['0.' for name in self.header])
+            self.insert_data(row, [f'0. {unit}' if unit != '' else f'0.' for unit in self.units])
 
     def remove_data(self, row):
         self.remove_row(row)
@@ -108,6 +112,7 @@ class TabularScanner(ScannerBase):
     def __init__(self, actuators: List['DAQ_Move'], display_units=True, **kwargs):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
+        self.display_units = display_units
         super().__init__(actuators=actuators, display_units=display_units)
         self.delegates: Iterable[SpinBoxDelegate] = []
 
@@ -132,7 +137,9 @@ class TabularScanner(ScannerBase):
             else:
                 init_data = [['0.' for _ in self._actuators]]
 
-        self.table_model = TableModelTabular(init_data, [act.title for act in self._actuators])
+        self.table_model = TableModelTabular(init_data,
+                                             [act.title for act in self._actuators],
+                                             display_units=self.display_units)
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('tabular_table').setValue(self.table_model)
         self.n_axes = len(self._actuators)
