@@ -70,7 +70,7 @@ def parse_quantity(quantity: str):
         value = float(value)
         unit = unit.strip() or 'dimensionless'
         return Q_(value, unit)
-    return Q_(s)
+    return Q_(quantity)
 
 def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     """
