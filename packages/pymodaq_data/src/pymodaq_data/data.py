@@ -50,9 +50,21 @@ logger = set_logger(get_module_name(__file__))
 
 
 
-def parse_quantity(s):
-    s = s.strip()
-    match = re.match(r'^([+-]?\d*\.?\d*(?:[eE][+-]?\d+)?)\s*(.*)$', s)
+def parse_quantity(quantity: str):
+    """
+    Converts a string into a Pint Quantity object using
+    a regex to split it in two parts and force usage of
+    Q_(value, unit) constructor
+    Parameters
+    ----------
+    quantity: The string to convert
+
+    Returns
+    -------
+    The Quantity object
+
+    """
+    match = re.match(r'^([+-]?\d*\.?\d*(?:[eE][+-]?\d+)?)\s*(.*)$', quantity.strip())
     if match:
         value, unit = float(match.group(1)), match.group(2).strip()
         value = float(value)
