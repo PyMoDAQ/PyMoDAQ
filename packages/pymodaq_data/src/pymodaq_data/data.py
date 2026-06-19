@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import numbers
+import re
 
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
@@ -45,6 +46,19 @@ config = Config()
 plotter_factory = PlotterFactory()
 ser_factory = SerializableFactory()
 logger = set_logger(get_module_name(__file__))
+
+
+
+
+def parse_quantity(s):
+    s = s.strip()
+    match = re.match(r'^([+-]?\d*\.?\d*(?:[eE][+-]?\d+)?)\s*(.*)$', s)
+    if match:
+        value, unit = float(match.group(1)), match.group(2).strip()
+        value = float(value)
+        unit = unit.strip() or 'dimensionless'
+        return Q_(value, unit)
+    return Q_(s)
 
 def dimensionless_aware_reduce_units(q: Type[Q_]) -> Type[Q_]:
     """

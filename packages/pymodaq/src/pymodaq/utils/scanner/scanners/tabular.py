@@ -9,6 +9,7 @@ from typing import List, Tuple, TYPE_CHECKING, Iterable
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
+
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_data import Q_
 from pymodaq_gui.utils import SpinBoxDelegate
@@ -20,6 +21,8 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq_gui.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+
+from pymodaq_data.data import parse_quantity
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -168,7 +171,7 @@ class TabularScanner(ScannerBase):
         return len(self.table_model)
 
     def set_scan(self):
-        positions = np.array([[Q_(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
+        positions = np.array([[parse_quantity(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
         self.get_info_from_positions(positions)
 
     def update_tabular_positions(self, positions: np.ndarray = None):
