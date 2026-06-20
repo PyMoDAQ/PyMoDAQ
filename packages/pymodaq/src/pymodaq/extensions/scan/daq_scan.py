@@ -10,7 +10,8 @@ import logging
 import os
 from pathlib import Path
 import tempfile
-from typing import List, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -68,6 +69,30 @@ class ScanDataTemp:
         self.scan_index = scan_index
         self.indexes = indexes
         self.data = data
+
+
+@dataclass
+class ScanInfo:
+    """Scan context forwarded to detector plugins on every grab during a DAQ_Scan run.
+
+    Passed as ``scan_info`` kwarg to ``DAQ_Viewer_base.grab_data``.  Outside of a scan
+    (live view, manual snap) the kwarg is absent so plugins must treat it as optional::
+
+        def grab_data(self, Naverage=1, **kwargs):
+            scan_info = kwargs.get('scan_info')  # None when not in a scan
+            if scan_info is not None:
+                out_dir = Path(scan_info.h5_file_path).parent / scan_info.scan_node_name
+                out_dir.mkdir(parents=True, exist_ok=True)
+                # save proprietary file as out_dir / f"frame_{scan_info.ind_scan:05d}.bin"
+    """
+    ind_scan: int
+    """Zero-based linear step index within the current scan."""
+    ind_average: int
+    """Zero-based averaging pass index (0 when scan_average == 1)."""
+    scan_node_name: str
+    """HDF5 group name for this scan run, e.g. ``'Scan001'``."""
+    h5_file_path: str
+    """Absolute path to the HDF5 file being written by PyMoDAQ."""
 
 
 class DAQScan(CustomExt):
@@ -1110,6 +1135,8 @@ class DAQScan(CustomExt):
 
             scan_node = self.module_and_data_saver.get_set_node(new=True)
             self.save_metadata(scan_node, 'scan_info')
+            scan_node_name = scan_node.name.split('/')[-1]
+            h5_file_path = str(self.h5saver.settings['current_h5_file'])
 
             self._init_live()
             Naverage = self.settings['scan_options', 'scan_average']
@@ -1144,7 +1171,8 @@ class DAQScan(CustomExt):
             self.runner_thread = QThread()
 
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.modules_manager,
-                                                  )
+                                                  scan_node_name=scan_node_name,
+                                                  h5_file_path=h5_file_path)
 
             if config('pymodaq', 'scan', 'scan_in_thread'):
                 scan_acquisition.moveToThread(self.runner_thread)
@@ -1258,11 +1286,12 @@ class DAQScanAcquisition(QObject):
     status_sig = Signal(utils.ThreadCommand)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 modules_manager: ModulesManager = None):
+                 modules_manager: ModulesManager = None,
+                 scan_node_name: str = '', h5_file_path: str = ''):
 
         """
         DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
-        getting back data, saviong and letting know th UI about the scan status
+        getting back data, saving and letting know the UI about the scan status
 
         """
 
@@ -1271,6 +1300,8 @@ class DAQScanAcquisition(QObject):
         self.scan_settings = scan_settings
         self.modules_manager = modules_manager
         self.scanner = scanner
+        self.scan_node_name = scan_node_name
+        self.h5_file_path = h5_file_path
 
         self.stop_scan_flag = False
         self.pause_scan_flag = False
@@ -1369,7 +1400,14 @@ class DAQScanAcquisition(QObject):
                     QThread.msleep(self.scan_settings['time_flow', 'wait_time_between'])
 
                     #grab datas and wait for grab completion
-                    self.det_done(self.modules_manager.grab_data(positions=positions))
+                    self.det_done(self.modules_manager.grab_data(
+                        positions=positions,
+                        scan_info=ScanInfo(
+                            ind_scan=self.ind_scan,
+                            ind_average=self.ind_average,
+                            scan_node_name=self.scan_node_name,
+                            h5_file_path=self.h5_file_path,
+                        )))
 
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())

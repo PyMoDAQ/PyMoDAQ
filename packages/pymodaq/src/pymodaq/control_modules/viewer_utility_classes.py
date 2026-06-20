@@ -193,9 +193,20 @@ class DAQ_Viewer_base(PluginBase):
 
     @abstractmethod
     def grab_data(self, Naverage=1, **kwargs):
-        """
-        Mandatory
-        To be reimplemented in subclass
+        """Grab one dataset from the hardware.  Must be reimplemented in every plugin subclass.
+
+        Parameters
+        ----------
+        Naverage : int
+            Number of hardware acquisitions to average before emitting data.
+        **kwargs
+            Extra keyword arguments forwarded transparently from the caller.  During a
+            ``DAQ_Scan`` run the following key is injected automatically:
+
+            ``scan_info`` : :class:`~pymodaq.extensions.scan.daq_scan.ScanInfo` or ``None``
+                Scan context for the current step (step index, averaging pass, scan-node
+                name and HDF5 file path).  Absent (or ``None``) outside of a scan run, so
+                always use ``kwargs.get('scan_info')`` and guard against ``None``.
         """
         raise NotImplementedError
 
