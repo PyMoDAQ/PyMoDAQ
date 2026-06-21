@@ -50,11 +50,12 @@ logger = set_logger(get_module_name(__file__))
 
 
 
-def parse_quantity(quantity: str):
+def parse_quantity(quantity: str) -> Q_:
     """
     Converts a string into a Pint Quantity object using
     a regex to split it in two parts and force usage of
-    Q_(value, unit) constructor
+    Q_(value, unit) constructor as Q_(value_unit_str)
+    induces some errors.
     Parameters
     ----------
     quantity: The string to convert
