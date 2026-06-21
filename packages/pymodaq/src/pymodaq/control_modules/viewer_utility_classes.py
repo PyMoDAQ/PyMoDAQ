@@ -200,13 +200,19 @@ class DAQ_Viewer_base(PluginBase):
         Naverage : int
             Number of hardware acquisitions to average before emitting data.
         **kwargs
-            Extra keyword arguments forwarded transparently from the caller.  During a
-            ``DAQ_Scan`` run the following key is injected automatically:
+            Extra keyword arguments forwarded transparently from the caller.
 
-            ``scan_info`` : :class:`~pymodaq.extensions.scan.daq_scan.ScanInfo` or ``None``
-                Scan context for the current step (step index, averaging pass, scan-node
-                name and HDF5 file path).  Absent (or ``None``) outside of a scan run, so
-                always use ``kwargs.get('scan_info')`` and guard against ``None``.
+        Notes
+        -----
+        Extensions that drive this plugin (e.g. ``DAQ_Scan``) may set caller context
+        describing the active HDF5 file/node, so a plugin can mirror PyMoDAQ's file
+        layout for its own files. Call ``self.get_caller()`` (inherited from
+        :class:`~pymodaq.control_modules.utils.PluginBase`) at any point in the plugin's
+        lifetime — not just inside ``grab_data`` — to read it. It returns ``None`` outside
+        of an extension-driven run. During a ``DAQ_Scan`` run it is a
+        :class:`~pymodaq.extensions.scan.daq_scan.DAQScanCaller`, which adds the current
+        step index and averaging pass on top of the base
+        :class:`~pymodaq.utils.caller.CallerBase` (``h5_file_path``, ``node_name``).
         """
         raise NotImplementedError
 

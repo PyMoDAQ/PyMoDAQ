@@ -26,6 +26,7 @@ from pymodaq_gui.h5modules.saving import H5Saver
 
 from pymodaq.utils.leco.pymodaq_listener import ActorListener, LECOClientCommands, LECOCommands, LECOComponentMixin
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver
+from pymodaq.utils.caller import CallerBase
 from pymodaq.control_modules.thread_commands import (ThreadStatus, ControlToHardware,
                                                      ControleModuleType, ControllerStatus)  # noqa: F401
 
@@ -156,6 +157,34 @@ class ControlModule(QObject):
     def module_and_data_saver(self, mod: Union[DetectorSaver, ActuatorSaver]):
         self._module_and_data_saver = mod
         self._module_and_data_saver.h5saver = self.h5saver
+
+    def get_caller(self) -> Optional[CallerBase]:
+        """Best-effort caller context derived from this module's own ``module_and_data_saver``.
+
+        Used as a fallback when nothing more specific (e.g. an extension driving a scan)
+        supplies an explicit caller. Reflects whatever this module is currently set up to
+        save to (e.g. continuous-saving mode) - this may be stale, reflecting a previous
+        extension-driven run, if queried in the window before ``module_and_data_saver`` has
+        been (re)configured for the current context. Returns None if no
+        ``module_and_data_saver`` has been set at all.
+
+        ``origin`` is set to the class name of the current ``module_and_data_saver``
+        (e.g. ``'DetectorTimeSaver'`` vs ``'DetectorExtendedSaver'``) rather than an
+        extension name, since this fallback has no notion of which extension (if any)
+        last configured that saver - that distinction lets a plugin tell live
+        continuous-saving state apart from a saver shape leftover from a finished scan.
+        """
+        if self._module_and_data_saver is None or self.module_and_data_saver.h5saver is None:
+            return None
+        saver = self.module_and_data_saver
+        node_name = None
+        if saver.module_group is not None:
+            node_name = saver.module_group.name.split('/')[-1]
+        return CallerBase(
+            h5_file_path=str(saver.h5saver.settings['current_h5_file']),
+            node_name=node_name,
+            origin=type(saver).__name__,
+        )
 
     def custom_command(self, command: str, **kwargs):
         self.command_hardware.emit(ThreadCommand(command, kwargs))

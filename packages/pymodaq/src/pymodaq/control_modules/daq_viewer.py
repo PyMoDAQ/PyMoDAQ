@@ -429,7 +429,8 @@ class DAQ_Viewer(ParameterControlModule):
             self.update_status(f'{self._title}: Snap')
             self.command_hardware.emit(
                 ThreadCommand(ControlToHardwareViewer.SINGLE,
-                              dict(Naverage=self.settings['main_settings', 'Naverage'])))
+                              dict(Naverage=self.settings['main_settings', 'Naverage'],
+                                   caller=self.get_caller())))
         else:
             if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
@@ -439,7 +440,8 @@ class DAQ_Viewer(ParameterControlModule):
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
                     ThreadCommand(ControlToHardwareViewer.GRAB,
-                                  dict(Naverage=self.settings['main_settings', 'Naverage'])))
+                                  dict(Naverage=self.settings['main_settings', 'Naverage'],
+                                       caller=self.get_caller())))
 
     def take_bkg(self):
         """ Do a snap and store data to be used as background into an attribute: `self._bkg`
@@ -1205,8 +1207,12 @@ class DetectorWorker(HardwareWorkerBase):
             The number of data to average
         live: bool
             Try to run the instrument plugin class grabbing in live mode
-        kwargs: optional named arguments passed to the grab_data method of the instrument plugin class
+        kwargs: optional named arguments passed to the grab_data method of the instrument plugin class.
+            A ``caller`` key (instance of :class:`~pymodaq.utils.caller.CallerBase`), if present, is
+            stored on this worker and not forwarded to the plugin; plugins read it via
+            ``self.get_caller()`` whenever needed, rather than through this call's kwargs.
         """
+        self.set_caller(kwargs.pop('caller', None))
         try:
             self.ind_average = 0
             self.Naverage = Naverage
