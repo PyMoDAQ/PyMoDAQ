@@ -41,7 +41,7 @@ class TableModelTabular(gutils.TableModel):
             else:
                 raise Exception('Invalid header')
         if kwargs.pop('display_units', False):
-            self.units = [str(Q_(dat).units) for dat in data[0]]
+            self.units = [str(parse_quantity(dat).units) for dat in data[0]]
         else:
             self.units = ['' for _ in axes_name]
         header = [name for name in axes_name]
