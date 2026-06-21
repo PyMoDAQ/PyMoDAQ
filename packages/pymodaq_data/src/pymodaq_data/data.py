@@ -799,6 +799,8 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
         self._units = check_units(units)
         self._errors = None
         self.origin = origin
+        self._averaged = False
+        self._n_averaged = 0
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -1083,6 +1085,42 @@ class DataBase(DataLowLevel, NDArrayOperatorsMixin):
 
     def deepcopy(self):
         return copy.deepcopy(self)
+
+    @property
+    def averaged(self) -> bool:
+        """ Get/Set a boolean depending if self is the result of an average operation
+
+        See Also
+        --------
+        n_averaged
+        average
+        """
+        return self._averaged
+
+    @averaged.setter
+    def averaged(self, status: bool):
+        self._averaged = status
+
+    @property
+    def n_averaged(self) -> int:
+        """ Get/set the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        average
+        """
+        return self._n_averaged
+
+    @n_averaged.setter
+    def n_averaged(self, n_data: int):
+        """ Return the number of averaging that resulted in this data
+
+        See Also
+        --------
+        averaged
+        """
+        self._n_averaged = n_data
 
     def average(self, other: 'DataBase', weight: int) -> 'DataBase':
         """ Compute the weighted average between self and other DataBase
