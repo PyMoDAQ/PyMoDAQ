@@ -1,1 +1,1 @@
-from pymodaq.extensions.scan.daq_scan import ScanInfo
+from pymodaq.extensions.scan.daq_scan import DAQScanCaller

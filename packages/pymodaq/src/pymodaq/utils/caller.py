@@ -26,3 +26,8 @@ class CallerBase:
     """Absolute path to the HDF5 file being written by PyMoDAQ."""
     node_name: Optional[str] = None
     """Name of the active HDF5 group for this call, e.g. ``'Scan001'``."""
+    origin: Optional[str] = None
+    """What produced this caller. An extension sets its own name (e.g. ``'DAQScan'``);
+    the module's own self-derived fallback (see ``ControlModule.get_caller``) sets the
+    class name of its current ``module_and_data_saver`` instead, since it has no notion
+    of which extension (if any) last configured that saver."""
