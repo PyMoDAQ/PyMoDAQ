@@ -9,6 +9,7 @@ from typing import List, Tuple, TYPE_CHECKING, Iterable
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
+
 from pymodaq_data.data import Axis, DataDistribution
 from pymodaq_data import Q_
 from pymodaq_gui.utils import SpinBoxDelegate
@@ -20,6 +21,8 @@ from pymodaq_gui.parameter import utils as putils
 from pymodaq_gui.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.scanner.scan_selector import Selector
 from pymodaq_gui.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+
+from pymodaq_data.data import parse_quantity
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
@@ -37,8 +40,12 @@ class TableModelTabular(gutils.TableModel):
                 kwargs.pop('header')
             else:
                 raise Exception('Invalid header')
+        if kwargs.pop('display_units', False):
+            self.units = [str(parse_quantity(dat).units) for dat in data[0]]
+        else:
+            self.units = ['' for _ in axes_name]
         header = [name for name in axes_name]
-        editable = [True for name in axes_name]
+        editable = [True for _ in axes_name]
         super().__init__(data, header, editable=editable, cast=str, **kwargs)
 
     def __len__(self):
@@ -48,7 +55,7 @@ class TableModelTabular(gutils.TableModel):
         if data is not None:
             self.insert_data(row, [f'{d}' for d in data])
         else:
-            self.insert_data(row, ['0.' for name in self.header])
+            self.insert_data(row, [f'0. {unit}' if unit != '' else f'0.' for unit in self.units])
 
     def remove_data(self, row):
         self.remove_row(row)
@@ -59,7 +66,7 @@ class TableModelTabular(gutils.TableModel):
             while self.rowCount(self.index(-1, -1)) > 0:
                 self.remove_row(0)
 
-            data = np.loadtxt(fname)
+            data = np.loadtxt(fname, dtype=str, delimiter='\t')
             if len(data.shape) == 1:
                 data = data.reshape((data.size, 1))
             self.set_data_all(data)
@@ -67,7 +74,7 @@ class TableModelTabular(gutils.TableModel):
     def save_txt(self):
         fname = gutils.select_file(start_path=None, save=True, ext='dat')
         if fname is not None and fname != '':
-            np.savetxt(fname, self.get_data_all(), delimiter='\t')
+            np.savetxt(fname, self.get_data_all(), delimiter='\t',  fmt='%s')
 
     def __repr__(self):
         return f'{self.__class__.__name__} from module {self.__class__.__module__}'
@@ -105,10 +112,11 @@ class TabularScanner(ScannerBase):
               ]
     distribution = DataDistribution['spread']
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True, **kwargs):
+    def __init__(self, actuators: List['DAQ_Move'], settings, **kwargs):
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
-        super().__init__(actuators=actuators, display_units=display_units)
+        super().__init__(actuators=actuators, settings=settings)
+
         self.delegates: Iterable[SpinBoxDelegate] = []
 
     def set_units(self):
@@ -132,7 +140,9 @@ class TabularScanner(ScannerBase):
             else:
                 init_data = [['0.' for _ in self._actuators]]
 
-        self.table_model = TableModelTabular(init_data, [act.title for act in self._actuators])
+        self.table_model = TableModelTabular(init_data,
+                                             [act.title for act in self._actuators],
+                                             display_units=self.display_units)
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('tabular_table').setValue(self.table_model)
         self.n_axes = len(self._actuators)
@@ -168,7 +178,7 @@ class TabularScanner(ScannerBase):
         return len(self.table_model)
 
     def set_scan(self):
-        positions = np.array([[Q_(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
+        positions = np.array([[parse_quantity(elt).magnitude for elt in line] for line in self.table_model.get_data_all()])
         self.get_info_from_positions(positions)
 
     def update_tabular_positions(self, positions: np.ndarray = None):
@@ -233,12 +243,12 @@ class TabularScannerSubSegmented(TabularScanner):
                'menu': True},
               ] + TabularScanner.params
 
-    def __init__(self, actuators: List['DAQ_Move'], display_units=True):
+    def __init__(self, actuators: List['DAQ_Move'], settings):
         self.table_model: TableModelTabularReadOnly = None
         self.table_view: TableViewCustom = None
         self.table_model_points: TableModelTabular = None
         self.table_view_points: TableViewCustom = None
-        super().__init__(actuators=actuators, display_units=display_units)
+        super().__init__(actuators=actuators, settings=settings)
 
     @property
     def actuators(self):

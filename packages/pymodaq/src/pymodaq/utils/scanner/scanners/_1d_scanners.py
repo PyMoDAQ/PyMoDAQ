@@ -13,6 +13,8 @@ from pymodaq_utils import math_utils as mutils
 
 from pymodaq_data.data import Axis, DataDistribution
 
+from pymodaq_gui.parameter import Parameter
+
 from pymodaq.utils.scanner.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
@@ -31,8 +33,8 @@ class Scan1DBase(ScannerBase):
     n_axes = 1
     distribution = DataDistribution.uniform
 
-    def __init__(self, actuators: List = None, display_units=True, **_ignored):
-        super().__init__(actuators=actuators, display_units=display_units)
+    def __init__(self, actuators: List = None, settings=None, **_ignored):
+        super().__init__(actuators=actuators, settings=settings)
 
     def set_units(self):
         """ Update settings units depending on the scanner type and the display_units boolean"""
@@ -69,8 +71,8 @@ class Scan1DLinear(Scan1DBase):
     n_axes = 1
     distribution = DataDistribution.uniform
 
-    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
-        super().__init__(actuators=actuators, display_units=display_units)
+    def __init__(self, actuators: List['DAQ_Move'] = None, settings=None, **_ignored):
+        super().__init__(actuators=actuators, settings=settings)
 
 
     def set_scan(self):
@@ -102,8 +104,8 @@ class Scan1DRandom(Scan1DLinear):
 
     scan_subtype = 'Random'
 
-    def __init__(self, actuators: List = None, display_units=True, **_ignored):
-        super().__init__(actuators=actuators, display_units=display_units)
+    def __init__(self, actuators: List = None, settings=None, **_ignored):
+        super().__init__(actuators=actuators, settings=settings)
 
     def set_scan(self):
         self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
@@ -132,10 +134,13 @@ class Scan1DSparse(Scan1DBase):
         ]
     n_axes = 1
     distribution = DataDistribution.uniform  # because in 1D it doesn't matter is spread or
-    # uniform, one can easily plot both types on a regulat 1D plot
+    # uniform, one can easily plot both types on a regular 1D plot
 
-    def __init__(self, actuators: List['DAQ_Move'] = None, display_units=True, **_ignored):
-        super().__init__(actuators=actuators, display_units=display_units)
+    def __init__(self, actuators: List['DAQ_Move'] = None,
+                 settings: Parameter = None, **_ignored):
+        super().__init__(actuators=actuators, settings=settings)
+        settings.child('units_handling', 'display_units').setValue(False)
+        settings.child('units_handling', 'display_units').hide()
         self.settings.child('parsed_string').setOpts(tip=self.__doc__)
 
     def set_scan(self):

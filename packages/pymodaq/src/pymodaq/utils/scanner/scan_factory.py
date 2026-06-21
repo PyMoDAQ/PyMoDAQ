@@ -91,14 +91,15 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     distribution: DataDistribution = abstract_attribute()
     save_settings = True
 
-    def __init__(self, actuators: List[DAQ_Move] = None, display_units=True):
+    def __init__(self, actuators: List[DAQ_Move] = None, settings: Parameter = None):
         super().__init__()
         self.positions: np.ndarray | list[Iterable[DataActuator]] = None
         self.n_steps = 1
         self._current_scan_step = 0
 
         self.config = ScanConfig()
-        self.display_units = display_units
+        settings.child('units_handling', 'display_units').show()
+        self.display_units = settings['units_handling', 'display_units']
         base_path = [act.title for act in actuators] + [self.scan_type, self.scan_subtype]
 
         self.config_saver_loader = ConfigSaverLoader(self.settings,
