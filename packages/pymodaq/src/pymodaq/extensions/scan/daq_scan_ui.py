@@ -101,9 +101,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_menu(MenuToolbarNames.TOOLS, MenuToolbarNames.TOOLS.capitalize(), parent_menu=menubar)
         self.add_menu('actions', 'Actions', parent_menu=menubar)
 
-        self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
-                         add_break=False)
-        self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
+        # self.add_toolbar('scan_manager', 'Scan Manager', parent=self.mainwindow,
+        #                  add_break=False)
+        # self.add_menu('scan_manager', 'Scan Manager', MenuToolbarNames.TOOLS, icon_name=ScanManager.icon_name)
 
     def setup_actions(self):
         self.add_action('ini_positions', 'Init Positions', 'arrows_input', menu='actions')
