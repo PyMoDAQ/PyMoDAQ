@@ -1,0 +1,28 @@
+"""Context objects describing who is invoking a control-module call (e.g. ``grab_data``)
+and which part of PyMoDAQ's HDF5 file structure that call corresponds to.
+
+Plugins receive a :class:`CallerBase` (or one of its subclasses) as the ``caller`` kwarg
+so they can mirror PyMoDAQ's file layout in their own files, without inventing independent
+session bookkeeping.
+"""
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class CallerBase:
+    """Generic caller context: the HDF5 file PyMoDAQ is writing to and the active node.
+
+    Outside of any extension-driven acquisition (live view, manual snap) no caller is
+    passed at all, so plugins must treat it as optional::
+
+        def grab_data(self, Naverage=1, **kwargs):
+            caller = kwargs.get('caller')  # None when not driven by an extension
+            if caller is not None and caller.h5_file_path is not None:
+                out_dir = Path(caller.h5_file_path).parent / caller.node_name
+                ...
+    """
+    h5_file_path: Optional[str] = None
+    """Absolute path to the HDF5 file being written by PyMoDAQ."""
+    node_name: Optional[str] = None
+    """Name of the active HDF5 group for this call, e.g. ``'Scan001'``."""
